@@ -6,9 +6,9 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    # إعداد متغيرات البيئة لقاعدة بيانات Railway
+    # إعداد متغيرات البيئة لقاعدة البيانات
     if 'DATABASE_URL' in os.environ:
-        print("تم اكتشاف بيئة Railway في manage.py")
+        print("تم اكتشاف DATABASE_URL في manage.py")
         print(f"DATABASE_URL: {os.environ.get('DATABASE_URL')}")
 
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
@@ -30,7 +30,8 @@ def main():
                 import django
                 django.setup()
 
-                # تنفيذ أمر migrate مع استثناء ترحيل accounts.fix_user_model_swap
+                # تنفيذ أمر migrate مع استثناء ترحيل
+                # accounts.fix_user_model_swap
                 from django.core.management import call_command
                 from django.db.migrations.recorder import MigrationRecorder
                 from django.db import connection
@@ -46,9 +47,13 @@ def main():
 
                 # تنفيذ الترحيلات باستثناء الترحيل المشكل
                 if problematic_migration not in applied_migrations:
-                    # إضافة الترحيل المشكل إلى قائمة الترحيلات المطبقة لتجنب تنفيذه
+                    # إضافة الترحيل المشكل إلى قائمة الترحيلات
+                    # المطبقة لتجنب تنفيذه
                     recorder.record_applied(*problematic_migration)
-                    print(f"تم تجاوز ترحيل {problematic_migration[0]}.{problematic_migration[1]}")
+                    app_name = problematic_migration[0]
+                    migration_file = problematic_migration[1]
+                    migration_name = f"{app_name}.{migration_file}"
+                    print(f"تم تجاوز ترحيل {migration_name}")
 
                 # تنفيذ باقي الترحيلات
                 call_command('migrate')

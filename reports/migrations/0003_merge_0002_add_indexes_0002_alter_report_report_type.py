@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('reports', '0002_add_indexes'),
+        ('reports', '0001_initial'),
         ('reports', '0002_alter_report_report_type'),
     ]
 

@@ -28,7 +28,11 @@ urlpatterns = [
 
     # مسارات API للعملاء
     path('api/customers/', customer_list, name='customer_list'),
-    path('api/customers/<int:pk>/', customer_detail, name='customer_detail'),
+    path(
+        'api/customers/<int:pk>/',
+        customer_detail,
+        name='customer_detail'
+    ),
 
     # مسارات لوحة التحكم
     path('admin/', admin.site.urls),
@@ -39,10 +43,18 @@ urlpatterns = [
     path('health/', health_check, name='health'),
 
     # مسار خدمة ملفات الوسائط
-    re_path(r'^media/(?P<path>.*)$', views.serve_media_file, name='serve_media'),
+    re_path(
+        r'^media/(?P<path>.*)$',
+        views.serve_media_file,
+        name='serve_media'
+    ),
 
     # مسارات JWT للمصادقة في API
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path(
+        'api/token/',
+        TokenObtainPairView.as_view(),
+        name='token_obtain_pair'
+    ),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),

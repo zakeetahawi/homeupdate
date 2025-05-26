@@ -10,7 +10,7 @@ ENV/
 
 # Ignore environment files
 .env
-# Don't ignore .env.production as it's a template for Railway
+# Don't ignore .env.production as it's a template
 !.env.production
 
 # السماح بملف قاعدة البيانات

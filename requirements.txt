@@ -30,7 +30,7 @@ django-import-export==3.3.1
 openpyxl==3.1.5
 pillow==11.2.1
 python-magic==0.4.27
-# python-magic-bin==0.4.14  # Windows support only - not needed on Linux/Railway
+# python-magic-bin==0.4.14  # Windows support only
 django-dbbackup==4.2.1
 
 # Cloud Services

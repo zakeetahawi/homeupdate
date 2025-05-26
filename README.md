@@ -146,35 +146,28 @@ python manage.py runserver
 ## التكوين
 - قم بتعديل `crm/settings.py` لتكوين إعدادات المشروع
 - استخدم ملف `.env` لتكوين متغيرات البيئة في بيئة التطوير
-- استخدم ملف `.env.production` كمرجع لإعداد متغيرات البيئة في Railway
+- استخدم ملف `.env.production` كمرجع لإعداد متغيرات البيئة في الإنتاج
 
-## النشر على Railway
+## النشر على الإنترنت
 
-### 1. إنشاء مشروع جديد على Railway
-1. قم بتسجيل الدخول إلى [Railway](https://railway.app/)
-2. انقر على "New Project"
-3. اختر "Deploy from GitHub repo"
-4. حدد مستودع GitHub الخاص بك
+### 1. استخدام Cloudflare Tunnel
+يمكنك تشغيل التطبيق على الإنترنت مباشرة من جهازك باستخدام:
+```bash
+./تشغيل_CRM_اونلاين.bat
+```
 
-### 2. إضافة قاعدة بيانات PostgreSQL
-1. في مشروعك على Railway، انقر على "New Service"
-2. اختر "Add Database" ثم "PostgreSQL"
+### 2. إعداد قاعدة البيانات للإنتاج
+1. تأكد من تشغيل PostgreSQL
+2. قم بإنشاء قاعدة بيانات جديدة للإنتاج
+3. قم بتحديث إعدادات قاعدة البيانات في النظام
 
-### 3. إضافة متغيرات البيئة
-1. انتقل إلى تبويب "Variables" في مشروع التطبيق
-2. أضف المتغيرات التالية:
-   - `SECRET_KEY` = مفتاح سري آمن
-   - `DEBUG` = "0"
-   - `ALLOWED_HOSTS` = "*.up.railway.app"
-   - `ENABLE_SSL_SECURITY` = "true"
-
-### 4. ترحيل البيانات (اختياري)
-إذا كنت تريد نقل البيانات من SQLite إلى PostgreSQL:
-1. قم بتصدير البيانات من SQLite محليًا:
+### 3. ترحيل البيانات (اختياري)
+إذا كنت تريد نقل البيانات من قاعدة بيانات إلى أخرى:
+1. قم بتصدير البيانات:
    ```bash
    python manage.py dumpdata --exclude auth.permission --exclude contenttypes > data.json
    ```
-2. قم باستيراد البيانات إلى PostgreSQL على Railway:
+2. قم باستيراد البيانات:
    ```bash
    python manage.py loaddata data.json
    ```

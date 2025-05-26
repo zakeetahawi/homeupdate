@@ -13,6 +13,9 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="{% static 'css/fontawesome.min.css' %}">
 
+    <!-- Animate.css for SweetAlert animations -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
@@ -455,6 +458,9 @@
     <!-- jQuery -->
     <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
 
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}"></script>
 
@@ -462,6 +468,144 @@
     {% if 'database' in request.path %}
     <script src="{% static 'js/db_connection_test.js' %}"></script>
     {% endif %}
+
+    <!-- Restore Success Alert -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // البحث عن رسائل النجاح المتعلقة بالاستعادة
+            const messages = document.querySelectorAll('.alert-success');
+
+            messages.forEach(function(messageElement) {
+                const messageText = messageElement.textContent.trim();
+
+                // التحقق من أن الرسالة تتعلق بالاستعادة
+                if (messageText.includes('تم استعادة النسخة الاحتياطية بنجاح') ||
+                    messageText.includes('تمت الاستعادة بنجاح') ||
+                    messageText.includes('تم استعادة البيانات بنجاح') ||
+                    messageText.includes('تمت استعادة البيانات بنجاح')) {
+
+                    // إخفاء الرسالة العادية
+                    messageElement.style.display = 'none';
+
+                    // عرض SweetAlert مع التعليمات
+                    Swal.fire({
+                        title: 'تمت الاستعادة بنجاح! 🎉',
+                        html: `
+                            <div style="text-align: right; direction: rtl; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                                <p style="font-size: 16px; margin-bottom: 20px; color: #2c3e50;">
+                                    <strong>لضمان ظهور جميع البيانات، يرجى اتباع إحدى الخطوات التالية:</strong>
+                                </p>
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                    <p style="margin: 8px 0; color: #495057;">
+                                        <i class="fas fa-sync-alt" style="color: #007bff; margin-left: 8px;"></i>
+                                        <strong>1. تحديث الصفحة (F5)</strong>
+                                    </p>
+                                    <p style="margin: 8px 0; color: #495057;">
+                                        <i class="fas fa-sign-in-alt" style="color: #28a745; margin-left: 8px;"></i>
+                                        <strong>2. إعادة تسجيل الدخول</strong>
+                                    </p>
+                                    <p style="margin: 8px 0; color: #495057;">
+                                        <i class="fas fa-clock" style="color: #ffc107; margin-left: 8px;"></i>
+                                        <strong>3. انتظار دقيقة واحدة للتحديث التلقائي</strong>
+                                    </p>
+                                </div>
+                                <p style="font-size: 14px; color: #6c757d; margin-top: 15px;">
+                                    <i class="fas fa-info-circle" style="margin-left: 5px;"></i>
+                                    هذا أمر طبيعي ويحدث بسبب التخزين المؤقت للبيانات
+                                </p>
+                            </div>
+                        `,
+                        icon: 'success',
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fas fa-sync-alt"></i> تحديث الصفحة الآن',
+                        cancelButtonText: '<i class="fas fa-times"></i> إغلاق',
+                        confirmButtonColor: '#007bff',
+                        cancelButtonColor: '#6c757d',
+                        width: '600px',
+                        customClass: {
+                            popup: 'rtl-popup',
+                            title: 'rtl-title',
+                            content: 'rtl-content'
+                        },
+                        showClass: {
+                            popup: 'animate__animated animate__fadeInDown'
+                        },
+                        hideClass: {
+                            popup: 'animate__animated animate__fadeOutUp'
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // تحديث الصفحة فوراً
+                            location.reload();
+                        } else {
+                            // إضافة رسالة تذكير للمستخدم
+                            const reminderToast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 5000,
+                                timerProgressBar: true,
+                                didOpen: (toast) => {
+                                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                                }
+                            });
+
+                            reminderToast.fire({
+                                icon: 'info',
+                                title: 'تذكير: قم بتحديث الصفحة لرؤية جميع البيانات'
+                            });
+
+                            // تحديث تلقائي بعد دقيقة واحدة
+                            setTimeout(() => {
+                                Swal.fire({
+                                    title: 'تحديث تلقائي',
+                                    text: 'سيتم تحديث الصفحة الآن لإظهار جميع البيانات',
+                                    icon: 'info',
+                                    timer: 3000,
+                                    timerProgressBar: true,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            }, 60000); // 60 ثانية
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+
+    <!-- CSS للـ RTL SweetAlert -->
+    <style>
+        .rtl-popup {
+            direction: rtl !important;
+            text-align: right !important;
+        }
+
+        .rtl-title {
+            direction: rtl !important;
+            text-align: center !important;
+        }
+
+        .rtl-content {
+            direction: rtl !important;
+            text-align: right !important;
+        }
+
+        .swal2-html-container {
+            direction: rtl !important;
+            text-align: right !important;
+        }
+
+        .swal2-actions {
+            direction: ltr !important;
+        }
+
+        .swal2-confirm {
+            margin-left: 10px !important;
+        }
+    </style>
 
     {% block extra_js %}{% endblock %}
 </body>

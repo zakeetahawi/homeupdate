@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0002_add_indexes'),
+        ('accounts', '0002_role_userrole'),
         ('accounts', '0005_department_is_core'),
     ]
 

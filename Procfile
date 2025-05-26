@@ -1,1 +1,0 @@
-web: python manage.py migrate --noinput && python manage.py create_admin_user --force && python scripts/post_deploy.py && gunicorn crm.wsgi:application --workers=2 --threads=4 --timeout=120 --max-requests=1000 --max-requests-jitter=50 --log-level=info

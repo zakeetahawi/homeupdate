@@ -20,6 +20,67 @@ from .services.database_service import DatabaseService
 from .services.scheduled_backup_service import scheduled_backup_service
 from .forms import BackupScheduleForm
 
+
+def _clear_system_cache():
+    """
+    تنظيف شامل للنظام بعد عملية الاستعادة
+    """
+    try:
+        print("🧹 بدء تنظيف النظام...")
+
+        # 1. مسح Django Cache
+        from django.core.cache import cache
+        cache.clear()
+        print("✅ تم مسح Django Cache")
+
+        # 2. إغلاق جميع اتصالات قاعدة البيانات
+        from django.db import connections
+        for conn in connections.all():
+            conn.close()
+        print("✅ تم إغلاق اتصالات قاعدة البيانات")
+
+        # 3. حذف الجلسات النشطة
+        from django.contrib.sessions.models import Session
+        Session.objects.all().delete()
+        print("✅ تم حذف الجلسات النشطة")
+
+        # 4. تنظيف ORM Cache
+        from django.apps import apps
+        for app in apps.get_app_configs():
+            for model in app.get_models():
+                if hasattr(model, '_meta'):
+                    model._meta._expire_cache()
+                if hasattr(model, '_state'):
+                    model._state.db = None
+        print("✅ تم تنظيف ORM Cache")
+
+        # 5. تنظيف Garbage Collection
+        import gc
+        gc.collect()
+        print("✅ تم تنظيف الذاكرة")
+
+        # 6. إعادة تحميل النماذج
+        import sys
+        import importlib
+        modules_to_reload = []
+        for name in sys.modules.keys():
+            if any(app in name for app in ['customers', 'orders', 'inventory', 'accounts']):
+                modules_to_reload.append(name)
+
+        for module_name in modules_to_reload:
+            if module_name in sys.modules:
+                try:
+                    importlib.reload(sys.modules[module_name])
+                except Exception:
+                    pass
+
+        print(f"✅ تم إعادة تحميل {len(modules_to_reload)} module")
+        print("🎉 تم التنظيف الشامل بنجاح!")
+
+    except Exception as e:
+        print(f"⚠️ خطأ في تنظيف النظام: {str(e)}")
+        # لا نرفع الخطأ لأن التنظيف اختياري
+
 def is_staff_or_superuser(user):
     """التحقق من أن المستخدم موظف أو مدير"""
     return user.is_staff or user.is_superuser
@@ -483,7 +544,10 @@ def backup_restore(request, pk):
                     _restore_json_simple(backup.file_path)
                 else:
                     raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON.")
-                messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
+                # تنظيف شامل للنظام بعد الاستعادة الناجحة
+            _clear_system_cache()
+
+            messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
 
             return redirect('odoo_db_manager:dashboard')
         except Exception as e:
@@ -652,6 +716,9 @@ def backup_upload(request, database_id=None):
                 _restore_json_simple(file_path)
 
             print("🎉 تمت الاستعادة بنجاح!")
+
+            # تنظيف شامل للنظام بعد الاستعادة الناجحة
+            _clear_system_cache()
 
             messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
             return redirect('odoo_db_manager:database_detail', pk=database_id)

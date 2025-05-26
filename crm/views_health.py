@@ -2,24 +2,23 @@ from django.http import JsonResponse, HttpResponse
 from django.db import connection
 from django.conf import settings
 import psutil
-import os
 import logging
 
 logger = logging.getLogger(__name__)
 
 def health_check(request):
     """
-    فحص صحة التطبيق لـ Railway
+    فحص صحة التطبيق
     يتحقق من:
     1. اتصال قاعدة البيانات (فقط للطلبات المفصلة)
     2. استخدام الذاكرة (فقط للطلبات المفصلة)
     3. استخدام وحدة المعالجة المركزية (فقط للطلبات المفصلة)
     4. مساحة القرص (فقط للطلبات المفصلة)
     """
-    # إذا كان المسار هو '/health/' بالضبط (كما يتوقع Railway)، نعيد استجابة بسيطة وسريعة
+    # إذا كان المسار هو '/health/' بالضبط، نعيد استجابة بسيطة وسريعة
     if request.path == '/health/' or request.path == '/health':
         # طباعة رسالة تأكيد
-        print("تم استدعاء فحص الصحة من Railway")
+        print("تم استدعاء فحص الصحة")
         return HttpResponse("OK", content_type="text/plain")
 
     # تسجيل طلب فحص الصحة المفصل فقط
@@ -42,10 +41,12 @@ def health_check(request):
         # استخدام interval=None لتجنب التأخير
         cpu = psutil.cpu_percent(interval=None)
         memory = psutil.virtual_memory()
-        # تجنب فحص القرص إذا كنا في بيئة Railway (حيث لا نحتاج إلى هذه المعلومات)
+        # فحص القرص (اختياري)
         disk = None
-        if not os.environ.get('RAILWAY_ENVIRONMENT'):
+        try:
             disk = psutil.disk_usage('/')
+        except Exception:
+            pass  # تجاهل أخطاء فحص القرص
     except Exception as e:
         logger.error(f"Error getting system info: {str(e)}")
         memory = None
@@ -71,5 +72,5 @@ def health_check(request):
 
     response_data["environment"] = "production" if not settings.DEBUG else "development"
 
-    # دائمًا نعيد 200 OK لـ Railway
+    # دائمًا نعيد 200 OK
     return JsonResponse(response_data, status=200)

@@ -8,9 +8,15 @@ from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 
-from .models import Notification, CompanyInfo, FormField, Department, Salesperson, Branch, Role, UserRole
+from .models import (
+    Notification, CompanyInfo, FormField, Department,
+    Salesperson, Branch, Role, UserRole
+)
 from .utils import get_user_notifications
-from .forms import CompanyInfoForm, FormFieldForm, DepartmentForm, SalespersonForm, RoleForm, RoleAssignForm
+from .forms import (
+    CompanyInfoForm, FormFieldForm, DepartmentForm,
+    SalespersonForm, RoleForm, RoleAssignForm
+)
 
 # الحصول على نموذج المستخدم المخصص
 User = get_user_model()
@@ -28,8 +34,14 @@ def login_view(request):
 
     # إضافة الأنماط إلى حقول النموذج
     try:
-        form.fields['username'].widget.attrs.update({'class': 'form-control', 'placeholder': 'اسم المستخدم'})
-        form.fields['password'].widget.attrs.update({'class': 'form-control', 'placeholder': 'كلمة المرور'})
+        form.fields['username'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'اسم المستخدم'
+        })
+        form.fields['password'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'كلمة المرور'
+        })
     except Exception as form_error:
         logger.error(f"[Form Error] {form_error}")
 
@@ -44,8 +56,14 @@ def login_view(request):
                 form = AuthenticationForm(request, data=request.POST)
 
                 # إضافة الأنماط إلى حقول النموذج
-                form.fields['username'].widget.attrs.update({'class': 'form-control', 'placeholder': 'اسم المستخدم'})
-                form.fields['password'].widget.attrs.update({'class': 'form-control', 'placeholder': 'كلمة المرور'})
+                form.fields['username'].widget.attrs.update({
+                    'class': 'form-control',
+                    'placeholder': 'اسم المستخدم'
+                })
+                form.fields['password'].widget.attrs.update({
+                    'class': 'form-control',
+                    'placeholder': 'كلمة المرور'
+                })
 
                 if form.is_valid():
                     username = form.cleaned_data.get('username')
@@ -53,7 +71,11 @@ def login_view(request):
                     logger.info(f"Login attempt for user: {username}")
 
                     # محاولة المصادقة المباشرة
-                    user = authenticate(request=request, username=username, password=password)
+                    user = authenticate(
+                        request=request,
+                        username=username,
+                        password=password
+                    )
 
                     if user is not None:
                         login(request, user)
@@ -61,17 +83,26 @@ def login_view(request):
                         next_url = request.GET.get('next', 'home')
                         return redirect(next_url)
                     else:
-                        messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة.')
+                        messages.error(
+                            request,
+                            'اسم المستخدم أو كلمة المرور غير صحيحة.'
+                        )
                 else:
-                    messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة.')
+                    messages.error(
+                        request,
+                        'اسم المستخدم أو كلمة المرور غير صحيحة.'
+                    )
             except Exception as auth_error:
                 logger.error(f"[Authentication Error] {auth_error}")
                 logger.error(traceback.format_exc())
-                messages.error(request, 'حدث خطأ أثناء محاولة تسجيل الدخول. يرجى المحاولة مرة أخرى.')
+                messages.error(
+                    request,
+                    'حدث خطأ أثناء محاولة تسجيل الدخول. يرجى المحاولة مرة أخرى.'
+                )
 
         # التحقق من وجود مستخدمين في النظام
         try:
-            from data_management.modules.db_manager.models import SetupToken, DatabaseConfig
+            from odoo_db_manager.models import SetupToken, DatabaseConfig
 
             if User.objects.count() == 0:
                 # لا يوجد مستخدمين في النظام، توجيه المستخدم إلى صفحة الإعداد الأولي
@@ -102,15 +133,15 @@ def login_view(request):
                         db_password = os.environ.get('DB_PASSWORD', '5525')
                         db_name = os.environ.get('DB_NAME', 'crm_system')
 
-                        # التحقق من وجود متغيرات البيئة الخاصة بـ Railway
+                        # التحقق من وجود متغيرات البيئة الخاصة بـ PostgreSQL
                         if 'PGHOST' in os.environ:
                             db_host = os.environ.get('PGHOST')
                             db_port = os.environ.get('PGPORT', '5432')
                             db_user = os.environ.get('PGUSER', 'postgres')
                             db_password = os.environ.get('PGPASSWORD', '')
-                            db_name = os.environ.get('PGDATABASE', 'railway')
+                            db_name = os.environ.get('PGDATABASE', 'postgres')
 
-                            logger.info(f"Using Railway database settings: {db_host}:{db_port}/{db_name}")
+                            logger.info(f"Using PostgreSQL environment settings: {db_host}:{db_port}/{db_name}")
 
                         DatabaseConfig.objects.create(
                             name="قاعدة البيانات الرئيسية",
@@ -142,13 +173,13 @@ def login_view(request):
 
                 # توجيه المستخدم إلى صفحة الإعداد
                 try:
-                    return redirect('data_management:db_manager:setup_with_token', token=valid_token.token)
+                    return redirect('odoo_db_manager:setup_with_token', token=valid_token.token)
                 except Exception as redirect_error:
                     logger.error(f"Error redirecting to setup page: {redirect_error}")
                     logger.error(traceback.format_exc())
 
                     # محاولة توجيه بديلة
-                    return redirect(f'/data_management/db-manager/setup/{valid_token.token}/')
+                    return redirect(f'/odoo-db-manager/setup/{valid_token.token}/')
         except Exception as setup_error:
             logger.error(f"[Setup Error] {setup_error}")
             logger.error(traceback.format_exc())
@@ -174,6 +205,7 @@ def login_view(request):
 
         return render(request, 'accounts/login.html', context)
 
+
 def logout_view(request):
     """
     View for user logout
@@ -181,6 +213,7 @@ def logout_view(request):
     logout(request)
     messages.success(request, 'تم تسجيل الخروج بنجاح.')
     return redirect('home')
+
 
 def admin_logout_view(request):
     """
@@ -268,7 +301,10 @@ def mark_notification_read(request, notification_id):
         # Check if user has access to this notification
         user_notifications = get_user_notifications(request.user)
         if notification not in user_notifications:
-            return JsonResponse({'success': False, 'message': 'ليس لديك صلاحية للوصول إلى هذا الإشعار.'})
+            return JsonResponse({
+                'success': False,
+                'message': 'ليس لديك صلاحية للوصول إلى هذا الإشعار.'
+            })
 
         # Mark notification as read
         notification.mark_as_read(request.user)
@@ -284,13 +320,18 @@ def mark_all_notifications_read(request):
     """
     if request.method == 'POST':
         # Get all unread notifications for the user
-        unread_notifications = get_user_notifications(request.user, unread_only=True)
+        unread_notifications = get_user_notifications(
+            request.user, unread_only=True
+        )
 
         # Mark all as read
         for notification in unread_notifications:
             notification.mark_as_read(request.user)
 
-        return JsonResponse({'success': True, 'count': unread_notifications.count()})
+        return JsonResponse({
+            'success': True,
+            'count': unread_notifications.count()
+        })
 
     return JsonResponse({'success': False, 'message': 'طريقة غير صالحة.'})
 
@@ -314,7 +355,9 @@ def company_info_view(request):
         )
 
         if request.method == 'POST':
-            form = CompanyInfoForm(request.POST, request.FILES, instance=company)
+            form = CompanyInfoForm(
+                request.POST, request.FILES, instance=company
+            )
             if form.is_valid():
                 form.save()
                 messages.success(request, 'تم تحديث معلومات الشركة بنجاح.')
@@ -333,7 +376,10 @@ def company_info_view(request):
         import traceback
         print("[CompanyInfo Error]", e)
         traceback.print_exc()
-        messages.error(request, 'حدث خطأ غير متوقع أثناء معالجة معلومات الشركة. يرجى مراجعة الدعم الفني.')
+        messages.error(
+            request,
+            'حدث خطأ غير متوقع أثناء معالجة معلومات الشركة. يرجى مراجعة الدعم الفني.'
+        )
         return redirect('home')
 
 @staff_member_required
@@ -549,7 +595,10 @@ def department_delete(request, pk):
     if request.method == 'POST':
         # فحص ما إذا كان القسم يحتوي على أقسام فرعية
         if department.children.exists():
-            messages.error(request, 'لا يمكن حذف القسم لأنه يحتوي على أقسام فرعية.')
+            messages.error(
+                request,
+                'لا يمكن حذف القسم لأنه يحتوي على أقسام فرعية.'
+            )
             return redirect('accounts:department_list')
 
         department.delete()
@@ -691,7 +740,7 @@ def salesperson_delete(request, pk):
         try:
             salesperson.delete()
             messages.success(request, 'تم حذف البائع بنجاح.')
-        except Exception as e:
+        except Exception:
             messages.error(request, 'لا يمكن حذف البائع لارتباطه بسجلات أخرى.')
         return redirect('accounts:salesperson_list')
 
@@ -871,7 +920,10 @@ def role_assign(request, pk):
                     user.user_permissions.add(permission)
                 count += 1
 
-            messages.success(request, f'تم إسناد دور {role.name} لـ {count} مستخدمين بنجاح.')
+            messages.success(
+                request,
+                f'تم إسناد دور {role.name} لـ {count} مستخدمين بنجاح.'
+            )
             return redirect('accounts:role_list')
     else:
         form = RoleAssignForm(role=role)
@@ -890,7 +942,9 @@ def role_management(request):
     الصفحة الرئيسية لإدارة الأدوار
     """
     roles = Role.objects.all().prefetch_related('user_roles', 'permissions')
-    users = User.objects.filter(is_active=True).exclude(is_superuser=True).prefetch_related('user_roles')
+    users = User.objects.filter(is_active=True).exclude(
+        is_superuser=True
+    ).prefetch_related('user_roles')
 
     # تصفية الأدوار
     role_type = request.GET.get('type', '')

@@ -19,12 +19,34 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # تفعيل وضع التطوير بشكل دائم للكشف عن الأخطاء
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ['true', 't', '1', 'yes', 'y']
+DEBUG = os.environ.get('DEBUG', 'True').lower() in [
+    'true', 't', '1', 'yes', 'y'
+]
 
 # تفعيل تتبع الأخطاء في الإنتاج
-RAILWAY_DEBUG = os.environ.get('RAILWAY_DEBUG', 'True').lower() in ['true', 't', '1', 'yes', 'y']
+# RAILWAY_DEBUG = os.environ.get('RAILWAY_DEBUG', 'True').lower() in ['true', 't', '1', 'yes', 'y']
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,web-production-f91f.up.railway.app').split(',')
+# إعداد ALLOWED_HOSTS لدعم جميع المنصات والروابط
+ALLOWED_HOSTS_DEFAULT = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    '*.trycloudflare.com',  # دعم جميع روابط Cloudflare المؤقتة
+    '*.cloudflare.com',     # دعم جميع روابط Cloudflare
+    '*.cfargotunnel.com',   # دعم Cloudflare Argo Tunnel
+    '*.ngrok.io',
+    '*.ngrok-free.app',
+]
+
+# دمج ALLOWED_HOSTS من متغير البيئة مع القائمة الافتراضية
+env_hosts = os.environ.get(
+    'ALLOWED_HOSTS',
+    ','.join(ALLOWED_HOSTS_DEFAULT)
+).split(',')
+ALLOWED_HOSTS = list(set(ALLOWED_HOSTS_DEFAULT + env_hosts))  # إزالة التكرارات
+
+# إضافة دعم تلقائي لجميع روابط Cloudflare
+ALLOWED_HOSTS.append('*')  # السماح لجميع النطاقات (للتطوير والاختبار)
 
 # Application definition
 INSTALLED_APPS = [
@@ -46,11 +68,12 @@ INSTALLED_APPS = [
     'reports',
     'odoo_db_manager.apps.OdooDbManagerConfig',  # تطبيق إدارة قواعد البيانات على طراز أودو
     'corsheaders',
-    'django_apscheduler', # إضافة مكتبة جدولة المهام
+    'django_apscheduler',  # إضافة مكتبة جدولة المهام
     'dbbackup',  # إضافة تطبيق النسخ الاحتياطي
     'rest_framework',
     'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist'  # إضافة دعم القائمة السوداء للتوكن
+    # إضافة دعم القائمة السوداء للتوكن
+    'rest_framework_simplejwt.token_blacklist'
 ]
 
 # Authentication backends
@@ -69,8 +92,9 @@ AUTH_USER_MODEL = 'accounts.User'
 # قائمة الوسطاء الأساسية
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    'crm.middleware.cloudflare_hosts.CloudflareHostsMiddleware',  # دعم تلقائي لـ Cloudflare
     'django.middleware.security.SecurityMiddleware',
-    'crm.middleware.CustomGZipMiddleware',  # وسيط الضغط المخصص
+    'crm.middleware.performance.CustomGZipMiddleware',  # وسيط الضغط المخصص
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -78,16 +102,16 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'crm.middleware.PerformanceMiddleware',  # وسيط قياس وتحسين الأداء
-    'crm.middleware.LazyLoadMiddleware',  # وسيط التحميل الكسول للصور
+    'crm.middleware.performance.PerformanceMiddleware',  # وسيط قياس وتحسين الأداء
+    'crm.middleware.performance.LazyLoadMiddleware',  # وسيط التحميل الكسول للصور
 ]
 
 # Disable debug toolbar temporarily
 if DEBUG:
     MIDDLEWARE.extend([
         # 'debug_toolbar.middleware.DebugToolbarMiddleware',
-        'crm.middleware.QueryPerformanceMiddleware',
-        'crm.middleware.PerformanceCookiesMiddleware',
+        'crm.middleware.performance.QueryPerformanceMiddleware',
+        'crm.middleware.performance.PerformanceCookiesMiddleware',
     ])
 
 ROOT_URLCONF = 'crm.urls'
@@ -152,7 +176,9 @@ else:
     try:
         # استيراد إعدادات قاعدة البيانات من odoo_db_manager
         try:
-            from odoo_db_manager.db_settings import get_active_database_settings, reset_to_default_settings
+            from odoo_db_manager.db_settings import (
+                get_active_database_settings
+            )
             print("تم استيراد إعدادات قاعدة البيانات من odoo_db_manager")
         except ImportError:
             print("فشل استيراد إعدادات قاعدة البيانات من odoo_db_manager")
@@ -161,14 +187,17 @@ else:
         db_settings = get_active_database_settings()
         active_db_id = db_settings.get('active_db')
 
-        if active_db_id and str(active_db_id) in db_settings.get('databases', {}):
+        if (active_db_id and
+                str(active_db_id) in db_settings.get('databases', {})):
             # استخدام إعدادات قاعدة البيانات النشطة
             active_db_settings = db_settings['databases'][str(active_db_id)]
 
             # استخدام إعدادات قاعدة البيانات النشطة
             DATABASES = {
                 'default': {
-                    'ENGINE': active_db_settings.get('ENGINE', 'django.db.backends.postgresql'),
+                    'ENGINE': active_db_settings.get(
+                        'ENGINE', 'django.db.backends.postgresql'
+                    ),
                     'NAME': active_db_settings.get('NAME', 'crm_system'),
                     'USER': active_db_settings.get('USER', 'crm_user'),
                     'PASSWORD': active_db_settings.get('PASSWORD', '5525'),
@@ -181,7 +210,10 @@ else:
                 }
             }
 
-            print(f"تم تحميل إعدادات قاعدة البيانات النشطة: {active_db_settings.get('NAME')}")
+            print(
+                f"تم تحميل إعدادات قاعدة البيانات النشطة: "
+                f"{active_db_settings.get('NAME')}"
+            )
         else:
             # استخدام إعدادات قاعدة البيانات الافتراضية
             DATABASES = {
@@ -226,16 +258,28 @@ DATABASES['default']['AUTOCOMMIT'] = True
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.'
+            'UserAttributeSimilarityValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.'
+            'MinimumLengthValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.'
+            'CommonPasswordValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.'
+            'NumericPasswordValidator'
+        ),
     },
 ]
 
@@ -303,8 +347,10 @@ REST_FRAMEWORK = {
 # إعدادات JWT (Simple JWT)
 from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),  # زيادة مدة صلاحية التوكن إلى 7 أيام
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),  # زيادة مدة صلاحية توكن التحديث إلى 30 يوم
+    # زيادة مدة صلاحية التوكن إلى 7 أيام
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    # زيادة مدة صلاحية توكن التحديث إلى 30 يوم
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
@@ -320,10 +366,11 @@ SIMPLE_JWT = {
 }
 
 # Security Settings for Production
-if not DEBUG and os.environ.get('ENABLE_SSL_SECURITY', 'false').lower() == 'true':
+if (not DEBUG and
+        os.environ.get('ENABLE_SSL_SECURITY', 'false').lower() == 'true'):
     # HTTPS/SSL Settings
     SECURE_SSL_REDIRECT = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # مهم لـ Railway
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
     # Session and CSRF Settings
     SESSION_COOKIE_SECURE = True
@@ -348,10 +395,11 @@ if not DEBUG and os.environ.get('ENABLE_SSL_SECURITY', 'false').lower() == 'true
 
     # Additional Security Headers
     CSRF_TRUSTED_ORIGINS = [
-        'https://*.up.railway.app',  # للسماح بالوصول من تطبيقات Railway
+        'https://*.trycloudflare.com',
+        'https://*.cloudflare.com',
     ]
 
-# CORS settings
+# CORS settings - إعدادات موحدة ومنظمة
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
@@ -359,11 +407,10 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5173',  # منفذ Vite الافتراضي
     'http://localhost:8000',
     'http://127.0.0.1:8000',
-    'https://*.up.railway.app',
-    'https://*.railway.app'
+    'https://*.trycloudflare.com',
+    'https://*.cloudflare.com'
 ]
 
-# تعديل إعدادات CORS الإضافية
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_EXPOSE_HEADERS = ['*']
@@ -379,7 +426,7 @@ CORS_ALLOW_HEADERS = [
     'origin',
     'user-agent',
     'x-requested-with',
-    'x-request-id',  # إضافة هذا الرأس المطلوب
+    'x-request-id',
 ]
 
 # تعطيل بعض إعدادات الأمان في بيئة التطوير
@@ -399,7 +446,9 @@ if DEBUG:
         'http://localhost:5173',  # منفذ Vite الافتراضي
         'http://127.0.0.1:5173',  # منفذ Vite الافتراضي
         'http://localhost:8000',
-        'http://127.0.0.1:8000'
+        'http://127.0.0.1:8000',
+        'https://*.trycloudflare.com',
+        'https://*.cloudflare.com'
     ]
 
     class DisableCSRFMiddleware:
@@ -421,7 +470,7 @@ SESSION_COOKIE_HTTPONLY = True
 # DEBUG is set from environment variable at the top of the file
 # Do not override it here
 
-# تحديث إعدادات CSRF
+# إعدادات CSRF موحدة مع دعم Cloudflare
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
@@ -429,8 +478,9 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:5173',  # منفذ Vite الافتراضي
     'http://localhost:8000',
     'http://127.0.0.1:8000',
-    'https://*.up.railway.app',
-    'https://*.railway.app'
+    'https://*.trycloudflare.com',  # دعم جميع روابط Cloudflare المؤقتة
+    'https://*.cloudflare.com',     # دعم جميع روابط Cloudflare
+    'https://*.cfargotunnel.com',   # دعم Cloudflare Argo Tunnel
 ]
 
 CSRF_COOKIE_SAMESITE = None
@@ -438,28 +488,14 @@ CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_SECURE = False
 
-# تحديث إعدادات Session
+# إعدادات Session موحدة
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = False
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 86400 * 7  # 7 أيام
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # استخدام قاعدة البيانات لتخزين الجلسات
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
-# إضافة إعدادات CORS_ORIGIN_WHITELIST
-CORS_ORIGIN_WHITELIST = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:5173',  # منفذ Vite الافتراضي
-    'http://127.0.0.1:5173',  # منفذ Vite الافتراضي
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'https://*.up.railway.app',
-    'https://*.railway.app'
-]
-
-# Security Settings
-CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_HTTPONLY = False  # Must be False to allow JavaScript access
+# Security Settings - تم دمجها مع إعدادات CSRF أعلاه
 CSRF_COOKIE_SECURE = False  # تعطيل في جميع البيئات لتجنب مشاكل المصادقة
 SESSION_COOKIE_SECURE = False  # تعطيل في جميع البيئات لتجنب مشاكل المصادقة
 
@@ -490,48 +526,37 @@ SESSION_CLEANUP_SCHEDULE = {
     'minute': 0,  # تنفيذ المهمة في الدقيقة 0
 }
 
-# إعدادات تحسين الأداء لـ Railway
-if os.environ.get('RAILWAY_ENVIRONMENT') or 'railway' in os.environ.get('PGHOST', ''):
-    # تقليل عدد الاستعلامات المسموح بها في صفحة واحدة
-    DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+# إعدادات تحسين الأداء
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
-    # تعطيل التسجيل المفصل في الإنتاج
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'handlers': {
-            'console': {
-                'class': 'logging.StreamHandler',
-                'level': 'INFO',  # تغيير مستوى التسجيل إلى INFO للحصول على مزيد من المعلومات
-            },
-        },
-        'loggers': {
-            'django': {
-                'handlers': ['console'],
-                'level': 'INFO',
-                'propagate': True,
-            },
-            'django.db.backends': {
-                'handlers': ['console'],
-                'level': 'WARNING',
-                'propagate': False,
-            },
-            'data_management': {  # إضافة تسجيل خاص لتطبيق data_management
-                'handlers': ['console'],
-                'level': 'INFO',
-                'propagate': True,
-            },
-        },
-        'root': {
-            'handlers': ['console'],
+# إعدادات التسجيل
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
             'level': 'INFO',
         },
-    }
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
 
-    # تقليل عدد الاتصالات المتزامنة بقاعدة البيانات
-    DATABASES['default']['CONN_MAX_AGE'] = 300  # 5 دقائق
-
-    # تعطيل التصحيح التلقائي للمخطط
-    DATABASES['default']['AUTOCOMMIT'] = True  # تمكين AUTOCOMMIT لتجنب مشاكل الاتصال
-
-    # تم نقل إعدادات قاعدة بيانات Railway إلى بداية الملف
+# تحسين إعدادات قاعدة البيانات
+DATABASES['default']['CONN_MAX_AGE'] = 300  # 5 دقائق
+DATABASES['default']['AUTOCOMMIT'] = True

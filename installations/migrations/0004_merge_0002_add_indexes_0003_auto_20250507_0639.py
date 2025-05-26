@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('installations', '0002_add_indexes'),
+        ('installations', '0002_installationissue_installationnotification_and_more'),
         ('installations', '0003_auto_20250507_0639'),
     ]
 

@@ -23,14 +23,14 @@ def get_active_database_settings():
         dict: إعدادات قاعدة البيانات النشطة
     """
     try:
-        # التحقق من وجود متغيرات البيئة الخاصة بـ Railway
+        # التحقق من وجود متغيرات البيئة الخاصة بقاعدة البيانات
         if 'DATABASE_URL' in os.environ:
-            # استخدام إعدادات Railway مباشرة
-            logger.info("تم اكتشاف بيئة Railway، استخدام إعدادات قاعدة البيانات من متغيرات البيئة")
-            print("تم اكتشاف بيئة Railway، استخدام إعدادات قاعدة البيانات من متغيرات البيئة")
+            # استخدام إعدادات قاعدة البيانات من متغيرات البيئة
+            logger.info("تم اكتشاف DATABASE_URL، استخدام إعدادات قاعدة البيانات من متغيرات البيئة")
+            print("تم اكتشاف DATABASE_URL، استخدام إعدادات قاعدة البيانات من متغيرات البيئة")
 
-            # إنشاء معرف فريد لقاعدة بيانات Railway
-            railway_db_id = 'railway_db'
+            # إنشاء معرف فريد لقاعدة البيانات
+            external_db_id = 'external_db'
 
             # طباعة معلومات متغيرات البيئة للتشخيص
             print(f"DATABASE_URL: {os.environ.get('DATABASE_URL')}")
@@ -39,13 +39,13 @@ def get_active_database_settings():
             import dj_database_url
             db_config = dj_database_url.parse(os.environ.get('DATABASE_URL'))
 
-            # إنشاء إعدادات قاعدة بيانات Railway
-            railway_settings = {
-                'active_db': railway_db_id,
+            # إنشاء إعدادات قاعدة البيانات الخارجية
+            external_settings = {
+                'active_db': external_db_id,
                 'databases': {
-                    railway_db_id: {
+                    external_db_id: {
                         'ENGINE': db_config.get('ENGINE', 'django.db.backends.postgresql'),
-                        'NAME': db_config.get('NAME', 'railway'),
+                        'NAME': db_config.get('NAME', 'external_db'),
                         'USER': db_config.get('USER', 'postgres'),
                         'PASSWORD': db_config.get('PASSWORD', ''),
                         'HOST': db_config.get('HOST', 'localhost'),
@@ -62,10 +62,10 @@ def get_active_database_settings():
             print(f"HOST: {db_config.get('HOST')}")
             print(f"PORT: {db_config.get('PORT')}")
 
-            # حفظ إعدادات Railway
-            save_database_settings(railway_settings)
+            # حفظ إعدادات قاعدة البيانات الخارجية
+            save_database_settings(external_settings)
 
-            return railway_settings
+            return external_settings
 
         # التحقق من وجود ملف الإعدادات
         if not os.path.exists(DB_SETTINGS_FILE):
@@ -108,23 +108,10 @@ def save_database_settings(settings):
         settings (dict): إعدادات قاعدة البيانات
     """
     try:
-        # التحقق مما إذا كنا في بيئة Railway
-        if os.environ.get('RAILWAY_ENVIRONMENT', '') == 'production':
-            # في بيئة Railway، نحاول حفظ الإعدادات ولكن لا نتوقف إذا فشلت العملية
-            try:
-                # حفظ ملف الإعدادات
-                with open(DB_SETTINGS_FILE, 'w') as f:
-                    json.dump(settings, f, indent=4)
-                logger.info("تم حفظ إعدادات قاعدة البيانات في بيئة Railway")
-            except Exception as railway_error:
-                logger.warning(f"تعذر حفظ إعدادات قاعدة البيانات في بيئة Railway: {str(railway_error)}")
-                # لا نرفع استثناء في بيئة Railway لأن الملفات قد تكون للقراءة فقط
-                pass
-        else:
-            # في البيئة المحلية، نحفظ الإعدادات كالمعتاد
-            with open(DB_SETTINGS_FILE, 'w') as f:
-                json.dump(settings, f, indent=4)
-            logger.info("تم حفظ إعدادات قاعدة البيانات في البيئة المحلية")
+        # حفظ ملف الإعدادات
+        with open(DB_SETTINGS_FILE, 'w') as f:
+            json.dump(settings, f, indent=4)
+        logger.info("تم حفظ إعدادات قاعدة البيانات")
     except Exception as e:
         logger.error(f"حدث خطأ أثناء حفظ إعدادات قاعدة البيانات: {str(e)}")
 
