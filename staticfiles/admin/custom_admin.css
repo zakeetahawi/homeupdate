@@ -1,0 +1,26 @@
+/* جعل لوحة المدير بكامل الشاشة في Jazzmin */
+
+/* إزالة الهوامش الجانبية */
+.content-wrapper, .main-footer, .main-header {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: 100vw !important;
+    width: 100vw !important;
+}
+
+/* جعل الحاوية الرئيسية تأخذ كامل العرض */
+.container-fluid, .container {
+    max-width: 100vw !important;
+    width: 100vw !important;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+/* توسعة الجدول الرئيسي */
+.table-responsive {
+    width: 100vw !important;
+    overflow-x: auto;
+}
+
+/* إخفاء الشعار الجانبي إذا أردت */
+/* .brand-link { display: none !important; } */

@@ -1,0 +1,70 @@
+/**
+ * أنماط CSS لبطاقات إدارة قواعد البيانات
+ */
+
+/* أنماط البطاقات */
+#db-test-card, #db-list-card {
+    border: 1px solid #e3e6f0;
+    transition: all 0.3s ease;
+}
+
+/* تأثير التحويم على البطاقات */
+#db-test-card:hover, #db-list-card:hover {
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+/* أنماط البطاقات الإحصائية */
+.card .numbers {
+    font-weight: 600;
+}
+
+.card .numbers p {
+    margin-bottom: 0.25rem;
+}
+
+.card .numbers h5 {
+    font-size: 1.5rem;
+    margin-bottom: 0;
+}
+
+.card .icon-shape {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card .icon-shape i {
+    font-size: 1.25rem;
+}
+
+/* أنماط الأزرار */
+#test-current-connection {
+    transition: all 0.2s ease;
+}
+
+#test-current-connection:hover {
+    transform: translateY(-2px);
+}
+
+#test-current-connection:active {
+    transform: translateY(0);
+}
+
+/* أنماط نتائج الاختبار */
+#connection-result {
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+/* أنماط جدول معلومات قاعدة البيانات */
+#db-info table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#db-info th {
+    width: 40%;
+    font-weight: 600;
+}
