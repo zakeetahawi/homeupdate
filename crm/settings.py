@@ -59,11 +59,11 @@ AUTHENTICATION_BACKENDS = [
 
 AUTH_USER_MODEL = 'accounts.User'
 
-# قائمة الوسطاء الأساسية
+# قائمة الوسطاء الأساسية (تم تعطيل الوسطاء المخصصة مؤقتاً)
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'crm.middleware.CustomGZipMiddleware',  # وسيط الضغط المخصص
+    'django.middleware.gzip.GZipMiddleware',  # استخدام وسيط Django الأساسي
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -71,16 +71,16 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'crm.middleware.PerformanceMiddleware',  # وسيط قياس وتحسين الأداء
-    'crm.middleware.LazyLoadMiddleware',  # وسيط التحميل الكسول للصور
+    # 'crm.middleware.PerformanceMiddleware',  # تم تعطيل مؤقتاً
+    # 'crm.middleware.LazyLoadMiddleware',  # تم تعطيل مؤقتاً
 ]
 
-# إضافة middleware إضافي في وضع التطوير
-if DEBUG:
-    MIDDLEWARE.extend([
-        'crm.middleware.QueryPerformanceMiddleware',
-        'crm.middleware.PerformanceCookiesMiddleware',
-    ])
+# تم تعطيل middleware إضافي مؤقتاً لحل مشكلة التحميل
+# if DEBUG:
+#     MIDDLEWARE.extend([
+#         'crm.middleware.QueryPerformanceMiddleware',
+#         'crm.middleware.PerformanceCookiesMiddleware',
+#     ])
 
 ROOT_URLCONF = 'crm.urls'
 
