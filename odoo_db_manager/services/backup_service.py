@@ -6,16 +6,13 @@ Supports full data backup and restore from files
 import os
 import subprocess
 import datetime
-import json
 import gzip
 import shutil
 import tempfile
 from django.conf import settings
 from django.core.management import call_command
-# تم إزالة imports غير المستخدمة
-from django.db import connection
-from django.contrib.auth.models import User
 from odoo_db_manager.models import Database, Backup
+
 
 class BackupService:
     """خدمة النسخ الاحتياطي المحسنة"""
@@ -60,34 +57,17 @@ class BackupService:
         print(f"معلومات الاتصال: {database.connection_info}")
 
         # تحديد نوع النسخة الاحتياطية ومسار الملف
-        if database.db_type == 'sqlite3' or settings.DATABASES['default']['ENGINE'].endswith('sqlite3'):
-            # استخدام نسخة مباشرة من ملف SQLite
-            db_file = settings.DATABASES['default']['NAME']
-            print(f"استخدام نسخة مباشرة من ملف SQLite: {db_file}")
+        # إنشاء مسار ملف النسخة الاحتياطية
+        file_path = os.path.join(backup_dir, f"{name}.json.gz")
+        print(f"مسار ملف النسخة الاحتياطية: {file_path}")
 
-            # إنشاء مسار ملف النسخة الاحتياطية
-            file_path = os.path.join(backup_dir, f"{name}.sqlite3")
-            print(f"مسار ملف النسخة الاحتياطية: {file_path}")
-
-            # نسخ ملف قاعدة البيانات مباشرة
-            try:
-                shutil.copy2(db_file, file_path)
-                print(f"تم نسخ ملف قاعدة البيانات بنجاح إلى: {file_path}")
-            except Exception as e:
-                print(f"حدث خطأ أثناء نسخ ملف قاعدة البيانات: {str(e)}")
-                raise RuntimeError(f"فشل إنشاء النسخة الاحتياطية: {str(e)}")
-        else:
-            # إنشاء مسار ملف النسخة الاحتياطية
-            file_path = os.path.join(backup_dir, f"{name}.json.gz")
-            print(f"مسار ملف النسخة الاحتياطية: {file_path}")
-
-            # استخدام Django dumpdata للنسخ الاحتياطي
-            print("استخدام Django dumpdata لإنشاء النسخة الاحتياطية")
-            self._create_django_backup(
-                database=database,
-                file_path=file_path,
-                backup_type=backup_type
-            )
+        # استخدام Django dumpdata للنسخ الاحتياطي
+        print("استخدام Django dumpdata لإنشاء النسخة الاحتياطية")
+        self._create_django_backup(
+            database=database,
+            file_path=file_path,
+            backup_type=backup_type
+        )
 
         # الحصول على حجم الملف
         size = os.path.getsize(file_path)
@@ -314,10 +294,6 @@ class BackupService:
             # التحقق من نوع الملف
             file_info = self._check_file_type(backup.file_path)
 
-            # إذا كان امتداد الملف .sqlite3، نضبط النوع على sqlite3 بغض النظر عن ما تم اكتشافه
-            if backup.file_path.endswith('.sqlite3'):
-                file_info['type'] = 'sqlite3'
-
             print(f"معلومات الملف: {file_info}")
 
             # التعامل مع ملفات pg_dump الثنائية
@@ -354,93 +330,6 @@ class BackupService:
                         f"يرجى استخدام ملفات JSON.gz بدلاً من ذلك."
                     )
             # استعادة النسخة الاحتياطية حسب نوع الملف
-            elif file_info['type'] == 'sqlite3':
-                # استعادة من ملف SQLite3
-                print("استعادة من ملف SQLite3")
-
-                # التحقق من وجود الملف
-                if not os.path.exists(backup.file_path):
-                    raise FileNotFoundError(f"ملف النسخة الاحتياطية '{backup.file_path}' غير موجود")
-
-                # الحصول على مسار ملف قاعدة البيانات الحالية
-                db_file = settings.DATABASES['default']['NAME']
-                print(f"مسار ملف قاعدة البيانات الحالية: {db_file}")
-
-                # حفظ معلومات النسخة الاحتياطية قبل استعادتها
-                backup_info = {
-                    'id': backup.id,
-                    'name': backup.name,
-                    'database_id': backup.database.id,
-                    'backup_type': backup.backup_type,
-                    'file_path': backup.file_path,
-                    'created_at': backup.created_at,
-                    'created_by_id': backup.created_by.id if backup.created_by else None
-                }
-
-                # إنشاء نسخة احتياطية من قاعدة البيانات الحالية قبل الاستبدال
-                backup_current_db = f"{db_file}.bak"
-                print(f"إنشاء نسخة احتياطية من قاعدة البيانات الحالية: {backup_current_db}")
-                shutil.copy2(db_file, backup_current_db)
-
-                try:
-                    # نسخ ملف النسخة الاحتياطية إلى مسار قاعدة البيانات الحالية
-                    print(f"استعادة قاعدة البيانات من: {backup.file_path}")
-                    shutil.copy2(backup.file_path, db_file)
-                    print("تمت استعادة قاعدة البيانات بنجاح")
-
-                    # إعادة إنشاء سجل النسخة الاحتياطية في قاعدة البيانات الجديدة
-
-                    # الحصول على قاعدة البيانات
-                    try:
-                        db = Database.objects.get(id=backup_info['database_id'])
-                    except Database.DoesNotExist:
-                        # إذا لم تكن قاعدة البيانات موجودة، نستخدم أول قاعدة بيانات متاحة
-                        db = Database.objects.first()
-                        if not db:
-                            # إذا لم تكن هناك قواعد بيانات، نقوم بإنشاء واحدة
-                            db = Database.objects.create(
-                                name="Default Database",
-                                db_type="sqlite3",
-                                connection_info={}
-                            )
-
-                    # الحصول على المستخدم
-                    user_id = backup_info['created_by_id']
-                    user = None
-                    if user_id:
-                        try:
-                            user = User.objects.get(id=user_id)
-                        except User.DoesNotExist:
-                            # إذا لم يكن المستخدم موجودًا، نستخدم أول مستخدم متاح
-                            user = User.objects.first()
-
-                    # إعادة إنشاء سجل النسخة الاحتياطية
-                    try:
-                        Backup.objects.get(id=backup_info['id'])
-                        print(f"سجل النسخة الاحتياطية موجود بالفعل: {backup_info['id']}")
-                    except Backup.DoesNotExist:
-                        print(f"إعادة إنشاء سجل النسخة الاحتياطية: {backup_info['id']}")
-                        Backup.objects.create(
-                            id=backup_info['id'],
-                            name=backup_info['name'],
-                            database=db,
-                            backup_type=backup_info['backup_type'],
-                            file_path=backup_info['file_path'],
-                            created_at=backup_info['created_at'],
-                            created_by=user
-                        )
-                except Exception as e:
-                    # استعادة النسخة الاحتياطية في حالة حدوث خطأ
-                    print(f"حدث خطأ أثناء استعادة قاعدة البيانات: {str(e)}")
-                    print(f"استعادة النسخة الاحتياطية من: {backup_current_db}")
-                    shutil.copy2(backup_current_db, db_file)
-                    raise RuntimeError(f"فشل استعادة قاعدة البيانات: {str(e)}")
-                finally:
-                    # حذف النسخة الاحتياطية المؤقتة
-                    if os.path.exists(backup_current_db):
-                        os.unlink(backup_current_db)
-                        print(f"تم حذف النسخة الاحتياطية المؤقتة: {backup_current_db}")
-
             elif file_info['type'] == 'json_gz':
                 # استعادة من ملف JSON مضغوط
                 print("استعادة من ملف JSON مضغوط")

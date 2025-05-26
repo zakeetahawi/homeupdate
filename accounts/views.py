@@ -1,3 +1,9 @@
+# filepath: c:\Users\zakee\Desktop\crm\accounts\views.py
+import logging
+import traceback
+import os
+from datetime import datetime, timedelta
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
@@ -21,12 +27,11 @@ from .forms import (
 # الحصول على نموذج المستخدم المخصص
 User = get_user_model()
 
+
 def login_view(request):
     """
     View for user login
     """
-    import logging
-    import traceback
     logger = logging.getLogger('django')
 
     # إعداد نموذج تسجيل الدخول الافتراضي
@@ -97,33 +102,47 @@ def login_view(request):
                 logger.error(traceback.format_exc())
                 messages.error(
                     request,
-                    'حدث خطأ أثناء محاولة تسجيل الدخول. يرجى المحاولة مرة أخرى.'
+                    'حدث خطأ أثناء محاولة تسجيل الدخول. '
+                    'يرجى المحاولة مرة أخرى.'
                 )
 
         # التحقق من وجود مستخدمين في النظام
         try:
-            from odoo_db_manager.models import SetupToken, DatabaseConfig
+            from odoo_db_manager.models import (
+                SetupToken, DatabaseConfig
+            )
 
             if User.objects.count() == 0:
-                # لا يوجد مستخدمين في النظام، توجيه المستخدم إلى صفحة الإعداد الأولي
-                logger.info("No users found in the system, redirecting to setup page")
+                # لا يوجد مستخدمين في النظام، توجيه المستخدم إلى صفحة
+                # الإعداد الأولي
+                logger.info(
+                    "No users found in the system, redirecting to setup page"
+                )
 
                 # التحقق من وجود رمز إعداد صالح
-                valid_token = SetupToken.objects.filter(is_used=False, is_expired=False).first()
+                valid_token = SetupToken.objects.filter(
+                    is_used=False, is_expired=False
+                ).first()
 
                 if not valid_token:
                     # إنشاء رمز إعداد جديد
-                    from datetime import datetime, timedelta
                     valid_token = SetupToken.objects.create(
                         expires_at=datetime.now() + timedelta(hours=24)
                     )
-                    messages.info(request, 'تم إنشاء رمز إعداد جديد للنظام. يرجى استخدامه لإعداد النظام لأول مرة.')
+                    messages.info(
+                        request,
+                        'تم إنشاء رمز إعداد جديد للنظام. '
+                        'يرجى استخدامه لإعداد النظام لأول مرة.'
+                    )
 
                 # التحقق من وجود قاعدة بيانات نشطة
-                if not DatabaseConfig.objects.filter(is_active=True).exists():
+                if not DatabaseConfig.objects.filter(
+                    is_active=True
+                ).exists():
                     # إنشاء قاعدة بيانات افتراضية
-                    import os
-                    logger.info("No active database found, creating default database")
+                    logger.info(
+                        "No active database found, creating default database"
+                    )
 
                     try:
                         # محاولة استخدام متغيرات البيئة
@@ -139,9 +158,14 @@ def login_view(request):
                             db_port = os.environ.get('PGPORT', '5432')
                             db_user = os.environ.get('PGUSER', 'postgres')
                             db_password = os.environ.get('PGPASSWORD', '')
-                            db_name = os.environ.get('PGDATABASE', 'postgres')
+                            db_name = os.environ.get(
+                                'PGDATABASE', 'postgres'
+                            )
 
-                            logger.info(f"Using PostgreSQL environment settings: {db_host}:{db_port}/{db_name}")
+                            logger.info(
+                                f"Using PostgreSQL environment settings: "
+                                f"{db_host}:{db_port}/{db_name}"
+                            )
 
                         DatabaseConfig.objects.create(
                             name="قاعدة البيانات الرئيسية",
@@ -155,7 +179,9 @@ def login_view(request):
                             is_default=True
                         )
                     except Exception as db_error:
-                        logger.error(f"Error creating default database: {db_error}")
+                        logger.error(
+                            f"Error creating default database: {db_error}"
+                        )
                         logger.error(traceback.format_exc())
 
                         # إنشاء قاعدة بيانات افتراضية بقيم ثابتة
@@ -173,17 +199,25 @@ def login_view(request):
 
                 # توجيه المستخدم إلى صفحة الإعداد
                 try:
-                    return redirect('odoo_db_manager:setup_with_token', token=valid_token.token)
+                    return redirect(
+                        'odoo_db_manager:setup_with_token',
+                        token=valid_token.token
+                    )
                 except Exception as redirect_error:
-                    logger.error(f"Error redirecting to setup page: {redirect_error}")
+                    logger.error(
+                        f"Error redirecting to setup page: {redirect_error}"
+                    )
                     logger.error(traceback.format_exc())
 
                     # محاولة توجيه بديلة
-                    return redirect(f'/odoo-db-manager/setup/{valid_token.token}/')
+                    return redirect(
+                        f'/odoo-db-manager/setup/{valid_token.token}/'
+                    )
         except Exception as setup_error:
             logger.error(f"[Setup Error] {setup_error}")
             logger.error(traceback.format_exc())
-            # لا نقوم بإعادة رفع الاستثناء هنا، بل نستمر في عرض نموذج تسجيل الدخول
+            # لا نقوم بإعادة رفع الاستثناء هنا، بل نستمر في عرض
+            # نموذج تسجيل الدخول
 
         # عرض نموذج تسجيل الدخول
         context = {
@@ -223,6 +257,7 @@ def admin_logout_view(request):
     messages.success(request, 'تم تسجيل الخروج بنجاح.')
     return redirect('admin:index')
 
+
 @login_required
 def profile_view(request):
     """
@@ -233,6 +268,7 @@ def profile_view(request):
         'title': 'الملف الشخصي',
     }
     return render(request, 'accounts/profile.html', context)
+
 
 @login_required
 def notifications_list(request):
@@ -265,6 +301,7 @@ def notifications_list(request):
     }
     return render(request, 'accounts/notifications.html', context)
 
+
 @login_required
 def notification_detail(request, notification_id):
     """
@@ -276,7 +313,10 @@ def notification_detail(request, notification_id):
     # Check if user has access to this notification
     user_notifications = get_user_notifications(request.user)
     if notification not in user_notifications:
-        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذا الإشعار.')
+        messages.error(
+            request,
+            'ليس لديك صلاحية للوصول إلى هذا الإشعار.'
+        )
         return redirect('accounts:notifications')
 
     # Mark notification as read
@@ -288,6 +328,7 @@ def notification_detail(request, notification_id):
         'title': notification.title,
     }
     return render(request, 'accounts/notification_detail.html', context)
+
 
 @login_required
 def mark_notification_read(request, notification_id):
@@ -311,7 +352,11 @@ def mark_notification_read(request, notification_id):
 
         return JsonResponse({'success': True})
 
-    return JsonResponse({'success': False, 'message': 'طريقة غير صالحة.'})
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة غير صالحة.'
+    })
+
 
 @login_required
 def mark_all_notifications_read(request):
@@ -333,17 +378,25 @@ def mark_all_notifications_read(request):
             'count': unread_notifications.count()
         })
 
-    return JsonResponse({'success': False, 'message': 'طريقة غير صالحة.'})
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة غير صالحة.'
+    })
+
 
 @login_required
 def company_info_view(request):
+    """
+    View for managing company information
+    """
     try:
         if not request.user.is_superuser:
-            messages.error(request, 'هذه الصفحة متاحة فقط لمديري النظام.')
+            messages.error(
+                request,
+                'هذه الصفحة متاحة فقط لمديري النظام.'
+            )
             return redirect('home')
-        """
-        View for managing company information
-        """
+
         # Get or create company info
         company, _ = CompanyInfo.objects.get_or_create(
             defaults={
@@ -360,7 +413,10 @@ def company_info_view(request):
             )
             if form.is_valid():
                 form.save()
-                messages.success(request, 'تم تحديث معلومات الشركة بنجاح.')
+                messages.success(
+                    request,
+                    'تم تحديث معلومات الشركة بنجاح.'
+                )
                 return redirect('accounts:company_info')
         else:
             form = CompanyInfoForm(instance=company)
@@ -373,14 +429,15 @@ def company_info_view(request):
 
         return render(request, 'accounts/company_info.html', context)
     except Exception as e:
-        import traceback
         print("[CompanyInfo Error]", e)
         traceback.print_exc()
         messages.error(
             request,
-            'حدث خطأ غير متوقع أثناء معالجة معلومات الشركة. يرجى مراجعة الدعم الفني.'
+            'حدث خطأ غير متوقع أثناء معالجة معلومات الشركة. '
+            'يرجى مراجعة الدعم الفني.'
         )
         return redirect('home')
+
 
 @staff_member_required
 def form_field_list(request):
@@ -409,6 +466,7 @@ def form_field_list(request):
 
     return render(request, 'accounts/form_field_list.html', context)
 
+
 @staff_member_required
 def form_field_create(request):
     """
@@ -431,6 +489,7 @@ def form_field_create(request):
     }
 
     return render(request, 'accounts/form_field_form.html', context)
+
 
 @staff_member_required
 def form_field_update(request, pk):
@@ -456,6 +515,7 @@ def form_field_update(request, pk):
 
     return render(request, 'accounts/form_field_form.html', context)
 
+
 @staff_member_required
 def form_field_delete(request, pk):
     """
@@ -475,6 +535,7 @@ def form_field_delete(request, pk):
 
     return render(request, 'accounts/form_field_confirm_delete.html', context)
 
+
 @staff_member_required
 def toggle_form_field(request, pk):
     """
@@ -491,9 +552,14 @@ def toggle_form_field(request, pk):
             'field_id': form_field.id
         })
 
-    return JsonResponse({'success': False, 'message': 'طريقة غير صالحة.'})
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة غير صالحة.'
+    })
+
 
 # إدارة الأقسام Department Management Views
+
 
 @staff_member_required
 def department_list(request):
@@ -540,6 +606,7 @@ def department_list(request):
 
     return render(request, 'accounts/department_list.html', context)
 
+
 @staff_member_required
 def department_create(request):
     """
@@ -560,6 +627,7 @@ def department_create(request):
     }
 
     return render(request, 'accounts/department_form.html', context)
+
 
 @staff_member_required
 def department_update(request, pk):
@@ -584,6 +652,7 @@ def department_update(request, pk):
     }
 
     return render(request, 'accounts/department_form.html', context)
+
 
 @staff_member_required
 def department_delete(request, pk):
@@ -612,6 +681,7 @@ def department_delete(request, pk):
 
     return render(request, 'accounts/department_confirm_delete.html', context)
 
+
 @staff_member_required
 def toggle_department(request, pk):
     """
@@ -628,9 +698,14 @@ def toggle_department(request, pk):
             'department_id': department.id
         })
 
-    return JsonResponse({'success': False, 'message': 'طريقة غير صالحة.'})
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة غير صالحة.'
+    })
+
 
 # إدارة البائعين Salesperson Management Views
+
 
 @staff_member_required
 def salesperson_list(request):
@@ -684,6 +759,7 @@ def salesperson_list(request):
 
     return render(request, 'accounts/salesperson_list.html', context)
 
+
 @staff_member_required
 def salesperson_create(request):
     """
@@ -704,6 +780,7 @@ def salesperson_create(request):
     }
 
     return render(request, 'accounts/salesperson_form.html', context)
+
 
 @staff_member_required
 def salesperson_update(request, pk):
@@ -729,6 +806,7 @@ def salesperson_update(request, pk):
 
     return render(request, 'accounts/salesperson_form.html', context)
 
+
 @staff_member_required
 def salesperson_delete(request, pk):
     """
@@ -741,7 +819,10 @@ def salesperson_delete(request, pk):
             salesperson.delete()
             messages.success(request, 'تم حذف البائع بنجاح.')
         except Exception:
-            messages.error(request, 'لا يمكن حذف البائع لارتباطه بسجلات أخرى.')
+            messages.error(
+                request,
+                'لا يمكن حذف البائع لارتباطه بسجلات أخرى.'
+            )
         return redirect('accounts:salesperson_list')
 
     context = {
@@ -750,6 +831,7 @@ def salesperson_delete(request, pk):
     }
 
     return render(request, 'accounts/salesperson_confirm_delete.html', context)
+
 
 @staff_member_required
 def toggle_salesperson(request, pk):
@@ -767,9 +849,14 @@ def toggle_salesperson(request, pk):
             'salesperson_id': salesperson.id
         })
 
-    return JsonResponse({'success': False, 'message': 'طريقة غير صالحة.'})
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة غير صالحة.'
+    })
+
 
 # إدارة الأدوار Role Management Views
+
 
 @staff_member_required
 def role_list(request):
@@ -781,7 +868,10 @@ def role_list(request):
     # بحث عن الأدوار
     search_query = request.GET.get('search', '')
     if search_query:
-        roles = roles.filter(name__icontains=search_query)
+        roles = roles.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
 
     # تصفية الأدوار
     role_type = request.GET.get('type', '')
@@ -807,6 +897,7 @@ def role_list(request):
 
     return render(request, 'accounts/role_list.html', context)
 
+
 @staff_member_required
 def role_create(request):
     """
@@ -816,7 +907,10 @@ def role_create(request):
         form = RoleForm(request.POST)
         if form.is_valid():
             role = form.save()
-            messages.success(request, f'تم إنشاء دور {role.name} بنجاح.')
+            messages.success(
+                request,
+                f'تم إنشاء دور {role.name} بنجاح.'
+            )
             return redirect('accounts:role_list')
     else:
         form = RoleForm()
@@ -828,6 +922,7 @@ def role_create(request):
 
     return render(request, 'accounts/role_form.html', context)
 
+
 @staff_member_required
 def role_update(request, pk):
     """
@@ -837,7 +932,10 @@ def role_update(request, pk):
 
     # لا يمكن تحديث أدوار النظام إلا للمشرفين
     if role.is_system_role and not request.user.is_superuser:
-        messages.error(request, 'لا يمكنك تعديل أدوار النظام الأساسية.')
+        messages.error(
+            request,
+            'لا يمكنك تعديل أدوار النظام الأساسية.'
+        )
         return redirect('accounts:role_list')
 
     if request.method == 'POST':
@@ -856,7 +954,10 @@ def role_update(request, pk):
                     for permission in ur.role.permissions.all():
                         user.user_permissions.add(permission)
 
-            messages.success(request, f'تم تحديث دور {role.name} بنجاح.')
+            messages.success(
+                request,
+                f'تم تحديث دور {role.name} بنجاح.'
+            )
             return redirect('accounts:role_list')
     else:
         form = RoleForm(instance=role)
@@ -869,6 +970,7 @@ def role_update(request, pk):
 
     return render(request, 'accounts/role_form.html', context)
 
+
 @staff_member_required
 def role_delete(request, pk):
     """
@@ -878,19 +980,23 @@ def role_delete(request, pk):
 
     # لا يمكن حذف أدوار النظام
     if role.is_system_role:
-        messages.error(request, 'لا يمكن حذف أدوار النظام الأساسية.')
+        messages.error(
+            request,
+            'لا يمكن حذف أدوار النظام الأساسية.'
+        )
         return redirect('accounts:role_list')
 
     if request.method == 'POST':
-        role_name = role.name
+        # فحص ما إذا كان الدور مستخدم من قبل أي مستخدم
+        if UserRole.objects.filter(role=role).exists():
+            messages.error(
+                request,
+                'لا يمكن حذف الدور لأنه مستخدم من قبل مستخدمين آخرين.'
+            )
+            return redirect('accounts:role_list')
 
-        # حذف علاقات الدور بالمستخدمين
-        UserRole.objects.filter(role=role).delete()
-
-        # حذف الدور
         role.delete()
-
-        messages.success(request, f'تم حذف دور {role_name} بنجاح.')
+        messages.success(request, f'تم حذف دور {role.name} بنجاح.')
         return redirect('accounts:role_list')
 
     context = {
@@ -899,6 +1005,7 @@ def role_delete(request, pk):
     }
 
     return render(request, 'accounts/role_confirm_delete.html', context)
+
 
 @staff_member_required
 def role_assign(request, pk):
@@ -935,6 +1042,7 @@ def role_assign(request, pk):
     }
 
     return render(request, 'accounts/role_assign_form.html', context)
+
 
 @staff_member_required
 def role_management(request):

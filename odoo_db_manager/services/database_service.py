@@ -28,14 +28,6 @@ class DatabaseService:
             # طباعة معلومات تشخيصية
             print(f"إنشاء قاعدة بيانات PostgreSQL: {name}")
             print(f"اسم قاعدة البيانات في PostgreSQL: {connection_info['NAME']}")
-        elif db_type == 'sqlite3':
-            # إذا لم يتم تحديد اسم ملف SQLite، استخدم الاسم المدخل
-            if 'NAME' not in connection_info or not connection_info['NAME']:
-                connection_info['NAME'] = f"{name}.sqlite3"
-
-            # طباعة معلومات تشخيصية
-            print(f"إنشاء قاعدة بيانات SQLite: {name}")
-            print(f"مسار ملف SQLite: {connection_info['NAME']}")
 
         try:
             # إنشاء قاعدة البيانات حسب النوع
@@ -250,8 +242,6 @@ class DatabaseService:
                 # تحديد نوع قاعدة البيانات من المحرك
                 if 'postgresql' in engine:
                     db_type = 'postgresql'
-                elif 'sqlite3' in engine:
-                    db_type = 'sqlite3'
                 else:
                     # تخطي قواعد البيانات غير المدعومة
                     continue
@@ -269,7 +259,7 @@ class DatabaseService:
                 try:
                     database = Database.objects.get(id=int(db_id))
                     # تحديث قاعدة البيانات الموجودة
-                    database.name = os.path.basename(db_name) if db_type == 'sqlite3' else db_name
+                    database.name = db_name
                     database.db_type = db_type
                     database.connection_info = connection_info
                     database.is_active = (active_db_id == int(db_id))
@@ -279,7 +269,7 @@ class DatabaseService:
                     # إنشاء قاعدة بيانات جديدة
                     database = Database.objects.create(
                         id=int(db_id),
-                        name=os.path.basename(db_name) if db_type == 'sqlite3' else db_name,
+                        name=db_name,
                         db_type=db_type,
                         connection_info=connection_info,
                         is_active=(active_db_id == int(db_id))
@@ -306,28 +296,12 @@ class DatabaseService:
                     host=database.connection_info.get('HOST', 'localhost'),
                     port=database.connection_info.get('PORT', '5432')
                 )
-            elif database.db_type == 'sqlite3':
-                # حذف قاعدة بيانات SQLite
-                self._delete_sqlite_database(
-                    name=database.connection_info.get('NAME', f"{database.name}.sqlite3")
-                )
         except Exception as e:
             # تسجيل الخطأ ولكن الاستمرار في حذف السجل
             print(f"تحذير: {str(e)}")
 
         # حذف سجل قاعدة البيانات
         database.delete()
-
-        return True
-
-    def _delete_sqlite_database(self, name):
-        """حذف قاعدة بيانات SQLite"""
-        # التأكد من وجود الملف
-        db_path = os.path.join(settings.BASE_DIR, name)
-
-        # حذف الملف إذا كان موجوداً
-        if os.path.exists(db_path):
-            os.remove(db_path)
 
         return True
 

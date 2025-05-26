@@ -69,13 +69,17 @@ def get_active_database_settings():
 
         # التحقق من وجود ملف الإعدادات
         if not os.path.exists(DB_SETTINGS_FILE):
-            # إنشاء ملف إعدادات افتراضي
+            # إنشاء ملف إعدادات افتراضي لـ PostgreSQL
             default_settings = {
-                'active_db': 7,  # استخدام SQLite كقاعدة بيانات افتراضية
+                'active_db': 1,  # استخدام PostgreSQL كقاعدة بيانات افتراضية
                 'databases': {
-                    '7': {
-                        'ENGINE': 'django.db.backends.sqlite3',
-                        'NAME': 'db.sqlite3',
+                    '1': {
+                        'ENGINE': 'django.db.backends.postgresql',
+                        'NAME': 'crm_system',
+                        'USER': 'postgres',
+                        'PASSWORD': '5525',
+                        'HOST': 'localhost',
+                        'PORT': '5432',
                     }
                 }
             }
@@ -89,13 +93,17 @@ def get_active_database_settings():
         return settings
     except Exception as e:
         logger.error(f"حدث خطأ أثناء قراءة إعدادات قاعدة البيانات: {str(e)}")
-        # إرجاع إعدادات SQLite الافتراضية في حالة حدوث خطأ
+        # إرجاع إعدادات PostgreSQL الافتراضية في حالة حدوث خطأ
         return {
-            'active_db': 7,
+            'active_db': 1,
             'databases': {
-                '7': {
-                    'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME': 'db.sqlite3',
+                '1': {
+                    'ENGINE': 'django.db.backends.postgresql',
+                    'NAME': 'crm_system',
+                    'USER': 'postgres',
+                    'PASSWORD': '5525',
+                    'HOST': 'localhost',
+                    'PORT': '5432',
                 }
             }
         }
@@ -120,13 +128,17 @@ def reset_to_default_settings():
     إعادة تعيين إعدادات قاعدة البيانات إلى الإعدادات الافتراضية
     """
     try:
-        # إنشاء ملف إعدادات افتراضي
+        # إنشاء ملف إعدادات افتراضي لـ PostgreSQL
         default_settings = {
-            'active_db': 7,  # استخدام SQLite كقاعدة بيانات افتراضية
+            'active_db': 1,  # استخدام PostgreSQL كقاعدة بيانات افتراضية
             'databases': {
-                '7': {
-                    'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME': 'db.sqlite3',
+                '1': {
+                    'ENGINE': 'django.db.backends.postgresql',
+                    'NAME': 'crm_system',
+                    'USER': 'postgres',
+                    'PASSWORD': '5525',
+                    'HOST': 'localhost',
+                    'PORT': '5432',
                 }
             }
         }

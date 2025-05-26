@@ -6,8 +6,6 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.utils import timezone
-import os
-import json
 import calendar
 from datetime import timedelta
 
@@ -16,7 +14,6 @@ class Database(models.Model):
 
     DB_TYPES = [
         ('postgresql', 'PostgreSQL'),
-        ('sqlite3', 'SQLite'),
     ]
 
     name = models.CharField(_('اسم قاعدة البيانات'), max_length=100)
@@ -43,9 +40,6 @@ class Database(models.Model):
             name = self.connection_info.get('NAME', self.name)
             user = self.connection_info.get('USER', '')
             return f"postgresql://{user}@{host}:{port}/{name}"
-        elif self.db_type == 'sqlite3':
-            name = self.connection_info.get('NAME', f"{self.name}.sqlite3")
-            return f"sqlite:///{name}"
         return ""
 
     @property
