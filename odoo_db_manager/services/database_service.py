@@ -28,6 +28,14 @@ class DatabaseService:
             # طباعة معلومات تشخيصية
             print(f"إنشاء قاعدة بيانات PostgreSQL: {name}")
             print(f"اسم قاعدة البيانات في PostgreSQL: {connection_info['NAME']}")
+        elif db_type == 'sqlite3':
+            # إذا لم يتم تحديد اسم ملف SQLite، استخدم الاسم المدخل
+            if 'NAME' not in connection_info or not connection_info['NAME']:
+                connection_info['NAME'] = f"{name}.sqlite3"
+
+            # طباعة معلومات تشخيصية
+            print(f"إنشاء قاعدة بيانات SQLite: {name}")
+            print(f"مسار ملف SQLite: {connection_info['NAME']}")
 
         try:
             # إنشاء قاعدة البيانات حسب النوع
@@ -219,12 +227,118 @@ class DatabaseService:
         with open(settings_file, 'w') as f:
             json.dump(db_settings, f, indent=4)
 
+    def discover_postgresql_databases(self):
+        """اكتشاف قواعد البيانات الموجودة في PostgreSQL"""
+        try:
+            # الحصول على معلومات الاتصال من متغيرات البيئة أو الإعدادات
+            if os.environ.get('DATABASE_URL'):
+                import dj_database_url
+                db_config = dj_database_url.parse(os.environ.get('DATABASE_URL'))
+                user = db_config.get('USER', 'postgres')
+                password = db_config.get('PASSWORD', '')
+                host = db_config.get('HOST', 'localhost')
+                port = str(db_config.get('PORT', '5432'))
+            else:
+                user = os.environ.get('DB_USER', 'postgres')
+                password = os.environ.get('DB_PASSWORD', '5525')
+                host = os.environ.get('DB_HOST', 'localhost')
+                port = os.environ.get('DB_PORT', '5432')
+
+            # التحقق من وجود أداة psql
+            if not self._check_command_exists('psql'):
+                print("أداة psql غير موجودة. لا يمكن اكتشاف قواعد البيانات.")
+                return []
+
+            # استعلام للحصول على قائمة قواعد البيانات
+            env = os.environ.copy()
+            env['PGPASSWORD'] = password
+
+            list_cmd = [
+                'psql',
+                '-h', host,
+                '-p', port,
+                '-U', user,
+                '-t',  # بدون عناوين
+                '-c', "SELECT datname FROM pg_database WHERE datistemplate = false;"
+            ]
+
+            result = subprocess.run(list_cmd, env=env, check=True,
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  text=True)
+
+            # تحليل النتيجة
+            databases = []
+            for line in result.stdout.splitlines():
+                db_name = line.strip()
+                if db_name and db_name not in ['postgres', 'template0', 'template1']:
+                    databases.append({
+                        'name': db_name,
+                        'type': 'postgresql',
+                        'connection_info': {
+                            'ENGINE': 'django.db.backends.postgresql',
+                            'NAME': db_name,
+                            'USER': user,
+                            'PASSWORD': password,
+                            'HOST': host,
+                            'PORT': port,
+                        }
+                    })
+
+            print(f"تم اكتشاف {len(databases)} قاعدة بيانات في PostgreSQL")
+            return databases
+
+        except Exception as e:
+            print(f"خطأ في اكتشاف قواعد البيانات: {str(e)}")
+            return []
+
+    def sync_discovered_databases(self):
+        """مزامنة قواعد البيانات المكتشفة مع النظام"""
+        discovered_dbs = self.discover_postgresql_databases()
+
+        if not discovered_dbs:
+            return
+
+        synced_count = 0
+        for db_info in discovered_dbs:
+            try:
+                # التحقق من وجود قاعدة البيانات في النظام
+                existing_db = Database.objects.filter(
+                    name=db_info['name'],
+                    db_type='postgresql'
+                ).first()
+
+                if not existing_db:
+                    # إنشاء قاعدة بيانات جديدة في النظام
+                    database = Database.objects.create(
+                        name=db_info['name'],
+                        db_type='postgresql',
+                        connection_info=db_info['connection_info'],
+                        is_active=False  # لا نجعلها نشطة تلقائياً
+                    )
+                    print(f"تم إضافة قاعدة البيانات المكتشفة: {db_info['name']}")
+                    synced_count += 1
+                else:
+                    # تحديث معلومات الاتصال إذا لزم الأمر
+                    existing_db.connection_info = db_info['connection_info']
+                    existing_db.save()
+                    print(f"تم تحديث قاعدة البيانات: {db_info['name']}")
+
+            except Exception as e:
+                print(f"خطأ في مزامنة قاعدة البيانات {db_info['name']}: {str(e)}")
+
+        if synced_count > 0:
+            print(f"تم مزامنة {synced_count} قاعدة بيانات جديدة مع النظام")
+
     def sync_databases_from_settings(self):
         """مزامنة قواعد البيانات من ملف الإعدادات"""
+        # إذا كان DATABASE_URL موجود، لا نحتاج لملف الإعدادات
+        if os.environ.get('DATABASE_URL'):
+            return
+
         # قراءة ملف الإعدادات
         settings_file = os.path.join(settings.BASE_DIR, 'db_settings.json')
         if not os.path.exists(settings_file):
-            print("ملف الإعدادات غير موجود")
+            # لا نطبع رسالة إذا كان DATABASE_URL موجود
             return
 
         try:
@@ -242,6 +356,8 @@ class DatabaseService:
                 # تحديد نوع قاعدة البيانات من المحرك
                 if 'postgresql' in engine:
                     db_type = 'postgresql'
+                elif 'sqlite3' in engine:
+                    db_type = 'sqlite3'
                 else:
                     # تخطي قواعد البيانات غير المدعومة
                     continue
@@ -259,7 +375,7 @@ class DatabaseService:
                 try:
                     database = Database.objects.get(id=int(db_id))
                     # تحديث قاعدة البيانات الموجودة
-                    database.name = db_name
+                    database.name = os.path.basename(db_name) if db_type == 'sqlite3' else db_name
                     database.db_type = db_type
                     database.connection_info = connection_info
                     database.is_active = (active_db_id == int(db_id))
@@ -269,7 +385,7 @@ class DatabaseService:
                     # إنشاء قاعدة بيانات جديدة
                     database = Database.objects.create(
                         id=int(db_id),
-                        name=db_name,
+                        name=os.path.basename(db_name) if db_type == 'sqlite3' else db_name,
                         db_type=db_type,
                         connection_info=connection_info,
                         is_active=(active_db_id == int(db_id))
@@ -296,12 +412,28 @@ class DatabaseService:
                     host=database.connection_info.get('HOST', 'localhost'),
                     port=database.connection_info.get('PORT', '5432')
                 )
+            elif database.db_type == 'sqlite3':
+                # حذف قاعدة بيانات SQLite
+                self._delete_sqlite_database(
+                    name=database.connection_info.get('NAME', f"{database.name}.sqlite3")
+                )
         except Exception as e:
             # تسجيل الخطأ ولكن الاستمرار في حذف السجل
             print(f"تحذير: {str(e)}")
 
         # حذف سجل قاعدة البيانات
         database.delete()
+
+        return True
+
+    def _delete_sqlite_database(self, name):
+        """حذف قاعدة بيانات SQLite"""
+        # التأكد من وجود الملف
+        db_path = os.path.join(settings.BASE_DIR, name)
+
+        # حذف الملف إذا كان موجوداً
+        if os.path.exists(db_path):
+            os.remove(db_path)
 
         return True
 

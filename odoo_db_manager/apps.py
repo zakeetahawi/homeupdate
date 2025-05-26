@@ -22,6 +22,9 @@ class OdooDbManagerConfig(AppConfig):
             database_service = DatabaseService()
             database_service.sync_databases_from_settings()
 
+            # اكتشاف ومزامنة قواعد البيانات الموجودة في PostgreSQL
+            database_service.sync_discovered_databases()
+
             # بدء تشغيل خدمة النسخ الاحتياطية المجدولة
             import os
             if os.environ.get('RUN_MAIN', None) != 'true':

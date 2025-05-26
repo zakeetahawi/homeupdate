@@ -13,6 +13,7 @@ urlpatterns = [
 
     # قواعد البيانات
     path('databases/', views.database_list, name='database_list'),
+    path('databases/discover/', views.database_discover, name='database_discover'),
     path('databases/create/', views.database_create, name='database_create'),
     path('databases/<int:pk>/', views.database_detail, name='database_detail'),
     path('databases/<int:pk>/activate/', views.database_activate, name='activate_database'),

@@ -20,67 +20,6 @@ from .services.database_service import DatabaseService
 from .services.scheduled_backup_service import scheduled_backup_service
 from .forms import BackupScheduleForm
 
-
-def _clear_system_cache():
-    """
-    تنظيف شامل للنظام بعد عملية الاستعادة
-    """
-    try:
-        print("🧹 بدء تنظيف النظام...")
-
-        # 1. مسح Django Cache
-        from django.core.cache import cache
-        cache.clear()
-        print("✅ تم مسح Django Cache")
-
-        # 2. إغلاق جميع اتصالات قاعدة البيانات
-        from django.db import connections
-        for conn in connections.all():
-            conn.close()
-        print("✅ تم إغلاق اتصالات قاعدة البيانات")
-
-        # 3. حذف الجلسات النشطة
-        from django.contrib.sessions.models import Session
-        Session.objects.all().delete()
-        print("✅ تم حذف الجلسات النشطة")
-
-        # 4. تنظيف ORM Cache
-        from django.apps import apps
-        for app in apps.get_app_configs():
-            for model in app.get_models():
-                if hasattr(model, '_meta'):
-                    model._meta._expire_cache()
-                if hasattr(model, '_state'):
-                    model._state.db = None
-        print("✅ تم تنظيف ORM Cache")
-
-        # 5. تنظيف Garbage Collection
-        import gc
-        gc.collect()
-        print("✅ تم تنظيف الذاكرة")
-
-        # 6. إعادة تحميل النماذج
-        import sys
-        import importlib
-        modules_to_reload = []
-        for name in sys.modules.keys():
-            if any(app in name for app in ['customers', 'orders', 'inventory', 'accounts']):
-                modules_to_reload.append(name)
-
-        for module_name in modules_to_reload:
-            if module_name in sys.modules:
-                try:
-                    importlib.reload(sys.modules[module_name])
-                except Exception:
-                    pass
-
-        print(f"✅ تم إعادة تحميل {len(modules_to_reload)} module")
-        print("🎉 تم التنظيف الشامل بنجاح!")
-
-    except Exception as e:
-        print(f"⚠️ خطأ في تنظيف النظام: {str(e)}")
-        # لا نرفع الخطأ لأن التنظيف اختياري
-
 def is_staff_or_superuser(user):
     """التحقق من أن المستخدم موظف أو مدير"""
     return user.is_staff or user.is_superuser
@@ -134,6 +73,58 @@ def database_list(request):
     }
 
     return render(request, 'odoo_db_manager/database_list.html', context)
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def database_discover(request):
+    """اكتشاف قواعد البيانات الموجودة في PostgreSQL"""
+    if request.method == 'POST':
+        try:
+            # اكتشاف ومزامنة قواعد البيانات
+            database_service = DatabaseService()
+            database_service.sync_discovered_databases()
+
+            messages.success(request, _('تم اكتشاف ومزامنة قواعد البيانات بنجاح.'))
+        except Exception as e:
+            messages.error(request, _(f'حدث خطأ أثناء اكتشاف قواعد البيانات: {str(e)}'))
+
+        return redirect('odoo_db_manager:database_list')
+
+    # عرض قواعد البيانات المكتشفة قبل المزامنة
+    try:
+        database_service = DatabaseService()
+        discovered_dbs = database_service.discover_postgresql_databases()
+
+        # التحقق من قواعد البيانات الموجودة في النظام
+        existing_dbs = Database.objects.filter(db_type='postgresql').values_list('name', flat=True)
+
+        # تصنيف قواعد البيانات
+        new_dbs = []
+        existing_in_system = []
+
+        for db_info in discovered_dbs:
+            if db_info['name'] in existing_dbs:
+                existing_in_system.append(db_info)
+            else:
+                new_dbs.append(db_info)
+
+        context = {
+            'discovered_dbs': discovered_dbs,
+            'new_dbs': new_dbs,
+            'existing_in_system': existing_in_system,
+            'title': _('اكتشاف قواعد البيانات'),
+        }
+
+    except Exception as e:
+        messages.error(request, _(f'حدث خطأ أثناء اكتشاف قواعد البيانات: {str(e)}'))
+        context = {
+            'discovered_dbs': [],
+            'new_dbs': [],
+            'existing_in_system': [],
+            'title': _('اكتشاف قواعد البيانات'),
+        }
+
+    return render(request, 'odoo_db_manager/database_discover.html', context)
 
 @login_required
 @user_passes_test(is_staff_or_superuser)
@@ -544,10 +535,7 @@ def backup_restore(request, pk):
                     _restore_json_simple(backup.file_path)
                 else:
                     raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON.")
-                # تنظيف شامل للنظام بعد الاستعادة الناجحة
-            _clear_system_cache()
-
-            messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
+                messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
 
             return redirect('odoo_db_manager:dashboard')
         except Exception as e:
@@ -716,9 +704,6 @@ def backup_upload(request, database_id=None):
                 _restore_json_simple(file_path)
 
             print("🎉 تمت الاستعادة بنجاح!")
-
-            # تنظيف شامل للنظام بعد الاستعادة الناجحة
-            _clear_system_cache()
 
             messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
             return redirect('odoo_db_manager:database_detail', pk=database_id)
@@ -892,12 +877,8 @@ def schedule_delete(request, pk):
                     backup.delete()
 
             # حذف الجدولة من المجدول
-            if scheduled_backup_service.scheduler:
-                job_id = f"backup_{schedule.id}"
-                try:
-                    scheduled_backup_service.scheduler.remove_job(job_id)
-                except:
-                    pass
+            job_id = f"backup_{schedule.id}"
+            scheduled_backup_service.remove_job(job_id)
 
             # حذف جدولة النسخة الاحتياطية
             schedule.delete()
@@ -933,12 +914,8 @@ def schedule_toggle(request, pk):
         scheduled_backup_service._schedule_backup(schedule)
         messages.success(request, _('تم تنشيط جدولة النسخة الاحتياطية بنجاح.'))
     else:
-        if scheduled_backup_service.scheduler:
-            job_id = f"backup_{schedule.id}"
-            try:
-                scheduled_backup_service.scheduler.remove_job(job_id)
-            except:
-                pass
+        job_id = f"backup_{schedule.id}"
+        scheduled_backup_service.remove_job(job_id)
         messages.success(request, _('تم إيقاف جدولة النسخة الاحتياطية بنجاح.'))
 
     return redirect('odoo_db_manager:schedule_detail', pk=schedule.pk)
@@ -953,7 +930,7 @@ def schedule_run_now(request, pk):
 
     try:
         # تشغيل الجدولة الآن
-        backup = scheduled_backup_service._create_backup(schedule.id)
+        backup = scheduled_backup_service.run_job_now(schedule.id)
         if backup:
             messages.success(request, _('تم إنشاء النسخة الاحتياطية بنجاح.'))
         else:

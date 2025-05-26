@@ -3,9 +3,7 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
-# import django
-
-# Excluir Debug Toolbar cuando se ejecutan pruebas
+# تحديد ما إذا كان النظام في وضع الاختبار
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
 # تحميل متغيرات البيئة من ملف .env
@@ -19,34 +17,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # تفعيل وضع التطوير بشكل دائم للكشف عن الأخطاء
-DEBUG = os.environ.get('DEBUG', 'True').lower() in [
-    'true', 't', '1', 'yes', 'y'
-]
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ['true', 't', '1', 'yes', 'y']
 
-# تفعيل تتبع الأخطاء في الإنتاج
-# RAILWAY_DEBUG = os.environ.get('RAILWAY_DEBUG', 'True').lower() in ['true', 't', '1', 'yes', 'y']
-
-# إعداد ALLOWED_HOSTS لدعم جميع المنصات والروابط
-ALLOWED_HOSTS_DEFAULT = [
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    '*.trycloudflare.com',  # دعم جميع روابط Cloudflare المؤقتة
-    '*.cloudflare.com',     # دعم جميع روابط Cloudflare
-    '*.cfargotunnel.com',   # دعم Cloudflare Argo Tunnel
-    '*.ngrok.io',
-    '*.ngrok-free.app',
-]
-
-# دمج ALLOWED_HOSTS من متغير البيئة مع القائمة الافتراضية
-env_hosts = os.environ.get(
-    'ALLOWED_HOSTS',
-    ','.join(ALLOWED_HOSTS_DEFAULT)
-).split(',')
-ALLOWED_HOSTS = list(set(ALLOWED_HOSTS_DEFAULT + env_hosts))  # إزالة التكرارات
-
-# إضافة دعم تلقائي لجميع روابط Cloudflare
-ALLOWED_HOSTS.append('*')  # السماح لجميع النطاقات (للتطوير والاختبار)
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -68,12 +41,11 @@ INSTALLED_APPS = [
     'reports',
     'odoo_db_manager.apps.OdooDbManagerConfig',  # تطبيق إدارة قواعد البيانات على طراز أودو
     'corsheaders',
-    'django_apscheduler',  # إضافة مكتبة جدولة المهام
+    'django_apscheduler', # إضافة مكتبة جدولة المهام
     'dbbackup',  # إضافة تطبيق النسخ الاحتياطي
     'rest_framework',
     'rest_framework_simplejwt',
-    # إضافة دعم القائمة السوداء للتوكن
-    'rest_framework_simplejwt.token_blacklist'
+    'rest_framework_simplejwt.token_blacklist'  # إضافة دعم القائمة السوداء للتوكن
 ]
 
 # Authentication backends
@@ -83,18 +55,15 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 
-# Disable debug toolbar temporarily
-# if not TESTING and DEBUG:
-#     INSTALLED_APPS += ['debug_toolbar']
+# Debug toolbar معطل مؤقت<|im_start|> لتحسين الأداء
 
 AUTH_USER_MODEL = 'accounts.User'
 
 # قائمة الوسطاء الأساسية
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
-    'crm.middleware.cloudflare_hosts.CloudflareHostsMiddleware',  # دعم تلقائي لـ Cloudflare
     'django.middleware.security.SecurityMiddleware',
-    'crm.middleware.performance.CustomGZipMiddleware',  # وسيط الضغط المخصص
+    'crm.middleware.CustomGZipMiddleware',  # وسيط الضغط المخصص
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -102,16 +71,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'crm.middleware.performance.PerformanceMiddleware',  # وسيط قياس وتحسين الأداء
-    'crm.middleware.performance.LazyLoadMiddleware',  # وسيط التحميل الكسول للصور
+    'crm.middleware.PerformanceMiddleware',  # وسيط قياس وتحسين الأداء
+    'crm.middleware.LazyLoadMiddleware',  # وسيط التحميل الكسول للصور
 ]
 
-# Disable debug toolbar temporarily
+# إضافة middleware إضافي في وضع التطوير
 if DEBUG:
     MIDDLEWARE.extend([
-        # 'debug_toolbar.middleware.DebugToolbarMiddleware',
-        'crm.middleware.performance.QueryPerformanceMiddleware',
-        'crm.middleware.performance.PerformanceCookiesMiddleware',
+        'crm.middleware.QueryPerformanceMiddleware',
+        'crm.middleware.PerformanceCookiesMiddleware',
     ])
 
 ROOT_URLCONF = 'crm.urls'
@@ -137,149 +105,68 @@ TEMPLATES = [
     },
 ]
 
-ASGI_APPLICATION = 'crm.asgi.application'
 WSGI_APPLICATION = 'crm.wsgi.application'
 
-# Channels configuration
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")],
-        },
-    },
-}
+# تم إزالة إعدادات Channels و Redis لأنها غير مستخدمة
+# ASGI_APPLICATION = 'crm.asgi.application'
+# CHANNEL_LAYERS = {...}
 
-# Database
-# استخدام DATABASE_URL مباشرة إذا كان متاحًا
-if os.environ.get('DATABASE_URL'):
-    print(f"استخدام DATABASE_URL: {os.environ.get('DATABASE_URL')}")
-    DATABASES = {
-        'default': dj_database_url.config(
+# Database Configuration (تم تبسيط المنطق)
+def get_database_config():
+    """تحديد إعدادات قاعدة البيانات بطريقة مبسطة"""
+    # الإعدادات الافتراضية
+    default_config = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'crm_system'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', '5525'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+        'ATOMIC_REQUESTS': False,
+        'AUTOCOMMIT': True,
+        'CONN_MAX_AGE': 600,
+        'CONN_HEALTH_CHECKS': True,
+    }
+
+    # إذا كان DATABASE_URL متاح، استخدمه (أولوية عالية)
+    if os.environ.get('DATABASE_URL'):
+        return dj_database_url.config(
             default=os.environ.get('DATABASE_URL'),
             conn_max_age=600,
             conn_health_checks=True,
         )
-    }
-    print("تم تكوين قاعدة البيانات من DATABASE_URL")
 
-    # طباعة معلومات قاعدة البيانات للتشخيص
-    db_config = DATABASES['default']
-    print(f"معلومات قاعدة البيانات:")
-    print(f"ENGINE: {db_config.get('ENGINE')}")
-    print(f"NAME: {db_config.get('NAME')}")
-    print(f"USER: {db_config.get('USER')}")
-    print(f"HOST: {db_config.get('HOST')}")
-    print(f"PORT: {db_config.get('PORT')}")
-else:
-    # محاولة تحميل إعدادات قاعدة البيانات من الملف الخارجي
+    # محاولة تحميل إعدادات من odoo_db_manager
     try:
-        # استيراد إعدادات قاعدة البيانات من odoo_db_manager
-        try:
-            from odoo_db_manager.db_settings import (
-                get_active_database_settings
-            )
-            print("تم استيراد إعدادات قاعدة البيانات من odoo_db_manager")
-        except ImportError:
-            print("فشل استيراد إعدادات قاعدة البيانات من odoo_db_manager")
-
-        # الحصول على إعدادات قاعدة البيانات النشطة
+        from odoo_db_manager.db_settings import get_active_database_settings
         db_settings = get_active_database_settings()
         active_db_id = db_settings.get('active_db')
 
-        if (active_db_id and
-                str(active_db_id) in db_settings.get('databases', {})):
-            # استخدام إعدادات قاعدة البيانات النشطة
+        if active_db_id and str(active_db_id) in db_settings.get('databases', {}):
             active_db_settings = db_settings['databases'][str(active_db_id)]
+            # دمج الإعدادات النشطة مع الافتراضية
+            default_config.update(active_db_settings)
+            return default_config
+    except (ImportError, Exception):
+        pass
 
-            # استخدام إعدادات قاعدة البيانات النشطة
-            DATABASES = {
-                'default': {
-                    'ENGINE': active_db_settings.get(
-                        'ENGINE', 'django.db.backends.postgresql'
-                    ),
-                    'NAME': active_db_settings.get('NAME', 'crm_system'),
-                    'USER': active_db_settings.get('USER', 'crm_user'),
-                    'PASSWORD': active_db_settings.get('PASSWORD', '5525'),
-                    'HOST': active_db_settings.get('HOST', 'localhost'),
-                    'PORT': active_db_settings.get('PORT', '5432'),
-                    'ATOMIC_REQUESTS': False,
-                    'AUTOCOMMIT': True,
-                    'CONN_MAX_AGE': 600,
-                    'CONN_HEALTH_CHECKS': True,
-                }
-            }
+    return default_config
 
-            print(
-                f"تم تحميل إعدادات قاعدة البيانات النشطة: "
-                f"{active_db_settings.get('NAME')}"
-            )
-        else:
-            # استخدام إعدادات قاعدة البيانات الافتراضية
-            DATABASES = {
-                'default': {
-                    'ENGINE': 'django.db.backends.postgresql',
-                    'NAME': os.environ.get('DB_NAME', 'crm_system'),
-                    'USER': os.environ.get('DB_USER', 'crm_user'),
-                    'PASSWORD': os.environ.get('DB_PASSWORD', '5525'),
-                    'HOST': os.environ.get('DB_HOST', 'localhost'),
-                    'PORT': os.environ.get('DB_PORT', '5432'),
-                    'ATOMIC_REQUESTS': False,
-                    'AUTOCOMMIT': True,
-                    'CONN_MAX_AGE': 600,
-                    'CONN_HEALTH_CHECKS': True,
-                }
-            }
-
-            print("تم تحميل إعدادات قاعدة البيانات الافتراضية")
-    except Exception as e:
-        # في حالة حدوث خطأ، استخدم الإعدادات الافتراضية
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': os.environ.get('DB_NAME', 'crm_system'),
-                'USER': os.environ.get('DB_USER', 'crm_user'),
-                'PASSWORD': os.environ.get('DB_PASSWORD', '5525'),
-                'HOST': os.environ.get('DB_HOST', 'localhost'),
-                'PORT': os.environ.get('DB_PORT', '5432'),
-                'ATOMIC_REQUESTS': False,
-                'AUTOCOMMIT': True,
-                'CONN_MAX_AGE': 600,
-                'CONN_HEALTH_CHECKS': True,
-            }
-        }
-
-        print(f"حدث خطأ أثناء تحميل إعدادات قاعدة البيانات: {str(e)}")
-
-# إضافة إعدادات إضافية لقاعدة البيانات
-DATABASES['default']['ATOMIC_REQUESTS'] = False
-DATABASES['default']['AUTOCOMMIT'] = True
+DATABASES = {'default': get_database_config()}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': (
-            'django.contrib.auth.password_validation.'
-            'UserAttributeSimilarityValidator'
-        ),
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': (
-            'django.contrib.auth.password_validation.'
-            'MinimumLengthValidator'
-        ),
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
-        'NAME': (
-            'django.contrib.auth.password_validation.'
-            'CommonPasswordValidator'
-        ),
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME': (
-            'django.contrib.auth.password_validation.'
-            'NumericPasswordValidator'
-        ),
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
 
@@ -347,10 +234,8 @@ REST_FRAMEWORK = {
 # إعدادات JWT (Simple JWT)
 from datetime import timedelta
 SIMPLE_JWT = {
-    # زيادة مدة صلاحية التوكن إلى 7 أيام
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
-    # زيادة مدة صلاحية توكن التحديث إلى 30 يوم
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),  # زيادة مدة صلاحية التوكن إلى 7 أيام
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),  # زيادة مدة صلاحية توكن التحديث إلى 30 يوم
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
@@ -366,8 +251,7 @@ SIMPLE_JWT = {
 }
 
 # Security Settings for Production
-if (not DEBUG and
-        os.environ.get('ENABLE_SSL_SECURITY', 'false').lower() == 'true'):
+if not DEBUG and os.environ.get('ENABLE_SSL_SECURITY', 'false').lower() == 'true':
     # HTTPS/SSL Settings
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -395,11 +279,11 @@ if (not DEBUG and
 
     # Additional Security Headers
     CSRF_TRUSTED_ORIGINS = [
-        'https://*.trycloudflare.com',
-        'https://*.cloudflare.com',
+        'https://localhost',
+        'https://127.0.0.1',
     ]
 
-# CORS settings - إعدادات موحدة ومنظمة
+# CORS settings (تم دمج الإعدادات المكررة)
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
@@ -407,9 +291,9 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5173',  # منفذ Vite الافتراضي
     'http://localhost:8000',
     'http://127.0.0.1:8000',
-    'https://*.trycloudflare.com',
-    'https://*.cloudflare.com'
 ]
+
+CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS  # استخدام نفس القائمة
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
@@ -429,27 +313,10 @@ CORS_ALLOW_HEADERS = [
     'x-request-id',
 ]
 
-# تعطيل بعض إعدادات الأمان في بيئة التطوير
-if DEBUG:
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
-    CORS_ALLOW_ALL_ORIGINS = True
-    CORS_ALLOW_CREDENTIALS = True
-    JWT_AUTH_COOKIE_SECURE = False
-    JWT_AUTH_SECURE = False
+# تم دمج إعدادات الأمان أدناه
 
 # Disable CSRF for /api/ endpoints in development
 if DEBUG:
-    CSRF_TRUSTED_ORIGINS = [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://localhost:5173',  # منفذ Vite الافتراضي
-        'http://127.0.0.1:5173',  # منفذ Vite الافتراضي
-        'http://localhost:8000',
-        'http://127.0.0.1:8000',
-        'https://*.trycloudflare.com',
-        'https://*.cloudflare.com'
-    ]
 
     class DisableCSRFMiddleware:
         def __init__(self, get_response):
@@ -462,42 +329,21 @@ if DEBUG:
 
     MIDDLEWARE.insert(0, 'crm.settings.DisableCSRFMiddleware')
 
-# Session settings
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = False
-SESSION_COOKIE_HTTPONLY = True
+# Security and Session Settings (تم دمج الإعدادات المكررة)
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS  # استخدام نفس قائمة CORS
 
-# DEBUG is set from environment variable at the top of the file
-# Do not override it here
-
-# إعدادات CSRF موحدة مع دعم Cloudflare
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:5173',  # منفذ Vite الافتراضي
-    'http://127.0.0.1:5173',  # منفذ Vite الافتراضي
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'https://*.trycloudflare.com',  # دعم جميع روابط Cloudflare المؤقتة
-    'https://*.cloudflare.com',     # دعم جميع روابط Cloudflare
-    'https://*.cfargotunnel.com',   # دعم Cloudflare Argo Tunnel
-]
-
-CSRF_COOKIE_SAMESITE = None
-CSRF_COOKIE_HTTPONLY = False
+# إعدادات CSRF موحدة
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = False  # Must be False to allow JavaScript access
+CSRF_COOKIE_SECURE = False  # تعطيل لتجنب مشاكل المصادقة
 CSRF_USE_SESSIONS = False
-CSRF_COOKIE_SECURE = False
 
 # إعدادات Session موحدة
 SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False  # تعطيل لتجنب مشاكل المصادقة
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 86400 * 7  # 7 أيام
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-
-# Security Settings - تم دمجها مع إعدادات CSRF أعلاه
-CSRF_COOKIE_SECURE = False  # تعطيل في جميع البيئات لتجنب مشاكل المصادقة
-SESSION_COOKIE_SECURE = False  # تعطيل في جميع البيئات لتجنب مشاكل المصادقة
 
 # إعدادات جدولة المهام
 APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"
@@ -527,36 +373,47 @@ SESSION_CLEANUP_SCHEDULE = {
 }
 
 # إعدادات تحسين الأداء
+# تقليل عدد الاستعلامات المسموح بها في صفحة واحدة
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
-# إعدادات التسجيل
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'level': 'INFO',
+# تعطيل التسجيل المفصل في الإنتاج
+if not DEBUG:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+                'level': 'INFO',  # تغيير مستوى التسجيل إلى INFO للحصول على مزيد من المعلومات
+            },
         },
-    },
-    'loggers': {
-        'django': {
+        'loggers': {
+            'django': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': True,
+            },
+            'django.db.backends': {
+                'handlers': ['console'],
+                'level': 'WARNING',
+                'propagate': False,
+            },
+            'data_management': {  # إضافة تسجيل خاص لتطبيق data_management
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': True,
+            },
+        },
+        'root': {
             'handlers': ['console'],
             'level': 'INFO',
-            'propagate': True,
         },
-        'django.db.backends': {
-            'handlers': ['console'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
-}
+    }
 
-# تحسين إعدادات قاعدة البيانات
-DATABASES['default']['CONN_MAX_AGE'] = 300  # 5 دقائق
-DATABASES['default']['AUTOCOMMIT'] = True
+    # تقليل عدد الاتصالات المتزامنة بقاعدة البيانات
+    DATABASES['default']['CONN_MAX_AGE'] = 300  # 5 دقائق
+
+    # تعطيل التصحيح التلقائي للمخطط
+    DATABASES['default']['AUTOCOMMIT'] = True  # تمكين AUTOCOMMIT لتجنب مشاكل الاتصال
+
+    # تم نقل إعدادات قاعدة بيانات Railway إلى بداية الملف
