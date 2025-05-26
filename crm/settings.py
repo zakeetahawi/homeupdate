@@ -19,7 +19,29 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # تفعيل وضع التطوير بشكل دائم للكشف عن الأخطاء
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ['true', 't', '1', 'yes', 'y']
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
+# إعداد ALLOWED_HOSTS لدعم جميع المنصات والنطاقات
+ALLOWED_HOSTS_DEFAULT = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    'testserver',
+    # نطاقات الإنتاج
+    'elkhawaga.uk',
+    'www.elkhawaga.uk',
+    'crm.elkhawaga.uk',
+    'api.elkhawaga.uk',
+    'admin.elkhawaga.uk',
+    # نطاقات Cloudflare
+    '*.trycloudflare.com',
+    '*.cloudflare.com',
+    '*.cfargotunnel.com',
+    '*.ngrok.io',
+    '*.ngrok-free.app',
+]
+
+# دمج ALLOWED_HOSTS من متغير البيئة مع القائمة الافتراضية
+env_hosts = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
+ALLOWED_HOSTS = list(set(ALLOWED_HOSTS_DEFAULT + env_hosts))  # إزالة التكرارات
 
 # Application definition
 INSTALLED_APPS = [
@@ -291,6 +313,17 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5173',  # منفذ Vite الافتراضي
     'http://localhost:8000',
     'http://127.0.0.1:8000',
+    # نطاقات الإنتاج
+    'https://elkhawaga.uk',
+    'https://www.elkhawaga.uk',
+    'https://crm.elkhawaga.uk',
+    'https://api.elkhawaga.uk',
+    'https://admin.elkhawaga.uk',
+    'http://elkhawaga.uk',
+    'http://www.elkhawaga.uk',
+    'http://crm.elkhawaga.uk',
+    'http://api.elkhawaga.uk',
+    'http://admin.elkhawaga.uk',
 ]
 
 CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS  # استخدام نفس القائمة
@@ -330,7 +363,14 @@ if DEBUG:
     MIDDLEWARE.insert(0, 'crm.settings.DisableCSRFMiddleware')
 
 # Security and Session Settings (تم دمج الإعدادات المكررة)
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS  # استخدام نفس قائمة CORS
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS + [
+    # إضافة نطاقات إضافية للـ CSRF
+    'https://elkhawaga.uk',
+    'https://www.elkhawaga.uk',
+    'https://crm.elkhawaga.uk',
+    'https://api.elkhawaga.uk',
+    'https://admin.elkhawaga.uk',
+]
 
 # إعدادات CSRF موحدة
 CSRF_COOKIE_SAMESITE = 'Lax'
