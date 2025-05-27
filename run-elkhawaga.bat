@@ -64,16 +64,26 @@ start /B python manage.py runserver 127.0.0.1:8000
 
 :: Wait for Django to start
 echo Waiting for Django to initialize...
-timeout /t 8 /nobreak >nul
+timeout /t 10 /nobreak >nul
 
-:: Verify Django is running
-netstat -an | findstr ":8000" >nul
-if errorlevel 1 (
-    echo [ERROR] Django failed to start!
-    pause
-    exit /b 1
+:: Verify Django is running with multiple attempts
+set DJANGO_STARTED=0
+for /L %%i in (1,1,5) do (
+    netstat -an | findstr ":8000" >nul
+    if not errorlevel 1 (
+        set DJANGO_STARTED=1
+        goto :django_ready
+    )
+    echo Checking Django startup attempt %%i/5...
+    timeout /t 2 /nobreak >nul
 )
-echo [OK] Django server is running
+
+:django_ready
+if "%DJANGO_STARTED%"=="1" (
+    echo [OK] Django server is running successfully
+) else (
+    echo [WARNING] Django may still be starting, continuing with tunnel...
+)
 
 :: Start Cloudflare tunnel
 echo.
