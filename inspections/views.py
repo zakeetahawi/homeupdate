@@ -13,6 +13,7 @@ from .forms import InspectionForm, InspectionReportForm, InspectionNotificationF
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.http import require_GET
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'inspections/dashboard.html'
@@ -349,6 +350,64 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         messages.success(self.request, 'تم تحديث حالة المعاينة بنجاح')
         return response
 
+
+@login_required
+def check_upload_status(request, pk):
+    """التحقق من حالة رفع الملف إلى Google Drive"""
+    try:
+        inspection = get_object_or_404(Inspection, pk=pk)
+
+        # إعادة تحميل البيانات من قاعدة البيانات للتأكد من الحالة الحديثة
+        inspection.refresh_from_db()
+
+        # التحقق من وجود الملف في Google Drive إذا لم تكن الحالة محدثة
+        if not inspection.is_uploaded_to_drive and inspection.inspection_file:
+            # محاولة العثور على الملف في Google Drive
+            try:
+                from inspections.services.google_drive_service import get_google_drive_service
+                drive_service = get_google_drive_service()
+
+                if drive_service:
+                    # البحث عن الملف بالاسم
+                    filename = inspection.google_drive_file_name or inspection.generate_drive_filename()
+                    files = drive_service.service.files().list(
+                        q=f"name='{filename}' and trashed=false",
+                        fields="files(id, name, webViewLink)"
+                    ).execute()
+
+                    if files.get('files'):
+                        # تم العثور على الملف - تحديث البيانات
+                        file_info = files['files'][0]
+                        inspection.google_drive_file_id = file_info['id']
+                        inspection.google_drive_file_url = file_info['webViewLink']
+                        inspection.is_uploaded_to_drive = True
+                        inspection.google_drive_file_name = filename
+
+                        # حفظ التحديثات
+                        inspection.save(update_fields=[
+                            'google_drive_file_id',
+                            'google_drive_file_url',
+                            'is_uploaded_to_drive',
+                            'google_drive_file_name'
+                        ])
+
+                        print(f"تم تحديث حالة المعاينة {pk} - الملف موجود في Google Drive")
+
+            except Exception as drive_error:
+                print(f"خطأ في التحقق من Google Drive: {str(drive_error)}")
+
+        return JsonResponse({
+            'is_uploaded': inspection.is_uploaded_to_drive,
+            'google_drive_url': inspection.google_drive_file_url,
+            'file_name': inspection.google_drive_file_name,
+            'file_id': inspection.google_drive_file_id
+        })
+    except Exception as e:
+        return JsonResponse({
+            'is_uploaded': False,
+            'error': str(e)
+        })
+
     def handle_no_permission(self):
         messages.error(self.request, 'ليس لديك صلاحية لتعديل هذه المعاينة')
         return redirect('inspections:inspection_list')
@@ -583,3 +642,82 @@ def ajax_duplicate_inspection(request):
             'success': False,
             'error': _('طريقة الطلب غير مدعومة.')
         })
+
+
+@login_required
+def ajax_upload_to_google_drive(request):
+    """رفع ملف المعاينة إلى Google Drive عبر AJAX"""
+    if request.method == 'POST':
+        try:
+            inspection_id = request.POST.get('inspection_id')
+
+            if not inspection_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'معرف المعاينة مطلوب'
+                })
+
+            # الحصول على المعاينة
+            inspection = get_object_or_404(Inspection, id=inspection_id)
+
+            # التحقق من وجود ملف المعاينة
+            if not inspection.inspection_file:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'لا يوجد ملف معاينة للرفع'
+                })
+
+            # التحقق من أن الملف لم يتم رفعه مسبقاً
+            if inspection.is_uploaded_to_drive:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'تم رفع هذا الملف مسبقاً إلى Google Drive'
+                })
+
+            # رفع الملف إلى Google Drive
+            from .services.google_drive_service import get_google_drive_service
+
+            drive_service = get_google_drive_service()
+            if not drive_service:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'خدمة Google Drive غير متوفرة. يرجى التحقق من الإعدادات.'
+                })
+
+            # رفع الملف
+            result = drive_service.upload_inspection_file(
+                inspection.inspection_file.path,
+                inspection
+            )
+
+            # تحديث بيانات المعاينة
+            inspection.google_drive_file_id = result['file_id']
+            inspection.google_drive_file_url = result['view_url']
+            inspection.google_drive_file_name = result['filename']
+            inspection.is_uploaded_to_drive = True
+            inspection.save(update_fields=[
+                'google_drive_file_id', 'google_drive_file_url',
+                'google_drive_file_name', 'is_uploaded_to_drive'
+            ])
+
+            return JsonResponse({
+                'success': True,
+                'message': 'تم رفع الملف بنجاح إلى Google Drive',
+                'data': {
+                    'filename': result['filename'],
+                    'view_url': result['view_url'],
+                    'customer_name': result['customer_name'],
+                    'branch_name': result['branch_name']
+                }
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'خطأ في رفع الملف: {str(e)}'
+            })
+
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة الطلب غير صحيحة'
+    })

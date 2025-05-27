@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load static %}
 
 {% block title %}{% trans 'المعاينات' %}{% endblock %}
 
@@ -99,7 +100,7 @@
         <div class="card-body">
             <form method="get" class="row g-3">
                 <div class="col-md-3">
-                    <input type="text" name="search" class="form-control" placeholder="{% trans 'بحث...' %}" 
+                    <input type="text" name="search" class="form-control" placeholder="{% trans 'بحث...' %}"
                            value="{{ request.GET.search }}">
                 </div>
                 <div class="col-md-3">
@@ -191,12 +192,20 @@
                     </td>
                     <td>{% if inspection.responsible_employee %}{{ inspection.responsible_employee }}{% else %}-{% endif %}</td>
                     <td>
-                        {% if inspection.inspection_file %}
-                            <a href="{{ inspection.inspection_file.url }}" class="btn btn-sm btn-primary" target="_blank">
-                                <i class="fas fa-file-pdf"></i> عرض
+                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                            <a href="{{ inspection.google_drive_file_url }}" target="_blank" title="عرض ملف المعاينة في Google Drive"
+                               data-inspection-id="{{ inspection.id }}">
+                                <i class="fas fa-file-pdf text-danger" style="font-size: 24px;"></i>
                             </a>
+                        {% elif inspection.inspection_file %}
+                            <span title="جاري رفع الملف إلى Google Drive"
+                                  data-inspection-id="{{ inspection.id }}"
+                                  data-upload-pending="true">
+                                <i class="fas fa-file-pdf text-warning" style="font-size: 24px;"></i>
+                                <i class="fas fa-clock text-warning" style="font-size: 12px; position: relative; top: -10px; left: -5px;"></i>
+                            </span>
                         {% else %}
-                            <span class="text-muted">-</span>
+                            <i class="fas fa-file-pdf text-muted" style="font-size: 24px;" title="لا يوجد ملف"></i>
                         {% endif %}
                     </td>
                     <td>
@@ -218,25 +227,25 @@
                     </td>
                     <td>
                         <div class="btn-group" role="group">
-                            <a href="{% url 'inspections:inspection_detail' inspection.pk %}" 
+                            <a href="{% url 'inspections:inspection_detail' inspection.pk %}"
                                class="btn btn-sm btn-info" title="{% trans 'عرض' %}">
                                 <i class="fas fa-eye"></i>
                             </a>
                             {% if inspection.status == 'pending' %}
-                            <a href="{% url 'inspections:inspection_update' inspection.pk %}" 
+                            <a href="{% url 'inspections:inspection_update' inspection.pk %}"
                                class="btn btn-sm btn-primary" title="{% trans 'تعديل' %}">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <a href="{% url 'inspections:inspection_delete' inspection.pk %}" 
+                            <a href="{% url 'inspections:inspection_delete' inspection.pk %}"
                                class="btn btn-sm btn-danger" title="{% trans 'حذف' %}">
                                 <i class="fas fa-trash"></i>
                             </a>
                             {% endif %}
-                            
+
                             {% if inspection.status == 'completed' %}
-                            <button type="button" 
-                                   class="btn btn-sm btn-success duplicate-inspection" 
-                                   data-id="{{ inspection.pk }}" 
+                            <button type="button"
+                                   class="btn btn-sm btn-success duplicate-inspection"
+                                   data-id="{{ inspection.pk }}"
                                    data-contract="{{ inspection.contract_number }}"
                                    data-customer="{{ inspection.customer }}"
                                    title="{% trans 'تكرار المعاينة' %}">
@@ -262,7 +271,7 @@
                 </a>
             </li>
             {% endif %}
-            
+
             {% for num in page_obj.paginator.page_range %}
             <li class="page-item {% if num == page_obj.number %}active{% endif %}">
                 <a class="page-link" href="?page={{ num }}&search={{ request.GET.search }}&status={{ request.GET.status }}&branch={{ request.GET.branch }}">
@@ -270,7 +279,7 @@
                 </a>
             </li>
             {% endfor %}
-            
+
             {% if page_obj.has_next %}
             <li class="page-item">
                 <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ request.GET.search }}&status={{ request.GET.status }}&branch={{ request.GET.branch }}">
@@ -354,49 +363,50 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'inspections/js/upload_status_checker.js' %}"></script>
 <script>
     $(document).ready(function() {
         // Enable Bootstrap tooltips
         $('[data-toggle="tooltip"]').tooltip();
-        
+
         // Set default scheduled date to tomorrow
         var tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         var formattedDate = tomorrow.toISOString().split('T')[0];
         $('#scheduled_date').val(formattedDate);
-        
+
         // Handle duplicate inspection button click
         $('.duplicate-inspection').click(function() {
             var inspectionId = $(this).data('id');
             var contractNumber = $(this).data('contract');
             var customer = $(this).data('customer');
-            
+
             $('#inspection-contract').text(contractNumber);
             $('#inspection-customer').text(customer);
-            
+
             // Store inspection ID for later use
             $('#confirm-duplicate').data('inspection-id', inspectionId);
-            
+
             // Show modal
             $('#duplicateInspectionModal').modal('show');
         });
-        
+
         // Handle confirm duplicate button click
         $('#confirm-duplicate').click(function() {
             var inspectionId = $(this).data('inspection-id');
             var scheduledDate = $('#scheduled_date').val();
             var notes = $('#duplicate-notes').val();
-            
+
             if (!scheduledDate) {
                 showErrorToast('{% trans "الرجاء تحديد تاريخ التنفيذ الجديد" %}');
                 return;
             }
-            
+
             // Show loading spinner
             $('.modal-loading').removeClass('d-none');
             $('.modal-footer').addClass('d-none');
             $('.modal-body').addClass('d-none');
-            
+
             // Send AJAX request to duplicate inspection
             $.ajax({
                 url: '{% url "inspections:ajax_duplicate_inspection" %}',
@@ -411,10 +421,10 @@
                     if (response.success) {
                         // Close modal
                         $('#duplicateInspectionModal').modal('hide');
-                        
+
                         // Show success toast
                         showSuccessToast('{% trans "تم تكرار المعاينة بنجاح" %}');
-                        
+
                         // Reload page after a short delay to show new inspection
                         setTimeout(function() {
                             window.location.reload();
@@ -422,7 +432,7 @@
                     } else {
                         // Show error toast
                         showErrorToast('{% trans "حدث خطأ أثناء تكرار المعاينة" %}: ' + response.error);
-                        
+
                         // Hide loading, show buttons
                         $('.modal-loading').addClass('d-none');
                         $('.modal-footer').removeClass('d-none');
@@ -432,7 +442,7 @@
                 error: function() {
                     // Show error toast
                     showErrorToast('{% trans "حدث خطأ أثناء الاتصال بالخادم" %}');
-                    
+
                     // Hide loading, show buttons
                     $('.modal-loading').addClass('d-none');
                     $('.modal-footer').removeClass('d-none');
@@ -440,14 +450,14 @@
                 }
             });
         });
-        
+
         // Functions for showing toast notifications
         function showSuccessToast(message) {
             $('#successToastMessage').text(message);
             var toast = new bootstrap.Toast($('#successToast'));
             toast.show();
         }
-        
+
         function showErrorToast(message) {
             $('#errorToastMessage').text(message);
             var toast = new bootstrap.Toast($('#errorToast'));

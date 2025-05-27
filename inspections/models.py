@@ -6,6 +6,7 @@ from django.utils import timezone
 from customers.models import Customer
 from accounts.models import User, Branch
 from model_utils.tracker import FieldTracker
+import re
 
 class InspectionEvaluation(models.Model):
     CRITERIA_CHOICES = [
@@ -205,6 +206,13 @@ class Inspection(models.Model):
     is_from_orders = models.BooleanField(_('من قسم الطلبات'), default=False)
     windows_count = models.IntegerField(_('عدد الشبابيك'), null=True, blank=True)
     inspection_file = models.FileField(_('ملف المعاينة'), upload_to='inspections/files/', null=True, blank=True)
+
+    # حقول Google Drive
+    google_drive_file_id = models.CharField(_('معرف ملف Google Drive'), max_length=255, blank=True, null=True)
+    google_drive_file_url = models.URLField(_('رابط ملف Google Drive'), blank=True, null=True)
+    google_drive_file_name = models.CharField(_('اسم الملف في Google Drive'), max_length=500, blank=True, null=True)
+    is_uploaded_to_drive = models.BooleanField(_('تم الرفع إلى Google Drive'), default=False)
+
     request_date = models.DateField(_('تاريخ طلب المعاينة'))
     scheduled_date = models.DateField(_('تاريخ تنفيذ المعاينة'))
     status = models.CharField(
@@ -291,7 +299,34 @@ class Inspection(models.Model):
         if self.order and self.order.notes and not self.order_notes:
             self.order_notes = self.order.notes
 
+        # التحقق من تغيير الملف
+        file_changed = False
+        if self.pk:  # إذا كان هذا تحديث وليس إنشاء جديد
+            try:
+                old_instance = Inspection.objects.get(pk=self.pk)
+                # التحقق من تغيير الملف
+                if old_instance.inspection_file != self.inspection_file:
+                    file_changed = True
+                    # إعادة تعيين حالة الرفع إذا تغير الملف
+                    self.is_uploaded_to_drive = False
+                    self.google_drive_file_id = None
+                    self.google_drive_file_url = None
+                    self.google_drive_file_name = None
+            except Inspection.DoesNotExist:
+                file_changed = True
+        else:
+            # إنشاء جديد
+            file_changed = bool(self.inspection_file)
+
+        # توليد اسم الملف لـ Google Drive فقط إذا تغير الملف
+        if self.inspection_file and (file_changed or not self.google_drive_file_name):
+            self.google_drive_file_name = self.generate_drive_filename()
+
         super().save(*args, **kwargs)
+
+        # رفع تلقائي إلى Google Drive فقط إذا تغير الملف ولم يتم رفعه بعد
+        if file_changed and self.inspection_file and not self.is_uploaded_to_drive:
+            self.upload_to_google_drive_async()
 
     def get_status_color(self):
         status_colors = {
@@ -325,3 +360,92 @@ class Inspection(models.Model):
     @property
     def is_overdue(self):
         return self.status == 'pending' and self.scheduled_date < timezone.now().date()
+
+    def generate_drive_filename(self):
+        """توليد اسم الملف للرفع على Google Drive"""
+        # اسم العميل (تنظيف الاسم من الرموز الخاصة)
+        if self.customer and self.customer.name:
+            customer_name = self.customer.name
+        elif hasattr(self, 'customer_name') and self.customer_name:
+            customer_name = self.customer_name
+        else:
+            customer_name = "عميل_جديد"
+        customer_name = self._clean_filename(customer_name)
+
+        # الفرع
+        branch_name = self.branch.name if self.branch else "فرع_غير_محدد"
+        branch_name = self._clean_filename(branch_name)
+
+        # التاريخ
+        date_str = self.scheduled_date.strftime("%Y-%m-%d") if self.scheduled_date else timezone.now().strftime("%Y-%m-%d")
+
+        # رقم الطلب
+        order_number = self.order.order_number if self.order else self.contract_number or "بدون_رقم"
+        order_number = self._clean_filename(order_number)
+
+        # تجميع اسم الملف
+        filename = f"{customer_name}_{branch_name}_{date_str}_{order_number}.pdf"
+        return filename
+
+    def _clean_filename(self, name):
+        """تنظيف اسم الملف من الرموز الخاصة"""
+        # إزالة الرموز الخاصة والمسافات
+        cleaned = re.sub(r'[^\w\u0600-\u06FF\s-]', '', str(name))
+        # استبدال المسافات بـ underscore
+        cleaned = re.sub(r'\s+', '_', cleaned)
+        return cleaned[:50]  # تحديد الطول الأقصى
+
+    def upload_to_google_drive_async(self):
+        """رفع الملف إلى Google Drive بشكل تلقائي"""
+        try:
+            from inspections.services.google_drive_service import get_google_drive_service
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(f"بدء رفع ملف المعاينة {self.id} إلى Google Drive")
+
+            # الحصول على خدمة Google Drive
+            drive_service = get_google_drive_service()
+            if not drive_service:
+                logger.error("فشل في الحصول على خدمة Google Drive")
+                return False
+
+            # رفع الملف
+            result = drive_service.upload_inspection_file(
+                file_path=self.inspection_file.path,
+                inspection=self
+            )
+
+            if result.get('success'):
+                # تحديث بيانات المعاينة
+                self.google_drive_file_id = result.get('file_id')
+                self.google_drive_file_url = result.get('view_url')
+                self.is_uploaded_to_drive = True
+
+                # حفظ التحديثات في قاعدة البيانات
+                try:
+                    # تحديث قاعدة البيانات مباشرة
+                    Inspection.objects.filter(id=self.id).update(
+                        google_drive_file_id=self.google_drive_file_id,
+                        google_drive_file_url=self.google_drive_file_url,
+                        is_uploaded_to_drive=True
+                    )
+
+                    # إعادة تحميل الكائن من قاعدة البيانات للتأكد من التحديث
+                    self.refresh_from_db()
+
+                    logger.info(f"تم تحديث بيانات المعاينة {self.id} في قاعدة البيانات")
+                except Exception as update_error:
+                    logger.error(f"خطأ في تحديث قاعدة البيانات للمعاينة {self.id}: {str(update_error)}")
+
+                logger.info(f"تم رفع ملف المعاينة {self.id} بنجاح إلى Google Drive")
+                return True
+            else:
+                logger.error(f"فشل في رفع ملف المعاينة {self.id}: {result.get('message')}")
+                return False
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في رفع ملف المعاينة {self.id} إلى Google Drive: {str(e)}")
+            return False

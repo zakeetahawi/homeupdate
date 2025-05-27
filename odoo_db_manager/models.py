@@ -247,3 +247,79 @@ class BackupSchedule(models.Model):
         self.next_run = next_run
         self.save(update_fields=['next_run'])
         return next_run
+
+
+class GoogleDriveConfig(models.Model):
+    """نموذج إعدادات Google Drive للمعاينات"""
+
+    name = models.CharField(_('اسم الإعداد'), max_length=100, default="إعدادات Google Drive")
+
+    # إعدادات المجلد
+    inspections_folder_id = models.CharField(
+        _('معرف مجلد المعاينات'),
+        max_length=255,
+        blank=True,
+        help_text=_('معرف المجلد في Google Drive لحفظ ملفات المعاينات')
+    )
+    inspections_folder_name = models.CharField(
+        _('اسم مجلد المعاينات'),
+        max_length=255,
+        blank=True,
+        help_text=_('اسم المجلد في Google Drive')
+    )
+
+    # ملف الاعتماد
+    credentials_file = models.FileField(
+        _('ملف اعتماد Google'),
+        upload_to='google_credentials/',
+        blank=True,
+        null=True,
+        help_text=_('ملف JSON من Google Cloud Console')
+    )
+
+    # إعدادات تسمية الملفات
+    filename_pattern = models.CharField(
+        _('نمط تسمية الملفات'),
+        max_length=200,
+        default="{customer}_{branch}_{date}_{order}",
+        help_text=_('المتغيرات المتاحة: {customer}, {branch}, {date}, {order}')
+    )
+
+    # حالة الخدمة
+    is_active = models.BooleanField(_('مفعل'), default=True)
+    last_test = models.DateTimeField(_('آخر اختبار'), null=True, blank=True)
+    test_status = models.CharField(_('حالة الاختبار'), max_length=50, blank=True)
+    test_message = models.TextField(_('رسالة الاختبار'), blank=True)
+
+    # إحصائيات
+    total_uploads = models.IntegerField(_('إجمالي الرفعات'), default=0)
+    last_upload = models.DateTimeField(_('آخر رفع'), null=True, blank=True)
+
+    # تواريخ النظام
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name=_('تم الإنشاء بواسطة')
+    )
+
+    class Meta:
+        verbose_name = _('إعدادات Google Drive')
+        verbose_name_plural = _('إعدادات Google Drive')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def get_active_config(cls):
+        """الحصول على الإعدادات النشطة"""
+        return cls.objects.filter(is_active=True).first()
+
+    def save(self, *args, **kwargs):
+        # التأكد من وجود إعداد واحد نشط فقط
+        if self.is_active:
+            GoogleDriveConfig.objects.filter(is_active=True).exclude(pk=self.pk).update(is_active=False)
+        super().save(*args, **kwargs)

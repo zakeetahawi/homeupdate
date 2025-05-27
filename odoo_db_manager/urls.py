@@ -39,5 +39,10 @@ urlpatterns = [
     path('schedules/<int:pk>/toggle/', views.schedule_toggle, name='schedule_toggle'),
     path('schedules/<int:pk>/run/', views.schedule_run_now, name='schedule_run_now'),
 
+    # Google Drive
+    path('google-drive/settings/', views.google_drive_settings, name='google_drive_settings'),
+    path('google-drive/test-connection/', views.google_drive_test_connection, name='google_drive_test_connection'),
+    path('google-drive/create-test-folder/', views.google_drive_create_test_folder, name='google_drive_create_test_folder'),
+    path('google-drive/test-file-upload/', views.google_drive_test_file_upload, name='google_drive_test_file_upload'),
 
 ]

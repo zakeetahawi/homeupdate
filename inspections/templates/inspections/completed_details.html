@@ -21,6 +21,7 @@
                     <th>{% trans 'العنوان' %}</th>
                     <th>{% trans 'تاريخ الطلب' %}</th>
                     <th>{% trans 'تاريخ التنفيذ' %}</th>
+                    <th>{% trans 'الملف' %}</th>
                     <th>{% trans 'الملاحظات' %}</th>
                     <th>{% trans 'التقييم' %}</th>
                     <th>{% trans 'الإجراءات' %}</th>
@@ -34,6 +35,20 @@
                     <td>{{ inspection.customer.address|default:'-' }}</td>
                     <td>{{ inspection.request_date }}</td>
                     <td>{{ inspection.scheduled_date }}</td>
+                    <td>
+                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                            <a href="{{ inspection.google_drive_file_url }}" target="_blank" title="عرض ملف المعاينة في Google Drive">
+                                <i class="fas fa-file-pdf text-danger" style="font-size: 20px;"></i>
+                            </a>
+                        {% elif inspection.inspection_file %}
+                            <span title="جاري رفع الملف إلى Google Drive">
+                                <i class="fas fa-file-pdf text-warning" style="font-size: 20px;"></i>
+                                <i class="fas fa-clock text-warning" style="font-size: 10px; position: relative; top: -8px; left: -3px;"></i>
+                            </span>
+                        {% else %}
+                            <i class="fas fa-file-pdf text-muted" style="font-size: 20px;" title="لا يوجد ملف"></i>
+                        {% endif %}
+                    </td>
                     <td>{{ inspection.notes|default:'-' }}</td>
                     <td>{% if inspection.evaluation %}{{ inspection.evaluation.rating }}{% else %}-{% endif %}</td>
                     <td>

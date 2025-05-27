@@ -14,11 +14,11 @@ import os
 import datetime
 import shutil
 
-from .models import Database, Backup, BackupSchedule
+from .models import Database, Backup, BackupSchedule, GoogleDriveConfig
 from .services.database_service import DatabaseService
 # تم إزالة BackupService لتجنب التضارب
 from .services.scheduled_backup_service import scheduled_backup_service
-from .forms import BackupScheduleForm
+from .forms import BackupScheduleForm, GoogleDriveConfigForm
 
 def is_staff_or_superuser(user):
     """التحقق من أن المستخدم موظف أو مدير"""
@@ -982,3 +982,156 @@ def _restore_json_simple(file_path):
     except Exception as e:
         print(f"❌ خطأ في قراءة الملف: {str(e)}")
         raise
+
+
+# ==================== عروض Google Drive ====================
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def google_drive_settings(request):
+    """إدارة إعدادات Google Drive"""
+    # الحصول على الإعدادات الحالية أو إنشاء جديدة
+    config = GoogleDriveConfig.get_active_config()
+
+    if request.method == 'POST':
+        form = GoogleDriveConfigForm(request.POST, request.FILES, instance=config)
+        if form.is_valid():
+            config = form.save(commit=False)
+            config.created_by = request.user
+            config.save()
+
+            messages.success(request, _('تم حفظ إعدادات Google Drive بنجاح.'))
+            return redirect('odoo_db_manager:google_drive_settings')
+        else:
+            messages.error(request, _('يرجى تصحيح الأخطاء في النموذج.'))
+    else:
+        form = GoogleDriveConfigForm(instance=config)
+
+    context = {
+        'form': form,
+        'config': config,
+        'title': _('إعدادات Google Drive'),
+    }
+
+    return render(request, 'odoo_db_manager/google_drive_settings.html', context)
+
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def google_drive_test_connection(request):
+    """اختبار الاتصال مع Google Drive"""
+    if request.method == 'POST':
+        try:
+            from inspections.services.google_drive_service import get_google_drive_service
+
+            # الحصول على خدمة Google Drive
+            drive_service = get_google_drive_service()
+
+            if not drive_service:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'فشل في تهيئة خدمة Google Drive'
+                })
+
+            # اختبار الاتصال
+            result = drive_service.test_connection()
+
+            if result['success']:
+                messages.success(request, result['message'])
+            else:
+                messages.error(request, result['message'])
+
+            return JsonResponse(result)
+
+        except Exception as e:
+            error_message = f'خطأ في اختبار الاتصال: {str(e)}'
+            messages.error(request, error_message)
+            return JsonResponse({
+                'success': False,
+                'message': error_message
+            })
+
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة الطلب غير صحيحة'
+    })
+
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def google_drive_create_test_folder(request):
+    """إنشاء مجلد تجريبي في Google Drive"""
+    if request.method == 'POST':
+        try:
+            from inspections.services.google_drive_service import create_test_folder
+
+            # إنشاء مجلد تجريبي
+            result = create_test_folder()
+
+            if result:
+                messages.success(request, f'تم إنشاء مجلد تجريبي بنجاح: {result["name"]}')
+                return JsonResponse({
+                    'success': True,
+                    'message': f'تم إنشاء مجلد تجريبي بنجاح',
+                    'folder': result
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'فشل في إنشاء المجلد التجريبي'
+                })
+
+        except Exception as e:
+            error_message = f'خطأ في إنشاء المجلد التجريبي: {str(e)}'
+            messages.error(request, error_message)
+            return JsonResponse({
+                'success': False,
+                'message': error_message
+            })
+
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة الطلب غير صحيحة'
+    })
+
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def google_drive_test_file_upload(request):
+    """اختبار رفع ملف تجريبي إلى المجلد المحدد"""
+    if request.method == 'POST':
+        try:
+            from inspections.services.google_drive_service import test_file_upload_to_folder
+
+            # اختبار رفع ملف
+            result = test_file_upload_to_folder()
+
+            if result and result.get('success'):
+                messages.success(request, 'تم اختبار رفع الملف بنجاح')
+                return JsonResponse({
+                    'success': True,
+                    'message': result.get('message'),
+                    'details': {
+                        'file_name': result.get('file_name'),
+                        'folder_id': result.get('folder_id')
+                    }
+                })
+            else:
+                error_message = result.get('message') if result else 'فشل في اختبار رفع الملف'
+                return JsonResponse({
+                    'success': False,
+                    'message': error_message
+                })
+
+        except Exception as e:
+            error_message = f'خطأ في اختبار رفع الملف: {str(e)}'
+            messages.error(request, error_message)
+            return JsonResponse({
+                'success': False,
+                'message': error_message
+            })
+
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة الطلب غير صحيحة'
+    })

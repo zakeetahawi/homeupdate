@@ -108,6 +108,7 @@
                                     <th>تاريخ المعاينة</th>
                                     <th>الحالة</th>
                                     <th>المعاين</th>
+                                    <th>الملف</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
@@ -124,6 +125,23 @@
                                     </td>
                                     <td>{{ inspection.inspector.get_full_name }}</td>
                                     <td>
+                                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                            <a href="{{ inspection.google_drive_file_url }}" target="_blank" title="عرض ملف المعاينة في Google Drive"
+                                               data-inspection-id="{{ inspection.id }}">
+                                                <i class="fas fa-file-pdf text-danger" style="font-size: 20px;"></i>
+                                            </a>
+                                        {% elif inspection.inspection_file %}
+                                            <span title="جاري رفع الملف إلى Google Drive"
+                                                  data-inspection-id="{{ inspection.id }}"
+                                                  data-upload-pending="true">
+                                                <i class="fas fa-file-pdf text-warning" style="font-size: 20px;"></i>
+                                                <i class="fas fa-clock text-warning" style="font-size: 10px; position: relative; top: -8px; left: -3px;"></i>
+                                            </span>
+                                        {% else %}
+                                            <i class="fas fa-file-pdf text-muted" style="font-size: 20px;" title="لا يوجد ملف"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         <a href="{% url 'inspections:inspection_detail' inspection.id %}" class="btn btn-sm btn-info">
                                             <i class="fas fa-eye"></i>
                                         </a>
@@ -131,7 +149,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center">لا توجد معاينات حديثة</td>
+                                    <td colspan="7" class="text-center">لا توجد معاينات حديثة</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -163,6 +181,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'inspections/js/upload_status_checker.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const chartData = {
@@ -186,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 ],
                 backgroundColor: [
                     '#0d6efd',
-                    '#198754', 
+                    '#198754',
                     '#ffc107',
                     '#dc3545'
                 ]

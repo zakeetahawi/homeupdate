@@ -21,10 +21,12 @@ urlpatterns = [
     path('<int:pk>/delete/', views.InspectionDeleteView.as_view(), name='inspection_delete'),
     path('<int:pk>/iterate/', views.iterate_inspection, name='iterate_inspection'),
     path('ajax/duplicate-inspection/', views.ajax_duplicate_inspection, name='ajax_duplicate_inspection'),
-    
+    path('ajax/upload-to-google-drive/', views.ajax_upload_to_google_drive, name='ajax_upload_to_google_drive'),
+    path('<int:pk>/check-upload-status/', views.check_upload_status, name='check_upload_status'),
+
     # Evaluations
     path('<int:inspection_pk>/evaluate/', views.EvaluationCreateView.as_view(), name='evaluation_create'),
-    
+
     # Notifications
     path('notifications/', views.NotificationListView.as_view(), name='notification_list'),
     path('<int:inspection_pk>/notify/', views.NotificationCreateView.as_view(), name='notification_create'),

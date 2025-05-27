@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load static %}
 
 {% block title %}{% trans 'تفاصيل المعاينة' %} - {{ inspection.contract_number }}{% endblock %}
 
@@ -98,15 +99,66 @@
                         </div>
                         <div class="col-sm-8">
                             {% if inspection.inspection_file %}
-                                <a href="{{ inspection.inspection_file.url }}" class="btn btn-primary" target="_blank">
-                                    <i class="fas fa-file-pdf"></i> {% trans 'عرض ملف المعاينة' %}
-                                </a>
+                                <div class="d-flex align-items-center gap-3">
+                                    <!-- أيقونة الملف -->
+                                    {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                        <a href="{{ inspection.google_drive_file_url }}" target="_blank" title="عرض ملف المعاينة في Google Drive"
+                                           data-inspection-id="{{ inspection.id }}" class="large-icon">
+                                            <i class="fas fa-file-pdf text-danger" style="font-size: 48px;"></i>
+                                        </a>
+                                        <div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-success">
+                                                    <i class="fab fa-google-drive"></i> متوفر في Google Drive
+                                                </span>
+                                                <small class="text-muted">انقر على الأيقونة للعرض</small>
+                                            </div>
+                                            {% if inspection.google_drive_file_name %}
+                                            <div class="mt-1">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-file-signature"></i>
+                                                    <strong>اسم الملف:</strong> {{ inspection.google_drive_file_name }}
+                                                </small>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <!-- إذا لم يتم الرفع بعد -->
+                                        <div style="position: relative;"
+                                             data-inspection-id="{{ inspection.id }}"
+                                             data-upload-pending="true"
+                                             class="large-icon">
+                                            <i class="fas fa-file-pdf text-warning" style="font-size: 48px;"></i>
+                                            <i class="fas fa-clock text-warning" style="font-size: 16px; position: absolute; top: 0; right: -5px;"></i>
+                                        </div>
+                                        <div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-clock"></i> جاري الرفع إلى Google Drive
+                                                </span>
+                                            </div>
+                                            <div class="mt-1">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-info-circle"></i>
+                                                    سيتم رفع الملف تلقائياً...
+                                                </small>
+                                                <br>
+                                                <button class="btn btn-outline-primary btn-sm mt-1" onclick="location.reload()">
+                                                    <i class="fas fa-sync"></i> تحديث الصفحة
+                                                </button>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
                             {% else %}
-                                <span class="text-muted">-</span>
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="fas fa-file-pdf text-muted" style="font-size: 48px;" title="لا يوجد ملف"></i>
+                                    <span class="text-muted">لا يوجد ملف مرفق</span>
+                                </div>
                             {% endif %}
                         </div>
                     </div>
-                    
+
                     <!-- فني المعاينة -->
                     <div class="row mb-3">
                         <div class="col-sm-4">
@@ -124,7 +176,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    
+
                     <!-- Salesperson Information -->
                     <div class="row mb-3">
                         <div class="col-sm-4">
@@ -138,7 +190,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    
+
                     <!-- Inspection Notes Section - Moved to the end -->
                     {% if inspection.notes %}
                     <div class="row mb-3">
@@ -185,7 +237,7 @@
                 </div>
             </div>
             {% endif %}
-            
+
             <!-- Customer Details -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -217,7 +269,7 @@
                     {% endif %}
                 </div>
             </div>
-            
+
             <!-- Customer Notes -->
             {% if inspection.status == 'pending' and inspection.customer and inspection.customer.notes %}
             <div class="card mb-4 border-danger">
@@ -282,10 +334,123 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- إزالة كل كود JavaScript المتعلق بملاحظات الطلب -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{% static 'inspections/js/upload_status_checker.js' %}"></script>
 <script>
     $(document).ready(function() {
         // الاحتفاظ فقط بالوظائف الأساسية
     });
+
+    // دالة رفع الملف إلى Google Drive
+    function uploadToGoogleDrive(inspectionId) {
+        const btn = document.getElementById('uploadBtn');
+        const originalHtml = btn.innerHTML;
+
+        // تغيير حالة الزر
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>جاري الرفع...';
+
+        // عرض شريط التقدم
+        Swal.fire({
+            title: 'جاري رفع الملف إلى Google Drive...',
+            html: `
+                <div class="progress mb-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                         style="width: 0%" id="uploadProgress"></div>
+                </div>
+                <p>يرجى الانتظار...</p>
+            `,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            customClass: {
+                popup: 'swal-upload-popup'
+            }
+        });
+
+        // محاكاة التقدم
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+
+            const progressBar = document.getElementById('uploadProgress');
+            if (progressBar) {
+                progressBar.style.width = progress + '%';
+            }
+        }, 200);
+
+        // إرسال طلب الرفع
+        const formData = new FormData();
+        formData.append('inspection_id', inspectionId);
+        formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+
+        $.ajax({
+            url: '/inspections/ajax/upload-to-google-drive/',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                clearInterval(interval);
+
+                // إعادة تعيين الزر
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم رفع الملف بنجاح!',
+                        html: `
+                            <div class="success-info">
+                                <p><strong>تم رفع ملف المعاينة إلى Google Drive</strong></p>
+                                <hr>
+                                <p><strong>اسم الملف:</strong> ${response.data.filename}</p>
+                                <p><strong>العميل:</strong> ${response.data.customer_name}</p>
+                                <p><strong>الفرع:</strong> ${response.data.branch_name}</p>
+                                <a href="${response.data.view_url}" target="_blank" class="btn btn-primary btn-sm mt-2">
+                                    <i class="fas fa-external-link-alt"></i> عرض في Google Drive
+                                </a>
+                            </div>
+                        `,
+                        confirmButtonText: 'موافق',
+                        customClass: {
+                            confirmButton: 'btn btn-success'
+                        }
+                    }).then(() => {
+                        // إعادة تحميل الصفحة لتحديث البيانات
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'خطأ في الرفع',
+                        text: response.message,
+                        confirmButtonText: 'موافق',
+                        customClass: {
+                            confirmButton: 'btn btn-danger'
+                        }
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                clearInterval(interval);
+
+                // إعادة تعيين الزر
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ في الشبكة',
+                    text: 'حدث خطأ أثناء رفع الملف',
+                    confirmButtonText: 'موافق',
+                    customClass: {
+                        confirmButton: 'btn btn-danger'
+                    }
+                });
+            }
+        });
+    }
 </script>
 {% endblock %}
