@@ -1,0 +1,616 @@
+/**
+ * Apple Dark Mode Theme
+ * ثيم الوضع الليلي بنمط Apple
+ */
+
+/* ===== تطبيق ثيم Apple Dark Mode ===== */
+[data-theme="apple-dark-mode"] {
+    /* الخلفية الرئيسية */
+    background: #000000 !important;
+    color: #ffffff !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Cairo', sans-serif !important;
+}
+
+[data-theme="apple-dark-mode"] body {
+    background: #000000 !important;
+    color: #ffffff !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Cairo', sans-serif !important;
+    line-height: 1.6 !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* ===== الهيدر بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .navbar {
+    background: rgba(28, 28, 30, 0.8) !important;
+    backdrop-filter: var(--apple-blur) !important;
+    -webkit-backdrop-filter: var(--apple-blur) !important;
+    border-bottom: 1px solid var(--separator) !important;
+    box-shadow: var(--apple-shadow-light) !important;
+    padding: 1rem 0 !important;
+    min-height: 64px !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1000 !important;
+}
+
+/* ===== شعار الشركة بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .navbar-brand {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    font-size: 1.25rem !important;
+    transition: var(--apple-transition) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+[data-theme="apple-dark-mode"] .navbar-brand:hover {
+    color: var(--primary) !important;
+    transform: none !important;
+}
+
+[data-theme="apple-dark-mode"] .logo-img {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 8px !important;
+    transition: var(--apple-transition) !important;
+}
+
+[data-theme="apple-dark-mode"] .navbar-brand:hover .logo-img {
+    transform: scale(1.05) !important;
+}
+
+/* ===== روابط التنقل بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .nav-link {
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+    padding: 8px 16px !important;
+    border-radius: var(--apple-radius) !important;
+    transition: var(--apple-transition) !important;
+    position: relative !important;
+    margin: 0 4px !important;
+}
+
+[data-theme="apple-dark-mode"] .nav-link:hover {
+    color: var(--text-primary) !important;
+    background: rgba(120, 120, 128, 0.16) !important;
+}
+
+[data-theme="apple-dark-mode"] .nav-link:active {
+    background: rgba(120, 120, 128, 0.24) !important;
+    transform: scale(0.98) !important;
+}
+
+[data-theme="apple-dark-mode"] .nav-link i {
+    margin-left: 8px !important;
+    font-size: 1rem !important;
+    transition: var(--apple-transition) !important;
+}
+
+/* ===== أيقونات SF Symbols للأقسام ===== */
+[data-theme="apple-dark-mode"] .nav-link[href*="home"] i,
+[data-theme="apple-dark-mode"] .nav-link[href="/"] i {
+    color: var(--success) !important; /* أخضر Apple */
+}
+
+[data-theme="apple-dark-mode"] .nav-link[href*="customers"] i {
+    color: var(--primary) !important; /* أزرق Apple */
+}
+
+[data-theme="apple-dark-mode"] .nav-link[href*="orders"] i {
+    color: var(--warning) !important; /* برتقالي Apple */
+}
+
+[data-theme="apple-dark-mode"] .nav-link[href*="inventory"] i {
+    color: #bf5af2 !important; /* بنفسجي Apple */
+}
+
+[data-theme="apple-dark-mode"] .nav-link[href*="inspections"] i {
+    color: #5ac8fa !important; /* سماوي Apple */
+}
+
+[data-theme="apple-dark-mode"] .nav-link[href*="installations"] i {
+    color: #ffcc02 !important; /* أصفر Apple */
+}
+
+[data-theme="apple-dark-mode"] .nav-link[href*="factory"] i {
+    color: #ff6482 !important; /* وردي Apple */
+}
+
+[data-theme="apple-dark-mode"] .nav-link[href*="reports"] i {
+    color: #64d2ff !important; /* أزرق فاتح Apple */
+}
+
+[data-theme="apple-dark-mode"] .nav-link[href*="database"] i,
+[data-theme="apple-dark-mode"] .nav-link[href*="data"] i {
+    color: #a28bfe !important; /* بنفسجي فاتح Apple */
+}
+
+/* ===== البطاقات بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .card {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--separator) !important;
+    border-radius: var(--apple-radius-large) !important;
+    box-shadow: var(--apple-shadow-light) !important;
+    transition: var(--apple-transition) !important;
+    overflow: hidden !important;
+    margin-bottom: 24px !important;
+}
+
+[data-theme="apple-dark-mode"] .card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: var(--apple-shadow) !important;
+}
+
+[data-theme="apple-dark-mode"] .card-header {
+    background: var(--elevated-bg) !important;
+    color: var(--text-primary) !important;
+    border: none !important;
+    padding: 20px 24px !important;
+    font-weight: 600 !important;
+    font-size: 1.1rem !important;
+    border-bottom: 1px solid var(--separator) !important;
+}
+
+[data-theme="apple-dark-mode"] .card-body {
+    padding: 24px !important;
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="apple-dark-mode"] .card-title {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    margin-bottom: 16px !important;
+    font-size: 1.25rem !important;
+}
+
+[data-theme="apple-dark-mode"] .card-text {
+    color: var(--text-secondary) !important;
+    line-height: 1.6 !important;
+    font-size: 0.95rem !important;
+}
+
+/* ===== الجداول بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .table {
+    background: var(--card-bg) !important;
+    border-radius: var(--apple-radius-large) !important;
+    overflow: hidden !important;
+    box-shadow: var(--apple-shadow-light) !important;
+    border: 1px solid var(--separator) !important;
+    margin-bottom: 24px !important;
+}
+
+[data-theme="apple-dark-mode"] .table th {
+    background: var(--elevated-bg) !important;
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    border: none !important;
+    padding: 16px 20px !important;
+    font-size: 0.875rem !important;
+    border-bottom: 1px solid var(--separator) !important;
+}
+
+[data-theme="apple-dark-mode"] .table td {
+    padding: 16px 20px !important;
+    border: none !important;
+    border-bottom: 1px solid var(--separator) !important;
+    color: var(--text-primary) !important;
+    vertical-align: middle !important;
+    transition: var(--apple-transition) !important;
+    background: var(--card-bg) !important;
+}
+
+[data-theme="apple-dark-mode"] .table tbody tr:hover {
+    background: rgba(120, 120, 128, 0.08) !important;
+}
+
+[data-theme="apple-dark-mode"] .table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+/* ===== الأزرار بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .btn {
+    border-radius: var(--apple-radius) !important;
+    padding: 12px 20px !important;
+    font-weight: 600 !important;
+    transition: var(--apple-transition) !important;
+    border: none !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+[data-theme="apple-dark-mode"] .btn:active {
+    transform: scale(0.98) !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-primary {
+    background: var(--primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(0, 122, 255, 0.3) !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-primary:hover {
+    background: #0056b3 !important;
+    box-shadow: 0 6px 20px rgba(0, 122, 255, 0.4) !important;
+    transform: translateY(-1px) !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-success {
+    background: var(--success) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(48, 209, 88, 0.3) !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-warning {
+    background: var(--warning) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(255, 149, 0, 0.3) !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-danger {
+    background: var(--error) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(255, 69, 58, 0.3) !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-info {
+    background: var(--info) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(0, 122, 255, 0.3) !important;
+}
+
+/* ===== أزرار الروابط بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .btn-link {
+    border: none !important;
+    background: none !important;
+    padding: 8px !important;
+    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: var(--apple-transition) !important;
+    position: relative !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-link:hover {
+    background: rgba(120, 120, 128, 0.16) !important;
+    transform: scale(1.1) !important;
+    text-decoration: none !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-link:active {
+    background: rgba(120, 120, 128, 0.24) !important;
+    transform: scale(0.95) !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-link i {
+    font-size: 1rem !important;
+    transition: var(--apple-transition) !important;
+}
+
+/* ===== ألوان الأيقونات Apple ===== */
+[data-theme="apple-dark-mode"] .text-info,
+[data-theme="apple-dark-mode"] .btn-link.text-info {
+    color: var(--primary) !important;
+}
+
+[data-theme="apple-dark-mode"] .text-success,
+[data-theme="apple-dark-mode"] .btn-link.text-success {
+    color: var(--success) !important;
+}
+
+[data-theme="apple-dark-mode"] .text-warning,
+[data-theme="apple-dark-mode"] .btn-link.text-warning {
+    color: var(--warning) !important;
+}
+
+[data-theme="apple-dark-mode"] .text-danger,
+[data-theme="apple-dark-mode"] .btn-link.text-danger {
+    color: var(--error) !important;
+}
+
+[data-theme="apple-dark-mode"] .text-primary,
+[data-theme="apple-dark-mode"] .btn-link.text-primary {
+    color: var(--primary) !important;
+}
+
+/* ===== النماذج بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .form-control {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--separator) !important;
+    border-radius: var(--apple-radius) !important;
+    padding: 12px 16px !important;
+    color: var(--text-primary) !important;
+    transition: var(--apple-transition) !important;
+    font-size: 1rem !important;
+}
+
+[data-theme="apple-dark-mode"] .form-control:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1) !important;
+    background: var(--elevated-bg) !important;
+    outline: none !important;
+}
+
+[data-theme="apple-dark-mode"] .form-control::placeholder {
+    color: var(--text-tertiary) !important;
+}
+
+[data-theme="apple-dark-mode"] .form-label {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    margin-bottom: 8px !important;
+    font-size: 0.875rem !important;
+}
+
+[data-theme="apple-dark-mode"] .form-select {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--separator) !important;
+    border-radius: var(--apple-radius) !important;
+    padding: 12px 16px !important;
+    color: var(--text-primary) !important;
+    transition: var(--apple-transition) !important;
+}
+
+[data-theme="apple-dark-mode"] .form-select:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1) !important;
+}
+
+/* ===== القوائم المنسدلة بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .dropdown-menu {
+    background: rgba(28, 28, 30, 0.9) !important;
+    backdrop-filter: var(--apple-blur) !important;
+    -webkit-backdrop-filter: var(--apple-blur) !important;
+    border: 1px solid var(--separator) !important;
+    border-radius: var(--apple-radius-large) !important;
+    box-shadow: var(--apple-shadow) !important;
+    padding: 8px !important;
+    margin-top: 8px !important;
+}
+
+[data-theme="apple-dark-mode"] .dropdown-item {
+    color: var(--text-primary) !important;
+    padding: 12px 16px !important;
+    transition: var(--apple-transition) !important;
+    border-radius: var(--apple-radius) !important;
+    font-weight: 500 !important;
+    margin-bottom: 2px !important;
+}
+
+[data-theme="apple-dark-mode"] .dropdown-item:hover {
+    background: rgba(120, 120, 128, 0.16) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="apple-dark-mode"] .dropdown-item:active {
+    background: rgba(120, 120, 128, 0.24) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="apple-dark-mode"] .dropdown-item i {
+    margin-left: 12px !important;
+    color: var(--text-secondary) !important;
+    width: 16px !important;
+    text-align: center !important;
+}
+
+[data-theme="apple-dark-mode"] .dropdown-item:hover i {
+    color: var(--primary) !important;
+}
+
+/* ===== الشارات بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .badge {
+    border-radius: var(--apple-radius) !important;
+    padding: 6px 12px !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+}
+
+[data-theme="apple-dark-mode"] .badge.bg-success {
+    background: var(--success) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="apple-dark-mode"] .badge.bg-danger {
+    background: var(--error) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="apple-dark-mode"] .badge.bg-warning {
+    background: var(--warning) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="apple-dark-mode"] .badge.bg-info {
+    background: var(--info) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="apple-dark-mode"] .badge.bg-secondary {
+    background: var(--fill-primary) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="apple-dark-mode"] .badge.bg-primary {
+    background: var(--primary) !important;
+    color: #ffffff !important;
+}
+
+/* ===== الإشعارات بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .alert {
+    border: none !important;
+    border-radius: var(--apple-radius-large) !important;
+    padding: 16px 20px !important;
+    margin-bottom: 20px !important;
+    backdrop-filter: var(--apple-blur) !important;
+    -webkit-backdrop-filter: var(--apple-blur) !important;
+}
+
+[data-theme="apple-dark-mode"] .alert-success {
+    background: rgba(48, 209, 88, 0.15) !important;
+    color: var(--success) !important;
+    border-left: 4px solid var(--success) !important;
+}
+
+[data-theme="apple-dark-mode"] .alert-danger {
+    background: rgba(255, 69, 58, 0.15) !important;
+    color: var(--error) !important;
+    border-left: 4px solid var(--error) !important;
+}
+
+[data-theme="apple-dark-mode"] .alert-warning {
+    background: rgba(255, 149, 0, 0.15) !important;
+    color: var(--warning) !important;
+    border-left: 4px solid var(--warning) !important;
+}
+
+[data-theme="apple-dark-mode"] .alert-info {
+    background: rgba(0, 122, 255, 0.15) !important;
+    color: var(--info) !important;
+    border-left: 4px solid var(--info) !important;
+}
+
+/* ===== التذييل بتصميم Apple ===== */
+[data-theme="apple-dark-mode"] .footer-area {
+    background: rgba(28, 28, 30, 0.8) !important;
+    backdrop-filter: var(--apple-blur) !important;
+    -webkit-backdrop-filter: var(--apple-blur) !important;
+    color: var(--text-primary) !important;
+    border-top: 1px solid var(--separator) !important;
+    padding: 40px 0 20px 0 !important;
+}
+
+[data-theme="apple-dark-mode"] .footer-title {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    margin-bottom: 16px !important;
+    font-size: 1.1rem !important;
+}
+
+[data-theme="apple-dark-mode"] .footer-link {
+    color: var(--text-secondary) !important;
+    transition: var(--apple-transition) !important;
+    text-decoration: none !important;
+    padding: 4px 0 !important;
+    display: block !important;
+}
+
+[data-theme="apple-dark-mode"] .footer-link:hover {
+    color: var(--primary) !important;
+    transform: translateX(-4px) !important;
+}
+
+[data-theme="apple-dark-mode"] .footer-contact-item {
+    color: var(--text-secondary) !important;
+    margin-bottom: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+[data-theme="apple-dark-mode"] .footer-contact-item i {
+    margin-left: 12px !important;
+    color: var(--primary) !important;
+    width: 16px !important;
+    text-align: center !important;
+}
+
+[data-theme="apple-dark-mode"] .social-icon {
+    background: rgba(120, 120, 128, 0.16) !important;
+    color: var(--text-primary) !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 8px !important;
+    transition: var(--apple-transition) !important;
+    border: 1px solid var(--separator) !important;
+}
+
+[data-theme="apple-dark-mode"] .social-icon:hover {
+    background: var(--primary) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: var(--apple-shadow-light) !important;
+}
+
+[data-theme="apple-dark-mode"] .copyright-text {
+    color: var(--text-tertiary) !important;
+    font-size: 0.875rem !important;
+    text-align: center !important;
+    margin-top: 24px !important;
+    padding-top: 24px !important;
+    border-top: 1px solid var(--separator) !important;
+}
+
+/* ===== أزرار الإجراءات في الهيدر ===== */
+[data-theme="apple-dark-mode"] .btn-outline-light {
+    border: 1px solid var(--separator) !important;
+    color: var(--text-primary) !important;
+    background: rgba(120, 120, 128, 0.16) !important;
+    border-radius: var(--apple-radius) !important;
+    padding: 8px 16px !important;
+    transition: var(--apple-transition) !important;
+    backdrop-filter: var(--apple-blur) !important;
+    -webkit-backdrop-filter: var(--apple-blur) !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-outline-light:hover {
+    border-color: var(--primary) !important;
+    background: rgba(0, 122, 255, 0.16) !important;
+    color: var(--text-primary) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: var(--apple-shadow-light) !important;
+}
+
+[data-theme="apple-dark-mode"] .btn-outline-light:active {
+    transform: scale(0.98) !important;
+}
+
+/* ===== النصوص والعناوين ===== */
+[data-theme="apple-dark-mode"] h1,
+[data-theme="apple-dark-mode"] h2,
+[data-theme="apple-dark-mode"] h3,
+[data-theme="apple-dark-mode"] h4,
+[data-theme="apple-dark-mode"] h5,
+[data-theme="apple-dark-mode"] h6 {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+}
+
+[data-theme="apple-dark-mode"] p,
+[data-theme="apple-dark-mode"] span,
+[data-theme="apple-dark-mode"] div {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="apple-dark-mode"] .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+/* ===== تأثيرات الحركة Apple ===== */
+[data-theme="apple-dark-mode"] * {
+    transition: var(--apple-transition) !important;
+}
+
+/* ===== تأثير الضبابية للعناصر المرتفعة ===== */
+[data-theme="apple-dark-mode"] .navbar,
+[data-theme="apple-dark-mode"] .dropdown-menu,
+[data-theme="apple-dark-mode"] .footer-area {
+    backdrop-filter: var(--apple-blur) !important;
+    -webkit-backdrop-filter: var(--apple-blur) !important;
+}
+
+/* ===== تحسينات خاصة بـ Safari ===== */
+@supports (-webkit-backdrop-filter: blur(20px)) {
+    [data-theme="apple-dark-mode"] .navbar,
+    [data-theme="apple-dark-mode"] .dropdown-menu,
+    [data-theme="apple-dark-mode"] .footer-area {
+        -webkit-backdrop-filter: var(--apple-blur) !important;
+    }
+}

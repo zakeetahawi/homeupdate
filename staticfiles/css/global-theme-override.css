@@ -1,0 +1,344 @@
+/**
+ * Global Theme Override - تطبيق الثيم على جميع عناصر النظام
+ * يطبق الثيم الداكن الاحترافي على جميع الجداول والنماذج والبطاقات
+ */
+
+/* ===== تطبيق شامل للثيم الداكن ===== */
+
+/* الجداول - تطبيق شامل */
+.table {
+    background: var(--card-bg) !important;
+    color: var(--text-light) !important;
+    border-radius: 15px !important;
+    overflow: hidden !important;
+    box-shadow: var(--shadow-heavy) !important;
+    border: 2px solid var(--border-color) !important;
+}
+
+.table th {
+    background: var(--primary-gradient) !important;
+    color: var(--light) !important;
+    border: none !important;
+    padding: 1.2rem 1rem !important;
+    font-weight: 700 !important;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5) !important;
+    position: relative !important;
+}
+
+.table th::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 3px !important;
+    background: var(--secondary-gradient) !important;
+}
+
+.table td {
+    background: var(--card-bg) !important;
+    color: var(--text-light) !important;
+    border-color: var(--border-color) !important;
+    padding: 1rem !important;
+    vertical-align: middle !important;
+    transition: all 0.3s ease !important;
+}
+
+.table tbody tr:hover {
+    background: rgba(74, 144, 226, 0.15) !important;
+    transform: scale(1.01) !important;
+    box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3) !important;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background: rgba(74, 144, 226, 0.08) !important;
+}
+
+.table-responsive {
+    border-radius: 15px !important;
+    overflow: hidden !important;
+    box-shadow: var(--shadow-heavy) !important;
+}
+
+/* البطاقات - تطبيق شامل */
+.card {
+    background: var(--card-bg) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 20px !important;
+    box-shadow: var(--shadow-heavy) !important;
+    transition: all 0.3s ease !important;
+    overflow: hidden !important;
+}
+
+.card:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: var(--shadow-heavy), var(--glow-blue) !important;
+    border-color: var(--secondary) !important;
+}
+
+.card-header {
+    background: var(--primary-gradient) !important;
+    color: var(--light) !important;
+    border: none !important;
+    padding: 1.5rem !important;
+    font-weight: 700 !important;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5) !important;
+    position: relative !important;
+}
+
+.card-header::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 3px !important;
+    background: var(--secondary-gradient) !important;
+}
+
+.card-body {
+    background: var(--card-bg) !important;
+    color: var(--text-light) !important;
+    padding: 2rem !important;
+}
+
+.card-title {
+    color: var(--text-light) !important;
+    font-weight: 700 !important;
+}
+
+.card-text {
+    color: var(--text-light) !important;
+}
+
+/* النماذج - تطبيق شامل */
+.form-control {
+    background: var(--card-bg) !important;
+    border: 2px solid var(--border-color) !important;
+    color: var(--text-light) !important;
+    border-radius: 10px !important;
+    padding: 0.8rem 1rem !important;
+    transition: all 0.3s ease !important;
+}
+
+.form-control:focus {
+    background: var(--card-bg) !important;
+    border-color: var(--secondary) !important;
+    color: var(--text-light) !important;
+    box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25) !important;
+}
+
+.form-control::placeholder {
+    color: var(--text-muted) !important;
+}
+
+.form-select {
+    background: var(--card-bg) !important;
+    border: 2px solid var(--border-color) !important;
+    color: var(--text-light) !important;
+    border-radius: 10px !important;
+    padding: 0.8rem 1rem !important;
+}
+
+.form-select:focus {
+    background: var(--card-bg) !important;
+    border-color: var(--secondary) !important;
+    color: var(--text-light) !important;
+    box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25) !important;
+}
+
+.form-label {
+    color: var(--text-light) !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.8rem !important;
+}
+
+/* الأزرار - تطبيق شامل */
+.btn-primary {
+    background: var(--secondary-gradient) !important;
+    border: none !important;
+    color: var(--light) !important;
+    font-weight: 600 !important;
+    padding: 0.8rem 1.5rem !important;
+    border-radius: 25px !important;
+    box-shadow: var(--shadow-blue) !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-primary:hover {
+    background: var(--primary-gradient) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: var(--shadow-heavy), var(--glow-blue) !important;
+    color: var(--light) !important;
+}
+
+.btn-secondary {
+    background: var(--silver-gradient) !important;
+    border: none !important;
+    color: var(--dark) !important;
+    font-weight: 600 !important;
+    padding: 0.8rem 1.5rem !important;
+    border-radius: 25px !important;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    border: none !important;
+    color: var(--light) !important;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%) !important;
+    border: none !important;
+    color: var(--light) !important;
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+    border: none !important;
+    color: var(--dark) !important;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%) !important;
+    border: none !important;
+    color: var(--light) !important;
+}
+
+/* الإشعارات - تطبيق شامل */
+.alert {
+    border-radius: 15px !important;
+    border: none !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+    box-shadow: var(--shadow-blue) !important;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.9) 0%, rgba(32, 201, 151, 0.9) 100%) !important;
+    color: var(--light) !important;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.9) 0%, rgba(231, 76, 60, 0.9) 100%) !important;
+    color: var(--light) !important;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.9) 0%, rgba(253, 126, 20, 0.9) 100%) !important;
+    color: var(--dark) !important;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, rgba(23, 162, 184, 0.9) 0%, rgba(32, 201, 151, 0.9) 100%) !important;
+    color: var(--light) !important;
+}
+
+/* الشارات - تطبيق شامل */
+.badge {
+    padding: 0.5rem 1rem !important;
+    border-radius: 20px !important;
+    font-weight: 600 !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3) !important;
+}
+
+.bg-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+}
+
+.bg-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%) !important;
+}
+
+.bg-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+    color: var(--dark) !important;
+}
+
+.bg-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%) !important;
+}
+
+.bg-secondary {
+    background: var(--silver-gradient) !important;
+    color: var(--dark) !important;
+}
+
+/* القوائم المنسدلة - تطبيق شامل */
+.dropdown-menu {
+    background: var(--card-bg) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 15px !important;
+    box-shadow: var(--shadow-heavy) !important;
+    padding: 1rem !important;
+}
+
+.dropdown-item {
+    color: var(--text-light) !important;
+    padding: 0.8rem 1rem !important;
+    border-radius: 10px !important;
+    transition: all 0.3s ease !important;
+}
+
+.dropdown-item:hover {
+    background: rgba(74, 144, 226, 0.2) !important;
+    color: var(--light) !important;
+}
+
+.dropdown-header {
+    color: var(--secondary) !important;
+    font-weight: 700 !important;
+}
+
+/* النصوص والعناوين - تطبيق شامل */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-light) !important;
+    font-weight: 700 !important;
+}
+
+p, span, div, label {
+    color: var(--text-light) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+a {
+    color: var(--secondary) !important;
+    transition: all 0.3s ease !important;
+}
+
+a:hover {
+    color: var(--blue-accent) !important;
+    text-shadow: 0 0 10px rgba(88, 166, 255, 0.5) !important;
+}
+
+/* التصفح والترقيم - تطبيق شامل */
+.pagination {
+    margin-top: 2rem !important;
+}
+
+.page-link {
+    background: var(--card-bg) !important;
+    border: 2px solid var(--border-color) !important;
+    color: var(--text-light) !important;
+    padding: 0.8rem 1rem !important;
+    margin: 0 0.2rem !important;
+    border-radius: 10px !important;
+    transition: all 0.3s ease !important;
+}
+
+.page-link:hover {
+    background: var(--secondary) !important;
+    border-color: var(--secondary) !important;
+    color: var(--light) !important;
+    transform: translateY(-2px) !important;
+}
+
+.page-item.active .page-link {
+    background: var(--secondary-gradient) !important;
+    border-color: var(--secondary) !important;
+    color: var(--light) !important;
+    box-shadow: var(--glow-blue) !important;
+}

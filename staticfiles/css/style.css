@@ -131,6 +131,86 @@
     --light-accent: #EBDEF0;
 }
 
+/* Professional Silver-Blue Theme */
+[data-theme="professional-silver-blue"] {
+    --primary: #1a1a1a;           /* أسود عميق */
+    --secondary: #4a90e2;         /* أزرق شامي */
+    --accent: #c0c0c0;            /* فضي */
+    --dark: #000000;              /* أسود خالص */
+    --light: #ffffff;             /* أبيض خالص */
+    --neutral: #f8f9fa;           /* رمادي فاتح جداً */
+    --dark-bg: #0d1117;           /* خلفية داكنة */
+    --card-bg: #161b22;           /* خلفية البطاقات */
+    --border-color: #30363d;      /* لون الحدود */
+    --text-light: #f0f6fc;        /* نص فاتح */
+    --text-muted: #8b949e;        /* نص خافت */
+    --blue-accent: #58a6ff;       /* أزرق مضيء */
+    --silver-accent: #e6e6e6;     /* فضي فاتح */
+    --light-bg: #0d1117;          /* خلفية فاتحة (داكنة في هذا الثيم) */
+    --dark-text: #f0f6fc;         /* نص داكن (فاتح في هذا الثيم) */
+    --alert: #ff6b6b;             /* تحذير أحمر فاتح */
+    --light-accent: #58a6ff;      /* لهجة فاتحة زرقاء */
+}
+
+/* Google Material Professional Theme */
+[data-theme="google-material-pro"] {
+    --primary: #1976d2;           /* أزرق Google الأساسي */
+    --secondary: #424242;         /* رمادي داكن */
+    --accent: #ff5722;            /* برتقالي مميز */
+    --surface: #ffffff;           /* سطح أبيض */
+    --background: #fafafa;        /* خلفية فاتحة */
+    --error: #f44336;             /* أحمر خطأ */
+    --warning: #ff9800;           /* برتقالي تحذير */
+    --info: #2196f3;              /* أزرق معلومات */
+    --success: #4caf50;           /* أخضر نجاح */
+    --on-primary: #ffffff;        /* نص على الأساسي */
+    --on-secondary: #ffffff;      /* نص على الثانوي */
+    --on-surface: #212121;        /* نص على السطح */
+    --on-background: #212121;     /* نص على الخلفية */
+    --elevation-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    --elevation-2: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+    --elevation-3: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+    --elevation-4: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+    --border-radius: 8px;
+    --border-radius-large: 16px;
+    --transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    --light-bg: #fafafa;
+    --dark-text: #212121;
+    --alert: #f44336;
+    --light-accent: #2196f3;
+}
+
+/* Apple Dark Mode Theme */
+[data-theme="apple-dark-mode"] {
+    --primary: #007aff;           /* أزرق Apple الأساسي */
+    --secondary: #1c1c1e;         /* رمادي Apple الداكن */
+    --accent: #ff9500;            /* برتقالي Apple */
+    --surface: #2c2c2e;           /* سطح داكن */
+    --background: #000000;        /* خلفية سوداء خالصة */
+    --card-bg: #1c1c1e;           /* خلفية البطاقات */
+    --elevated-bg: #2c2c2e;       /* خلفية مرتفعة */
+    --error: #ff453a;             /* أحمر Apple */
+    --warning: #ff9500;           /* برتقالي Apple */
+    --info: #007aff;              /* أزرق Apple */
+    --success: #30d158;           /* أخضر Apple */
+    --text-primary: #ffffff;      /* نص أساسي أبيض */
+    --text-secondary: #ebebf5;    /* نص ثانوي فاتح */
+    --text-tertiary: #ebebf599;   /* نص ثالثي شفاف */
+    --separator: #38383a;         /* خط فاصل */
+    --fill-primary: #787880;      /* تعبئة أساسية */
+    --fill-secondary: #78788033;  /* تعبئة ثانوية */
+    --apple-blur: blur(20px);     /* تأثير الضبابية */
+    --apple-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --apple-shadow-light: 0 4px 16px rgba(0, 0, 0, 0.2);
+    --apple-radius: 12px;
+    --apple-radius-large: 20px;
+    --apple-transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+    --light-bg: #000000;
+    --dark-text: #ffffff;
+    --alert: #ff453a;
+    --light-accent: #007aff;
+}
+
 /* Enhanced Dropdown Menu Styling */
 .navbar .nav-item.dropdown:hover .dropdown-menu {
     display: block;
@@ -214,12 +294,12 @@
         padding-right: 20px;
         background-color: transparent;
     }
-    
+
     .navbar .dropdown-item {
         color: rgba(255,255,255,0.8);
         padding: 8px 15px;
     }
-    
+
     .navbar .dropdown-item:hover {
         color: #fff;
         background-color: rgba(255,255,255,0.1);
@@ -228,7 +308,7 @@
     .navbar .dropdown-divider {
         border-color: rgba(255,255,255,0.2);
     }
-    
+
     .navbar .dropdown-header {
         color: #fff;
     }
@@ -236,33 +316,33 @@
     .navbar-collapse {
         padding: 1rem 0;
     }
-    
+
     .navbar-nav .nav-link {
         padding: 0.5rem 0.75rem;
     }
-    
+
     .navbar-nav .dropdown-menu {
         margin-right: 1rem;
         border: none;
         background-color: rgba(255,255,255,0.05);
         box-shadow: none;
     }
-    
+
     .navbar-nav .dropdown-item {
         color: rgba(255,255,255,0.8);
         padding: 0.5rem 1rem;
     }
-    
+
     .navbar-nav .dropdown-item:hover {
         background-color: rgba(255,255,255,0.1);
     }
-    
+
     .navbar-dark .d-flex.align-items-center {
         margin-top: 1rem;
         justify-content: center;
         width: 100%;
     }
-    
+
     .navbar-dark .dropdown {
         margin-bottom: 0.5rem;
     }
@@ -479,7 +559,7 @@ footer {
     .no-print {
         display: none !important;
     }
-    
+
     .container {
         width: 100%;
         max-width: 100%;
@@ -500,7 +580,7 @@ footer {
     .navbar-brand > div {
         gap: 6px;
     }
-    
+
     .card-title {
         font-size: 1.1rem;
     }
@@ -511,7 +591,7 @@ footer {
         margin-left: 8px;
         padding: 6px 10px;
     }
-    
+
     .navbar .container {
         padding: 0.5rem;
     }
@@ -521,17 +601,17 @@ footer {
     .navbar-brand {
         margin-left: 0;
     }
-    
+
     .logo-img {
         width: 30px;
         height: 30px;
     }
-    
+
     .btn-outline-light {
         padding: 0.4rem 0.6rem;
         font-size: 0.9rem;
     }
-    
+
     .notification-dropdown {
         width: 280px;
     }
