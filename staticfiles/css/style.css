@@ -152,33 +152,7 @@
     --light-accent: #58a6ff;      /* لهجة فاتحة زرقاء */
 }
 
-/* Google Material Professional Theme */
-[data-theme="google-material-pro"] {
-    --primary: #1976d2;           /* أزرق Google الأساسي */
-    --secondary: #424242;         /* رمادي داكن */
-    --accent: #ff5722;            /* برتقالي مميز */
-    --surface: #ffffff;           /* سطح أبيض */
-    --background: #fafafa;        /* خلفية فاتحة */
-    --error: #f44336;             /* أحمر خطأ */
-    --warning: #ff9800;           /* برتقالي تحذير */
-    --info: #2196f3;              /* أزرق معلومات */
-    --success: #4caf50;           /* أخضر نجاح */
-    --on-primary: #ffffff;        /* نص على الأساسي */
-    --on-secondary: #ffffff;      /* نص على الثانوي */
-    --on-surface: #212121;        /* نص على السطح */
-    --on-background: #212121;     /* نص على الخلفية */
-    --elevation-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-    --elevation-2: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
-    --elevation-3: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
-    --elevation-4: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
-    --border-radius: 8px;
-    --border-radius-large: 16px;
-    --transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-    --light-bg: #fafafa;
-    --dark-text: #212121;
-    --alert: #f44336;
-    --light-accent: #2196f3;
-}
+
 
 /* Apple Dark Mode Theme */
 [data-theme="apple-dark-mode"] {
