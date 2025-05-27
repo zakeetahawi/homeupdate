@@ -23,6 +23,7 @@ DEBUG = os.environ.get('DEBUG', 'True').lower() in ['true', 't', '1', 'yes', 'y'
 ALLOWED_HOSTS_DEFAULT = [
     'localhost',
     '127.0.0.1',
+    '192.168.2.6',
     '0.0.0.0',
     'testserver',
     # نطاقات الإنتاج
