@@ -231,11 +231,14 @@ class BackupService:
                         except Exception as model_error:
                             print(f"تخطي نموذج {model_name}: {str(model_error)}")
 
-                # تعريف دالة مساعدة لتحويل كائنات datetime إلى سلاسل نصية
+                # تعريف دالة مساعدة لتحويل كائنات datetime و Decimal إلى سلاسل نصية
                 def json_serial(obj):
                     """تحويل كائنات Python إلى JSON"""
+                    import decimal
                     if isinstance(obj, (datetime.datetime, datetime.date)):
                         return obj.isoformat()
+                    elif isinstance(obj, decimal.Decimal):
+                        return float(obj)  # تحويل Decimal إلى float
                     raise TypeError(f"النوع {type(obj)} غير قابل للتحويل إلى JSON")
 
                 # كتابة البيانات إلى الملف المؤقت

@@ -533,8 +533,37 @@ def backup_restore(request, pk):
                 # تم إزالة BackupService لتجنب التعقيدات
                 if backup.file_path.endswith('.json'):
                     _restore_json_simple(backup.file_path)
+                elif backup.file_path.endswith('.json.gz'):
+                    # التعامل مع الملفات المضغوطة
+                    import gzip
+                    import tempfile
+
+                    print(f"📦 ملف مضغوط - فك الضغط: {backup.file_path}")
+
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as temp_file:
+                        temp_path = temp_file.name
+
+                    try:
+                        # فك ضغط الملف
+                        with gzip.open(backup.file_path, 'rt', encoding='utf-8') as gz_file:
+                            content = gz_file.read()
+
+                        # كتابة المحتوى المفكوك
+                        with open(temp_path, 'w', encoding='utf-8') as json_file:
+                            json_file.write(content)
+
+                        print(f"✅ تم فك الضغط بنجاح إلى: {temp_path}")
+
+                        # استعادة من الملف المفكوك
+                        _restore_json_simple(temp_path)
+
+                    finally:
+                        # حذف الملف المؤقت
+                        if os.path.exists(temp_path):
+                            os.unlink(temp_path)
+                            print(f"🗑️ تم حذف الملف المؤقت: {temp_path}")
                 else:
-                    raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON.")
+                    raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON أو JSON.GZ.")
                 messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
 
             return redirect('odoo_db_manager:dashboard')
