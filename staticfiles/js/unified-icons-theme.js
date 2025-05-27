@@ -39,6 +39,8 @@ function applyUnifiedIcons() {
         unifyActionIcons();
         unifyTableIcons();
         unifyButtonIcons();
+        unifyFormIcons();
+        unifyNotificationIcons();
         addIconAnimations();
     }
 }
@@ -130,29 +132,50 @@ function unifyActionIcons() {
 
 function unifyTableIcons() {
     // توحيد أيقونات الجداول
-    const tableIcons = document.querySelectorAll('table i');
+    const tableIcons = document.querySelectorAll('table i, .table i');
 
     tableIcons.forEach(icon => {
-        const parentCell = icon.closest('td');
-        const parentButton = icon.closest('button, a');
+        const parentButton = icon.closest('button, a, .btn-link');
 
-        if (parentButton && parentCell) {
+        if (parentButton) {
             const buttonClass = parentButton.className;
+            const title = parentButton.getAttribute('title') || '';
+            const href = parentButton.getAttribute('href') || '';
 
             // إزالة الفئات الحالية
             icon.className = icon.className.replace(/fa-\w+/g, '');
+            if (!icon.classList.contains('fas')) {
+                icon.classList.add('fas');
+            }
 
-            // إضافة الأيقونات حسب نوع الزر
-            if (buttonClass.includes('text-info')) {
-                icon.classList.add('fas', 'fa-eye');
-            } else if (buttonClass.includes('text-success')) {
-                icon.classList.add('fas', 'fa-download');
-            } else if (buttonClass.includes('text-warning')) {
-                icon.classList.add('fas', 'fa-clock');
-            } else if (buttonClass.includes('text-danger')) {
-                icon.classList.add('fas', 'fa-trash');
-            } else if (buttonClass.includes('text-primary')) {
-                icon.classList.add('fas', 'fa-power-off');
+            // إضافة الأيقونات حسب نوع الزر أو العنوان أو الرابط
+            if (buttonClass.includes('text-info') || title.includes('عرض') || title.includes('تفاصيل')) {
+                icon.classList.add('fa-eye');
+            } else if (buttonClass.includes('text-success') || title.includes('تحميل') || title.includes('نسخة احتياطية')) {
+                icon.classList.add('fa-download');
+            } else if (buttonClass.includes('text-warning') || title.includes('جدولة') || title.includes('وقت') || title.includes('تعديل')) {
+                if (title.includes('تعديل')) {
+                    icon.classList.add('fa-edit');
+                } else {
+                    icon.classList.add('fa-clock');
+                }
+            } else if (buttonClass.includes('text-danger') || title.includes('حذف')) {
+                icon.classList.add('fa-trash');
+            } else if (buttonClass.includes('text-primary') || title.includes('تنشيط') || title.includes('تفعيل')) {
+                icon.classList.add('fa-power-off');
+            } else if (title.includes('إعدادات')) {
+                icon.classList.add('fa-cog');
+            } else if (title.includes('طباعة')) {
+                icon.classList.add('fa-print');
+            } else if (href.includes('edit') || href.includes('update')) {
+                icon.classList.add('fa-edit');
+                parentButton.classList.add('text-warning');
+            } else if (href.includes('delete') || href.includes('remove')) {
+                icon.classList.add('fa-trash');
+                parentButton.classList.add('text-danger');
+            } else if (href.includes('view') || href.includes('detail')) {
+                icon.classList.add('fa-eye');
+                parentButton.classList.add('text-info');
             }
         }
     });
@@ -192,6 +215,127 @@ function unifyButtonIcons() {
     });
 }
 
+function unifyFormIcons() {
+    // توحيد أيقونات النماذج
+    const formGroups = document.querySelectorAll('.form-group, .mb-3, .form-floating');
+
+    formGroups.forEach(group => {
+        const label = group.querySelector('label');
+        const input = group.querySelector('input, select, textarea');
+
+        if (label && input && !label.querySelector('i.fas')) {
+            const labelText = label.textContent.toLowerCase();
+            const inputType = input.type || '';
+            const inputName = input.name || '';
+            let iconClass = '';
+
+            // تحديد الأيقونة حسب النص أو نوع الحقل
+            if (labelText.includes('اسم') || labelText.includes('name') || inputName.includes('name')) {
+                iconClass = 'fa-user';
+            } else if (labelText.includes('بريد') || labelText.includes('email') || inputType === 'email') {
+                iconClass = 'fa-envelope';
+            } else if (labelText.includes('هاتف') || labelText.includes('phone') || inputType === 'tel') {
+                iconClass = 'fa-phone';
+            } else if (labelText.includes('عنوان') || labelText.includes('address')) {
+                iconClass = 'fa-map-marker-alt';
+            } else if (labelText.includes('تاريخ') || labelText.includes('date') || inputType === 'date') {
+                iconClass = 'fa-calendar';
+            } else if (labelText.includes('وقت') || labelText.includes('time') || inputType === 'time') {
+                iconClass = 'fa-clock';
+            } else if (labelText.includes('كلمة المرور') || labelText.includes('password') || inputType === 'password') {
+                iconClass = 'fa-lock';
+            } else if (labelText.includes('بحث') || labelText.includes('search') || inputType === 'search') {
+                iconClass = 'fa-search';
+            } else if (labelText.includes('ملف') || labelText.includes('file') || inputType === 'file') {
+                iconClass = 'fa-file';
+            } else if (labelText.includes('صورة') || labelText.includes('image')) {
+                iconClass = 'fa-image';
+            } else if (labelText.includes('رقم') || labelText.includes('number') || inputType === 'number') {
+                iconClass = 'fa-hashtag';
+            } else if (labelText.includes('مبلغ') || labelText.includes('سعر') || labelText.includes('price')) {
+                iconClass = 'fa-dollar-sign';
+            } else if (labelText.includes('وصف') || labelText.includes('description') || input.tagName === 'TEXTAREA') {
+                iconClass = 'fa-align-left';
+            } else if (labelText.includes('فئة') || labelText.includes('category') || input.tagName === 'SELECT') {
+                iconClass = 'fa-list';
+            } else if (labelText.includes('حالة') || labelText.includes('status')) {
+                iconClass = 'fa-info-circle';
+            }
+
+            if (iconClass) {
+                const icon = document.createElement('i');
+                icon.className = `fas ${iconClass}`;
+                icon.style.marginLeft = '8px';
+                icon.style.color = '#007bff';
+
+                label.insertBefore(icon, label.firstChild);
+            }
+        }
+    });
+}
+
+function unifyNotificationIcons() {
+    // توحيد أيقونات الإشعارات والتنبيهات
+    const notificationButton = document.querySelector('[data-bs-toggle="dropdown"][aria-expanded]');
+    if (notificationButton) {
+        const icon = notificationButton.querySelector('i');
+        if (icon) {
+            icon.className = 'fas fa-bell';
+            icon.style.color = '#ff9500';
+        }
+    }
+
+    // أيقونات القائمة المنسدلة للمستخدم
+    const userDropdownItems = document.querySelectorAll('.dropdown-item');
+    userDropdownItems.forEach(item => {
+        const icon = item.querySelector('i');
+        const text = item.textContent.toLowerCase();
+
+        if (icon) {
+            icon.className = icon.className.replace(/fa-\w+/g, '');
+            if (!icon.classList.contains('fas')) {
+                icon.classList.add('fas');
+            }
+
+            if (text.includes('ملف') || text.includes('profile')) {
+                icon.classList.add('fa-user');
+            } else if (text.includes('إعدادات') || text.includes('settings')) {
+                icon.classList.add('fa-cog');
+            } else if (text.includes('خروج') || text.includes('logout')) {
+                icon.classList.add('fa-sign-out-alt');
+            } else if (text.includes('لوحة') || text.includes('admin')) {
+                icon.classList.add('fa-tachometer-alt');
+            }
+        }
+    });
+
+    // أيقونات الإشعارات والتنبيهات
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        if (!alert.querySelector('i.fas')) {
+            let iconClass = '';
+
+            if (alert.classList.contains('alert-success')) {
+                iconClass = 'fa-check-circle';
+            } else if (alert.classList.contains('alert-danger')) {
+                iconClass = 'fa-exclamation-circle';
+            } else if (alert.classList.contains('alert-warning')) {
+                iconClass = 'fa-exclamation-triangle';
+            } else if (alert.classList.contains('alert-info')) {
+                iconClass = 'fa-info-circle';
+            }
+
+            if (iconClass) {
+                const icon = document.createElement('i');
+                icon.className = `fas ${iconClass}`;
+                icon.style.marginLeft = '8px';
+
+                alert.insertBefore(icon, alert.firstChild);
+            }
+        }
+    });
+}
+
 function addIconAnimations() {
     // إضافة تأثيرات الحركة للأيقونات
     const allIcons = document.querySelectorAll('i[class*="fa"]');
@@ -226,5 +370,7 @@ window.UnifiedIconsTheme = {
     unifyActions: unifyActionIcons,
     unifyTables: unifyTableIcons,
     unifyButtons: unifyButtonIcons,
+    unifyForms: unifyFormIcons,
+    unifyNotifications: unifyNotificationIcons,
     addAnimations: addIconAnimations
 };

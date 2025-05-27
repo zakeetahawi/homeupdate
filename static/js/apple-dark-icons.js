@@ -115,7 +115,7 @@ function applyNavigationAppleIcons() {
             }
 
             // إضافة تأثيرات Apple
-            icon.style.fontSize = '16px';
+            icon.style.fontSize = '14px';
             icon.style.transition = 'all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
             icon.style.display = 'inline-block';
         }
@@ -202,7 +202,7 @@ function applyActionAppleIcons() {
             }
 
             // إضافة تأثيرات Apple
-            icon.style.fontSize = '14px';
+            icon.style.fontSize = '12px';
             icon.style.transition = 'all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
             icon.style.display = 'inline-block';
         }
@@ -258,7 +258,7 @@ function applyTableAppleIcons() {
             }
 
             // إضافة تأثيرات Apple
-            icon.style.fontSize = '14px';
+            icon.style.fontSize = '12px';
             icon.style.transition = 'all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
             icon.style.display = 'inline-block';
         }
@@ -308,9 +308,9 @@ function applyButtonAppleIcons() {
             }
 
             // إضافة تأثيرات Apple
-            icon.style.fontSize = '14px';
+            icon.style.fontSize = '12px';
             icon.style.transition = 'all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
-            icon.style.marginLeft = '8px';
+            icon.style.marginLeft = '6px';
             icon.style.display = 'inline-block';
         }
     });
@@ -385,8 +385,8 @@ function applyFormAppleIcons() {
                 const icon = document.createElement('span');
                 icon.className = 'apple-icon';
                 icon.innerHTML = iconEmoji;
-                icon.style.fontSize = '14px';
-                icon.style.marginLeft = '8px';
+                icon.style.fontSize = '12px';
+                icon.style.marginLeft = '6px';
                 icon.style.display = 'inline-block';
                 icon.style.verticalAlign = 'middle';
 
