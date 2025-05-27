@@ -29,9 +29,14 @@ class OdooDbManagerConfig(AppConfig):
             import os
             if os.environ.get('RUN_MAIN', None) != 'true':
                 # تجنب التشغيل المزدوج في وضع التطوير
-                from .services.scheduled_backup_service import scheduled_backup_service
-                scheduled_backup_service.start()
-                print("تم بدء تشغيل خدمة النسخ الاحتياطية المجدولة")
+                try:
+                    from .services.scheduled_backup_service import scheduled_backup_service
+                    scheduled_backup_service.start()
+                    print("تم بدء تشغيل خدمة النسخ الاحتياطية المجدولة")
+                except Exception as scheduler_error:
+                    print(f"فشل بدء تشغيل المجدول: {str(scheduler_error)}")
+                    # في بيئة الإنتاج، قد نحتاج لحل بديل
+                    print("سيتم استخدام النسخ الاحتياطية اليدوية في بيئة الإنتاج")
         except ImportError:
             pass
         except Exception as e:

@@ -941,6 +941,67 @@ def schedule_run_now(request, pk):
     return redirect('odoo_db_manager:schedule_detail', pk=schedule.pk)
 
 
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def scheduler_status(request):
+    """عرض حالة المجدول وإصلاح المشاكل"""
+    from .services.scheduled_backup_service import scheduled_backup_service, get_scheduler
+
+    context = {
+        'title': _('حالة مجدول النسخ الاحتياطية'),
+    }
+
+    try:
+        # فحص حالة المجدول
+        scheduler = get_scheduler()
+        context['scheduler_running'] = scheduler.running if scheduler else False
+        context['scheduler_available'] = scheduler is not None
+
+        if scheduler:
+            context['scheduler_jobs'] = len(scheduler.get_jobs())
+        else:
+            context['scheduler_jobs'] = 0
+
+        # فحص الجدولات النشطة
+        active_schedules = BackupSchedule.objects.filter(is_active=True)
+        context['active_schedules_count'] = active_schedules.count()
+        context['active_schedules'] = active_schedules
+
+        # فحص النسخ الاحتياطية الأخيرة
+        recent_backups = Backup.objects.filter(
+            is_scheduled=True
+        ).order_by('-created_at')[:5]
+        context['recent_scheduled_backups'] = recent_backups
+
+    except Exception as e:
+        context['error'] = str(e)
+        messages.error(request, f'خطأ في فحص حالة المجدول: {str(e)}')
+
+    # معالجة الطلبات
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'restart_scheduler':
+            try:
+                scheduled_backup_service.stop()
+                scheduled_backup_service.start()
+                messages.success(request, 'تم إعادة تشغيل المجدول بنجاح')
+            except Exception as e:
+                messages.error(request, f'فشل إعادة تشغيل المجدول: {str(e)}')
+
+        elif action == 'run_manual_backup':
+            try:
+                from django.core.management import call_command
+                call_command('run_scheduled_backups', force=True)
+                messages.success(request, 'تم تشغيل النسخ الاحتياطية يدوياً')
+            except Exception as e:
+                messages.error(request, f'فشل تشغيل النسخ الاحتياطية: {str(e)}')
+
+        return redirect('odoo_db_manager:scheduler_status')
+
+    return render(request, 'odoo_db_manager/scheduler_status.html', context)
+
+
 def _restore_json_simple(file_path):
     """استعادة ملف JSON بطريقة مبسطة"""
     import json

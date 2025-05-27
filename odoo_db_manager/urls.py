@@ -38,6 +38,7 @@ urlpatterns = [
     path('schedules/<int:pk>/delete/', views.schedule_delete, name='schedule_delete'),
     path('schedules/<int:pk>/toggle/', views.schedule_toggle, name='schedule_toggle'),
     path('schedules/<int:pk>/run/', views.schedule_run_now, name='schedule_run_now'),
+    path('scheduler/status/', views.scheduler_status, name='scheduler_status'),
 
     # Google Drive
     path('google-drive/settings/', views.google_drive_settings, name='google_drive_settings'),
