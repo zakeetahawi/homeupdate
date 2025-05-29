@@ -8,8 +8,12 @@
     <div class="col-md-5 mb-4">
         <div class="card text-center shadow-lg" style="background-color: #f5f0e5;">
             <div class="card-body py-3">
-                <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="img-fluid mb-3" style="max-width: 120px;">
-                <h2 class="card-title mb-3" style="color: #8B7355;">مرحباً بك في نظام الخواجه لإدارة العملاء</h2>
+                {% if company_info.logo %}
+                    <img src="{{ company_info.logo.url }}" alt="{{ company_info.name|default:'شعار النظام' }}" class="img-fluid mb-3 logo-img home-logo" style="width: 180px; height: auto;">
+                {% else %}
+                    <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="img-fluid mb-3 logo-img home-logo" style="width: 180px; height: auto;">
+                {% endif %}
+                <h2 class="card-title mb-3 welcome-title">مرحباً بك في نظام الخواجه لإدارة العملاء</h2>
                 <p class="card-text" style="color: #8B7355;">نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون</p>
             </div>
         </div>

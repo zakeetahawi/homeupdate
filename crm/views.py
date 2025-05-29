@@ -46,6 +46,12 @@ def home(request):
         if product.needs_restock
     ][:10]
 
+    # Get company info for logo
+    try:
+        company_info = CompanyInfo.objects.first()
+    except:
+        company_info = None
+
     context = {
         'customers_count': customers_count,
         'orders_count': orders_count,
@@ -55,6 +61,7 @@ def home(request):
         'production_orders': production_orders,
         'low_stock_products': low_stock_products,
         'current_year': timezone.now().year,
+        'company_info': company_info,
     }
 
     return render(request, 'home.html', context)

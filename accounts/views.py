@@ -831,3 +831,44 @@ def role_management(request):
     }
 
     return render(request, 'accounts/role_management.html', context)
+
+@staff_member_required
+def set_default_theme(request):
+    """
+    تعيين الثيم الافتراضي للنظام
+    """
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            theme = data.get('theme', 'default')
+            
+            # الحصول على معلومات الشركة أو إنشاؤها
+            company, created = CompanyInfo.objects.get_or_create(
+                defaults={'name': 'الخواجه'}
+            )
+            
+            # حفظ الثيم الافتراضي في حقل جديد أو استخدام حقل موجود
+            # يمكن إضافة حقل default_theme للنموذج لاحقاً
+            # company.default_theme = theme
+            # company.save()
+            
+            # حالياً سنحفظه في الكاش كحل مؤقت
+            from django.core.cache import cache
+            cache.set('default_theme', theme, timeout=None)
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'تم تعيين "{theme}" كثيم افتراضي للنظام'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False, 
+                'message': f'حدث خطأ: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False, 
+        'message': 'طريقة غير مدعومة'
+    })

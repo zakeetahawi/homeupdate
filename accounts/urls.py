@@ -56,5 +56,7 @@ urlpatterns = [
     path('roles/<int:pk>/update/', views.role_update, name='role_update'),
     path('roles/<int:pk>/delete/', views.role_delete, name='role_delete'),
     path('roles/<int:pk>/assign/', views.role_assign, name='role_assign'),
+    
+    # Theme Management
+    path('set-default-theme/', views.set_default_theme, name='set_default_theme'),
 ]
-
