@@ -20,7 +20,14 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
     <!-- Apple Dark Mode Theme CSS -->
-    <link rel="stylesheet" href="{% static 'css/apple-dark-mode-theme.css' %}">
+    <link rel="stylesheet" href="{% static 'css/apple-dark-mode-theme.css' %}">    <!-- Modern Black Theme CSS -->
+    <link rel="stylesheet" href="{% static 'css/modern-black-theme.css' %}">
+    
+    <!-- Modern Black Theme Fixes -->
+    <link rel="stylesheet" href="{% static 'css/modern-black-fixes.css' %}">
+    
+    <!-- Extra Dark Mode Fixes -->
+    <link rel="stylesheet" href="{% static 'css/extra-dark-fixes.css' %}">
 
     <!-- Google Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
@@ -33,15 +40,30 @@
     <link rel="stylesheet" href="{% static 'css/db_card.css' %}">
     {% endif %}
 
+    <!-- تطبيق فوري للثيم لتجنب الوميض -->
+    <script>
+        // تطبيق الثيم فوراً قبل رسم الصفحة
+        (function() {
+            var savedTheme = localStorage.getItem('selectedTheme');
+            if (savedTheme && savedTheme !== 'default') {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }
+        })();
+    </script>
+
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body id="main-body">
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="{% url 'home' %}">
                 <div class="d-flex align-items-center">
-                    <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="logo-img">
+                    {% if company_info.logo %}
+                        <img src="{{ company_info.logo.url }}" alt="{{ company_info.name|default:'شعار النظام' }}" class="logo-img">
+                    {% else %}
+                        <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="logo-img">
+                    {% endif %}
                 </div>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -174,10 +196,11 @@
                             <i class="fas fa-user"></i> {{ user.get_full_name|default:user.username }}
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li>
-                                <div class="px-3 py-2">
-                                    <select class="form-select" id="themeSelector">
+                            <li>                                <div class="px-3 py-2" style="position: relative;" oncontextmenu="return false;">
+                                    <label for="themeSelector" class="form-label" style="font-weight: bold;">اختر الثيم المناسب</label>
+                                    <select class="form-select" id="themeSelector" oncontextmenu="return false;">
                                         <option value="default">الثيم الافتراضي</option>
+                                        <option value="modern-black" style="font-weight: bold; background-color: #000; color: #00D2FF; padding: 8px;">⚫ الأسود الحديث (موصى به)</option>
                                         <option value="apple-dark-mode">🌙 Apple الوضع الليلي</option>
                                         <option value="light-sky">السماوي الفاتح</option>
                                         <option value="soft-pink">الوردي الناعم</option>
@@ -190,6 +213,12 @@
                                         <option value="light-turquoise">التركواز الفاتح</option>
                                         <option value="soft-lilac">الليلكي الناعم</option>
                                     </select>
+                                    <div class="theme-selector-hint">
+                                        <i class="fas fa-lightbulb"></i> انقر بزر الماوس الأيمن <i class="fas fa-mouse"></i> لتعيين الثيم كافتراضي
+                                    </div>
+                                    
+                                    <!-- حاوية مخصصة لزر التفعيل -->
+                                    <div id="theme-activate-button-container"></div>
                                 </div>
                             </li>
                             <li><hr class="dropdown-divider"></li>
@@ -225,71 +254,71 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer class="footer-area text-white mt-5 py-4" style="background-color: var(--accent);">
+    <!-- Footer المُحسَّن -->
+    <footer class="footer-area text-white mt-5 py-3" style="background-color: var(--accent);">
         <div class="container">
             <div class="row">
-                <div class="col-md-5">
-                    <h5 class="footer-title">
+                <div class="col-md-4">
+                    <h6 class="footer-title">
                         <i class="fas fa-building me-2"></i>
                         {{ footer_settings.left_column_title|default:company_info.name }}
-                    </h5>
-                    <p class="footer-description ps-4 border-start border-3 border-light">
+                    </h6>
+                    <p class="footer-description small ps-3 border-start border-2 border-light">
                         {{ footer_settings.left_column_text|default:company_info.description }}
                     </p>
                     {% if company_info.facebook or company_info.twitter or company_info.instagram or company_info.linkedin %}
-                    <div class="social-icons mt-3">
+                    <div class="social-icons mt-2">
                         {% if company_info.facebook %}
                         <a href="{{ company_info.facebook }}" class="social-icon me-2" target="_blank" title="Facebook">
-                            <i class="fab fa-facebook-f fa-fw"></i>
+                            <i class="fab fa-facebook-f"></i>
                         </a>
                         {% endif %}
                         {% if company_info.twitter %}
                         <a href="{{ company_info.twitter }}" class="social-icon me-2" target="_blank" title="Twitter">
-                            <i class="fab fa-twitter fa-fw"></i>
+                            <i class="fab fa-twitter"></i>
                         </a>
                         {% endif %}
                         {% if company_info.instagram %}
                         <a href="{{ company_info.instagram }}" class="social-icon me-2" target="_blank" title="Instagram">
-                            <i class="fab fa-instagram fa-fw"></i>
+                            <i class="fab fa-instagram"></i>
                         </a>
                         {% endif %}
                         {% if company_info.linkedin %}
                         <a href="{{ company_info.linkedin }}" class="social-icon me-2" target="_blank" title="LinkedIn">
-                            <i class="fab fa-linkedin-in fa-fw"></i>
+                            <i class="fab fa-linkedin-in"></i>
                         </a>
                         {% endif %}
                     </div>
                     {% endif %}
                 </div>
                 <div class="col-md-3">
-                    <h5 class="footer-title">
+                    <h6 class="footer-title">
                         <i class="fas fa-link me-2"></i>
                         {{ footer_settings.middle_column_title|default:"روابط سريعة" }}
-                    </h5>
+                    </h6>
                     <ul class="footer-links">
                         <li>
                             <a href="{% url 'home' %}" class="footer-link">
-                                <i class="fas fa-home fa-fw me-1"></i> الرئيسية
+                                <i class="fas fa-home me-1"></i> الرئيسية
                             </a>
                         </li>
                         <li>
                             <a href="{% url 'about' %}" class="footer-link">
-                                <i class="fas fa-info-circle fa-fw me-1"></i> عن النظام
+                                <i class="fas fa-info-circle me-1"></i> عن النظام
                             </a>
                         </li>
                         <li>
                             <a href="{% url 'contact' %}" class="footer-link">
-                                <i class="fas fa-envelope fa-fw me-1"></i> اتصل بنا
+                                <i class="fas fa-envelope me-1"></i> اتصل بنا
                             </a>
                         </li>
                     </ul>
                 </div>
-                <div class="col-md-4">
-                    <h5 class="footer-title">
+                <div class="col-md-5">
+                    <h6 class="footer-title">
                         <i class="fas fa-headset me-2"></i>
                         {{ footer_settings.right_column_title|default:"تواصل معنا" }}
-                    </h5>
+                    </h6>
                     <ul class="footer-contact-info">
                         <li>
                             <a href="tel:{{ company_info.phone|default:'+20 123 456 7890' }}" class="footer-contact-item">
@@ -330,9 +359,9 @@
                     </ul>
                 </div>
             </div>
-            <hr class="footer-divider">
+            <hr class="footer-divider my-3">
             <div class="text-center footer-bottom">
-                <p class="copyright-text mb-0">
+                <p class="copyright-text mb-0 small">
                     <i class="far fa-copyright me-1"></i>
                     {{ current_year }}
                     {{ company_info.copyright_text|default:"جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات - تطوير zakee tahawi" }}
@@ -342,16 +371,18 @@
     </footer>
 
     <style>
-    /* أنماط التذييل الاحترافي */
+    /* أنماط التذييل المُحسَّن - نصف الحجم */
     .footer-area {
         background: linear-gradient(to right, var(--accent), var(--dark));
+        padding: 15px 0 8px 0 !important; /* نصف الحجم الأصلي */
     }
 
     .footer-title {
-        margin-bottom: 1.5rem;
-        font-weight: 700;
+        margin-bottom: 10px; /* نصف الحجم */
+        font-weight: 600; /* أقل من 700 */
+        font-size: 1rem; /* أصغر */
         position: relative;
-        padding-bottom: 0.5rem;
+        padding-bottom: 4px; /* أقل */
     }
 
     .footer-title::after {
@@ -359,37 +390,40 @@
         position: absolute;
         bottom: 0;
         right: 0;
-        height: 2px;
-        width: 50px;
+        height: 1px; /* أنحف */
+        width: 30px; /* أقصر */
         background-color: rgba(255,255,255,0.5);
     }
 
     .footer-description {
         opacity: 0.9;
-        line-height: 1.6;
+        line-height: 1.4; /* أقل */
+        font-size: 0.85rem; /* أصغر */
     }
 
     .social-icons {
         display: flex;
+        gap: 8px; /* أقل */
     }
 
     .social-icon {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
+        width: 28px; /* أصغر */
+        height: 28px; /* أصغر */
         border-radius: 50%;
         color: white;
         background-color: rgba(255,255,255,0.1);
         transition: all 0.3s ease;
         text-decoration: none;
+        font-size: 0.8rem; /* أصغر */
     }
 
     .social-icon:hover {
         background-color: rgba(255,255,255,0.3);
         color: white;
-        transform: translateY(-3px);
+        transform: translateY(-2px); /* أقل */
     }
 
     .footer-links {
@@ -398,7 +432,7 @@
     }
 
     .footer-links li {
-        margin-bottom: 0.75rem;
+        margin-bottom: 4px; /* أقل */
     }
 
     .footer-link {
@@ -406,12 +440,18 @@
         text-decoration: none;
         transition: all 0.3s ease;
         display: block;
-        padding: 0.35rem 0;
+        padding: 2px 0; /* أقل */
+        font-size: 0.85rem; /* أصغر */
     }
 
     .footer-link:hover {
         color: white;
-        transform: translateX(-5px);
+        transform: translateX(-3px); /* أقل */
+    }
+
+    .footer-link i {
+        font-size: 0.8rem; /* أصغر */
+        width: 14px; /* أقل */
     }
 
     .footer-contact-info {
@@ -420,7 +460,7 @@
     }
 
     .footer-contact-info li {
-        margin-bottom: 1rem;
+        margin-bottom: 6px; /* أقل */
     }
 
     .footer-contact-item {
@@ -429,6 +469,7 @@
         color: rgba(255,255,255,0.9);
         text-decoration: none;
         transition: all 0.2s ease;
+        font-size: 0.85rem; /* أصغر */
     }
 
     a.footer-contact-item:hover {
@@ -436,29 +477,59 @@
     }
 
     .icon-circle {
-        width: 36px;
-        height: 36px;
+        width: 26px; /* أصغر */
+        height: 26px; /* أصغر */
         background-color: rgba(255,255,255,0.1);
         border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-left: 0.75rem;
+        margin-left: 8px; /* أقل */
         flex-shrink: 0;
+        font-size: 0.8rem; /* أصغر */
     }
 
     .footer-divider {
-        margin: 1.5rem 0;
+        margin: 10px 0; /* أقل */
         border-color: rgba(255,255,255,0.2);
     }
 
     .footer-bottom {
-        padding-top: 1rem;
+        padding-top: 8px; /* أقل */
     }
 
     .copyright-text {
-        font-size: 0.9rem;
+        font-size: 0.8rem; /* أصغر */
         opacity: 0.9;
+    }
+
+    /* استجابة للشاشات الصغيرة */
+    @media (max-width: 768px) {
+        .footer-area {
+            padding: 12px 0 6px 0 !important;
+        }
+        
+        .footer-title {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        
+        .footer-link,
+        .footer-contact-item {
+            font-size: 0.8rem;
+        }
+        
+        .social-icon {
+            width: 26px;
+            height: 26px;
+            font-size: 0.75rem;
+        }
+        
+        .icon-circle {
+            width: 24px;
+            height: 24px;
+            font-size: 0.75rem;
+        }
     }
     </style>
 

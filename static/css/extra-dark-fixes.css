@@ -1,0 +1,86 @@
+/**
+ * Correcciones adicionales para el tema oscuro
+ * Este archivo contiene reglas específicas para corregir problemas de visualización en formularios y listas
+ */
+
+/* Correcciones para los formularios de clientes y otros */
+[data-theme="modern-black"] .customer-form label,
+[data-theme="modern-black"] .customer-form .form-label,
+[data-theme="modern-black"] .customer-form .form-text,
+[data-theme="modern-black"] .customer-form legend,
+[data-theme="modern-black"] .customer-form small,
+[data-theme="modern-black"] form label,
+[data-theme="modern-black"] form .form-label,
+[data-theme="modern-black"] form small,
+[data-theme="modern-black"] form .text-muted,
+[data-theme="modern-black"] form .text-secondary {
+    color: #ffffff !important;
+    text-shadow: none !important;
+}
+
+/* Navegación a través de la página */
+[data-theme="modern-black"] .navbar .nav-item .nav-link,
+[data-theme="modern-black"] .sidebar .nav-link,
+[data-theme="modern-black"] .nav-tabs .nav-link,
+[data-theme="modern-black"] .nav-pills .nav-link,
+[data-theme="modern-black"] .navbar-light .navbar-nav .nav-link {
+    color: #ffffff !important;
+}
+
+/* تعليق: تم نقل قواعد breadcrumb إلى ملف modern-black-fixes.css لمنع التكرار */
+
+/* Correcciones para modales y popups */
+[data-theme="modern-black"] .modal-content,
+[data-theme="modern-black"] .popover,
+[data-theme="modern-black"] .toast {
+    background-color: #1a1a1a !important;
+    border-color: #00D2FF !important;
+}
+
+[data-theme="modern-black"] .modal-header,
+[data-theme="modern-black"] .modal-footer {
+    border-color: #333333 !important;
+}
+
+[data-theme="modern-black"] .modal-title,
+[data-theme="modern-black"] .popover-header,
+[data-theme="modern-black"] .toast-header {
+    color: #00D2FF !important;
+}
+
+/* تعليق: تم نقل قواعد z-index للقوائم المنسدلة إلى ملفات أخرى لمنع التكرار */
+
+/* Formularios y campos de entrada */
+[data-theme="modern-black"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="modern-black"] select,
+[data-theme="modern-black"] textarea,
+[data-theme="modern-black"] .form-control,
+[data-theme="modern-black"] .form-select {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+    border-color: #333333 !important;
+}
+
+/* Texto en tablas */
+[data-theme="modern-black"] table,
+[data-theme="modern-black"] .table,
+[data-theme="modern-black"] td,
+[data-theme="modern-black"] th {
+    color: #ffffff !important;
+}
+
+/* Corrección para encabezados de sección y títulos */
+[data-theme="modern-black"] h1, 
+[data-theme="modern-black"] h2, 
+[data-theme="modern-black"] h3, 
+[data-theme="modern-black"] h4, 
+[data-theme="modern-black"] h5, 
+[data-theme="modern-black"] h6,
+[data-theme="modern-black"] .h1,
+[data-theme="modern-black"] .h2,
+[data-theme="modern-black"] .h3,
+[data-theme="modern-black"] .h4,
+[data-theme="modern-black"] .h5,
+[data-theme="modern-black"] .h6 {
+    color: #00D2FF !important;
+}

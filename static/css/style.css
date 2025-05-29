@@ -185,6 +185,138 @@
     --light-accent: #007aff;
 }
 
+/* Modern Black Theme - الثيم الأسود الحديث */
+[data-theme="modern-black"] {
+    --primary: #00D2FF;              /* أزرق زاهي */
+    --secondary: #1a1a1a;            /* رمادي داكن */
+    --accent: #00FF88;               /* أخضر زمردي */
+    --background: #000000;           /* أسود خالص */
+    --surface: #111111;              /* سطح داكن */
+    --card-bg: #1a1a1a;              /* خلفية البطاقات */
+    --elevated-bg: #222222;          /* خلفية مرتفعة */
+    --success: #00FF88;              /* أخضر نجاح */
+    --warning: #FFD700;              /* أصفر تحذير */
+    --error: #FF3366;                /* أحمر خطأ */
+    --info: #00D2FF;                 /* أزرق معلومات */
+    --text-primary: #ffffff;         /* نص أساسي أبيض */
+    --text-secondary: #e0e0e0;       /* نص ثانوي فاتح */
+    --text-tertiary: #a0a0a0;        /* نص ثالثي خافت */
+    --border: #333333;               /* لون الحدود */
+    --separator: #2a2a2a;            /* خط فاصل */
+    --light-bg: #000000;
+    --dark-text: #ffffff;
+    --alert: #FF3366;
+    --light-accent: #00D2FF;
+    --neutral: #333333;
+}
+
+/* إصلاح شامل للجداول في الثيم الأسود */
+[data-theme="modern-black"] .table,
+[data-theme="modern-black"] table,
+[data-theme="modern-black"] .table-responsive table,
+[data-theme="modern-black"] .data-table table,
+[data-theme="modern-black"] .dataTables_wrapper table,
+[data-theme="modern-black"] .dataTable,
+[data-theme="modern-black"] #DataTables_Table_0 {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--primary) !important;
+}
+
+[data-theme="modern-black"] .table th,
+[data-theme="modern-black"] table th,
+[data-theme="modern-black"] .table-responsive table th,
+[data-theme="modern-black"] .data-table table th,
+[data-theme="modern-black"] .dataTables_wrapper table th,
+[data-theme="modern-black"] .dataTable th {
+    background-color: rgba(0, 210, 255, 0.15) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--primary) !important;
+    font-weight: 600 !important;
+}
+
+[data-theme="modern-black"] .table td,
+[data-theme="modern-black"] table td,
+[data-theme="modern-black"] .table-responsive table td,
+[data-theme="modern-black"] .data-table table td,
+[data-theme="modern-black"] .dataTables_wrapper table td,
+[data-theme="modern-black"] .dataTable td {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--primary) !important;
+}
+
+[data-theme="modern-black"] .table tbody tr:hover,
+[data-theme="modern-black"] table tbody tr:hover,
+[data-theme="modern-black"] .dataTable tbody tr:hover {
+    background-color: var(--elevated-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .table-striped tbody tr:nth-of-type(odd) td,
+[data-theme="modern-black"] .dataTable.stripe tbody tr.odd {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* تحسينات DataTables للثيم الأسود */
+[data-theme="modern-black"] .dataTables_wrapper .dataTables_length,
+[data-theme="modern-black"] .dataTables_wrapper .dataTables_filter,
+[data-theme="modern-black"] .dataTables_wrapper .dataTables_info,
+[data-theme="modern-black"] .dataTables_wrapper .dataTables_paginate {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .dataTables_wrapper .dataTables_filter input {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+}
+
+[data-theme="modern-black"] .dataTables_wrapper .dataTables_length select {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* تحسين pagination */
+[data-theme="modern-black"] .pagination .page-link {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+}
+
+[data-theme="modern-black"] .pagination .page-link:hover {
+    background-color: var(--primary) !important;
+    color: #000000 !important;
+    border-color: var(--primary) !important;
+}
+
+[data-theme="modern-black"] .pagination .page-item.active .page-link {
+    background-color: var(--primary) !important;
+    color: #000000 !important;
+    border-color: var(--primary) !important;
+}
+
+/* ضمان ظهور القوائم المنسدلة في الثيم الأسود فوق كل شيء */
+[data-theme="modern-black"] .dropdown-menu {
+    z-index: 99999999 !important; 
+    position: absolute !important;
+}
+
+[data-theme="modern-black"] .dropdown {
+    position: relative !important;
+    z-index: 99999999 !important;
+}
+
+[data-theme="modern-black"] .navbar .dropdown {
+    position: relative !important;
+    z-index: 99999999 !important;
+}
+
+[data-theme="modern-black"] .navbar .dropdown-menu {
+    position: absolute !important;
+}
+
 /* Enhanced Dropdown Menu Styling */
 .navbar .nav-item.dropdown:hover .dropdown-menu {
     display: block;
@@ -201,6 +333,8 @@
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
     border: 1px solid var(--neutral);
     padding: 8px 0;
+    z-index: 999999999 !important;
+    position: absolute !important;
 }
 
 .dropdown-item {
@@ -251,13 +385,23 @@
 /* User and notification buttons */
 .btn-outline-light {
     border-width: 1px;
-    padding: 0.5rem 0.75rem;
+    padding: 0.6rem 0.85rem;
     transition: all 0.2s ease;
+    font-size: 1.1rem;
 }
 
 .btn-outline-light:hover {
     transform: translateY(-2px);
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* تكبير الأيقونات في الهيدر أكثر */
+.navbar .btn-outline-light i {
+    font-size: 1.4rem;
+}
+
+.navbar .dropdown-toggle i {
+    font-size: 1.3rem;
 }
 
 /* Responsive dropdown adjustments */
@@ -324,13 +468,19 @@
 
 /* Logo Styles */
 .logo-img {
-    width: 35px;
-    height: 35px;
-    margin-right: 5px;
+    width: 45px;
+    height: 45px;
+    margin-right: 8px;
     display: inline-block;
     vertical-align: middle;
     color: var(--light-accent);
     transition: color 0.3s ease;
+    background: transparent !important;
+    background-color: transparent !important;
+    mix-blend-mode: normal;
+    /* إزالة أي خلفية قد تكون موجودة في الملف */
+    -webkit-background-clip: padding-box;
+    background-clip: padding-box;
 }
 
 .navbar-brand:hover .logo-img {
@@ -362,9 +512,9 @@
     color: var(--light-accent);
 }
 
-/* Navigation menu */
+/* Navigation menu - تقليل المسافات */
 .navbar-nav .nav-link {
-    padding: 0.7rem 1rem;
+    padding: 0.6rem 0.8rem;
     color: rgba(255,255,255,0.85);
     transition: all 0.2s ease;
 }
@@ -423,25 +573,115 @@ body, .navbar, .card, .btn, .badge, footer,
     background-color: var(--light-bg);
     color: var(--dark-text);
     border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
+    position: relative;
 }
 
 #themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
+    padding: 10px;
+    cursor: context-menu;
 }
 
-.dropdown-menu .px-3 {
-    min-width: 200px;
+/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
+#themeSelector option:hover {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
+.theme-selector-hint {
+    color: var(--primary);
+    font-size: 12px;
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    font-weight: bold;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.theme-selector-hint:hover {
+    opacity: 1;
+}
+
+/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
+[data-theme="modern-black"] .theme-selector-hint {
+    color: var(--accent);
+    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
+}
+
+/* Theme Selector Styles - أنماط منتقي الثيم */
+.theme-selector-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.theme-selector-label {
+    margin-right: 10px;
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+.theme-selector {
+    position: relative;
+    display: inline-block;
+    width: 200px;
+    height: 40px;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    background-color: var(--neutral);
+}
+
+.theme-selector:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 300%;
+    height: 300%;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--primary), var(--accent));
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+    z-index: 0;
+}
+
+.theme-selector:hover:before {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.theme-selector-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    z-index: 1;
+}
+
+.theme-selector-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    transition: transform 0.3s ease;
+}
+
+.theme-selector-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    transition: color 0.3s ease;
+}
+
+.theme-selector:hover .theme-selector-text {
+    color: #fff;
+}
+
+.theme-selector:hover .theme-selector-icon {
+    transform: rotate(360deg);
 }
 
 /* Card customization */
@@ -589,4 +829,1865 @@ footer {
     .notification-dropdown {
         width: 280px;
     }
+
+    /* تصغير لوغو شاشة الترحيب في الموبايل */
+    .home-logo {
+        width: 160px !important;
+        max-width: 160px !important;
+    }
 }
+
+/* أنماط خاصة للوغو في شاشة الترحيب */
+.home-logo {
+    width: 200px !important;
+    height: auto !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    /* إزالة أي خلفية من الملف نفسه */
+    -webkit-mask-composite: source-over;
+    mask-composite: add;
+    object-fit: contain;
+    max-width: 200px !important;
+}
+
+/* أنماط عامة للوغو في البطاقات */
+.card .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    object-fit: contain;
+}
+
+/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
+[data-theme] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+}
+
+/* ضمان الشفافية في الثيم الأسود */
+[data-theme="modern-black"] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* نص الترحيب المبسط - أزرق شامي فقط */
+.welcome-title {
+    color: #4a90e2 !important;
+    font-weight: 700 !important;
+    font-size: 1.8rem !important;
+    letter-spacing: 0.5px;
+}
+
+/* تجاوب النص الترحيبي للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .welcome-title {
+        font-size: 1.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .welcome-title {
+        font-size: 1.3rem !important;
+    }
+}
+
+/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+    position: relative;
+}
+
+#themeSelector option {
+    padding: 10px;
+    cursor: context-menu;
+}
+
+/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
+#themeSelector option:hover {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
+.theme-selector-hint {
+    color: var(--primary);
+    font-size: 12px;
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    font-weight: bold;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.theme-selector-hint:hover {
+    opacity: 1;
+}
+
+/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
+[data-theme="modern-black"] .theme-selector-hint {
+    color: var(--accent);
+    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
+}
+
+/* Theme Selector Styles - أنماط منتقي الثيم */
+.theme-selector-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.theme-selector-label {
+    margin-right: 10px;
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+.theme-selector {
+    position: relative;
+    display: inline-block;
+    width: 200px;
+    height: 40px;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    background-color: var(--neutral);
+}
+
+.theme-selector:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 300%;
+    height: 300%;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--primary), var(--accent));
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+    z-index: 0;
+}
+
+.theme-selector:hover:before {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.theme-selector-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    z-index: 1;
+}
+
+.theme-selector-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    transition: transform 0.3s ease;
+}
+
+.theme-selector-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    transition: color 0.3s ease;
+}
+
+.theme-selector:hover .theme-selector-text {
+    color: #fff;
+}
+
+.theme-selector:hover .theme-selector-icon {
+    transform: rotate(360deg);
+}
+
+/* Card customization */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease;
+    border-color: var(--neutral);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: bold;
+}
+
+.card .bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.card .bg-success {
+    background-color: var(--secondary) !important;
+}
+
+.card .bg-warning {
+    background-color: var(--light-accent) !important;
+    color: var(--dark-text) !important;
+}
+
+.card .bg-danger {
+    background-color: var(--alert) !important;
+}
+
+/* Tables */
+.table th {
+    font-weight: bold;
+    background-color: #f8f9fa;
+}
+
+.table-responsive {
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+/* Badges */
+.badge {
+    padding: 6px 10px;
+    font-weight: normal;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 5px;
+    padding: 8px 16px;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+}
+
+/* Footer */
+footer {
+    margin-top: 50px;
+    background-color: var(--accent) !important;
+}
+
+/* Login page */
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+}
+
+/* Form styling */
+.form-control {
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.form-label {
+    font-weight: bold;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+
+    .logo-img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .navbar-brand > div {
+        gap: 6px;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+    }
+
+    .theme-selector {
+        min-width: 120px;
+        font-size: 0.85rem;
+        margin-left: 8px;
+        padding: 6px 10px;
+    }
+
+    .navbar .container {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand {
+        margin-left: 0;
+    }
+
+    .logo-img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .btn-outline-light {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .notification-dropdown {
+        width: 280px;
+    }
+
+    /* تصغير لوغو شاشة الترحيب في الموبايل */
+    .home-logo {
+        width: 160px !important;
+        max-width: 160px !important;
+    }
+}
+
+/* أنماط خاصة للوغو في شاشة الترحيب */
+.home-logo {
+    width: 200px !important;
+    height: auto !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    /* إزالة أي خلفية من الملف نفسه */
+    -webkit-mask-composite: source-over;
+    mask-composite: add;
+    object-fit: contain;
+    max-width: 200px !important;
+}
+
+/* أنماط عامة للوغو في البطاقات */
+.card .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    object-fit: contain;
+}
+
+/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
+[data-theme] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+}
+
+/* ضمان الشفافية في الثيم الأسود */
+[data-theme="modern-black"] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* نص الترحيب المبسط - أزرق شامي فقط */
+.welcome-title {
+    color: #4a90e2 !important;
+    font-weight: 700 !important;
+    font-size: 1.8rem !important;
+    letter-spacing: 0.5px;
+}
+
+/* تجاوب النص الترحيبي للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .welcome-title {
+        font-size: 1.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .welcome-title {
+        font-size: 1.3rem !important;
+    }
+}
+
+/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+    position: relative;
+}
+
+#themeSelector option {
+    padding: 10px;
+    cursor: context-menu;
+}
+
+/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
+#themeSelector option:hover {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
+.theme-selector-hint {
+    color: var(--primary);
+    font-size: 12px;
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    font-weight: bold;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.theme-selector-hint:hover {
+    opacity: 1;
+}
+
+/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
+[data-theme="modern-black"] .theme-selector-hint {
+    color: var(--accent);
+    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
+}
+
+/* Theme Selector Styles - أنماط منتقي الثيم */
+.theme-selector-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.theme-selector-label {
+    margin-right: 10px;
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+.theme-selector {
+    position: relative;
+    display: inline-block;
+    width: 200px;
+    height: 40px;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    background-color: var(--neutral);
+}
+
+.theme-selector:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 300%;
+    height: 300%;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--primary), var(--accent));
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+    z-index: 0;
+}
+
+.theme-selector:hover:before {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.theme-selector-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    z-index: 1;
+}
+
+.theme-selector-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    transition: transform 0.3s ease;
+}
+
+.theme-selector-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    transition: color 0.3s ease;
+}
+
+.theme-selector:hover .theme-selector-text {
+    color: #fff;
+}
+
+.theme-selector:hover .theme-selector-icon {
+    transform: rotate(360deg);
+}
+
+/* Card customization */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease;
+    border-color: var(--neutral);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: bold;
+}
+
+.card .bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.card .bg-success {
+    background-color: var(--secondary) !important;
+}
+
+.card .bg-warning {
+    background-color: var(--light-accent) !important;
+    color: var(--dark-text) !important;
+}
+
+.card .bg-danger {
+    background-color: var(--alert) !important;
+}
+
+/* Tables */
+.table th {
+    font-weight: bold;
+    background-color: #f8f9fa;
+}
+
+.table-responsive {
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+/* Badges */
+.badge {
+    padding: 6px 10px;
+    font-weight: normal;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 5px;
+    padding: 8px 16px;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+}
+
+/* Footer */
+footer {
+    margin-top: 50px;
+    background-color: var(--accent) !important;
+}
+
+/* Login page */
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+}
+
+/* Form styling */
+.form-control {
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.form-label {
+    font-weight: bold;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+
+    .logo-img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .navbar-brand > div {
+        gap: 6px;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+    }
+
+    .theme-selector {
+        min-width: 120px;
+        font-size: 0.85rem;
+        margin-left: 8px;
+        padding: 6px 10px;
+    }
+
+    .navbar .container {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand {
+        margin-left: 0;
+    }
+
+    .logo-img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .btn-outline-light {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .notification-dropdown {
+        width: 280px;
+    }
+
+    /* تصغير لوغو شاشة الترحيب في الموبايل */
+    .home-logo {
+        width: 160px !important;
+        max-width: 160px !important;
+    }
+}
+
+/* أنماط خاصة للوغو في شاشة الترحيب */
+.home-logo {
+    width: 200px !important;
+    height: auto !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    /* إزالة أي خلفية من الملف نفسه */
+    -webkit-mask-composite: source-over;
+    mask-composite: add;
+    object-fit: contain;
+    max-width: 200px !important;
+}
+
+/* أنماط عامة للوغو في البطاقات */
+.card .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    object-fit: contain;
+}
+
+/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
+[data-theme] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+}
+
+/* ضمان الشفافية في الثيم الأسود */
+[data-theme="modern-black"] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* نص الترحيب المبسط - أزرق شامي فقط */
+.welcome-title {
+    color: #4a90e2 !important;
+    font-weight: 700 !important;
+    font-size: 1.8rem !important;
+    letter-spacing: 0.5px;
+}
+
+/* تجاوب النص الترحيبي للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .welcome-title {
+        font-size: 1.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .welcome-title {
+        font-size: 1.3rem !important;
+    }
+}
+
+/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+    position: relative;
+}
+
+#themeSelector option {
+    padding: 10px;
+    cursor: context-menu;
+}
+
+/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
+#themeSelector option:hover {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
+.theme-selector-hint {
+    color: var(--primary);
+    font-size: 12px;
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    font-weight: bold;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.theme-selector-hint:hover {
+    opacity: 1;
+}
+
+/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
+[data-theme="modern-black"] .theme-selector-hint {
+    color: var(--accent);
+    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
+}
+
+/* Theme Selector Styles - أنماط منتقي الثيم */
+.theme-selector-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.theme-selector-label {
+    margin-right: 10px;
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+.theme-selector {
+    position: relative;
+    display: inline-block;
+    width: 200px;
+    height: 40px;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    background-color: var(--neutral);
+}
+
+.theme-selector:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 300%;
+    height: 300%;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--primary), var(--accent));
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+    z-index: 0;
+}
+
+.theme-selector:hover:before {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.theme-selector-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    z-index: 1;
+}
+
+.theme-selector-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    transition: transform 0.3s ease;
+}
+
+.theme-selector-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    transition: color 0.3s ease;
+}
+
+.theme-selector:hover .theme-selector-text {
+    color: #fff;
+}
+
+.theme-selector:hover .theme-selector-icon {
+    transform: rotate(360deg);
+}
+
+/* Card customization */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease;
+    border-color: var(--neutral);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: bold;
+}
+
+.card .bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.card .bg-success {
+    background-color: var(--secondary) !important;
+}
+
+.card .bg-warning {
+    background-color: var(--light-accent) !important;
+    color: var(--dark-text) !important;
+}
+
+.card .bg-danger {
+    background-color: var(--alert) !important;
+}
+
+/* Tables */
+.table th {
+    font-weight: bold;
+    background-color: #f8f9fa;
+}
+
+.table-responsive {
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+/* Badges */
+.badge {
+    padding: 6px 10px;
+    font-weight: normal;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 5px;
+    padding: 8px 16px;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+}
+
+/* Footer */
+footer {
+    margin-top: 50px;
+    background-color: var(--accent) !important;
+}
+
+/* Login page */
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+}
+
+/* Form styling */
+.form-control {
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.form-label {
+    font-weight: bold;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+
+    .logo-img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .navbar-brand > div {
+        gap: 6px;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+    }
+
+    .theme-selector {
+        min-width: 120px;
+        font-size: 0.85rem;
+        margin-left: 8px;
+        padding: 6px 10px;
+    }
+
+    .navbar .container {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand {
+        margin-left: 0;
+    }
+
+    .logo-img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .btn-outline-light {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .notification-dropdown {
+        width: 280px;
+    }
+
+    /* تصغير لوغو شاشة الترحيب في الموبايل */
+    .home-logo {
+        width: 160px !important;
+        max-width: 160px !important;
+    }
+}
+
+/* أنماط خاصة للوغو في شاشة الترحيب */
+.home-logo {
+    width: 200px !important;
+    height: auto !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    /* إزالة أي خلفية من الملف نفسه */
+    -webkit-mask-composite: source-over;
+    mask-composite: add;
+    object-fit: contain;
+    max-width: 200px !important;
+}
+
+/* أنماط عامة للوغو في البطاقات */
+.card .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    object-fit: contain;
+}
+
+/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
+[data-theme] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+}
+
+/* ضمان الشفافية في الثيم الأسود */
+[data-theme="modern-black"] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* نص الترحيب المبسط - أزرق شامي فقط */
+.welcome-title {
+    color: #4a90e2 !important;
+    font-weight: 700 !important;
+    font-size: 1.8rem !important;
+    letter-spacing: 0.5px;
+}
+
+/* تجاوب النص الترحيبي للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .welcome-title {
+        font-size: 1.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .welcome-title {
+        font-size: 1.3rem !important;
+    }
+}
+
+/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+    position: relative;
+}
+
+#themeSelector option {
+    padding: 10px;
+    cursor: context-menu;
+}
+
+/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
+#themeSelector option:hover {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
+.theme-selector-hint {
+    color: var(--primary);
+    font-size: 12px;
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    font-weight: bold;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.theme-selector-hint:hover {
+    opacity: 1;
+}
+
+/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
+[data-theme="modern-black"] .theme-selector-hint {
+    color: var(--accent);
+    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
+}
+
+/* Theme Selector Styles - أنماط منتقي الثيم */
+.theme-selector-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.theme-selector-label {
+    margin-right: 10px;
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+.theme-selector {
+    position: relative;
+    display: inline-block;
+    width: 200px;
+    height: 40px;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    background-color: var(--neutral);
+}
+
+.theme-selector:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 300%;
+    height: 300%;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--primary), var(--accent));
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+    z-index: 0;
+}
+
+.theme-selector:hover:before {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.theme-selector-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    z-index: 1;
+}
+
+.theme-selector-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    transition: transform 0.3s ease;
+}
+
+.theme-selector-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    transition: color 0.3s ease;
+}
+
+.theme-selector:hover .theme-selector-text {
+    color: #fff;
+}
+
+.theme-selector:hover .theme-selector-icon {
+    transform: rotate(360deg);
+}
+
+/* Card customization */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease;
+    border-color: var(--neutral);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: bold;
+}
+
+.card .bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.card .bg-success {
+    background-color: var(--secondary) !important;
+}
+
+.card .bg-warning {
+    background-color: var(--light-accent) !important;
+    color: var(--dark-text) !important;
+}
+
+.card .bg-danger {
+    background-color: var(--alert) !important;
+}
+
+/* Tables */
+.table th {
+    font-weight: bold;
+    background-color: #f8f9fa;
+}
+
+.table-responsive {
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+/* Badges */
+.badge {
+    padding: 6px 10px;
+    font-weight: normal;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 5px;
+    padding: 8px 16px;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+}
+
+/* Footer */
+footer {
+    margin-top: 50px;
+    background-color: var(--accent) !important;
+}
+
+/* Login page */
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+}
+
+/* Form styling */
+.form-control {
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.form-label {
+    font-weight: bold;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+
+    .logo-img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .navbar-brand > div {
+        gap: 6px;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+    }
+
+    .theme-selector {
+        min-width: 120px;
+        font-size: 0.85rem;
+        margin-left: 8px;
+        padding: 6px 10px;
+    }
+
+    .navbar .container {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand {
+        margin-left: 0;
+    }
+
+    .logo-img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .btn-outline-light {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .notification-dropdown {
+        width: 280px;
+    }
+
+    /* تصغير لوغو شاشة الترحيب في الموبايل */
+    .home-logo {
+        width: 160px !important;
+        max-width: 160px !important;
+    }
+}
+
+/* أنماط خاصة للوغو في شاشة الترحيب */
+.home-logo {
+    width: 200px !important;
+    height: auto !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    /* إزالة أي خلفية من الملف نفسه */
+    -webkit-mask-composite: source-over;
+    mask-composite: add;
+    object-fit: contain;
+    max-width: 200px !important;
+}
+
+/* أنماط عامة للوغو في البطاقات */
+.card .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    object-fit: contain;
+}
+
+/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
+[data-theme] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+}
+
+/* ضمان الشفافية في الثيم الأسود */
+[data-theme="modern-black"] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* نص الترحيب المبسط - أزرق شامي فقط */
+.welcome-title {
+    color: #4a90e2 !important;
+    font-weight: 700 !important;
+    font-size: 1.8rem !important;
+    letter-spacing: 0.5px;
+}
+
+/* تجاوب النص الترحيبي للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .welcome-title {
+        font-size: 1.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .welcome-title {
+        font-size: 1.3rem !important;
+    }
+}
+
+/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+    position: relative;
+}
+
+#themeSelector option {
+    padding: 10px;
+    cursor: context-menu;
+}
+
+/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
+#themeSelector option:hover {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
+.theme-selector-hint {
+    color: var(--primary);
+    font-size: 12px;
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    font-weight: bold;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.theme-selector-hint:hover {
+    opacity: 1;
+}
+
+/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
+[data-theme="modern-black"] .theme-selector-hint {
+    color: var(--accent);
+    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
+}
+
+/* Theme Selector Styles - أنماط منتقي الثيم */
+.theme-selector-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.theme-selector-label {
+    margin-right: 10px;
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+.theme-selector {
+    position: relative;
+    display: inline-block;
+    width: 200px;
+    height: 40px;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    background-color: var(--neutral);
+}
+
+.theme-selector:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 300%;
+    height: 300%;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--primary), var(--accent));
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+    z-index: 0;
+}
+
+.theme-selector:hover:before {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.theme-selector-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    z-index: 1;
+}
+
+.theme-selector-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    transition: transform 0.3s ease;
+}
+
+.theme-selector-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    transition: color 0.3s ease;
+}
+
+.theme-selector:hover .theme-selector-text {
+    color: #fff;
+}
+
+.theme-selector:hover .theme-selector-icon {
+    transform: rotate(360deg);
+}
+
+/* Card customization */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease;
+    border-color: var(--neutral);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: bold;
+}
+
+.card .bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.card .bg-success {
+    background-color: var(--secondary) !important;
+}
+
+.card .bg-warning {
+    background-color: var(--light-accent) !important;
+    color: var(--dark-text) !important;
+}
+
+.card .bg-danger {
+    background-color: var(--alert) !important;
+}
+
+/* Tables */
+.table th {
+    font-weight: bold;
+    background-color: #f8f9fa;
+}
+
+.table-responsive {
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+/* Badges */
+.badge {
+    padding: 6px 10px;
+    font-weight: normal;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 5px;
+    padding: 8px 16px;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+}
+
+/* Footer */
+footer {
+    margin-top: 50px;
+    background-color: var(--accent) !important;
+}
+
+/* Login page */
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+}
+
+/* Form styling */
+.form-control {
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.form-label {
+    font-weight: bold;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+
+    .logo-img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .navbar-brand > div {
+        gap: 6px;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+    }
+
+    .theme-selector {
+        min-width: 120px;
+        font-size: 0.85rem;
+        margin-left: 8px;
+        padding: 6px 10px;
+    }
+
+    .navbar .container {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand {
+        margin-left: 0;
+    }
+
+    .logo-img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .btn-outline-light {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .notification-dropdown {
+        width: 280px;
+    }
+
+    /* تصغير لوغو شاشة الترحيب في الموبايل */
+    .home-logo {
+        width: 160px !important;
+        max-width: 160px !important;
+    }
+}
+
+/* أنماط خاصة للوغو في شاشة الترحيب */
+.home-logo {
+    width: 200px !important;
+    height: auto !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    /* إزالة أي خلفية من الملف نفسه */
+    -webkit-mask-composite: source-over;
+    mask-composite: add;
+    object-fit: contain;
+    max-width: 200px !important;
+}
+
+/* أنماط عامة للوغو في البطاقات */
+.card .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    object-fit: contain;
+}
+
+/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
+[data-theme] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+}
+
+/* ضمان الشفافية في الثيم الأسود */
+[data-theme="modern-black"] .logo-img {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* نص الترحيب المبسط - أزرق شامي فقط */
+.welcome-title {
+    color: #4a90e2 !important;
+    font-weight: 700 !important;
+    font-size: 1.8rem !important;
+    letter-spacing: 0.5px;
+}
+
+/* تجاوب النص الترحيبي للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .welcome-title {
+        font-size: 1.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .welcome-title {
+        font-size: 1.3rem !important;
+    }
+}
+
+/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+    position: relative;
+}
+
+#themeSelector option {
+    padding: 10px;
+    cursor: context-menu;
+}
+
+/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
+#themeSelector option:hover {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
+.theme-selector-hint {
+    color: var(--primary);
+    font-size: 12px;
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    font-weight: bold;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.theme-selector-hint:hover {
+    opacity: 1;
+}
+
+/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
+[data-theme="modern-black"] .theme-selector-hint {
+    color: var(--accent);
+    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
+}
+
+/* Theme Selector Styles - أنماط منتقي الثيم */
+.theme-selector-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.theme-selector-label {
+    margin-right: 10px;
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+.theme-selector {
+    position: relative;
+    display: inline-block;
+    width: 200px;
+    height: 40px;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    background-color: var(--neutral);
+}
+
+.theme-selector:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 300%;
+    height: 300%;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--primary), var(--accent));
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+    z-index: 0;
+}
+
+.theme-selector:hover:before {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.theme-selector-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    z-index: 1;
+}
+
+.theme-selector-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    transition: transform 0.3s ease;
+}
+
+.theme-selector-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-text);
+    transition: color 0.3s ease;
+}
+
+.theme-selector:hover .theme-selector-text {
+    color: #fff;
+}
+
+.theme-selector:hover .theme-selector-icon {
+    transform: rotate(360deg);
+}
+
+/* Card customization */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease;
+    border-color: var(--neutral);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    border-radius:
