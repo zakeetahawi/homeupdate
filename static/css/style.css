@@ -11,180 +11,6 @@
     --light-accent: #D2B48C;
 }
 
-/* Light Sky Theme */
-[data-theme="light-sky"] {
-    --primary: #7FB3D5;
-    --secondary: #85C1E9;
-    --accent: #3498DB;
-    --neutral: #BDC3C7;
-    --light-bg: #EBF5FB;
-    --dark-text: #2C3E50;
-    --alert: #E74C3C;
-    --light-accent: #AED6F1;
-}
-
-/* Soft Pink Theme */
-[data-theme="soft-pink"] {
-    --primary: #F1948A;
-    --secondary: #F5B7B1;
-    --accent: #E74C3C;
-    --neutral: #FADBD8;
-    --light-bg: #FDEDEC;
-    --dark-text: #943126;
-    --alert: #C0392B;
-    --light-accent: #F2D7D5;
-}
-
-/* Fresh Mint Theme */
-[data-theme="fresh-mint"] {
-    --primary: #52BE80;
-    --secondary: #82E0AA;
-    --accent: #27AE60;
-    --neutral: #A9DFBF;
-    --light-bg: #E8F6F3;
-    --dark-text: #196F3D;
-    --alert: #E74C3C;
-    --light-accent: #ABEBC6;
-}
-
-/* Calm Lavender Theme */
-[data-theme="calm-lavender"] {
-    --primary: #A569BD;
-    --secondary: #BB8FCE;
-    --accent: #8E44AD;
-    --neutral: #D2B4DE;
-    --light-bg: #F4ECF7;
-    --dark-text: #4A235A;
-    --alert: #E74C3C;
-    --light-accent: #E8DAEF;
-}
-
-/* Warm Beige Theme */
-[data-theme="warm-beige"] {
-    --primary: #DBAC81;
-    --secondary: #E6C9A8;
-    --accent: #C68642;
-    --neutral: #E8D6B9;
-    --light-bg: #FDF6E9;
-    --dark-text: #8B4513;
-    --alert: #DC7633;
-    --light-accent: #F5DEB3;
-}
-
-/* Pastel Blue Theme */
-[data-theme="pastel-blue"] {
-    --primary: #89CFF0;
-    --secondary: #A7D7F3;
-    --accent: #5B9BD5;
-    --neutral: #B9E0F7;
-    --light-bg: #EBF5FB;
-    --dark-text: #2E5984;
-    --alert: #E74C3C;
-    --light-accent: #CCEAF9;
-}
-
-/* Peachy Yellow Theme */
-[data-theme="peachy-yellow"] {
-    --primary: #F7DC6F;
-    --secondary: #F9E79F;
-    --accent: #F1C40F;
-    --neutral: #FCF3CF;
-    --light-bg: #FEF9E7;
-    --dark-text: #B7950B;
-    --alert: #E67E22;
-    --light-accent: #FAD7A0;
-}
-
-/* Light Gray Theme */
-[data-theme="light-gray"] {
-    --primary: #95A5A6;
-    --secondary: #BDC3C7;
-    --accent: #7F8C8D;
-    --neutral: #D0D3D4;
-    --light-bg: #F8F9F9;
-    --dark-text: #2C3E50;
-    --alert: #E74C3C;
-    --light-accent: #CACFD2;
-}
-
-/* Light Turquoise Theme */
-[data-theme="light-turquoise"] {
-    --primary: #48C9B0;
-    --secondary: #76D7C4;
-    --accent: #16A085;
-    --neutral: #A3E4D7;
-    --light-bg: #E8F8F5;
-    --dark-text: #0E6655;
-    --alert: #E74C3C;
-    --light-accent: #D1F2EB;
-}
-
-/* Soft Lilac Theme */
-[data-theme="soft-lilac"] {
-    --primary: #C39BD3;
-    --secondary: #D2B4DE;
-    --accent: #9B59B6;
-    --neutral: #E8DAEF;
-    --light-bg: #F5EEF8;
-    --dark-text: #6C3483;
-    --alert: #E74C3C;
-    --light-accent: #EBDEF0;
-}
-
-/* Professional Silver-Blue Theme */
-[data-theme="professional-silver-blue"] {
-    --primary: #1a1a1a;           /* أسود عميق */
-    --secondary: #4a90e2;         /* أزرق شامي */
-    --accent: #c0c0c0;            /* فضي */
-    --dark: #000000;              /* أسود خالص */
-    --light: #ffffff;             /* أبيض خالص */
-    --neutral: #f8f9fa;           /* رمادي فاتح جداً */
-    --dark-bg: #0d1117;           /* خلفية داكنة */
-    --card-bg: #161b22;           /* خلفية البطاقات */
-    --border-color: #30363d;      /* لون الحدود */
-    --text-light: #f0f6fc;        /* نص فاتح */
-    --text-muted: #8b949e;        /* نص خافت */
-    --blue-accent: #58a6ff;       /* أزرق مضيء */
-    --silver-accent: #e6e6e6;     /* فضي فاتح */
-    --light-bg: #0d1117;          /* خلفية فاتحة (داكنة في هذا الثيم) */
-    --dark-text: #f0f6fc;         /* نص داكن (فاتح في هذا الثيم) */
-    --alert: #ff6b6b;             /* تحذير أحمر فاتح */
-    --light-accent: #58a6ff;      /* لهجة فاتحة زرقاء */
-}
-
-
-
-/* Apple Dark Mode Theme */
-[data-theme="apple-dark-mode"] {
-    --primary: #007aff;           /* أزرق Apple الأساسي */
-    --secondary: #1c1c1e;         /* رمادي Apple الداكن */
-    --accent: #ff9500;            /* برتقالي Apple */
-    --surface: #2c2c2e;           /* سطح داكن */
-    --background: #000000;        /* خلفية سوداء خالصة */
-    --card-bg: #1c1c1e;           /* خلفية البطاقات */
-    --elevated-bg: #2c2c2e;       /* خلفية مرتفعة */
-    --error: #ff453a;             /* أحمر Apple */
-    --warning: #ff9500;           /* برتقالي Apple */
-    --info: #007aff;              /* أزرق Apple */
-    --success: #30d158;           /* أخضر Apple */
-    --text-primary: #ffffff;      /* نص أساسي أبيض */
-    --text-secondary: #ebebf5;    /* نص ثانوي فاتح */
-    --text-tertiary: #ebebf599;   /* نص ثالثي شفاف */
-    --separator: #38383a;         /* خط فاصل */
-    --fill-primary: #787880;      /* تعبئة أساسية */
-    --fill-secondary: #78788033;  /* تعبئة ثانوية */
-    --apple-blur: blur(20px);     /* تأثير الضبابية */
-    --apple-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    --apple-shadow-light: 0 4px 16px rgba(0, 0, 0, 0.2);
-    --apple-radius: 12px;
-    --apple-radius-large: 20px;
-    --apple-transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-    --light-bg: #000000;
-    --dark-text: #ffffff;
-    --alert: #ff453a;
-    --light-accent: #007aff;
-}
-
 /* Modern Black Theme - الثيم الأسود الحديث */
 [data-theme="modern-black"] {
     --primary: #00D2FF;              /* أزرق زاهي */
@@ -203,6 +29,12 @@
     --text-tertiary: #a0a0a0;        /* نص ثالثي خافت */
     --border: #333333;               /* لون الحدود */
     --separator: #2a2a2a;            /* خط فاصل */
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.3);
+    --blur: blur(10px);
+    --radius: 8px;
+    --radius-large: 12px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --light-bg: #000000;
     --dark-text: #ffffff;
     --alert: #FF3366;
@@ -540,6 +372,59 @@ body, .navbar, .card, .btn, .badge, footer,
     transition: all 0.3s ease-in-out;
 }
 
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
 .theme-selector {
     transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
@@ -573,115 +458,2027 @@ body, .navbar, .card, .btn, .badge, footer,
     background-color: var(--light-bg);
     color: var(--dark-text);
     border: 1px solid var(--neutral);
-    position: relative;
 }
 
-#themeSelector option {
-    padding: 10px;
-    cursor: context-menu;
-}
-
-/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
-#themeSelector option:hover {
-    background-color: var(--primary);
-    color: #fff;
-}
-
-/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
-.theme-selector-hint {
-    color: var(--primary);
-    font-size: 12px;
-    display: block;
-    margin-top: 5px;
-    text-align: center;
-    font-weight: bold;
-    opacity: 0.8;
-    transition: all 0.3s ease;
-}
-
-.theme-selector-hint:hover {
-    opacity: 1;
-}
-
-/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
-[data-theme="modern-black"] .theme-selector-hint {
-    color: var(--accent);
-    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
-}
-
-/* Theme Selector Styles - أنماط منتقي الثيم */
-.theme-selector-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 20px 0;
-}
-
-.theme-selector-label {
-    margin-right: 10px;
-    font-weight: 500;
-    color: var(--dark-text);
-}
-
-.theme-selector {
-    position: relative;
-    display: inline-block;
-    width: 200px;
-    height: 40px;
-    border-radius: 20px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+#themeSelector:hover {
     background-color: var(--neutral);
 }
 
-.theme-selector:before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 300%;
-    height: 300%;
-    border-radius: 50%;
-    background: linear-gradient(45deg, var(--primary), var(--accent));
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
-    z-index: 0;
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
 }
 
-.theme-selector:hover:before {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.theme-selector-content {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    z-index: 1;
-}
-
-.theme-selector-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 8px;
-    transition: transform 0.3s ease;
-}
-
-.theme-selector-text {
-    font-size: 0.9rem;
-    font-weight: 600;
+#themeSelector option {
+    background-color: white;
     color: var(--dark-text);
-    transition: color 0.3s ease;
+    padding: 8px;
 }
 
-.theme-selector:hover .theme-selector-text {
-    color: #fff;
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
 }
 
-.theme-selector:hover .theme-selector-icon {
-    transform: rotate(360deg);
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Navbar customization */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Theme Selector */
+/* Theme Selector in Dropdown */
+#themeSelector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--neutral);
+}
+
+#themeSelector:hover {
+    background-color: var(--neutral);
+}
+
+#themeSelector:focus {
+    box-shadow: 0 0 0 2px var(--light-accent);
+    border-color: var(--accent);
+}
+
+#themeSelector option {
+    background-color: white;
+    color: var(--dark-text);
+    padding: 8px;
+}
+
+/* Theme transition effects */
+body, .navbar, .card, .btn, .badge, footer,
+.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
+.card .bg-success, .card .bg-warning, .card .bg-danger {
+    transition: all 0.3s ease-in-out;
+}
+
+.theme-selector {
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Card customization */
@@ -892,1802 +2689,3 @@ footer {
         font-size: 1.3rem !important;
     }
 }
-
-/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-    position: relative;
-}
-
-#themeSelector option {
-    padding: 10px;
-    cursor: context-menu;
-}
-
-/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
-#themeSelector option:hover {
-    background-color: var(--primary);
-    color: #fff;
-}
-
-/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
-.theme-selector-hint {
-    color: var(--primary);
-    font-size: 12px;
-    display: block;
-    margin-top: 5px;
-    text-align: center;
-    font-weight: bold;
-    opacity: 0.8;
-    transition: all 0.3s ease;
-}
-
-.theme-selector-hint:hover {
-    opacity: 1;
-}
-
-/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
-[data-theme="modern-black"] .theme-selector-hint {
-    color: var(--accent);
-    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
-}
-
-/* Theme Selector Styles - أنماط منتقي الثيم */
-.theme-selector-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 20px 0;
-}
-
-.theme-selector-label {
-    margin-right: 10px;
-    font-weight: 500;
-    color: var(--dark-text);
-}
-
-.theme-selector {
-    position: relative;
-    display: inline-block;
-    width: 200px;
-    height: 40px;
-    border-radius: 20px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    background-color: var(--neutral);
-}
-
-.theme-selector:before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 300%;
-    height: 300%;
-    border-radius: 50%;
-    background: linear-gradient(45deg, var(--primary), var(--accent));
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
-    z-index: 0;
-}
-
-.theme-selector:hover:before {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.theme-selector-content {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    z-index: 1;
-}
-
-.theme-selector-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 8px;
-    transition: transform 0.3s ease;
-}
-
-.theme-selector-text {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--dark-text);
-    transition: color 0.3s ease;
-}
-
-.theme-selector:hover .theme-selector-text {
-    color: #fff;
-}
-
-.theme-selector:hover .theme-selector-icon {
-    transform: rotate(360deg);
-}
-
-/* Card customization */
-.card {
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    transition: transform 0.3s ease;
-    border-color: var(--neutral);
-}
-
-.card:hover {
-    transform: translateY(-5px);
-}
-
-.card-header {
-    border-radius: 10px 10px 0 0 !important;
-    font-weight: bold;
-}
-
-.card .bg-primary {
-    background-color: var(--primary) !important;
-}
-
-.card .bg-success {
-    background-color: var(--secondary) !important;
-}
-
-.card .bg-warning {
-    background-color: var(--light-accent) !important;
-    color: var(--dark-text) !important;
-}
-
-.card .bg-danger {
-    background-color: var(--alert) !important;
-}
-
-/* Tables */
-.table th {
-    font-weight: bold;
-    background-color: #f8f9fa;
-}
-
-.table-responsive {
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-/* Badges */
-.badge {
-    padding: 6px 10px;
-    font-weight: normal;
-}
-
-/* Buttons */
-.btn {
-    border-radius: 5px;
-    padding: 8px 16px;
-}
-
-.btn-sm {
-    padding: 5px 10px;
-}
-
-/* Footer */
-footer {
-    margin-top: 50px;
-    background-color: var(--accent) !important;
-}
-
-/* Login page */
-.login-container {
-    max-width: 400px;
-    margin: 100px auto;
-}
-
-/* Form styling */
-.form-control {
-    border-radius: 5px;
-    padding: 10px;
-}
-
-.form-label {
-    font-weight: bold;
-}
-
-/* Print styles */
-@media print {
-    .no-print {
-        display: none !important;
-    }
-
-    .container {
-        width: 100%;
-        max-width: 100%;
-    }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .navbar-brand {
-        font-size: 1.1rem;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .navbar-brand > div {
-        gap: 6px;
-    }
-
-    .card-title {
-        font-size: 1.1rem;
-    }
-
-    .theme-selector {
-        min-width: 120px;
-        font-size: 0.85rem;
-        margin-left: 8px;
-        padding: 6px 10px;
-    }
-
-    .navbar .container {
-        padding: 0.5rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .navbar-brand {
-        margin-left: 0;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .btn-outline-light {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.9rem;
-    }
-
-    .notification-dropdown {
-        width: 280px;
-    }
-
-    /* تصغير لوغو شاشة الترحيب في الموبايل */
-    .home-logo {
-        width: 160px !important;
-        max-width: 160px !important;
-    }
-}
-
-/* أنماط خاصة للوغو في شاشة الترحيب */
-.home-logo {
-    width: 200px !important;
-    height: auto !important;
-    background: transparent !important;
-    background-color: transparent !important;
-    /* إزالة أي خلفية من الملف نفسه */
-    -webkit-mask-composite: source-over;
-    mask-composite: add;
-    object-fit: contain;
-    max-width: 200px !important;
-}
-
-/* أنماط عامة للوغو في البطاقات */
-.card .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    object-fit: contain;
-}
-
-/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
-[data-theme] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    backdrop-filter: none !important;
-}
-
-/* ضمان الشفافية في الثيم الأسود */
-[data-theme="modern-black"] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-/* نص الترحيب المبسط - أزرق شامي فقط */
-.welcome-title {
-    color: #4a90e2 !important;
-    font-weight: 700 !important;
-    font-size: 1.8rem !important;
-    letter-spacing: 0.5px;
-}
-
-/* تجاوب النص الترحيبي للشاشات الصغيرة */
-@media (max-width: 768px) {
-    .welcome-title {
-        font-size: 1.5rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .welcome-title {
-        font-size: 1.3rem !important;
-    }
-}
-
-/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-    position: relative;
-}
-
-#themeSelector option {
-    padding: 10px;
-    cursor: context-menu;
-}
-
-/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
-#themeSelector option:hover {
-    background-color: var(--primary);
-    color: #fff;
-}
-
-/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
-.theme-selector-hint {
-    color: var(--primary);
-    font-size: 12px;
-    display: block;
-    margin-top: 5px;
-    text-align: center;
-    font-weight: bold;
-    opacity: 0.8;
-    transition: all 0.3s ease;
-}
-
-.theme-selector-hint:hover {
-    opacity: 1;
-}
-
-/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
-[data-theme="modern-black"] .theme-selector-hint {
-    color: var(--accent);
-    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
-}
-
-/* Theme Selector Styles - أنماط منتقي الثيم */
-.theme-selector-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 20px 0;
-}
-
-.theme-selector-label {
-    margin-right: 10px;
-    font-weight: 500;
-    color: var(--dark-text);
-}
-
-.theme-selector {
-    position: relative;
-    display: inline-block;
-    width: 200px;
-    height: 40px;
-    border-radius: 20px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    background-color: var(--neutral);
-}
-
-.theme-selector:before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 300%;
-    height: 300%;
-    border-radius: 50%;
-    background: linear-gradient(45deg, var(--primary), var(--accent));
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
-    z-index: 0;
-}
-
-.theme-selector:hover:before {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.theme-selector-content {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    z-index: 1;
-}
-
-.theme-selector-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 8px;
-    transition: transform 0.3s ease;
-}
-
-.theme-selector-text {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--dark-text);
-    transition: color 0.3s ease;
-}
-
-.theme-selector:hover .theme-selector-text {
-    color: #fff;
-}
-
-.theme-selector:hover .theme-selector-icon {
-    transform: rotate(360deg);
-}
-
-/* Card customization */
-.card {
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    transition: transform 0.3s ease;
-    border-color: var(--neutral);
-}
-
-.card:hover {
-    transform: translateY(-5px);
-}
-
-.card-header {
-    border-radius: 10px 10px 0 0 !important;
-    font-weight: bold;
-}
-
-.card .bg-primary {
-    background-color: var(--primary) !important;
-}
-
-.card .bg-success {
-    background-color: var(--secondary) !important;
-}
-
-.card .bg-warning {
-    background-color: var(--light-accent) !important;
-    color: var(--dark-text) !important;
-}
-
-.card .bg-danger {
-    background-color: var(--alert) !important;
-}
-
-/* Tables */
-.table th {
-    font-weight: bold;
-    background-color: #f8f9fa;
-}
-
-.table-responsive {
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-/* Badges */
-.badge {
-    padding: 6px 10px;
-    font-weight: normal;
-}
-
-/* Buttons */
-.btn {
-    border-radius: 5px;
-    padding: 8px 16px;
-}
-
-.btn-sm {
-    padding: 5px 10px;
-}
-
-/* Footer */
-footer {
-    margin-top: 50px;
-    background-color: var(--accent) !important;
-}
-
-/* Login page */
-.login-container {
-    max-width: 400px;
-    margin: 100px auto;
-}
-
-/* Form styling */
-.form-control {
-    border-radius: 5px;
-    padding: 10px;
-}
-
-.form-label {
-    font-weight: bold;
-}
-
-/* Print styles */
-@media print {
-    .no-print {
-        display: none !important;
-    }
-
-    .container {
-        width: 100%;
-        max-width: 100%;
-    }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .navbar-brand {
-        font-size: 1.1rem;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .navbar-brand > div {
-        gap: 6px;
-    }
-
-    .card-title {
-        font-size: 1.1rem;
-    }
-
-    .theme-selector {
-        min-width: 120px;
-        font-size: 0.85rem;
-        margin-left: 8px;
-        padding: 6px 10px;
-    }
-
-    .navbar .container {
-        padding: 0.5rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .navbar-brand {
-        margin-left: 0;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .btn-outline-light {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.9rem;
-    }
-
-    .notification-dropdown {
-        width: 280px;
-    }
-
-    /* تصغير لوغو شاشة الترحيب في الموبايل */
-    .home-logo {
-        width: 160px !important;
-        max-width: 160px !important;
-    }
-}
-
-/* أنماط خاصة للوغو في شاشة الترحيب */
-.home-logo {
-    width: 200px !important;
-    height: auto !important;
-    background: transparent !important;
-    background-color: transparent !important;
-    /* إزالة أي خلفية من الملف نفسه */
-    -webkit-mask-composite: source-over;
-    mask-composite: add;
-    object-fit: contain;
-    max-width: 200px !important;
-}
-
-/* أنماط عامة للوغو في البطاقات */
-.card .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    object-fit: contain;
-}
-
-/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
-[data-theme] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    backdrop-filter: none !important;
-}
-
-/* ضمان الشفافية في الثيم الأسود */
-[data-theme="modern-black"] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-/* نص الترحيب المبسط - أزرق شامي فقط */
-.welcome-title {
-    color: #4a90e2 !important;
-    font-weight: 700 !important;
-    font-size: 1.8rem !important;
-    letter-spacing: 0.5px;
-}
-
-/* تجاوب النص الترحيبي للشاشات الصغيرة */
-@media (max-width: 768px) {
-    .welcome-title {
-        font-size: 1.5rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .welcome-title {
-        font-size: 1.3rem !important;
-    }
-}
-
-/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-    position: relative;
-}
-
-#themeSelector option {
-    padding: 10px;
-    cursor: context-menu;
-}
-
-/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
-#themeSelector option:hover {
-    background-color: var(--primary);
-    color: #fff;
-}
-
-/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
-.theme-selector-hint {
-    color: var(--primary);
-    font-size: 12px;
-    display: block;
-    margin-top: 5px;
-    text-align: center;
-    font-weight: bold;
-    opacity: 0.8;
-    transition: all 0.3s ease;
-}
-
-.theme-selector-hint:hover {
-    opacity: 1;
-}
-
-/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
-[data-theme="modern-black"] .theme-selector-hint {
-    color: var(--accent);
-    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
-}
-
-/* Theme Selector Styles - أنماط منتقي الثيم */
-.theme-selector-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 20px 0;
-}
-
-.theme-selector-label {
-    margin-right: 10px;
-    font-weight: 500;
-    color: var(--dark-text);
-}
-
-.theme-selector {
-    position: relative;
-    display: inline-block;
-    width: 200px;
-    height: 40px;
-    border-radius: 20px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    background-color: var(--neutral);
-}
-
-.theme-selector:before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 300%;
-    height: 300%;
-    border-radius: 50%;
-    background: linear-gradient(45deg, var(--primary), var(--accent));
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
-    z-index: 0;
-}
-
-.theme-selector:hover:before {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.theme-selector-content {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    z-index: 1;
-}
-
-.theme-selector-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 8px;
-    transition: transform 0.3s ease;
-}
-
-.theme-selector-text {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--dark-text);
-    transition: color 0.3s ease;
-}
-
-.theme-selector:hover .theme-selector-text {
-    color: #fff;
-}
-
-.theme-selector:hover .theme-selector-icon {
-    transform: rotate(360deg);
-}
-
-/* Card customization */
-.card {
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    transition: transform 0.3s ease;
-    border-color: var(--neutral);
-}
-
-.card:hover {
-    transform: translateY(-5px);
-}
-
-.card-header {
-    border-radius: 10px 10px 0 0 !important;
-    font-weight: bold;
-}
-
-.card .bg-primary {
-    background-color: var(--primary) !important;
-}
-
-.card .bg-success {
-    background-color: var(--secondary) !important;
-}
-
-.card .bg-warning {
-    background-color: var(--light-accent) !important;
-    color: var(--dark-text) !important;
-}
-
-.card .bg-danger {
-    background-color: var(--alert) !important;
-}
-
-/* Tables */
-.table th {
-    font-weight: bold;
-    background-color: #f8f9fa;
-}
-
-.table-responsive {
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-/* Badges */
-.badge {
-    padding: 6px 10px;
-    font-weight: normal;
-}
-
-/* Buttons */
-.btn {
-    border-radius: 5px;
-    padding: 8px 16px;
-}
-
-.btn-sm {
-    padding: 5px 10px;
-}
-
-/* Footer */
-footer {
-    margin-top: 50px;
-    background-color: var(--accent) !important;
-}
-
-/* Login page */
-.login-container {
-    max-width: 400px;
-    margin: 100px auto;
-}
-
-/* Form styling */
-.form-control {
-    border-radius: 5px;
-    padding: 10px;
-}
-
-.form-label {
-    font-weight: bold;
-}
-
-/* Print styles */
-@media print {
-    .no-print {
-        display: none !important;
-    }
-
-    .container {
-        width: 100%;
-        max-width: 100%;
-    }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .navbar-brand {
-        font-size: 1.1rem;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .navbar-brand > div {
-        gap: 6px;
-    }
-
-    .card-title {
-        font-size: 1.1rem;
-    }
-
-    .theme-selector {
-        min-width: 120px;
-        font-size: 0.85rem;
-        margin-left: 8px;
-        padding: 6px 10px;
-    }
-
-    .navbar .container {
-        padding: 0.5rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .navbar-brand {
-        margin-left: 0;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .btn-outline-light {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.9rem;
-    }
-
-    .notification-dropdown {
-        width: 280px;
-    }
-
-    /* تصغير لوغو شاشة الترحيب في الموبايل */
-    .home-logo {
-        width: 160px !important;
-        max-width: 160px !important;
-    }
-}
-
-/* أنماط خاصة للوغو في شاشة الترحيب */
-.home-logo {
-    width: 200px !important;
-    height: auto !important;
-    background: transparent !important;
-    background-color: transparent !important;
-    /* إزالة أي خلفية من الملف نفسه */
-    -webkit-mask-composite: source-over;
-    mask-composite: add;
-    object-fit: contain;
-    max-width: 200px !important;
-}
-
-/* أنماط عامة للوغو في البطاقات */
-.card .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    object-fit: contain;
-}
-
-/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
-[data-theme] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    backdrop-filter: none !important;
-}
-
-/* ضمان الشفافية في الثيم الأسود */
-[data-theme="modern-black"] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-/* نص الترحيب المبسط - أزرق شامي فقط */
-.welcome-title {
-    color: #4a90e2 !important;
-    font-weight: 700 !important;
-    font-size: 1.8rem !important;
-    letter-spacing: 0.5px;
-}
-
-/* تجاوب النص الترحيبي للشاشات الصغيرة */
-@media (max-width: 768px) {
-    .welcome-title {
-        font-size: 1.5rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .welcome-title {
-        font-size: 1.3rem !important;
-    }
-}
-
-/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-    position: relative;
-}
-
-#themeSelector option {
-    padding: 10px;
-    cursor: context-menu;
-}
-
-/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
-#themeSelector option:hover {
-    background-color: var(--primary);
-    color: #fff;
-}
-
-/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
-.theme-selector-hint {
-    color: var(--primary);
-    font-size: 12px;
-    display: block;
-    margin-top: 5px;
-    text-align: center;
-    font-weight: bold;
-    opacity: 0.8;
-    transition: all 0.3s ease;
-}
-
-.theme-selector-hint:hover {
-    opacity: 1;
-}
-
-/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
-[data-theme="modern-black"] .theme-selector-hint {
-    color: var(--accent);
-    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
-}
-
-/* Theme Selector Styles - أنماط منتقي الثيم */
-.theme-selector-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 20px 0;
-}
-
-.theme-selector-label {
-    margin-right: 10px;
-    font-weight: 500;
-    color: var(--dark-text);
-}
-
-.theme-selector {
-    position: relative;
-    display: inline-block;
-    width: 200px;
-    height: 40px;
-    border-radius: 20px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    background-color: var(--neutral);
-}
-
-.theme-selector:before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 300%;
-    height: 300%;
-    border-radius: 50%;
-    background: linear-gradient(45deg, var(--primary), var(--accent));
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
-    z-index: 0;
-}
-
-.theme-selector:hover:before {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.theme-selector-content {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    z-index: 1;
-}
-
-.theme-selector-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 8px;
-    transition: transform 0.3s ease;
-}
-
-.theme-selector-text {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--dark-text);
-    transition: color 0.3s ease;
-}
-
-.theme-selector:hover .theme-selector-text {
-    color: #fff;
-}
-
-.theme-selector:hover .theme-selector-icon {
-    transform: rotate(360deg);
-}
-
-/* Card customization */
-.card {
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    transition: transform 0.3s ease;
-    border-color: var(--neutral);
-}
-
-.card:hover {
-    transform: translateY(-5px);
-}
-
-.card-header {
-    border-radius: 10px 10px 0 0 !important;
-    font-weight: bold;
-}
-
-.card .bg-primary {
-    background-color: var(--primary) !important;
-}
-
-.card .bg-success {
-    background-color: var(--secondary) !important;
-}
-
-.card .bg-warning {
-    background-color: var(--light-accent) !important;
-    color: var(--dark-text) !important;
-}
-
-.card .bg-danger {
-    background-color: var(--alert) !important;
-}
-
-/* Tables */
-.table th {
-    font-weight: bold;
-    background-color: #f8f9fa;
-}
-
-.table-responsive {
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-/* Badges */
-.badge {
-    padding: 6px 10px;
-    font-weight: normal;
-}
-
-/* Buttons */
-.btn {
-    border-radius: 5px;
-    padding: 8px 16px;
-}
-
-.btn-sm {
-    padding: 5px 10px;
-}
-
-/* Footer */
-footer {
-    margin-top: 50px;
-    background-color: var(--accent) !important;
-}
-
-/* Login page */
-.login-container {
-    max-width: 400px;
-    margin: 100px auto;
-}
-
-/* Form styling */
-.form-control {
-    border-radius: 5px;
-    padding: 10px;
-}
-
-.form-label {
-    font-weight: bold;
-}
-
-/* Print styles */
-@media print {
-    .no-print {
-        display: none !important;
-    }
-
-    .container {
-        width: 100%;
-        max-width: 100%;
-    }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .navbar-brand {
-        font-size: 1.1rem;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .navbar-brand > div {
-        gap: 6px;
-    }
-
-    .card-title {
-        font-size: 1.1rem;
-    }
-
-    .theme-selector {
-        min-width: 120px;
-        font-size: 0.85rem;
-        margin-left: 8px;
-        padding: 6px 10px;
-    }
-
-    .navbar .container {
-        padding: 0.5rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .navbar-brand {
-        margin-left: 0;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .btn-outline-light {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.9rem;
-    }
-
-    .notification-dropdown {
-        width: 280px;
-    }
-
-    /* تصغير لوغو شاشة الترحيب في الموبايل */
-    .home-logo {
-        width: 160px !important;
-        max-width: 160px !important;
-    }
-}
-
-/* أنماط خاصة للوغو في شاشة الترحيب */
-.home-logo {
-    width: 200px !important;
-    height: auto !important;
-    background: transparent !important;
-    background-color: transparent !important;
-    /* إزالة أي خلفية من الملف نفسه */
-    -webkit-mask-composite: source-over;
-    mask-composite: add;
-    object-fit: contain;
-    max-width: 200px !important;
-}
-
-/* أنماط عامة للوغو في البطاقات */
-.card .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    object-fit: contain;
-}
-
-/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
-[data-theme] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    backdrop-filter: none !important;
-}
-
-/* ضمان الشفافية في الثيم الأسود */
-[data-theme="modern-black"] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-/* نص الترحيب المبسط - أزرق شامي فقط */
-.welcome-title {
-    color: #4a90e2 !important;
-    font-weight: 700 !important;
-    font-size: 1.8rem !important;
-    letter-spacing: 0.5px;
-}
-
-/* تجاوب النص الترحيبي للشاشات الصغيرة */
-@media (max-width: 768px) {
-    .welcome-title {
-        font-size: 1.5rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .welcome-title {
-        font-size: 1.3rem !important;
-    }
-}
-
-/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-    position: relative;
-}
-
-#themeSelector option {
-    padding: 10px;
-    cursor: context-menu;
-}
-
-/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
-#themeSelector option:hover {
-    background-color: var(--primary);
-    color: #fff;
-}
-
-/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
-.theme-selector-hint {
-    color: var(--primary);
-    font-size: 12px;
-    display: block;
-    margin-top: 5px;
-    text-align: center;
-    font-weight: bold;
-    opacity: 0.8;
-    transition: all 0.3s ease;
-}
-
-.theme-selector-hint:hover {
-    opacity: 1;
-}
-
-/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
-[data-theme="modern-black"] .theme-selector-hint {
-    color: var(--accent);
-    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
-}
-
-/* Theme Selector Styles - أنماط منتقي الثيم */
-.theme-selector-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 20px 0;
-}
-
-.theme-selector-label {
-    margin-right: 10px;
-    font-weight: 500;
-    color: var(--dark-text);
-}
-
-.theme-selector {
-    position: relative;
-    display: inline-block;
-    width: 200px;
-    height: 40px;
-    border-radius: 20px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    background-color: var(--neutral);
-}
-
-.theme-selector:before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 300%;
-    height: 300%;
-    border-radius: 50%;
-    background: linear-gradient(45deg, var(--primary), var(--accent));
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
-    z-index: 0;
-}
-
-.theme-selector:hover:before {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.theme-selector-content {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    z-index: 1;
-}
-
-.theme-selector-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 8px;
-    transition: transform 0.3s ease;
-}
-
-.theme-selector-text {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--dark-text);
-    transition: color 0.3s ease;
-}
-
-.theme-selector:hover .theme-selector-text {
-    color: #fff;
-}
-
-.theme-selector:hover .theme-selector-icon {
-    transform: rotate(360deg);
-}
-
-/* Card customization */
-.card {
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    transition: transform 0.3s ease;
-    border-color: var(--neutral);
-}
-
-.card:hover {
-    transform: translateY(-5px);
-}
-
-.card-header {
-    border-radius: 10px 10px 0 0 !important;
-    font-weight: bold;
-}
-
-.card .bg-primary {
-    background-color: var(--primary) !important;
-}
-
-.card .bg-success {
-    background-color: var(--secondary) !important;
-}
-
-.card .bg-warning {
-    background-color: var(--light-accent) !important;
-    color: var(--dark-text) !important;
-}
-
-.card .bg-danger {
-    background-color: var(--alert) !important;
-}
-
-/* Tables */
-.table th {
-    font-weight: bold;
-    background-color: #f8f9fa;
-}
-
-.table-responsive {
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-/* Badges */
-.badge {
-    padding: 6px 10px;
-    font-weight: normal;
-}
-
-/* Buttons */
-.btn {
-    border-radius: 5px;
-    padding: 8px 16px;
-}
-
-.btn-sm {
-    padding: 5px 10px;
-}
-
-/* Footer */
-footer {
-    margin-top: 50px;
-    background-color: var(--accent) !important;
-}
-
-/* Login page */
-.login-container {
-    max-width: 400px;
-    margin: 100px auto;
-}
-
-/* Form styling */
-.form-control {
-    border-radius: 5px;
-    padding: 10px;
-}
-
-.form-label {
-    font-weight: bold;
-}
-
-/* Print styles */
-@media print {
-    .no-print {
-        display: none !important;
-    }
-
-    .container {
-        width: 100%;
-        max-width: 100%;
-    }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .navbar-brand {
-        font-size: 1.1rem;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .navbar-brand > div {
-        gap: 6px;
-    }
-
-    .card-title {
-        font-size: 1.1rem;
-    }
-
-    .theme-selector {
-        min-width: 120px;
-        font-size: 0.85rem;
-        margin-left: 8px;
-        padding: 6px 10px;
-    }
-
-    .navbar .container {
-        padding: 0.5rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .navbar-brand {
-        margin-left: 0;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .btn-outline-light {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.9rem;
-    }
-
-    .notification-dropdown {
-        width: 280px;
-    }
-
-    /* تصغير لوغو شاشة الترحيب في الموبايل */
-    .home-logo {
-        width: 160px !important;
-        max-width: 160px !important;
-    }
-}
-
-/* أنماط خاصة للوغو في شاشة الترحيب */
-.home-logo {
-    width: 200px !important;
-    height: auto !important;
-    background: transparent !important;
-    background-color: transparent !important;
-    /* إزالة أي خلفية من الملف نفسه */
-    -webkit-mask-composite: source-over;
-    mask-composite: add;
-    object-fit: contain;
-    max-width: 200px !important;
-}
-
-/* أنماط عامة للوغو في البطاقات */
-.card .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    object-fit: contain;
-}
-
-/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
-[data-theme] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    backdrop-filter: none !important;
-}
-
-/* ضمان الشفافية في الثيم الأسود */
-[data-theme="modern-black"] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-/* نص الترحيب المبسط - أزرق شامي فقط */
-.welcome-title {
-    color: #4a90e2 !important;
-    font-weight: 700 !important;
-    font-size: 1.8rem !important;
-    letter-spacing: 0.5px;
-}
-
-/* تجاوب النص الترحيبي للشاشات الصغيرة */
-@media (max-width: 768px) {
-    .welcome-title {
-        font-size: 1.5rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .welcome-title {
-        font-size: 1.3rem !important;
-    }
-}
-
-/* تحسين منتقي الثيم وإضافة تلميح للنقر بالزر الأيمن */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-    position: relative;
-}
-
-#themeSelector option {
-    padding: 10px;
-    cursor: context-menu;
-}
-
-/* تأثير عند مرور المؤشر على خيارات منتقي الثيم */
-#themeSelector option:hover {
-    background-color: var(--primary);
-    color: #fff;
-}
-
-/* إضافة تلميح للنقر بالزر الأيمن فوق منتقي الثيم */
-.theme-selector-hint {
-    color: var(--primary);
-    font-size: 12px;
-    display: block;
-    margin-top: 5px;
-    text-align: center;
-    font-weight: bold;
-    opacity: 0.8;
-    transition: all 0.3s ease;
-}
-
-.theme-selector-hint:hover {
-    opacity: 1;
-}
-
-/* أنماط خاصة للنقرة اليمنى في الثيم الأسود */
-[data-theme="modern-black"] .theme-selector-hint {
-    color: var(--accent);
-    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3);
-}
-
-/* Theme Selector Styles - أنماط منتقي الثيم */
-.theme-selector-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 20px 0;
-}
-
-.theme-selector-label {
-    margin-right: 10px;
-    font-weight: 500;
-    color: var(--dark-text);
-}
-
-.theme-selector {
-    position: relative;
-    display: inline-block;
-    width: 200px;
-    height: 40px;
-    border-radius: 20px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    background-color: var(--neutral);
-}
-
-.theme-selector:before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 300%;
-    height: 300%;
-    border-radius: 50%;
-    background: linear-gradient(45deg, var(--primary), var(--accent));
-    transform: translate(-50%, -50%) scale(0);
-    transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
-    z-index: 0;
-}
-
-.theme-selector:hover:before {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.theme-selector-content {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    z-index: 1;
-}
-
-.theme-selector-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 8px;
-    transition: transform 0.3s ease;
-}
-
-.theme-selector-text {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--dark-text);
-    transition: color 0.3s ease;
-}
-
-.theme-selector:hover .theme-selector-text {
-    color: #fff;
-}
-
-.theme-selector:hover .theme-selector-icon {
-    transform: rotate(360deg);
-}
-
-/* Card customization */
-.card {
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    transition: transform 0.3s ease;
-    border-color: var(--neutral);
-}
-
-.card:hover {
-    transform: translateY(-5px);
-}
-
-.card-header {
-    border-radius:

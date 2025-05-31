@@ -1,0 +1,39 @@
+/* Default Theme */
+:root {
+    --primary: #8B735A;
+    --secondary: #B69D7F;
+    --accent: #D4B996;
+    --dark: #2C3E50;
+    --light: #F5F5F5;
+    --neutral: #E8DFD8;
+    --warm-white: #FAF9F6;
+    --dark-text: #333333;
+    --light-bg: #FFFFFF;
+    --border: #DED5CE;
+    --radius: 8px;
+    --shadow: 0 2px 4px rgba(0,0,0,0.1);
+    --transition: all 0.3s ease;
+}
+
+/* Modern Black Theme */
+[data-theme="modern-black"] {
+    --primary: #00D2FF;
+    --secondary: #00FF88;
+    --accent: #00FF88;
+    --background: #0D1117;
+    --elevated-bg: #161B22;
+    --card-bg: #21262D;
+    --border: #30363D;
+    --text-primary: #F0F6FC;
+    --text-secondary: #8B949E;
+    --shadow: 0 4px 15px rgba(0,0,0,0.2);
+    --shadow-light: 0 2px 8px rgba(0,0,0,0.1);
+    --radius: 10px;
+    --radius-large: 15px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="modern-black"] body {
+    background-color: var(--background);
+    color: var(--text-primary);
+}

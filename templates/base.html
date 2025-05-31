@@ -190,35 +190,18 @@
                         </ul>
                     </div>
 
-                    <!-- User Dropdown -->
-                    <div class="dropdown">
+                    <!-- User Dropdown -->                    <div class="dropdown">
                         <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-user"></i> {{ user.get_full_name|default:user.username }}
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li>                                <div class="px-3 py-2" style="position: relative;" oncontextmenu="return false;">
+                            <li>
+                                <div class="px-3 py-2">
                                     <label for="themeSelector" class="form-label" style="font-weight: bold;">اختر الثيم المناسب</label>
-                                    <select class="form-select" id="themeSelector" oncontextmenu="return false;">
-                                        <option value="default">الثيم الافتراضي</option>
-                                        <option value="modern-black" style="font-weight: bold; background-color: #000; color: #00D2FF; padding: 8px;">⚫ الأسود الحديث (موصى به)</option>
-                                        <option value="apple-dark-mode">🌙 Apple الوضع الليلي</option>
-                                        <option value="light-sky">السماوي الفاتح</option>
-                                        <option value="soft-pink">الوردي الناعم</option>
-                                        <option value="fresh-mint">الأخضر المنعش</option>
-                                        <option value="calm-lavender">البنفسجي الهادئ</option>
-                                        <option value="warm-beige">البيج الدافئ</option>
-                                        <option value="pastel-blue">الأزرق الباستيل</option>
-                                        <option value="peachy-yellow">الأصفر المشمشي</option>
-                                        <option value="light-gray">الرمادي الفاتح</option>
-                                        <option value="light-turquoise">التركواز الفاتح</option>
-                                        <option value="soft-lilac">الليلكي الناعم</option>
+                                    <select id="themeSelector" class="form-select">
+                                        <option value="default">الثيم الإفتراضي</option>
+                                        <option value="modern-black">الثيم الأسود العصري</option>
                                     </select>
-                                    <div class="theme-selector-hint">
-                                        <i class="fas fa-lightbulb"></i> انقر بزر الماوس الأيمن <i class="fas fa-mouse"></i> لتعيين الثيم كافتراضي
-                                    </div>
-                                    
-                                    <!-- حاوية مخصصة لزر التفعيل -->
-                                    <div id="theme-activate-button-container"></div>
                                 </div>
                             </li>
                             <li><hr class="dropdown-divider"></li>
