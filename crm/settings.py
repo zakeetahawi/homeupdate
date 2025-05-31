@@ -136,63 +136,59 @@ WSGI_APPLICATION = 'crm.wsgi.application'
 
 # Database Configuration (تم تبسيط المنطق)
 def get_database_config():
-    """
-    تحديد إعدادات قاعدة البيانات بطريقة موحدة
-    
-    يقوم بقراءة الإعدادات من:
-    1. متغير البيئة DATABASE_URL إذا كان موجودًا
-    2. ملف db_settings.json إذا كان موجودًا
-    3. الإعدادات الافتراضية إذا لم يكن أي منهما موجودًا
-    """
-    # استخدام DATABASE_URL إذا كان متاحًا
-    if os.environ.get('DATABASE_URL'):
-        return dj_database_url.config(
-            conn_max_age=600,
-            conn_health_checks=True,
-            ssl_require=False,
-        )
-    
-    # محاولة قراءة إعدادات قاعدة البيانات من ملف db_settings.json
-    db_settings_file = os.path.join(BASE_DIR, 'db_settings.json')
-    if os.path.exists(db_settings_file):
-        try:
+    """تحديد إعدادات قاعدة البيانات"""
+    import json
+    # التكوين الافتراضي - سيتم استخدامه إذا فشلت كل المحاولات الأخرى
+    default_config = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'crm_system',
+        'USER': 'postgres',
+        'PASSWORD': '5525',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+
+    try:
+        db_settings_file = os.path.join(BASE_DIR, 'db_settings.json')
+        if os.path.exists(db_settings_file):
             with open(db_settings_file, 'r') as f:
                 settings_data = json.load(f)
             
-            active_db = settings_data.get('active_db')
-            if active_db and active_db in settings_data.get('databases', {}):
-                db_config = settings_data['databases'][active_db]
-                return {
-                    'ENGINE': db_config.get('ENGINE', 'django.db.backends.postgresql'),
-                    'NAME': db_config.get('NAME', 'test'),
-                    'USER': db_config.get('USER', 'admin'),
-                    'PASSWORD': db_config.get('PASSWORD', 'admin123'),
-                    'HOST': db_config.get('HOST', 'localhost'),
-                    'PORT': db_config.get('PORT', '5433'),
-                    'ATOMIC_REQUESTS': False,
-                    'AUTOCOMMIT': True,
-                    'CONN_MAX_AGE': 600,
-                    'CONN_HEALTH_CHECKS': True,
-                }
-        except Exception as e:
-            print(f"حدث خطأ أثناء قراءة ملف db_settings.json: {str(e)}")
-    
-    # الإعدادات الافتراضية إذا لم يكن أي من المصادر السابقة متاحًا
-    default_config = {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'test',
-        'USER': 'admin',
-        'PASSWORD': 'admin123',
-        'HOST': 'localhost',
-        'PORT': '5433',
+            # التحقق من وجود البيانات المطلوبة
+            if settings_data and isinstance(settings_data, dict):
+                active_db = str(settings_data.get('active_db'))
+                if active_db and active_db in settings_data.get('databases', {}):
+                    db_config = settings_data['databases'][active_db]
+                    # التحقق من وجود جميع الحقول المطلوبة
+                    required_fields = ['ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT']
+                    if all(field in db_config for field in required_fields):
+                        print(f"استخدام قاعدة البيانات: {db_config['NAME']} على {db_config['HOST']}:{db_config['PORT']}")
+                        return db_config
+
+        print("استخدام إعدادات قاعدة البيانات الافتراضية")
+        return default_config
+
+    except Exception as e:
+        print(f"خطأ في قراءة إعدادات قاعدة البيانات: {str(e)}")
+        print("استخدام الإعدادات الافتراضية")
+        return default_config
+
+# تكوين قاعدة البيانات
+db_config = get_database_config()
+DATABASES = {
+    'default': {
+        'ENGINE': db_config['ENGINE'],
+        'NAME': db_config['NAME'],
+        'USER': db_config['USER'],
+        'PASSWORD': db_config['PASSWORD'],
+        'HOST': db_config['HOST'],
+        'PORT': db_config['PORT'],
         'ATOMIC_REQUESTS': False,
         'AUTOCOMMIT': True,
         'CONN_MAX_AGE': 600,
         'CONN_HEALTH_CHECKS': True,
     }
-    return default_config
-
-DATABASES = {'default': get_database_config()}
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

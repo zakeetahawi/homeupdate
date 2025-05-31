@@ -53,13 +53,41 @@ class GoogleSyncConfig(models.Model):
         """الحصول على بيانات الاعتماد"""
         try:
             if not self.credentials_file:
+                logger.error("لم يتم تحميل ملف بيانات الاعتماد")
+                return None
+
+            file_path = self.credentials_file.path
+            if not os.path.exists(file_path):
+                logger.error(f"ملف بيانات الاعتماد غير موجود في المسار: {file_path}")
                 return None
             
-            # قراءة ملف بيانات الاعتماد
-            with open(self.credentials_file.path, 'r') as f:
-                credentials = json.load(f)
-            
-            return credentials
+            try:
+                # قراءة ملف بيانات الاعتماد
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    credentials = json.load(f)
+                
+                # التحقق من نوع بيانات الاعتماد
+                if not isinstance(credentials, dict):
+                    logger.error("ملف بيانات الاعتماد ليس بالتنسيق المتوقع")
+                    return None
+
+                if credentials.get('type') != 'service_account':
+                    logger.error("نوع بيانات الاعتماد غير صحيح - يجب أن يكون حساب خدمة")
+                    return None
+
+                # التحقق من وجود الحقول المطلوبة
+                required_fields = ['client_email', 'private_key', 'project_id']
+                missing_fields = [field for field in required_fields if field not in credentials]
+                if missing_fields:
+                    logger.error(f"حقول مفقودة في ملف بيانات الاعتماد: {', '.join(missing_fields)}")
+                    return None
+
+                return credentials
+
+            except json.JSONDecodeError as e:
+                logger.error(f"فشل تحليل ملف بيانات الاعتماد كـ JSON: {str(e)}")
+                return None
+                
         except Exception as e:
             logger.error(f"حدث خطأ أثناء قراءة بيانات الاعتماد: {str(e)}")
             return None
@@ -128,8 +156,8 @@ def sync_with_google_sheets(config_id=None, manual=False):
             message = "لا يوجد إعداد مزامنة نشط"
             logger.error(message)
             return {'status': 'error', 'message': message}
-        
-        # التحقق مما إذا كان وقت المزامنة قد حان (للمزامنة التلقائية فقط)
+
+        # التحقق من حالة المزامنة التلقائية
         if not manual and not config.is_sync_due():
             message = f"لم يحن وقت المزامنة بعد. آخر مزامنة: {config.last_sync}"
             logger.info(message)
@@ -138,31 +166,38 @@ def sync_with_google_sheets(config_id=None, manual=False):
         # الحصول على بيانات الاعتماد
         credentials = config.get_credentials()
         if not credentials:
-            message = "لا يمكن قراءة بيانات الاعتماد"
+            message = "فشل قراءة بيانات الاعتماد. تأكد من تحميل ملف اعتماد حساب خدمة صالح."
             logger.error(message)
-            
-            # تسجيل الخطأ
             GoogleSyncLog.objects.create(
                 config=config,
                 status='error',
                 message=message
             )
-            
             return {'status': 'error', 'message': message}
         
         # إنشاء خدمة Google Sheets
         sheets_service = create_sheets_service(credentials)
         if not sheets_service:
-            message = "فشل إنشاء خدمة Google Sheets"
+            message = f"فشل الاتصال بـ Google Sheets. تأكد من صحة بيانات الاعتماد ومشاركة جدول البيانات مع البريد: {credentials.get('client_email', 'غير معروف')}"
             logger.error(message)
-            
-            # تسجيل الخطأ
             GoogleSyncLog.objects.create(
                 config=config,
                 status='error',
                 message=message
             )
-            
+            return {'status': 'error', 'message': message}
+        
+        try:
+            # التحقق من الوصول إلى جدول البيانات
+            sheets_service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
+        except Exception as e:
+            message = f"فشل الوصول إلى جدول البيانات. تأكد من صحة المعرف ومشاركة الجدول مع حساب الخدمة."
+            logger.error(f"{message}: {str(e)}")
+            GoogleSyncLog.objects.create(
+                config=config,
+                status='error',
+                message=message
+            )
             return {'status': 'error', 'message': message}
         
         # مزامنة البيانات
@@ -202,22 +237,21 @@ def sync_with_google_sheets(config_id=None, manual=False):
         config.update_last_sync()
         
         # تسجيل نجاح المزامنة
+        message = "تمت المزامنة مع Google Sheets بنجاح"
+        logger.info(message)
         GoogleSyncLog.objects.create(
             config=config,
             status='success',
-            message="تمت المزامنة بنجاح",
+            message=message,
             details=sync_results
         )
         
-        message = "تمت المزامنة مع Google Sheets بنجاح"
-        logger.info(message)
         return {'status': 'success', 'message': message, 'results': sync_results}
     
     except Exception as e:
         message = f"حدث خطأ أثناء المزامنة مع Google Sheets: {str(e)}"
         logger.error(message)
         
-        # تسجيل الخطأ
         if 'config' in locals():
             GoogleSyncLog.objects.create(
                 config=config,
@@ -240,56 +274,64 @@ def create_sheets_service(credentials):
     """
     try:
         from googleapiclient.discovery import build
-        from google.oauth2.credentials import Credentials
         from google.oauth2 import service_account
         import json
         
+        if not credentials:
+            raise ValueError("لم يتم توفير بيانات الاعتماد")
+
         # التحقق من نوع بيانات الاعتماد
         if isinstance(credentials, dict):
-            # إذا كانت بيانات الاعتماد هي قاموس، فقد تكون بيانات اعتماد OAuth أو بيانات اعتماد حساب الخدمة
-            if 'type' in credentials and credentials['type'] == 'service_account':
-                # بيانات اعتماد حساب الخدمة
+            if credentials.get('type') != 'service_account':
+                raise ValueError("بيانات الاعتماد ليست من نوع حساب الخدمة")
+
+            # التحقق من وجود الحقول المطلوبة
+            required_fields = ['client_email', 'private_key', 'project_id']
+            missing_fields = [field for field in required_fields if field not in credentials]
+            if missing_fields:
+                raise ValueError(f"حقول مفقودة في بيانات الاعتماد: {', '.join(missing_fields)}")
+
+            try:
                 creds = service_account.Credentials.from_service_account_info(
                     credentials,
                     scopes=['https://www.googleapis.com/auth/spreadsheets']
                 )
-            else:
-                # بيانات اعتماد OAuth
-                creds = Credentials.from_authorized_user_info(
+            except Exception as e:
+                raise ValueError(f"فشل إنشاء بيانات الاعتماد من المعلومات المقدمة: {str(e)}")
+
+        elif isinstance(credentials, str):
+            if not os.path.exists(credentials):
+                raise ValueError(f"ملف بيانات الاعتماد غير موجود: {credentials}")
+
+            try:
+                creds = service_account.Credentials.from_service_account_file(
                     credentials,
                     scopes=['https://www.googleapis.com/auth/spreadsheets']
                 )
-        elif isinstance(credentials, str):
-            # إذا كانت بيانات الاعتماد هي سلسلة نصية، فقد تكون مسار ملف أو سلسلة JSON
-            try:
-                # محاولة تحليل السلسلة كـ JSON
-                creds_dict = json.loads(credentials)
-                if 'type' in creds_dict and creds_dict['type'] == 'service_account':
-                    creds = service_account.Credentials.from_service_account_info(
-                        creds_dict,
-                        scopes=['https://www.googleapis.com/auth/spreadsheets']
-                    )
-                else:
-                    creds = Credentials.from_authorized_user_info(
-                        creds_dict,
-                        scopes=['https://www.googleapis.com/auth/spreadsheets']
-                    )
-            except json.JSONDecodeError:
-                # قد تكون مسار ملف
-                if credentials.endswith('.json'):
-                    creds = service_account.Credentials.from_service_account_file(
-                        credentials,
-                        scopes=['https://www.googleapis.com/auth/spreadsheets']
-                    )
-                else:
-                    raise ValueError("تنسيق بيانات الاعتماد غير صالح")
+            except Exception as e:
+                raise ValueError(f"فشل قراءة بيانات الاعتماد من الملف: {str(e)}")
         else:
             raise ValueError("نوع بيانات الاعتماد غير مدعوم")
-        
-        # إنشاء خدمة Google Sheets
-        service = build('sheets', 'v4', credentials=creds)
-        
-        return service
+
+        try:
+            # إنشاء خدمة Google Sheets
+            service = build('sheets', 'v4', credentials=creds)
+
+            # اختبار الاتصال لتأكيد صحة بيانات الاعتماد
+            service.spreadsheets().get(spreadsheetId='1').execute()
+            
+            return service
+
+        except Exception as e:
+            error_msg = str(e).lower()
+            if 'not found' in error_msg:
+                # هذا متوقع لأننا استخدمنا معرف غير موجود للاختبار
+                return service
+            elif 'permission' in error_msg:
+                raise ValueError("تأكد من مشاركة جدول البيانات مع البريد الإلكتروني لحساب الخدمة")
+            else:
+                raise ValueError(f"فشل اختبار الاتصال: {str(e)}")
+
     except Exception as e:
         logger.error(f"حدث خطأ أثناء إنشاء خدمة Google Sheets: {str(e)}")
         return None
