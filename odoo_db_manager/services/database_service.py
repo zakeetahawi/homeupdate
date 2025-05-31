@@ -12,6 +12,18 @@ from ..models import Database
 
 class DatabaseService:
     """خدمة إدارة قواعد البيانات"""
+    
+    def activate_database(self, database_id):
+        """تنشيط قاعدة بيانات باستخدام طريقة النموذج الجديدة"""
+        try:
+            # الحصول على قاعدة البيانات
+            database = Database.objects.get(id=database_id)
+            
+            # استخدام طريقة activate الجديدة في النموذج
+            return database.activate()
+        except Exception as e:
+            print(f"حدث خطأ أثناء تنشيط قاعدة البيانات: {str(e)}")
+            raise
 
     def create_database(self, name, db_type, connection_info, force_create=False):
         """إنشاء قاعدة بيانات جديدة"""
@@ -230,46 +242,38 @@ class DatabaseService:
     def discover_postgresql_databases(self):
         """اكتشاف قواعد البيانات الموجودة في PostgreSQL"""
         try:
-            # الحصول على معلومات الاتصال من متغيرات البيئة أو الإعدادات
-            if os.environ.get('DATABASE_URL'):
-                import dj_database_url
-                db_config = dj_database_url.parse(os.environ.get('DATABASE_URL'))
-                user = db_config.get('USER', 'postgres')
-                password = db_config.get('PASSWORD', '')
-                host = db_config.get('HOST', 'localhost')
-                port = str(db_config.get('PORT', '5432'))
-            else:
-                user = os.environ.get('DB_USER', 'postgres')
-                password = os.environ.get('DB_PASSWORD', '5525')
-                host = os.environ.get('DB_HOST', 'localhost')
-                port = os.environ.get('DB_PORT', '5432')
-
-            # التحقق من وجود أداة psql
-            if not self._check_command_exists('psql'):
-                print("أداة psql غير موجودة. لا يمكن اكتشاف قواعد البيانات.")
-                return []
-
+            # الحصول على معلومات الاتصال من إعدادات Django
+            from django.conf import settings
+            db_settings = settings.DATABASES['default']
+            
+            user = db_settings.get('USER', 'admin')
+            password = db_settings.get('PASSWORD', 'admin123')
+            host = db_settings.get('HOST', 'localhost')
+            port = str(db_settings.get('PORT', '5433'))
+            
+            # استخدام psycopg2 للاتصال بقاعدة البيانات
+            import psycopg2
+            
+            # إنشاء اتصال بقاعدة البيانات postgres الافتراضية
+            conn = psycopg2.connect(
+                dbname='postgres',
+                user=user,
+                password=password,
+                host=host,
+                port=port
+            )
+            conn.autocommit = True
+            
+            # إنشاء cursor للاستعلام
+            cursor = conn.cursor()
+            
             # استعلام للحصول على قائمة قواعد البيانات
-            env = os.environ.copy()
-            env['PGPASSWORD'] = password
-
-            list_cmd = [
-                'psql',
-                '-h', host,
-                '-p', port,
-                '-U', user,
-                '-t',  # بدون عناوين
-                '-c', "SELECT datname FROM pg_database WHERE datistemplate = false;"
-            ]
-
-            result = subprocess.run(list_cmd, env=env, check=True,
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                  text=True)
-
+            cursor.execute("SELECT datname FROM pg_database WHERE datistemplate = false;")
+            
             # تحليل النتيجة
             databases = []
-            for line in result.stdout.splitlines():
-                db_name = line.strip()
+            for row in cursor.fetchall():
+                db_name = row[0]
                 if db_name and db_name not in ['postgres', 'template0', 'template1']:
                     databases.append({
                         'name': db_name,
@@ -283,13 +287,27 @@ class DatabaseService:
                             'PORT': port,
                         }
                     })
-
+            
+            # إغلاق الاتصال
+            cursor.close()
+            conn.close()
+            
             print(f"تم اكتشاف {len(databases)} قاعدة بيانات في PostgreSQL")
             return databases
-
+            
         except Exception as e:
             print(f"خطأ في اكتشاف قواعد البيانات: {str(e)}")
-            return []
+            # إرجاع قاعدة البيانات الافتراضية على الأقل
+            try:
+                from django.conf import settings
+                current_db_name = settings.DATABASES['default']['NAME']
+                return [{
+                    'name': current_db_name,
+                    'type': 'postgresql',
+                    'connection_info': settings.DATABASES['default']
+                }]
+            except:
+                return []
 
     def sync_discovered_databases(self):
         """مزامنة قواعد البيانات المكتشفة مع النظام"""

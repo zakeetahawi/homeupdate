@@ -50,12 +50,93 @@ def dashboard(request):
     # الحصول على آخر نسخة احتياطية
     last_backup = Backup.objects.order_by('-created_at').first()
 
+    # التحقق من وجود رسالة نجاح لتنشيط قاعدة البيانات
+    show_activation_success = request.session.pop('show_db_activation_success', False)
+    activated_db_name = request.session.pop('activated_db_name', '')
+    created_default_user = request.session.pop('created_default_user', False)
+    
+    # الحصول على معلومات قاعدة البيانات الحالية من إعدادات Django
+    from django.conf import settings
+    current_db_name = settings.DATABASES['default']['NAME']
+    current_db_user = settings.DATABASES['default']['USER']
+    current_db_host = settings.DATABASES['default']['HOST']
+    current_db_port = settings.DATABASES['default']['PORT']
+    current_db_password = settings.DATABASES['default']['PASSWORD']
+    
+    # البحث عن قاعدة البيانات الحالية في قائمة قواعد البيانات
+    current_database = None
+    for db in databases:
+        if db.connection_info.get('NAME') == current_db_name:
+            current_database = db
+            break
+    
+    # إذا لم يتم العثور على قاعدة البيانات الحالية، نقوم بإنشائها
+    if not current_database:
+        try:
+            # إنشاء قاعدة بيانات جديدة للقاعدة الحالية
+            current_database = Database(
+                name=f"قاعدة البيانات الحالية ({current_db_name})",
+                db_type='postgresql',
+                connection_info={
+                    'ENGINE': 'django.db.backends.postgresql',
+                    'NAME': current_db_name,
+                    'USER': current_db_user,
+                    'PASSWORD': current_db_password,
+                    'HOST': current_db_host,
+                    'PORT': current_db_port,
+                }
+            )
+            current_database.save()
+            print(f"تم إنشاء قاعدة البيانات الحالية: {current_db_name}")
+        except Exception as e:
+            print(f"حدث خطأ أثناء إنشاء قاعدة البيانات الحالية: {str(e)}")
+    
+    # الحصول على قاعدة البيانات النشطة
+    active_database = databases.filter(is_active=True).first()
+    
+    # إذا كانت قاعدة البيانات الحالية موجودة ولكنها غير نشطة، نقوم بتنشيطها
+    if current_database and not current_database.is_active:
+        # تعطيل جميع قواعد البيانات الأخرى
+        Database.objects.exclude(id=current_database.id).update(is_active=False)
+        # تنشيط قاعدة البيانات الحالية
+        current_database.is_active = True
+        current_database.save()
+        active_database = current_database
+        print(f"تم تنشيط قاعدة البيانات الحالية: {current_db_name}")
+    
+    # التحقق من حالة الاتصال بقاعدة البيانات الحالية
+    current_db_status = False
+    try:
+        import psycopg2
+        conn = psycopg2.connect(
+            dbname=current_db_name,
+            user=current_db_user,
+            password=current_db_password,
+            host=current_db_host,
+            port=current_db_port,
+            connect_timeout=3
+        )
+        conn.close()
+        current_db_status = True
+    except Exception as e:
+        print(f"فشل الاتصال بقاعدة البيانات الحالية: {str(e)}")
+        pass
+
     context = {
         'databases': databases,
         'backups': backups,
         'total_size_display': total_size_display,
         'last_backup': last_backup,
         'title': _('إدارة قواعد البيانات'),
+        'show_activation_success': show_activation_success,
+        'activated_db_name': activated_db_name,
+        'created_default_user': created_default_user,
+        'active_database': active_database,
+        'current_db_name': current_db_name,
+        'current_db_user': current_db_user,
+        'current_db_host': current_db_host,
+        'current_db_port': current_db_port,
+        'current_db_status': current_db_status,
     }
 
     return render(request, 'odoo_db_manager/dashboard.html', context)
@@ -67,9 +148,15 @@ def database_list(request):
     # الحصول على قواعد البيانات
     databases = Database.objects.all().order_by('-is_active', '-created_at')
 
+    # التحقق من وجود رسالة نجاح لتنشيط قاعدة البيانات
+    show_activation_success = request.session.pop('show_db_activation_success', False)
+    activated_db_name = request.session.pop('activated_db_name', '')
+
     context = {
         'databases': databases,
         'title': _('قائمة قواعد البيانات'),
+        'show_activation_success': show_activation_success,
+        'activated_db_name': activated_db_name,
     }
 
     return render(request, 'odoo_db_manager/database_list.html', context)
@@ -230,19 +317,30 @@ def database_create(request):
 @user_passes_test(is_staff_or_superuser)
 def database_activate(request, pk):
     """تنشيط قاعدة بيانات"""
-    # الحصول على قاعدة البيانات
-    database = get_object_or_404(Database, pk=pk)
-
     try:
-        # تنشيط قاعدة البيانات
-        database_service = DatabaseService()
-        database_service.activate_database(database.id)
-
-        messages.success(request, _('تم تنشيط قاعدة البيانات بنجاح.'))
+        # الحصول على قاعدة البيانات
+        database = get_object_or_404(Database, pk=pk)
+        
+        # تنشيط قاعدة البيانات باستخدام الطريقة الجديدة
+        if database.activate():
+            # محاولة إنشاء مستخدم افتراضي إذا لم يكن هناك مستخدمين
+            created_default_user = database.create_default_user()
+            
+            # استخدام رسالة نجاح مع معلومات إضافية
+            success_message = f'تم تنشيط قاعدة البيانات {database.name} بنجاح. يرجى إعادة تشغيل السيرفر لتطبيق التغييرات.'
+            messages.success(request, success_message)
+            
+            # إضافة متغير في الجلسة لعرض SweetAlert في الصفحة التالية
+            request.session['show_db_activation_success'] = True
+            request.session['activated_db_name'] = database.name
+            request.session['created_default_user'] = created_default_user
+        else:
+            messages.error(request, _(f'حدث خطأ أثناء تنشيط قاعدة البيانات {database.name}.'))
+    
     except Exception as e:
         messages.error(request, _(f'حدث خطأ أثناء تنشيط قاعدة البيانات: {str(e)}'))
-
-    return redirect('odoo_db_manager:database_detail', pk=database.pk)
+    
+    return redirect('odoo_db_manager:dashboard')
 
 @login_required
 @user_passes_test(is_staff_or_superuser)

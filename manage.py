@@ -8,7 +8,10 @@ def main():
     """Run administrative tasks."""
     # إعداد متغيرات البيئة لقاعدة البيانات
     if 'DATABASE_URL' in os.environ:
-        print(f"استخدام DATABASE_URL: {os.environ.get('DATABASE_URL')}")
+        # تم تعديل هذا الجزء لتجنب طباعة كلمة المرور في السجلات
+        db_url = os.environ.get('DATABASE_URL')
+        masked_url = db_url.replace(db_url.split('@')[0].split('://')[1], '****:****')
+        print(f"استخدام قاعدة البيانات: {masked_url}")
         print("تم تكوين قاعدة البيانات من DATABASE_URL")
 
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')

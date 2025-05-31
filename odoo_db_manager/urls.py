@@ -4,6 +4,7 @@
 
 from django.urls import path
 from . import views
+from . import google_sync_views
 
 app_name = 'odoo_db_manager'
 
@@ -46,4 +47,14 @@ urlpatterns = [
     path('google-drive/create-test-folder/', views.google_drive_create_test_folder, name='google_drive_create_test_folder'),
     path('google-drive/test-file-upload/', views.google_drive_test_file_upload, name='google_drive_test_file_upload'),
 
+    # مزامنة غوغل
+    path('google-sync/', google_sync_views.google_sync, name='google_sync'),
+    path('google-sync/config/', google_sync_views.google_sync_config, name='google_sync_config'),
+    path('google-sync/config/save/', google_sync_views.google_sync_config_save, name='google_sync_config_save'),
+    path('google-sync/delete-credentials/', google_sync_views.google_sync_delete_credentials, name='google_sync_delete_credentials'),
+    path('google-sync/options/', google_sync_views.google_sync_options, name='google_sync_options'),
+    path('google-sync/now/', google_sync_views.google_sync_now, name='google_sync_now'),
+    path('google-sync/test/', google_sync_views.google_sync_test, name='google_sync_test'),
+    path('google-sync/reset/', google_sync_views.google_sync_reset, name='google_sync_reset'),
+    path('google-sync/advanced-settings/', google_sync_views.google_sync_advanced_settings, name='google_sync_advanced_settings'),
 ]

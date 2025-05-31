@@ -42,9 +42,6 @@ urlpatterns = [
     path('health-check/', health_check, name='health_check'),
     path('health/', health_check, name='health'),
 
-    # مسارات إدارة الثيم
-    path('set-default-theme/', include('accounts.urls')),
-
     # مسار خدمة ملفات الوسائط
     re_path(
         r'^media/(?P<path>.*)$',

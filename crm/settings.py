@@ -136,43 +136,60 @@ WSGI_APPLICATION = 'crm.wsgi.application'
 
 # Database Configuration (تم تبسيط المنطق)
 def get_database_config():
-    """تحديد إعدادات قاعدة البيانات بطريقة مبسطة"""
-    # الإعدادات الافتراضية
+    """
+    تحديد إعدادات قاعدة البيانات بطريقة موحدة
+    
+    يقوم بقراءة الإعدادات من:
+    1. متغير البيئة DATABASE_URL إذا كان موجودًا
+    2. ملف db_settings.json إذا كان موجودًا
+    3. الإعدادات الافتراضية إذا لم يكن أي منهما موجودًا
+    """
+    # استخدام DATABASE_URL إذا كان متاحًا
+    if os.environ.get('DATABASE_URL'):
+        return dj_database_url.config(
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=False,
+        )
+    
+    # محاولة قراءة إعدادات قاعدة البيانات من ملف db_settings.json
+    db_settings_file = os.path.join(BASE_DIR, 'db_settings.json')
+    if os.path.exists(db_settings_file):
+        try:
+            with open(db_settings_file, 'r') as f:
+                settings_data = json.load(f)
+            
+            active_db = settings_data.get('active_db')
+            if active_db and active_db in settings_data.get('databases', {}):
+                db_config = settings_data['databases'][active_db]
+                return {
+                    'ENGINE': db_config.get('ENGINE', 'django.db.backends.postgresql'),
+                    'NAME': db_config.get('NAME', 'test'),
+                    'USER': db_config.get('USER', 'admin'),
+                    'PASSWORD': db_config.get('PASSWORD', 'admin123'),
+                    'HOST': db_config.get('HOST', 'localhost'),
+                    'PORT': db_config.get('PORT', '5433'),
+                    'ATOMIC_REQUESTS': False,
+                    'AUTOCOMMIT': True,
+                    'CONN_MAX_AGE': 600,
+                    'CONN_HEALTH_CHECKS': True,
+                }
+        except Exception as e:
+            print(f"حدث خطأ أثناء قراءة ملف db_settings.json: {str(e)}")
+    
+    # الإعدادات الافتراضية إذا لم يكن أي من المصادر السابقة متاحًا
     default_config = {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'crm_system'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', '5525'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'NAME': 'test',
+        'USER': 'admin',
+        'PASSWORD': 'admin123',
+        'HOST': 'localhost',
+        'PORT': '5433',
         'ATOMIC_REQUESTS': False,
         'AUTOCOMMIT': True,
         'CONN_MAX_AGE': 600,
         'CONN_HEALTH_CHECKS': True,
     }
-
-    # إذا كان DATABASE_URL متاح، استخدمه (أولوية عالية)
-    if os.environ.get('DATABASE_URL'):
-        return dj_database_url.config(
-            default=os.environ.get('DATABASE_URL'),
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-
-    # محاولة تحميل إعدادات من odoo_db_manager
-    try:
-        from odoo_db_manager.db_settings import get_active_database_settings
-        db_settings = get_active_database_settings()
-        active_db_id = db_settings.get('active_db')
-
-        if active_db_id and str(active_db_id) in db_settings.get('databases', {}):
-            active_db_settings = db_settings['databases'][str(active_db_id)]
-            # دمج الإعدادات النشطة مع الافتراضية
-            default_config.update(active_db_settings)
-            return default_config
-    except (ImportError, Exception):
-        pass
-
     return default_config
 
 DATABASES = {'default': get_database_config()}

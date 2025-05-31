@@ -69,20 +69,25 @@ def company_info(request):
         company = CompanyInfo.objects.first()
         if not company:
             # إنشاء كائن بقيم افتراضية إذا لم يكن موجوداً
-            company = CompanyInfo(
-                name="نظام الخواجه",
-                address="",
-                phone="",
-                email="",
+            company = CompanyInfo.objects.create(
+                name="الخواجة للستائر والمفروشات",
+                description="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
+                version="1.0.0",
+                release_date="2025-04-30",
+                developer="zakee tahawi",
+                working_hours="9 صباحاً - 5 مساءً",
+                copyright_text="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi"
             )
-            # نحن لا نحفظ الكائن في قاعدة البيانات، لكن نستخدمه فقط لتجنب الأخطاء
     except Exception:
         # في حالة حدوث أي خطأ، إنشاء كائن بقيم افتراضية
         company = CompanyInfo(
-            name="نظام الخواجه",
-            address="",
-            phone="",
-            email="",
+            name="الخواجة للستائر والمفروشات",
+            description="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
+            version="1.0.0",
+            release_date="2025-04-30",
+            developer="zakee tahawi",
+            working_hours="9 صباحاً - 5 مساءً",
+            copyright_text="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi"
         )
     return {'company_info': company}
 
@@ -91,10 +96,20 @@ def footer_settings(request):
     try:
         footer_settings = FooterSettings.objects.first()
         if not footer_settings:
-            footer_settings = FooterSettings.objects.create()
+            footer_settings = FooterSettings.objects.create(
+                left_column_title="عن الشركة",
+                left_column_text="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
+                middle_column_title="روابط سريعة",
+                right_column_title="تواصل معنا"
+            )
     except Exception:
         # في حالة حدوث أي خطأ، إنشاء كائن بقيم افتراضية
-        footer_settings = FooterSettings()
+        footer_settings = FooterSettings(
+            left_column_title="عن الشركة",
+            left_column_text="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
+            middle_column_title="روابط سريعة",
+            right_column_title="تواصل معنا"
+        )
 
     return {
         'footer_settings': footer_settings,

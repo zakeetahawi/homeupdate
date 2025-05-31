@@ -18,7 +18,7 @@ DB_SETTINGS_FILE = os.path.join(BASE_DIR, 'db_settings.json')
 def get_active_database_settings():
     """
     الحصول على إعدادات قاعدة البيانات النشطة
-
+    
     Returns:
         dict: إعدادات قاعدة البيانات النشطة
     """
@@ -31,9 +31,6 @@ def get_active_database_settings():
 
             # إنشاء معرف فريد لقاعدة البيانات
             external_db_id = 'external_db'
-
-            # طباعة معلومات متغيرات البيئة للتشخيص
-            print(f"DATABASE_URL: {os.environ.get('DATABASE_URL')}")
 
             # تحليل DATABASE_URL
             import dj_database_url
@@ -54,13 +51,8 @@ def get_active_database_settings():
                 }
             }
 
-            # طباعة معلومات قاعدة البيانات للتشخيص
-            print(f"معلومات قاعدة البيانات:")
-            print(f"ENGINE: {db_config.get('ENGINE')}")
-            print(f"NAME: {db_config.get('NAME')}")
-            print(f"USER: {db_config.get('USER')}")
-            print(f"HOST: {db_config.get('HOST')}")
-            print(f"PORT: {db_config.get('PORT')}")
+            # تسجيل معلومات قاعدة البيانات (بدون كلمة المرور)
+            logger.info(f"تم تكوين قاعدة البيانات: {db_config.get('NAME')} على {db_config.get('HOST')}:{db_config.get('PORT')}")
 
             # حفظ إعدادات قاعدة البيانات الخارجية
             save_database_settings(external_settings)
@@ -75,11 +67,11 @@ def get_active_database_settings():
                 'databases': {
                     '1': {
                         'ENGINE': 'django.db.backends.postgresql',
-                        'NAME': 'crm_system',
-                        'USER': 'postgres',
-                        'PASSWORD': '5525',
+                        'NAME': 'test',
+                        'USER': 'admin',
+                        'PASSWORD': 'admin123',
                         'HOST': 'localhost',
-                        'PORT': '5432',
+                        'PORT': '5433',
                     }
                 }
             }
@@ -99,11 +91,11 @@ def get_active_database_settings():
             'databases': {
                 '1': {
                     'ENGINE': 'django.db.backends.postgresql',
-                    'NAME': 'crm_system',
-                    'USER': 'postgres',
-                    'PASSWORD': '5525',
+                    'NAME': 'test',
+                    'USER': 'admin',
+                    'PASSWORD': 'admin123',
                     'HOST': 'localhost',
-                    'PORT': '5432',
+                    'PORT': '5433',
                 }
             }
         }
@@ -134,11 +126,11 @@ def reset_to_default_settings():
             'databases': {
                 '1': {
                     'ENGINE': 'django.db.backends.postgresql',
-                    'NAME': 'crm_system',
-                    'USER': 'postgres',
-                    'PASSWORD': '5525',
+                    'NAME': 'test',
+                    'USER': 'admin',
+                    'PASSWORD': 'admin123',
                     'HOST': 'localhost',
-                    'PORT': '5432',
+                    'PORT': '5433',
                 }
             }
         }

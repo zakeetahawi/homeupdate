@@ -10,44 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveIndex(
-            model_name='branch',
-            name='branch_is_active_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='branch',
-            name='branch_is_main_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='department',
-            name='department_is_active_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='department',
-            name='department_is_core_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='department',
-            name='department_parent_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='notification',
-            name='is_read_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='notification',
-            name='notification_created_at_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='user',
-            name='username_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='user',
-            name='email_idx',
-        ),
-        migrations.RemoveIndex(
-            model_name='user',
-            name='is_active_idx',
-        ),
+        # تم تعديل الملف لتجنب محاولة إزالة فهارس غير موجودة
+        # سنقوم بإضافة عملية فارغة بدلاً من ذلك
     ]

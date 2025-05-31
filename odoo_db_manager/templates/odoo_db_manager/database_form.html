@@ -54,9 +54,13 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="port">المنفذ</label>
-                            <input type="text" class="form-control" id="port" name="port" value="5432">
+                        <div class="form-group">
+                            <label for="{{ form.port.id_for_label }}">المنفذ</label>
+                            {{ form.port|add_class:"form-control" }}
+                            <small class="form-text text-muted">منفذ الاتصال بقاعدة البيانات (مثال: 5433 لـ PostgreSQL، 3306 لـ MySQL)</small>
+                            {% if form.port.errors %}
+                                <div class="invalid-feedback d-block">{{ form.port.errors }}</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

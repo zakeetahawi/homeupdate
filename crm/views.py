@@ -47,10 +47,14 @@ def home(request):
     ][:10]
 
     # Get company info for logo
-    try:
-        company_info = CompanyInfo.objects.first()
-    except:
-        company_info = None
+    company_info = CompanyInfo.objects.first()
+    if not company_info:
+        company_info = CompanyInfo.objects.create(
+            name='الخواجة للستائر والمفروشات',
+            version='1.0.0',
+            release_date='2025-04-30',
+            developer='zakee tahawi'
+        )
 
     context = {
         'customers_count': customers_count,
