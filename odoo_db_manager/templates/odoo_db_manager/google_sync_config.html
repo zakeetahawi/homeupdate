@@ -203,16 +203,20 @@
                     </div>
                     
                     <div class="setup-step">
-                        <h5>3. إنشاء بيانات اعتماد</h5>
-                        <p>انتقل إلى "APIs & Services" > "Credentials" وانقر على "Create Credentials" > "OAuth client ID".</p>
-                        <p>اختر "Desktop application" كنوع التطبيق وأدخل اسمًا له.</p>
-                        <p>بعد الإنشاء، قم بتنزيل ملف JSON الذي يحتوي على بيانات الاعتماد.</p>
+                        <h5>3. إنشاء حساب خدمة (Service Account)</h5>
+                        <p>انتقل إلى "APIs & Services" > "Credentials" وانقر على "Create Credentials" > "Service Account".</p>
+                        <p>1. أدخل اسم حساب الخدمة واترك باقي الإعدادات كما هي.</p>
+                        <p>2. انقر على حساب الخدمة الجديد، ثم اختر تبويب "KEYS".</p>
+                        <p>3. انقر على "ADD KEY" > "Create new key" واختر JSON.</p>
+                        <p>4. سيتم تنزيل ملف JSON - احتفظ به لتحميله في النموذج.</p>
+                        <p class="text-danger">ملاحظة مهمة: بعد تنزيل ملف JSON، قم بمشاركة جدول البيانات مع البريد الإلكتروني الموجود في الملف في حقل client_email.</p>
                     </div>
                     
                     <div class="setup-step">
                         <h5>4. إنشاء جدول بيانات Google Sheets</h5>
                         <p>قم بزيارة <a href="https://docs.google.com/spreadsheets/" target="_blank">Google Sheets</a> وإنشاء جدول بيانات جديد.</p>
-                        <p>انسخ معرف جدول البيانات من الرابط (الجزء بين /d/ و /edit).</p>
+                        <p>1. انسخ معرف جدول البيانات من الرابط (الجزء بين /d/ و /edit).</p>
+                        <p>2. انقر على زر المشاركة واضف البريد الإلكتروني لحساب الخدمة كمحرر.</p>
                     </div>
                     
                     <div class="setup-step">

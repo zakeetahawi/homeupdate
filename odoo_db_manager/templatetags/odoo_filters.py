@@ -28,3 +28,7 @@ def pprint(value):
         return mark_safe(formatted_json)
     except Exception as e:
         return f"خطأ في تنسيق البيانات: {str(e)}"
+
+# Register odoo_pprint as an alias for pprint
+odoo_pprint = pprint
+register.filter('odoo_pprint', odoo_pprint)

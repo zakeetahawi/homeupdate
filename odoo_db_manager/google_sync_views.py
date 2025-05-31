@@ -17,7 +17,10 @@ from django.views.decorators.http import require_POST
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
-from .google_sync import GoogleSyncConfig, GoogleSyncLog, sync_with_google_sheets
+from .google_sync import (
+    GoogleSyncConfig, GoogleSyncLog, sync_with_google_sheets,
+    create_sheets_service
+)
 from .views import is_staff_or_superuser
 
 # إعداد التسجيل
@@ -42,22 +45,15 @@ def google_sync(request):
     connection_status = False
     if config:
         try:
-            from googleapiclient.discovery import build
-            from google.oauth2.credentials import Credentials
-            
             # الحصول على بيانات الاعتماد
             credentials = config.get_credentials()
             if credentials:
-                # إنشاء كائن بيانات الاعتماد
-                creds = Credentials.from_authorized_user_info(credentials)
-                
-                # محاولة إنشاء خدمة Google Sheets
-                service = build('sheets', 'v4', credentials=creds)
-                
-                # محاولة الوصول إلى جدول البيانات
-                service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
-                
-                connection_status = True
+                # إنشاء خدمة Google Sheets
+                sheets_service = create_sheets_service(credentials)
+                if sheets_service:
+                    # محاولة الوصول إلى جدول البيانات
+                    sheets_service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
+                    connection_status = True
         except Exception as e:
             logger.error(f"فشل اختبار الاتصال: {str(e)}")
     
@@ -341,8 +337,6 @@ def google_sync_test(request):
         if not config:
             # إضافة رسالة خطأ
             messages.error(request, 'لا يوجد إعداد مزامنة نشط')
-            
-            # إعادة التوجيه إلى صفحة المزامنة
             return redirect('odoo_db_manager:google_sync')
         
         # الحصول على بيانات الاعتماد
@@ -351,22 +345,16 @@ def google_sync_test(request):
         if not credentials:
             # إضافة رسالة خطأ
             messages.error(request, 'لا يمكن قراءة بيانات الاعتماد')
-            
-            # إعادة التوجيه إلى صفحة المزامنة
             return redirect('odoo_db_manager:google_sync')
-        
-        # اختبار الاتصال
-        from googleapiclient.discovery import build
-        from google.oauth2.credentials import Credentials
-        
-        # إنشاء كائن بيانات الاعتماد
-        creds = Credentials.from_authorized_user_info(credentials)
-        
-        # إنشاء خدمة Google Sheets
-        service = build('sheets', 'v4', credentials=creds)
-        
+
+        # اختبار الاتصال باستخدام حساب الخدمة
+        sheets_service = create_sheets_service(credentials)
+        if not sheets_service:
+            messages.error(request, 'فشل إنشاء خدمة Google Sheets. تحقق من صحة بيانات الاعتماد.')
+            return redirect('odoo_db_manager:google_sync')
+
         # محاولة الوصول إلى جدول البيانات
-        spreadsheet = service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
+        spreadsheet = sheets_service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
         
         # الحصول على عنوان جدول البيانات
         spreadsheet_title = spreadsheet.get('properties', {}).get('title', 'جدول بيانات')
@@ -396,8 +384,6 @@ def google_sync_reset(request):
         if not config:
             # إضافة رسالة خطأ
             messages.error(request, 'لا يوجد إعداد مزامنة نشط')
-            
-            # إعادة التوجيه إلى صفحة المزامنة
             return redirect('odoo_db_manager:google_sync')
         
         # الحصول على بيانات الاعتماد
@@ -406,22 +392,16 @@ def google_sync_reset(request):
         if not credentials:
             # إضافة رسالة خطأ
             messages.error(request, 'لا يمكن قراءة بيانات الاعتماد')
-            
-            # إعادة التوجيه إلى صفحة المزامنة
             return redirect('odoo_db_manager:google_sync')
-        
-        # إعادة تعيين البيانات
-        from googleapiclient.discovery import build
-        from google.oauth2.credentials import Credentials
-        
-        # إنشاء كائن بيانات الاعتماد
-        creds = Credentials.from_authorized_user_info(credentials)
-        
+
         # إنشاء خدمة Google Sheets
-        service = build('sheets', 'v4', credentials=creds)
-        
+        sheets_service = create_sheets_service(credentials)
+        if not sheets_service:
+            messages.error(request, 'فشل إنشاء خدمة Google Sheets. تحقق من صحة بيانات الاعتماد.')
+            return redirect('odoo_db_manager:google_sync')
+
         # الحصول على معلومات جدول البيانات
-        spreadsheet = service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
+        spreadsheet = sheets_service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
         
         # حذف جميع أوراق العمل باستثناء الورقة الأولى
         sheets = spreadsheet.get('sheets', [])
@@ -452,7 +432,7 @@ def google_sync_reset(request):
         
         # تنفيذ الطلبات
         if requests:
-            service.spreadsheets().batchUpdate(
+            sheets_service.spreadsheets().batchUpdate(
                 spreadsheetId=config.spreadsheet_id,
                 body={'requests': requests}
             ).execute()
@@ -476,9 +456,7 @@ def google_sync_reset(request):
         
         # إضافة رسالة خطأ
         messages.error(request, f'حدث خطأ أثناء إعادة تعيين بيانات المزامنة: {str(e)}')
-    
-    # إعادة التوجيه إلى صفحة المزامنة
-    return redirect('odoo_db_manager:google_sync')
+        return redirect('odoo_db_manager:google_sync')
 
 
 @login_required
@@ -562,7 +540,7 @@ def google_sync_advanced_settings(request):
     
     except Exception as e:
         # تسجيل الخطأ
-        logger.error(f"حدث خطأ أثناء حفظ الإعدادات المتقدمة: {str(e)}")
+        logger.error(f"فشل حفظ الإعدادات المتقدمة: {str(e)}")
         
         # إرجاع استجابة خطأ
         return JsonResponse({'status': 'error', 'message': str(e)})
