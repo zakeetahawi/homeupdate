@@ -1,18 +1,48 @@
-/* Theme Variables */
+/* Theme Variables - متغيرات الثيمات الموحدة */
 :root {
     /* Default Theme (Current brown theme) */
-    --primary: #8B735A;
-    --secondary: #A67B5B;
-    --accent: #5F4B32;
-    --neutral: #B7A99A;
+    --primary: #8B735A;              /* اللون الأساسي - بني */
+    --secondary: #A67B5B;            /* اللون الثانوي - بني فاتح */
+    --accent: #5F4B32;               /* لون الإبراز - بني داكن */
+    --background: #FFFFFF;           /* لون الخلفية - أبيض */
+    --surface: #F8F8F8;              /* لون السطح - أبيض مائل للرمادي */
+    --card-bg: #FFFFFF;              /* خلفية البطاقات - أبيض */
+    --elevated-bg: #F5F5F5;          /* خلفية مرتفعة - أبيض فاتح */
+    
+    /* ألوان النصوص */
+    --text-primary: #3D3427;         /* نص أساسي - بني داكن */
+    --text-secondary: #6D6055;       /* نص ثانوي - بني متوسط */
+    --text-tertiary: #8B8178;        /* نص ثالثي - بني فاتح */
+    
+    /* ألوان الحالة */
+    --success: #4CAF50;              /* أخضر نجاح */
+    --warning: #FF9800;              /* برتقالي تحذير */
+    --error: #F44336;                /* أحمر خطأ */
+    --info: #2196F3;                 /* أزرق معلومات */
+    
+    /* الحدود والفواصل */
+    --border: #DED5CE;               /* لون الحدود - بيج فاتح */
+    --separator: #E8DCCA;            /* خط فاصل - بيج أفتح */
+    --neutral: #B7A99A;              /* لون محايد - بيج متوسط */
+    
+    /* التأثيرات */
+    --shadow: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-light: 0 1px 2px rgba(0,0,0,0.05);
+    --blur: blur(5px);
+    --radius: 8px;
+    --radius-large: 12px;
+    --transition: all 0.3s ease;
+    
+    /* متغيرات توافق مع الكود القديم */
     --light-bg: #E8DCCA;
     --dark-text: #3D3427;
     --alert: #C17817;
     --light-accent: #D2B48C;
 }
 
-/* Modern Black Theme - الثيم الأسود الحديث */
+/* Modern Black Theme - الثيم الأسود العصري */
 [data-theme="modern-black"] {
+    /* الألوان الأساسية */
     --primary: #00D2FF;              /* أزرق زاهي */
     --secondary: #1a1a1a;            /* رمادي داكن */
     --accent: #00FF88;               /* أخضر زمردي */
@@ -20,26 +50,36 @@
     --surface: #111111;              /* سطح داكن */
     --card-bg: #1a1a1a;              /* خلفية البطاقات */
     --elevated-bg: #222222;          /* خلفية مرتفعة */
+    
+    /* ألوان النصوص */
+    --text-primary: #ffffff;         /* نص أساسي أبيض */
+    --text-secondary: #e0e0e0;       /* نص ثانوي فاتح */
+    --text-tertiary: #a0a0a0;        /* نص ثالثي خافت */
+    
+    /* ألوان الحالة */
     --success: #00FF88;              /* أخضر نجاح */
     --warning: #FFD700;              /* أصفر تحذير */
     --error: #FF3366;                /* أحمر خطأ */
     --info: #00D2FF;                 /* أزرق معلومات */
-    --text-primary: #ffffff;         /* نص أساسي أبيض */
-    --text-secondary: #e0e0e0;       /* نص ثانوي فاتح */
-    --text-tertiary: #a0a0a0;        /* نص ثالثي خافت */
+    
+    /* الحدود والفواصل */
     --border: #333333;               /* لون الحدود */
     --separator: #2a2a2a;            /* خط فاصل */
+    --neutral: #333333;              /* لون محايد */
+    
+    /* التأثيرات */
     --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.3);
     --blur: blur(10px);
     --radius: 8px;
     --radius-large: 12px;
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* متغيرات توافق مع الكود القديم */
     --light-bg: #000000;
     --dark-text: #ffffff;
     --alert: #FF3366;
     --light-accent: #00D2FF;
-    --neutral: #333333;
 }
 
 /* إصلاح شامل للجداول في الثيم الأسود */
@@ -52,42 +92,257 @@
 [data-theme="modern-black"] #DataTables_Table_0 {
     background-color: var(--card-bg) !important;
     color: var(--text-primary) !important;
-    border: 1px solid var(--primary) !important;
+    border: 1px solid var(--border) !important;
 }
 
-[data-theme="modern-black"] .table th,
-[data-theme="modern-black"] table th,
-[data-theme="modern-black"] .table-responsive table th,
-[data-theme="modern-black"] .data-table table th,
-[data-theme="modern-black"] .dataTables_wrapper table th,
-[data-theme="modern-black"] .dataTable th {
-    background-color: rgba(0, 210, 255, 0.15) !important;
-    color: var(--text-primary) !important;
+/* ضمان توافق كامل مع Bootstrap - إضافة قواعد شاملة */
+
+/* ألوان الخلفية لمكونات Bootstrap الأساسية */
+[data-theme="modern-black"] .bg-primary { background-color: var(--primary) !important; }
+[data-theme="modern-black"] .bg-secondary { background-color: var(--secondary) !important; }
+[data-theme="modern-black"] .bg-success { background-color: var(--success) !important; }
+[data-theme="modern-black"] .bg-danger { background-color: var(--error) !important; }
+[data-theme="modern-black"] .bg-warning { background-color: var(--warning) !important; }
+[data-theme="modern-black"] .bg-info { background-color: var(--info) !important; }
+[data-theme="modern-black"] .bg-light { background-color: var(--elevated-bg) !important; color: var(--text-primary) !important; }
+[data-theme="modern-black"] .bg-dark { background-color: var(--surface) !important; color: var(--text-primary) !important; }
+
+/* ألوان النص لمكونات Bootstrap */
+[data-theme="modern-black"] .text-primary { color: var(--primary) !important; }
+[data-theme="modern-black"] .text-secondary { color: var(--text-secondary) !important; }
+[data-theme="modern-black"] .text-success { color: var(--success) !important; }
+[data-theme="modern-black"] .text-danger { color: var(--error) !important; }
+[data-theme="modern-black"] .text-warning { color: var(--warning) !important; }
+[data-theme="modern-black"] .text-info { color: var(--info) !important; }
+[data-theme="modern-black"] .text-light { color: var(--text-secondary) !important; }
+[data-theme="modern-black"] .text-dark { color: var(--text-primary) !important; }
+[data-theme="modern-black"] .text-muted { color: var(--text-tertiary) !important; }
+
+/* تنسيق الأزرار في Bootstrap */
+[data-theme="modern-black"] .btn-primary {
+    background-color: var(--primary) !important;
     border-color: var(--primary) !important;
-    font-weight: 600 !important;
+    color: #000 !important;
 }
-
-[data-theme="modern-black"] .table td,
-[data-theme="modern-black"] table td,
-[data-theme="modern-black"] .table-responsive table td,
-[data-theme="modern-black"] .data-table table td,
-[data-theme="modern-black"] .dataTables_wrapper table td,
-[data-theme="modern-black"] .dataTable td {
-    background-color: var(--card-bg) !important;
+[data-theme="modern-black"] .btn-secondary {
+    background-color: var(--secondary) !important;
+    border-color: var(--border) !important;
     color: var(--text-primary) !important;
-    border-color: var(--primary) !important;
 }
-
-[data-theme="modern-black"] .table tbody tr:hover,
-[data-theme="modern-black"] table tbody tr:hover,
-[data-theme="modern-black"] .dataTable tbody tr:hover {
+[data-theme="modern-black"] .btn-success {
+    background-color: var(--success) !important;
+    border-color: var(--success) !important;
+    color: #000 !important;
+}
+[data-theme="modern-black"] .btn-danger {
+    background-color: var(--error) !important;
+    border-color: var(--error) !important;
+    color: #fff !important;
+}
+[data-theme="modern-black"] .btn-warning {
+    background-color: var(--warning) !important;
+    border-color: var(--warning) !important;
+    color: #000 !important;
+}
+[data-theme="modern-black"] .btn-info {
+    background-color: var(--info) !important;
+    border-color: var(--info) !important;
+    color: #000 !important;
+}
+[data-theme="modern-black"] .btn-light {
     background-color: var(--elevated-bg) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+[data-theme="modern-black"] .btn-dark {
+    background-color: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+[data-theme="modern-black"] .btn-outline-primary {
+    color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+[data-theme="modern-black"] .btn-outline-primary:hover {
+    background-color: var(--primary) !important;
+    color: #000 !important;
+}
+[data-theme="modern-black"] .btn-outline-secondary {
+    color: var(--text-primary) !important;
+    border-color: var(--border) !important;
+}
+[data-theme="modern-black"] .btn-outline-secondary:hover {
+    background-color: var(--secondary) !important;
     color: var(--text-primary) !important;
 }
 
-[data-theme="modern-black"] .table-striped tbody tr:nth-of-type(odd) td,
-[data-theme="modern-black"] .dataTable.stripe tbody tr.odd {
-    background-color: rgba(255, 255, 255, 0.02) !important;
+/* تنسيق البطاقات في Bootstrap */
+[data-theme="modern-black"] .card {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border) !important;
+}
+[data-theme="modern-black"] .card-header {
+    background-color: rgba(0, 210, 255, 0.1) !important;
+    border-bottom-color: var(--border) !important;
+}
+[data-theme="modern-black"] .card-footer {
+    background-color: var(--elevated-bg) !important;
+    border-top-color: var(--border) !important;
+}
+
+/* تنسيق النماذج في Bootstrap */
+[data-theme="modern-black"] .form-control,
+[data-theme="modern-black"] .form-select {
+    background-color: var(--elevated-bg) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+[data-theme="modern-black"] .form-control:focus,
+[data-theme="modern-black"] .form-select:focus {
+    background-color: var(--elevated-bg) !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 0.25rem rgba(0, 210, 255, 0.25) !important;
+}
+[data-theme="modern-black"] .input-group-text {
+    background-color: var(--secondary) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+/* تنسيق القوائم المنسدلة في Bootstrap */
+[data-theme="modern-black"] .dropdown-menu {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border) !important;
+}
+[data-theme="modern-black"] .dropdown-item {
+    color: var(--text-primary) !important;
+}
+[data-theme="modern-black"] .dropdown-item:hover, 
+[data-theme="modern-black"] .dropdown-item:focus {
+    background-color: var(--elevated-bg) !important;
+    color: var(--primary) !important;
+}
+[data-theme="modern-black"] .dropdown-divider {
+    border-top-color: var(--border) !important;
+}
+
+/* تنسيق عناصر التنقل في Bootstrap */
+[data-theme="modern-black"] .nav-link {
+    color: var(--text-secondary) !important;
+}
+[data-theme="modern-black"] .nav-link:hover, 
+[data-theme="modern-black"] .nav-link:focus {
+    color: var(--primary) !important;
+}
+[data-theme="modern-black"] .nav-link.active {
+    color: var(--primary) !important;
+}
+[data-theme="modern-black"] .nav-tabs {
+    border-bottom-color: var(--border) !important;
+}
+[data-theme="modern-black"] .nav-tabs .nav-link.active {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border) var(--border) var(--card-bg) !important;
+    color: var(--primary) !important;
+}
+
+/* تنسيق Modals في Bootstrap */
+[data-theme="modern-black"] .modal-content {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border) !important;
+}
+[data-theme="modern-black"] .modal-header {
+    border-bottom-color: var(--border) !important;
+}
+[data-theme="modern-black"] .modal-footer {
+    border-top-color: var(--border) !important;
+}
+[data-theme="modern-black"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* تنسيق التنبيهات في Bootstrap */
+[data-theme="modern-black"] .alert-primary {
+    background-color: rgba(0, 210, 255, 0.15) !important;
+    border-color: rgba(0, 210, 255, 0.4) !important;
+    color: var(--primary) !important;
+}
+[data-theme="modern-black"] .alert-secondary {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: var(--border) !important;
+    color: var(--text-secondary) !important;
+}
+[data-theme="modern-black"] .alert-success {
+    background-color: rgba(0, 255, 136, 0.15) !important;
+    border-color: rgba(0, 255, 136, 0.4) !important;
+    color: var(--success) !important;
+}
+[data-theme="modern-black"] .alert-danger {
+    background-color: rgba(255, 51, 102, 0.15) !important;
+    border-color: rgba(255, 51, 102, 0.4) !important;
+    color: var(--error) !important;
+}
+[data-theme="modern-black"] .alert-warning {
+    background-color: rgba(255, 215, 0, 0.15) !important;
+    border-color: rgba(255, 215, 0, 0.4) !important;
+    color: var(--warning) !important;
+}
+[data-theme="modern-black"] .alert-info {
+    background-color: rgba(0, 210, 255, 0.15) !important;
+    border-color: rgba(0, 210, 255, 0.4) !important;
+    color: var(--info) !important;
+}
+
+/* تنسيق badges في Bootstrap */
+[data-theme="modern-black"] .badge {
+    font-weight: 500;
+}
+[data-theme="modern-black"] .badge.bg-secondary {
+    color: var(--text-primary) !important;
+}
+
+/* تنسيق الجداول في Bootstrap */
+[data-theme="modern-black"] .table {
+    color: var(--text-primary) !important;
+}
+[data-theme="modern-black"] .table thead th {
+    border-bottom-color: var(--border) !important;
+}
+[data-theme="modern-black"] .table td, 
+[data-theme="modern-black"] .table th {
+    border-top-color: var(--border) !important;
+}
+[data-theme="modern-black"] .table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+}
+[data-theme="modern-black"] .table-hover tbody tr:hover {
+    background-color: rgba(0, 210, 255, 0.05) !important;
+}
+[data-theme="modern-black"] .table-dark {
+    background-color: var(--surface) !important;
+    color: var(--text-primary) !important;
+}
+
+/* تنسيق Pagination في Bootstrap */
+[data-theme="modern-black"] .page-link {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border) !important;
+    color: var(--primary) !important;
+}
+[data-theme="modern-black"] .page-link:hover {
+    background-color: var(--elevated-bg) !important;
+    border-color: var(--border) !important;
+    color: var(--primary) !important;
+}
+[data-theme="modern-black"] .page-item.active .page-link {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #000 !important;
+}
+[data-theme="modern-black"] .page-item.disabled .page-link {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border) !important;
+    color: var(--text-tertiary) !important;
 }
 
 /* تحسينات DataTables للثيم الأسود */
@@ -418,2274 +673,45 @@ body, .navbar, .card, .btn, .badge, footer,
     padding: 8px;
 }
 
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
+/* تأثير الانتقال بين الثيمات */
+.theme-transition-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.2);
+    z-index: 9999;
+    pointer-events: none;
+    animation: theme-transition-fade 0.3s ease-out;
 }
 
-#themeSelector:hover {
-    background-color: var(--neutral);
+.theme-transition-overlay.fade-out {
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
 }
 
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Navbar customization */
-.navbar-dark.bg-primary {
-    background-color: var(--primary) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    border-color: var(--accent);
-}
-
-.btn-primary:hover {
-    background-color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* Theme Selector */
-/* Theme Selector in Dropdown */
-#themeSelector {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    background-color: var(--light-bg);
-    color: var(--dark-text);
-    border: 1px solid var(--neutral);
-}
-
-#themeSelector:hover {
-    background-color: var(--neutral);
-}
-
-#themeSelector:focus {
-    box-shadow: 0 0 0 2px var(--light-accent);
-    border-color: var(--accent);
-}
-
-#themeSelector option {
-    background-color: white;
-    color: var(--dark-text);
-    padding: 8px;
-}
-
-/* Theme transition effects */
-body, .navbar, .card, .btn, .badge, footer,
-.navbar-dark.bg-primary, .btn-primary, .card .bg-primary,
-.card .bg-success, .card .bg-warning, .card .bg-danger {
-    transition: all 0.3s ease-in-out;
-}
-
-.theme-selector {
-    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Card customization */
-.card {
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    transition: transform 0.3s ease;
-    border-color: var(--neutral);
-}
-
-.card:hover {
-    transform: translateY(-5px);
-}
-
-.card-header {
-    border-radius: 10px 10px 0 0 !important;
-    font-weight: bold;
-}
-
-.card .bg-primary {
-    background-color: var(--primary) !important;
-}
-
-.card .bg-success {
-    background-color: var(--secondary) !important;
-}
-
-.card .bg-warning {
-    background-color: var(--light-accent) !important;
-    color: var(--dark-text) !important;
-}
-
-.card .bg-danger {
-    background-color: var(--alert) !important;
-}
-
-/* Tables */
-.table th {
-    font-weight: bold;
-    background-color: #f8f9fa;
-}
-
-.table-responsive {
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-/* Badges */
-.badge {
-    padding: 6px 10px;
-    font-weight: normal;
-}
-
-/* Buttons */
-.btn {
-    border-radius: 5px;
-    padding: 8px 16px;
-}
-
-.btn-sm {
-    padding: 5px 10px;
-}
-
-/* Footer */
-footer {
-    margin-top: 50px;
-    background-color: var(--accent) !important;
-}
-
-/* Login page */
-.login-container {
-    max-width: 400px;
-    margin: 100px auto;
-}
-
-/* Form styling */
-.form-control {
-    border-radius: 5px;
-    padding: 10px;
-}
-
-.form-label {
-    font-weight: bold;
-}
-
-/* Print styles */
-@media print {
-    .no-print {
-        display: none !important;
+@keyframes theme-transition-fade {
+    0% {
+        opacity: 0.4;
     }
-
-    .container {
-        width: 100%;
-        max-width: 100%;
+    100% {
+        opacity: 0;
     }
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .navbar-brand {
-        font-size: 1.1rem;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .navbar-brand > div {
-        gap: 6px;
-    }
-
-    .card-title {
-        font-size: 1.1rem;
-    }
-
-    .theme-selector {
-        min-width: 120px;
-        font-size: 0.85rem;
-        margin-left: 8px;
-        padding: 6px 10px;
-    }
-
-    .navbar .container {
-        padding: 0.5rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .navbar-brand {
-        margin-left: 0;
-    }
-
-    .logo-img {
-        width: 30px;
-        height: 30px;
-    }
-
-    .btn-outline-light {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.9rem;
-    }
-
-    .notification-dropdown {
-        width: 280px;
-    }
-
-    /* تصغير لوغو شاشة الترحيب في الموبايل */
-    .home-logo {
-        width: 160px !important;
-        max-width: 160px !important;
-    }
-}
-
-/* أنماط خاصة للوغو في شاشة الترحيب */
-.home-logo {
-    width: 200px !important;
-    height: auto !important;
-    background: transparent !important;
-    background-color: transparent !important;
-    /* إزالة أي خلفية من الملف نفسه */
-    -webkit-mask-composite: source-over;
-    mask-composite: add;
-    object-fit: contain;
-    max-width: 200px !important;
-}
-
-/* أنماط عامة للوغو في البطاقات */
-.card .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    object-fit: contain;
-}
-
-/* تأكيد عدم وجود خلفية للوغو في جميع الثيمات */
-[data-theme] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    backdrop-filter: none !important;
-}
-
-/* ضمان الشفافية في الثيم الأسود */
-[data-theme="modern-black"] .logo-img {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-/* نص الترحيب المبسط - أزرق شامي فقط */
-.welcome-title {
-    color: #4a90e2 !important;
-    font-weight: 700 !important;
-    font-size: 1.8rem !important;
-    letter-spacing: 0.5px;
-}
-
-/* تجاوب النص الترحيبي للشاشات الصغيرة */
-@media (max-width: 768px) {
-    .welcome-title {
-        font-size: 1.5rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .welcome-title {
-        font-size: 1.3rem !important;
-    }
+/* ضمان التحول السلس لجميع العناصر عند تغيير الثيم */
+body, 
+.card, 
+.navbar, 
+.btn, 
+.form-control, 
+.modal-content, 
+.dropdown-menu,
+.list-group-item,
+.alert,
+.badge,
+.table,
+.toast {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
