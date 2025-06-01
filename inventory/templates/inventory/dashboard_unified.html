@@ -5,50 +5,50 @@
 
 {% block inventory_content %}
 <div class="dashboard-container">
-    <!-- بطاقات الأيقونات للتنقل -->
+    <!-- أيقونات التنقل الجديدة -->
     <div class="icon-cards-container">
         <a href="{% url 'inventory:product_list' %}" class="icon-card">
             <div class="icon-card-icon" style="color: #4e73df;">
                 <i class="fas fa-box"></i>
             </div>
             <div class="icon-card-title">المنتجات</div>
-            <div class="icon-card-subtitle">إدارة المنتجات والمخزون</div>
+            <div class="icon-card-subtitle">إدارة المنتجات</div>
         </a>
         
         <a href="{% url 'inventory:category_list' %}" class="icon-card">
-            <div class="icon-card-icon" style="color: #1cc88a;">
+            <div class="icon-card-icon" style="color: #4e73df;">
                 <i class="fas fa-tags"></i>
             </div>
             <div class="icon-card-title">التصنيفات</div>
-            <div class="icon-card-subtitle">إدارة فئات المنتجات</div>
+            <div class="icon-card-subtitle">فئات المنتجات</div>
         </a>
         
         <a href="{% url 'inventory:transaction_list' %}" class="icon-card">
-            <div class="icon-card-icon" style="color: #36b9cc;">
+            <div class="icon-card-icon" style="color: #4e73df;">
                 <i class="fas fa-exchange-alt"></i>
             </div>
-            <div class="icon-card-title">حركات المخزون</div>
-            <div class="icon-card-subtitle">تتبع حركة المنتجات</div>
+            <div class="icon-card-title">الحركات</div>
+            <div class="icon-card-subtitle">حركة المخزون</div>
         </a>
         
         <a href="{% url 'inventory:adjustment_list' %}" class="icon-card">
-            <div class="icon-card-icon" style="color: #f6c23e;">
+            <div class="icon-card-icon" style="color: #4e73df;">
                 <i class="fas fa-balance-scale"></i>
             </div>
-            <div class="icon-card-title">تسويات المخزون</div>
-            <div class="icon-card-subtitle">ضبط وتعديل المخزون</div>
+            <div class="icon-card-title">التسويات</div>
+            <div class="icon-card-subtitle">ضبط المخزون</div>
         </a>
         
         <a href="{% url 'inventory:purchase_order_list' %}" class="icon-card">
-            <div class="icon-card-icon" style="color: #e74a3b;">
+            <div class="icon-card-icon" style="color: #4e73df;">
                 <i class="fas fa-shopping-cart"></i>
             </div>
-            <div class="icon-card-title">طلبات الشراء</div>
-            <div class="icon-card-subtitle">إدارة طلبات الشراء</div>
+            <div class="icon-card-title">الطلبات</div>
+            <div class="icon-card-subtitle">طلبات الشراء</div>
         </a>
         
         <a href="{% url 'inventory:supplier_list' %}" class="icon-card">
-            <div class="icon-card-icon" style="color: #5a5c69;">
+            <div class="icon-card-icon" style="color: #4e73df;">
                 <i class="fas fa-truck"></i>
             </div>
             <div class="icon-card-title">الموردين</div>
@@ -56,7 +56,7 @@
         </a>
         
         <a href="{% url 'inventory:warehouse_list' %}" class="icon-card">
-            <div class="icon-card-icon" style="color: #6f42c1;">
+            <div class="icon-card-icon" style="color: #4e73df;">
                 <i class="fas fa-warehouse"></i>
             </div>
             <div class="icon-card-title">المستودعات</div>
@@ -64,15 +64,15 @@
         </a>
         
         <a href="{% url 'inventory:warehouse_location_list' %}" class="icon-card">
-            <div class="icon-card-icon" style="color: #fd7e14;">
+            <div class="icon-card-icon" style="color: #4e73df;">
                 <i class="fas fa-map-marker-alt"></i>
             </div>
             <div class="icon-card-title">مواقع التخزين</div>
-            <div class="icon-card-subtitle">إدارة مواقع التخزين</div>
+            <div class="icon-card-subtitle">أماكن التخزين</div>
         </a>
         
         <a href="{% url 'inventory:report_list' %}" class="icon-card">
-            <div class="icon-card-icon" style="color: #20c9a6;">
+            <div class="icon-card-icon" style="color: #4e73df;">
                 <i class="fas fa-chart-bar"></i>
             </div>
             <div class="icon-card-title">التقارير</div>
@@ -80,7 +80,7 @@
         </a>
         
         <a href="{% url 'inventory:alert_list' %}" class="icon-card">
-            <div class="icon-card-icon" style="color: #e74a3b;">
+            <div class="icon-card-icon" style="color: #4e73df;">
                 <i class="fas fa-bell"></i>
             </div>
             <div class="icon-card-title">التنبيهات</div>
@@ -88,8 +88,8 @@
         </a>
     </div>
 
-    <!-- إحصائيات سريعة -->
-    <div class="stats-cards-container">
+    <!-- إحصائيات سريعة موحدة الخلفية -->
+    <div class="stats-container">
         <div class="stat-card">
             <div class="stat-card-icon">
                 <i class="fas fa-box"></i>
