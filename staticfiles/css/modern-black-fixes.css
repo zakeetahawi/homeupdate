@@ -75,15 +75,6 @@
     color: #00D2FF !important;
 }
 
-/* زر التفعيل - تحسين الظهور */
-.theme-activate-btn {
-    position: absolute !important;
-    right: 10px !important;
-    top: 8px !important;
-    z-index: 999999999 !important;
-    box-shadow: 0 0 10px rgba(0, 255, 136, 0.5) !important;
-}
-
 /* إصلاح مشكلة تداخل القوائم مع البطاقات */
 [data-theme="modern-black"] .card,
 [data-theme="modern-black"] .content-card,
@@ -198,167 +189,185 @@
     color: #000000 !important;
 }
 
-/* تحسين زر تفعيل الثيم */
-.theme-activate-btn {
-    position: absolute !important;
-    right: 10px !important;
-    top: 10px !important;
-    z-index: 100000 !important;
-    opacity: 0.8;
-    transition: all 0.3s ease;
+/* Modern Black Theme Fixes */
+
+/* تحسين العناصر الرئيسية */
+[data-theme="modern-black"] {
+    --background: #0D1117;
+    --elevated-bg: #161B22;
+    --card-bg: #21262D;
+    --border: #30363D;
+    --primary: #00D2FF;
+    --secondary: #00FF88;
+    --accent: #00FF88;
+    --success: #00FF88;
+    --error: #FF5252;
+    --warning: #FFBC00;
+    --info: #59C2FF;
+    --text-primary: #F0F6FC;
+    --text-secondary: #8B949E;
+    --shadow: 0 4px 15px rgba(0,0,0,0.2);
+    --shadow-light: 0 2px 8px rgba(0,0,0,0.1);
+    --radius: 10px;
+    --radius-large: 15px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.theme-activate-btn:hover {
-    opacity: 1;
-    transform: scale(1.05);
+/* تحسين الخلفية والنص */
+[data-theme="modern-black"] body {
+    background-color: var(--background);
+    color: var(--text-primary);
 }
 
-/* إضافة توهج للحدود في حالة التركيز */
-[data-theme="modern-black"] input:focus,
-[data-theme="modern-black"] select:focus,
-[data-theme="modern-black"] textarea:focus,
-[data-theme="modern-black"] .form-control:focus {
-    box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.25) !important;
-    border-color: var(--primary) !important;
+/* تحسين البطاقات */
+[data-theme="modern-black"] .card {
+    background-color: var(--card-bg);
+    border-color: var(--border);
+    color: var(--text-primary);
+    box-shadow: var(--shadow);
 }
 
-/* تحسين خلفيات المدخلات */
-[data-theme="modern-black"] input,
-[data-theme="modern-black"] select,
-[data-theme="modern-black"] textarea,
+/* تحسين الجداول */
+[data-theme="modern-black"] .table {
+    background-color: transparent;
+    color: var(--text-primary);
+}
+
+[data-theme="modern-black"] .table th {
+    background-color: var(--elevated-bg);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+[data-theme="modern-black"] .table td {
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+[data-theme="modern-black"] .table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(33, 38, 45, 0.6);
+}
+
+[data-theme="modern-black"] .table-hover tbody tr:hover {
+    background-color: var(--elevated-bg);
+    color: var(--text-primary);
+}
+
+/* تحسين النماذج */
 [data-theme="modern-black"] .form-control {
-    background-color: var(--card-bg) !important;
-    color: var(--text-primary) !important;
+    background-color: var(--elevated-bg);
+    border-color: var(--border);
+    color: var(--text-primary);
 }
 
-/* تحسين خلفية الموديل */
+[data-theme="modern-black"] .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 210, 255, 0.25);
+    background-color: var(--elevated-bg);
+    color: var(--text-primary);
+}
+
+/* تحسين مسار التنقل */
+[data-theme="modern-black"] nav[aria-label="breadcrumb"] {
+    background-color: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-light);
+}
+
+[data-theme="modern-black"] nav[aria-label="breadcrumb"] *,
+[data-theme="modern-black"] .page-header .breadcrumb {
+    color: #ffffff;
+    text-shadow: 0 0 3px rgba(0, 210, 255, 0.5);
+    font-weight: 500;
+}
+
+/* تحسين الرابط النشط في مخطط الصفحة */
+[data-theme="modern-black"] .breadcrumb-item.active {
+    color: #00D2FF;
+    font-weight: bold;
+}
+
+[data-theme="modern-black"] .breadcrumb-item+.breadcrumb-item::before {
+    color: #00D2FF;
+}
+
+/* تحسين النافذة المنبثقة */
 [data-theme="modern-black"] .modal-content {
-    background-color: var(--surface) !important;
-    box-shadow: 0 0 25px rgba(0, 0, 0, 0.5) !important;
-    border: 1px solid var(--primary) !important;
+    background-color: var(--card-bg);
+    border: 1px solid var(--primary);
 }
 
 [data-theme="modern-black"] .modal-header,
 [data-theme="modern-black"] .modal-footer {
-    border-color: var(--primary) !important;
+    border-color: var(--primary);
 }
 
 /* تحسين الأزرار في الثيم */
 [data-theme="modern-black"] .btn-primary {
-    background-color: var(--primary) !important;
-    color: #000 !important;
-    border-color: var(--primary) !important;
+    background-color: var(--primary);
+    color: #000;
+    border-color: var(--primary);
 }
 
 [data-theme="modern-black"] .btn-outline-primary {
-    color: var(--primary) !important;
-    border-color: var(--primary) !important;
+    color: var(--primary);
+    border-color: var(--primary);
 }
 
 [data-theme="modern-black"] .btn-outline-primary:hover {
-    background-color: var(--primary) !important;
-    color: #000 !important;
+    background-color: var(--primary);
+    color: #000;
 }
 
-/* إضافة أنماط قائمة النقر بالزر الأيمن في الثيم الأسود */
-[data-theme="modern-black"] #theme-context-menu {
-    background-color: #1a1a1a !important;
-    border: 1px solid var(--primary) !important;
-    box-shadow: 0 0 15px rgba(0, 210, 255, 0.3) !important;
-    color: var(--text-primary) !important;
+/* تحسين الهوامش في الثيم */
+[data-theme="modern-black"] .alert {
+    border-radius: var(--radius);
+    border: none;
+    box-shadow: var(--shadow-light);
 }
 
-[data-theme="modern-black"] #theme-context-menu > div {
-    color: var(--text-primary) !important;
+[data-theme="modern-black"] .alert-primary {
+    background-color: rgba(0, 210, 255, 0.1);
+    color: var(--primary);
+    border-left: 4px solid var(--primary);
 }
 
-[data-theme="modern-black"] #theme-context-menu > div:first-child {
-    border-bottom: 1px solid var(--primary) !important;
-    color: var(--primary) !important;
+[data-theme="modern-black"] .alert-success {
+    background-color: rgba(0, 255, 136, 0.1);
+    color: var(--success);
+    border-left: 4px solid var(--success);
 }
 
-[data-theme="modern-black"] .theme-selector-hint {
-    color: var(--accent) !important;
-    font-weight: bold !important;
-    text-shadow: 0 0 3px rgba(0, 255, 136, 0.3) !important;
+[data-theme="modern-black"] .alert-danger {
+    background-color: rgba(255, 82, 82, 0.1);
+    color: var(--error);
+    border-left: 4px solid var(--error);
 }
 
-/* تحسين خيارات منتقي الثيم في الثيم الأسود */
+[data-theme="modern-black"] .alert-warning {
+    background-color: rgba(255, 188, 0, 0.1);
+    color: var(--warning);
+    border-left: 4px solid var(--warning);
+}
+
 [data-theme="modern-black"] #themeSelector option {
-    background-color: #1a1a1a !important;
-    color: var(--text-primary) !important;
-    padding: 10px !important;
+    background-color: #1a1a1a;
+    color: var(--text-primary);
+    padding: 10px;
 }
 
 [data-theme="modern-black"] #themeSelector option:hover {
-    background-color: var(--primary) !important;
-    color: #000 !important;
+    background-color: var(--primary);
+    color: #000;
 }
 
-/* تحسين تلميح النقر بالزر الأيمن */
-[data-theme="modern-black"] .theme-selector-hint i {
-    color: var(--accent) !important;
-    animation: pulse-light 2s infinite;
-}
-
-@keyframes pulse-light {
-    0% { opacity: 0.7; }
-    50% { opacity: 1; }
-    100% { opacity: 0.7; }
-}
-
-/* تحسينات قائمة النقر بالزر الأيمن */
-#theme-context-menu {
-    direction: rtl;
-    font-family: 'Cairo', sans-serif;
-    opacity: 0;
-    transform: scale(0.95);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    animation: showContextMenu 0.2s forwards;
-}
-
-@keyframes showContextMenu {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-#theme-context-menu > div:hover {
-    background-color: rgba(0, 210, 255, 0.1);
-}
-
-/* تحسين مظهر قائمة النقر بالزر الأيمن في الثيم الأسود */
-[data-theme="modern-black"] #theme-context-menu {
-    background-color: #1a1a1a !important;
-    border: 2px solid var(--primary) !important;
-    box-shadow: 0 0 20px rgba(0, 210, 255, 0.4) !important;
-}
-
-/* إضافة إطار متوهج عند تحديد الثيم بالنقر اليمين */
+/* إضافة إطار متوهج عند تحديد الثيم */
 [data-theme="modern-black"] #themeSelector:focus {
-    outline: none !important;
-    border-color: var(--primary) !important;
-    box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.5) !important;
-}
-
-/* تحسين زر التفعيل في الثيم الأسود */
-[data-theme="modern-black"] .theme-activate-btn {
-    animation: glow-button 2s infinite !important;
-}
-
-@keyframes glow-button {
-    0% {
-        box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
-    }
-    50% {
-        box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
-    }
-    100% {
-        box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
-    }
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.5);
 }

@@ -13,11 +13,6 @@ ENV/
 # Don't ignore .env.production as it's a template
 !.env.production
 
-# السماح بملف قاعدة البيانات
-# *.sqlite3
-# *.sqlite3.bak
-# db.sqlite3
-
 # Ignore secret files
 passwords.txt
 *secret*
@@ -53,3 +48,25 @@ local_settings.py
 dist/
 build/
 *.egg-info/
+
+# Django static and media files
+staticfiles/
+media/backups/
+
+# Compressed files
+*.gz
+*.zip
+*.tar
+*.rar
+
+# Automatically generated CSS and JS files
+*.css.gz
+*.js.gz
+*.min.css
+*.min.js
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project

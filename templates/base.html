@@ -216,10 +216,8 @@
                 </div>
             </div>
         </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="container mt-4">
+    </nav>    <!-- Main Content -->
+    <main class="container mt-4 flex-grow">
         {% if messages %}
         <div class="messages">
             {% for message in messages %}
@@ -232,22 +230,18 @@
         {% endif %}
 
         {% block content %}{% endblock %}
-    </main>
-
-    <!-- Footer المُحسَّن -->
-    <footer class="footer-area text-white mt-5 py-3" style="background-color: var(--accent);">
+    </main><!-- Footer المُحسَّن - تصميم أفقي -->
+    <footer class="footer-area text-white mt-5 py-2" style="background-color: var(--accent);">
         <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <h6 class="footer-title">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <!-- معلومات الشركة والتواصل الاجتماعي -->
+                <div class="d-flex align-items-center">
+                    <h6 class="footer-title mb-0 me-3">
                         <i class="fas fa-building me-2"></i>
                         {{ footer_settings.left_column_title|default:company_info.name }}
                     </h6>
-                    <p class="footer-description small ps-3 border-start border-2 border-light">
-                        {{ footer_settings.left_column_text|default:company_info.description }}
-                    </p>
                     {% if company_info.facebook or company_info.twitter or company_info.instagram or company_info.linkedin %}
-                    <div class="social-icons mt-2">
+                    <div class="social-icons d-flex">
                         {% if company_info.facebook %}
                         <a href="{{ company_info.facebook }}" class="social-icon me-2" target="_blank" title="Facebook">
                             <i class="fab fa-facebook-f"></i>
@@ -271,76 +265,37 @@
                     </div>
                     {% endif %}
                 </div>
-                <div class="col-md-3">
-                    <h6 class="footer-title">
-                        <i class="fas fa-link me-2"></i>
-                        {{ footer_settings.middle_column_title|default:"روابط سريعة" }}
-                    </h6>
-                    <ul class="footer-links">
-                        <li>
-                            <a href="{% url 'home' %}" class="footer-link">
-                                <i class="fas fa-home me-1"></i> الرئيسية
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{% url 'about' %}" class="footer-link">
-                                <i class="fas fa-info-circle me-1"></i> عن النظام
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{% url 'contact' %}" class="footer-link">
-                                <i class="fas fa-envelope me-1"></i> اتصل بنا
-                            </a>
-                        </li>
-                    </ul>
+
+                <!-- الروابط السريعة -->
+                <div class="d-flex align-items-center">
+                    <a href="{% url 'home' %}" class="footer-link mx-2">
+                        <i class="fas fa-home"></i>
+                    </a>
+                    <a href="{% url 'about' %}" class="footer-link mx-2">
+                        <i class="fas fa-info-circle"></i>
+                    </a>
+                    <a href="{% url 'contact' %}" class="footer-link mx-2">
+                        <i class="fas fa-envelope"></i>
+                    </a>
                 </div>
-                <div class="col-md-5">
-                    <h6 class="footer-title">
-                        <i class="fas fa-headset me-2"></i>
-                        {{ footer_settings.right_column_title|default:"تواصل معنا" }}
-                    </h6>
-                    <ul class="footer-contact-info">
-                        <li>
-                            <a href="tel:{{ company_info.phone|default:'+20 123 456 7890' }}" class="footer-contact-item">
-                                <span class="icon-circle">
-                                    <i class="fas fa-phone-alt"></i>
-                                </span>
-                                <span>{{ company_info.phone|default:"+20 123 456 7890" }}</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="mailto:{{ company_info.email|default:'info@elkhawaga.com' }}" class="footer-contact-item">
-                                <span class="icon-circle">
-                                    <i class="fas fa-envelope"></i>
-                                </span>
-                                <span>{{ company_info.email|default:"info@elkhawaga.com" }}</span>
-                            </a>
-                        </li>
-                        {% if company_info.address %}
-                        <li>
-                            <div class="footer-contact-item">
-                                <span class="icon-circle">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                </span>
-                                <span>{{ company_info.address }}</span>
-                            </div>
-                        </li>
-                        {% endif %}
-                        {% if company_info.working_hours %}
-                        <li>
-                            <div class="footer-contact-item">
-                                <span class="icon-circle">
-                                    <i class="fas fa-clock"></i>
-                                </span>
-                                <span>{{ company_info.working_hours }}</span>
-                            </div>
-                        </li>
-                        {% endif %}
-                    </ul>
+
+                <!-- معلومات الاتصال -->
+                <div class="d-flex align-items-center gap-3">
+                    <a href="tel:{{ company_info.phone|default:'+20 123 456 7890' }}" class="footer-contact-item">
+                        <i class="fas fa-phone-alt"></i>
+                    </a>                    <a href="mailto:{{ company_info.email|default:'info@elkhawaga.com' }}" class="footer-contact-item">
+                        <i class="fas fa-at"></i>
+                    </a>
+                    {% if company_info.address %}
+                    <div class="footer-contact-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
-            <hr class="footer-divider my-3">
-            <div class="text-center footer-bottom">
+
+            <!-- حقوق النشر -->
+            <div class="text-center mt-2">
                 <p class="copyright-text mb-0 small">
                     <i class="far fa-copyright me-1"></i>
                     {{ current_year }}
@@ -351,164 +306,107 @@
     </footer>
 
     <style>
-    /* أنماط التذييل المُحسَّن - نصف الحجم */
+    /* تنسيق الجسم والمحتوى الرئيسي للصفحة */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    main.container {
+        flex: 1 0 auto;
+    }
+
+    /* أنماط التذييل المُحسَّن - تصميم أفقي */
     .footer-area {
+        flex-shrink: 0;
         background: linear-gradient(to right, var(--accent), var(--dark));
-        padding: 15px 0 8px 0 !important; /* نصف الحجم الأصلي */
+        padding: 10px 0 5px 0 !important;
+        width: 100%;
     }
 
     .footer-title {
-        margin-bottom: 10px; /* نصف الحجم */
-        font-weight: 600; /* أقل من 700 */
-        font-size: 1rem; /* أصغر */
-        position: relative;
-        padding-bottom: 4px; /* أقل */
-    }
-
-    .footer-title::after {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        height: 1px; /* أنحف */
-        width: 30px; /* أقصر */
-        background-color: rgba(255,255,255,0.5);
-    }
-
-    .footer-description {
-        opacity: 0.9;
-        line-height: 1.4; /* أقل */
-        font-size: 0.85rem; /* أصغر */
+        font-size: 0.9rem;
+        font-weight: 600;
     }
 
     .social-icons {
-        display: flex;
-        gap: 8px; /* أقل */
+        gap: 5px;
     }
 
     .social-icon {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 28px; /* أصغر */
-        height: 28px; /* أصغر */
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
         color: white;
         background-color: rgba(255,255,255,0.1);
         transition: all 0.3s ease;
         text-decoration: none;
-        font-size: 0.8rem; /* أصغر */
+        font-size: 0.75rem;
     }
 
     .social-icon:hover {
         background-color: rgba(255,255,255,0.3);
         color: white;
-        transform: translateY(-2px); /* أقل */
-    }
-
-    .footer-links {
-        padding: 0;
-        list-style: none;
-    }
-
-    .footer-links li {
-        margin-bottom: 4px; /* أقل */
+        transform: translateY(-2px);
     }
 
     .footer-link {
         color: rgba(255,255,255,0.9);
         text-decoration: none;
         transition: all 0.3s ease;
-        display: block;
-        padding: 2px 0; /* أقل */
-        font-size: 0.85rem; /* أصغر */
+        font-size: 0.85rem;
     }
 
     .footer-link:hover {
         color: white;
-        transform: translateX(-3px); /* أقل */
-    }
-
-    .footer-link i {
-        font-size: 0.8rem; /* أصغر */
-        width: 14px; /* أقل */
-    }
-
-    .footer-contact-info {
-        padding: 0;
-        list-style: none;
-    }
-
-    .footer-contact-info li {
-        margin-bottom: 6px; /* أقل */
+        transform: scale(1.1);
     }
 
     .footer-contact-item {
-        display: flex;
-        align-items: center;
         color: rgba(255,255,255,0.9);
         text-decoration: none;
         transition: all 0.2s ease;
-        font-size: 0.85rem; /* أصغر */
+        font-size: 0.85rem;
     }
 
-    a.footer-contact-item:hover {
+    .footer-contact-item:hover {
         color: white;
     }
 
-    .icon-circle {
-        width: 26px; /* أصغر */
-        height: 26px; /* أصغر */
-        background-color: rgba(255,255,255,0.1);
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        margin-left: 8px; /* أقل */
-        flex-shrink: 0;
-        font-size: 0.8rem; /* أصغر */
-    }
-
-    .footer-divider {
-        margin: 10px 0; /* أقل */
-        border-color: rgba(255,255,255,0.2);
-    }
-
-    .footer-bottom {
-        padding-top: 8px; /* أقل */
-    }
-
     .copyright-text {
-        font-size: 0.8rem; /* أصغر */
+        font-size: 0.75rem;
         opacity: 0.9;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 5px;
     }
 
     /* استجابة للشاشات الصغيرة */
     @media (max-width: 768px) {
         .footer-area {
-            padding: 12px 0 6px 0 !important;
+            padding: 8px 0 4px 0 !important;
         }
         
         .footer-title {
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-        }
-        
-        .footer-link,
-        .footer-contact-item {
             font-size: 0.8rem;
         }
         
         .social-icon {
-            width: 26px;
-            height: 26px;
-            font-size: 0.75rem;
+            width: 22px;
+            height: 22px;
+            font-size: 0.7rem;
         }
-        
-        .icon-circle {
-            width: 24px;
-            height: 24px;
-            font-size: 0.75rem;
+
+        .copyright-text {
+            font-size: 0.7rem;
         }
     }
     </style>

@@ -331,6 +331,203 @@
     height: 300px;
 }
 
+/* ===== دعم الثيم الأسود الحديث ===== */
+[data-theme="modern-black"] .inventory-dashboard-container {
+    background-color: var(--background) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .dashboard-header {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-light) !important;
+}
+
+[data-theme="modern-black"] .header-title h1 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .notifications .btn,
+[data-theme="modern-black"] .user-menu .btn {
+    color: var(--text-secondary) !important;
+    background: var(--elevated-bg) !important;
+    border: 1px solid var(--border) !important;
+}
+
+[data-theme="modern-black"] .notifications .btn:hover,
+[data-theme="modern-black"] .user-menu .btn:hover {
+    background: var(--primary) !important;
+    color: #000000 !important;
+}
+
+[data-theme="modern-black"] .dashboard-breadcrumb {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border) !important;
+}
+
+[data-theme="modern-black"] .breadcrumb-item a {
+    color: var(--primary) !important;
+}
+
+[data-theme="modern-black"] .breadcrumb-item.active {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="modern-black"] .dashboard-content {
+    background-color: var(--background) !important;
+}
+
+[data-theme="modern-black"] .icon-card {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-primary) !important;
+    box-shadow: var(--shadow-light) !important;
+}
+
+[data-theme="modern-black"] .icon-card:hover {
+    background-color: var(--elevated-bg) !important;
+    transform: translateY(-8px) !important;
+    box-shadow: var(--shadow) !important;
+}
+
+[data-theme="modern-black"] .icon-card-icon {
+    background-color: var(--elevated-bg) !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--border) !important;
+}
+
+[data-theme="modern-black"] .icon-card:hover .icon-card-icon {
+    background-color: var(--primary) !important;
+    color: #000000 !important;
+    border-color: var(--primary) !important;
+}
+
+[data-theme="modern-black"] .icon-card-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .icon-card-subtitle {
+    color: var(--text-tertiary) !important;
+}
+
+[data-theme="modern-black"] .stat-card {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-light) !important;
+}
+
+[data-theme="modern-black"] .stat-card:hover {
+    background-color: var(--elevated-bg) !important;
+    transform: translateY(-8px) !important;
+    box-shadow: var(--shadow) !important;
+}
+
+[data-theme="modern-black"] .stat-card-icon {
+    color: var(--primary) !important;
+    opacity: 0.15 !important;
+}
+
+[data-theme="modern-black"] .stat-card-title {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="modern-black"] .stat-card-value {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .stat-card-change.positive {
+    color: var(--success) !important;
+}
+
+[data-theme="modern-black"] .stat-card-change.negative {
+    color: var(--error) !important;
+}
+
+[data-theme="modern-black"] .data-table-container {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-light) !important;
+}
+
+[data-theme="modern-black"] .data-table-header {
+    background-color: var(--elevated-bg) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+[data-theme="modern-black"] .data-table-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .data-table-footer {
+    background-color: var(--card-bg) !important;
+    border-top: 1px solid var(--border) !important;
+}
+
+[data-theme="modern-black"] .chart-container {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-light) !important;
+}
+
+[data-theme="modern-black"] .chart-header {
+    background-color: var(--elevated-bg) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+[data-theme="modern-black"] .chart-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .chart-body {
+    background-color: var(--card-bg) !important;
+}
+
+[data-theme="modern-black"] .dashboard-footer {
+    background-color: var(--card-bg) !important;
+    border-top: 1px solid var(--border) !important;
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="modern-black"] .footer-links a {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="modern-black"] .footer-links a:hover {
+    color: var(--primary) !important;
+}
+
+/* أيقونات ملونة خاصة بالمخزون */
+[data-theme="modern-black"] .icon-card[href*="products"] .icon-card-icon,
+[data-theme="modern-black"] .icon-card[href*="منتجات"] .icon-card-icon {
+    background: linear-gradient(135deg, #B537F2, #9C27B0) !important;
+}
+
+[data-theme="modern-black"] .icon-card[href*="categories"] .icon-card-icon,
+[data-theme="modern-black"] .icon-card[href*="فئات"] .icon-card-icon {
+    background: linear-gradient(135deg, #00FF88, #00CC6A) !important;
+}
+
+[data-theme="modern-black"] .icon-card[href*="suppliers"] .icon-card-icon,
+[data-theme="modern-black"] .icon-card[href*="موردين"] .icon-card-icon {
+    background: linear-gradient(135deg, #FF6B00, #E6004D) !important;
+}
+
+[data-theme="modern-black"] .icon-card[href*="warehouses"] .icon-card-icon,
+[data-theme="modern-black"] .icon-card[href*="مخازن"] .icon-card-icon {
+    background: linear-gradient(135deg, #00F5D4, #00D2FF) !important;
+}
+
+[data-theme="modern-black"] .icon-card[href*="orders"] .icon-card-icon,
+[data-theme="modern-black"] .icon-card[href*="طلبات"] .icon-card-icon {
+    background: linear-gradient(135deg, #FFD700, #E6C200) !important;
+}
+
+[data-theme="modern-black"] .icon-card[href*="reports"] .icon-card-icon,
+[data-theme="modern-black"] .icon-card[href*="تقارير"] .icon-card-icon {
+    background: linear-gradient(135deg, #3A86FF, #0066CC) !important;
+}
+
 /* ===== الاستجابة للشاشات المختلفة ===== */
 @media (max-width: 992px) {
     .icon-cards-container {
@@ -381,5 +578,20 @@
     
     .footer-links {
         justify-content: center;
+    }
+    
+    /* تحسينات للثيم الأسود في الشاشات الصغيرة */
+    [data-theme="modern-black"] .icon-card {
+        padding: 15px !important;
+    }
+    
+    [data-theme="modern-black"] .icon-card-icon {
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 1.3rem !important;
+    }
+    
+    [data-theme="modern-black"] .stat-card {
+        padding: 15px !important;
     }
 }
