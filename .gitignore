@@ -13,21 +13,38 @@ ENV/
 # Don't ignore .env.production as it's a template
 !.env.production
 
+# Database files
+*.sqlite3
+*.db
+db.sqlite3
+
 # Ignore secret files
 passwords.txt
 *secret*
 *key*
 generate_secret_key.py
 
+# Git and version control
+.git/
+.gitattributes
+*.patch
+*.diff
+*.orig
+
 # Ignore media files that might contain sensitive data
 media/google_credentials/
 media/imports_exports/
 media/db_backups/
 media/db_imports/
+media/**/*.gz
+media/**/*.zip
 
 # Ignore OS files
 .DS_Store
 Thumbs.db
+desktop.ini
+*.swp
+*~
 
 # Ignore logs and caches
 *.log
@@ -35,38 +52,70 @@ Thumbs.db
 *.pyc
 logs/
 .cache/
+*.cache
+.sass-cache/
 
 # Ignore other common files
 .coverage
 htmlcov/
 .pytest_cache/
+.hypothesis/
+.tox/
 
 # Local development settings
 local_settings.py
+development_settings.py
 
 # Distribution / packaging
 dist/
 build/
 *.egg-info/
+eggs/
+*.egg
 
 # Django static and media files
 staticfiles/
 media/backups/
+static/admin/
+static/rest_framework/
 
-# Compressed files
+# All compressed and compiled files
 *.gz
 *.zip
 *.tar
 *.rar
-
-# Automatically generated CSS and JS files
-*.css.gz
-*.js.gz
-*.min.css
+*.7z
 *.min.js
+*.min.css
+*.map
+*.compiled.*
+*.bundle.*
+*.chunk.*
+
+# All automatically generated files
+*.generated.*
+*.auto-generated.*
+**/*.gz
+**/*.min.*
+**/_generated_/
+**/generated/
+**/.generated/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
 
 # IDE files
 .idea/
 .vscode/
 *.sublime-workspace
 *.sublime-project
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.project
+.classpath
+.settings/
