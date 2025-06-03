@@ -2,7 +2,6 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from accounts.models import User
 from orders.models import Order
-
 class ProductionLine(models.Model):
     class Meta:
         ordering = ['id']  # ترتيب افتراضي لتفادي تحذير الباجنيشن
@@ -12,14 +11,11 @@ class ProductionLine(models.Model):
     name = models.CharField(_('اسم خط الإنتاج'), max_length=100, unique=True)
     description = models.TextField(_('الوصف'), blank=True)
     is_active = models.BooleanField(_('نشط'), default=True)
-    
     class Meta:
         verbose_name = _('خط إنتاج')
         verbose_name_plural = _('خطوط الإنتاج')
-    
     def __str__(self):
         return self.name
-
 class ProductionOrder(models.Model):
     """
     Model for production orders in the factory
@@ -31,7 +27,6 @@ class ProductionOrder(models.Model):
         ('stalled', _('متعطل')),
         ('cancelled', _('ملغي')),
     ]
-    
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
@@ -63,15 +58,12 @@ class ProductionOrder(models.Model):
         verbose_name=_('تم الإنشاء بواسطة')
     )
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
-    
     class Meta:
         verbose_name = _('أمر إنتاج')
         verbose_name_plural = _('أوامر الإنتاج')
         ordering = ['-created_at']
-    
     def __str__(self):
         return f"أمر إنتاج - {self.order.order_number}"
-
 class ProductionStage(models.Model):
     """
     Model for tracking different stages of production
@@ -95,15 +87,12 @@ class ProductionStage(models.Model):
         related_name='assigned_stages',
         verbose_name=_('تم التعيين إلى')
     )
-    
     class Meta:
         verbose_name = _('مرحلة إنتاج')
         verbose_name_plural = _('مراحل الإنتاج')
         ordering = ['start_date']
-    
     def __str__(self):
         return f"{self.name} - {self.production_order}"
-
 class ProductionIssue(models.Model):
     """
     Model for tracking production issues and stalls
@@ -114,7 +103,6 @@ class ProductionIssue(models.Model):
         ('high', _('عالية')),
         ('critical', _('حرجة')),
     ]
-    
     production_order = models.ForeignKey(
         ProductionOrder,
         on_delete=models.CASCADE,
@@ -148,11 +136,9 @@ class ProductionIssue(models.Model):
         verbose_name=_('تم الحل بواسطة')
     )
     resolution_notes = models.TextField(_('ملاحظات الحل'), blank=True)
-    
     class Meta:
         verbose_name = _('مشكلة إنتاج')
         verbose_name_plural = _('مشاكل الإنتاج')
         ordering = ['-reported_at']
-    
     def __str__(self):
         return f"{self.title} - {self.production_order}"

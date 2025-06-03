@@ -8,18 +8,29 @@ class CustomerForm(forms.ModelForm):
         model = Customer
         fields = [
             'name', 'image', 'category', 'customer_type',
-            'phone', 'email', 'address', 'status', 'notes'
+            'phone', 'email', 'address', 'status', 'notes', 'interests'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
             'customer_type': forms.Select(attrs={'class': 'form-select'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
-            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'phone': forms.TextInput(
+                attrs={'class': 'form-control', 'dir': 'ltr'}
+            ),
+            'email': forms.EmailInput(
+                attrs={'class': 'form-control', 'dir': 'ltr'}
+            ),
+            'address': forms.Textarea(
+                attrs={'class': 'form-control', 'rows': 3}
+            ),
             'status': forms.Select(attrs={'class': 'form-select'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'notes': forms.Textarea(
+                attrs={'class': 'form-control', 'rows': 3}
+            ),
+            'interests': forms.Textarea(
+                attrs={'class': 'form-control', 'rows': 3}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -29,6 +40,17 @@ class CustomerForm(forms.ModelForm):
         if user and not user.is_superuser:
             self.instance.branch = user.branch
             self.instance.created_by = user
+
+        # تحديث خيارات نوع العميل بشكل ديناميكي
+        customer_types = Customer.get_customer_types()
+        if not customer_types:
+            from .models import CustomerType
+            # إذا كانت القائمة فارغة، نجلب البيانات مباشرة
+            types = [(t.code, t.name) 
+                    for t in CustomerType.objects.filter(is_active=True).order_by('name')]
+            self.fields['customer_type'].choices = types
+        else:
+            self.fields['customer_type'].choices = customer_types
 
     def clean_image(self):
         image = self.cleaned_data.get('image')
@@ -84,7 +106,6 @@ class CustomerSearchForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     customer_type = forms.ChoiceField(
-        choices=[('', _('كل الأنواع'))] + list(Customer.CUSTOMER_TYPE_CHOICES),
         required=False,
         widget=forms.Select(attrs={'class': 'form-select'})
     )
@@ -93,3 +114,10 @@ class CustomerSearchForm(forms.Form):
         required=False,
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Update customer type choices dynamically
+        self.fields['customer_type'].choices = (
+            [('', _('كل الأنواع'))] + list(Customer.get_customer_types())
+        )

@@ -58,8 +58,7 @@
                             <th>{% trans 'البريد الإلكتروني' %}:</th>
                             <td dir="ltr">{{ customer.email }}</td>
                         </tr>
-                        {% endif %}
-                        <tr>
+                        {% endif %}                        <tr>
                             <th>{% trans 'العنوان' %}:</th>
                             <td>{{ customer.address }}</td>
                         </tr>
@@ -68,6 +67,22 @@
                             <td>{{ customer.branch.name }}</td>
                         </tr>
                     </table>
+                </div>
+            </div>
+            
+            <!-- Customer Interests -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{% trans 'اهتمامات العميل' %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if customer.interests %}
+                    <div class="p-3 bg-light rounded">
+                        {{ customer.interests|linebreaks }}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">{% trans 'لم يتم تحديد اهتمامات للعميل' %}</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

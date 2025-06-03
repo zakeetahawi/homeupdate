@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from inspections.models import Inspection
 from orders.models import Order
 from accounts.models import User, Branch
-
 class InstallationTeam(models.Model):
     """فريق التركيب"""
     name = models.CharField(_('اسم الفريق'), max_length=100)
@@ -31,15 +30,12 @@ class InstallationTeam(models.Model):
     is_active = models.BooleanField(_('نشط'), default=True)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
-
     class Meta:
         verbose_name = _('فريق تركيب')
         verbose_name_plural = _('فرق التركيب')
         ordering = ['name']
-
     def __str__(self):
         return f"{self.name} - {self.branch.name}"
-
 class Installation(models.Model):
     """عملية التركيب"""
     STATUS_CHOICES = [
@@ -49,7 +45,6 @@ class Installation(models.Model):
         ('completed', _('مكتمل')),
         ('cancelled', _('ملغي')),
     ]
-
     QUALITY_CHOICES = [
         (1, _('ضعيف')),
         (2, _('مقبول')),
@@ -57,7 +52,6 @@ class Installation(models.Model):
         (4, _('جيد جداً')),
         (5, _('ممتاز')),
     ]
-
     order = models.ForeignKey(
         Order,
         on_delete=models.PROTECT,
@@ -94,7 +88,6 @@ class Installation(models.Model):
     )
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
-
     class Meta:
         verbose_name = _('عملية تركيب')
         verbose_name_plural = _('عمليات التركيب')
@@ -107,15 +100,12 @@ class Installation(models.Model):
             models.Index(fields=['scheduled_date'], name='install_sched_date_idx'),
             models.Index(fields=['created_at'], name='install_created_idx'),
         ]
-
     def __str__(self):
         return f"تركيب طلب #{self.order.order_number}"
-
     def clean(self):
         if self.actual_end_date and self.actual_start_date:
             if self.actual_end_date < self.actual_start_date:
                 raise ValidationError(_('تاريخ انتهاء التركيب لا يمكن أن يكون قبل تاريخ البدء'))
-
     def save(self, *args, **kwargs):
         # تحديث تواريخ البدء والانتهاء عند تغيير الحالة
         if self.status == 'in_progress' and not self.actual_start_date:
@@ -123,7 +113,6 @@ class Installation(models.Model):
         elif self.status == 'completed' and not self.actual_end_date:
             self.actual_end_date = timezone.now()
         super().save(*args, **kwargs)
-
 class InstallationStep(models.Model):
     """خطوات التركيب"""
     installation = models.ForeignKey(
@@ -148,16 +137,13 @@ class InstallationStep(models.Model):
     photo = models.ImageField(_('صورة'), upload_to='installations/steps/', null=True, blank=True)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
-
     class Meta:
         verbose_name = _('خطوة تركيب')
         verbose_name_plural = _('خطوات التركيب')
         ordering = ['installation', 'order']
         unique_together = ['installation', 'order']
-
     def __str__(self):
         return f"{self.name} - {self.installation}"
-
     def save(self, *args, **kwargs):
         if self.is_completed and not self.completed_at:
             self.completed_at = timezone.now()
@@ -165,7 +151,6 @@ class InstallationStep(models.Model):
             self.completed_at = None
             self.completed_by = None
         super().save(*args, **kwargs)
-
 class InstallationQualityCheck(models.Model):
     """فحص جودة التركيب"""
     CRITERIA_CHOICES = [
@@ -175,7 +160,6 @@ class InstallationQualityCheck(models.Model):
         ('safety', _('السلامة')),
         ('cleanliness', _('النظافة')),
     ]
-
     installation = models.ForeignKey(
         Installation,
         on_delete=models.CASCADE,
@@ -194,16 +178,13 @@ class InstallationQualityCheck(models.Model):
         verbose_name=_('تم الفحص بواسطة')
     )
     created_at = models.DateTimeField(_('تاريخ الفحص'), auto_now_add=True)
-
     class Meta:
         verbose_name = _('فحص جودة')
         verbose_name_plural = _('فحوصات الجودة')
         ordering = ['-created_at']
         unique_together = ['installation', 'criteria']
-
     def __str__(self):
         return f"{self.get_criteria_display()} - {self.installation}"
-
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         # تحديث متوسط تقييم الجودة للتركيب
@@ -212,7 +193,6 @@ class InstallationQualityCheck(models.Model):
         if avg_rating:
             installation.quality_rating = round(avg_rating)
             installation.save()
-
 class InstallationIssue(models.Model):
     """مشاكل التركيب"""
     PRIORITY_CHOICES = [
@@ -221,14 +201,12 @@ class InstallationIssue(models.Model):
         ('high', _('عالية')),
         ('critical', _('حرجة')),
     ]
-
     STATUS_CHOICES = [
         ('open', _('مفتوحة')),
         ('in_progress', _('جاري المعالجة')),
         ('resolved', _('تم الحل')),
         ('closed', _('مغلقة')),
     ]
-
     installation = models.ForeignKey(
         Installation,
         on_delete=models.CASCADE,
@@ -266,15 +244,12 @@ class InstallationIssue(models.Model):
     )
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
-
     class Meta:
         verbose_name = _('مشكلة تركيب')
         verbose_name_plural = _('مشاكل التركيب')
         ordering = ['-created_at']
-
     def __str__(self):
         return f"{self.title} - {self.installation}"
-
     def save(self, *args, **kwargs):
         if self.status == 'resolved' and not self.resolved_at:
             self.resolved_at = timezone.now()
@@ -282,7 +257,6 @@ class InstallationIssue(models.Model):
             self.resolved_at = None
             self.resolved_by = None
         super().save(*args, **kwargs)
-
 class InstallationNotification(models.Model):
     """إشعارات التركيب"""
     TYPE_CHOICES = [
@@ -291,7 +265,6 @@ class InstallationNotification(models.Model):
         ('quality_check', _('فحص الجودة')),
         ('issue', _('مشكلة')),
     ]
-
     installation = models.ForeignKey(
         Installation,
         on_delete=models.CASCADE,
@@ -303,11 +276,9 @@ class InstallationNotification(models.Model):
     message = models.TextField(_('نص الإشعار'))
     is_read = models.BooleanField(_('تمت القراءة'), default=False)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
-
     class Meta:
         verbose_name = _('إشعار تركيب')
         verbose_name_plural = _('إشعارات التركيب')
         ordering = ['-created_at']
-
     def __str__(self):
         return f"{self.title} - {self.installation}"

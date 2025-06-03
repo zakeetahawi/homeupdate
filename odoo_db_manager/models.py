@@ -1,36 +1,29 @@
 """
 نماذج إدارة قواعد البيانات على طراز أودو
 """
-
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.utils import timezone
 import calendar
 from datetime import timedelta
-
 class Database(models.Model):
     """نموذج قاعدة البيانات الرئيسي"""
-
     DB_TYPES = [
         ('postgresql', 'PostgreSQL'),
     ]
-
     name = models.CharField(_('اسم قاعدة البيانات'), max_length=100)
     db_type = models.CharField(_('نوع قاعدة البيانات'), max_length=20, choices=DB_TYPES)
     connection_info = models.JSONField(_('معلومات الاتصال'), default=dict)
     is_active = models.BooleanField(_('نشطة'), default=False)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
-
     class Meta:
         verbose_name = _('قاعدة بيانات')
         verbose_name_plural = _('قواعد البيانات')
         ordering = ['-created_at']
-
     def __str__(self):
         return self.name
-
     @property
     def connection_string(self):
         """إنشاء سلسلة الاتصال"""
@@ -41,7 +34,6 @@ class Database(models.Model):
             user = self.connection_info.get('USER', '')
             return f"postgresql://{user}@{host}:{port}/{name}"
         return ""
-
     @property
     def status(self):
         """حالة قاعدة البيانات"""
@@ -62,25 +54,21 @@ class Database(models.Model):
             return True
         except Exception:
             return False
-
     @property
     def error_message(self):
         """رسالة الخطأ إن وجدت"""
         return self.connection_info.get('_ERROR', "")
-
     @property
     def size_display(self):
         """عرض حجم قاعدة البيانات بشكل مقروء"""
         # حساب حجم قاعدة البيانات من النسخ الاحتياطية
         total_size = sum(backup.size for backup in self.backups.all())
-
         # تحويل الحجم إلى وحدة مناسبة
         for unit in ['B', 'KB', 'MB', 'GB']:
             if total_size < 1024.0:
                 return f"{total_size:.1f} {unit}"
             total_size /= 1024.0
         return f"{total_size:.1f} TB"
-        
     def update_env_file(self):
         """تحديث ملف .env بإعدادات قاعدة البيانات النشطة"""
         try:
@@ -88,16 +76,13 @@ class Database(models.Model):
             from pathlib import Path
             from dotenv import load_dotenv
             import time
-            
             # الحصول على مسار ملف .env
             BASE_DIR = Path(__file__).resolve().parent.parent
             env_file = os.path.join(BASE_DIR, '.env')
-            
             # التحقق من وجود ملف .env
             if not os.path.exists(env_file):
                 print(f"ملف .env غير موجود في {env_file}")
                 return False
-            
             # إنشاء نسخة احتياطية من ملف .env
             backup_file = os.path.join(BASE_DIR, f'.env.backup.{int(time.time())}')
             try:
@@ -106,11 +91,9 @@ class Database(models.Model):
                 print(f"تم إنشاء نسخة احتياطية من ملف .env في {backup_file}")
             except Exception as e:
                 print(f"حدث خطأ أثناء إنشاء نسخة احتياطية من ملف .env: {str(e)}")
-            
             # قراءة محتوى ملف .env
             with open(env_file, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
-            
             # تحديث إعدادات قاعدة البيانات
             connection_info = self.connection_info
             new_lines = []
@@ -121,17 +104,14 @@ class Database(models.Model):
             db_host_updated = False
             db_port_updated = False
             pgpassword_updated = False
-            
             # إضافة تعليق يشير إلى أن الملف تم تحديثه
             current_time = time.strftime("%Y-%m-%d %H:%M:%S")
             new_lines.append(f"# تم تحديث هذا الملف تلقائياً بواسطة نظام إدارة قواعد البيانات في {current_time}\n")
             new_lines.append(f"# قاعدة البيانات النشطة: {self.name} ({connection_info.get('NAME')})\n\n")
-            
             for line in lines:
                 # تخطي التعليقات والأسطر الفارغة
                 if line.strip().startswith('#') or not line.strip():
                     continue
-                
                 if line.startswith('DATABASE_URL='):
                     # تحديث DATABASE_URL
                     db_url = f"postgres://{connection_info.get('USER')}:{connection_info.get('PASSWORD')}@{connection_info.get('HOST')}:{connection_info.get('PORT')}/{connection_info.get('NAME')}"
@@ -163,7 +143,6 @@ class Database(models.Model):
                     pgpassword_updated = True
                 else:
                     new_lines.append(line)
-            
             # إضافة الإعدادات إذا لم تكن موجودة
             if not db_url_updated:
                 db_url = f"postgres://{connection_info.get('USER')}:{connection_info.get('PASSWORD')}@{connection_info.get('HOST')}:{connection_info.get('PORT')}/{connection_info.get('NAME')}"
@@ -180,74 +159,59 @@ class Database(models.Model):
                 new_lines.append(f"DB_PORT={connection_info.get('PORT')}\n")
             if not pgpassword_updated:
                 new_lines.append(f"PGPASSWORD={connection_info.get('PASSWORD')}\n")
-            
             # إضافة متغيرات البيئة الأخرى التي قد تكون موجودة في الملف الأصلي
             for line in lines:
-                if (not line.strip().startswith('#') and 
-                    not line.startswith('DATABASE_URL=') and 
-                    not line.startswith('DB_NAME=') and 
-                    not line.startswith('DB_USER=') and 
-                    not line.startswith('DB_PASSWORD=') and 
-                    not line.startswith('DB_HOST=') and 
-                    not line.startswith('DB_PORT=') and 
+                if (not line.strip().startswith('#') and
+                    not line.startswith('DATABASE_URL=') and
+                    not line.startswith('DB_NAME=') and
+                    not line.startswith('DB_USER=') and
+                    not line.startswith('DB_PASSWORD=') and
+                    not line.startswith('DB_HOST=') and
+                    not line.startswith('DB_PORT=') and
                     not line.startswith('PGPASSWORD=') and
                     line.strip() and
                     '=' in line and
                     line not in new_lines):
                     new_lines.append(line)
-            
             # كتابة المحتوى المحدث إلى ملف .env
             with open(env_file, 'w', encoding='utf-8') as f:
                 f.writelines(new_lines)
-            
             print(f"تم تحديث ملف .env بنجاح")
             return True
-        
         except Exception as e:
             print(f"حدث خطأ أثناء تحديث ملف .env: {str(e)}")
             return False
-
     def update_settings_file(self):
         """تحديث ملف db_settings.json بإعدادات قاعدة البيانات النشطة"""
         try:
             import os
             import json
             from pathlib import Path
-            
             # الحصول على مسار ملف db_settings.json
             BASE_DIR = Path(__file__).resolve().parent.parent
             settings_file = os.path.join(BASE_DIR, 'db_settings.json')
-            
             # قراءة محتوى ملف db_settings.json
             with open(settings_file, 'r') as f:
                 settings = json.load(f)
-            
             # تحديث إعدادات قاعدة البيانات النشطة
             settings['active_db'] = str(self.id)
-            
             # التحقق من وجود قاعدة البيانات في الإعدادات
             if str(self.id) not in settings['databases']:
                 settings['databases'][str(self.id)] = self.connection_info
-            
             # كتابة المحتوى المحدث إلى ملف db_settings.json
             with open(settings_file, 'w') as f:
                 json.dump(settings, f, indent=4)
-            
             print(f"تم تحديث ملف db_settings.json بنجاح")
             return True
-        
         except Exception as e:
             print(f"حدث خطأ أثناء تحديث ملف db_settings.json: {str(e)}")
             return False
-
     def create_default_user(self):
         """إنشاء مستخدم افتراضي في حال عدم وجود مستخدمين"""
         try:
             from django.contrib.auth import get_user_model
             from django.db import connections
-            
             User = get_user_model()
-            
             # التحقق من وجود مستخدمين
             if User.objects.count() == 0:
                 # إنشاء مستخدم افتراضي
@@ -264,32 +228,25 @@ class Database(models.Model):
         except Exception as e:
             print(f"حدث خطأ أثناء إنشاء المستخدم الافتراضي: {str(e)}")
             return False
-    
     def activate(self):
         """تنشيط قاعدة البيانات"""
         try:
             # تعطيل جميع قواعد البيانات الأخرى
             Database.objects.exclude(id=self.id).update(is_active=False)
-            
             # تنشيط قاعدة البيانات الحالية
             self.is_active = True
             self.save()
-            
             # تحديث ملف .env
             env_updated = self.update_env_file()
-            
             # تحديث ملف db_settings.json
             settings_updated = self.update_settings_file()
-            
             # التحقق من نجاح التحديث
             if env_updated and settings_updated:
                 print(f"تم تنشيط قاعدة البيانات {self.name} بنجاح")
-                
                 # محاولة تحديث إعدادات Django في الذاكرة
                 try:
                     from django.conf import settings
                     import dj_database_url
-                    
                     # تحديث إعدادات قاعدة البيانات في الذاكرة
                     db_config = {
                         'ENGINE': self.connection_info.get('ENGINE', 'django.db.backends.postgresql'),
@@ -303,33 +260,26 @@ class Database(models.Model):
                         'CONN_MAX_AGE': 600,
                         'CONN_HEALTH_CHECKS': True,
                     }
-                    
                     # تحديث إعدادات قاعدة البيانات
                     settings.DATABASES['default'] = db_config
-                    
                     print(f"تم تحديث إعدادات Django في الذاكرة")
                 except Exception as e:
                     print(f"حدث خطأ أثناء تحديث إعدادات Django في الذاكرة: {str(e)}")
-                
                 return True
             else:
                 print(f"حدث خطأ أثناء تحديث ملفات الإعدادات")
                 return False
-        
         except Exception as e:
             print(f"حدث خطأ أثناء تنشيط قاعدة البيانات: {str(e)}")
             return False
-
 class Backup(models.Model):
     """نموذج النسخ الاحتياطي"""
-
     BACKUP_TYPES = [
         ('customers', 'بيانات العملاء'),
         ('users', 'بيانات المستخدمين'),
         ('settings', 'إعدادات النظام'),
         ('full', 'كل البيانات'),
     ]
-
     database = models.ForeignKey(
         Database,
         on_delete=models.CASCADE,
@@ -353,15 +303,12 @@ class Backup(models.Model):
         null=True,
         verbose_name=_('تم الإنشاء بواسطة')
     )
-
     class Meta:
         verbose_name = _('نسخة احتياطية')
         verbose_name_plural = _('النسخ الاحتياطية')
         ordering = ['-created_at']
-
     def __str__(self):
         return self.name
-
     @property
     def size_display(self):
         """عرض حجم النسخة الاحتياطية بشكل مقروء"""
@@ -371,18 +318,14 @@ class Backup(models.Model):
                 return f"{size:.1f} {unit}"
             size /= 1024.0
         return f"{size:.1f} TB"
-
-
 class BackupSchedule(models.Model):
     """نموذج جدولة النسخ الاحتياطية"""
-
     FREQUENCY_CHOICES = [
         ('hourly', _('كل ساعة')),
         ('daily', _('يومياً')),
         ('weekly', _('أسبوعياً')),
         ('monthly', _('شهرياً')),
     ]
-
     DAYS_OF_WEEK = [
         (0, _('الاثنين')),
         (1, _('الثلاثاء')),
@@ -392,7 +335,6 @@ class BackupSchedule(models.Model):
         (5, _('السبت')),
         (6, _('الأحد')),
     ]
-
     database = models.ForeignKey(
         Database,
         on_delete=models.CASCADE,
@@ -412,11 +354,9 @@ class BackupSchedule(models.Model):
         choices=FREQUENCY_CHOICES,
         default='daily'
     )
-
     # وقت التنفيذ
     hour = models.IntegerField(_('الساعة'), default=0, help_text=_('0-23'))
     minute = models.IntegerField(_('الدقيقة'), default=0, help_text=_('0-59'))
-
     # أيام الأسبوع (للتكرار الأسبوعي)
     day_of_week = models.IntegerField(
         _('يوم الأسبوع'),
@@ -425,7 +365,6 @@ class BackupSchedule(models.Model):
         null=True,
         blank=True
     )
-
     # يوم الشهر (للتكرار الشهري)
     day_of_month = models.IntegerField(
         _('يوم الشهر'),
@@ -434,14 +373,12 @@ class BackupSchedule(models.Model):
         null=True,
         blank=True
     )
-
     # الحد الأقصى لعدد النسخ الاحتياطية
     max_backups = models.IntegerField(
         _('الحد الأقصى لعدد النسخ'),
         default=24,
         help_text=_('الحد الأقصى هو 24 نسخة')
     )
-
     is_active = models.BooleanField(_('نشط'), default=True)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
@@ -454,22 +391,17 @@ class BackupSchedule(models.Model):
         verbose_name=_('تم الإنشاء بواسطة'),
         related_name='backup_schedules'
     )
-
     class Meta:
         verbose_name = _('جدولة النسخ الاحتياطية')
         verbose_name_plural = _('جدولة النسخ الاحتياطية')
         ordering = ['-created_at']
-
     def __str__(self):
         return f"{self.name} - {self.get_frequency_display()}"
-
     def calculate_next_run(self):
         """حساب موعد التشغيل القادم"""
         now = timezone.now()
-
         # تعيين الساعة والدقيقة
         next_run = now.replace(hour=self.hour, minute=self.minute, second=0, microsecond=0)
-
         # إذا كان الوقت المحدد قد مر بالفعل، نضيف الفترة المناسبة
         if next_run <= now:
             if self.frequency == 'hourly':
@@ -490,23 +422,16 @@ class BackupSchedule(models.Model):
                 else:
                     next_month = now.month + 1
                     next_year = now.year
-
                 # التعامل مع أيام الشهر غير الصالحة
                 last_day = calendar.monthrange(next_year, next_month)[1]
                 day = min(self.day_of_month, last_day)
-
                 next_run = now.replace(year=next_year, month=next_month, day=day)
-
         self.next_run = next_run
         self.save(update_fields=['next_run'])
         return next_run
-
-
 class GoogleDriveConfig(models.Model):
     """نموذج إعدادات Google Drive للمعاينات"""
-
     name = models.CharField(_('اسم الإعداد'), max_length=100, default="إعدادات Google Drive")
-
     # إعدادات المجلد
     inspections_folder_id = models.CharField(
         _('معرف مجلد المعاينات'),
@@ -520,7 +445,6 @@ class GoogleDriveConfig(models.Model):
         blank=True,
         help_text=_('اسم المجلد في Google Drive')
     )
-
     # ملف الاعتماد
     credentials_file = models.FileField(
         _('ملف اعتماد Google'),
@@ -529,7 +453,6 @@ class GoogleDriveConfig(models.Model):
         null=True,
         help_text=_('ملف JSON من Google Cloud Console')
     )
-
     # إعدادات تسمية الملفات
     filename_pattern = models.CharField(
         _('نمط تسمية الملفات'),
@@ -537,17 +460,14 @@ class GoogleDriveConfig(models.Model):
         default="{customer}_{branch}_{date}_{order}",
         help_text=_('المتغيرات المتاحة: {customer}, {branch}, {date}, {order}')
     )
-
     # حالة الخدمة
     is_active = models.BooleanField(_('مفعل'), default=True)
     last_test = models.DateTimeField(_('آخر اختبار'), null=True, blank=True)
     test_status = models.CharField(_('حالة الاختبار'), max_length=50, blank=True)
     test_message = models.TextField(_('رسالة الاختبار'), blank=True)
-
     # إحصائيات
     total_uploads = models.IntegerField(_('إجمالي الرفعات'), default=0)
     last_upload = models.DateTimeField(_('آخر رفع'), null=True, blank=True)
-
     # تواريخ النظام
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
@@ -557,20 +477,16 @@ class GoogleDriveConfig(models.Model):
         null=True,
         verbose_name=_('تم الإنشاء بواسطة')
     )
-
     class Meta:
         verbose_name = _('إعدادات Google Drive')
         verbose_name_plural = _('إعدادات Google Drive')
         ordering = ['-created_at']
-
     def __str__(self):
         return self.name
-
     @classmethod
     def get_active_config(cls):
         """الحصول على الإعدادات النشطة"""
         return cls.objects.filter(is_active=True).first()
-
     def save(self, *args, **kwargs):
         # التأكد من وجود إعداد واحد نشط فقط
         if self.is_active:

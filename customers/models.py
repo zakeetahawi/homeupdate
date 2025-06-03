@@ -1,17 +1,35 @@
+from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django.core.exceptions import ValidationError
-from django.conf import settings
-from django.contrib.auth import get_user_model
 from accounts.models import Branch
-
 User = get_user_model()
-
+def get_customer_types():
+    """استرجاع أنواع العملاء من قاعدة البيانات مع تخزين مؤقت"""
+    cache_key = 'customer_types_choices'
+    cached_types = cache.get(cache_key)
+    
+    if cached_types is None:
+        try:
+            from django.apps import apps
+            CustomerType = apps.get_model('customers', 'CustomerType')
+            
+            if not CustomerType._meta.installed:
+                return []
+                
+            types = [(t.code, t.name) for t in CustomerType.objects.filter(
+                is_active=True).order_by('name')]
+            cache.set(cache_key, types, timeout=3600)
+            cached_types = types
+        except Exception:
+            cached_types = []
+            
+    return cached_types or []
 class CustomerCategory(models.Model):
     name = models.CharField(_('اسم التصنيف'), max_length=50, db_index=True)
     description = models.TextField(_('وصف التصنيف'), blank=True)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
-
     class Meta:
         verbose_name = _('تصنيف العملاء')
         verbose_name_plural = _('تصنيفات العملاء')
@@ -19,10 +37,8 @@ class CustomerCategory(models.Model):
         indexes = [
             models.Index(fields=['name'], name='customer_cat_name_idx'),
         ]
-
     def __str__(self):
         return self.name
-
 class CustomerNote(models.Model):
     customer = models.ForeignKey(
         'Customer',
@@ -39,7 +55,6 @@ class CustomerNote(models.Model):
         verbose_name=_('تم الإنشاء بواسطة')
     )
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
-
     class Meta:
         verbose_name = _('ملاحظة العميل')
         verbose_name_plural = _('ملاحظات العملاء')
@@ -48,23 +63,30 @@ class CustomerNote(models.Model):
             models.Index(fields=['customer', 'created_at'], name='customer_note_idx'),
             models.Index(fields=['created_by'], name='customer_note_creator_idx'),
         ]
-
     def __str__(self):
         return f"{self.customer.name} - {self.created_at.strftime('%Y-%m-%d')}"
-
+class CustomerType(models.Model):
+    code = models.CharField(_('الرمز'), max_length=20, unique=True)
+    name = models.CharField(_('اسم النوع'), max_length=50, db_index=True)
+    description = models.TextField(_('وصف النوع'), blank=True)
+    is_active = models.BooleanField(_('نشط'), default=True)
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    class Meta:
+        verbose_name = _('نوع العميل')
+        verbose_name_plural = _('أنواع العملاء')
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['code'], name='customer_type_code_idx'),
+            models.Index(fields=['name'], name='customer_type_name_idx'),
+        ]
+    def __str__(self):
+        return self.name
 class Customer(models.Model):
     STATUS_CHOICES = [
         ('active', _('نشط')),
         ('inactive', _('غير نشط')),
         ('blocked', _('محظور')),
     ]
-
-    CUSTOMER_TYPE_CHOICES = [
-        ('retail', _('أفراد')),
-        ('wholesale', _('جملة')),
-        ('corporate', _('شركات')),
-    ]
-
     code = models.CharField(_('كود العميل'), max_length=10, unique=True, blank=True)
     image = models.ImageField(
         _('صورة العميل'),
@@ -74,16 +96,15 @@ class Customer(models.Model):
     )
     category = models.ForeignKey(
         CustomerCategory,
-        on_delete=models.SET_NULL,
-        null=True,
+        on_delete=models.SET_NULL,        null=True,
         blank=True,
         related_name='customers',
         verbose_name=_('تصنيف العميل')
     )
     customer_type = models.CharField(
         _('نوع العميل'),
-        max_length=10,
-        choices=CUSTOMER_TYPE_CHOICES,
+        max_length=20,
+        choices=get_customer_types(),
         default='retail'
     )
     name = models.CharField(_('اسم العميل'), max_length=200, db_index=True)
@@ -98,6 +119,7 @@ class Customer(models.Model):
     phone = models.CharField(_('رقم الهاتف'), max_length=20, db_index=True)
     email = models.EmailField(_('البريد الإلكتروني'), blank=True, null=True)
     address = models.TextField(_('العنوان'))
+    interests = models.TextField(_('اهتمامات العميل'), blank=True, help_text=_('اكتب اهتمامات العميل وتفضيلاته'))
     status = models.CharField(
         _('الحالة'),
         max_length=10,
@@ -115,7 +137,6 @@ class Customer(models.Model):
     )
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
-
     class Meta:
         verbose_name = _('عميل')
         verbose_name_plural = _('سجل العملاء')
@@ -128,23 +149,19 @@ class Customer(models.Model):
             models.Index(fields=['branch', 'status'], name='customer_branch_status_idx'),
             models.Index(fields=['created_at'], name='customer_created_at_idx'),
         ]
-
     def __str__(self):
         return f"{self.code} - {self.name}"
-    
     def clean(self):
         # Only allow users to create customers in their branch
         if self.created_by and not self.created_by.is_superuser:
             if self.branch != self.created_by.branch:
                 raise ValidationError(_('لا يمكنك إضافة عملاء لفرع آخر'))
-
     def save(self, *args, **kwargs):
         if not self.code:
             # Get the latest customer code for this branch
             latest_customer = Customer.objects.filter(
                 branch=self.branch
             ).order_by('-code').first()
-
             if latest_customer:
                 # Extract the sequence number and increment
                 try:
@@ -153,18 +170,18 @@ class Customer(models.Model):
                     sequence = 1
             else:
                 sequence = 1
-
             # Generate new code in format '001-0001'
             self.code = f"{self.branch.code}-{str(sequence).zfill(4)}"
-        
         super().save(*args, **kwargs)
-
     @property
     def branch_code(self):
         """Get the branch code part"""
         return self.code.split('-')[0] if self.code else ''
-
     @property
     def sequence_number(self):
         """Get the sequence number part"""
         return self.code.split('-')[1] if self.code else ''
+    @classmethod
+    def get_customer_types(cls):
+        """Helper method to get customer types"""
+        return get_customer_types()

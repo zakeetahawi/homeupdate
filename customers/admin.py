@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
-from .models import Customer, CustomerCategory, CustomerNote
+from .models import Customer, CustomerCategory, CustomerNote, CustomerType
 
 @admin.register(CustomerCategory)
 class CustomerCategoryAdmin(admin.ModelAdmin):
@@ -24,6 +24,14 @@ class CustomerNoteAdmin(admin.ModelAdmin):
         if not change:  # If creating new object
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
+@admin.register(CustomerType)
+class CustomerTypeAdmin(admin.ModelAdmin):
+    list_display = ['code', 'name', 'description', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['code', 'name', 'description']
+    readonly_fields = ['created_at']
+    ordering = ['name']
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
