@@ -4,48 +4,64 @@ from django.core.exceptions import ValidationError
 from .models import Customer, CustomerCategory, CustomerNote
 
 class CustomerForm(forms.ModelForm):
+    phone2 = forms.CharField(
+        label=_('رقم الهاتف الثاني'),
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'dir': 'ltr',
+            'placeholder': _('أدخل رقم الهاتف الثاني (اختياري)')
+        })
+    )
+
     class Meta:
         model = Customer
         fields = [
-            'name', 'image', 'category', 'customer_type',
-            'phone', 'email', 'address', 'status', 'notes', 'interests'
+            'name', 'phone', 'phone2', 'email', 'address',
+            'customer_type', 'category', 'status', 'interests',
+            'notes', 'image'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'image': forms.FileInput(attrs={'class': 'form-control'}),
-            'category': forms.Select(attrs={'class': 'form-select'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'customer_type': forms.Select(attrs={'class': 'form-select'}),
-            'phone': forms.TextInput(
-                attrs={'class': 'form-control', 'dir': 'ltr'}
-            ),
-            'email': forms.EmailInput(
-                attrs={'class': 'form-control', 'dir': 'ltr'}
-            ),
-            'address': forms.Textarea(
-                attrs={'class': 'form-control', 'rows': 3}
-            ),
+            'category': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
-            'notes': forms.Textarea(
-                attrs={'class': 'form-control', 'rows': 3}
-            ),
-            'interests': forms.Textarea(
-                attrs={'class': 'form-control', 'rows': 3}
-            ),
+            'interests': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'image': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        if user and not user.is_superuser:
-            self.instance.branch = user.branch
-            self.instance.created_by = user
+        if user and hasattr(user, 'branch') and user.branch:
+            if user.branch.is_main_branch:
+                # If user is from main branch, add branch field
+                Branch = type(user.branch)
+                self.fields['branch'] = forms.ModelChoiceField(
+                    queryset=Branch.objects.filter(is_active=True),
+                    label=_('الفرع'),
+                    required=True,
+                    empty_label=_('اختر الفرع'),
+                    widget=forms.Select(attrs={
+                        'class': 'form-select',
+                        'required': 'required'
+                    })
+                )
+                if 'branch' not in self._meta.fields:
+                    self._meta.fields.append('branch')
+            else:
+                # If user is not from main branch, their branch will be set in the view
+                self.fields.pop('branch', None)
 
-        # تحديث خيارات نوع العميل بشكل ديناميكي
+        # Update customer type choices dynamically
         customer_types = Customer.get_customer_types()
         if not customer_types:
             from .models import CustomerType
-            # إذا كانت القائمة فارغة، نجلب البيانات مباشرة
             types = [(t.code, t.name) 
                     for t in CustomerType.objects.filter(is_active=True).order_by('name')]
             self.fields['customer_type'].choices = types

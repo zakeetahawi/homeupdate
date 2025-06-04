@@ -362,6 +362,17 @@
                                 <small class="text-muted">اختياري</small>
                             </div>
                         </div>
+                        {% if user.branch.is_main_branch %}
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.branch.id_for_label }}" class="form-label required-field">{{ form.branch.label }}</label>
+                                {{ form.branch }}
+                                {% if form.branch.errors %}
+                                <span class="error-text">{{ form.branch.errors.0 }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>

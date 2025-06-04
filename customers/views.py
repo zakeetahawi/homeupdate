@@ -3,8 +3,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
+from django.utils.translation import gettext_lazy as _
 from django.core.paginator import Paginator
-from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.db.models import Count, Case, When, IntegerField
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -124,9 +125,8 @@ def customer_create(request):
     """
     View for creating a new customer with image upload
     """
-    # Check if user has a branch assigned
     if not request.user.branch:
-        messages.error(request, 'لا يمكنك إضافة عميل لأنك غير مرتبط بفرع. يرجى التواصل مع مدير النظام.')
+        messages.error(request, _('لا يمكنك إضافة عميل لأنك غير مرتبط بفرع'))
         return redirect('customers:customer_list')
 
     if request.method == 'POST':
@@ -135,34 +135,31 @@ def customer_create(request):
             try:
                 customer = form.save(commit=False)
                 customer.created_by = request.user
-                customer.branch = request.user.branch
-
-                # Get notes before saving customer
-                notes_text = form.cleaned_data.get('notes')
-
-                # Save customer first
+                
+                # تعيين الفرع
+                if request.user.branch.is_main_branch:
+                    branch = form.cleaned_data.get('branch')
+                    if not branch:
+                        messages.error(request, _('يرجى اختيار الفرع'))
+                        return render(request, 'customers/customer_form.html', {'form': form})
+                    customer.branch = branch
+                else:
+                    customer.branch = request.user.branch
+                
                 customer.save()
-
-                # Create CustomerNote if notes were provided
-                if notes_text:
-                    CustomerNote.objects.create(
-                        customer=customer,
-                        note=notes_text,
-                        created_by=request.user
-                    )
-
-                messages.success(request, 'تم إضافة العميل بنجاح.')
+                messages.success(request, _('تم إضافة العميل {} بنجاح').format(customer.name))
                 return redirect('customers:customer_detail', pk=customer.pk)
             except Exception as e:
-                messages.error(request, f'حدث خطأ أثناء إضافة العميل: {str(e)}')
+                messages.error(request, _('حدث خطأ أثناء حفظ العميل: {}').format(str(e)))
+        else:
+            print(f"Form errors: {form.errors}")  # للتشخيص
     else:
-        form = CustomerForm(initial={'branch': request.user.branch}, user=request.user)
-
+        form = CustomerForm(user=request.user)
+    
     context = {
         'form': form,
-        'title': 'إضافة عميل جديد',
+        'title': _('إضافة عميل جديد')
     }
-
     return render(request, 'customers/customer_form.html', context)
 
 @login_required

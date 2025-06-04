@@ -150,7 +150,8 @@ class Customer(models.Model):
         _('رقم الهاتف الثاني'),
         max_length=20,
         blank=True,
-        null=True
+        null=True,
+        help_text=_('رقم هاتف إضافي اختياري')
     )
     email = models.EmailField(_('البريد الإلكتروني'), blank=True, null=True)
     address = models.TextField(_('العنوان'))
