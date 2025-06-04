@@ -183,21 +183,52 @@ class Customer(models.Model):
         verbose_name_plural = _('سجل العملاء')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['name'], name='customer_name_idx'),
-            models.Index(fields=['phone'], name='customer_phone_idx'),
-            models.Index(fields=['status'], name='customer_status_idx'),
+            # فهارس بسيطة للحقول الأساسية
+            models.Index(fields=['code'], name='cust_code_idx'),
+            models.Index(fields=['name'], name='cust_name_idx'),
+            models.Index(
+                fields=['phone', 'phone2'],
+                name='cust_phones_idx'
+            ),
+            models.Index(fields=['email'], name='cust_email_idx'),
+            models.Index(fields=['status'], name='cust_status_idx'),
             models.Index(
                 fields=['customer_type'],
-                name='customer_type_idx'
-            ),
-            models.Index(
-                fields=['branch', 'status'],
-                name='customer_branch_status_idx'
+                name='cust_type_idx'
             ),
             models.Index(
                 fields=['created_at'],
-                name='customer_created_at_idx'
+                name='cust_created_idx'
             ),
+            models.Index(
+                fields=['updated_at'],
+                name='cust_updated_idx'
+            ),
+            
+            # فهارس مركبة للبحث المتعدد
+            models.Index(
+                fields=['branch', 'status', 'customer_type'],
+                name='cust_br_st_type_idx'
+            ),
+            models.Index(
+                fields=['name', 'phone', 'email'],
+                name='cust_search_idx'
+            ),
+            models.Index(
+                fields=['created_by', 'branch'],
+                name='cust_creator_branch_idx'
+            ),
+            
+            # فهرس جزئي للعملاء النشطين
+            models.Index(
+                fields=['name', 'phone'],
+                name='cust_active_idx',
+                condition=models.Q(status='active')
+            ),
+        ]
+        permissions = [
+            ('view_customer_reports', _('Can view customer reports')),
+            ('export_customer_data', _('Can export customer data')),
         ]
 
     def __str__(self):
