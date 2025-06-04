@@ -130,7 +130,7 @@ def customer_create(request):
         return redirect('customers:customer_list')
 
     if request.method == 'POST':
-        form = CustomerForm(request.POST, request.FILES)
+        form = CustomerForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             try:
                 customer = form.save(commit=False)
@@ -156,7 +156,7 @@ def customer_create(request):
             except Exception as e:
                 messages.error(request, f'حدث خطأ أثناء إضافة العميل: {str(e)}')
     else:
-        form = CustomerForm(initial={'branch': request.user.branch})
+        form = CustomerForm(initial={'branch': request.user.branch}, user=request.user)
 
     context = {
         'form': form,
@@ -174,13 +174,13 @@ def customer_update(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
 
     if request.method == 'POST':
-        form = CustomerForm(request.POST, request.FILES, instance=customer)
+        form = CustomerForm(request.POST, request.FILES, instance=customer, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, 'تم تحديث بيانات العميل بنجاح.')
             return redirect('customers:customer_detail', pk=customer.pk)
     else:
-        form = CustomerForm(instance=customer)
+        form = CustomerForm(instance=customer, user=request.user)
 
     context = {
         'form': form,
@@ -362,3 +362,9 @@ class CustomerDashboardView(LoginRequiredMixin, TemplateView):
         context['recent_customers'] = customers.order_by('-created_at')[:10]
 
         return context
+
+@login_required
+def test_customer_form(request):
+    """Test view for debugging customer form"""
+    form = CustomerForm(user=request.user)
+    return render(request, '../test_form.html', {'form': form})

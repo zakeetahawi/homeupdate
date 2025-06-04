@@ -78,23 +78,18 @@ class CustomerTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    form = CustomerAdminForm
-    
-    list_display = [
-        'code', 'customer_image', 'name', 'customer_type_display',
+    form = CustomerAdminForm  # استخدام النموذج المخصص    list_display = [
+        'code', 'customer_image', 'name', 'customer_type_name',
         'branch', 'phone', 'phone2', 'status', 'category'
     ]
-    
     list_filter = [
         'status', 'customer_type', 'category',
         'branch', 'created_at'
     ]
-    
     search_fields = [
         'code', 'name', 'phone', 'phone2', 'email',
         'notes', 'category__name'
     ]
-    
     readonly_fields = ['created_by', 'created_at', 'updated_at']
 
     fieldsets = (
@@ -106,27 +101,22 @@ class CustomerAdmin(admin.ModelAdmin):
         }),
         (_('معلومات الاتصال'), {
             'fields': ('phone', 'phone2', 'email', 'address')
-        }),
-        (_('معلومات إضافية'), {
+        }),        (_('معلومات إضافية'), {
             'fields': ('branch', 'interests', 'notes')
-        }),
-        (_('معلومات النظام'), {
+        }),        (_('معلومات النظام'), {
             'classes': ('collapse',),
             'fields': ('created_by', 'created_at', 'updated_at')
         }),
-    )
-
-    def customer_type_display(self, obj):
-        """عرض نوع العميل بالاسم المقروء"""
+    )    def customer_type_name(self, obj):
+        """عرض نوع العميل بالاسم"""
         if not obj or not obj.customer_type:
             return 'غير محدد'
         
-        # الحصول على قاموس أنواع العملاء
         customer_types_dict = dict(get_customer_types())
         return customer_types_dict.get(obj.customer_type, obj.customer_type)
     
-    customer_type_display.short_description = _('نوع العميل')
-    customer_type_display.admin_order_field = 'customer_type'
+    customer_type_name.short_description = _('نوع العميل')
+    customer_type_name.admin_order_field = 'customer_type'
 
     def customer_image(self, obj):
         if obj.image:
@@ -139,7 +129,7 @@ class CustomerAdmin(admin.ModelAdmin):
     customer_image.short_description = _('الصورة')
 
     def save_model(self, request, obj, form, change):
-        if not change:
+        if not change:  # If creating new object
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 

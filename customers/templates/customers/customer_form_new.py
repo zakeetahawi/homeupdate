@@ -299,13 +299,10 @@
                                         {% endif %}
                                     </div>
                                 </div>
-                                <div class="col-md-6">                                    <div class="form-group">
+                                <div class="col-md-6">
+                                    <div class="form-group">
                                         <label for="{{ form.customer_type.id_for_label }}" class="form-label required-field">{{ form.customer_type.label }}</label>
-                                        <select name="customer_type" class="form-select" id="{{ form.customer_type.id_for_label }}">
-                                            {% for choice in form.customer_type.field.choices %}
-                                            <option value="{{ choice.0 }}"{% if form.customer_type.value == choice.0 %} selected{% endif %}>{{ choice.1 }}</option>
-                                            {% endfor %}
-                                        </select>
+                                        {{ form.customer_type }}
                                         {% if form.customer_type.errors %}
                                         <span class="error-text">{{ form.customer_type.errors.0 }}</span>
                                         {% endif %}
