@@ -446,3 +446,35 @@ class SystemSettings(models.Model):
         """الحصول على إعدادات النظام (إنشاء إذا لم تكن موجودة)"""
         settings, created = cls.objects.get_or_create(pk=1)
         return settings
+class BranchMessage(models.Model):
+    MESSAGE_TYPES = [
+        ('welcome', 'رسالة ترحيبية'),
+        ('goal', 'هدف'),
+        ('announcement', 'إعلان'),
+        ('holiday', 'إجازة'),
+    ]
+
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, verbose_name="الفرع", related_name='messages')
+    title = models.CharField(max_length=200, verbose_name="العنوان")
+    message = models.TextField(verbose_name="نص الرسالة")
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES, default='announcement', verbose_name="نوع الرسالة")
+    color = models.CharField(max_length=50, default='primary', verbose_name="لون الرسالة")
+    icon = models.CharField(max_length=50, default='fas fa-bell', verbose_name="الأيقونة")
+    start_date = models.DateTimeField(verbose_name="تاريخ البداية")
+    end_date = models.DateTimeField(verbose_name="تاريخ النهاية")
+    is_active = models.BooleanField(default=True, verbose_name="نشط")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الإنشاء")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث")
+
+    class Meta:
+        verbose_name = "رسالة الفرع"
+        verbose_name_plural = "رسائل الفروع"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.branch.name} - {self.title}"
+
+    @property
+    def is_valid(self):
+        now = timezone.now()
+        return self.is_active and self.start_date <= now <= self.end_date

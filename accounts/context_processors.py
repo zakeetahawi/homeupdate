@@ -1,12 +1,14 @@
-from .models import Department, CompanyInfo, SystemSettings
+from .models import Department, CompanyInfo, SystemSettings, BranchMessage
 from .utils import get_user_notifications
 from django.utils import timezone
 from accounts.models import FooterSettings
 from django.core.cache import cache
 
+
 def departments(request):
     """
-    Context processor to add departments to all templates in a hierarchical structure
+    Context processor to add departments to all templates in a hierarchical
+    structure.
     """
     # Get all active departments
     all_departments = Department.objects.filter(is_active=True).order_by('order')
@@ -22,28 +24,41 @@ def departments(request):
         if request.user.is_superuser:
             user_departments = all_departments
             user_parent_departments = parent_departments
-        else:
-            user_departments = request.user.departments.filter(is_active=True).order_by('order')
+        else:            # Get user departments with ordering
+            user_departments = (
+                request.user.departments
+                .filter(is_active=True)
+                .order_by('order')
+            )
+            
             # Get unique parent departments
             user_parent_ids = set()
             for dept in user_departments:
-                if dept.parent:
-                    user_parent_ids.add(dept.parent.id)
-                else:
-                    user_parent_ids.add(dept.id)
+                # Add either parent id or own id
+                dept_id = dept.parent.id if dept.parent else dept.id
+                user_parent_ids.add(dept_id)
 
-            user_parent_departments = Department.objects.filter(id__in=user_parent_ids, is_active=True).order_by('order')
-
+            # Get parent departments
+            user_parent_departments = (
+                Department.objects
+                .filter(
+                    id__in=user_parent_ids, 
+                    is_active=True
+                )
+                .order_by('order')
+            )
+            
     return {
         'all_departments': all_departments,
         'parent_departments': parent_departments,
         'user_departments': user_departments,
-        'user_parent_departments': user_parent_departments,
+        'user_parent_departments': user_parent_departments
     }
+
 
 def notifications(request):
     """
-    Context processor to add notifications to all templates
+    Context processor to add notifications to all templates.
     """
     unread_notifications = []
     recent_notifications = []
@@ -142,3 +157,29 @@ def system_settings(request):
         'currency_code': settings.currency,
         'currency_symbol': settings.CURRENCY_SYMBOLS.get(settings.currency, settings.currency)
     }
+
+def user_context(request):
+    """Context processor to add user-specific context to all templates."""
+    context = {}
+    if request.user.is_authenticated:
+        has_branch = hasattr(request.user, 'branch')
+        context['user_branch'] = request.user.branch if has_branch else None
+    return context
+
+
+def branch_messages(request):
+    """
+    Context processor to add branch messages to templates.
+    Only loads messages for the home page.
+    """
+    if (request.user.is_authenticated and
+            hasattr(request.user, 'branch') and
+            request.path == '/'):
+        messages = BranchMessage.objects.filter(
+            branch=request.user.branch,
+            is_active=True,
+            start_date__lte=timezone.now(),
+            end_date__gte=timezone.now()
+        ).order_by('-created_at')
+        return {'branch_messages': messages}
+    return {'branch_messages': []}

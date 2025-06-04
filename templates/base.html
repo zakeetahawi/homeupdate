@@ -216,7 +216,134 @@
                 </div>
             </div>
         </div>
-    </nav>    <!-- Main Content -->
+    </nav>      <!-- Branch Messages - Only shown on home page -->
+    {% if branch_messages and request.path == '/' %}
+    <script>
+        // Wait for all DOM content and resources to load for optimal display timing
+        window.addEventListener('load', function() {
+            const branchMessages = [
+                {% for message in branch_messages %}
+                    {
+                        title: "{{ message.title|escapejs }}",
+                        message: "{{ message.message|escapejs }}",
+                        type: "{{ message.message_type|escapejs }}",
+                        color: "{{ message.color|escapejs }}",
+                        icon: "{{ message.icon|escapejs }}"
+                    }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ];
+
+            let currentMessageIndex = 0;
+            const showMessage = () => {
+                if (currentMessageIndex >= branchMessages.length) return;
+                
+                const message = branchMessages[currentMessageIndex];
+                currentMessageIndex++;
+
+                Swal.fire({
+                    title: message.title,
+                    html: message.message,
+                    icon: getMessageIcon(message.type),
+                    timer: 8000,
+                    timerProgressBar: true,
+                    showClass: {
+                        popup: 'animate__animated animate__fadeInDown'
+                    },
+                    hideClass: {
+                        popup: 'animate__animated animate__fadeOutUp'
+                    },
+                    customClass: {
+                        popup: 'rtl-popup',
+                        title: 'rtl-title',
+                        content: 'rtl-content',
+                        container: 'branch-message-container'
+                    },
+                    showCloseButton: true,
+                    position: 'top-start',
+                    showConfirmButton: false,
+                    allowOutsideClick: true,
+                    background: getMessageBackground(message.color),
+                    didOpen: (toast) => {
+                        const icon = document.createElement('i');
+                        icon.className = message.icon;
+                        const title = toast.querySelector('.swal2-title');
+                        if (title) {
+                            title.insertBefore(icon, title.firstChild);
+                            icon.style.marginLeft = '10px';
+                        }
+                        
+                        toast.addEventListener('mouseenter', Swal.stopTimer);
+                        toast.addEventListener('mouseleave', Swal.resumeTimer);
+                    },
+                    didClose: () => {
+                        setTimeout(() => {
+                            if (currentMessageIndex < branchMessages.length) {
+                                showMessage();
+                            }
+                        }, 500);
+                    }
+                });
+            };
+
+            function getMessageIcon(type) {
+                switch(type) {
+                    case 'welcome':
+                        return 'success';
+                    case 'goal':
+                        return 'info';
+                    case 'announcement':
+                        return 'info';
+                    case 'holiday':
+                        return 'warning';
+                    default:
+                        return 'info';
+                }
+            }
+
+            function getMessageBackground(color) {
+                switch(color) {
+                    case 'danger':
+                        return '#f8d7da';
+                    case 'warning':
+                        return '#fff3cd';
+                    case 'success':
+                        return '#d4edda';
+                    case 'info':
+                        return '#d1ecf1';
+                    default:
+                        return '#ffffff';
+                }
+            }
+
+            // Start showing messages after a short delay to ensure page is fully loaded
+            setTimeout(showMessage, 500);
+        });
+    </script>
+
+    <style>
+        .branch-message-container {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .branch-message-container i {
+            margin-left: 10px;
+            font-size: 1.2em;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 768px) {
+            .branch-message-container {
+                margin: 5px;
+                padding: 10px;
+            }
+        }
+    </style>
+    {% endif %}
+
+    <!-- Main Content -->
     <main class="container mt-4 flex-grow">
         {% if messages %}
         <div class="messages">

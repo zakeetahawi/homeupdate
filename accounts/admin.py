@@ -9,7 +9,7 @@ from django.utils.html import format_html
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from .models import (
     User, CompanyInfo, Branch, Notification, Department, Salesperson,
-    Role, UserRole, SystemSettings
+    Role, UserRole, SystemSettings, BranchMessage
 )
 
 class DepartmentFilter(admin.SimpleListFilter):
@@ -399,3 +399,21 @@ class SystemSettingsAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # السماح للموظفين بحذف إعدادات النظام
         return request.user.is_staff
+
+@admin.register(BranchMessage)
+class BranchMessageAdmin(admin.ModelAdmin):
+    list_display = ('title', 'branch', 'message_type', 'is_active', 'start_date', 'end_date')
+    list_filter = ('branch', 'message_type', 'is_active')
+    search_fields = ('title', 'message')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        ('معلومات الرسالة', {
+            'fields': ('branch', 'title', 'message', 'message_type')
+        }),
+        ('المظهر', {
+            'fields': ('color', 'icon')
+        }),
+        ('التوقيت', {
+            'fields': ('start_date', 'end_date', 'is_active')
+        })
+    )

@@ -92,8 +92,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'crm.middleware.permission_handler.PermissionDeniedMiddleware',
     # 'crm.middleware.PerformanceMiddleware',  # تم تعطيل مؤقتاً
     # 'crm.middleware.LazyLoadMiddleware',  # تم تعطيل مؤقتاً
 ]
@@ -123,6 +123,7 @@ TEMPLATES = [
                 'accounts.context_processors.company_info',
                 'accounts.context_processors.footer_settings',
                 'accounts.context_processors.system_settings',
+                'accounts.context_processors.branch_messages',  # إضافة context processor الجديد
             ],
         },
     },

@@ -4,6 +4,8 @@ from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
+from django.db.models import Q, ProtectedError
+from django.core.paginator import Paginator
 from django.core.paginator import Paginator
 from django.db.models import Count, Case, When, IntegerField
 from django.db.models import Q
@@ -183,21 +185,33 @@ def customer_update(request, pk):
     """
     View for updating customer details including image
     """
-    customer = get_object_or_404(Customer, pk=pk)
+    try:
+        customer = Customer.objects.select_related('branch').get(pk=pk)
+    except Customer.DoesNotExist:
+        messages.error(request, 'العميل غير موجود في قاعدة البيانات.')
+        return redirect('customers:customer_list')
+
+    # Check if user has access to this customer's branch
+    if not request.user.is_superuser and customer.branch != request.user.branch:
+        messages.error(request, 'لا يمكنك تعديل بيانات عميل في فرع آخر')
+        return redirect('customers:customer_list')
 
     if request.method == 'POST':
         form = CustomerForm(request.POST, request.FILES, instance=customer, user=request.user)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'تم تحديث بيانات العميل بنجاح.')
-            return redirect('customers:customer_detail', pk=customer.pk)
+            try:
+                form.save()
+                messages.success(request, 'تم تحديث بيانات العميل بنجاح.')
+                return redirect('customers:customer_detail', pk=customer.pk)
+            except Exception as e:
+                messages.error(request, f'حدث خطأ أثناء تحديث بيانات العميل: {str(e)}')
     else:
         form = CustomerForm(instance=customer, user=request.user)
 
     context = {
         'form': form,
         'customer': customer,
-        'title': 'تعديل بيانات العميل',
+        'title': 'تعديل بيانات العميل'
     }
 
     return render(request, 'customers/customer_form.html', context)
@@ -205,20 +219,73 @@ def customer_update(request, pk):
 @login_required
 @permission_required('customers.delete_customer', raise_exception=True)
 def customer_delete(request, pk):
-    """
-    View for deleting a customer and their related data
-    """
+    """View for deleting a customer with proper error handling."""
     customer = get_object_or_404(Customer, pk=pk)
 
-    if request.method == 'POST':
-        customer.delete()
-        messages.success(request, 'تم حذف العميل بنجاح.')
-        return redirect('customers:customer_list')
-
-    context = {
-        'customer': customer,
+    # Check related records before attempting deletion 
+    has_related_records = False
+    relations = {
+        'inspections': _('معاينة'),
+        'orders': _('طلب'),
+        'installations': _('تركيب'),
     }
+    
+    related_counts = {}
+    for rel, label in relations.items():
+        if hasattr(customer, rel):
+            count = getattr(customer, rel).count()
+            if count > 0:
+                has_related_records = True
+                related_counts[label] = count
 
+    if request.method == 'POST':
+        if has_related_records:
+            # Format message showing all related records
+            records_msg = ', '.join(
+                f'{count} {label}'
+                for label, count in related_counts.items()
+            )
+            msg = (
+                f'لا يمكن حذف العميل لوجود السجلات التالية: {records_msg}. '
+                'يمكنك تعطيل حساب العميل بدلاً من حذفه.'
+            )
+            messages.error(request, msg)
+            return redirect('customers:customer_detail', pk=customer.pk)
+            
+        try:
+            customer.delete()
+            messages.success(request, 'تم حذف العميل بنجاح.')
+            return redirect('customers:customer_list')
+        except ProtectedError as e:
+            # Determine related records from protection error
+            protected_objects = list(e.protected_objects)
+            relations_found = {
+                'inspection': _('معاينات'),
+                'order': _('طلبات'), 
+                'installation': _('تركيبات')
+            }
+            
+            found_relations = [
+                rel_name
+                for model_name, rel_name in relations_found.items()
+                if any(obj._meta.model_name == model_name 
+                      for obj in protected_objects)
+            ]
+            
+            if found_relations:
+                records_msg = ' و'.join(found_relations)
+                msg = (
+                    f'لا يمكن حذف العميل لوجود {records_msg} مرتبطة به. '
+                    'يمكنك تعطيل حساب العميل بدلاً من حذفه.'
+                )
+                messages.error(request, msg)
+            return redirect('customers:customer_detail', pk=customer.pk)
+        except Exception as e:
+            msg = f'حدث خطأ أثناء محاولة حذف العميل: {str(e)}'
+            messages.error(request, msg)
+            return redirect('customers:customer_detail', pk=customer.pk)
+
+    context = {'customer': customer}
     return render(request, 'customers/customer_confirm_delete.html', context)
 
 @login_required
