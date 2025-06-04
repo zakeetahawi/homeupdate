@@ -13,6 +13,14 @@ from .models import Customer, CustomerCategory, CustomerNote
 from orders.models import Order
 from .forms import CustomerForm, CustomerSearchForm, CustomerNoteForm
 
+def get_queryset_for_user(request):
+    """دالة مساعدة للحصول على العملاء المسموح للمستخدم برؤيتهم"""
+    if request.user.is_superuser:
+        return Customer.objects.all()
+    if request.user.branch:
+        return Customer.objects.filter(branch=request.user.branch)
+    return Customer.objects.none()
+
 @login_required
 def customer_list(request):
     """
@@ -20,9 +28,9 @@ def customer_list(request):
     تم تحسين الأداء باستخدام select_related وتحسين الاستعلامات
     """
     form = CustomerSearchForm(request.GET)
-
-    # استخدام select_related لتحميل البيانات المرتبطة مسبقًا
-    customers = Customer.objects.select_related('category', 'branch', 'created_by')
+    customers = get_queryset_for_user(request).select_related(
+        'category', 'branch', 'created_by'
+    )
 
     # تحسين الاستعلامات باستخدام الفهارس
     if form.is_valid():
@@ -36,10 +44,12 @@ def customer_list(request):
             # استخدام استعلامات منفصلة لتحسين الأداء
             name_query = Q(name__icontains=search)
             code_query = Q(code__icontains=search)
-            phone_query = Q(phone__icontains=search)
+            phone_query = Q(phone__icontains=search) | Q(phone2__icontains=search)
             email_query = Q(email__icontains=search)
 
-            customers = customers.filter(name_query | code_query | phone_query | email_query)
+            customers = customers.filter(
+                name_query | code_query | phone_query | email_query
+            )
 
         # استخدام الفهارس للتصفية
         if category:
@@ -86,7 +96,12 @@ def customer_detail(request, pk):
     View for displaying customer details, orders, and notes
     تحسين الأداء باستخدام select_related و prefetch_related
     """
-    customer = get_object_or_404(Customer.objects.select_related('category', 'branch', 'created_by'), pk=pk)
+    customer = get_object_or_404(
+        get_queryset_for_user(request).select_related(
+            'category', 'branch', 'created_by'
+        ),
+        pk=pk
+    )
 
     # تحسين استعلام الطلبات باستخدام prefetch_related
     customer_orders = customer.customer_orders.select_related('customer', 'salesperson', 'branch').prefetch_related('items').order_by('-created_at')[:5]

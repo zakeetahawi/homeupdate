@@ -138,9 +138,32 @@ class CustomerAdmin(admin.ModelAdmin):
         return '-'
     customer_image.short_description = _('الصورة')
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        # فلترة العملاء حسب فرع المستخدم
+        if request.user.branch:
+            return qs.filter(branch=request.user.branch)
+        return qs.none()
+
+    def has_change_permission(self, request, obj=None):
+        if not obj or request.user.is_superuser:
+            return True
+        # السماح بالتعديل فقط للعملاء في نفس فرع المستخدم
+        return obj.branch == request.user.branch
+
+    def has_delete_permission(self, request, obj=None):
+        if not obj or request.user.is_superuser:
+            return True
+        # السماح بالحذف فقط للعملاء في نفس فرع المستخدم
+        return obj.branch == request.user.branch
+
     def save_model(self, request, obj, form, change):
         if not change:
             obj.created_by = request.user
+            if not request.user.is_superuser and not obj.branch:
+                obj.branch = request.user.branch
         super().save_model(request, obj, form, change)
 
     class Media:
