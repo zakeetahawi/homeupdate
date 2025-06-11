@@ -83,6 +83,18 @@
     .sync-options .form-check {
         margin-bottom: 10px;
     }
+    
+    .sync-status {
+        margin-top: 10px;
+        font-weight: bold;
+    }
+    .sync-flash {
+        animation: flash 1s infinite;
+    }
+    @keyframes flash {
+        0%, 100% {opacity: 1;}
+        50% {opacity: 0.5;}
+    }
 </style>
 {% endblock %}
 
@@ -175,8 +187,7 @@
                 </div>
                 <div class="sync-body">
                     {% if config %}
-                    <form method="post" action="{% url 'odoo_db_manager:google_sync_options' %}">
-                        {% csrf_token %}
+                    <form id="sync-options-form">
                         <div class="sync-options">
                             <div class="row">
                                 <div class="col-md-6">
@@ -196,6 +207,12 @@
                                         <input class="form-check-input" type="checkbox" name="sync_customers" id="sync_customers" {% if config.sync_customers %}checked{% endif %}>
                                         <label class="form-check-label" for="sync_customers">
                                             <i class="fas fa-user-tie me-1"></i> مزامنة العملاء
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="sync_inspections" id="sync_inspections" {% if config.sync_inspections %}checked{% endif %}>
+                                        <label class="form-check-label" for="sync_inspections">
+                                            <i class="fas fa-search me-1"></i> مزامنة المعاينات
                                         </label>
                                     </div>
                                 </div>
@@ -227,9 +244,7 @@
                                 <input type="number" class="form-control" id="sync_frequency" name="sync_frequency" value="{{ config.sync_frequency }}" min="1" max="168">
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary mt-3 w-100">
-                            <i class="fas fa-save"></i> حفظ الإعدادات
-                        </button>
+                        <button type="button" id="sync-now">مزامنة الآن</button>
                     </form>
                     {% else %}
                     <div class="alert alert-warning mb-0">
@@ -243,77 +258,21 @@
     </div>
 
     <!-- سجل المزامنة -->
-    <div class="card sync-card mb-4">
-        <div class="sync-header">
-            <h5 class="mb-0">
-                <i class="fas fa-history me-2"></i> سجل المزامنة
-            </h5>
-        </div>
-        <div class="sync-body">
-            {% if logs %}
-            <div class="table-responsive">
-                <table class="table table-striped sync-log-table">
-                    <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>الحالة</th>
-                            <th>الرسالة</th>
-                            <th>التفاصيل</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in logs %}
-                        <tr>
-                            <td>{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
-                            <td>
-                                {% if log.status == 'success' %}
-                                <span class="badge bg-success">{{ log.get_status_display }}</span>
-                                {% elif log.status == 'error' %}
-                                <span class="badge bg-danger">{{ log.get_status_display }}</span>
-                                {% else %}
-                                <span class="badge bg-warning">{{ log.get_status_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ log.message }}</td>
-                            <td>
-                                {% if log.details %}
-                                <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#logModal{{ log.id }}">
-                                    <i class="fas fa-info-circle"></i> عرض
-                                </button>
-                                
-                                <!-- Modal -->
-                                <div class="modal fade" id="logModal{{ log.id }}" tabindex="-1" aria-labelledby="logModalLabel{{ log.id }}" aria-hidden="true">
-                                    <div class="modal-dialog modal-lg">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="logModalLabel{{ log.id }}">تفاصيل المزامنة</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <pre class="bg-light p-3 rounded">{{ log.details|odoo_pprint }}</pre>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% else %}
-                                <span class="text-muted">لا توجد تفاصيل</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="alert alert-info mb-0">
-                <i class="fas fa-info-circle me-2"></i>
-                لا توجد سجلات مزامنة حتى الآن.
-            </div>
-            {% endif %}
-        </div>
+    <div id="sync-log-container">
+        <h2>سجل المزامنة</h2>
+        <table id="sync-log-table" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>الحالة</th>
+                    <th>الرسالة</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- سيتم ملء السجلات هنا بواسطة جافا سكريبت -->
+            </tbody>
+        </table>
     </div>
 
     <!-- معلومات جدول البيانات -->
@@ -398,62 +357,42 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(function() {
-            // إظهار رسالة نجاح
-            Swal.fire({
-                title: 'تم النسخ!',
-                text: 'تم نسخ معرف جدول البيانات إلى الحافظة',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false
-            });
-        }, function(err) {
-            console.error('فشل نسخ النص: ', err);
+    function fetchSyncLogs() {
+        $.ajax({
+            url: '{% url "odoo_db_manager:google_sync_logs_api" %}',
+            method: 'GET',
+            success: function(data) {
+                var tbody = '';
+                data.logs.forEach(function(log) {
+                    tbody += '<tr>' +
+                             '<td>' + log.created_at + '</td>' +
+                             '<td>' + log.status + '</td>' +
+                             '<td>' + log.message + '</td>' +
+                             '<td><button class="btn btn-info btn-sm" onclick="showDetails(' + JSON.stringify(log.details) + ')">عرض التفاصيل</button></td>' +
+                             '</tr>';
+                });
+                $('#sync-log-table tbody').html(tbody);
+            },
+            error: function() {
+                console.error('فشل تحميل سجل المزامنة');
+            }
         });
     }
-    
-    // عرض رسالة نجاح المزامنة إذا كان ضروريًا
-    {% if sync_success %}
-    document.addEventListener('DOMContentLoaded', function() {
+
+    function showDetails(details) {
         Swal.fire({
-            title: 'تمت المزامنة بنجاح!',
-            html: `
-                <div style="text-align: right; direction: rtl;">
-                    <p>تمت مزامنة البيانات مع Google Sheets بنجاح.</p>
-                    
-                    <div class="alert alert-success mt-3">
-                        <i class="fas fa-check-circle"></i>
-                        تمت مزامنة {{ sync_results.total_items }} عنصر في {{ sync_results.duration }} ثانية.
-                    </div>
-                </div>
-            `,
-            icon: 'success',
-            confirmButtonText: 'تم'
+            title: 'تفاصيل المزامنة',
+            html: '<pre style="text-align:right; direction:rtl; white-space:pre-wrap;">' + details + '</pre>',
+            width: 600,
+            confirmButtonText: 'إغلاق'
         });
+    }
+
+    $(document).ready(function() {
+        fetchSyncLogs();
+        setInterval(fetchSyncLogs, 30000); // تحديث كل 30 ثانية
     });
-    {% endif %}
-    
-    // عرض رسالة خطأ المزامنة إذا كان ضروريًا
-    {% if sync_error %}
-    document.addEventListener('DOMContentLoaded', function() {
-        Swal.fire({
-            title: 'فشلت المزامنة!',
-            html: `
-                <div style="text-align: right; direction: rtl;">
-                    <p>حدث خطأ أثناء مزامنة البيانات مع Google Sheets.</p>
-                    
-                    <div class="alert alert-danger mt-3">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        {{ sync_error_message }}
-                    </div>
-                </div>
-            `,
-            icon: 'error',
-            confirmButtonText: 'تم'
-        });
-    });
-    {% endif %}
 </script>
 {% endblock %}

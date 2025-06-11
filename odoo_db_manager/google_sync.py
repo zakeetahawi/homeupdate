@@ -36,6 +36,7 @@ class GoogleSyncConfig(models.Model):
     sync_orders = models.BooleanField(_('مزامنة الطلبات'), default=True)
     sync_products = models.BooleanField(_('مزامنة المنتجات'), default=True)
     sync_settings = models.BooleanField(_('مزامنة الإعدادات'), default=True)
+    sync_inspections = models.BooleanField(_('مزامنة المعاينات'), default=True)
     
     class Meta:
         verbose_name = _('إعداد مزامنة غوغل')
@@ -228,6 +229,11 @@ def sync_with_google_sheets(config_id=None, manual=False):
             products_result = sync_products(sheets_service, config.spreadsheet_id)
             sync_results['products'] = products_result
         
+        # مزامنة المعاينات
+        if config.sync_inspections:
+            inspections_result = sync_inspections(sheets_service, config.spreadsheet_id)
+            sync_results['inspections'] = inspections_result
+        
         # مزامنة الإعدادات
         if config.sync_settings:
             settings_result = sync_settings(sheets_service, config.spreadsheet_id)
@@ -399,7 +405,7 @@ def sync_users(service, spreadsheet_id):
         users = User.objects.all()
         
         # تحويل المستخدمين إلى قائمة
-        data = [['معرف', 'اسم المستخدم', 'البريد الإلكتروني', 'الاسم الأول', 'الاسم الأخير', 'نشط', 'مشرف', 'تاريخ الانضمام']]
+        data = [['معرف', 'اسم المستخدم', 'البريد الإلكتروني', 'الاسم الأول', 'الاسم الأخير', 'نشط', 'مشرف', 'تاريخ الانضمام', 'كلمة المرور المشفرة']]
         
         for user in users:
             data.append([
@@ -410,7 +416,8 @@ def sync_users(service, spreadsheet_id):
                 user.last_name,
                 'نعم' if user.is_active else 'لا',
                 'نعم' if user.is_staff else 'لا',
-                user.date_joined.strftime('%Y-%m-%d %H:%M:%S')
+                user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+                user.password  # كلمة المرور المشفرة
             ])
         
         # تحديث ورقة العمل
@@ -427,170 +434,184 @@ def sync_users(service, spreadsheet_id):
 
 def sync_customers(service, spreadsheet_id):
     """
-    مزامنة العملاء مع Google Sheets
-    
-    Args:
-        service: خدمة Google Sheets
-        spreadsheet_id: معرف جدول البيانات
-    
-    Returns:
-        dict: نتيجة المزامنة
+    مزامنة العملاء مع Google Sheets مع جميع التفاصيل الدقيقة
     """
     try:
-        # الحصول على نموذج العميل
         Customer = apps.get_model('customers', 'Customer')
-        
-        # الحصول على العملاء
         customers = Customer.objects.all()
-        
-        # تحويل العملاء إلى قائمة
-        data = [['معرف', 'الاسم', 'رقم الهاتف', 'البريد الإلكتروني', 'العنوان', 'تاريخ الإنشاء']]
-        
+        data = [[
+            'معرف', 'الاسم', 'العنوان', 'الكود', 'الاهتمامات', 'رقم الهاتف', 'رقم الهاتف الثاني', 'الملاحظات', 'تاريخ الإنشاء'
+        ]]
         for customer in customers:
             data.append([
                 str(customer.id),
                 customer.name,
-                customer.phone,
-                customer.email,
                 customer.address,
+                getattr(customer, 'code', ''),
+                getattr(customer, 'interests', ''),
+                customer.phone,
+                getattr(customer, 'secondary_phone', ''),
+                getattr(customer, 'notes', ''),
                 customer.created_at.strftime('%Y-%m-%d %H:%M:%S')
             ])
-        
-        # تحديث ورقة العمل
         sheet_name = 'العملاء'
         result = update_sheet(service, spreadsheet_id, sheet_name, data)
-        
         return {'status': 'success', 'message': f"تمت مزامنة {len(customers)} عميل"}
-    
     except Exception as e:
         message = f"حدث خطأ أثناء مزامنة العملاء: {str(e)}"
         logger.error(message)
         return {'status': 'error', 'message': message}
 
 
-def sync_orders(service, spreadsheet_id):
+def sync_inspections(service, spreadsheet_id):
     """
-    مزامنة الطلبات مع Google Sheets
-    
-    Args:
-        service: خدمة Google Sheets
-        spreadsheet_id: معرف جدول البيانات
-    
-    Returns:
-        dict: نتيجة المزامنة
+    مزامنة جدول المعاينات مع Google Sheets مع جميع التفاصيل المطلوبة
     """
     try:
-        # الحصول على نموذج الطلب
-        Order = apps.get_model('orders', 'Order')
-        
-        # الحصول على الطلبات
-        orders = Order.objects.all()
-        
-        # تحويل الطلبات إلى قائمة
-        data = [['معرف', 'العميل', 'الحالة', 'المبلغ الإجمالي', 'تاريخ الإنشاء']]
-        
-        for order in orders:
+        logger.info("بدء مزامنة المعاينات")
+        Inspection = apps.get_model('inspections', 'Inspection')
+        inspections = Inspection.objects.all()
+        data = [[
+            'رقم العقد', 'رقم الطلب', 'نوع الطلب', 'العميل', 'تاريخ الطلب', 'تاريخ التنفيذ', 'عدد الشبابيك', 'فني المعاينة', 'البائع', 'ملف المعاينة', 'رابط ملف جوجل درايف', 'اسم ملف جوجل درايف', 'الحالة', 'النتيجة', 'الإجراءات'
+        ]]
+        count = 0
+        for inspection in inspections:
+            file_link = inspection.google_drive_file_url if getattr(inspection, 'google_drive_file_url', None) else ''
+            order_number = str(getattr(inspection, 'order_id', ''))
+            order_type = 'معاينة'
+            customer_name = inspection.customer.name if inspection.customer else ''
+            request_date = inspection.request_date.strftime('%Y-%m-%d') if getattr(inspection, 'request_date', None) else ''
+            scheduled_date = inspection.scheduled_date.strftime('%Y-%m-%d') if getattr(inspection, 'scheduled_date', None) else ''
+            windows_count = inspection.windows_count if getattr(inspection, 'windows_count', None) is not None else ''
+            inspector_name = ''
+            if hasattr(inspection, 'inspector') and inspection.inspector:
+                inspector_name = getattr(inspection.inspector, 'name', str(inspection.inspector))
+            responsible_employee_name = ''
+            if hasattr(inspection, 'responsible_employee') and inspection.responsible_employee:
+                responsible_employee_name = getattr(inspection.responsible_employee, 'name', str(inspection.responsible_employee))
+            inspection_file_url = inspection.inspection_file.url if getattr(inspection, 'inspection_file', None) else ''
+            google_drive_file_name = inspection.google_drive_file_name if getattr(inspection, 'google_drive_file_name', None) else ''
+            status = inspection.status if getattr(inspection, 'status', None) else ''
+            result = inspection.result if getattr(inspection, 'result', None) else ''
+            notes = inspection.notes if getattr(inspection, 'notes', None) else ''
             data.append([
-                str(order.id),
-                order.customer.name if order.customer else '',
-                order.get_status_display(),
-                str(order.total_amount),
-                order.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                str(inspection.id), order_number, order_type, customer_name, request_date, scheduled_date, windows_count,
+                inspector_name, responsible_employee_name, inspection_file_url, file_link, google_drive_file_name, status, result, notes
             ])
-        
-        # تحديث ورقة العمل
-        sheet_name = 'الطلبات'
-        result = update_sheet(service, spreadsheet_id, sheet_name, data)
-        
-        return {'status': 'success', 'message': f"تمت مزامنة {len(orders)} طلب"}
-    
+            count += 1
+        logger.info(f"بيانات المعاينات المرسلة إلى update_sheet: {data}")
+        result = update_sheet(service, spreadsheet_id, 'المعاينات', data)
+        logger.info("انتهت مزامنة المعاينات")
+        return {'status': 'success', 'message': f"تمت مزامنة {result} معاينة"}
     except Exception as e:
-        message = f"حدث خطأ أثناء مزامنة الطلبات: {str(e)}"
-        logger.error(message)
-        return {'status': 'error', 'message': message}
+        logger.error(f"حدث خطأ أثناء مزامنة المعاينات: {str(e)}")
+        return {'status': 'error', 'message': str(e)}
+
+
+def sync_orders(service, spreadsheet_id):
+    """
+    مزامنة الطلبات مع Google Sheets مع التفاصيل المطلوبة
+    """
+    try:
+        logger.info("بدء مزامنة الطلبات")
+        Order = apps.get_model('orders', 'Order')
+        orders = Order.objects.all()
+        data = [[
+            'رقم الطلب', 'نوع الطلب', 'تفاصيل نوع الخدمة', 'العميل', 'تاريخ الطلب', 'تاريخ التسليم', 'الحالة', 'الملاحظات'
+        ]]
+        count = 0
+        for order in orders:
+            order_type = getattr(order, 'order_type', '') or 'طلب'
+            service_detail = ''
+            if hasattr(order, 'service') and order.service:
+                service_detail = str(order.service.name) if hasattr(order.service, 'name') else ''
+            customer_name = order.customer.name if order.customer else ''
+            order_date = order.order_date.strftime('%Y-%m-%d') if getattr(order, 'order_date', None) else ''
+            delivery_date = order.delivery_date.strftime('%Y-%m-%d') if getattr(order, 'delivery_date', None) else ''
+            status = order.status if getattr(order, 'status', None) else ''
+            notes = order.notes if getattr(order, 'notes', None) else ''
+            data.append([
+                str(order.id), order_type, service_detail, customer_name, order_date, delivery_date, status, notes
+            ])
+            count += 1
+        logger.info(f"بيانات الطلبات المرسلة إلى update_sheet: {data}")
+        result = update_sheet(service, spreadsheet_id, 'الطلبات', data)
+        logger.info("انتهت مزامنة الطلبات")
+        return {'status': 'success', 'message': f"تمت مزامنة {result} طلب"}
+    except Exception as e:
+        logger.error(f"حدث خطأ أثناء مزامنة الطلبات: {str(e)}")
+        return {'status': 'error', 'message': str(e)}
 
 
 def sync_products(service, spreadsheet_id):
     """
-    مزامنة المنتجات مع Google Sheets
-    
-    Args:
-        service: خدمة Google Sheets
-        spreadsheet_id: معرف جدول البيانات
-    
-    Returns:
-        dict: نتيجة المزامنة
+    مزامنة المنتجات مع Google Sheets بشكل مصحح وموسع
     """
     try:
-        # الحصول على نموذج المنتج
+        logger.info("بدء مزامنة المنتجات")
         Product = apps.get_model('inventory', 'Product')
-        
-        # الحصول على المنتجات
         products = Product.objects.all()
-        
-        # تحويل المنتجات إلى قائمة
-        data = [['معرف', 'الاسم', 'الوصف', 'السعر', 'الكمية', 'تاريخ الإنشاء']]
-        
+        data = [[
+            'معرف', 'الاسم', 'الوصف', 'السعر', 'الكمية', 'تاريخ الإنشاء', 'تفاصيل إضافية'
+        ]]
+        count = 0
         for product in products:
+            description = product.description if getattr(product, 'description', None) else ''
+            price = str(product.price) if getattr(product, 'price', None) else ''
+            quantity = product.quantity if getattr(product, 'quantity', None) is not None else ''
+            created_at = product.created_at.strftime('%Y-%m-%d %H:%M:%S') if getattr(product, 'created_at', None) else ''
+            details = f"الوصف: {description}, السعر: {price}, الكمية: {quantity}"
             data.append([
-                str(product.id),
-                product.name,
-                product.description,
-                str(product.price),
-                str(product.quantity),
-                product.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                str(product.id), product.name, description, price, quantity, created_at, details
             ])
-        
-        # تحديث ورقة العمل
-        sheet_name = 'المنتجات'
-        result = update_sheet(service, spreadsheet_id, sheet_name, data)
-        
-        return {'status': 'success', 'message': f"تمت مزامنة {len(products)} منتج"}
-    
+            count += 1
+        logger.info(f"بيانات المنتجات المرسلة إلى update_sheet: {data}")
+        result = update_sheet(service, spreadsheet_id, 'المنتجات', data)
+        logger.info("انتهت مزامنة المنتجات")
+        return {'status': 'success', 'message': f"تمت مزامنة {result} منتج"}
     except Exception as e:
-        message = f"حدث خطأ أثناء مزامنة المنتجات: {str(e)}"
-        logger.error(message)
-        return {'status': 'error', 'message': message}
+        logger.error(f"حدث خطأ أثناء مزامنة المنتجات: {str(e)}")
+        return {'status': 'error', 'message': str(e)}
 
 
 def sync_settings(service, spreadsheet_id):
     """
-    مزامنة الإعدادات مع Google Sheets
-    
-    Args:
-        service: خدمة Google Sheets
-        spreadsheet_id: معرف جدول البيانات
-    
-    Returns:
-        dict: نتيجة المزامنة
+    مزامنة إعدادات الشركة والنظام بشكل تفصيلي في صفحة واحدة
     """
     try:
-        # الحصول على نموذج الإعدادات
-        Setting = apps.get_model('accounts', 'Setting')
-        
-        # الحصول على الإعدادات
-        settings = Setting.objects.all()
-        
-        # تحويل الإعدادات إلى قائمة
-        data = [['معرف', 'المفتاح', 'القيمة', 'الوصف', 'تاريخ التحديث']]
-        
-        for setting in settings:
+        CompanyInfo = apps.get_model('accounts', 'CompanyInfo')
+        SystemSettings = apps.get_model('accounts', 'SystemSettings')
+        company_info = CompanyInfo.objects.first()
+        system_settings = SystemSettings.objects.first()
+        data = [[
+            'الإصدار', 'تاريخ الإطلاق', 'المطور', 'ساعات العمل', 'اسم الشركة', 'حقوق النشر',
+            'العنوان', 'الهاتف', 'البريد الإلكتروني', 'الرقم الضريبي', 'السجل التجاري', 'الموقع الإلكتروني',
+            'روابط التواصل الاجتماعي', 'الوصف', 'فيسبوك', 'تويتر', 'إنستغرام', 'لينكدإن', 'حول', 'رؤية', 'مهمة',
+            'اللون الأساسي', 'اللون الثانوي', 'لون التمييز'
+        ]]
+        if company_info:
+            social_links = json.dumps(company_info.social_links) if company_info.social_links else '{}'
             data.append([
-                str(setting.id),
-                setting.key,
-                setting.value,
-                setting.description,
-                setting.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+                company_info.version, company_info.release_date, company_info.developer, company_info.working_hours,
+                company_info.name, company_info.copyright_text, company_info.address, company_info.phone,
+                company_info.email, company_info.tax_number, company_info.commercial_register, company_info.website,
+                social_links, company_info.description, company_info.facebook, company_info.twitter,
+                company_info.instagram, company_info.linkedin, company_info.about, company_info.vision,
+                company_info.mission, company_info.primary_color, company_info.secondary_color, company_info.accent_color
             ])
-        
-        # تحديث ورقة العمل
-        sheet_name = 'الإعدادات'
+        else:
+            data.append([''] * 24)
+        if system_settings:
+            data.append([
+                system_settings.version, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+            ])
+        else:
+            data.append([''] * 24)
+        sheet_name = 'إعدادات الشركة والنظام'
         result = update_sheet(service, spreadsheet_id, sheet_name, data)
-        
-        return {'status': 'success', 'message': f"تمت مزامنة {len(settings)} إعداد"}
-    
+        return {'status': 'success', 'message': 'تمت مزامنة إعدادات الشركة والنظام بنجاح'}
     except Exception as e:
-        message = f"حدث خطأ أثناء مزامنة الإعدادات: {str(e)}"
+        message = f"حدث خطأ أثناء مزامنة إعدادات الشركة والنظام: {str(e)}"
         logger.error(message)
         return {'status': 'error', 'message': message}
 
@@ -609,6 +630,7 @@ def update_sheet(service, spreadsheet_id, sheet_name, data):
         dict: نتيجة التحديث
     """
     try:
+        logger.info(f"بدء تحديث ورقة: {sheet_name} بعدد صفوف: {len(data)}")
         # التحقق من وجود ورقة العمل
         sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
         sheets = sheet_metadata.get('sheets', [])
@@ -623,6 +645,7 @@ def update_sheet(service, spreadsheet_id, sheet_name, data):
         
         # إنشاء ورقة العمل إذا لم تكن موجودة
         if not sheet_exists:
+            logger.info(f"إنشاء ورقة جديدة: {sheet_name}")
             request = {
                 'addSheet': {
                     'properties': {
@@ -650,6 +673,7 @@ def update_sheet(service, spreadsheet_id, sheet_name, data):
             valueInputOption='RAW',
             body=body
         ).execute()
+        logger.info(f"تم تحديث ورقة: {sheet_name} بنجاح")
         
         # تنسيق الورقة
         if sheet_id:
@@ -716,13 +740,16 @@ def update_sheet(service, spreadsheet_id, sheet_name, data):
                     spreadsheetId=spreadsheet_id,
                     body={'requests': requests}
                 ).execute()
+                logger.info(f"تم تنسيق ورقة: {sheet_name} بنجاح")
             except Exception as format_error:
-                # تسجيل خطأ التنسيق ولكن لا نتوقف عن العملية
-                logger.warning(f"حدث خطأ أثناء تنسيق ورقة العمل: {str(format_error)}")
+                logger.warning(f"حدث خطأ أثناء تنسيق ورقة: {sheet_name} - {str(format_error)}")
         
-        return {'status': 'success', 'message': f"تم تحديث {result.get('updatedCells')} خلية"}
-    
+        updated_rows = result.get('updatedRows', 0)
+        if updated_rows == 0:
+            # إذا لم يتم إرجاع عدد الصفوف المحدثة، استخدم عدد الصفوف في البيانات كبديل
+            updated_rows = len(data) - 1  # خصم صف العناوين
+        
+        return updated_rows
     except Exception as e:
-        message = f"حدث خطأ أثناء تحديث ورقة العمل: {str(e)}"
-        logger.error(message)
-        return {'status': 'error', 'message': message}
+        logger.error(f"حدث خطأ أثناء تحديث ورقة: {sheet_name} - {str(e)}")
+        return 0

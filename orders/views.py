@@ -50,7 +50,7 @@ def order_list(request):
     status_filter = request.GET.get('status', '')
 
     # Filter orders based on search query and status
-    orders = Order.objects.all()
+    orders = Order.objects.all().select_related('customer', 'salesperson')
 
     if search_query:
         orders = orders.filter(
@@ -469,5 +469,3 @@ def update_order_status(request, order_id):
             messages.error(request, 'حالة الطلب غير صالحة.')
 
     return redirect('orders:order_detail', pk=order_id)
-
-

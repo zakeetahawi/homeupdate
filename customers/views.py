@@ -32,7 +32,7 @@ def customer_list(request):
     form = CustomerSearchForm(request.GET)
     customers = get_queryset_for_user(request).select_related(
         'category', 'branch', 'created_by'
-    )
+    ).prefetch_related('customer_orders')
 
     # تحسين الاستعلامات باستخدام الفهارس
     if form.is_valid():

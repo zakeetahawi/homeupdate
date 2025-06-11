@@ -18,8 +18,8 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
 from .google_sync import (
-    GoogleSyncConfig, GoogleSyncLog, sync_with_google_sheets,
-    create_sheets_service
+    GoogleSyncConfig, GoogleSyncLog, sync_with_google_sheets, sync_databases,
+    sync_users, sync_customers, sync_orders, sync_products, sync_inspections, sync_settings, create_sheets_service
 )
 from .views import is_staff_or_superuser
 
@@ -41,21 +41,29 @@ def google_sync(request):
     if config and config.last_sync:
         next_sync = config.last_sync + datetime.timedelta(hours=config.sync_frequency)
     
-    # التحقق من حالة الاتصال
+    # استخدام كاش لحالة الاتصال لتقليل استدعاءات Google Sheets API
     connection_status = False
-    if config:
-        try:
-            # الحصول على بيانات الاعتماد
-            credentials = config.get_credentials()
-            if credentials:
-                # إنشاء خدمة Google Sheets
-                sheets_service = create_sheets_service(credentials)
-                if sheets_service:
-                    # محاولة الوصول إلى جدول البيانات
-                    sheets_service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
-                    connection_status = True
-        except Exception as e:
-            logger.error(f"فشل اختبار الاتصال: {str(e)}")
+    connection_status_cache_key = f'google_sync_connection_status_{config.id if config else "none"}'
+    
+    # محاولة الحصول على الحالة من الكاش
+    from django.core.cache import cache
+    cached_status = cache.get(connection_status_cache_key)
+    
+    if cached_status is not None:
+        connection_status = cached_status
+    else:
+        if config:
+            try:
+                credentials = config.get_credentials()
+                if credentials:
+                    sheets_service = create_sheets_service(credentials)
+                    if sheets_service:
+                        sheets_service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
+                        connection_status = True
+            except Exception as e:
+                logger.error(f"فشل اختبار الاتصال: {str(e)}")
+        # تخزين الحالة في الكاش لمدة 10 دقائق
+        cache.set(connection_status_cache_key, connection_status, 600)
     
     # إعداد سياق العرض
     context = {
@@ -350,7 +358,7 @@ def google_sync_test(request):
         # اختبار الاتصال باستخدام حساب الخدمة
         sheets_service = create_sheets_service(credentials)
         if not sheets_service:
-            messages.error(request, 'فشل إنشاء خدمة Google Sheets. تحقق من صحة بيانات الاعتماد.')
+            messages.error(request, f"فشل إنشاء خدمة Google Sheets. تحقق من صحة بيانات الاعتماد ومشاركة جدول البيانات مع البريد: {credentials.get('client_email', 'غير معروف')}")
             return redirect('odoo_db_manager:google_sync')
 
         # محاولة الوصول إلى جدول البيانات
@@ -376,87 +384,127 @@ def google_sync_test(request):
 @login_required
 @user_passes_test(is_staff_or_superuser)
 def google_sync_reset(request):
-    """إعادة تعيين بيانات المزامنة"""
+    """حذف سجلات المزامنة القديمة وإنشاء سجل جديد"""
+    config = GoogleSyncConfig.get_active_config()
+    if not config:
+        messages.error(request, 'لا يوجد إعداد مزامنة نشط')
+        return redirect('odoo_db_manager:google_sync')
+    
+    with transaction.atomic():
+        GoogleSyncLog.objects.filter(config=config).delete()
+        GoogleSyncLog.objects.create(
+            config=config,
+            status='info',
+            message='تم حذف سجلات المزامنة القديمة. سجل جديد تم إنشاؤه.'
+        )
+    messages.success(request, 'تم حذف سجلات المزامنة القديمة وإنشاء سجل جديد')
+    return redirect('odoo_db_manager:google_sync')
+
+
+from django.db import transaction
+
+def sync_with_google_sheets(config_id=None, manual=False):
     try:
-        # الحصول على إعداد المزامنة النشط
-        config = GoogleSyncConfig.get_active_config()
+        if config_id:
+            config = GoogleSyncConfig.objects.get(id=config_id)
+        else:
+            config = GoogleSyncConfig.get_active_config()
         
         if not config:
-            # إضافة رسالة خطأ
-            messages.error(request, 'لا يوجد إعداد مزامنة نشط')
-            return redirect('odoo_db_manager:google_sync')
-        
-        # الحصول على بيانات الاعتماد
-        credentials = config.get_credentials()
-        
-        if not credentials:
-            # إضافة رسالة خطأ
-            messages.error(request, 'لا يمكن قراءة بيانات الاعتماد')
-            return redirect('odoo_db_manager:google_sync')
+            message = "لا يوجد إعداد مزامنة نشط"
+            logger.error(message)
+            return {'status': 'error', 'message': message}
 
-        # إنشاء خدمة Google Sheets
+        if not manual and not config.is_sync_due():
+            message = f"لم يحن وقت المزامنة بعد. آخر مزامنة: {config.last_sync}"
+            logger.info(message)
+            return {'status': 'info', 'message': message}
+        
+        credentials = config.get_credentials()
+        if not credentials:
+            message = "فشل قراءة بيانات الاعتماد. تأكد من تحميل ملف اعتماد حساب خدمة صالح."
+            logger.error(message)
+            GoogleSyncLog.objects.create(
+                config=config,
+                status='error',
+                message=message
+            )
+            return {'status': 'error', 'message': message}
+        
         sheets_service = create_sheets_service(credentials)
         if not sheets_service:
-            messages.error(request, 'فشل إنشاء خدمة Google Sheets. تحقق من صحة بيانات الاعتماد.')
-            return redirect('odoo_db_manager:google_sync')
-
-        # الحصول على معلومات جدول البيانات
-        spreadsheet = sheets_service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
+            message = f"فشل إنشاء خدمة Google Sheets. تحقق من صحة بيانات الاعتماد ومشاركة جدول البيانات مع البريد: {credentials.get('client_email', 'غير معروف')}"
+            logger.error(message)
+            GoogleSyncLog.objects.create(
+                config=config,
+                status='error',
+                message=message
+            )
+            return {'status': 'error', 'message': message}
         
-        # حذف جميع أوراق العمل باستثناء الورقة الأولى
-        sheets = spreadsheet.get('sheets', [])
-        requests = []
+        try:
+            sheets_service.spreadsheets().get(spreadsheetId=config.spreadsheet_id).execute()
+        except Exception as e:
+            message = f"فشل الوصول إلى جدول البيانات. تأكد من صحة المعرف ومشاركة الجدول مع حساب الخدمة."
+            logger.error(f"{message}: {str(e)}")
+            GoogleSyncLog.objects.create(
+                config=config,
+                status='error',
+                message=message
+            )
+            return {'status': 'error', 'message': message}
         
-        for sheet in sheets[1:]:  # تجاوز الورقة الأولى
-            sheet_id = sheet.get('properties', {}).get('sheetId')
-            requests.append({
-                'deleteSheet': {
-                    'sheetId': sheet_id
-                }
-            })
+        sync_results = {}
         
-        # مسح محتوى الورقة الأولى
-        first_sheet_id = sheets[0].get('properties', {}).get('sheetId')
-        first_sheet_title = sheets[0].get('properties', {}).get('title')
+        if config.sync_databases:
+            db_result = sync_databases(sheets_service, config.spreadsheet_id)
+            sync_results['databases'] = db_result
         
-        requests.append({
-            'updateCells': {
-                'range': {
-                    'sheetId': first_sheet_id,
-                    'startRowIndex': 0,
-                    'startColumnIndex': 0
-                },
-                'fields': 'userEnteredValue'
-            }
-        })
+        if config.sync_users:
+            users_result = sync_users(sheets_service, config.spreadsheet_id)
+            sync_results['users'] = users_result
         
-        # تنفيذ الطلبات
-        if requests:
-            sheets_service.spreadsheets().batchUpdate(
-                spreadsheetId=config.spreadsheet_id,
-                body={'requests': requests}
-            ).execute()
+        if config.sync_customers:
+            customers_result = sync_customers(sheets_service, config.spreadsheet_id)
+            sync_results['customers'] = customers_result
         
-        # إعادة تعيين وقت آخر مزامنة
-        config.last_sync = None
-        config.save()
+        if config.sync_orders:
+            orders_result = sync_orders(sheets_service, config.spreadsheet_id)
+            sync_results['orders'] = orders_result
         
-        # حذف سجلات المزامنة
-        GoogleSyncLog.objects.all().delete()
+        if config.sync_products:
+            products_result = sync_products(sheets_service, config.spreadsheet_id)
+            sync_results['products'] = products_result
         
-        # إضافة رسالة نجاح
-        messages.success(request, 'تم إعادة تعيين بيانات المزامنة بنجاح')
+        if config.sync_inspections:
+            inspections_result = sync_inspections(sheets_service, config.spreadsheet_id)
+            sync_results['inspections'] = inspections_result
         
-        # تنفيذ المزامنة مرة أخرى
-        return redirect('odoo_db_manager:google_sync_now')
-    
+        if config.sync_settings:
+            settings_result = sync_settings(sheets_service, config.spreadsheet_id)
+            sync_results['settings'] = settings_result
+        
+        config.update_last_sync()
+        
+        message = "تمت المزامنة مع Google Sheets بنجاح"
+        logger.info(message)
+        GoogleSyncLog.objects.create(
+            config=config,
+            status='success',
+            message=message,
+            details=sync_results
+        )
+        
+        return {'status': 'success', 'message': message}
     except Exception as e:
-        # تسجيل الخطأ
-        logger.error(f"حدث خطأ أثناء إعادة تعيين بيانات المزامنة: {str(e)}")
-        
-        # إضافة رسالة خطأ
-        messages.error(request, f'حدث خطأ أثناء إعادة تعيين بيانات المزامنة: {str(e)}')
-        return redirect('odoo_db_manager:google_sync')
+        message = f"حدث خطأ أثناء المزامنة: {str(e)}"
+        logger.error(message)
+        GoogleSyncLog.objects.create(
+            config=config,
+            status='error',
+            message=message
+        )
+        return {'status': 'error', 'message': message}
 
 
 @login_required
@@ -544,3 +592,26 @@ def google_sync_advanced_settings(request):
         
         # إرجاع استجابة خطأ
         return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def google_sync_logs_api(request):
+    """API لإرجاع بيانات سجل المزامنة بصيغة JSON"""
+    logs = GoogleSyncLog.objects.all().order_by('-created_at')[:50]
+    logs_data = []
+    for log in logs:
+        details = ''
+        if log.details:
+            try:
+                import json
+                details = json.dumps(log.details, indent=2, ensure_ascii=False)
+            except Exception:
+                details = str(log.details)
+        logs_data.append({
+            'created_at': log.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'status': log.get_status_display(),
+            'message': log.message,
+            'details': details
+        })
+    return JsonResponse({'logs': logs_data})

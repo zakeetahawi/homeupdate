@@ -57,4 +57,5 @@ urlpatterns = [
     path('google-sync/test/', google_sync_views.google_sync_test, name='google_sync_test'),
     path('google-sync/reset/', google_sync_views.google_sync_reset, name='google_sync_reset'),
     path('google-sync/advanced-settings/', google_sync_views.google_sync_advanced_settings, name='google_sync_advanced_settings'),
+    path('google-sync/logs-api/', google_sync_views.google_sync_logs_api, name='google_sync_logs_api'),
 ]

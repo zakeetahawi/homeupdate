@@ -375,7 +375,7 @@ def department_list(request):
     parent_filter = request.GET.get('parent', '')
 
     # قاعدة البيانات الأساسية
-    departments = Department.objects.all()
+    departments = Department.objects.all().select_related('parent').prefetch_related('children')
 
     # تطبيق البحث
     if search_query:
@@ -397,8 +397,12 @@ def department_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # جلب قائمة الأقسام الرئيسية للتصفية
-    parent_departments = Department.objects.filter(parent__isnull=True)
+    # جلب قائمة الأقسام الرئيسية للتصفية مع كاش
+    from django.core.cache import cache
+    parent_departments = cache.get('parent_departments')
+    if not parent_departments:
+        parent_departments = list(Department.objects.filter(parent__isnull=True))
+        cache.set('parent_departments', parent_departments, 3600)  # كاش لمدة ساعة
 
     context = {
         'page_obj': page_obj,
@@ -510,7 +514,7 @@ def salesperson_list(request):
     is_active = request.GET.get('is_active', '')
 
     # قاعدة البيانات الأساسية
-    salespersons = Salesperson.objects.all()
+    salespersons = Salesperson.objects.select_related('branch').all()
 
     # تطبيق البحث
     if search_query:
@@ -537,8 +541,12 @@ def salesperson_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # جلب قائمة الفروع للتصفية
-    branches = Branch.objects.all()
+    # جلب قائمة الفروع للتصفية مع كاش
+    from django.core.cache import cache
+    branches = cache.get('branches')
+    if not branches:
+        branches = list(Branch.objects.all())
+        cache.set('branches', branches, 3600)  # كاش لمدة ساعة
 
     context = {
         'page_obj': page_obj,
@@ -642,7 +650,7 @@ def toggle_salesperson(request, pk):
 @staff_member_required
 def role_list(request):
     """
-    عرض قائمة الأدوار مع إمكانية البحث
+    عرض قائمة الأدوار مع إمكانية البحث والتصفية والتقسيم بشكل مستقل
     """
     roles = Role.objects.all()
 
@@ -661,7 +669,7 @@ def role_list(request):
     # ترتيب الأدوار
     roles = roles.order_by('name')
 
-    # تقسيم الصفحات
+    # التقسيم لصفحات
     paginator = Paginator(roles, 10)  # عرض 10 أدوار في كل صفحة
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)

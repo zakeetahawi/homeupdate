@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, F
 from .models import Product, Category, PurchaseOrder
 from .inventory_utils import (
     get_cached_stock_level,
@@ -124,30 +124,32 @@ def product_list(request):
     filter_type = request.GET.get('filter', '')
     sort_by = request.GET.get('sort', '-created_at')
 
-    # الحصول على المنتجات من الذاكرة المؤقتة
-    products = get_cached_product_list(
-        category_id=category_id if category_id else None,
-        include_stock=True
-    )
+    # الحصول على المنتجات من قاعدة البيانات مع select_related لتحميل العلاقات
+    products = Product.objects.all().select_related('category')
 
     # تطبيق البحث
     if search_query:
-        products = [p for p in products if
-                   search_query.lower() in p.name.lower() or
-                   search_query in str(p.code) or
-                   search_query.lower() in p.description.lower()]
+        products = products.filter(
+            Q(name__icontains=search_query) |
+            Q(code__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+
+    # تطبيق فلتر الفئة
+    if category_id:
+        products = products.filter(category_id=category_id)
 
     # تطبيق فلتر المخزون
     if filter_type == 'low_stock':
-        products = [p for p in products if 0 < p.current_stock_calc <= p.minimum_stock]
+        products = products.filter(current_stock_calc__gt=0, current_stock_calc__lte=F('minimum_stock'))
     elif filter_type == 'out_of_stock':
-        products = [p for p in products if p.current_stock_calc <= 0]
+        products = products.filter(current_stock_calc__lte=0)
 
     # تطبيق الترتيب
     if hasattr(Product, sort_by.lstrip('-')):
-        products = sorted(products,
-                        key=lambda x: getattr(x, sort_by.lstrip('-')),
-                        reverse=sort_by.startswith('-'))
+        products = products.order_by(sort_by)
+    else:
+        products = products.order_by('-created_at')
 
     # الصفحات
     paginator = Paginator(products, 20)
