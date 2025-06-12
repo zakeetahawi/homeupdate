@@ -2,13 +2,21 @@
    Custom Theme Enhancements - Glowing colored icons and animations */
 
 /* تأثيرات الأيقونات الملونة والمشعة في الهيدر */
+[data-theme="custom-theme"] .navbar .nav-link {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 0.5rem 0.7rem !important;
+}
+
 [data-theme="custom-theme"] .navbar .fa,
 [data-theme="custom-theme"] .navbar .fas,
 [data-theme="custom-theme"] .navbar .far,
 [data-theme="custom-theme"] .navbar .fab,
 [data-theme="custom-theme"] .navbar .fal {
-    font-size: 1.25rem !important; /* حجم أيقونات متناسق مع الثيم الافتراضي */
-    margin: 0 3px;
+    font-size: 1.25rem !important;
+    margin: 0 0 0.15rem 0 !important;
     transition: all 0.3s ease;
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
     background-clip: text;
@@ -17,6 +25,11 @@
 }
 
 /* ألوان مخصصة ومتنوعة للأيقونات */
+[data-theme="custom-theme"] .navbar .nav-item {
+    display: flex !important;
+    align-items: center !important;
+}
+
 [data-theme="custom-theme"] .navbar .fa-user,
 [data-theme="custom-theme"] .navbar .fa-user-circle {
     color: #FFD700 !important; /* ذهبي */
@@ -83,11 +96,16 @@
 
 /* تقليص المسافات في شريط التنقل */
 [data-theme="custom-theme"] .navbar-nav {
-    gap: 3px;
+    gap: 0;
+    margin-right: 0 !important;
 }
 
 [data-theme="custom-theme"] .navbar-nav .nav-link {
-    padding: 0.5rem 0.7rem;
+    font-size: 0.75rem !important;
+    white-space: nowrap !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 0.5rem 0.7rem !important;
 }
 
 /* تأثيرات متحركة للبطاقات */
