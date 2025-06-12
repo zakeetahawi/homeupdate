@@ -40,6 +40,50 @@
     --light-accent: #D2B48C;
 }
 
+/* Custom Theme - نسخة قابلة للتعديل من الثيم الافتراضي */
+[data-theme="custom-theme"] {
+    /* Custom Theme - ألوان أغمق مع احتفاظ بالطابع البني */
+    --primary: #6A5743;              /* اللون الأساسي - بني داكن */
+    --secondary: #8B6E4E;            /* اللون الثانوي - بني متوسط */
+    --accent: #493B29;               /* لون الإبراز - بني داكن جداً */
+    --background: #F5F2EF;           /* لون الخلفية - بيج فاتح جداً */
+    --surface: #EDEAE7;              /* لون السطح - بيج فاتح */
+    --card-bg: #F8F6F4;              /* خلفية البطاقات - أبيض مائل للبيج */
+    --elevated-bg: #EAE6E2;          /* خلفية مرتفعة - بيج فاتح */
+    
+    /* ألوان النصوص */
+    --text-primary: #2A251E;         /* نص أساسي - بني غامق جداً */
+    --text-secondary: #574B41;       /* نص ثانوي - بني داكن */
+    --text-tertiary: #7D6E63;        /* نص ثالثي - بني متوسط */
+    
+    /* ألوان الحالة - أكثر إشراقاً للتباين مع الخلفية الداكنة */
+    --success: #3CBD41;              /* أخضر نجاح أكثر تميزاً */
+    --warning: #FF8500;              /* برتقالي تحذير زاهي */
+    --error: #E53935;                /* أحمر خطأ غامق */
+    --info: #1E88E5;                 /* أزرق معلومات غامق */
+    
+    /* الحدود والفواصل */
+    --border: #C9BEB4;               /* لون الحدود - بيج متوسط */
+    --separator: #D6CABC;            /* خط فاصل - بيج فاتح */
+    --neutral: #A49587;              /* لون محايد - بيج داكن */
+    
+    /* التأثيرات - ظلال أقوى وتأثيرات انتقالية أكثر تعبيراً */
+    --shadow: 0 4px 8px rgba(0,0,0,0.15);
+    --shadow-light: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-hover: 0 8px 15px rgba(0,0,0,0.2);
+    --blur: blur(8px);
+    --radius: 10px;
+    --radius-large: 15px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    
+    /* متغيرات توافق مع الكود القديم */
+    --light-bg: #D6CABC;    --dark-text: #2A251E; 
+    --alert: #B06811;
+    --light-accent: #C1A78A;
+    --light-accent: #D2B48C;
+}
+
 /* Modern Black Theme - الثيم الأسود العصري */
 [data-theme="modern-black"] {
     /* الألوان الأساسية */

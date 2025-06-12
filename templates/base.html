@@ -22,9 +22,11 @@
     
     <!-- Modern Black Theme Fixes -->
     <link rel="stylesheet" href="{% static 'css/modern-black-fixes.css' %}">
-    
-    <!-- Extra Dark Mode Fixes -->
+      <!-- Extra Dark Mode Fixes -->
     <link rel="stylesheet" href="{% static 'css/extra-dark-fixes.css' %}">
+    
+    <!-- Custom Theme Enhancements -->
+    <link rel="stylesheet" href="{% static 'css/custom-theme-enhancements.css' %}">
 
     <!-- Google Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
@@ -193,10 +195,10 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li>
-                                <div class="px-3 py-2">
-                                    <label for="themeSelector" class="form-label" style="font-weight: bold;">اختر الثيم المناسب</label>
+                                <div class="px-3 py-2">                                    <label for="themeSelector" class="form-label" style="font-weight: bold;">اختر الثيم المناسب</label>
                                     <select id="themeSelector" class="form-select">
                                         <option value="default">الثيم الإفتراضي</option>
+                                        <option value="custom-theme">نسخة الثيم الإفتراضي القابلة للتعديل</option>
                                         <option value="modern-black">الثيم الأسود العصري</option>
                                     </select>
                                 </div>
@@ -547,6 +549,7 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>    <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/custom-theme-animations.js' %}"></script>
 
     <!-- Database Connection Test JS -->
     {% if 'database' in request.path %}
