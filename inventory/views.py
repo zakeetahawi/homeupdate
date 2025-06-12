@@ -4,8 +4,10 @@ from django.contrib import messages
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
-from django.db.models import Q, F
-from .models import Product, Category, PurchaseOrder
+from django.db.models import Q, F, Sum
+from django.utils import timezone
+from datetime import datetime, timedelta
+from .models import Product, Category, PurchaseOrder, StockTransaction, StockAlert
 from .inventory_utils import (
     get_cached_stock_level,
     get_cached_product_list,
@@ -26,9 +28,17 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
         # إضافة active_menu للقائمة الجانبية
         context['active_menu'] = 'dashboard'
 
-        # الحصول على المنتجات منخفضة المخزون
+        # الحصول على المنتجات منخفضة المخزون مع حالة المخزون
         products = get_cached_product_list(include_stock=True)
-        low_stock_products = [p for p in products if 0 < p.current_stock_calc <= p.minimum_stock]
+        low_stock_products = [
+            {
+                'product': p,
+                'status': p.status,
+                'is_available': p.is_available
+            } 
+            for p in products 
+            if 0 < p.current_stock_calc <= p.minimum_stock
+        ]
         context['low_stock_products'] = low_stock_products[:10]
 
         # الحصول على آخر حركات المخزون
@@ -293,45 +303,48 @@ def product_detail(request, pk):
 
     # إعداد بيانات الرسم البياني
     from django.utils import timezone
-    from datetime import timedelta
-
-    # الحصول على تواريخ آخر 30 يوم
+    from datetime import timedelta    # Get dates for last 30 days
     end_date = timezone.now().date()
     start_date = end_date - timedelta(days=29)
 
-    # الحصول على المعاملات في الفترة المحددة
-    period_transactions = transactions.filter(date__date__gte=start_date, date__date__lte=end_date)
+    # Get all transactions up to end_date ordered by transaction_date
+    all_transactions = product.transactions.filter(
+        transaction_date__date__lte=end_date
+    ).order_by('transaction_date')
 
-    # إعداد قائمة التواريخ والأرصدة
+    # Calculate the running balance for each day in the range
     transaction_dates = []
     transaction_balances = []
+    daily_balance = 0
 
-    # حساب الرصيد الافتتاحي
-    opening_balance = transactions.filter(date__date__lt=start_date).aggregate(
-        in_total=Sum('quantity', filter=Q(transaction_type='in')),
-        out_total=Sum('quantity', filter=Q(transaction_type='out'))
-    )
+    # Calculate opening balance from transactions before start_date
+    opening_transactions = all_transactions.filter(transaction_date__date__lt=start_date)
+    for trans in opening_transactions:
+        if trans.transaction_type == 'in':
+            daily_balance += trans.quantity
+        else:
+            daily_balance -= trans.quantity
 
-    opening_in = opening_balance['in_total'] or 0
-    opening_out = opening_balance['out_total'] or 0
-    balance = opening_in - opening_out
-
-    # إضافة الرصيد لكل يوم
+    # إضافة الرصيد لكل يوم    # Iterate through each day in the range
     current_date = start_date
     while current_date <= end_date:
-        # حساب حركات اليوم
-        day_transactions = period_transactions.filter(date__date=current_date)
-        day_in = day_transactions.filter(transaction_type='in').aggregate(total=Sum('quantity'))['total'] or 0
-        day_out = day_transactions.filter(transaction_type='out').aggregate(total=Sum('quantity'))['total'] or 0
+        # Get all transactions for this day
+        day_transactions = all_transactions.filter(
+            transaction_date__date=current_date
+        ).order_by('transaction_date')
 
-        # تحديث الرصيد
-        balance += day_in - day_out
+        # Update balance with day's transactions
+        for trans in day_transactions:
+            if trans.transaction_type == 'in':
+                daily_balance += trans.quantity
+            else:
+                daily_balance -= trans.quantity
 
-        # إضافة اليوم والرصيد إلى القوائم
+        # Add date and balance to lists
         transaction_dates.append(current_date)
-        transaction_balances.append(balance)
+        transaction_balances.append(daily_balance)
 
-        # الانتقال إلى اليوم التالي
+        # Move to next day
         current_date += timedelta(days=1)
 
     # إضافة عدد التنبيهات النشطة
@@ -387,6 +400,9 @@ def transaction_create(request, product_pk):
         ('other', 'أخرى'),
     ]
 
+    # الحصول على مستوى المخزون الحالي من الذاكرة المؤقتة
+    current_stock = get_cached_stock_level(product.pk)
+
     if request.method == 'POST':
         try:
             # استخراج البيانات من النموذج
@@ -408,13 +424,17 @@ def transaction_create(request, product_pk):
             except (ValueError, TypeError):
                 raise ValueError("الكمية يجب أن تكون رقماً صحيحاً")
 
+            # إعادة فحص المخزون الحالي قبل تسجيل الحركة
+            current_stock = get_cached_stock_level(product.pk)
+
             # التحقق من توفر المخزون للحركات الصادرة
-            current_stock = get_cached_stock_level(product.id)
-            if transaction_type == 'out' and quantity > current_stock:
-                raise ValueError(f"الكمية المطلوبة ({quantity}) أكبر من المخزون المتاح ({current_stock})")
+            if transaction_type == 'out':
+                if current_stock <= 0:
+                    raise ValueError("لا يوجد مخزون متاح للصرف")
+                if quantity > current_stock:
+                    raise ValueError(f"الكمية المطلوبة ({quantity}) أكبر من المخزون المتاح ({current_stock})")
 
             # إنشاء حركة المخزون
-            from .models import StockTransaction
             transaction = StockTransaction.objects.create(
                 product=product,
                 transaction_type=transaction_type,
@@ -422,16 +442,19 @@ def transaction_create(request, product_pk):
                 quantity=quantity,
                 reference=reference,
                 notes=notes,
-                created_by=request.user
+                created_by=request.user,
+                date=timezone.now()
             )
 
             # إعادة تحميل الذاكرة المؤقتة للمنتج
             invalidate_product_cache(product.id)
 
             # إضافة رسالة نجاح
-            messages.success(request, f"تم تسجيل حركة المخزون بنجاح. الكمية: {quantity}")
+            if transaction_type == 'in':
+                messages.success(request, f"تم تسجيل حركة وارد بنجاح. الكمية: {quantity}")
+            else:
+                messages.success(request, f"تم تسجيل حركة صادر بنجاح. الكمية: {quantity}")
 
-            # إعادة التوجيه إلى صفحة تفاصيل المنتج
             return redirect('inventory:product_detail', pk=product.pk)
 
         except ValueError as e:
@@ -440,7 +463,6 @@ def transaction_create(request, product_pk):
             messages.error(request, f"حدث خطأ أثناء تسجيل حركة المخزون: {str(e)}")
 
     # إضافة عدد التنبيهات النشطة
-    from .models import StockAlert
     alerts_count = StockAlert.objects.filter(status='active').count()
 
     # إضافة آخر التنبيهات للعرض في القائمة المنسدلة
@@ -449,19 +471,19 @@ def transaction_create(request, product_pk):
     ).select_related('product').order_by('-created_at')[:5]
 
     # إضافة السنة الحالية لشريط التذييل
-    from datetime import datetime
     current_year = datetime.now().year
 
     context = {
         'product': product,
         'transaction_types': transaction_types,
         'transaction_reasons': transaction_reasons,
+        'current_stock': current_stock,
         'alerts_count': alerts_count,
         'recent_alerts': recent_alerts,
         'current_year': current_year
     }
 
-    return render(request, 'inventory/transaction_form.html', context)
+    return render(request, 'inventory/transaction_form_new.html', context)
 
 # API Endpoints
 from django.http import JsonResponse

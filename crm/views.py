@@ -38,12 +38,10 @@ def home(request):
         'order', 'production_line'
     ).exclude(
         status__in=['completed', 'cancelled']
-    ).order_by('estimated_completion')[:5]
-
-    # Get low stock products
+    ).order_by('estimated_completion')[:5]    # Get low stock products
     low_stock_products = [
         product for product in Product.objects.all()
-        if product.needs_restock
+        if product.current_stock > 0 and product.current_stock <= product.minimum_stock
     ][:10]
 
     # Get company info for logo

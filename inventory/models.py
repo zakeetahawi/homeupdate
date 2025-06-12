@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 from accounts.models import User, Branch
 import uuid
 from datetime import datetime
@@ -34,19 +35,21 @@ class Product(models.Model):
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=50, unique=True, null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(_('العملة'), max_length=3, default='EGP')
     category = models.ForeignKey(
         'Category',
         on_delete=models.CASCADE,
         related_name='products',
         verbose_name=_('الفئة'),
-        null=True,  # Allow null temporarily for imports
+        null=True,
     )
     description = models.TextField(_('الوصف'), blank=True)
     minimum_stock = models.PositiveIntegerField(_('الحد الأدنى للمخزون'), default=0)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
-    # استخدام المدير المخصص
+
     objects = ProductManager()
+
     class Meta:
         verbose_name = _('منتج')
         verbose_name_plural = _('منتجات')
@@ -56,50 +59,51 @@ class Product(models.Model):
             models.Index(fields=['category']),
             models.Index(fields=['created_at']),
         ]
+
     def __str__(self):
         return self.name
+
     @property
     def current_stock(self):
-        """Get current stock level"""
-        stock_in = self.transactions.filter(transaction_type='in').aggregate(Sum('quantity'))['quantity__sum'] or 0
-        stock_out = self.transactions.filter(transaction_type='out').aggregate(Sum('quantity'))['quantity__sum'] or 0
-        return stock_in - stock_out
+        """الحصول على مستوى المخزون الحالي"""
+        latest_transaction = self.transactions.order_by('-transaction_date').first()
+        if latest_transaction:
+            return latest_transaction.running_balance
+        return 0
+
     @property
-    def needs_restock(self):
-        """Check if product needs restocking"""
-        return 0 < self.current_stock <= self.minimum_stock
+    def is_available(self):
+        """التحقق مما إذا كان المنتج متوفراً"""
+        return self.current_stock > 0
+
+    @property
+    def stock_status(self):
+        """الحصول على حالة المخزون"""
+        current = self.current_stock
+        if current <= 0:
+            return _('غير متوفر')
+        elif current <= self.minimum_stock:
+            return _('مخزون منخفض')
+        return _('متوفر')
+
     def save(self, *args, **kwargs):
+        # إنشاء كود للمنتج إذا لم يكن موجوداً
+        if not self.code:
+            self.code = f"P-{uuid.uuid4().hex[:8].upper()}"
+        
         # تنظيف ذاكرة التخزين المؤقت عند حفظ المنتج
         from django.core.cache import cache
-        # إذا لم يكن هناك فئة، حاول العثور على فئة افتراضية
-        if not self.category:
-            from django.db import transaction
-            try:
-                with transaction.atomic():
-                    # البحث عن فئة افتراضية
-                    default_category = Category.objects.filter(name='عام').first()
-                    if not default_category:
-                        default_category = Category.objects.first()
-                    if default_category:
-                        self.category = default_category
-                        print(f"Assigned default category '{default_category.name}' to product '{self.name}'")
-            except Exception as e:
-                print(f"Error assigning default category: {e}")
-        # تحديد مفاتيح ذاكرة التخزين المؤقت
         cache_keys = [
             f'product_detail_{self.id}',
             'product_list_all',
             'inventory_dashboard_stats'
         ]
-        # إضافة مفاتيح متعلقة بالفئة إذا كانت موجودة
         if self.category_id:
             cache_keys.extend([
                 f'category_stats_{self.category_id}',
                 f'product_list_{self.category_id}',
             ])
-        # حفظ المنتج
         super().save(*args, **kwargs)
-        # حذف مفاتيح ذاكرة التخزين المؤقت
         cache.delete_many(cache_keys)
 class Supplier(models.Model):
     """
@@ -238,8 +242,10 @@ class StockTransaction(models.Model):
     reason = models.CharField(_('السبب'), max_length=20, choices=REASON_CHOICES, default='other')
     quantity = models.DecimalField(_('الكمية'), max_digits=10, decimal_places=2)
     reference = models.CharField(_('المرجع'), max_length=100, blank=True)
-    date = models.DateTimeField(_('التاريخ'), auto_now_add=True)
+    transaction_date = models.DateTimeField(_('تاريخ العملية'), default=timezone.now)
+    date = models.DateTimeField(_('تاريخ التسجيل'), auto_now_add=True)
     notes = models.TextField(_('ملاحظات'), blank=True)
+    running_balance = models.DecimalField(_('الرصيد المتحرك'), max_digits=10, decimal_places=2, default=0)
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -247,17 +253,59 @@ class StockTransaction(models.Model):
         related_name='stock_transactions',
         verbose_name=_('تم بواسطة')
     )
+
     class Meta:
         verbose_name = _('حركة مخزون')
         verbose_name_plural = _('حركات المخزون')
-        ordering = ['-date']
+        ordering = ['-transaction_date', '-date']
         indexes = [
             models.Index(fields=['product'], name='transaction_product_idx'),
             models.Index(fields=['transaction_type'], name='transaction_type_idx'),
-            models.Index(fields=['date'], name='transaction_date_idx'),
+            models.Index(fields=['transaction_date'], name='transaction_date_idx'),
         ]
+
     def __str__(self):
         return f"{self.get_transaction_type_display()} - {self.product.name} ({self.quantity})"
+
+    def save(self, *args, **kwargs):
+        from django.db import transaction
+        with transaction.atomic():
+            # Get previous balance from the transaction immediately before this one
+            previous_balance = StockTransaction.objects.filter(
+                product=self.product,
+                transaction_date__lt=self.transaction_date
+            ).order_by('-transaction_date').first()
+
+            # Calculate current balance based on previous balance
+            current_balance = previous_balance.running_balance if previous_balance else 0
+
+            # Update running balance for this transaction
+            if self.transaction_type == 'in':
+                self.running_balance = current_balance + self.quantity
+            else:  # out, transfer, or adjustment
+                self.running_balance = current_balance - self.quantity
+
+            # Save this transaction
+            super().save(*args, **kwargs)
+
+            # Update all subsequent transactions' running balances
+            next_transactions = StockTransaction.objects.filter(
+                product=self.product,
+                transaction_date__gt=self.transaction_date
+            ).order_by('transaction_date').select_for_update()
+
+            # Recalculate running balances for all subsequent transactions
+            current_balance = self.running_balance
+            for trans in next_transactions:
+                if trans.transaction_type == 'in':
+                    current_balance += trans.quantity
+                else:  # out, transfer, or adjustment
+                    current_balance -= trans.quantity
+                
+                # Only update if balance has changed
+                if trans.running_balance != current_balance:
+                    trans.running_balance = current_balance
+                    super(StockTransaction, trans).save()
 class PurchaseOrder(models.Model):
     """
     Model for purchase orders

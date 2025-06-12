@@ -73,14 +73,7 @@ urlpatterns = [
     path('database/', include('odoo_db_manager.urls', namespace='odoo_db_manager')),
 ]
 
-# خدمة الملفات الثابتة في بيئة التطوير
+# إضافة مسارات الملفات الثابتة ووسائط التحميل في وضع التطوير
 if settings.DEBUG:
-    # Only serve static files in development
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
-    # Disable debug toolbar temporarily
-    # if not getattr(settings, 'TESTING', False):
-    #     import debug_toolbar
-    #     urlpatterns += [
-    #         path('__debug__/', include(debug_toolbar.urls)),
-    #     ]
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
