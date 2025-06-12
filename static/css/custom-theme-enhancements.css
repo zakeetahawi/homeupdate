@@ -15,7 +15,7 @@
 [data-theme="custom-theme"] .navbar .far,
 [data-theme="custom-theme"] .navbar .fab,
 [data-theme="custom-theme"] .navbar .fal {
-    font-size: 1.25rem !important;
+    font-size: 1.5rem !important;
     margin: 0 0 0.15rem 0 !important;
     transition: all 0.3s ease;
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
@@ -32,40 +32,71 @@
 
 [data-theme="custom-theme"] .navbar .fa-user,
 [data-theme="custom-theme"] .navbar .fa-user-circle {
-    color: #FFD700 !important; /* ذهبي */
+    color: #3700ff !important; /* ذهبي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-bell,
 [data-theme="custom-theme"] .navbar .fa-bell-slash {
-    color: #FF8C00 !important; /* برتقالي مائل للذهبي */
+    color: #897aee !important; /* برتقالي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-cog,
 [data-theme="custom-theme"] .navbar .fa-cogs {
-    color: #C0C0C0 !important; /* فضي */
+    color: #E0E0E0 !important; /* فضي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-home {
-    color: #9ACD32 !important; /* أخضر فاتح */
+    color: #98FB98 !important; /* أخضر مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-users {
-    color: #40E0D0 !important; /* تركواز */
+    color: #00CED1 !important; /* تركواز مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-chart-line,
 [data-theme="custom-theme"] .navbar .fa-chart-bar {
-    color: #DA70D6 !important; /* أرجواني */
+    color: #87CEEB !important; /* أزرق سماوي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-file,
 [data-theme="custom-theme"] .navbar .fa-file-alt {
-    color: #87CEFA !important; /* أزرق فاتح */
+    color: #1E90FF !important; /* أزرق مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-folder,
 [data-theme="custom-theme"] .navbar .fa-folder-open {
-    color: #FFA07A !important; /* سالمون */
+    color: #FFB347 !important; /* برتقالي فاتح مشرق */
+}
+
+/* أيقونات الأقسام الإضافية */
+[data-theme="custom-theme"] .navbar .fa-shopping-cart,
+[data-theme="custom-theme"] .navbar .fa-cart-plus {
+    color: #FFB6C1 !important; /* وردي فاتح مشرق - للطلبات */
+}
+
+[data-theme="custom-theme"] .navbar .fa-boxes,
+[data-theme="custom-theme"] .navbar .fa-box {
+    color: #90EE90 !important; /* أخضر فاتح مشرق - للمخزون */
+}
+
+[data-theme="custom-theme"] .navbar .fa-search,
+[data-theme="custom-theme"] .navbar .fa-clipboard-check {
+    color: #87CEFA !important; /* أزرق فاتح مشرق - للمعاينات */
+}
+
+[data-theme="custom-theme"] .navbar .fa-tools,
+[data-theme="custom-theme"] .navbar .fa-wrench {
+    color: #DDA0DD !important; /* بنفسجي فاتح مشرق - للتركيبات */
+}
+
+[data-theme="custom-theme"] .navbar .fa-industry,
+[data-theme="custom-theme"] .navbar .fa-factory {
+    color: #98FB98 !important; /* أخضر مشرق - للمصنع */
+}
+
+[data-theme="custom-theme"] .navbar .fa-database,
+[data-theme="custom-theme"] .navbar .fa-server {
+    color: #B0C4DE !important; /* أزرق فاتح مشرق - لإدارة البيانات */
 }
 
 /* تأثير التوهج عند التحويم (hover) */
