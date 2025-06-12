@@ -7,8 +7,8 @@
 [data-theme="custom-theme"] .navbar .far,
 [data-theme="custom-theme"] .navbar .fab,
 [data-theme="custom-theme"] .navbar .fal {
-    font-size: 1.6rem !important; /* أيقونات أكبر حجماً */
-    margin: 0 3px; /* تقليل المسافات بين الأيقونات */
+    font-size: 1.25rem !important; /* حجم أيقونات متناسق مع الثيم الافتراضي */
+    margin: 0 3px;
     transition: all 0.3s ease;
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
     background-clip: text;
@@ -68,9 +68,9 @@
 
 /* مظهر الأيقونات في القوائم المنسدلة */
 [data-theme="custom-theme"] .dropdown-item i {
-    font-size: 1.2rem !important;
-    width: 24px !important;
-    height: 24px !important;
+    font-size: 1rem !important;
+    width: 20px !important;
+    height: 20px !important;
     text-align: center !important;
     margin-left: 10px !important;
     transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;

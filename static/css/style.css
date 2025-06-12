@@ -528,11 +528,11 @@
 
 /* تكبير الأيقونات في الهيدر أكثر */
 .navbar .btn-outline-light i {
-    font-size: 1.4rem;
+    font-size: 1.25rem;
 }
 
 .navbar .dropdown-toggle i {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
 }
 
 /* Responsive dropdown adjustments */
