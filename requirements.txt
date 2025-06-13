@@ -1,58 +1,152 @@
-# Core Dependencies
-Django>=4.2.0,<5.0
-djangorestframework==3.14.0
-djangorestframework-simplejwt==5.3.0
-django-cors-headers==4.3.1
+# ======================================
+# Core Framework & Extensions
+# ======================================
+Django==4.2.21
 django-environ==0.12.0
-psycopg2>=2.9.9
-dj-database-url>=2.0.0
-django-widget-tweaks>=1.4.12
-django-model-utils>=4.3.1
+django-debug-toolbar==4.2.0
+django-extensions==3.2.3
 
-# WebSocket Support (تم إزالة المكتبات غير المستخدمة)
-# channels==4.0.0        # غير مستخدم - تم الحذف
-# channels-redis==4.1.0  # غير مستخدم - تم الحذف
-# redis==5.0.1           # غير مستخدم - تم الحذف
-asgiref==3.8.1
-# daphne==4.0.0          # غير مستخدم - تم الحذف
+# REST Framework & API
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.2.2
+django-cors-headers==4.3.1
+django-rest-framework==0.1.0
+coreapi==2.3.3
+uritemplate==4.2.0
 
-# Task Scheduling
-django-apscheduler==0.6.2
+# Forms & UI
+django-widget-tweaks==1.5.0
+django-crispy-forms==2.4
+django-filter==25.1
+django-js-asset==3.1.2
 
-# Data Processing and Analytics (تم إزالة المكتبات غير المستخدمة)
-# numpy>=1.24.0          # غير مستخدم - تم الحذف
-# pandas>=2.2.3          # غير مستخدم - تم الحذف
-# scikit-learn>=1.2.0    # غير مستخدم - تم الحذف
-# plotly>=5.13.0         # غير مستخدم - تم الحذف
+# Authentication & Users
+django-allauth==65.9.0
+PyJWT==2.9.0
+oauthlib==3.2.2
 
-# File Handling and Import/Export
+# Database & Models
+psycopg2==2.9.10
+psycopg2-binary==2.9.10
+dj-database-url==3.0.0
+django-model-utils==5.0.0
+django-mptt==0.17.0
+
+# ======================================
+# File Handling & Media
+# ======================================
+Pillow==11.2.1
+python-magic==0.4.27
+reportlab==4.4.1
+
+# Import/Export Support
 django-import-export==3.3.1
 openpyxl==3.1.5
-pillow==11.2.1
-python-magic==0.4.27
-# python-magic-bin==0.4.14  # Windows support only - not needed on Linux/Railway
-django-dbbackup==4.2.1
+xlrd==2.0.1
+xlwt==1.3.0
+odfpy==1.4.1
+tablib==3.5.0
 
-# Cloud Services
-google-auth==2.39.0
-google-api-python-client==2.169.0
-google-auth-httplib2==0.2.0
-google-auth-oauthlib>=0.4.6
-# boto3>=1.26.0          # AWS - غير مستخدم - تم الحذف
+# ======================================
+# Task Processing & Caching
+# ======================================
+celery==5.5.3
+redis==6.2.0
+APScheduler==3.11.0
 
-# System Monitoring
-psutil>=5.9.0
+# Celery Dependencies
+amqp==5.3.1
+billiard==4.2.1
+kombu==5.5.4
+vine==5.1.0
 
-# Security
+# ======================================
+# Security & Authentication
+# ======================================
 cryptography==41.0.1
-PyJWT==2.10.1
+defusedxml==0.7.1
+python-decouple==3.8
 
-# Development and Testing
+# Google Integration
+google-auth==2.39.0
+google-auth-oauthlib==1.2.2
+google-api-core==2.25.0
+googleapis-common-protos==1.70.0
+
+# ======================================
+# Data Processing & Visualization
+# ======================================
+numpy==2.2.6
+pandas==2.2.3
+scikit-learn==1.6.1
+matplotlib==3.10.3
+seaborn==0.13.2
+scipy==1.15.3
+
+# ======================================
+# Development & Testing
+# ======================================
+pytest==7.4.3
+pytest-django==4.5.2
 gunicorn==21.2.0
 whitenoise==6.5.0
-python-dotenv==1.0.0
+Markdown==3.8
+python-slugify==8.0.4
 
-# Utilities
-pytz==2025.2
+# System Monitoring
+psutil==7.0.0
+
+# ======================================
+# Dependencies & Utilities
+# ======================================
 python-dateutil==2.9.0.post0
-PyYAML==6.0.2
+diff-match-patch==20241021
+text-unidecode==1.3
+setuptools==80.0.0
+six==1.17.0
+sqlparse==0.5.3
+
+# HTTP & Networking
+requests==2.32.3
+requests-oauthlib==2.0.0
+urllib3==2.4.0
+httplib2==0.22.0
+certifi==2025.4.26
+chardet==5.2.0
+idna==3.10
+
+# Additional Utilities
+click==8.2.1
+click-didyoumean==0.3.0
+click-plugins==1.1.1
+click-repl==0.3.0
+colorama==0.4.6
+Jinja2==3.1.6
+MarkupPy==1.18
+MarkupSafe==3.0.2
+Pygments==2.19.1
+wcwidth==0.2.13
+
+# Low Level Dependencies
+cachetools==5.5.2
+cffi==1.17.1
+charset-normalizer==3.4.2
+contourpy==1.3.2
+et_xmlfile==2.0.0
+fonttools==4.58.1
+itypes==1.2.0
+joblib==1.5.1
+kiwisolver==1.4.8
+packaging==25.0
+prompt_toolkit==3.0.51
+proto-plus==1.26.1
+protobuf==6.31.1
+pyasn1==0.6.1
+pyasn1_modules==0.4.0
+pycparser==2.22
+pyparsing==3.2.3
+rsa==4.9.1
+threadpoolctl==3.6.0
+typing_extensions==4.14.0
+tzdata==2025.2
+tzlocal==5.3.1
