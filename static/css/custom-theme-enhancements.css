@@ -2,7 +2,8 @@
    Custom Theme Enhancements - Glowing colored icons and animations */
 
 /* تأثيرات الأيقونات الملونة والمشعة في الهيدر */
-[data-theme="zakee-style"] .navbar .nav-link {
+[data-theme="custom-theme"] .navbar .nav-link {
+
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
