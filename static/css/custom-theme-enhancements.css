@@ -32,12 +32,12 @@
 
 [data-theme="custom-theme"] .navbar .fa-user,
 [data-theme="custom-theme"] .navbar .fa-user-circle {
-    color: #efec33 !important; /* ذهبي مشرق */
+    color: #ffffff !important; /* ذهبي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-bell,
 [data-theme="custom-theme"] .navbar .fa-bell-slash {
-    color: #897aee !important; /* برتقالي مشرق */
+    color: #e0ee7a !important; /* برتقالي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-cog,

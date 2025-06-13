@@ -11,6 +11,7 @@ from .models import (
     User, CompanyInfo, Branch, Notification, Department, Salesperson,
     Role, UserRole, SystemSettings, BranchMessage
 )
+from .forms import THEME_CHOICES
 
 class DepartmentFilter(admin.SimpleListFilter):
     title = _('Department')
@@ -54,10 +55,10 @@ class CustomUserAdmin(UserAdmin):
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'branch', 'is_inspection_technician', 'user_roles__role')
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
     inlines = [UserRoleInline]
-
+    
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('معلومات شخصية'), {'fields': ('first_name', 'last_name', 'email', 'phone', 'image', 'branch', 'departments')}),
+        (_('معلومات شخصية'), {'fields': ('first_name', 'last_name', 'email', 'phone', 'image', 'branch', 'departments', 'default_theme')}),
         (_('الصلاحيات'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'is_inspection_technician', 'groups', 'user_permissions'),
             'classes': ('collapse',),
@@ -65,6 +66,19 @@ class CustomUserAdmin(UserAdmin):
         }),
         (_('تواريخ مهمة'), {'fields': ('last_login', 'date_joined')}),
     )
+    
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'password1', 'password2', 'first_name', 'last_name', 'email', 'phone', 'image', 'branch', 'departments', 'default_theme'),
+        }),
+    )
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if 'default_theme' in form.base_fields:
+            form.base_fields['default_theme'].widget = forms.Select(choices=THEME_CHOICES)
+        return form
 
     def get_roles(self, obj):
         """عرض أدوار المستخدم في قائمة المستخدمين"""

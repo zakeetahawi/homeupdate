@@ -8,16 +8,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const themeSelector = document.getElementById('themeSelector');
     if (!themeSelector) return;
 
-    // تحميل الثيم المحفوظ من localStorage
-    const savedTheme = localStorage.getItem('selectedTheme') || 'default';
-    themeSelector.value = savedTheme;
-    applyTheme(savedTheme);
+    // تحديث حالة select لتطابق الثيم الحالي
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'default';
+    themeSelector.value = currentTheme;
 
     // الاستماع لتغييرات الثيم
     themeSelector.addEventListener('change', function(e) {
         const selectedTheme = e.target.value;
         applyTheme(selectedTheme);
         localStorage.setItem('selectedTheme', selectedTheme);
+
+        // حفظ الثيم في قاعدة البيانات إذا كان المستخدم مسجل
+        if (document.body.dataset.userAuthenticated === 'true') {
+            fetch('/accounts/set_default_theme/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: JSON.stringify({ theme: selectedTheme })
+            });
+        }
         
         // تطبيق تأثير التحول السلس
         addTransitionEffect();

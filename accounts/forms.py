@@ -5,6 +5,13 @@ from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from .models import User, Branch, Department, CompanyInfo, FormField, Salesperson, Role, UserRole
 
+# Theme choices constant
+THEME_CHOICES = [
+    ('default', _('الثيم الإفتراضي')),
+    ('custom-theme', _('نسخة الثيم الإفتراضي القابلة للتعديل')),
+    ('modern-black', _('الثيم الأسود العصري'))
+]
+
 class CustomAuthenticationForm(AuthenticationForm):
     """
     Custom authentication form with Bootstrap styling
@@ -43,9 +50,16 @@ class UserUpdateForm(forms.ModelForm):
     """
     Form for updating user information
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['default_theme'].widget = forms.Select(
+            choices=THEME_CHOICES,
+            attrs={'class': 'form-select'}
+        )
+
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'phone', 'branch')
+        fields = ('username', 'first_name', 'last_name', 'email', 'phone', 'branch', 'default_theme')
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('اسم المستخدم')}),
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('الاسم الأول')}),

@@ -13,11 +13,17 @@ class User(AbstractUser):
     branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='users', verbose_name=_('الفرع'))
     departments = models.ManyToManyField('Department', blank=True, related_name='users', verbose_name=_('الأقسام'))
     is_inspection_technician = models.BooleanField(default=False, verbose_name=_('فني معاينة'))
+    default_theme = models.CharField(max_length=50, default='default', verbose_name=_('الثيم الافتراضي'))
     class Meta:
         verbose_name = _('مستخدم')
         verbose_name_plural = _('المستخدمين')
     def __str__(self):
         return self.username
+    def get_default_theme(self):
+        """
+        جلب الثيم الافتراضي للمستخدم
+        """
+        return self.default_theme or 'default'
 class Branch(models.Model):
     code = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100)

@@ -37,22 +37,39 @@
     <!-- Database Card CSS -->
     {% if 'database' in request.path %}
     <link rel="stylesheet" href="{% static 'css/db_card.css' %}">
-    {% endif %}
-
-    <!-- تطبيق فوري للثيم لتجنب الوميض -->
+    {% endif %}    <!-- تطبيق فوري للثيم لتجنب الوميض -->
     <script>
         // تطبيق الثيم فوراً قبل رسم الصفحة
         (function() {
-            var savedTheme = localStorage.getItem('selectedTheme');
-            if (savedTheme && savedTheme !== 'default') {
-                document.documentElement.setAttribute('data-theme', savedTheme);
-            }
+            {% if user.is_authenticated %}
+                var userDefaultTheme = '{{ user.default_theme }}';
+                // Always prefer user's default theme from database after login
+                if (userDefaultTheme && userDefaultTheme !== 'default') {
+                    document.documentElement.setAttribute('data-theme', userDefaultTheme);
+                    localStorage.setItem('selectedTheme', userDefaultTheme);
+                    if (document.getElementById('themeSelector')) {
+                        document.getElementById('themeSelector').value = userDefaultTheme;
+                    }
+                } else {
+                    var savedTheme = localStorage.getItem('selectedTheme');
+                    // Only use localStorage theme if no default theme is set
+                    if (savedTheme && savedTheme !== 'default') {
+                        document.documentElement.setAttribute('data-theme', savedTheme);
+                    }
+                }
+            {% else %}
+                // For non-authenticated users, use localStorage theme
+                var savedTheme = localStorage.getItem('selectedTheme');
+                if (savedTheme && savedTheme !== 'default') {
+                    document.documentElement.setAttribute('data-theme', savedTheme);
+                }
+            {% endif %}
         })();
     </script>
 
     {% block extra_css %}{% endblock %}
 </head>
-<body id="main-body">
+<body id="main-body" data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
