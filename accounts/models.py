@@ -14,6 +14,7 @@ class User(AbstractUser):
     departments = models.ManyToManyField('Department', blank=True, related_name='users', verbose_name=_('الأقسام'))
     is_inspection_technician = models.BooleanField(default=False, verbose_name=_('فني معاينة'))
     default_theme = models.CharField(max_length=50, default='default', verbose_name=_('الثيم الافتراضي'))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_('تاريخ التحديث'))
     class Meta:
         verbose_name = _('مستخدم')
         verbose_name_plural = _('المستخدمين')
