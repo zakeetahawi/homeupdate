@@ -40,6 +40,7 @@ def customer_list(request):
         category = form.cleaned_data.get('category')
         customer_type = form.cleaned_data.get('customer_type')
         status = form.cleaned_data.get('status')
+        branch = form.cleaned_data.get('branch')
 
         # تحسين استعلام البحث
         if search:
@@ -62,6 +63,9 @@ def customer_list(request):
 
         if status:
             customers = customers.filter(status=status)
+            
+        if branch:
+            customers = customers.filter(branch=branch)
 
     # استخدام فهرس created_at للترتيب
     customers = customers.order_by('-created_at')
@@ -80,6 +84,8 @@ def customer_list(request):
     customer_type_value = request.GET.get('customer_type', '')
     status_value = request.GET.get('status', '')
 
+    branch_value = request.GET.get('branch', '')
+    
     context = {
         'page_obj': page_obj,
         'form': form,
@@ -88,6 +94,7 @@ def customer_list(request):
         'category_value': category_value,
         'customer_type_value': customer_type_value,
         'status_value': status_value,
+        'branch_value': branch_value,
     }
 
     return render(request, 'customers/customer_list.html', context)

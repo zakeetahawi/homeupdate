@@ -2,6 +2,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from .models import Customer, CustomerCategory, CustomerNote
+from accounts.models import Branch
 
 class CustomerForm(forms.ModelForm):
     phone2 = forms.CharField(
@@ -119,6 +120,12 @@ class CustomerSearchForm(forms.Form):
         queryset=CustomerCategory.objects.all(),
         required=False,
         empty_label=_('كل التصنيفات'),
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    branch = forms.ModelChoiceField(
+        queryset=Branch.objects.filter(is_active=True),
+        required=False,
+        empty_label=_('كل الفروع'),
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     customer_type = forms.ChoiceField(
