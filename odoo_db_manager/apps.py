@@ -15,15 +15,24 @@ class OdooDbManagerConfig(AppConfig):
         """تهيئة التطبيق"""
         # استيراد الإشارات
         try:
-            import odoo_db_manager.signals
-
-            # مزامنة قواعد البيانات من ملف الإعدادات
-            from .services.database_service import DatabaseService
-            database_service = DatabaseService()
-            database_service.sync_databases_from_settings()
-
-            # اكتشاف ومزامنة قواعد البيانات الموجودة في PostgreSQL
-            database_service.sync_discovered_databases()
+            import odoo_db_manager.signals            # التحقق من وجود الجداول قبل المزامنة
+            from django.db import connection
+            from django.db.utils import OperationalError
+            
+            try:
+                # محاولة التحقق من وجود جدول Database
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT COUNT(*) FROM odoo_db_manager_database LIMIT 1")
+                
+                # إذا وصلنا هنا، فالجداول موجودة ويمكننا المزامنة
+                from .services.database_service import DatabaseService
+                database_service = DatabaseService()
+                database_service.sync_databases_from_settings()
+                database_service.sync_discovered_databases()
+                
+            except OperationalError:
+                # الجداول غير موجودة بعد، تخطي المزامنة
+                print("تخطي مزامنة قواعد البيانات - الجداول غير موجودة بعد")
 
             # بدء تشغيل خدمة النسخ الاحتياطية المجدولة
             import os

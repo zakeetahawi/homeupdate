@@ -70,7 +70,8 @@ urlpatterns = [
     path('installations/', include('installations.urls', namespace='installations')),
     # إعادة توجيه من المسار القديم إلى المسار الجديد
     path('data_management/', views.data_management_redirect, name='data_management_redirect'),
-    path('database/', include('odoo_db_manager.urls', namespace='odoo_db_manager')),
+    path('database/', views.data_management_redirect, name='database_redirect'),
+    path('odoo-db-manager/', include('odoo_db_manager.urls', namespace='odoo_db_manager')),
 ]
 
 # إضافة مسارات الملفات الثابتة ووسائط التحميل في وضع التطوير

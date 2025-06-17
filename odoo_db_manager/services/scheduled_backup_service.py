@@ -140,13 +140,18 @@ class ScheduledBackupService:
 
     def _schedule_all_backups(self):
         """جدولة جميع النسخ الاحتياطية النشطة"""
-        scheduler = get_scheduler()
-        # حذف جميع المهام السابقة
-        scheduler.remove_all_jobs()
+        try:
+            scheduler = get_scheduler()
+            # حذف جميع المهام السابقة
+            scheduler.remove_all_jobs()
 
-        # الحصول على جميع جدولات النسخ الاحتياطية النشطة
-        schedules = BackupSchedule.objects.filter(is_active=True)
-        logger.info(f"جدولة {schedules.count()} نسخة احتياطية")
+            # الحصول على جميع جدولات النسخ الاحتياطية النشطة
+            schedules = BackupSchedule.objects.filter(is_active=True)
+            logger.info(f"جدولة {schedules.count()} نسخة احتياطية")
+        except Exception as e:
+            # إذا كانت الجداول غير موجودة، تخطي الجدولة
+            logger.info(f"تخطي جدولة النسخ الاحتياطية: {str(e)}")
+            return
 
         for schedule in schedules:
             self._schedule_backup(schedule)

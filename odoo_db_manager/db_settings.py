@@ -6,6 +6,8 @@ import os
 import json
 import logging
 from pathlib import Path
+from zoneinfo import ZoneInfo
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,33 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # مسار ملف إعدادات قاعدة البيانات
 DB_SETTINGS_FILE = os.path.join(BASE_DIR, 'db_settings.json')
+
+# Database connection settings
+DB_SETTINGS = {
+    'host': 'localhost',
+    'port': 5432,
+    'database': 'crm_system',
+    'user': 'postgres',
+    'password': '5525',
+    'timezone': 'Asia/Riyadh'
+}
+
+# Time zone settings
+TIME_ZONE = 'Asia/Riyadh'
+USE_TZ = True
+
+# Default datetime settings
+def get_current_time():
+    return datetime.now(ZoneInfo(TIME_ZONE))
+
+# Backup settings
+BACKUP_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'backups')
+if not os.path.exists(BACKUP_DIR):
+    os.makedirs(BACKUP_DIR)
+
+# Additional database configurations
+MAX_CONNECTIONS = 20
+CONNECT_TIMEOUT = 30
 
 def get_active_database_settings():
     """

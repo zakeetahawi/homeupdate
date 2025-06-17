@@ -11,8 +11,8 @@ def main():
         # تم تعديل هذا الجزء لتجنب طباعة كلمة المرور في السجلات
         db_url = os.environ.get('DATABASE_URL')
         masked_url = db_url.replace(db_url.split('@')[0].split('://')[1], '****:****')
-        print(f"استخدام قاعدة البيانات: {masked_url}")
-        print("تم تكوين قاعدة البيانات من DATABASE_URL")
+        # print(f"استخدام قاعدة البيانات: {masked_url}")  # معلومات حساسة
+        # print("تم تكوين قاعدة البيانات من DATABASE_URL")  # معلومات غير ضرورية
 
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
     try:

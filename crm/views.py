@@ -1,3 +1,6 @@
+"""
+العرض الرئيسي للنظام
+"""
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.db.models import Count, Sum, F
@@ -166,7 +169,7 @@ def serve_media_file(request, path):
 
 def data_management_redirect(request):
     """
-    إعادة توجيه من المسار القديم /data_management/ إلى المسار الجديد /database/
+    إعادة توجيه من المسارات القديمة إلى المسار الجديد لإدارة قواعد البيانات
     """
     return redirect('odoo_db_manager:dashboard')
 

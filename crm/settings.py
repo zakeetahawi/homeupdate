@@ -61,8 +61,7 @@ INSTALLED_APPS = [
     'installations',
     'inventory',
     'orders',
-    'reports',
-    'odoo_db_manager.apps.OdooDbManagerConfig',  # تطبيق إدارة قواعد البيانات على طراز أودو
+    'reports',    'odoo_db_manager.apps.OdooDbManagerConfig',  # تطبيق إدارة قواعد البيانات على طراز أودو
     'corsheaders',
     'django_apscheduler', # إضافة مكتبة جدولة المهام
     'dbbackup',  # إضافة تطبيق النسخ الاحتياطي
@@ -91,9 +90,9 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',    'django.contrib.messages.middleware.MessageMiddleware',    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'crm.middleware.permission_handler.PermissionDeniedMiddleware',
+    'odoo_db_manager.middleware.default_user.DefaultUserMiddleware',  # إنشاء مستخدم افتراضي
     # 'crm.middleware.PerformanceMiddleware',  # تم تعطيل مؤقتاً
     # 'crm.middleware.LazyLoadMiddleware',  # تم تعطيل مؤقتاً
 ]
@@ -138,8 +137,7 @@ WSGI_APPLICATION = 'crm.wsgi.application'
 # Database Configuration (تم تبسيط المنطق)
 def get_database_config():
     """تحديد إعدادات قاعدة البيانات"""
-    import json
-    # التكوين الافتراضي - سيتم استخدامه إذا فشلت كل المحاولات الأخرى
+    import json    # التكوين الافتراضي - سيتم استخدامه إذا فشلت كل المحاولات الأخرى
     default_config = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'crm_system',
@@ -159,35 +157,44 @@ def get_database_config():
             if settings_data and isinstance(settings_data, dict):
                 active_db = str(settings_data.get('active_db'))
                 if active_db and active_db in settings_data.get('databases', {}):
-                    db_config = settings_data['databases'][active_db]
-                    # التحقق من وجود جميع الحقول المطلوبة
+                    db_config = settings_data['databases'][active_db]                    # التحقق من وجود جميع الحقول المطلوبة
                     required_fields = ['ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT']
                     if all(field in db_config for field in required_fields):
-                        print(f"استخدام قاعدة البيانات: {db_config['NAME']} على {db_config['HOST']}:{db_config['PORT']}")
-                        return db_config
-
-        print("استخدام إعدادات قاعدة البيانات الافتراضية")
+                        # print(f"قراءة إعدادات قاعدة البيانات من الملف: {db_config}")  # معلومات حساسة
+                        # print(f"استخدام قاعدة البيانات: {db_config['NAME']} على {db_config['HOST']}:{db_config['PORT']}")
+                        return db_config        # print("استخدام إعدادات قاعدة البيانات الافتراضية")  # معلومات غير ضرورية
+        # print(f"الإعدادات الافتراضية: {default_config}")  # معلومات حساسة
         return default_config
 
     except Exception as e:
-        print(f"خطأ في قراءة إعدادات قاعدة البيانات: {str(e)}")
-        print("استخدام الإعدادات الافتراضية")
+        # print(f"خطأ في قراءة إعدادات قاعدة البيانات: {str(e)}")  # معلومات حساسة
+        # print("استخدام الإعدادات الافتراضية")  # معلومات غير ضرورية
         return default_config
 
 # تكوين قاعدة البيانات
 db_config = get_database_config()
+
+# استخراج TIME_ZONE وإزالته من المعاملات الأساسية لتجنب تمريره إلى PostgreSQL
+time_zone = db_config.pop('TIME_ZONE', 'Africa/Cairo')
+
+# إنشاء تكوين نظيف بدون TIME_ZONE
+clean_db_config = {k: v for k, v in db_config.items() if k != 'TIME_ZONE'}
+
 DATABASES = {
     'default': {
-        'ENGINE': db_config['ENGINE'],
-        'NAME': db_config['NAME'],
-        'USER': db_config['USER'],
-        'PASSWORD': db_config['PASSWORD'],
-        'HOST': db_config['HOST'],
-        'PORT': db_config['PORT'],
+        'ENGINE': clean_db_config['ENGINE'],
+        'NAME': clean_db_config['NAME'],
+        'USER': clean_db_config['USER'],
+        'PASSWORD': clean_db_config['PASSWORD'],
+        'HOST': clean_db_config['HOST'],
+        'PORT': clean_db_config['PORT'],
         'ATOMIC_REQUESTS': False,
         'AUTOCOMMIT': True,
         'CONN_MAX_AGE': 600,
         'CONN_HEALTH_CHECKS': True,
+        'OPTIONS': {
+            # إزالة TIME_ZONE من OPTIONS لحل مشكلة PostgreSQL
+        },
     }
 }
 

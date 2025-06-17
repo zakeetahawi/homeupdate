@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load widget_tweaks %}
 
 {% block title %}{{ title }}{% endblock %}
 
@@ -26,136 +27,174 @@
         <form method="post">
             {% csrf_token %}
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label for="name">اسم قاعدة البيانات</label>
-                        <input type="text" class="form-control" id="name" name="name" required>
-                        <small class="form-text text-muted">اسم قاعدة البيانات الذي سيظهر في النظام</small>
-                    </div>
+            <!-- معلومات أساسية -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>المعلومات الأساسية</h5>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label for="db_type">نوع قاعدة البيانات</label>
-                        <select class="form-control" id="db_type" name="db_type">
-                            <option value="postgresql">PostgreSQL</option>
-                            <option value="sqlite3">SQLite</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div id="postgresql-fields">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="host">المضيف</label>
-                            <input type="text" class="form-control" id="host" name="host" value="localhost">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                                {{ form.name }}
+                                <small class="form-text text-muted">اسم قاعدة البيانات في النظام</small>
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="{{ form.port.id_for_label }}">المنفذ</label>
-                            {{ form.port|add_class:"form-control" }}
-                            <small class="form-text text-muted">منفذ الاتصال بقاعدة البيانات (مثال: 5433 لـ PostgreSQL، 3306 لـ MySQL)</small>
-                            {% if form.port.errors %}
-                                <div class="invalid-feedback d-block">{{ form.port.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="form-group mb-3">
-                            <label for="database_name">اسم قاعدة البيانات في الخادم</label>
-                            <input type="text" class="form-control" id="database_name" name="database_name">
-                            <small class="form-text text-muted">اسم قاعدة البيانات في خادم PostgreSQL. إذا تركته فارغاً، سيتم استخدام الاسم المدخل أعلاه.</small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="username">اسم المستخدم</label>
-                            <input type="text" class="form-control" id="username" name="username" value="postgres">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="password">كلمة المرور</label>
-                            <input type="password" class="form-control" id="password" name="password">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.db_type.id_for_label }}">{{ form.db_type.label }}</label>
+                                {{ form.db_type }}
+                                {% if form.db_type.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.db_type.errors }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="sqlite-fields" style="display: none;">
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="form-group mb-3">
-                            <label for="sqlite_path">مسار ملف قاعدة البيانات</label>
-                            <input type="text" class="form-control" id="sqlite_path" name="sqlite_path">
-                            <small class="form-text text-muted">مسار ملف قاعدة بيانات SQLite. إذا تركته فارغاً، سيتم استخدام اسم قاعدة البيانات مع امتداد .sqlite3</small>
+            <!-- إعدادات الاتصال -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>إعدادات الاتصال</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.host.id_for_label }}">{{ form.host.label }}</label>
+                                {{ form.host }}
+                                {% if form.host.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.host.errors }}</div>
+                                {% endif %}
+                            </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.port.id_for_label }}">{{ form.port.label }}</label>
+                                {{ form.port }}
+                                <small class="form-text text-muted">منفذ الاتصال (افتراضي: 5432)</small>
+                                {% if form.port.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.port.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.database_name.id_for_label }}">{{ form.database_name.label }}</label>
+                                {{ form.database_name }}
+                                <small class="form-text text-muted">اسم قاعدة البيانات في الخادم</small>
+                                {% if form.database_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.database_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                                {{ form.username }}
+                                {% if form.username.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.username.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                                {{ form.password }}
+                                {% if form.password.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.password.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>                    </div>
+                </div>
+            </div>
+
+            <!-- خيارات متقدمة -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>خيارات متقدمة</h5>
+                </div>                <div class="card-body">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="create_actual_db" name="create_actual_db" checked>
+                        <label class="form-check-label" for="create_actual_db">
+                            إنشاء قاعدة البيانات الفعلية في PostgreSQL
+                        </label>
+                        <small class="form-text text-muted">إذا تم تحديد هذا الخيار، سيتم إنشاء قاعدة البيانات فعلياً في PostgreSQL</small>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="force_create" name="force_create">
+                        <label class="form-check-label" for="force_create">
+                            إجبار إنشاء قاعدة البيانات (تجاوز التحقق من الوجود)
+                        </label>
+                        <small class="form-text text-muted">استخدم هذا الخيار إذا كنت تريد إعادة إنشاء قاعدة بيانات موجودة</small>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="ignore_db_errors" name="ignore_db_errors">
+                        <label class="form-check-label" for="ignore_db_errors">
+                            تجاهل أخطاء إنشاء قاعدة البيانات (إنشاء السجل فقط)
+                        </label>
+                        <small class="form-text text-muted">استخدم هذا الخيار إذا كنت تريد إنشاء السجل دون إنشاء قاعدة البيانات أو اختبار الاتصال</small>
                     </div>
                 </div>
             </div>
 
-            <div class="form-check mb-3" id="create_db_container">
-                <input type="checkbox" class="form-check-input" id="create_db" name="create_db" checked>
-                <label class="form-check-label" for="create_db">إنشاء قاعدة البيانات في الخادم</label>
-                <small class="form-text text-muted d-block">قم بإلغاء تحديد هذا الخيار إذا كانت قاعدة البيانات موجودة بالفعل في الخادم.</small>
-            </div>
-
-            <div class="form-check mb-3">
-                <input type="checkbox" class="form-check-input" id="force_create" name="force_create">
-                <label class="form-check-label" for="force_create">تجاوز التحقق من وجود قاعدة البيانات</label>
-                <small class="form-text text-muted d-block">حدد هذا الخيار إذا كنت متأكدًا من أن قاعدة البيانات غير موجودة، ولكن النظام يظهر خطأ يفيد بأنها موجودة.</small>
-            </div>
-
-            <div class="form-check mb-3">
-                <input type="checkbox" class="form-check-input" id="ignore_db_errors" name="ignore_db_errors">
-                <label class="form-check-label" for="ignore_db_errors">تجاهل أخطاء إنشاء قاعدة البيانات</label>
-                <small class="form-text text-muted d-block">حدد هذا الخيار إذا كنت تريد فقط إنشاء سجل قاعدة البيانات في النظام، حتى لو فشل إنشاء قاعدة البيانات الفعلية (مفيد للاتصال بقاعدة بيانات موجودة بالفعل).</small>
-            </div>
-
+            <!-- أزرار التحكم -->
             <div class="form-group mt-4">
-                <button type="submit" class="btn btn-primary">إنشاء قاعدة البيانات</button>
-                <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">إلغاء</a>
-            </div>
-        </form>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> إنشاء قاعدة البيانات
+                </button>
+                <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> إلغاء
+                </a>
+            </div>        </form>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
-    $(document).ready(function() {
-        // نسخ اسم قاعدة البيانات إلى اسم قاعدة البيانات في الخادم
-        $('#name').on('input', function() {
-            if ($('#database_name').val() === '') {
-                $('#database_name').val($(this).val());
-            }
-            if ($('#sqlite_path').val() === '') {
-                $('#sqlite_path').val($(this).val() + '.sqlite3');
-            }
-        });
-
-        // تبديل حقول الإدخال حسب نوع قاعدة البيانات
-        $('#db_type').on('change', function() {
-            var dbType = $(this).val();
-            if (dbType === 'postgresql') {
-                $('#postgresql-fields').show();
-                $('#sqlite-fields').hide();
-                $('#create_db').closest('.form-check').show();
-            } else if (dbType === 'sqlite3') {
-                $('#postgresql-fields').hide();
-                $('#sqlite-fields').show();
-                $('#create_db').closest('.form-check').hide();
-            }
-        });
+$(document).ready(function() {
+    // منطق تفاعل الخيارات
+    $('#ignore_db_errors').change(function() {
+        if ($(this).is(':checked')) {
+            $('#create_actual_db').prop('checked', false).prop('disabled', true);
+            $('#force_create').prop('checked', false).prop('disabled', true);
+        } else {
+            $('#create_actual_db').prop('disabled', false);
+            $('#force_create').prop('disabled', false);
+        }
     });
+    
+    $('#create_actual_db').change(function() {
+        if (!$(this).is(':checked')) {
+            $('#force_create').prop('checked', false).prop('disabled', true);
+        } else {
+            $('#force_create').prop('disabled', false);
+        }
+    });
+    
+    // منطق عرض الحقول حسب نوع قاعدة البيانات
+    $('#id_db_type').change(function() {
+        var dbType = $(this).val();
+        if (dbType === 'postgresql') {
+            $('#postgresql-fields').show();
+            $('#sqlite-fields').hide();
+            $('#create_actual_db').closest('.form-check').show();
+        } else if (dbType === 'sqlite3') {
+            $('#postgresql-fields').hide();
+            $('#sqlite-fields').show();
+            $('#create_actual_db').closest('.form-check').hide();
+        }
+    });
+});
 </script>
 {% endblock %}

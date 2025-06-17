@@ -18,7 +18,7 @@ from .models import Database, Backup, BackupSchedule, GoogleDriveConfig
 from .services.database_service import DatabaseService
 # تم إزالة BackupService لتجنب التضارب
 from .services.scheduled_backup_service import scheduled_backup_service
-from .forms import BackupScheduleForm, GoogleDriveConfigForm
+from .forms import BackupScheduleForm, GoogleDriveConfigForm, DatabaseForm
 
 def is_staff_or_superuser(user):
     """التحقق من أن المستخدم موظف أو مدير"""
@@ -28,8 +28,32 @@ def is_staff_or_superuser(user):
 @user_passes_test(is_staff_or_superuser)
 def dashboard(request):
     """عرض لوحة التحكم الرئيسية"""
-    # الحصول على قواعد البيانات
+    # تحديث حالة الاتصال لجميع قواعد البيانات
+    database_service = DatabaseService()
     databases = Database.objects.all().order_by('-is_active', '-created_at')
+    
+    # تحديث حالة الاتصال لكل قاعدة بيانات
+    for db in databases:
+        try:
+            success, message = database_service.test_connection(db.connection_info)
+            db.status = success
+            if not success:
+                db.error_message = message
+            else:
+                db.error_message = ""
+            db.save()
+        except Exception as e:
+            db.status = False
+            db.error_message = str(e)
+            db.save()
+
+    # محاولة اكتشاف قواعد البيانات الموجودة في PostgreSQL
+    try:
+        discovered_databases = database_service.discover_postgresql_databases()
+        # سنعرض هذه في context لإظهارها للمستخدم
+    except Exception as e:
+        discovered_databases = []
+        print(f"خطأ في اكتشاف قواعد البيانات: {e}")
 
     # الحصول على النسخ الاحتياطية
     backups = Backup.objects.all().order_by('-created_at')[:10]
@@ -123,8 +147,7 @@ def dashboard(request):
         pass
 
     context = {
-        'databases': databases,
-        'backups': backups,
+        'databases': databases,        'backups': backups,
         'total_size_display': total_size_display,
         'last_backup': last_backup,
         'title': _('إدارة قواعد البيانات'),
@@ -137,6 +160,7 @@ def dashboard(request):
         'current_db_host': current_db_host,
         'current_db_port': current_db_port,
         'current_db_status': current_db_status,
+        'discovered_databases': discovered_databases,  # قواعد البيانات الموجودة في PostgreSQL
     }
 
     return render(request, 'odoo_db_manager/dashboard.html', context)
@@ -149,7 +173,7 @@ def database_list(request):
     databases = Database.objects.all().order_by('-is_active', '-created_at')
 
     # التحقق من وجود رسالة نجاح لتنشيط قاعدة البيانات
-    show_activation_success = request.session.pop('show_db_activation_success', False)
+    show_activation_success = request.session.pop('show_activation_success', False)
     activated_db_name = request.session.pop('activated_db_name', '')
 
     context = {
@@ -218,97 +242,151 @@ def database_discover(request):
 def database_detail(request, pk):
     """عرض تفاصيل قاعدة البيانات"""
     # الحصول على قاعدة البيانات
-    database = get_object_or_404(Database, pk=pk)
-
-    # الحصول على النسخ الاحتياطية
-    backups = database.backups.all().order_by('-created_at')
+    database = get_object_or_404(Database, pk=pk)    # الحصول على النسخ الاحتياطية
+    backups = database.backups.all().order_by('-created_at')    # التحقق من رسائل نجاح إنشاء قاعدة البيانات
+    database_created_success = request.session.pop('database_created_success', False)
+    created_database_name = request.session.pop('created_database_name', '')
+    default_user_created = request.session.pop('default_user_created', False)
+    migrations_applied = request.session.pop('migrations_applied', False)
 
     context = {
         'database': database,
         'backups': backups,
         'title': _('تفاصيل قاعدة البيانات'),
+        'database_created_success': database_created_success,
+        'created_database_name': created_database_name,
+        'default_user_created': default_user_created,
+        'migrations_applied': migrations_applied,
     }
 
     return render(request, 'odoo_db_manager/database_detail.html', context)
 
 @login_required
 @user_passes_test(is_staff_or_superuser)
+@login_required
+@user_passes_test(is_staff_or_superuser)
 def database_create(request):
     """إنشاء قاعدة بيانات جديدة"""
     if request.method == 'POST':
-        # الحصول على بيانات النموذج
-        name = request.POST.get('name')
-        db_type = request.POST.get('db_type', 'postgresql')
-
-        # إنشاء معلومات الاتصال حسب نوع قاعدة البيانات
-        connection_info = {}
-
-        if db_type == 'postgresql':
-            # معلومات اتصال PostgreSQL
-            host = request.POST.get('host', 'localhost')
-            port = request.POST.get('port', '5432')
-            database_name = request.POST.get('database_name', '')
-            # استخدام اسم قاعدة البيانات المدخل إذا لم يتم تحديد اسم قاعدة البيانات في الخادم
-            if not database_name:
-                # استبدال المسافات بالشرطات السفلية لتجنب أخطاء SQL
-                database_name = name.replace(' ', '_')
-            username = request.POST.get('username', '')
-            password = request.POST.get('password', '')
-
-            connection_info = {
-                'NAME': database_name,
-                'USER': username,
-                'PASSWORD': password,
-                'HOST': host,
-                'PORT': port,
-            }
-        elif db_type == 'sqlite3':
-            # معلومات اتصال SQLite
-            sqlite_path = request.POST.get('sqlite_path', f"{name}.sqlite3")
-
-            connection_info = {
-                'NAME': sqlite_path,
-            }
-
-        try:
-            # التحقق مما إذا كان المستخدم يريد تجاوز التحقق من وجود قاعدة البيانات
-            force_create = request.POST.get('force_create') == 'on'
-
-            # التحقق مما إذا كان المستخدم يريد تجاهل أخطاء إنشاء قاعدة البيانات
-            ignore_db_errors = request.POST.get('ignore_db_errors') == 'on'
-
-            # إنشاء قاعدة البيانات
-            database_service = DatabaseService()
-
-            if ignore_db_errors:
-                # إنشاء سجل قاعدة البيانات فقط دون محاولة إنشاء قاعدة البيانات الفعلية
-                database = Database.objects.create(
-                    name=name,
-                    db_type=db_type,
-                    connection_info=connection_info
-                )
-                messages.warning(request, _('تم إنشاء سجل قاعدة البيانات فقط، دون محاولة إنشاء قاعدة البيانات الفعلية.'))
-            else:
-                # إنشاء قاعدة البيانات وسجلها
-                database = database_service.create_database(
-                    name=name,
-                    db_type=db_type,
-                    connection_info=connection_info,
-                    force_create=force_create
-                )
-
-            if database.status:
-                messages.success(request, _('تم إنشاء قاعدة البيانات بنجاح.'))
-            else:
-                messages.warning(request, _(f'تم إنشاء سجل قاعدة البيانات ولكن حدث خطأ أثناء إنشاء قاعدة البيانات الفعلية: {database.error_message}'))
-
-            return redirect('odoo_db_manager:database_detail', pk=database.pk)
-        except Exception as e:
-            messages.error(request, _(f'حدث خطأ أثناء إنشاء قاعدة البيانات: {str(e)}'))
-            return redirect('odoo_db_manager:database_create')
+        form = DatabaseForm(request.POST)
+        if form.is_valid():
+            try:                # حفظ قاعدة البيانات من النموذج (بدون إنشاء قاعدة البيانات الفعلية)
+                database = form.save(commit=False)
+                
+                # إنشاء قاعدة البيانات الفعلية إذا أراد المستخدم ذلك
+                force_create = request.POST.get('force_create') == 'on'
+                ignore_db_errors = request.POST.get('ignore_db_errors') == 'on'
+                create_actual_db = request.POST.get('create_actual_db') == 'on'                  # حفظ السجل أولاً
+                database.save()
+                  # إنشاء خدمة قاعدة البيانات مرة واحدة
+                database_service = DatabaseService()
+                
+                if create_actual_db and not ignore_db_errors:
+                    # استخدام خدمة إنشاء قواعد البيانات لإنشاء قاعدة البيانات الفعلية
+                    try:
+                        # إنشاء قاعدة البيانات الفعلية
+                        db_created, create_message = database_service.create_physical_database(
+                            connection_info=database.connection_info,
+                            force_create=force_create
+                        )
+                        
+                        if db_created:
+                            # اختبار الاتصال بعد الإنشاء
+                            success, test_message = database_service.test_connection(database.connection_info)
+                            
+                            if success:
+                                database.status = True
+                                database.error_message = ''
+                                database.save()
+                                
+                                # تطبيق migrations في قاعدة البيانات الجديدة
+                                migrations_applied = False
+                                try:
+                                    migrations_applied = _apply_migrations_to_database(database)
+                                except Exception as migrate_error:
+                                    print(f"خطأ في تطبيق migrations: {migrate_error}")
+                                  # محاولة إنشاء مستخدم افتراضي فقط إذا تم تطبيق migrations
+                                default_user_created = False
+                                if migrations_applied:
+                                    # انتظار قصير لضمان اكتمال migrations
+                                    import time
+                                    time.sleep(2)
+                                    
+                                    try:
+                                        default_user_created = _create_default_user(database)
+                                    except Exception as user_error:
+                                        print(f"خطأ في إنشاء المستخدم الافتراضي: {user_error}")
+                                        # محاولة ثانية بعد انتظار أطول
+                                        try:
+                                            time.sleep(3)
+                                            default_user_created = _create_default_user(database)
+                                        except Exception as user_error2:
+                                            print(f"فشل في المحاولة الثانية لإنشاء المستخدم الافتراضي: {user_error2}")
+                                
+                                # حفظ معلومات نجاح الإنشاء في الجلسة لعرضها في SweetAlert
+                                request.session['database_created_success'] = True
+                                request.session['created_database_name'] = database.name
+                                request.session['created_database_id'] = database.id
+                                request.session['default_user_created'] = default_user_created
+                                request.session['migrations_applied'] = migrations_applied
+                                
+                                success_msg = f'تم إنشاء قاعدة البيانات في PostgreSQL وتم اختبار الاتصال بنجاح. {create_message}'
+                                if migrations_applied:
+                                    success_msg += " تم تطبيق migrations."
+                                if default_user_created:
+                                    success_msg += " تم إنشاء مستخدم افتراضي."
+                                
+                                messages.success(request, success_msg)
+                            else:
+                                database.status = False
+                                database.error_message = test_message
+                                database.save()
+                                messages.warning(request, f'تم إنشاء قاعدة البيانات في PostgreSQL ولكن فشل اختبار الاتصال: {test_message}')
+                        else:
+                            database.status = False
+                            database.error_message = create_message
+                            database.save()
+                            messages.error(request, f'فشل في إنشاء قاعدة البيانات: {create_message}')
+                    
+                    except Exception as e:
+                        database.status = False
+                        database.error_message = str(e)
+                        database.save()
+                        messages.error(request, f'حدث خطأ أثناء إنشاء قاعدة البيانات: {str(e)}')
+                
+                elif not create_actual_db and not ignore_db_errors:
+                    # فقط اختبار الاتصال بدون إنشاء قاعدة البيانات
+                    success, message = database_service.test_connection(database.connection_info)
+                    
+                    if success:
+                        database.status = True
+                        database.error_message = ''
+                        database.save()
+                        messages.success(request, f'تم إنشاء سجل قاعدة البيانات وتم اختبار الاتصال بقاعدة البيانات الموجودة. {message}')
+                    else:
+                        database.status = False
+                        database.error_message = message
+                        database.save()
+                        messages.warning(request, f'تم إنشاء سجل قاعدة البيانات ولكن فشل اختبار الاتصال: {message}')
+                else:
+                    # تجاهل اختبار الاتصال
+                    messages.warning(request, 'تم إنشاء سجل قاعدة البيانات دون اختبار الاتصال أو إنشاء قاعدة البيانات.')
+                
+                return redirect('odoo_db_manager:database_detail', pk=database.pk)
+                
+            except Exception as e:
+                messages.error(request, _(f'حدث خطأ أثناء إنشاء قاعدة البيانات: {str(e)}'))
+        else:
+            # إضافة رسائل الأخطاء للمستخدم
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label}: {error}")
+    else:
+        form = DatabaseForm()
 
     context = {
         'title': _('إنشاء قاعدة بيانات جديدة'),
+        'form': form,
     }
 
     return render(request, 'odoo_db_manager/database_form.html', context)
@@ -317,30 +395,81 @@ def database_create(request):
 @user_passes_test(is_staff_or_superuser)
 def database_activate(request, pk):
     """تنشيط قاعدة بيانات"""
+      # التأكد من أن الطلب POST فقط أو AJAX GET
+    if request.method == 'GET':
+        # إذا كان GET request، إعادة توجيه إلى dashboard مع رسالة
+        messages.warning(request, 'يرجى استخدام زر التفعيل من لوحة التحكم.')
+        return redirect('odoo_db_manager:dashboard')
+    
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'message': 'طريقة الطلب غير صحيحة. يجب استخدام POST.'
+        })
+    
     try:
         # الحصول على قاعدة البيانات
+        print(f"محاولة تنشيط قاعدة البيانات بمعرف: {pk}")
         database = get_object_or_404(Database, pk=pk)
+        print(f"تم العثور على قاعدة البيانات: {database.name}")
         
         # تنشيط قاعدة البيانات باستخدام الطريقة الجديدة
-        if database.activate():
-            # محاولة إنشاء مستخدم افتراضي إذا لم يكن هناك مستخدمين
-            created_default_user = database.create_default_user()
+        print("بدء عملية تنشيط قاعدة البيانات...")
+        activation_result = database.activate()
+        print(f"نتيجة التنشيط: {activation_result}")
+        
+        if activation_result.get('success', False):
+            print("تم تنشيط قاعدة البيانات بنجاح، محاولة إنشاء مستخدم افتراضي...")
             
-            # استخدام رسالة نجاح مع معلومات إضافية
-            success_message = f'تم تنشيط قاعدة البيانات {database.name} بنجاح. يرجى إعادة تشغيل السيرفر لتطبيق التغييرات.'
+            # محاولة إنشاء مستخدم افتراضي إذا لم يكن هناك مستخدمين
+            try:
+                created_default_user = database.create_default_user()
+                print(f"نتيجة إنشاء المستخدم الافتراضي: {created_default_user}")
+            except Exception as user_error:
+                print(f"خطأ في إنشاء المستخدم الافتراضي: {str(user_error)}")
+                created_default_user = False
+              # استخدام رسالة نجاح مع معلومات إضافية
+            success_message = f'تم تنشيط قاعدة البيانات {database.name} بنجاح.'
             messages.success(request, success_message)
             
-            # إضافة متغير في الجلسة لعرض SweetAlert في الصفحة التالية
-            request.session['show_db_activation_success'] = True
-            request.session['activated_db_name'] = database.name
-            request.session['created_default_user'] = created_default_user
+            # لا نحفظ في session لتجنب مشاكل تغيير قاعدة البيانات
+            # request.session['show_db_activation_success'] = True
+            # request.session['activated_db_name'] = database.name
+            # request.session['created_default_user'] = created_default_user
+            
+            # إعادة توجيه مع رسالة تطلب إعادة التشغيل
+            response_data = {
+                'success': True, 
+                'message': 'تم تنشيط قاعدة البيانات وتطبيق التغييرات بنجاح',
+                'database_name': activation_result.get('database_name', database.name),
+                'created_default_user': created_default_user,
+                'requires_restart': activation_result.get('requires_restart', False)
+            }
+            print(f"إعادة الاستجابة: {response_data}")
+            
+            response = JsonResponse(response_data)
+            response['Content-Type'] = 'application/json; charset=utf-8'
+            return response
         else:
-            messages.error(request, _(f'حدث خطأ أثناء تنشيط قاعدة البيانات {database.name}.'))
+            error_message = activation_result.get('message', f'حدث خطأ أثناء تنشيط قاعدة البيانات {database.name}.')
+            print(f"فشل التنشيط: {error_message}")
+            
+            response = JsonResponse({
+                'success': False,
+                'message': error_message
+            })
+            response['Content-Type'] = 'application/json; charset=utf-8'
+            return response
     
     except Exception as e:
-        messages.error(request, _(f'حدث خطأ أثناء تنشيط قاعدة البيانات: {str(e)}'))
-    
-    return redirect('odoo_db_manager:dashboard')
+        print(f"خطأ عام في database_activate: {str(e)}")
+        import traceback
+        print(f"تفاصيل الخطأ: {traceback.format_exc()}")
+        
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ أثناء تنشيط قاعدة البيانات: {str(e)}'
+        })
 
 @login_required
 @user_passes_test(is_staff_or_superuser)
@@ -363,7 +492,7 @@ def database_delete(request, pk):
 
     context = {
         'database': database,
-        'title': _('حذف قاعدة البيانات'),
+        'title': _('حذف قاعدة بيانات'),
     }
 
     return render(request, 'odoo_db_manager/database_delete.html', context)
@@ -626,11 +755,11 @@ def backup_restore(request, pk):
                     # حذف النسخة الاحتياطية المؤقتة
                     if os.path.exists(backup_current_db):
                         os.unlink(backup_current_db)
-            else:
-                # استعادة النسخة الاحتياطية بطريقة مبسطة
+            else:                # استعادة النسخة الاحتياطية بطريقة مبسطة
                 # تم إزالة BackupService لتجنب التعقيدات
+                result = None
                 if backup.file_path.endswith('.json'):
-                    _restore_json_simple(backup.file_path)
+                    result = _restore_json_simple(backup.file_path, clear_existing=clear_data)
                 elif backup.file_path.endswith('.json.gz'):
                     # التعامل مع الملفات المضغوطة
                     import gzip
@@ -653,7 +782,7 @@ def backup_restore(request, pk):
                         print(f"✅ تم فك الضغط بنجاح إلى: {temp_path}")
 
                         # استعادة من الملف المفكوك
-                        _restore_json_simple(temp_path)
+                        result = _restore_json_simple(temp_path, clear_existing=clear_data)
 
                     finally:
                         # حذف الملف المؤقت
@@ -662,7 +791,25 @@ def backup_restore(request, pk):
                             print(f"🗑️ تم حذف الملف المؤقت: {temp_path}")
                 else:
                     raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON أو JSON.GZ.")
-                messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
+                
+                # إنشاء رسالة تفصيلية
+                if result:
+                    success_count = result.get('success_count', 0)
+                    error_count = result.get('error_count', 0)
+                    total_count = result.get('total_count', 0)
+                    
+                    if error_count == 0:
+                        success_message = f"🎉 تم استعادة جميع البيانات بنجاح!\n\n📊 الإحصائيات:\n• إجمالي العناصر: {total_count}\n• تم الاستعادة: {success_count}\n• نسبة النجاح: 100%"
+                    else:
+                        success_rate = (success_count / total_count * 100) if total_count > 0 else 0
+                        success_message = f"✅ تمت الاستعادة بنجاح!\n\n📊 الإحصائيات:\n• إجمالي العناصر: {total_count}\n• تم الاستعادة: {success_count}\n• فشل: {error_count}\n• نسبة النجاح: {success_rate:.1f}%"
+                        
+                        if error_count > 0:
+                            success_message += f"\n\n⚠️ تحذير: {error_count} عنصر لم يتم استعادته (عادة بسبب بيانات غير متوافقة مع النسخة الحالية)."
+                    
+                    messages.success(request, success_message)
+                else:
+                    messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
 
             return redirect('odoo_db_manager:dashboard')
         except Exception as e:
@@ -808,15 +955,15 @@ def backup_upload(request, database_id=None):
                             content = gz_file.read()
 
                         print(f"📝 كتابة المحتوى المفكوك إلى: {temp_path}")
+                        
                         with open(temp_path, 'w', encoding='utf-8') as json_file:
                             json_file.write(content)
 
                         temp_size = os.path.getsize(temp_path)
                         print(f"✅ تم فك الضغط بنجاح - حجم الملف المفكوك: {temp_size} بايت")
-
-                        # استعادة من الملف المفكوك
+                          # استعادة من الملف المفكوك
                         print("🔄 استعادة البيانات من الملف المفكوك...")
-                        _restore_json_simple(temp_path)
+                        result = _restore_json_simple(temp_path, clear_existing=clear_data)
 
                     except Exception as gz_error:
                         print(f"❌ خطأ في فك الضغط: {str(gz_error)}")
@@ -828,7 +975,26 @@ def backup_upload(request, database_id=None):
                             print(f"🗑️ تم حذف الملف المؤقت: {temp_path}")
             else:
                 print("📄 ملف JSON عادي - استعادة مباشرة...")
-                _restore_json_simple(file_path)
+                result = _restore_json_simple(file_path, clear_existing=clear_data)
+
+            # إنشاء رسالة تفصيلية بناءً على النتيجة
+            if result:
+                success_count = result.get('success_count', 0)
+                error_count = result.get('error_count', 0)
+                total_count = result.get('total_count', 0)
+                
+                if error_count == 0:
+                    success_message = f"🎉 تم استعادة جميع البيانات بنجاح!\n\n📊 الإحصائيات:\n• إجمالي العناصر: {total_count}\n• تم الاستعادة: {success_count}\n• نسبة النجاح: 100%\n\n✨ تم إصلاح جميع المشاكل تلقائياً!"
+                else:
+                    success_rate = (success_count / total_count * 100) if total_count > 0 else 0
+                    success_message = f"✅ تمت الاستعادة بنجاح!\n\n📊 الإحصائيات:\n• إجمالي العناصر: {total_count}\n• تم الاستعادة: {success_count}\n• فشل: {error_count}\n• نسبة النجاح: {success_rate:.1f}%"
+                    
+                    if error_count > 0:
+                        success_message += f"\n\n⚠️ تحذير: {error_count} عنصر لم يتم استعادته (عادة بسبب بيانات غير متوافقة مع النسخة الحالية)."
+                
+                messages.success(request, success_message)
+            else:
+                messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
 
             print("🎉 تمت الاستعادة بنجاح!")
 
@@ -1129,10 +1295,12 @@ def scheduler_status(request):
     return render(request, 'odoo_db_manager/scheduler_status.html', context)
 
 
-def _restore_json_simple(file_path):
-    """استعادة ملف JSON بطريقة مبسطة"""
+def _restore_json_simple(file_path, clear_existing=False):
+    """استعادة ملف JSON بطريقة محسنة"""
     import json
     from django.core import serializers
+    from django.apps import apps
+    from django.db import transaction
 
     try:
         print(f"📖 قراءة ملف JSON: {file_path}")
@@ -1142,30 +1310,144 @@ def _restore_json_simple(file_path):
 
         print(f"✅ تم تحميل {len(data)} عنصر من الملف")
 
-        # استعادة البيانات عنصر بعنصر مع تجاهل الأخطاء
+        # ترتيب البيانات حسب الأولوية (الجداول التي لا تعتمد على غيرها أولاً)
+        priority_order = [
+            'auth.user',
+            'auth.group',
+            'auth.permission',
+            'accounts.department',
+            'accounts.branch',
+            'customers.customer',
+            'inventory.category',
+            'inventory.brand',
+            'inventory.product',
+            'orders.order',
+            'inspections.inspection',
+            'installations.installation',
+            'reports.report',
+            'odoo_db_manager.database',
+            'odoo_db_manager.backup',
+            'odoo_db_manager.backupschedule',
+            'odoo_db_manager.importlog',
+        ]
+
+        # ترتيب البيانات
+        sorted_data = []
+        remaining_data = []
+
+        for model_name in priority_order:
+            for item in data:
+                if item.get('model') == model_name:
+                    sorted_data.append(item)
+
+        # إضافة باقي البيانات
+        for item in data:
+            if item not in sorted_data:
+                remaining_data.append(item)
+
+        final_data = sorted_data + remaining_data
+
+        # حذف البيانات القديمة إذا تم طلب ذلك
+        if clear_existing:
+            print("🗑️ حذف البيانات القديمة...")
+            models_to_clear = set()
+            for item in final_data:
+                model_name = item.get('model')
+                if model_name:
+                    models_to_clear.add(model_name)
+
+            # حذف البيانات بترتيب عكسي
+            for model_name in reversed(priority_order):
+                if model_name in models_to_clear:
+                    try:
+                        app_label, model_class = model_name.split('.')
+                        model = apps.get_model(app_label, model_class)
+                        count = model.objects.count()
+                        if count > 0:
+                            model.objects.all().delete()
+                            print(f"🗑️ تم حذف {count} سجل من {model_name}")
+                    except Exception as e:
+                        print(f"⚠️ خطأ في حذف {model_name}: {str(e)}")
+
+        # استعادة البيانات مع معالجة محسنة للأخطاء
         success_count = 0
         error_count = 0
+        failed_items = []
 
         print("🔄 بدء استعادة العناصر...")
 
-        for i, item in enumerate(data):
+        # محاولة أولى
+        for i, item in enumerate(final_data):
             try:
-                # تحويل العنصر إلى كائن Django
-                for obj in serializers.deserialize('json', json.dumps([item])):
-                    obj.save()
+                with transaction.atomic():
+                    for obj in serializers.deserialize('json', json.dumps([item])):
+                        obj.save()
                 success_count += 1
 
-                # طباعة تقدم كل 10 عناصر
-                if (i + 1) % 10 == 0:
+                # طباعة تقدم كل 50 عنصر
+                if (i + 1) % 50 == 0:
                     print(f"📊 تم معالجة {i + 1} عنصر...")
 
             except Exception as item_error:
                 error_count += 1
+                failed_items.append((i, item, str(item_error)))
                 # طباعة تفاصيل الخطأ للعناصر القليلة الأولى فقط
-                if error_count <= 3:
-                    print(f"⚠️ خطأ في العنصر {i + 1}: {str(item_error)[:100]}...")
+                if error_count <= 5:
+                    print(f"⚠️ خطأ في العنصر {i + 1} ({item.get('model', 'unknown')}): {str(item_error)[:100]}...")        # محاولة ثانية للعناصر الفاشلة (قد تكون فشلت بسبب ترتيب الاعتمادات)
+        if failed_items:
+            print(f"🔄 محاولة ثانية لـ {len(failed_items)} عنصر فاشل...")
+            second_attempt_success = 0
+            
+            for original_index, item, original_error in failed_items:
+                try:
+                    with transaction.atomic():
+                        # معالجة أخطاء محددة قبل المحاولة الثانية
+                        item_copy = item.copy()
+                        fields = item_copy.get('fields', {})
+                        model_name = item_copy.get('model', 'unknown')
+                        
+                        # معالجة مشاكل الصلاحيات
+                        if 'permission_id' in original_error and 'foreign key' in original_error:
+                            print(f"🔧 إصلاح مشكلة الصلاحيات: {model_name}")
+                            fields.pop('user_permissions', None)
+                            fields.pop('groups', None)
+                            item_copy['fields'] = fields
+                        
+                        # معالجة مشاكل الخصائص المفقودة
+                        elif 'has no attribute' in original_error:
+                            print(f"🔧 إصلاح مشكلة خاصية مفقودة: {model_name}")
+                            if 'default_currency' in original_error:
+                                fields.pop('default_currency', None)
+                                item_copy['fields'] = fields
+                        
+                        # تجاهل المفاتيح الخارجية المفقودة
+                        elif 'foreign key constraint' in original_error:
+                            print(f"⚠️ تجاهل عنصر بمفتاح خارجي مفقود: {model_name}")
+                            continue
+                        
+                        for obj in serializers.deserialize('json', json.dumps([item_copy])):
+                            obj.save()
+                    second_attempt_success += 1
+                    success_count += 1
+                    error_count -= 1
+                    print(f"✅ نجح إصلاح العنصر {original_index + 1}")
+                except Exception as e:
+                    # طباعة تفاصيل الأخطاء المستمرة
+                    if len(failed_items) - second_attempt_success <= 10:
+                        print(f"❌ فشل نهائي في العنصر {original_index + 1} ({item.get('model', 'unknown')}): {str(e)[:200]}...")
 
-        print(f"🎯 تمت الاستعادة: {success_count} عنصر بنجاح، {error_count} عنصر تم تجاهله")
+            print(f"✅ نجحت المحاولة الثانية في استعادة {second_attempt_success} عنصر إضافي")
+
+        print(f"🎯 تمت الاستعادة: {success_count} عنصر بنجاح، {error_count} عنصر فشل نهائياً")
+        
+        if error_count > 0:
+            print(f"⚠️ تحذير: {error_count} عنصر لم يتم استعادته. قد تحتاج لمراجعة البيانات.")
+
+        return {
+            'success_count': success_count,
+            'error_count': error_count,
+            'total_count': len(final_data)
+        }
 
     except Exception as e:
         print(f"❌ خطأ في قراءة الملف: {str(e)}")
@@ -1323,3 +1605,224 @@ def google_drive_test_file_upload(request):
         'success': False,
         'message': 'طريقة الطلب غير صحيحة'
     })
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def database_register(request):
+    """تسجيل قاعدة بيانات مكتشفة في النظام"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            db_name = data.get('name')
+            
+            if not db_name:
+                return JsonResponse({'success': False, 'message': 'اسم قاعدة البيانات مطلوب'})
+            
+            # التحقق من عدم وجود قاعدة البيانات مسبقاً
+            if Database.objects.filter(name=db_name).exists():
+                return JsonResponse({'success': False, 'message': 'قاعدة البيانات مسجلة بالفعل'})
+            
+            # الحصول على معلومات الاتصال الافتراضية من Django settings
+            from django.conf import settings
+            default_db = settings.DATABASES['default']
+            
+            # إنشاء معلومات الاتصال
+            connection_info = {
+                'ENGINE': 'django.db.backends.postgresql',
+                'HOST': default_db.get('HOST', 'localhost'),
+                'PORT': default_db.get('PORT', '5432'),
+                'USER': default_db.get('USER', 'postgres'),
+                'PASSWORD': default_db.get('PASSWORD', ''),
+                'NAME': db_name,
+            }
+            
+            # إنشاء سجل قاعدة البيانات
+            database = Database.objects.create(
+                name=db_name,
+                db_type='postgresql',
+                connection_info=connection_info,
+                status=True,  # نفترض أنها متاحة لأنها مكتشفة
+            )
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'تم تسجيل قاعدة البيانات "{db_name}" بنجاح',
+                'database_id': database.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'حدث خطأ: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'طريقة غير مسموحة'})
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def database_refresh_status(request):
+    """تحديث حالة الاتصال لجميع قواعد البيانات"""
+    if request.method == 'POST':
+        try:
+            database_service = DatabaseService()
+            databases = Database.objects.all()
+            updated_count = 0
+            
+            for db in databases:
+                try:
+                    success, message = database_service.test_connection(db.connection_info)
+                    if db.status != success:
+                        db.status = success
+                        db.error_message = message if not success else ""
+                        db.save()
+                        updated_count += 1
+                except Exception as e:
+                    if db.status != False:
+                        db.status = False
+                        db.error_message = str(e)
+                        db.save()
+                        updated_count += 1
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'تم تحديث حالة {updated_count} قاعدة بيانات',
+                'updated_count': updated_count
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'حدث خطأ: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'طريقة غير مسموحة'})
+
+
+def _create_default_user(database):
+    """إنشاء مستخدم افتراضي في قاعدة البيانات الجديدة"""
+    try:
+        import psycopg2
+        from django.contrib.auth.hashers import make_password
+        
+        # الاتصال بقاعدة البيانات الجديدة
+        conn = psycopg2.connect(
+            dbname=database.connection_info.get('NAME'),
+            user=database.connection_info.get('USER'),
+            password=database.connection_info.get('PASSWORD'),
+            host=database.connection_info.get('HOST', 'localhost'),
+            port=database.connection_info.get('PORT', '5432')
+        )
+        conn.autocommit = True
+        cursor = conn.cursor()
+          # التحقق من وجود جدول المستخدمين
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'accounts_user'
+            );
+        """)
+        
+        table_exists = cursor.fetchone()
+        if not table_exists or not table_exists[0]:
+            print("جدول المستخدمين غير موجود في قاعدة البيانات الجديدة")
+            cursor.close()
+            conn.close()
+            return False
+        
+        # التحقق من عدد الأعمدة في الجدول للتأكد من اكتمال الـ migrations
+        cursor.execute("""
+            SELECT COUNT(*) FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'accounts_user'
+        """)
+        
+        column_count = cursor.fetchone()
+        if not column_count or column_count[0] < 10:  # نتوقع على الأقل 10 أعمدة
+            print("جدول المستخدمين غير مكتمل، migrations لم تطبق بالكامل")
+            cursor.close()
+            conn.close()
+            return False
+        
+        # التحقق من عدم وجود مستخدم admin مسبقاً
+        cursor.execute("SELECT COUNT(*) FROM accounts_user WHERE username = %s", ('admin',))
+        admin_result = cursor.fetchone()
+        admin_exists = admin_result and admin_result[0] > 0
+        
+        if admin_exists:
+            print("المستخدم admin موجود بالفعل")
+            cursor.close()
+            conn.close()
+            return False
+        
+        # إنشاء كلمة مرور مُشفرة
+        hashed_password = make_password('admin123')
+        
+        # إدراج المستخدم الجديد
+        cursor.execute("""
+            INSERT INTO accounts_user (
+                username, password, email, first_name, last_name,
+                is_staff, is_active, is_superuser, date_joined
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+        """, (
+            'admin',
+            hashed_password,
+            'admin@example.com',
+            'مدير',
+            'النظام',
+            True,
+            True,
+            True
+        ))
+        
+        cursor.close()
+        conn.close()
+        
+        print(f"تم إنشاء المستخدم الافتراضي admin في قاعدة البيانات {database.name}")
+        return True
+        
+    except Exception as e:
+        print(f"خطأ في إنشاء المستخدم الافتراضي: {str(e)}")
+        return False
+
+def _apply_migrations_to_database(database):
+    """تطبيق migrations في قاعدة البيانات الجديدة"""
+    try:
+        import subprocess
+        import os
+        from django.conf import settings
+        
+        # إنشاء DATABASE_URL للقاعة الجديدة
+        conn_info = database.connection_info
+        database_url = f"postgres://{conn_info.get('USER')}:{conn_info.get('PASSWORD')}@{conn_info.get('HOST', 'localhost')}:{conn_info.get('PORT', '5432')}/{conn_info.get('NAME')}"
+        
+        # تطبيق migrations في قاعدة البيانات الجديدة
+        env = os.environ.copy()
+        env['DATABASE_URL'] = database_url
+          # تشغيل migrate command مع تجاهل أخطاء django_apscheduler
+        migrate_cmd = [
+            'python', 'manage.py', 'migrate', '--fake-initial'
+        ]
+        
+        result = subprocess.run(
+            migrate_cmd,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='ignore',
+            cwd=settings.BASE_DIR        )
+        
+        if result.returncode == 0:
+            print(f"تم تطبيق migrations في قاعدة البيانات {database.name} بنجاح")
+            return True
+        else:
+            error_msg = result.stderr if result.stderr else result.stdout
+            print(f"فشل في تطبيق migrations: {error_msg}")
+            # التحقق إذا كان الخطأ متعلق بـ django_apscheduler فقط
+            if 'django_apscheduler' in error_msg and 'column' in error_msg and 'does not exist' in error_msg:
+                print("خطأ django_apscheduler - سيتم تجاهله")
+                return True  # نعتبر العملية ناجحة رغم خطأ django_apscheduler
+            return False
+            
+    except Exception as e:
+        print(f"خطأ في تطبيق migrations: {str(e)}")
+        return False

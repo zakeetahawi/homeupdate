@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+<style>
+    .import-card {
+        transition: transform 0.3s ease;
+        cursor: pointer;
+    }
+    .import-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .sheet-icon {
+        font-size: 3rem;
+        color: var(--primary);
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="odoo-dashboard">
+    <div class="odoo-toolbar">
+        <div class="odoo-toolbar-left">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="odoo-toolbar-right">
+            <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> العودة
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for sheet in available_sheets %}
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="card import-card h-100" onclick="selectSheet('{{ sheet.key }}')">
+                <div class="card-body text-center">
+                    <i class="{{ sheet.icon }} sheet-icon"></i>
+                    <h5 class="card-title">{{ sheet.name }}</h5>
+                    <p class="card-text">
+                        <span class="badge bg-primary">{{ sheet.record_count }} سجل</span>
+                    </p>
+                    <button class="btn btn-primary btn-sm">
+                        <i class="fas fa-file-import"></i> استيراد
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-warning text-center">
+                <i class="fas fa-exclamation-triangle"></i>
+                لا توجد جداول متاحة للاستيراد
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectSheet(sheetKey) {
+    window.location.href = "{% url 'odoo_db_manager:import_select' %}?sheet=" + sheetKey;
+}
+</script>
+{% endblock %}

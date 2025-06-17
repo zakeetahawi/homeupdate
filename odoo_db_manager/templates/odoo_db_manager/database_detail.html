@@ -171,10 +171,75 @@
                     <tr>
                         <td colspan="5" class="text-center">لا توجد نسخ احتياطية</td>
                     </tr>
-                    {% endfor %}
-                </tbody>
+                    {% endfor %}                </tbody>
             </table>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// التحقق من نجاح إنشاء قاعدة البيانات وعرض رسالة SweetAlert
+{% if database_created_success %}
+$(document).ready(function() {
+    // عرض رسالة SweetAlert للنجاح
+    let htmlContent = `
+        <div class="text-right">
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                تم إنشاء قاعدة البيانات "<strong>{{ created_database_name }}</strong>" بنجاح!
+            </div>
+            
+            {% if migrations_applied %}
+            <div class="alert alert-info">
+                <i class="fas fa-database"></i>
+                تم تطبيق جداول قاعدة البيانات (migrations) بنجاح.
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                لم يتم تطبيق جداول قاعدة البيانات. قد تحتاج إلى تطبيق migrations يدوياً.
+            </div>
+            {% endif %}
+            
+            {% if default_user_created %}
+            <div class="alert alert-info">
+                <i class="fas fa-user-plus"></i>
+                تم إنشاء مستخدم افتراضي:
+                <ul class="mt-2 mb-0">
+                    <li><strong>اسم المستخدم:</strong> admin</li>
+                    <li><strong>كلمة المرور:</strong> admin123</li>
+                </ul>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                لم يتم إنشاء مستخدم افتراضي. قد تحتاج إلى إنشاء مستخدم يدوياً.
+            </div>
+            {% endif %}
+            
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle"></i>
+                يرجى حفظ بيانات المستخدم الافتراضي في مكان آمن.
+            </div>
+        </div>
+    `;
+    
+    Swal.fire({
+        title: 'تم إنشاء قاعدة البيانات بنجاح!',
+        html: htmlContent,
+        icon: 'success',
+        confirmButtonText: 'تم',
+        allowOutsideClick: false,
+        customClass: {
+            popup: 'rtl-popup swal-wide',
+            title: 'rtl-title',
+            content: 'rtl-content'
+        },
+        width: '600px'
+    });
+});
+{% endif %}
+</script>
 {% endblock %}

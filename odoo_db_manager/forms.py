@@ -9,13 +9,75 @@ from .models import Database, Backup, BackupSchedule, GoogleDriveConfig
 
 class DatabaseForm(forms.ModelForm):
     """نموذج إنشاء وتعديل قاعدة البيانات"""
+    
+    # حقول منفصلة لسهولة الاستخدام
+    host = forms.CharField(
+        label=_('المضيف'),
+        initial='localhost',
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    port = forms.IntegerField(
+        label=_('المنفذ'),
+        initial=5432,
+        required=True,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    database_name = forms.CharField(
+        label=_('اسم قاعدة البيانات'),
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    username = forms.CharField(
+        label=_('اسم المستخدم'),
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    password = forms.CharField(
+        label=_('كلمة المرور'),
+        required=True,
+        widget=forms.PasswordInput(attrs={'class': 'form-control'})
+    )
 
     class Meta:
         model = Database
-        fields = ['name', 'db_type', 'connection_info']
+        fields = ['name', 'db_type']
         widgets = {
-            'connection_info': forms.Textarea(attrs={'rows': 5, 'dir': 'ltr'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'db_type': forms.Select(attrs={'class': 'form-select'}),
         }
+        labels = {
+            'name': _('اسم قاعدة البيانات في النظام'),
+            'db_type': _('نوع قاعدة البيانات'),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.connection_info:
+            # تعبئة الحقول من connection_info الموجود
+            info = self.instance.connection_info
+            self.fields['host'].initial = info.get('HOST', 'localhost')
+            self.fields['port'].initial = info.get('PORT', 5432)
+            self.fields['database_name'].initial = info.get('NAME', '')
+            self.fields['username'].initial = info.get('USER', '')
+            self.fields['password'].initial = info.get('PASSWORD', '')
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # بناء connection_info من الحقول المنفصلة
+        instance.connection_info = {
+            'ENGINE': 'django.db.backends.postgresql',
+            'HOST': self.cleaned_data['host'],
+            'PORT': str(self.cleaned_data['port']),
+            'NAME': self.cleaned_data['database_name'],
+            'USER': self.cleaned_data['username'],
+            'PASSWORD': self.cleaned_data['password'],
+        }
+        
+        if commit:
+            instance.save()
+        return instance
 
 
 class BackupForm(forms.ModelForm):
@@ -192,3 +254,55 @@ class GoogleDriveConfigForm(forms.ModelForm):
                 raise forms.ValidationError(_('حجم الملف كبير جداً (الحد الأقصى 1MB)'))
 
         return file
+
+
+class ImportSelectionForm(forms.Form):
+    """نموذج اختيار بيانات الاستيراد"""
+    sheet_name = forms.ChoiceField(
+        label=_('الجدول المطلوب'),
+        choices=[
+            ('customers', _('العملاء')),
+            ('users', _('المستخدمين')),
+            ('databases', _('قواعد البيانات')),
+            ('orders', _('الطلبات')),
+            ('products', _('المنتجات')),
+            ('inspections', _('المعاينات')),
+            ('settings', _('الإعدادات')),
+        ]
+    )
+    import_all = forms.BooleanField(
+        label=_('استيراد كل البيانات'),
+        required=False,
+        initial=True
+    )
+    page_start = forms.IntegerField(
+        label=_('من الصفحة'),
+        required=False,
+        min_value=1
+    )
+    page_end = forms.IntegerField(
+        label=_('إلى الصفحة'),
+        required=False,
+        min_value=1
+    )
+    clear_existing = forms.BooleanField(
+        label=_('حذف البيانات القديمة'),
+        required=False,
+        help_text=_('تنبيه: سيتم حذف جميع البيانات الموجودة في الجدول المحدد')
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        import_all = cleaned_data.get('import_all')
+        page_start = cleaned_data.get('page_start')
+        page_end = cleaned_data.get('page_end')
+
+        if not import_all:
+            if not page_start:
+                raise forms.ValidationError(_('يجب تحديد رقم الصفحة الأولى'))
+            if not page_end:
+                raise forms.ValidationError(_('يجب تحديد رقم الصفحة الأخيرة'))
+            if page_start > page_end:
+                raise forms.ValidationError(_('يجب أن تكون الصفحة الأولى أقل من أو تساوي الصفحة الأخيرة'))
+
+        return cleaned_data

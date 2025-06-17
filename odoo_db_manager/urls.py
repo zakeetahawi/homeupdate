@@ -4,6 +4,7 @@
 
 from django.urls import path
 from . import views
+from . import views_import
 from . import google_sync_views
 
 app_name = 'odoo_db_manager'
@@ -15,6 +16,8 @@ urlpatterns = [
     # قواعد البيانات
     path('databases/', views.database_list, name='database_list'),
     path('databases/discover/', views.database_discover, name='database_discover'),
+    path('databases/register/', views.database_register, name='database_register'),
+    path('databases/refresh-status/', views.database_refresh_status, name='database_refresh_status'),
     path('databases/create/', views.database_create, name='database_create'),
     path('databases/<int:pk>/', views.database_detail, name='database_detail'),
     path('databases/<int:pk>/activate/', views.database_activate, name='activate_database'),
@@ -58,4 +61,12 @@ urlpatterns = [
     path('google-sync/reset/', google_sync_views.google_sync_reset, name='google_sync_reset'),
     path('google-sync/advanced-settings/', google_sync_views.google_sync_advanced_settings, name='google_sync_advanced_settings'),
     path('google-sync/logs-api/', google_sync_views.google_sync_logs_api, name='google_sync_logs_api'),
+
+    # استيراد البيانات
+    path('import/', views_import.import_dashboard, name='import_dashboard'),
+    path('import/select/', views_import.import_select, name='import_select'),
+    path('import/preview/', views_import.import_preview, name='import_preview'),
+    path('import/execute/', views_import.import_execute, name='import_execute'),
+    path('import/result/<int:log_id>/', views_import.import_result, name='import_result'),
+    path('import/progress/', views_import.import_progress, name='import_progress'),
 ]

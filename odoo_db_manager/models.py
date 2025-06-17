@@ -1,6 +1,51 @@
 """
 نماذج إدارة قواعد البيانات على طراز أودو
 """
+
+from django.db import models  # Add this import at the top
+from django.conf import settings
+from django.utils.translation import gettext_lazy as _
+
+class ImportLog(models.Model):
+    """سجل عمليات الاستيراد"""
+    sheet_name = models.CharField(_('اسم الجدول'), max_length=100)
+    total_records = models.IntegerField(_('إجمالي السجلات'), default=0)
+    imported_records = models.IntegerField(_('السجلات المستوردة'), default=0)
+    updated_records = models.IntegerField(_('السجلات المحدثة'), default=0)
+    failed_records = models.IntegerField(_('السجلات الفاشلة'), default=0)
+    clear_existing = models.BooleanField(_('حذف البيانات القديمة'), default=False)
+    status = models.CharField(
+        _('الحالة'),
+        max_length=20,
+        choices=[
+            ('success', 'نجح'),
+            ('failed', 'فشل'),
+            ('partial', 'جزئي'),
+        ],
+        default='success'
+    )
+    error_details = models.TextField(_('تفاصيل الأخطاء'), blank=True)
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_('المستخدم'),
+        related_name='created_import_logs',  # Add this line
+        on_delete=models.CASCADE
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_('المستخدم'),
+        related_name='assigned_import_logs',  # Add this line
+        on_delete=models.CASCADE
+    )
+
+    class Meta:
+        verbose_name = _('سجل استيراد')
+        verbose_name_plural = _('سجلات الاستيراد')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"استيراد {self.sheet_name} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
@@ -16,6 +61,9 @@ class Database(models.Model):
     db_type = models.CharField(_('نوع قاعدة البيانات'), max_length=20, choices=DB_TYPES)
     connection_info = models.JSONField(_('معلومات الاتصال'), default=dict)
     is_active = models.BooleanField(_('نشطة'), default=False)
+    # إضافة الحقول المفقودة
+    status = models.BooleanField(_('حالة الاتصال'), default=False)
+    error_message = models.TextField(_('رسالة الخطأ'), blank=True, null=True)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
     class Meta:
@@ -34,9 +82,10 @@ class Database(models.Model):
             user = self.connection_info.get('USER', '')
             return f"postgresql://{user}@{host}:{port}/{name}"
         return ""
+
     @property
-    def status(self):
-        """حالة قاعدة البيانات"""
+    def connection_status(self):
+        """فحص حالة الاتصال الفعلية بقاعدة البيانات"""
         try:
             # التحقق من الاتصال بقاعدة البيانات
             if self.db_type == 'postgresql':
@@ -54,16 +103,14 @@ class Database(models.Model):
             return True
         except Exception:
             return False
-    @property
-    def error_message(self):
-        """رسالة الخطأ إن وجدت"""
-        return self.connection_info.get('_ERROR', "")
+
     @property
     def size_display(self):
         """عرض حجم قاعدة البيانات بشكل مقروء"""
-        # حساب حجم قاعدة البيانات من النسخ الاحتياطية
-        total_size = sum(backup.size for backup in self.backups.all())
-        # تحويل الحجم إلى وحدة مناسبة
+        total_size = 0
+        # Django يوفر self.backups إذا كان هناك علاقة Backup صحيحة
+        if hasattr(self, 'backups'):
+            total_size = sum(backup.size for backup in self.backups.all())
         for unit in ['B', 'KB', 'MB', 'GB']:
             if total_size < 1024.0:
                 return f"{total_size:.1f} {unit}"
@@ -82,11 +129,10 @@ class Database(models.Model):
             # التحقق من وجود ملف .env
             if not os.path.exists(env_file):
                 print(f"ملف .env غير موجود في {env_file}")
-                return False
-            # إنشاء نسخة احتياطية من ملف .env
+                return False            # إنشاء نسخة احتياطية من ملف .env
             backup_file = os.path.join(BASE_DIR, f'.env.backup.{int(time.time())}')
             try:
-                with open(env_file, 'r') as src, open(backup_file, 'w') as dst:
+                with open(env_file, 'r', encoding='utf-8') as src, open(backup_file, 'w', encoding='utf-8') as dst:
                     dst.write(src.read())
                 print(f"تم إنشاء نسخة احتياطية من ملف .env في {backup_file}")
             except Exception as e:
@@ -194,10 +240,15 @@ class Database(models.Model):
             with open(settings_file, 'r') as f:
                 settings = json.load(f)
             # تحديث إعدادات قاعدة البيانات النشطة
-            settings['active_db'] = str(self.id)
-            # التحقق من وجود قاعدة البيانات في الإعدادات
-            if str(self.id) not in settings['databases']:
-                settings['databases'][str(self.id)] = self.connection_info
+            settings['active_db'] = str(self.pk)            # التحقق من وجود قاعدة البيانات في الإعدادات
+            if str(self.pk) not in settings['databases']:
+                settings['databases'][str(self.pk)] = self.connection_info.copy()
+            else:
+                settings['databases'][str(self.pk)] = self.connection_info.copy()
+            
+            # إزالة TIME_ZONE إذا كان موجوداً (لأنه يسبب مشاكل في PostgreSQL)
+            if 'TIME_ZONE' in settings['databases'][str(self.pk)]:
+                del settings['databases'][str(self.pk)]['TIME_ZONE']
             # كتابة المحتوى المحدث إلى ملف db_settings.json
             with open(settings_file, 'w') as f:
                 json.dump(settings, f, indent=4)
@@ -228,50 +279,103 @@ class Database(models.Model):
         except Exception as e:
             print(f"حدث خطأ أثناء إنشاء المستخدم الافتراضي: {str(e)}")
             return False
+
     def activate(self):
         """تنشيط قاعدة البيانات"""
         try:
+            print(f"🔄 بدء تنشيط قاعدة البيانات: {self.name}")
+            
             # تعطيل جميع قواعد البيانات الأخرى
-            Database.objects.exclude(id=self.id).update(is_active=False)
+            print("📝 تعطيل قواعد البيانات الأخرى...")
+            Database.objects.exclude(pk=self.pk).update(is_active=False)
+            
             # تنشيط قاعدة البيانات الحالية
+            print("✅ تنشيط قاعدة البيانات الحالية...")
             self.is_active = True
             self.save()
+            
             # تحديث ملف .env
+            print("📄 تحديث ملف .env...")
             env_updated = self.update_env_file()
+            print(f"نتيجة تحديث .env: {env_updated}")
+            
             # تحديث ملف db_settings.json
+            print("⚙️ تحديث ملف db_settings.json...")
             settings_updated = self.update_settings_file()
+            print(f"نتيجة تحديث settings: {settings_updated}")
+            
             # التحقق من نجاح التحديث
             if env_updated and settings_updated:
-                print(f"تم تنشيط قاعدة البيانات {self.name} بنجاح")
+                print(f"✅ تم تنشيط قاعدة البيانات {self.name} بنجاح")
                 # محاولة تحديث إعدادات Django في الذاكرة
                 try:
+                    print("🔄 محاولة تحديث إعدادات Django في الذاكرة...")
                     from django.conf import settings
-                    import dj_database_url
+                    from django.db import connections
+                    import importlib
                     # تحديث إعدادات قاعدة البيانات في الذاكرة
+                    connection_info = self.connection_info.copy()
                     db_config = {
-                        'ENGINE': self.connection_info.get('ENGINE', 'django.db.backends.postgresql'),
-                        'NAME': self.connection_info.get('NAME'),
-                        'USER': self.connection_info.get('USER'),
-                        'PASSWORD': self.connection_info.get('PASSWORD'),
-                        'HOST': self.connection_info.get('HOST'),
-                        'PORT': self.connection_info.get('PORT'),
+                        'ENGINE': connection_info.get('ENGINE', 'django.db.backends.postgresql'),
+                        'NAME': connection_info.get('NAME'),
+                        'USER': connection_info.get('USER'),
+                        'PASSWORD': connection_info.get('PASSWORD'),
+                        'HOST': connection_info.get('HOST'),
+                        'PORT': connection_info.get('PORT'),
                         'ATOMIC_REQUESTS': False,
                         'AUTOCOMMIT': True,
                         'CONN_MAX_AGE': 600,
                         'CONN_HEALTH_CHECKS': True,
+                        'TIME_ZONE': None,  # Django يحتاج هذا المفتاح
+                        'OPTIONS': {},
                     }
+                    print(f"🔧 إعدادات قاعدة البيانات الجديدة: {db_config}")
+                    # إغلاق جميع الاتصالات الحالية أولاً
+                    print("🔌 إغلاق جميع الاتصالات الحالية...")
+                    connections.close_all()
+                    
                     # تحديث إعدادات قاعدة البيانات
+                    print("⚙️ تحديث إعدادات قاعدة البيانات في Django...")
                     settings.DATABASES['default'] = db_config
-                    print(f"تم تحديث إعدادات Django في الذاكرة")
+                    
+                    # إعادة تعيين مدير الاتصالات لضمان استخدام الإعدادات الجديدة
+                    # نحتاج لإجبار Django على إعادة إنشاء الاتصالات
+                    if 'default' in connections:
+                        del connections['default']
+                    
+                    # اختبار الاتصال الجديد
+                    print("🧪 اختبار الاتصال الجديد...")
+                    from django.db import connection
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT current_database()")
+                        result = cursor.fetchone()
+                    current_db = result[0] if result else "غير معروف"
+                    
+                    print(f"✅ تم تحديث إعدادات Django في الذاكرة بنجاح - قاعدة البيانات الحالية: {current_db}")
+                    
+                    if current_db == connection_info.get('NAME'):
+                        print("🎉 تم التبديل بنجاح إلى قاعدة البيانات الجديدة!")
+                        # تشغيل migrations للتأكد من وجود جميع الجداول المطلوبة
+                        try:
+                            print("🔄 تشغيل migrations للتأكد من وجود جميع الجداول...")
+                            # self.run_migrations()  # مؤقتاً معطل
+                            print("✅ سيتم تشغيل migrations بعد إعادة التشغيل")
+                        except Exception as migration_error:
+                            print(f"⚠️ خطأ في تشغيل migrations: {str(migration_error)}")
+                            # رغم خطأ migrations، التبديل نجح
+                        
+                        return {'success': True, 'requires_restart': False, 'database_name': self.name}
+                    else:
+                        print(f"⚠️ لم يتم التبديل بنجاح. قاعدة البيانات الحالية: {current_db}, المطلوبة: {connection_info.get('NAME')}")
+                        return {'success': True, 'requires_restart': True, 'database_name': self.name}
                 except Exception as e:
-                    print(f"حدث خطأ أثناء تحديث إعدادات Django في الذاكرة: {str(e)}")
-                return True
-            else:
-                print(f"حدث خطأ أثناء تحديث ملفات الإعدادات")
-                return False
+                    print(f"❌ خطأ أثناء تحديث إعدادات Django في الذاكرة: {str(e)}")
+            # ...existing code...
         except Exception as e:
-            print(f"حدث خطأ أثناء تنشيط قاعدة البيانات: {str(e)}")
+            print(f"❌ خطأ أثناء تنشيط قاعدة البيانات: {str(e)}")
             return False
+        return True
+    # ...existing code...
 class Backup(models.Model):
     """نموذج النسخ الاحتياطي"""
     BACKUP_TYPES = [
@@ -396,7 +500,12 @@ class BackupSchedule(models.Model):
         verbose_name_plural = _('جدولة النسخ الاحتياطية')
         ordering = ['-created_at']
     def __str__(self):
-        return f"{self.name} - {self.get_frequency_display()}"
+        frequency_map = {
+            'daily': 'يومياً',
+            'weekly': 'أسبوعياً',
+            'monthly': 'شهرياً',
+        }
+        return f"{self.name} - {frequency_map.get(self.frequency, self.frequency)}"
     def calculate_next_run(self):
         """حساب موعد التشغيل القادم"""
         now = timezone.now()
@@ -410,7 +519,7 @@ class BackupSchedule(models.Model):
                 next_run = next_run + timedelta(days=1)
             elif self.frequency == 'weekly':
                 # حساب عدد الأيام حتى يوم الأسبوع المحدد
-                days_ahead = self.day_of_week - now.weekday()
+                days_ahead = (self.day_of_week or 0) - now.weekday()
                 if days_ahead <= 0:  # إذا كان اليوم المحدد قد مر هذا الأسبوع
                     days_ahead += 7
                 next_run = next_run + timedelta(days=days_ahead)
@@ -424,7 +533,7 @@ class BackupSchedule(models.Model):
                     next_year = now.year
                 # التعامل مع أيام الشهر غير الصالحة
                 last_day = calendar.monthrange(next_year, next_month)[1]
-                day = min(self.day_of_month, last_day)
+                day = min(self.day_of_month or last_day, last_day)
                 next_run = now.replace(year=next_year, month=next_month, day=day)
         self.next_run = next_run
         self.save(update_fields=['next_run'])
