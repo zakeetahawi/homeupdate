@@ -357,3 +357,44 @@ def get_sheets_ajax(request):
             'success': False,
             'error': str(e)
         }, status=400)
+
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+@require_http_methods(["POST"])
+def google_import_all(request):
+    """استيراد شامل لكل الصفحات المدعومة من جدول Google Sheets"""
+    try:
+        importer = GoogleSheetsImporter()
+        importer.initialize()
+        all_sheets = importer.get_available_sheets()
+        # قائمة الصفحات المدعومة فقط (حسب model_map)
+        supported_keys = [
+            'customers', 'عملاء', 'orders', 'طلبات', 'products', 'منتجات',
+            'users', 'مستخدمين', 'branches', 'فروع', 'databases', 'قواعد البيانات',
+            'inspections', 'معاينات', 'settings', 'إعدادات الشركة والنظام'
+        ]
+        imported_logs = []
+        for sheet in all_sheets:
+            if any(key in sheet.lower() for key in supported_keys):
+                data = importer.get_sheet_data(sheet)
+                result = importer.import_data_by_type(sheet, data, clear_existing=False, user=request.user)
+                import_log = ImportLog.objects.create(
+                    user=request.user,
+                    created_by=getattr(request, 'user', None),
+                    sheet_name=sheet,
+                    total_records=len(data),
+                    imported_records=result.get('imported', 0),
+                    updated_records=result.get('updated', 0),
+                    failed_records=result.get('failed', 0),
+                    clear_existing=False,
+                    status='success' if result.get('failed', 0) == 0 else 'partial',
+                    error_details='\n'.join(result.get('errors', [])) if result.get('errors') else ''
+                )
+                imported_logs.append(import_log)
+        messages.success(request, f"تم استيراد جميع الصفحات المدعومة ({len(imported_logs)}) بنجاح.")
+        return redirect('odoo_db_manager:import_logs')
+    except Exception as e:
+        logger.error(f"خطأ في الاستيراد الشامل: {str(e)}")
+        messages.error(request, f'خطأ في الاستيراد الشامل: {str(e)}')
+        return redirect('odoo_db_manager:google_import_dashboard')

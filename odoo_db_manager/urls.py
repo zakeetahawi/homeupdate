@@ -134,4 +134,9 @@ urlpatterns = [
     path('import/logs/',
          views_google_import.import_logs,
          name='import_logs'),
+
+    # زر الاستيراد الشامل
+    path('google-import/all/',
+         views_google_import.google_import_all,
+         name='google_import_all'),
 ]

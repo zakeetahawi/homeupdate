@@ -1,7 +1,7 @@
 {
-    "active_db": 6,
+    "active_db": 7,
     "databases": {
-        "6": {
+        "7": {
             "ENGINE": "django.db.backends.postgresql",
             "HOST": "localhost",
             "NAME": "testdb",
