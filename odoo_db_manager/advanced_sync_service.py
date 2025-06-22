@@ -1,0 +1,626 @@
+"""
+خدمة المزامنة المتقدمة مع Google Sheets
+Advanced Google Sheets Sync Service
+"""
+
+import logging
+import json
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional, Tuple
+from django.utils import timezone
+from django.db import transaction
+from django.core.exceptions import ValidationError
+
+from .google_sync_advanced import (
+    GoogleSheetMapping, GoogleSyncTask, GoogleSyncConflict, GoogleSyncSchedule
+)
+from .google_sheets_import import GoogleSheetsImporter
+from customers.models import Customer, CustomerCategory
+from orders.models import Order
+from orders.extended_models import ExtendedOrder
+from inspections.models import Inspection
+from installations.models import Installation, InstallationTeam
+from accounts.models import Branch, Salesperson
+
+logger = logging.getLogger(__name__)
+
+
+class AdvancedSyncService:
+    """خدمة المزامنة المتقدمة"""
+
+    def __init__(self, mapping: GoogleSheetMapping):
+        self.mapping = mapping
+        self.importer = GoogleSheetsImporter()
+        self.conflicts = []
+        self.stats = {
+            'total_rows': 0,
+            'processed_rows': 0,
+            'successful_rows': 0,
+            'failed_rows': 0,
+            'created_customers': 0,
+            'updated_customers': 0,
+            'created_orders': 0,
+            'updated_orders': 0,
+            'created_inspections': 0,
+            'created_installations': 0,
+        }
+
+    def sync_from_sheets(self, task: GoogleSyncTask = None) -> Dict[str, Any]:
+        """مزامنة البيانات من Google Sheets إلى النظام"""
+        try:
+            # تهيئة المستورد
+            self.importer.initialize()
+
+            # إنشاء مهمة إذا لم تكن موجودة
+            if not task:
+                task = GoogleSyncTask.objects.create(
+                    mapping=self.mapping,
+                    task_type='import',
+                    created_by=None  # يمكن تحديد المستخدم لاحقاً
+                )
+
+            task.start_task()
+
+            # جلب البيانات من Google Sheets
+            sheet_data = self._get_sheet_data()
+            if not sheet_data:
+                task.fail_task("لا توجد بيانات في الجدول")
+                return {'success': False, 'error': 'لا توجد بيانات في الجدول'}
+
+            # معالجة البيانات
+            self.stats['total_rows'] = len(sheet_data) - self.mapping.header_row
+            task.total_rows = self.stats['total_rows']
+            task.save(update_fields=['total_rows'])
+
+            # معالجة كل صف
+            for row_index, row_data in enumerate(sheet_data[self.mapping.start_row - 1:],
+                                               start=self.mapping.start_row):
+                try:
+                    self._process_row(row_data, row_index, task)
+                    self.stats['processed_rows'] += 1
+                    self.stats['successful_rows'] += 1
+
+                    # تحديث تقدم المهمة
+                    task.processed_rows = self.stats['processed_rows']
+                    task.successful_rows = self.stats['successful_rows']
+                    task.save(update_fields=['processed_rows', 'successful_rows'])
+
+                except Exception as e:
+                    logger.error(f"خطأ في معالجة الصف {row_index}: {str(e)}")
+                    self.stats['failed_rows'] += 1
+                    task.failed_rows = self.stats['failed_rows']
+                    task.save(update_fields=['failed_rows'])
+
+                    # إنشاء تعارض
+                    self._create_conflict(
+                        task, 'validation_error', 'unknown', row_index,
+                        {}, dict(zip(self._get_headers(), row_data)),
+                        f"خطأ في معالجة الصف: {str(e)}"
+                    )
+
+            # تحديث آخر صف تمت معالجته
+            self.mapping.last_row_processed = self.stats['processed_rows'] + self.mapping.start_row - 1
+            self.mapping.last_sync = timezone.now()
+            self.mapping.save(update_fields=['last_row_processed', 'last_sync'])
+
+            # إكمال المهمة
+            task.complete_task(self.stats)
+
+            return {
+                'success': True,
+                'stats': self.stats,
+                'conflicts': len(self.conflicts),
+                'task_id': task.id
+            }
+
+        except Exception as e:
+            logger.error(f"خطأ في المزامنة: {str(e)}")
+            if task:
+                task.fail_task(str(e))
+            return {'success': False, 'error': str(e)}
+
+    def sync_to_sheets(self, task: GoogleSyncTask = None) -> Dict[str, Any]:
+        """مزامنة البيانات من النظام إلى Google Sheets (المزامنة العكسية)"""
+        try:
+            if not self.mapping.enable_reverse_sync:
+                return {'success': False, 'error': 'المزامنة العكسية غير مفعلة'}
+
+            # تهيئة المستورد
+            self.importer.initialize()
+
+            # إنشاء مهمة إذا لم تكن موجودة
+            if not task:
+                task = GoogleSyncTask.objects.create(
+                    mapping=self.mapping,
+                    task_type='reverse_sync',
+                    created_by=None
+                )
+
+            task.start_task()
+
+            # جلب البيانات من النظام
+            system_data = self._get_system_data()
+
+            # تحديث Google Sheets
+            self._update_sheets_data(system_data, task)
+
+            task.complete_task({'updated_rows': len(system_data)})
+
+            return {
+                'success': True,
+                'updated_rows': len(system_data),
+                'task_id': task.id
+            }
+
+        except Exception as e:
+            logger.error(f"خطأ في المزامنة العكسية: {str(e)}")
+            if task:
+                task.fail_task(str(e))
+            return {'success': False, 'error': str(e)}
+
+    def _get_sheet_data(self) -> List[List[str]]:
+        """جلب البيانات من Google Sheets"""
+        try:
+            return self.importer.get_sheet_data(self.mapping.sheet_name)
+        except Exception as e:
+            logger.error(f"خطأ في جلب البيانات من Google Sheets: {str(e)}")
+            raise
+
+    def _get_headers(self) -> List[str]:
+        """جلب عناوين الأعمدة"""
+        try:
+            sheet_data = self.importer.get_sheet_data(self.mapping.sheet_name)
+            if sheet_data and len(sheet_data) >= self.mapping.header_row:
+                return sheet_data[self.mapping.header_row - 1]
+            return []
+        except Exception as e:
+            logger.error(f"خطأ في جلب العناوين: {str(e)}")
+            return []
+
+    def _process_row(self, row_data: List[str], row_index: int, task: GoogleSyncTask):
+        """معالجة صف واحد من البيانات"""
+        try:
+            # تحويل البيانات إلى قاموس
+            mapped_data = self._map_row_data(row_data)
+
+            # معالجة العميل
+            customer = self._process_customer(mapped_data, row_index, task)
+
+            # معالجة الطلب
+            order = self._process_order(mapped_data, customer, row_index, task)
+
+            # معالجة المعاينة
+            if self.mapping.auto_create_inspections and order:
+                self._process_inspection(mapped_data, customer, order, row_index, task)
+
+            # معالجة التركيب
+            if self.mapping.auto_create_installations and order:
+                self._process_installation(mapped_data, customer, order, row_index, task)
+
+        except Exception as e:
+            logger.error(f"خطأ في معالجة الصف {row_index}: {str(e)}")
+            raise
+
+    def _map_row_data(self, row_data: List[str]) -> Dict[str, str]:
+        """تحويل بيانات الصف إلى قاموس مع التعيينات"""
+        mapped_data = {}
+
+        for col_index, value in enumerate(row_data):
+            field_type = self.mapping.get_column_mapping(col_index)
+            if field_type and field_type != 'ignore':
+                mapped_data[field_type] = value.strip() if value else ''
+
+        return mapped_data
+
+    def _process_customer(self, mapped_data: Dict[str, str], row_index: int,
+                         task: GoogleSyncTask) -> Optional[Customer]:
+        """معالجة بيانات العميل"""
+        try:
+            customer_name = mapped_data.get('customer_name', '').strip()
+            if not customer_name:
+                return None
+
+            customer_phone = mapped_data.get('customer_phone', '').strip()
+            customer_email = mapped_data.get('customer_email', '').strip()
+
+            # البحث عن العميل الموجود
+            customer = None
+            if customer_phone:
+                customer = Customer.objects.filter(phone=customer_phone).first()
+
+            if not customer and customer_email:
+                customer = Customer.objects.filter(email=customer_email).first()
+
+            if not customer and customer_name:
+                customer = Customer.objects.filter(name=customer_name).first()
+
+            # إنشاء أو تحديث العميل
+            if customer:
+                if self.mapping.update_existing_customers:
+                    self._update_customer(customer, mapped_data)
+                    self.stats['updated_customers'] += 1
+            else:
+                if self.mapping.auto_create_customers:
+                    customer = self._create_customer(mapped_data)
+                    self.stats['created_customers'] += 1
+
+            return customer
+
+        except Exception as e:
+            logger.error(f"خطأ في معالجة العميل في الصف {row_index}: {str(e)}")
+            raise
+
+    def _create_customer(self, mapped_data: Dict[str, str]) -> Customer:
+        """إنشاء عميل جديد"""
+        customer_data = {
+            'name': mapped_data.get('customer_name', ''),
+            'phone': mapped_data.get('customer_phone', ''),
+            'phone2': mapped_data.get('customer_phone2', ''),
+            'email': mapped_data.get('customer_email', ''),
+            'address': mapped_data.get('customer_address', ''),
+        }
+
+        # تحديد الفرع
+        branch_name = mapped_data.get('branch', '')
+        if branch_name:
+            branch = Branch.objects.filter(name__icontains=branch_name).first()
+            if branch:
+                customer_data['branch'] = branch
+
+        # إنشاء كود العميل تلقائياً
+        customer_data['code'] = self._generate_customer_code()
+
+        return Customer.objects.create(**customer_data)
+
+    def _update_customer(self, customer: Customer, mapped_data: Dict[str, str]):
+        """تحديث بيانات العميل"""
+        updated = False
+
+        # تحديث الحقول إذا كانت فارغة أو مختلفة
+        if mapped_data.get('customer_phone2') and not customer.phone2:
+            customer.phone2 = mapped_data['customer_phone2']
+            updated = True
+
+        if mapped_data.get('customer_email') and not customer.email:
+            customer.email = mapped_data['customer_email']
+            updated = True
+
+        if mapped_data.get('customer_address') and customer.address != mapped_data['customer_address']:
+            customer.address = mapped_data['customer_address']
+            updated = True
+
+        if updated:
+            customer.save()
+
+    def _process_order(self, mapped_data: Dict[str, str], customer: Customer,
+                      row_index: int, task: GoogleSyncTask) -> Optional[Order]:
+        """معالجة بيانات الطلب"""
+        try:
+            if not customer:
+                return None
+
+            order_number = mapped_data.get('order_number', '').strip()
+            invoice_number = mapped_data.get('invoice_number', '').strip()
+
+            # البحث عن الطلب الموجود
+            order = None
+            if order_number:
+                order = Order.objects.filter(order_number=order_number).first()
+            elif invoice_number:
+                order = Order.objects.filter(invoice_number=invoice_number).first()
+
+            # إنشاء أو تحديث الطلب
+            if order:
+                if self.mapping.update_existing_orders:
+                    self._update_order(order, mapped_data, customer)
+                    self.stats['updated_orders'] += 1
+            else:
+                if self.mapping.auto_create_orders:
+                    order = self._create_order(mapped_data, customer)
+                    self.stats['created_orders'] += 1
+
+            return order
+
+        except Exception as e:
+            logger.error(f"خطأ في معالجة الطلب في الصف {row_index}: {str(e)}")
+            raise
+
+    def _create_order(self, mapped_data: Dict[str, str], customer: Customer) -> Order:
+        """إنشاء طلب جديد"""
+        order_data = {
+            'customer': customer,
+            'order_number': mapped_data.get('order_number') or self._generate_order_number(),
+            'invoice_number': mapped_data.get('invoice_number', ''),
+            'contract_number': mapped_data.get('contract_number', ''),
+            'notes': mapped_data.get('notes', ''),
+            'delivery_address': mapped_data.get('delivery_address', ''),
+        }
+
+        # تحديد نوع الطلب (استخدام الخيارات المتاحة في النموذج)
+        order_type_name = mapped_data.get('order_type', '')
+        if order_type_name:
+            # البحث في الخيارات المتاحة
+            type_mapping = {
+                'قماش': 'fabric',
+                'إكسسوار': 'accessory',
+                'تركيب': 'installation',
+                'معاينة': 'inspection',
+                'نقل': 'transport',
+                'تفصيل': 'tailoring',
+            }
+            order_type = type_mapping.get(order_type_name)
+            if order_type:
+                # سيتم حفظ نوع الطلب في ExtendedOrder لاحقاً
+                pass
+
+        # تحديد حالة التتبع
+        tracking_status = mapped_data.get('tracking_status', '')
+        if tracking_status:
+            # تحويل حالة التتبع إلى القيم المقبولة
+            status_mapping = {
+                'قيد الانتظار': 'pending',
+                'قيد المعالجة': 'processing',
+                'في المستودع': 'warehouse',
+                'في المصنع': 'factory',
+                'قيد القص': 'cutting',
+                'جاهز للتسليم': 'ready',
+                'تم التسليم': 'delivered',
+            }
+            order_data['tracking_status'] = status_mapping.get(tracking_status, 'pending')
+
+        # تحديد المبالغ
+        try:
+            if mapped_data.get('total_amount'):
+                order_data['total_amount'] = float(mapped_data['total_amount'])
+        except (ValueError, TypeError):
+            pass
+
+        try:
+            if mapped_data.get('paid_amount'):
+                order_data['paid_amount'] = float(mapped_data['paid_amount'])
+        except (ValueError, TypeError):
+            pass
+
+        # تحديد نوع التسليم
+        delivery_type = mapped_data.get('delivery_type', '')
+        if delivery_type:
+            delivery_mapping = {
+                'توصيل للمنزل': 'home',
+                'استلام من الفرع': 'branch',
+            }
+            order_data['delivery_type'] = delivery_mapping.get(delivery_type, 'branch')
+
+        # تحديد البائع
+        salesperson_name = mapped_data.get('salesperson', '')
+        if salesperson_name:
+            salesperson = Salesperson.objects.filter(name__icontains=salesperson_name).first()
+            if salesperson:
+                order_data['salesperson'] = salesperson
+
+        # تحديد الفرع
+        if customer.branch:
+            order_data['branch'] = customer.branch
+
+        return Order.objects.create(**order_data)
+
+    def _update_order(self, order: Order, mapped_data: Dict[str, str], customer: Customer):
+        """تحديث بيانات الطلب"""
+        updated = False
+
+        # تحديث حالة التتبع
+        tracking_status = mapped_data.get('tracking_status', '')
+        if tracking_status:
+            status_mapping = {
+                'قيد الانتظار': 'pending',
+                'قيد المعالجة': 'processing',
+                'في المستودع': 'warehouse',
+                'في المصنع': 'factory',
+                'قيد القص': 'cutting',
+                'جاهز للتسليم': 'ready',
+                'تم التسليم': 'delivered',
+            }
+            new_status = status_mapping.get(tracking_status, order.tracking_status)
+            if new_status != order.tracking_status:
+                order.tracking_status = new_status
+                updated = True
+
+        # تحديث المبالغ
+        try:
+            total_amount = mapped_data.get('total_amount')
+            if total_amount and float(total_amount) != order.total_amount:
+                order.total_amount = float(total_amount)
+                updated = True
+        except (ValueError, TypeError):
+            pass
+
+        try:
+            paid_amount = mapped_data.get('paid_amount')
+            if paid_amount and float(paid_amount) != order.paid_amount:
+                order.paid_amount = float(paid_amount)
+                updated = True
+        except (ValueError, TypeError):
+            pass
+
+        # تحديث الملاحظات
+        notes = mapped_data.get('notes', '')
+        if notes and notes != order.notes:
+            order.notes = notes
+            updated = True
+
+        if updated:
+            order.save()
+
+    def _process_inspection(self, mapped_data: Dict[str, str], customer: Customer,
+                          order: Order, row_index: int, task: GoogleSyncTask):
+        """معالجة بيانات المعاينة"""
+        try:
+            # التحقق من وجود معاينة للطلب
+            existing_inspection = Inspection.objects.filter(order=order).first()
+            if existing_inspection:
+                return existing_inspection
+
+            # إنشاء معاينة جديدة
+            inspection_data = {
+                'customer': customer,
+                'order': order,
+                'branch': customer.branch or order.branch,
+                'request_date': timezone.now().date(),
+                'scheduled_date': timezone.now().date() + timedelta(days=1),
+                'notes': mapped_data.get('notes', ''),
+            }
+
+            # تحديد تاريخ المعاينة إذا كان متوفراً
+            inspection_date = mapped_data.get('inspection_date', '')
+            if inspection_date:
+                try:
+                    # محاولة تحويل التاريخ
+                    parsed_date = datetime.strptime(inspection_date, '%Y-%m-%d').date()
+                    inspection_data['scheduled_date'] = parsed_date
+                except ValueError:
+                    pass
+
+            # تحديد نتيجة المعاينة
+            inspection_result = mapped_data.get('inspection_result', '')
+            if inspection_result:
+                result_mapping = {
+                    'مقبول': 'approved',
+                    'مرفوض': 'rejected',
+                    'يحتاج مراجعة': 'pending',
+                }
+                inspection_data['result'] = result_mapping.get(inspection_result, 'pending')
+
+            # تحديد عدد الشبابيك
+            windows_count = mapped_data.get('windows_count', '')
+            if windows_count:
+                try:
+                    inspection_data['windows_count'] = int(windows_count)
+                except (ValueError, TypeError):
+                    pass
+
+            inspection = Inspection.objects.create(**inspection_data)
+            self.stats['created_inspections'] += 1
+
+            return inspection
+
+        except Exception as e:
+            logger.error(f"خطأ في معالجة المعاينة في الصف {row_index}: {str(e)}")
+            raise
+
+    def _process_installation(self, mapped_data: Dict[str, str], customer: Customer,
+                            order: Order, row_index: int, task: GoogleSyncTask):
+        """معالجة بيانات التركيب"""
+        try:
+            # التحقق من وجود تركيب للطلب
+            existing_installation = Installation.objects.filter(order=order).first()
+            if existing_installation:
+                return existing_installation
+
+            # إنشاء تركيب جديد
+            installation_data = {
+                'order': order,
+                'scheduled_date': timezone.now().date() + timedelta(days=7),
+                'notes': mapped_data.get('notes', ''),
+            }
+
+            # تحديد حالة التركيب
+            installation_status = mapped_data.get('installation_status', '')
+            if installation_status:
+                status_mapping = {
+                    'قيد الانتظار': 'pending',
+                    'مجدول': 'scheduled',
+                    'جاري التنفيذ': 'in_progress',
+                    'مكتمل': 'completed',
+                    'ملغي': 'cancelled',
+                }
+                installation_data['status'] = status_mapping.get(installation_status, 'pending')
+
+            # تحديد فريق التركيب
+            if customer.branch:
+                team = InstallationTeam.objects.filter(branch=customer.branch, is_active=True).first()
+                if team:
+                    installation_data['team'] = team
+
+            installation = Installation.objects.create(**installation_data)
+            self.stats['created_installations'] += 1
+
+            return installation
+
+        except Exception as e:
+            logger.error(f"خطأ في معالجة التركيب في الصف {row_index}: {str(e)}")
+            raise
+
+    def _generate_customer_code(self) -> str:
+        """إنشاء كود عميل تلقائي"""
+        last_customer = Customer.objects.filter(code__isnull=False).order_by('-id').first()
+        if last_customer and last_customer.code:
+            try:
+                last_number = int(last_customer.code.replace('C', ''))
+                return f"C{last_number + 1:04d}"
+            except (ValueError, AttributeError):
+                pass
+
+        return f"C{Customer.objects.count() + 1:04d}"
+
+    def _generate_order_number(self) -> str:
+        """إنشاء رقم طلب تلقائي"""
+        today = timezone.now().date()
+        today_orders = Order.objects.filter(order_date__date=today).count()
+        return f"ORD-{today.strftime('%Y%m%d')}-{today_orders + 1:03d}"
+
+    def _create_conflict(self, task: GoogleSyncTask, conflict_type: str,
+                        record_type: str, sheet_row: int, system_data: Dict,
+                        sheet_data: Dict, description: str):
+        """إنشاء تعارض في المزامنة"""
+        conflict = GoogleSyncConflict.objects.create(
+            task=task,
+            conflict_type=conflict_type,
+            record_type=record_type,
+            sheet_row=sheet_row,
+            system_data=system_data,
+            sheet_data=sheet_data,
+            conflict_description=description
+        )
+        self.conflicts.append(conflict)
+        return conflict
+
+    def _get_system_data(self) -> List[Dict[str, Any]]:
+        """جلب البيانات من النظام للمزامنة العكسية"""
+        # هذه الدالة ستحتاج تطوير أكثر حسب متطلبات المزامنة العكسية
+        return []
+
+    def _update_sheets_data(self, system_data: List[Dict[str, Any]], task: GoogleSyncTask):
+        """تحديث بيانات Google Sheets"""
+        # هذه الدالة ستحتاج تطوير أكثر حسب متطلبات المزامنة العكسية
+        pass
+
+
+class SyncScheduler:
+    """مجدول المزامنة التلقائية"""
+
+    @staticmethod
+    def run_scheduled_syncs():
+        """تشغيل المزامنة المجدولة"""
+        try:
+            # البحث عن المزامنات المستحقة
+            due_schedules = GoogleSyncSchedule.objects.filter(
+                is_active=True,
+                next_run__lte=timezone.now()
+            )
+
+            for schedule in due_schedules:
+                try:
+                    # تشغيل المزامنة
+                    sync_service = AdvancedSyncService(schedule.mapping)
+                    result = sync_service.sync_from_sheets()
+
+                    # تسجيل النتيجة
+                    schedule.record_run(success=result.get('success', False))
+
+                    logger.info(f"تم تشغيل المزامنة المجدولة: {schedule.mapping.name}")
+
+                except Exception as e:
+                    logger.error(f"خطأ في تشغيل المزامنة المجدولة {schedule.mapping.name}: {str(e)}")
+                    schedule.record_run(success=False)
+
+        except Exception as e:
+            logger.error(f"خطأ في مجدول المزامنة: {str(e)}")

@@ -131,26 +131,32 @@ class GoogleSheetsImporter:
     def get_sheet_data(self, sheet_name, import_all=True, start_row=None, end_row=None):
         if not self.service:
             self.initialize()
+
         try:
-            if import_all:
-                range_name = sheet_name
-            else:
-                start_row = start_row or 1
-                end_row = end_row or 1000
-                range_name = f"{sheet_name}!A{start_row}:Z{end_row}"
+            from .google_sheets_utils import get_sheet_data_safe
+
             if not self.service or not self.config:
                 raise Exception("لم يتم تهيئة الخدمة بشكل صحيح")
-            result = (
-                self.service.spreadsheets()
-                .values()
-                .get(
-                    spreadsheetId=self.config.spreadsheet_id,
-                    range=range_name
-                )
-                .execute()
+
+            # تحديد نطاق البيانات
+            if not import_all:
+                start_row = start_row or 1
+                end_row = end_row or 1000
+            else:
+                start_row = None
+                end_row = None
+
+            # استخدام الدالة الآمنة لجلب البيانات
+            values = get_sheet_data_safe(
+                self.service,
+                self.config.spreadsheet_id,
+                sheet_name,
+                start_row,
+                end_row
             )
-            values = result.get('values', [])
+
             return values
+
         except Exception as e:
             logger.error(f"فشل في جلب بيانات الصفحة {sheet_name}: {str(e)}")
             raise Exception(f"فشل في جلب البيانات: {str(e)}")

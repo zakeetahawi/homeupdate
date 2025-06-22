@@ -7,6 +7,7 @@ from . import views
 from . import views_import
 from . import google_sync_views
 from . import views_google_import
+from . import views_advanced_sync
 
 app_name = 'odoo_db_manager'
 
@@ -129,6 +130,61 @@ urlpatterns = [
     path('google-import/api/sheets/',
          views_google_import.get_sheets_ajax,
          name='get_sheets_ajax'),
+
+    # مسارات المزامنة المتقدمة
+    path('advanced-sync/',
+         views_advanced_sync.advanced_sync_dashboard,
+         name='advanced_sync_dashboard'),
+    path('advanced-sync/mappings/',
+         views_advanced_sync.mapping_list,
+         name='mapping_list'),
+    path('advanced-sync/mappings/create/',
+         views_advanced_sync.mapping_create,
+         name='mapping_create'),
+    path('advanced-sync/mappings/<int:mapping_id>/',
+         views_advanced_sync.mapping_detail,
+         name='mapping_detail'),
+    path('advanced-sync/mappings/<int:mapping_id>/edit/',
+         views_advanced_sync.mapping_edit,
+         name='mapping_edit'),
+    path('advanced-sync/mappings/<int:mapping_id>/delete/',
+         views_advanced_sync.mapping_delete,
+         name='mapping_delete'),
+    path('advanced-sync/mappings/<int:mapping_id>/update-columns/',
+         views_advanced_sync.mapping_update_columns,
+         name='mapping_update_columns'),
+    path('advanced-sync/mappings/<int:mapping_id>/sync/',
+         views_advanced_sync.start_sync,
+         name='start_sync'),
+    path('advanced-sync/mappings/<int:mapping_id>/schedule/',
+         views_advanced_sync.schedule_sync,
+         name='schedule_sync'),
+    path('advanced-sync/tasks/<int:task_id>/',
+         views_advanced_sync.task_detail,
+         name='task_detail'),
+    path('advanced-sync/tasks/<int:task_id>/status/',
+         views_advanced_sync.get_task_status,
+         name='get_task_status'),
+    path('advanced-sync/conflicts/',
+         views_advanced_sync.conflict_list,
+         name='conflict_list'),
+    path('advanced-sync/conflicts/<int:conflict_id>/resolve/',
+         views_advanced_sync.resolve_conflict,
+         name='resolve_conflict'),
+
+    # API endpoints
+    path('advanced-sync/api/run-sync/<int:mapping_id>/',
+         views_advanced_sync.api_run_sync,
+         name='api_run_sync'),
+    path('advanced-sync/api/get-sheets/',
+         views_advanced_sync.get_sheets_by_id,
+         name='get_sheets_by_id'),
+    path('advanced-sync/api/sheet-columns/',
+         views_advanced_sync.get_sheet_columns,
+         name='get_sheet_columns'),
+    path('advanced-sync/api/preview-data/',
+         views_advanced_sync.preview_sheet_data,
+         name='preview_sheet_data'),
 
     # سجل الاستيراد
     path('import/logs/',

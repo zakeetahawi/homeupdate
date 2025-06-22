@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from .models import Database, Backup
 from .google_sync import GoogleSyncConfig, GoogleSyncLog
+from .google_sync_advanced import GoogleSheetMapping, GoogleSyncTask, GoogleSyncConflict, GoogleSyncSchedule
 
 @admin.register(Database)
 class DatabaseAdmin(admin.ModelAdmin):
