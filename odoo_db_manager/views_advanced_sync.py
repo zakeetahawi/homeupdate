@@ -611,6 +611,21 @@ def start_sync(request, mapping_id):
         print("[SYNC][DEBUG] before get_object_or_404", file=sys.stderr, flush=True)
         mapping = get_object_or_404(GoogleSheetMapping, id=mapping_id)
         print("[SYNC][DEBUG] mapping loaded", file=sys.stderr, flush=True)
+        mapping.refresh_from_db()
+        print(f"[SYNC][DEBUG] column_mappings type: {type(mapping.column_mappings)}", file=sys.stderr, flush=True)
+        print(f"[SYNC][DEBUG] column_mappings value: {mapping.column_mappings}", file=sys.stderr, flush=True)
+        # إذا كان column_mappings نصاً، حوّله إلى dict
+        if isinstance(mapping.column_mappings, str):
+            try:
+                mapping.column_mappings = json.loads(mapping.column_mappings)
+                print("[SYNC][DEBUG] column_mappings converted from str to dict", file=sys.stderr, flush=True)
+                mapping.save(update_fields=["column_mappings"])
+            except Exception as conv_exc:
+                print(f"[SYNC][DEBUG] Failed to convert column_mappings to dict: {conv_exc}", file=sys.stderr, flush=True)
+                return JsonResponse({
+                    'success': False,
+                    'error': f'خطأ في تحويل تعيين الأعمدة: {conv_exc}'
+                })
         # التحقق من وجود تعيينات الأعمدة
         if not mapping.column_mappings:
             print("[SYNC][DEBUG] no column_mappings", file=sys.stderr, flush=True)

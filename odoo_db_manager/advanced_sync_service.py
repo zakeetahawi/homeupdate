@@ -5,11 +5,14 @@ Advanced Google Sheets Sync Service
 
 import logging
 import json
+import os
+import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.conf import settings
 
 from .google_sync_advanced import (
     GoogleSheetMapping, GoogleSyncTask, GoogleSyncConflict, GoogleSyncSchedule
@@ -125,9 +128,17 @@ class AdvancedSyncService:
             # إكمال المهمة
             task.complete_task(self.stats)
 
+            # توحيد مفاتيح الإحصائيات مع السكريبت
+            stats_out = dict(self.stats)
+            stats_out['customers_created'] = self.stats.get('created_customers', 0)
+            stats_out['customers_updated'] = self.stats.get('updated_customers', 0)
+            stats_out['orders_created'] = self.stats.get('created_orders', 0)
+            stats_out['orders_updated'] = self.stats.get('updated_orders', 0)
+            stats_out['errors'] = []  # يمكن لاحقاً تعبئة الأخطاء الفعلية
+
             return {
                 'success': True,
-                'stats': self.stats,
+                'stats': stats_out,
                 'conflicts': len(self.conflicts),
                 'task_id': task.id
             }
@@ -218,18 +229,13 @@ class AdvancedSyncService:
         try:
             # تحويل البيانات إلى قاموس
             mapped_data = self._map_row_data(row_data)
+            logger.info(f"ROW {row_index} mapped_data: {mapped_data}")
 
-            # Log sheet data info
-            logger.info(f"Sheet data retrieved - Rows: {len(sheet_data) if sheet_data else 0}")
-            if sheet_data and len(sheet_data) > 0:
-                logger.info(f"First row (headers): {sheet_data[0]}")
-                if len(sheet_data) > 1:
-                    logger.info(f"Sample data row: {sheet_data[1]}")
-            
             # معالجة البيانات باستخدام التعيينات المخصصة
             logger.info("Starting to process custom data...")
-            result = self.process_custom_data(sheet_data, task)
-            logger.info(f"Custom data processing completed. Result: {result}")
+            # إذا كان هناك معالجة مخصصة فعلية، ضعها هنا أو احذف السطر التالي إذا لم تكن مستخدمة
+            # result = self.process_custom_data(sheet_data, task)
+            # logger.info(f"Custom data processing completed. Result: {result}")
 
             # معالجة العميل
             customer = self._process_customer(mapped_data, row_index, task)
@@ -252,12 +258,23 @@ class AdvancedSyncService:
     def _map_row_data(self, row_data: List[str]) -> Dict[str, str]:
         """تحويل بيانات الصف إلى قاموس مع التعيينات"""
         mapped_data = {}
-
+        # جلب العناوين من الشيت
+        headers = self._get_headers()
         for col_index, value in enumerate(row_data):
-            field_type = self.mapping.get_column_mapping(col_index)
+            # اسم العمود من الشيت (قد يكون فارغاً)
+            col_name = headers[col_index] if col_index < len(headers) else None
+            # اطبع اسم العمود ومفاتيح التعيين
+            logger.info(f"col_index={col_index}, col_name={repr(col_name)}, value={value}, mapping_keys={list(self.mapping.column_mappings.keys())}")
+            # جرب المطابقة بالاسم بعد strip
+            field_type = None
+            if col_name:
+                field_type = self.mapping.get_column_mapping(col_name.strip())
+            # إذا لم يوجد، جرب المطابقة بالرقم
+            if not field_type:
+                field_type = self.mapping.get_column_mapping(col_index)
+            logger.info(f"col_index={col_index}, value={value}, field_type={field_type}")
             if field_type and field_type != 'ignore':
                 mapped_data[field_type] = value.strip() if value else ''
-
         return mapped_data
 
     def _process_customer(self, mapped_data: Dict[str, str], row_index: int,

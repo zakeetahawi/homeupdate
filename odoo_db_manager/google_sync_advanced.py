@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 import json
 import logging
 import os
+import sys
 
 logger = logging.getLogger('odoo_db_manager.google_sync_advanced')
 
