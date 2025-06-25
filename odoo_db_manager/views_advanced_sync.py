@@ -972,3 +972,54 @@ def get_task_status(request, task_id):
             'success': False,
             'error': str(e)
         })
+
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+@require_http_methods(["POST"])
+def api_run_sync_all(request):
+    """تشغيل مزامنة جميع التعيينات النشطة دفعة واحدة عبر API"""
+    try:
+        active_mappings = GoogleSheetMapping.objects.filter(is_active=True)
+        if not active_mappings.exists():
+            return JsonResponse({'success': False, 'error': 'لا توجد تعيينات نشطة للمزامنة'})
+
+        results = []
+        for mapping in active_mappings:
+            # إنشاء مهمة مزامنة لكل تعيين
+            task = GoogleSyncTask.objects.create(
+                mapping=mapping,
+                status='pending',
+                created_by=request.user
+            )
+            try:
+                task.status = 'running'
+                task.save()
+                sync_service = AdvancedSyncService(mapping)
+                result = sync_service.sync_from_sheets(task)
+                task.status = 'completed' if result.get('success') else 'failed'
+                task.results = result
+                task.result = json.dumps(result.get('stats', {}), ensure_ascii=False)
+                task.save()
+                mapping.last_sync = timezone.now()
+                mapping.save(update_fields=['last_sync'])
+                results.append({
+                    'mapping': mapping.name,
+                    'success': result.get('success', False),
+                    'stats': result.get('stats', {}),
+                    'errors': result.get('stats', {}).get('errors', []),
+                })
+            except Exception as sync_error:
+                task.status = 'failed'
+                task.error_message = str(sync_error)
+                task.result = f'فشلت المزامنة: {str(sync_error)}'
+                task.save()
+                results.append({
+                    'mapping': mapping.name,
+                    'success': False,
+                    'error': str(sync_error)
+                })
+        return JsonResponse({'success': True, 'message': 'تمت مزامنة جميع التعيينات', 'results': results})
+    except Exception as e:
+        logger.error(f"خطأ في مزامنة جميع التعيينات: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})
