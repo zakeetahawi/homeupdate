@@ -68,15 +68,15 @@
                         </tr>
                         <tr>
                             <th>المبلغ الإجمالي</th>
-                            <td>{{ order.total_amount }} ج.م</td>
+                            <td>{{ order.total_amount }} {{ currency_symbol }}</td>
                         </tr>
                         <tr>
                             <th>المبلغ المدفوع</th>
-                            <td>{{ order.paid_amount }} ج.م</td>
+                            <td>{{ order.paid_amount }} {{ currency_symbol }}</td>
                         </tr>
                         <tr>
                             <th>المبلغ المتبقي</th>
-                            <td>{{ order.remaining_amount }} ج.م</td>
+                            <td>{{ order.remaining_amount }} {{ currency_symbol }}</td>
                         </tr>
                         <tr>
                             <th>تم الإنشاء بواسطة</th>
@@ -320,8 +320,8 @@
                             <td>{{ forloop.counter }}</td>
                             <td>{{ item.product.name }}</td>
                             <td>{{ item.quantity }}</td>
-                            <td>{{ item.unit_price }} ج.م</td>
-                            <td>{{ item.total_price }} ج.م</td>
+                            <td>{{ item.unit_price }} {{ currency_symbol }}</td>
+                            <td>{{ item.total_price }} {{ currency_symbol }}</td>
                             <td>{{ item.notes|default:"-" }}</td>
                         </tr>
                         {% empty %}
@@ -333,7 +333,7 @@
                     <tfoot>
                         <tr class="table-light">
                             <th colspan="4" class="text-start">المجموع</th>
-                            <th>{{ order.total_amount }} ج.م</th>
+                            <th>{{ order.total_amount }} {{ currency_symbol }}</th>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -465,7 +465,7 @@
                         {% for payment in payments %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td>{{ payment.amount }} ج.م</td>
+                            <td>{{ payment.amount }} {{ currency_symbol }}</td>
                             <td>{{ payment.get_payment_method_display }}</td>
                             <td>{{ payment.payment_date|date:"Y-m-d H:i" }}</td>
                             <td>{{ payment.reference_number|default:"-" }}</td>
@@ -492,11 +492,11 @@
                     <tfoot>
                         <tr class="table-light">
                             <th colspan="7" class="text-start">المجموع المدفوع</th>
-                            <th>{{ order.paid_amount }} ج.م</th>
+                            <th>{{ order.paid_amount }} {{ currency_symbol }}</th>
                         </tr>
                         <tr class="table-light">
                             <th colspan="7" class="text-start">المبلغ المتبقي</th>
-                            <th>{{ order.remaining_amount }} ج.م</th>
+                            <th>{{ order.remaining_amount }} {{ currency_symbol }}</th>
                         </tr>
                     </tfoot>
                 </table>
@@ -548,4 +548,4 @@
 }
 </style>
 {% endblock %}
-{% endblock %}
+{% endblock %
