@@ -229,32 +229,79 @@ class AdvancedSyncService:
             return []
 
     def _process_row(self, row_data: List[str], row_index: int, task: GoogleSyncTask):
-        """معالجة صف واحد من البيانات"""
+        """
+        معالجة صف واحد من البيانات
+        
+        المعلمات:
+            row_data: قائمة بقيم الصف
+            row_index: رقم الصف في الجدول (يبدأ من 1)
+            task: مهمة المزامنة الحالية
+        """
         try:
+            # تسجيل بيانات الصف للتصحيح
+            logger.debug(f"[DEBUG] معالجة الصف {row_index}: {row_data}")
+            
+            # تخطي الصفوف الفارغة
+            if not any(cell and str(cell).strip() for cell in row_data):
+                logger.info(f"[INFO] تخطي الصف {row_index}: صف فارغ")
+                return
+
             # تحويل البيانات إلى قاموس
             mapped_data = self._map_row_data(row_data)
+
+            # Log sheet data info
+            logger.info(f"Sheet data retrieved - Rows: {len(sheet_data) if sheet_data else 0}")
+            if sheet_data and len(sheet_data) > 0:
+                logger.info(f"First row (headers): {sheet_data[0]}")
+                if len(sheet_data) > 1:
+                    logger.info(f"Sample data row: {sheet_data[1]}")
             
-            # تسجيل البيانات فقط للصفوف الأولى للتشخيص
-            if row_index < self.mapping.start_row + 5:
-                logger.info(f"ROW {row_index} mapped_data: {mapped_data}")
+            # معالجة البيانات باستخدام التعيينات المخصصة
+            logger.info("Starting to process custom data...")
+            result = self.process_custom_data(sheet_data, task)
+            logger.info(f"Custom data processing completed. Result: {result}")
 
             # معالجة العميل
             customer = self._process_customer(mapped_data, row_index, task)
+            if not customer:
+                logger.info(f"[INFO] تخطي الصف {row_index}: لم يتم معالجة العميل")
+                return
 
             # معالجة الطلب
             order = self._process_order(mapped_data, customer, row_index, task)
+            if not order and self.mapping.auto_create_orders:
+                logger.info(f"[INFO] تخطي الصف {row_index}: لم يتم معالجة الطلب")
+                return
 
             # معالجة المعاينة
             if self.mapping.auto_create_inspections and order:
-                self._process_inspection(mapped_data, customer, order, row_index, task)
+                inspection = self._process_inspection(mapped_data, customer, order, row_index, task)
+                if not inspection and self.mapping.require_inspection:
+                    logger.info(f"[INFO] تخطي الصف {row_index}: لم يتم معالجة المعاينة")
+                    return
 
             # معالجة التركيب
             if self.mapping.auto_create_installations and order:
-                self._process_installation(mapped_data, customer, order, row_index, task)
+                installation = self._process_installation(mapped_data, customer, order, row_index, task)
+                if not installation and self.mapping.require_installation:
+                    logger.info(f"[INFO] تخطي الصف {row_index}: لم يتم معالجة التركيب")
+                    return
+
+            logger.debug(f"[DEBUG] تمت معالجة الصف {row_index} بنجاح")
 
         except Exception as e:
-            logger.error(f"خطأ في معالجة الصف {row_index}: {str(e)}")
-            raise
+            error_msg = f"خطأ في معالجة الصف {row_index}: {str(e)}"
+            logger.error(error_msg)
+            logger.exception(e)
+            self.stats['failed_rows'] += 1
+            
+            # تسجيل الخطأ في المهمة إذا كانت متوفرة
+            if hasattr(task, 'add_error'):
+                task.add_error(f"خطأ في الصف {row_index}: {str(e)}")
+            
+            # إعادة رفع الاستثناء إذا كنا في وضع التصحيح
+            if settings.DEBUG:
+                raise
 
     def _map_row_data(self, row_data: List[str]) -> Dict[str, str]:
         """تحويل بيانات الصف إلى قاموس مع التعيينات"""
@@ -288,59 +335,47 @@ class AdvancedSyncService:
 
     def _process_customer(self, mapped_data: Dict[str, str], row_index: int,
                          task: GoogleSyncTask) -> Optional[Customer]:
-        """معالجة بيانات العميل مع شروط التكرار والاسم والهاتف"""
+        """معالجة بيانات العميل"""
         try:
             customer_name = mapped_data.get('customer_name', '').strip()
             if not customer_name:
-                # لا يتم إنشاء عميل إذا لم يوجد اسم
-                reason = f"لم يتم إنشاء عميل للصف {row_index}: الاسم فارغ."
-                logger.info(reason)
-                self.stats['errors'].append(reason)
                 return None
 
             customer_phone = mapped_data.get('customer_phone', '').strip()
             customer_email = mapped_data.get('customer_email', '').strip()
-            customer_code = mapped_data.get('customer_code', '').strip()
 
-            # البحث عن عميل بنفس الاسم ورقم الهاتف
+            # البحث عن العميل الموجود
             customer = None
-            if customer_name and customer_phone:
-                customer = Customer.objects.filter(name=customer_name, phone=customer_phone).first()
+            if customer_phone:
+                customer = Customer.objects.filter(phone=customer_phone).first()
+
+            if not customer and customer_email:
+                customer = Customer.objects.filter(email=customer_email).first()
+
+            if not customer and customer_name:
+                customer = Customer.objects.filter(name=customer_name).first()
 
             if customer:
                 # إذا وُجد عميل بنفس الاسم والهاتف، يتم التحديث فقط
                 if self.mapping.update_existing_customers:
+                    logger.debug(f"[DEBUG] تحديث بيانات العميل الموجود: {customer_name} (ID: {customer.id})")
                     self._update_customer(customer, mapped_data)
                     self.stats['updated_customers'] += 1
-                    cid = getattr(customer, 'id', None)
-                    reason = f"تحديث بيانات عميل: {customer.name} (ID: {cid}) في الصف {row_index}"
-                    self.stats['errors'].append(reason)
-                return customer
             else:
-                # تحقق من وجود عميل بنفس الاسم فقط (ورقم هاتف مختلف)
-                same_name_customer = Customer.objects.filter(name=customer_name).exclude(phone=customer_phone).first()
-                if same_name_customer:
-                    # يوجد عميل بنفس الاسم لكن برقم هاتف مختلف: أنشئ عميل جديد
-                    if self.mapping.auto_create_customers:
-                        customer = self._create_customer(mapped_data)
-                        if customer:
-                            self.stats['created_customers'] += 1
-                        return customer
-                else:
-                    # لا يوجد أي عميل بهذا الاسم أو الهاتف: أنشئ عميل جديد
-                    if self.mapping.auto_create_customers:
-                        customer = self._create_customer(mapped_data)
-                        if customer:
-                            self.stats['created_customers'] += 1
-                        return customer
-            return None
+                if self.mapping.auto_create_customers:
+                    customer = self._create_customer(mapped_data)
+                    self.stats['created_customers'] += 1
+
+            return customer
+
         except Exception as e:
-            logger.error(f"خطأ في معالجة العميل في الصف {row_index}: {str(e)}")
+            error_msg = f"خطأ في معالجة العميل في الصف {row_index}: {str(e)}"
+            logger.error(error_msg)
+            logger.exception(e)
             raise
 
-    def _create_customer(self, mapped_data: Dict[str, str]) -> Optional[Customer]:
-        """إنشاء عميل جديد مع التأكد من تعيين الفرع بشكل نظامي"""
-        from accounts.models import Branch
+    def _create_customer(self, mapped_data: Dict[str, str]) -> Customer:
+        """إنشاء عميل جديد"""
         customer_data = {
             'name': mapped_data.get('customer_name', ''),
             'phone': mapped_data.get('customer_phone', ''),
@@ -349,41 +384,37 @@ class AdvancedSyncService:
             'address': mapped_data.get('customer_address', ''),
         }
 
-        # تعيين الفرع: أولوية للفرع الافتراضي، ثم من بيانات الشيت
-        branch_obj = None
-        if self.mapping.default_branch:
-            branch_obj = self.mapping.default_branch
-        elif mapped_data.get('branch'):
-            branch_code_val = mapped_data.get('branch')
-            branch_code = branch_code_val.strip() if branch_code_val else ''
-            if branch_code:
-                branch_obj = Branch.objects.filter(code=branch_code).first()
-        if branch_obj:
-            customer_data['branch'] = branch_obj
-        else:
-            # لا يمكن إنشاء عميل بدون فرع نظامي
-            logger.error("لا يمكن إنشاء عميل بدون فرع. تحقق من إعدادات التعيين أو بيانات الشيت.")
-            self.stats['errors'].append("لا يمكن إنشاء عميل بدون فرع. تحقق من إعدادات التعيين أو بيانات الشيت.")
-            return None
+        # تحديد الفرع
+        branch_name = mapped_data.get('branch', '')
+        if branch_name:
+            branch = Branch.objects.filter(name__icontains=branch_name).first()
+            if branch:
+                customer_data['branch'] = branch
 
-        # إضافة الفئة الافتراضية
-        if self.mapping.default_customer_category:
-            customer_data['category'] = self.mapping.default_customer_category
+        # إنشاء كود العميل تلقائياً
+        customer_data['code'] = self._generate_customer_code()
 
-        # إنشاء العميل
-        customer = Customer.objects.create(**customer_data)
-        return customer
+        return Customer.objects.create(**customer_data)
 
-    def _update_customer(self, customer: Customer, mapped_data: Dict[str, str]) -> Customer:
+    def _update_customer(self, customer: Customer, mapped_data: Dict[str, str]):
         """تحديث بيانات العميل"""
-        # تحديث البيانات الأساسية
-        for field, value in mapped_data.items():
-            if field.startswith('customer_') and hasattr(customer, field.replace('customer_', '')):
-                setattr(customer, field.replace('customer_', ''), value)
-        
-        # حفظ التغييرات
-        customer.save()
-        return customer
+        updated = False
+
+        # تحديث الحقول إذا كانت فارغة أو مختلفة
+        if mapped_data.get('customer_phone2') and not customer.phone2:
+            customer.phone2 = mapped_data['customer_phone2']
+            updated = True
+
+        if mapped_data.get('customer_email') and not customer.email:
+            customer.email = mapped_data['customer_email']
+            updated = True
+
+        if mapped_data.get('customer_address') and customer.address != mapped_data['customer_address']:
+            customer.address = mapped_data['customer_address']
+            updated = True
+
+        if updated:
+            customer.save()
 
     def _process_order(self, mapped_data: Dict[str, str], customer: Optional[Customer],
                       row_index: int, task: GoogleSyncTask) -> Optional[Order]:
@@ -552,17 +583,10 @@ class AdvancedSyncService:
         # هذه الدالة تحتاج إلى تنفيذ حسب متطلبات المزامنة العكسية
         return []
 
-    def _update_sheets_data(self, system_data: List[List[str]], task: GoogleSyncTask) -> int:
+    def _update_sheets_data(self, system_data: List[Dict[str, Any]], task: GoogleSyncTask):
         """تحديث بيانات Google Sheets"""
-        try:
-            return self.importer.update_sheet_data(
-                self.mapping.sheet_name,
-                system_data,
-                start_row=self.mapping.start_row
-            )
-        except Exception as e:
-            logger.error(f"خطأ في تحديث بيانات Google Sheets: {str(e)}")
-            raise
+        # هذه الدالة ستحتاج تطوير أكثر حسب متطلبات المزامنة العكسية
+        pass
 
 
 class SyncScheduler:
