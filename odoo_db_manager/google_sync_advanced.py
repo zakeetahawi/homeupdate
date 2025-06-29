@@ -8,10 +8,10 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-import json
 import logging
 import os
 import sys
+from datetime import time
 
 logger = logging.getLogger('odoo_db_manager.google_sync_advanced')
 
@@ -29,345 +29,448 @@ class GoogleSheetMapping(models.Model):
         ('customer_phone2', 'رقم الهاتف الثاني'),
         ('customer_email', 'بريد العميل الإلكتروني'),
         ('customer_address', 'عنوان العميل'),
-        ('customer_type', 'نوع العميل'),
-        ('customer_category', 'فئة العميل'),
-        ('branch', 'الفرع'),
-        ('salesperson', 'البائع'),
         ('order_number', 'رقم الطلب'),
-        ('order_status', 'حالة الطلب'),
-        ('order_date', 'تاريخ الطلب'),
         ('invoice_number', 'رقم الفاتورة'),
+        ('contract_number', 'رقم العقد'),
+        ('order_date', 'تاريخ الطلب'),
+        ('order_type', 'نوع الطلب'),
+        ('order_status', 'حالة الطلب'),
+        ('tracking_status', 'حالة التتبع'),
         ('total_amount', 'المبلغ الإجمالي'),
         ('paid_amount', 'المبلغ المدفوع'),
-        ('remaining_amount', 'المبلغ المتبقي'),
+        ('delivery_type', 'نوع التسليم'),
+        ('delivery_address', 'عنوان التسليم'),
+        ('installation_status', 'حالة التركيب'),
         ('inspection_date', 'تاريخ المعاينة'),
-        ('installation_date', 'تاريخ التركيب'),
+        ('inspection_result', 'نتيجة المعاينة'),
         ('notes', 'ملاحظات'),
+        ('branch', 'الفرع'),
+        ('salesperson', 'البائع'),
+        ('windows_count', 'عدد الشبابيك'),
+        ('ignore', 'تجاهل هذا العمود'),
     ]
 
-    name = models.CharField(_('اسم التعيين'), max_length=100)
+    # معلومات أساسية
+    name = models.CharField(max_length=200, verbose_name='اسم التعيين')
+    spreadsheet_id = models.CharField(max_length=500, verbose_name='معرف جدول Google')
+    sheet_name = models.CharField(max_length=200, verbose_name='اسم الورقة', default='Sheet1')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
 
-    # معلومات Google Sheets
-    spreadsheet_id = models.CharField(_('معرف جدول البيانات'), max_length=255)
-    sheet_name = models.CharField(_('اسم الصفحة'), max_length=100)
-    header_row = models.PositiveIntegerField(_('صف العناوين'), default=1)
-    start_row = models.PositiveIntegerField(_('صف البداية'), default=2)
-    last_row_processed = models.PositiveIntegerField(_('آخر صف تمت معالجته'), default=0)
+    # إعدادات الصفوف
+    header_row = models.PositiveIntegerField(default=1, verbose_name='صف العناوين')
+    start_row = models.PositiveIntegerField(default=2, verbose_name='صف البداية')
+    last_row_processed = models.PositiveIntegerField(null=True, blank=True, verbose_name='آخر صف تم معالجته')
 
-    # تعيينات الأعمدة
-    column_mappings = models.JSONField(
-        _('تعيينات الأعمدة'),
-        default=dict,
-        help_text=_('تعيين أعمدة Google Sheets إلى حقول النظام')
+    # تعيينات الأعمدة (JSON field)
+    column_mappings = models.JSONField(default=dict, verbose_name='تعيينات الأعمدة')
+
+    # إعدادات الإنشاء التلقائي
+    auto_create_customers = models.BooleanField(default=True, verbose_name='إنشاء عملاء تلقائياً')
+    auto_create_orders = models.BooleanField(default=True, verbose_name='إنشاء طلبات تلقائياً')
+    auto_create_inspections = models.BooleanField(default=False, verbose_name='إنشاء معاينات تلقائياً')
+    auto_create_installations = models.BooleanField(default=False, verbose_name='إنشاء تركيبات تلقائياً')
+
+    # إعدادات الربط والتحديث
+    update_existing = models.BooleanField(default=True, verbose_name='تحديث الموجود')
+    conflict_resolution = models.CharField(
+        max_length=20,
+        choices=[
+            ('skip', 'تجاهل التعارضات'),
+            ('overwrite', 'الكتابة فوق البيانات الموجودة'),
+            ('manual', 'الحل اليدوي للتعارضات'),
+        ],
+        default='manual',
+        verbose_name='حل التعارضات'
     )
 
-    # إعدادات المزامنة
-    auto_create_customers = models.BooleanField(_('إنشاء عملاء تلقائياً'), default=True)
-    auto_create_orders = models.BooleanField(_('إنشاء طلبات تلقائياً'), default=True)
-    auto_create_inspections = models.BooleanField(_('إنشاء معاينات تلقائياً'), default=False)
-    auto_create_installations = models.BooleanField(_('إنشاء تركيبات تلقائياً'), default=False)
-    update_existing_customers = models.BooleanField(_('تحديث العملاء الموجودين'), default=True)
-    update_existing_orders = models.BooleanField(_('تحديث الطلبات الموجودة'), default=True)
-    enable_reverse_sync = models.BooleanField(_('تمكين المزامنة العكسية'), default=False)
+    # المزامنة العكسية (من النظام إلى Google Sheets)
+    enable_reverse_sync = models.BooleanField(default=False, verbose_name='تمكين المزامنة العكسية')
+    reverse_sync_fields = models.JSONField(default=list, verbose_name='حقول المزامنة العكسية')
+
+    # معلومات التتبع
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    last_sync = models.DateTimeField(null=True, blank=True, verbose_name='آخر مزامنة')
+
+    # إعدادات الفلترة والتحقق
+    row_filter_conditions = models.JSONField(default=dict, blank=True, verbose_name='شروط فلترة الصفوف')
+    data_validation_rules = models.JSONField(default=dict, blank=True, verbose_name='قواعد التحقق من البيانات')
 
     # القيم الافتراضية
     default_customer_category = models.ForeignKey(
         'customers.CustomerCategory',
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        verbose_name=_('فئة العميل الافتراضية'),
-        related_name='sheet_mappings'
+        null=True,
+        blank=True,
+        verbose_name='تصنيف العميل الافتراضي'
     )
     default_customer_type = models.CharField(
-        _('نوع العميل الافتراضي'),
-        max_length=50,
+        max_length=20,
+        choices=[
+            ('retail', 'أفراد'),
+            ('wholesale', 'جملة'),
+            ('corporate', 'شركات'),
+        ],
+        null=True,
         blank=True,
-        null=True
+        verbose_name='نوع العميل الافتراضي'
     )
     default_branch = models.ForeignKey(
         'accounts.Branch',
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        verbose_name=_('الفرع الافتراضي'),
-        related_name='sheet_mappings'
+        null=True,
+        blank=True,
+        verbose_name='الفرع الافتراضي'
     )
     use_current_date_as_created = models.BooleanField(
-        _('استخدام التاريخ الحالي كتاريخ إنشاء'),
-        default=True
-    )
-
-    # معلومات النظام
-    is_active = models.BooleanField(_('نشط'), default=True)
-    last_sync = models.DateTimeField(_('آخر مزامنة'), null=True, blank=True)
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        verbose_name=_('تم الإنشاء بواسطة'),
-        related_name='created_sheet_mappings'
+        default=False,
+        verbose_name='استخدام التاريخ الحالي كتاريخ الإضافة'
     )
 
     class Meta:
-        verbose_name = _('تعيين Google Sheets')
-        verbose_name_plural = _('تعيينات Google Sheets')
-        ordering = ['-created_at']
+        verbose_name = 'تعيين Google Sheets'
+        verbose_name_plural = 'تعيينات Google Sheets'
+        db_table = 'google_sheet_mapping'
 
     def __str__(self):
         return f"{self.name} ({self.sheet_name})"
 
-    def get_column_mapping(self, column_identifier):
-        """
-        الحصول على تعيين العمود باستخدام المعرف (الاسم أو الرقم)
-        """
-        if not self.column_mappings:
-            return None
+    def get_column_mappings(self):
+        """إرجاع تعيينات الأعمدة مع التحقق من الصحة"""
+        if isinstance(self.column_mappings, str):
+            try:
+                import json
+                return json.loads(self.column_mappings)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return self.column_mappings or {}
 
-        # البحث بالاسم
-        if isinstance(column_identifier, str):
-            return self.column_mappings.get(column_identifier)
+    def get_reverse_sync_fields(self):
+        """إرجاع حقول المزامنة العكسية"""
+        return self.reverse_sync_fields or []
+    
+    def set_column_mappings(self, mappings_dict):
+        """تحديث تعيينات الأعمدة"""
+        if isinstance(mappings_dict, dict):
+            self.column_mappings = mappings_dict
+        else:
+            self.column_mappings = {}
 
-        # البحث بالرقم
-        return self.column_mappings.get(str(column_identifier))
+    def clean(self):
+        """التحقق من صحة البيانات"""
+        if not self.spreadsheet_id:
+            raise ValidationError('معرف جدول Google مطلوب')
+        
+        if not self.sheet_name:
+            raise ValidationError('اسم الورقة مطلوب')
+
+        if self.start_row <= self.header_row:
+            raise ValidationError('صف البداية يجب أن يكون بعد صف العناوين')
+
+    def has_valid_mappings(self):
+        """التحقق من وجود تعيينات صحيحة"""
+        mappings = self.get_column_mappings()
+        return bool(mappings and any(
+            field_type != 'ignore' 
+            for field_type in mappings.values()
+        ))
+
+    def get_mapped_columns(self):
+        """إرجاع الأعمدة المُعينة فقط (بدون التجاهل)"""
+        mappings = self.get_column_mappings()
+        return {
+            col: field_type 
+            for col, field_type in mappings.items() 
+            if field_type != 'ignore'
+        }
+
+    def get_customer_related_fields(self):
+        """إرجاع الحقول المتعلقة بالعملاء"""
+        mappings = self.get_mapped_columns()
+        customer_fields = [
+            'customer_code', 'customer_name', 'customer_phone', 
+            'customer_phone2', 'customer_email', 'customer_address'
+        ]
+        return {
+            col: field_type 
+            for col, field_type in mappings.items() 
+            if field_type in customer_fields
+        }
+
+    def get_order_related_fields(self):
+        """إرجاع الحقول المتعلقة بالطلبات"""
+        mappings = self.get_mapped_columns()
+        order_fields = [
+            'order_number', 'invoice_number', 'contract_number', 'order_date',
+            'order_type', 'order_status', 'tracking_status', 'total_amount',
+            'paid_amount', 'delivery_type', 'delivery_address', 'installation_status',
+            'notes', 'branch', 'salesperson', 'windows_count'
+        ]
+        return {
+            col: field_type 
+            for col, field_type in mappings.items() 
+            if field_type in order_fields
+        }
+
+    def should_create_customers(self):
+        """تحديد ما إذا كان يجب إنشاء عملاء"""
+        return self.auto_create_customers and bool(self.get_customer_related_fields())
+
+    def should_create_orders(self):
+        """تحديد ما إذا كان يجب إنشاء طلبات"""
+        return self.auto_create_orders and bool(self.get_order_related_fields())
+
+    def get_clean_column_mappings(self):
+        """إرجاع تعيينات الأعمدة منظفة (بدون القيم الفارغة أو ignore)"""
+        mappings = self.get_column_mappings()
+        return {
+            col: field_type 
+            for col, field_type in mappings.items() 
+            if field_type and field_type != 'ignore'
+        }
 
     def validate_mappings(self):
-        """
-        التحقق من صحة التعيينات
-        """
+        """التحقق من صحة تعيينات الأعمدة"""
         errors = []
-
-        # التحقق من وجود تعيينات
-        if not self.column_mappings:
-            errors.append("لا توجد تعيينات للأعمدة")
+        mappings = self.get_column_mappings()
+        
+        if not mappings:
+            errors.append('لا توجد تعيينات أعمدة محددة')
             return errors
-
-        # التحقق من وجود الحقول الأساسية
-        required_fields = []
+        
+        # التحقق من وجود حقول العميل الأساسية إذا كان الإنشاء التلقائي مفعل
         if self.auto_create_customers:
-            required_fields.append('customer_name')
-
+            customer_fields = self.get_customer_related_fields()
+            if not customer_fields:
+                errors.append('يجب تعيين على الأقل حقل واحد للعميل عند تفعيل الإنشاء التلقائي للعملاء')
+        
+        # التحقق من وجود حقول الطلب الأساسية إذا كان الإنشاء التلقائي مفعل
         if self.auto_create_orders:
-            required_fields.append('customer_name')  # العميل مطلوب للطلب
-
-        # التحقق من وجود الحقول المطلوبة
-        for field in required_fields:
-            found = False
-            for mapped_field in self.column_mappings.values():
-                if mapped_field == field:
-                    found = True
-                    break
-            if not found:
-                errors.append(f"الحقل المطلوب '{field}' غير موجود في التعيينات")
-
+            order_fields = self.get_order_related_fields()
+            if not order_fields:
+                errors.append('يجب تعيين على الأقل حقل واحد للطلب عند تفعيل الإنشاء التلقائي للطلبات')
+        
+        # التحقق من وجود تعيينات صالحة (ليست كلها ignore)
+        valid_mappings = [v for v in mappings.values() if v != 'ignore']
+        if not valid_mappings:
+            errors.append('يجب أن يكون هناك على الأقل تعيين واحد صالح (غير مُتجاهل)')
+        
         return errors
 
 
 class GoogleSyncTask(models.Model):
     """
     نموذج مهام المزامنة
-    Sync Tasks Model
+    Sync Task Model
     """
 
     TASK_TYPES = [
-        ('import', _('استيراد من Google Sheets')),
-        ('export', _('تصدير إلى Google Sheets')),
-        ('sync', _('مزامنة ثنائية الاتجاه')),
-        ('reverse_sync', _('مزامنة عكسية')),
+        ('import', 'استيراد من Google Sheets'),
+        ('export', 'تصدير إلى Google Sheets'),
+        ('sync_bidirectional', 'مزامنة ثنائية الاتجاه'),
     ]
 
-    STATUS_CHOICES = [
-        ('pending', _('في الانتظار')),
-        ('running', _('قيد التنفيذ')),
-        ('completed', _('مكتمل')),
-        ('failed', _('فشل')),
-        ('cancelled', _('ملغي')),
+    TASK_STATUS = [
+        ('pending', 'في الانتظار'),
+        ('running', 'قيد التنفيذ'),
+        ('completed', 'مكتملة'),
+        ('failed', 'فشلت'),
+        ('cancelled', 'ملغية'),
     ]
 
+    # معلومات المهمة
     mapping = models.ForeignKey(
-        GoogleSheetMapping,
-        on_delete=models.CASCADE,
-        related_name='sync_tasks',
-        verbose_name=_('تعيين الصفحة')
+        GoogleSheetMapping, 
+        on_delete=models.CASCADE, 
+        verbose_name='التعيين',
+        related_name='sync_tasks'
     )
+    task_type = models.CharField(max_length=20, choices=TASK_TYPES, verbose_name='نوع المهمة')
+    status = models.CharField(max_length=20, choices=TASK_STATUS, default='pending', verbose_name='الحالة')
 
-    task_type = models.CharField(_('نوع المهمة'), max_length=20, choices=TASK_TYPES)
-    status = models.CharField(_('الحالة'), max_length=20, choices=STATUS_CHOICES, default='pending')
-
-    # معلومات التنفيذ
-    started_at = models.DateTimeField(_('بدء التنفيذ'), null=True, blank=True)
-    completed_at = models.DateTimeField(_('انتهاء التنفيذ'), null=True, blank=True)
-
-    # إحصائيات
-    total_rows = models.IntegerField(_('إجمالي الصفوف'), default=0)
-    processed_rows = models.IntegerField(_('الصفوف المعالجة'), default=0)
-    successful_rows = models.IntegerField(_('الصفوف الناجحة'), default=0)
-    failed_rows = models.IntegerField(_('الصفوف الفاشلة'), default=0)
-
-    # تفاصيل النتائج
-    results = models.JSONField(
-        _('نتائج التنفيذ'),
-        default=dict,
-        help_text=_('تفاصيل نتائج المزامنة')
-    )
-
-    error_message = models.TextField(_('رسالة الخطأ'), blank=True)
-    error_details = models.JSONField(_('تفاصيل الأخطاء'), default=list)
-
-    # معلومات النظام
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    # معلومات التتبع
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
+        verbose_name='أنشأ بواسطة',
+        related_name='created_sync_tasks',
         null=True,
-        verbose_name=_('تم الإنشاء بواسطة')
+        blank=True
     )
+    started_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ البداية')
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الانتهاء')
 
-    # إعدادات المهمة
-    is_scheduled = models.BooleanField(_('مجدولة'), default=False)
-    schedule_frequency = models.IntegerField(_('تكرار الجدولة (بالدقائق)'), default=60)
-    next_run = models.DateTimeField(_('التشغيل القادم'), null=True, blank=True)
+    # النتائج
+    result = models.JSONField(null=True, blank=True, verbose_name='النتيجة')
+    rows_processed = models.PositiveIntegerField(default=0, verbose_name='الصفوف المعالجة')
+    rows_successful = models.PositiveIntegerField(default=0, verbose_name='الصفوف الناجحة')
+    rows_failed = models.PositiveIntegerField(default=0, verbose_name='الصفوف الفاشلة')
+
+    # معلومات إضافية
+    task_parameters = models.JSONField(default=dict, blank=True, verbose_name='معاملات المهمة')
+    error_log = models.TextField(blank=True, verbose_name='سجل الأخطاء')
 
     class Meta:
-        verbose_name = _('مهمة مزامنة')
-        verbose_name_plural = _('مهام المزامنة')
+        verbose_name = 'مهمة مزامنة'
+        verbose_name_plural = 'مهام المزامنة'
+        db_table = 'google_sync_task'
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.get_task_type_display()} - {self.mapping.name}"
+        return f"{self.get_task_type_display()} - {self.mapping.name} ({self.status})"
 
-    def start_task(self):
+    def get_duration(self):
+        """حساب مدة تنفيذ المهمة"""
+        if self.started_at and self.completed_at:
+            return self.completed_at - self.started_at
+        elif self.started_at:
+            return timezone.now() - self.started_at
+        return None
+
+    def get_success_rate(self):
+        """حساب معدل النجاح"""
+        if self.rows_processed > 0:
+            return (self.rows_successful / self.rows_processed) * 100
+        return 0
+
+    def is_running(self):
+        """التحقق من كون المهمة قيد التنفيذ"""
+        return self.status == 'running'
+
+    def is_completed(self):
+        """التحقق من اكتمال المهمة"""
+        return self.status in ['completed', 'failed', 'cancelled']
+
+    def start_execution(self):
         """بدء تنفيذ المهمة"""
         self.status = 'running'
         self.started_at = timezone.now()
         self.save(update_fields=['status', 'started_at'])
 
-    def complete_task(self, results=None):
-        """إكمال المهمة"""
-        self.status = 'completed'
+    def complete_execution(self, success=True, result=None, error_message=None):
+        """إنهاء تنفيذ المهمة"""
+        self.status = 'completed' if success else 'failed'
         self.completed_at = timezone.now()
-        if results:
-            self.results = results
-        self.save(update_fields=['status', 'completed_at', 'results'])
+        
+        if result:
+            self.result = result
+            
+        if error_message:
+            self.error_log = error_message
+            
+        self.save(update_fields=['status', 'completed_at', 'result', 'error_log'])
 
-    def fail_task(self, error_message, error_details=None):
-        """فشل المهمة"""
-        self.status = 'failed'
-        self.completed_at = timezone.now()
-        self.error_message = error_message
-        if error_details:
-            self.error_details = error_details
-        self.save(update_fields=['status', 'completed_at', 'error_message', 'error_details'])
-
-    def mark_completed(self, result_data=None):
-        """إنهاء المهمة بنجاح"""
-        self.status = 'completed'
-        self.completed_at = timezone.now()
-        if result_data:
-            self.results = result_data
-            # تحديث الإحصائيات من النتائج
-            if 'stats' in result_data:
-                stats = result_data['stats']
-                self.total_rows = stats.get('total_rows', 0)
-                self.processed_rows = stats.get('processed_rows', 0)
-                self.successful_rows = stats.get('customers_created', 0) + stats.get('orders_created', 0) + stats.get('customers_updated', 0) + stats.get('orders_updated', 0)
-                self.failed_rows = len(stats.get('errors', []))
-        self.save(update_fields=['status', 'completed_at', 'results', 'total_rows', 'processed_rows', 'successful_rows', 'failed_rows'])
-
-    def mark_failed(self, error_message, error_details=None):
-        """فشل المهمة (اسم بديل)"""
-        return self.fail_task(error_message, error_details)
-
-    def get_progress_percentage(self):
-        """حساب نسبة التقدم"""
-        if self.total_rows == 0:
-            return 0
-        return int((self.processed_rows / self.total_rows) * 100)
-
-    def get_duration(self):
-        """حساب مدة التنفيذ"""
-        if not self.started_at:
-            return None
-        end_time = self.completed_at or timezone.now()
-        return end_time - self.started_at
+    def update_progress(self, processed=0, successful=0, failed=0):
+        """تحديث تقدم المهمة"""
+        self.rows_processed = processed
+        self.rows_successful = successful
+        self.rows_failed = failed
+        self.save(update_fields=['rows_processed', 'rows_successful', 'rows_failed'])
+    
+    def start_task(self):
+        """بدء تنفيذ المهمة (alias لـ start_execution)"""
+        self.start_execution()
+    
+    def mark_completed(self, result=None, success=True):
+        """تحديد المهمة كمكتملة (alias لـ complete_execution)"""
+        self.complete_execution(success=success, result=result)
+    
+    def mark_failed(self, error_message=None):
+        """تحديد المهمة كفاشلة"""
+        self.complete_execution(success=False, error_message=error_message)
 
 
 class GoogleSyncConflict(models.Model):
     """
     نموذج تعارضات المزامنة
-    Sync Conflicts Model
+    Sync Conflict Model
     """
 
     CONFLICT_TYPES = [
-        ('duplicate', _('تكرار')),
-        ('validation_error', _('خطأ في التحقق')),
-        ('missing_data', _('بيانات مفقودة')),
-        ('data_mismatch', _('عدم تطابق البيانات')),
-        ('other', _('أخرى')),
+        ('duplicate_customer', 'عميل مكرر'),
+        ('duplicate_order', 'طلب مكرر'),
+        ('data_mismatch', 'عدم تطابق البيانات'),
+        ('missing_reference', 'مرجع مفقود'),
+        ('validation_error', 'خطأ في التحقق'),
     ]
 
     RESOLUTION_STATUS = [
-        ('pending', _('في انتظار الحل')),
-        ('resolved', _('تم الحل')),
-        ('ignored', _('تم التجاهل')),
+        ('pending', 'في الانتظار'),
+        ('resolved', 'تم الحل'),
+        ('ignored', 'متجاهل'),
     ]
 
+    # معلومات التعارض
     task = models.ForeignKey(
-        GoogleSyncTask,
-        on_delete=models.CASCADE,
-        related_name='conflicts',
-        verbose_name=_('مهمة المزامنة')
+        GoogleSyncTask, 
+        on_delete=models.CASCADE, 
+        verbose_name='المهمة',
+        related_name='conflicts'
     )
+    conflict_type = models.CharField(max_length=30, choices=CONFLICT_TYPES, verbose_name='نوع التعارض')
+    row_number = models.PositiveIntegerField(default=1, verbose_name='رقم الصف')
 
-    conflict_type = models.CharField(_('نوع التعارض'), max_length=20, choices=CONFLICT_TYPES)
-    field_name = models.CharField(_('اسم الحقل'), max_length=100)
-    row_index = models.IntegerField(_('رقم الصف'), default=0)
+    # البيانات المتعارضة
+    sheet_data = models.JSONField(verbose_name='بيانات الجدول')
+    existing_data = models.JSONField(null=True, blank=True, verbose_name='البيانات الموجودة')
+    suggested_action = models.CharField(max_length=100, blank=True, verbose_name='الإجراء المقترح')
 
-    system_data = models.JSONField(_('بيانات النظام'), default=dict)
-    sheet_data = models.JSONField(_('بيانات الجدول'), default=dict)
-
-    description = models.TextField(_('وصف التعارض'))
+    # معلومات الحل
     resolution_status = models.CharField(
-        _('حالة الحل'),
-        max_length=20,
-        choices=RESOLUTION_STATUS,
-        default='pending'
+        max_length=20, 
+        choices=RESOLUTION_STATUS, 
+        default='pending', 
+        verbose_name='حالة الحل'
     )
-    resolution_notes = models.TextField(_('ملاحظات الحل'), blank=True)
-    resolved_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        verbose_name=_('تم الحل بواسطة')
-    )
-    resolved_at = models.DateTimeField(_('تاريخ الحل'), null=True, blank=True)
+    resolution_action = models.CharField(max_length=100, blank=True, verbose_name='إجراء الحل')
+    resolution_notes = models.TextField(blank=True, verbose_name='ملاحظات الحل')
+    resolved_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الحل')
 
-    # معلومات النظام
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    # معلومات التتبع
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
 
     class Meta:
-        verbose_name = _('تعارض مزامنة')
-        verbose_name_plural = _('تعارضات المزامنة')
+        verbose_name = 'تعارض مزامنة'
+        verbose_name_plural = 'تعارضات المزامنة'
+        db_table = 'google_sync_conflict'
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.get_conflict_type_display()} - صف {self.row_index}"
+        return f"{self.get_conflict_type_display()} - الصف {self.row_number}"
 
-    def resolve(self, user, notes=''):
+    def get_conflict_description(self):
+        """وصف مفصل للتعارض"""
+        descriptions = {
+            'duplicate_customer': f'عميل مكرر في الصف {self.row_number}',
+            'duplicate_order': f'طلب مكرر في الصف {self.row_number}',
+            'data_mismatch': f'عدم تطابق البيانات في الصف {self.row_number}',
+            'missing_reference': f'مرجع مفقود في الصف {self.row_number}',
+            'validation_error': f'خطأ في التحقق في الصف {self.row_number}',
+        }
+        return descriptions.get(self.conflict_type, f'تعارض في الصف {self.row_number}')
+
+    def is_pending(self):
+        """التحقق من كون التعارض في انتظار الحل"""
+        return self.resolution_status == 'pending'
+
+    def resolve(self, action, notes=None):
         """حل التعارض"""
         self.resolution_status = 'resolved'
-        self.resolution_notes = notes
-        self.resolved_by = user
+        self.resolution_action = action
+        self.resolution_notes = notes or ''
         self.resolved_at = timezone.now()
-        self.save(update_fields=['resolution_status', 'resolution_notes', 'resolved_by', 'resolved_at'])
+        self.save(update_fields=[
+            'resolution_status', 'resolution_action', 
+            'resolution_notes', 'resolved_at'
+        ])
 
-    def ignore(self, user, notes=''):
+    def ignore(self, notes=None):
         """تجاهل التعارض"""
         self.resolution_status = 'ignored'
-        self.resolution_notes = notes
-        self.resolved_by = user
+        self.resolution_notes = notes or 'تم التجاهل'
         self.resolved_at = timezone.now()
-        self.save(update_fields=['resolution_status', 'resolution_notes', 'resolved_by', 'resolved_at'])
+        self.save(update_fields=['resolution_status', 'resolution_notes', 'resolved_at'])
 
 
 class GoogleSyncSchedule(models.Model):
@@ -377,75 +480,78 @@ class GoogleSyncSchedule(models.Model):
     """
 
     FREQUENCY_CHOICES = [
-        ('hourly', _('كل ساعة')),
-        ('daily', _('يومياً')),
-        ('weekly', _('أسبوعياً')),
-        ('monthly', _('شهرياً')),
-        ('custom', _('مخصص')),
+        ('once', 'مرة واحدة'),
+        ('daily', 'يومياً'),
+        ('weekly', 'أسبوعياً'),
+        ('monthly', 'شهرياً'),
+        ('hourly', 'كل ساعة'),
     ]
 
+    # معلومات الجدولة
     mapping = models.ForeignKey(
-        GoogleSheetMapping,
-        on_delete=models.CASCADE,
-        related_name='schedules',
-        verbose_name=_('تعيين الصفحة')
+        GoogleSheetMapping, 
+        on_delete=models.CASCADE, 
+        verbose_name='التعيين',
+        related_name='schedules'
     )
+    name = models.CharField(max_length=200, default='جدولة افتراضية', verbose_name='اسم الجدولة')
+    is_active = models.BooleanField(default=True, verbose_name='نشط')
 
-    name = models.CharField(_('اسم الجدولة'), max_length=100)
-    description = models.TextField(_('وصف الجدولة'), blank=True)
+    # إعدادات التوقيت
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='daily', verbose_name='التكرار')
+    scheduled_time = models.TimeField(default=time(0, 0), verbose_name='وقت التنفيذ')
+    next_run = models.DateTimeField(null=True, blank=True, verbose_name='التنفيذ القادم')
 
-    frequency = models.CharField(_('التكرار'), max_length=20, choices=FREQUENCY_CHOICES, default='daily')
-    custom_minutes = models.PositiveIntegerField(_('دقائق مخصصة'), default=60)
-    
-    is_active = models.BooleanField(_('نشط'), default=True)
-    last_run = models.DateTimeField(_('آخر تشغيل'), null=True, blank=True)
-    next_run = models.DateTimeField(_('التشغيل القادم'), null=True, blank=True)
-
-    total_runs = models.PositiveIntegerField(_('إجمالي مرات التشغيل'), default=0)
-    successful_runs = models.PositiveIntegerField(_('مرات التشغيل الناجحة'), default=0)
-    failed_runs = models.PositiveIntegerField(_('مرات التشغيل الفاشلة'), default=0)
-
-    # معلومات النظام
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        verbose_name=_('تم الإنشاء بواسطة')
+    # إعدادات المهمة
+    task_type = models.CharField(
+        max_length=20, 
+        choices=GoogleSyncTask.TASK_TYPES, 
+        default='import',
+        verbose_name='نوع المهمة'
     )
+    task_parameters = models.JSONField(default=dict, blank=True, verbose_name='معاملات المهمة')
+
+    # معلومات التتبع
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    last_run = models.DateTimeField(null=True, blank=True, verbose_name='آخر تنفيذ')
+    total_runs = models.PositiveIntegerField(default=0, verbose_name='إجمالي التنفيذ')
+    successful_runs = models.PositiveIntegerField(default=0, verbose_name='التنفيذ الناجح')
+    failed_runs = models.PositiveIntegerField(default=0, verbose_name='التنفيذ الفاشل')
 
     class Meta:
-        verbose_name = _('جدولة مزامنة')
-        verbose_name_plural = _('جدولات المزامنة')
+        verbose_name = 'جدولة مزامنة'
+        verbose_name_plural = 'جدولة المزامنة'
+        db_table = 'google_sync_schedule'
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.name} - {self.mapping.name}"
+        return f"{self.name} ({self.get_frequency_display()})"
 
-    def save(self, *args, **kwargs):
-        # حساب التشغيل القادم عند الإنشاء
-        if not self.next_run:
-            self.calculate_next_run()
-        super().save(*args, **kwargs)
+    def is_due(self):
+        """التحقق من حان وقت التنفيذ"""
+        if not self.is_active or not self.next_run:
+            return False
+        return timezone.now() >= self.next_run
 
     def calculate_next_run(self):
-        """حساب موعد التشغيل القادم"""
+        """حساب موعد التنفيذ القادم"""
+        from datetime import datetime, timedelta
+        
         now = timezone.now()
         
-        if self.frequency == 'hourly':
+        if self.frequency == 'once':
+            self.next_run = None
+        elif self.frequency == 'hourly':
             self.next_run = now + timedelta(hours=1)
         elif self.frequency == 'daily':
             self.next_run = now + timedelta(days=1)
         elif self.frequency == 'weekly':
             self.next_run = now + timedelta(weeks=1)
         elif self.frequency == 'monthly':
-            # تقريبي - 30 يوم
             self.next_run = now + timedelta(days=30)
-        else:  # custom
-            self.next_run = now + timedelta(minutes=self.custom_minutes)
 
-    def record_run(self, success=True):
-        """تسجيل تشغيل"""
+    def record_execution(self, success=True):
+        """تسجيل تنفيذ الجدولة"""
         self.last_run = timezone.now()
         self.total_runs += 1
         
@@ -456,467 +562,3 @@ class GoogleSyncSchedule(models.Model):
             
         self.calculate_next_run()
         self.save(update_fields=['last_run', 'total_runs', 'successful_runs', 'failed_runs', 'next_run'])
-
-
-class AdvancedSyncService:
-    """
-    خدمة المزامنة المتقدمة مع Google Sheets
-    Advanced Google Sheets Sync Service
-    """
-
-    def __init__(self, mapping):
-        self.mapping = mapping
-
-    def sync_from_sheets(self, task):
-        """
-        تنفيذ المزامنة من Google Sheets باستخدام التعيينات المخصصة
-        """
-        logger.info(f"SYNC LOG PATH = {os.path.join(settings.BASE_DIR, 'media', 'sync_from_sheets.log')}")
-        print("=== SYNC_FROM_SHEETS CALLED ===", file=sys.stderr, flush=True)
-        logger.info("=== SYNC_FROM_SHEETS CALLED === (triggered from UI or API)")
-        logger.info("=== TEST LOG ENTRY === (should appear in sync_from_sheets.log)")
-
-        try:
-            from .google_sheets_import import GoogleSheetsImporter
-
-            # إنشاء importer مع معرف الجدول الصحيح
-            importer = GoogleSheetsImporter()
-            importer.initialize()
-
-            # حفظ المعرف الأصلي وتحديثه بمعرف التعيين
-            original_id = getattr(importer.config, 'spreadsheet_id', None)
-
-            try:
-                # تحديث معرف الجدول إلى معرف التعيين
-                if hasattr(importer.config, 'spreadsheet_id'):
-                    importer.config.spreadsheet_id = self.mapping.spreadsheet_id
-
-                # جلب بيانات الجدول
-                sheet_data = importer.get_sheet_data(self.mapping.sheet_name)
-
-                if not sheet_data:
-                    return {
-                        'success': False,
-                        'error': 'لا توجد بيانات في الجدول'
-                    }
-
-                # معالجة البيانات باستخدام التعيينات المخصصة
-                result = self.process_custom_data(sheet_data, task)
-
-                return result
-
-            finally:
-                # استعادة المعرف الأصلي
-                if original_id and hasattr(importer.config, 'spreadsheet_id'):
-                    importer.config.spreadsheet_id = original_id
-
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-
-    def process_custom_data(self, sheet_data, task):
-        """
-        معالجة البيانات باستخدام تعيينات الأعمدة المخصصة
-        """
-        try:
-            # التحقق من وجود تعيينات الأعمدة
-            if not self.mapping.column_mappings:
-                return {
-                    'success': False,
-                    'error': 'لا توجد تعيينات أعمدة محفوظة. يرجى تحديث تعيينات الأعمدة أولاً.'
-                }
-
-            # جلب عناوين الأعمدة من الصف المحدد
-            if len(sheet_data) < self.mapping.header_row:
-                return {
-                    'success': False,
-                    'error': f'الجدول لا يحتوي على صف العناوين المحدد (صف {self.mapping.header_row})'
-                }
-
-            headers = sheet_data[self.mapping.header_row - 1]
-
-            # جلب بيانات الصفوف من الصف المحدد
-            if len(sheet_data) < self.mapping.start_row:
-                return {
-                    'success': False,
-                    'error': f'الجدول لا يحتوي على بيانات من الصف المحدد (صف {self.mapping.start_row})'
-                }
-
-            data_rows = sheet_data[self.mapping.start_row - 1:]
-
-            # إحصائيات المعالجة
-            stats = {
-                'total_rows': len(data_rows),
-                'processed_rows': 0,
-                'customers_created': 0,
-                'customers_updated': 0,
-                'orders_created': 0,
-                'orders_updated': 0,
-                'inspections_created': 0,
-                'installations_created': 0,
-                'errors': [],
-                'warnings': []
-            }
-
-            # معالجة كل صف
-            for row_index, row_data in enumerate(data_rows, start=self.mapping.start_row):
-                try:
-                    # تحويل الصف إلى قاموس باستخدام التعيينات
-                    row_dict = self.map_row_to_fields(headers, row_data, row_index)
-
-                    # معالجة البيانات حتى لو كانت ناقصة
-                    row_result = None
-                    if row_dict:
-                        # معالجة البيانات وإنشاء/تحديث السجلات
-                        row_result = self.process_row_data(row_dict, row_index, task)
-                    else:
-                        # حتى لو لم يكن هناك تعيين، حاول معالجة الصف مباشرة
-                        if any(str(cell).strip() for cell in row_data):
-                            # إنشاء قاموس بسيط من البيانات المتاحة
-                            simple_dict = {}
-                            for i, cell in enumerate(row_data):
-                                if i < len(headers) and str(cell).strip():
-                                    simple_dict[f'col_{i}'] = str(cell).strip()
-
-                            if simple_dict:
-                                row_result = self.process_row_data(simple_dict, row_index, task)
-                            else:
-                                continue
-                        else:
-                            continue
-
-                    # تحديث الإحصائيات فقط إذا كان هناك نتيجة
-                    if row_result:
-                        stats['processed_rows'] += 1
-                        stats['customers_created'] += row_result.get('customers_created', 0)
-                        stats['customers_updated'] += row_result.get('customers_updated', 0)
-                        stats['orders_created'] += row_result.get('orders_created', 0)
-                        stats['orders_updated'] += row_result.get('orders_updated', 0)
-                        stats['inspections_created'] += row_result.get('inspections_created', 0)
-                        stats['installations_created'] += row_result.get('installations_created', 0)
-
-                        if row_result.get('warnings'):
-                            stats['warnings'].extend(row_result['warnings'])
-
-                        # طباعة تفاصيل الصف للتشخيص
-                        if row_result.get('customers_created', 0) > 0 or row_result.get('orders_created', 0) > 0:
-                            print(f'الصف {row_index}: عملاء={row_result.get("customers_created", 0)}, طلبات={row_result.get("orders_created", 0)}')
-
-                except Exception as row_error:
-                    error_msg = f'خطأ في الصف {row_index}: {str(row_error)}'
-                    stats['errors'].append(error_msg)
-                    print(f'خطأ في معالجة الصف {row_index}: {str(row_error)}')
-
-            # تحديث آخر صف تمت معالجته
-            self.mapping.last_row_processed = self.mapping.start_row + len(data_rows) - 1
-            self.mapping.save(update_fields=['last_row_processed'])
-
-            return {
-                'success': True,
-                'stats': stats,
-                'conflicts': 0
-            }
-
-        except Exception as e:
-            return {
-                'success': False,
-                'error': f'خطأ في معالجة البيانات: {str(e)}'
-            }
-
-    def map_row_to_fields(self, headers, row_data, row_index):
-        """
-        تحويل صف البيانات إلى قاموس باستخدام تعيينات الأعمدة بناءً على رقم العمود أو اسم العمود
-        """
-        try:
-            mapped_data = {}
-
-            if not row_data or all(str(cell).strip() == '' for cell in row_data):
-                return None  # صف فارغ
-
-            # معالجة كل عمود
-            for col_index, cell_value in enumerate(row_data):
-                # جرب أولاً التعيين برقم العمود
-                field_type = self.mapping.get_column_mapping(col_index)
-                # إذا لم يوجد تعيين برقم العمود، جرب باسم العمود من headers
-                if not field_type and headers and col_index < len(headers):
-                    field_type = self.mapping.get_column_mapping(headers[col_index])
-                if field_type and field_type != 'ignore':
-                    # إذا كان الحقل يمثل تاريخًا، مرره على parse_date
-                    if field_type in ['order_date', 'inspection_date', 'installation_date', 'created_at', 'updated_at']:
-                        cleaned_value = self.clean_cell_value(cell_value, field_type)
-                        mapped_data[field_type] = self.parse_date(cleaned_value) if cleaned_value else None
-                    else:
-                        mapped_data[field_type] = self.clean_cell_value(cell_value, field_type)
-
-            # طباعة القيم التي تم تعيينها للتشخيص
-            print(f'صف {row_index} - البيانات المعينة: {mapped_data}')
-
-            return mapped_data if mapped_data else None
-
-        except Exception as e:
-            print(f'خطأ في تعيين الصف {row_index}: {str(e)}')
-            return None
-
-    def process_order_data(self, row_dict, customer, row_index, force_create=False):
-        """
-        معالجة بيانات الطلب
-        إذا كان force_create=True سيتم إنشاء طلب جديد دائماً.
-        """
-        try:
-            from orders.models import Order
-
-            order_data = {}
-            # المبلغ المدفوع
-            if 'paid_amount' in row_dict:
-                order_data['paid_amount'] = row_dict['paid_amount']
-            # عدد النوافذ
-            if 'windows_count' in row_dict:
-                order_data['windows_count'] = row_dict['windows_count']
-            # تاريخ الطلب
-            if 'order_date' in row_dict:
-                parsed_order_date = self.parse_date(row_dict['order_date'])
-                if parsed_order_date:
-                    order_data['order_date'] = parsed_order_date
-            elif self.mapping.use_current_date_as_created:
-                from datetime import datetime
-                order_data['order_date'] = datetime.now().date()
-            # الفرع
-            if self.mapping.default_branch:
-                order_data['branch'] = self.mapping.default_branch
-            # --- إضافة الحقول المميزة للبحث ---
-            for key in ['order_number', 'invoice_number', 'contract_number']:
-                if key in row_dict and row_dict[key]:
-                    order_data[key] = row_dict[key]
-            # فقط نتأكد من وجود عميل
-            if not customer:
-                return None
-            # لوج تشخيصي للقيم المستخدمة في البحث
-            print(f"[SYNC][Order Search] order_number={order_data.get('order_number')}, invoice_number={order_data.get('invoice_number')}, contract_number={order_data.get('contract_number')}, customer={customer}")
-            # إذا كان force_create=True أنشئ دائماً طلب جديد
-            created = False
-            if force_create:
-                order_data['customer'] = customer
-                order = Order.objects.create(**order_data)
-                created = True
-                # إعادة تحميل الطلب من قاعدة البيانات بعد الحفظ
-                from orders.models import Order as OrderModel
-                try:
-                    order = OrderModel.objects.get(pk=order.pk)
-                    order.refresh_from_db()
-                    if order.pk and OrderModel.objects.filter(pk=order.pk).exists():
-                        if hasattr(order, 'calculate_final_price'):
-                            order.calculate_final_price()
-                        else:
-                            print(f"Order instance has no calculate_final_price method, skipping final price calculation.")
-                    else:
-                        print(f"Order instance with pk={order.pk} not found in DB, skipping final price calculation.")
-                except Exception as calc_err:
-                    import traceback
-                    print(f"Error calculating final price (create): {calc_err}\n{traceback.format_exc()}")
-            else:
-                # البحث الذكي عن الطلب الموجود (كما كان سابقاً)
-                order = None
-                if 'order_number' in order_data and order_data['order_number']:
-                    order = Order.objects.filter(order_number=order_data['order_number']).first()
-                if not order and 'invoice_number' in order_data and order_data['invoice_number']:
-                    order = Order.objects.filter(invoice_number=order_data['invoice_number'], customer=customer).first()
-                if not order and 'contract_number' in order_data and order_data['contract_number']:
-                    order = Order.objects.filter(contract_number=order_data['contract_number'], customer=customer).first()
-                if not order and order_data.get('order_date'):
-                    order = Order.objects.filter(customer=customer, order_date=order_data['order_date']).first()
-                if order:
-                    if self.mapping.update_existing_orders:
-                        for field, value in order_data.items():
-                            if value and field != 'customer':
-                                setattr(order, field, value)
-                        order.save()
-                        from orders.models import Order as OrderModel
-                        try:
-                            order = OrderModel.objects.get(pk=order.pk)
-                            order.refresh_from_db()
-                            if order.pk and OrderModel.objects.filter(pk=order.pk).exists():
-                                if hasattr(order, 'calculate_final_price'):
-                                    order.calculate_final_price()
-                                else:
-                                    print(f"Order instance has no calculate_final_price method, skipping final price calculation.")
-                            else:
-                                print(f"Order instance with pk={order.pk} not found in DB, skipping final price calculation.")
-                        except Exception as calc_err:
-                            import traceback
-                            print(f"Error calculating final price (update): {calc_err}\n{traceback.format_exc()}")
-                else:
-                    if self.mapping.auto_create_orders:
-                        order_data['customer'] = customer
-                        order = Order.objects.create(**order_data)
-                        created = True
-                        from orders.models import Order as OrderModel
-                        try:
-                            order = OrderModel.objects.get(pk=order.pk)
-                            order.refresh_from_db()
-                            if order.pk and OrderModel.objects.filter(pk=order.pk).exists():
-                                if hasattr(order, 'calculate_final_price'):
-                                    order.calculate_final_price()
-                                else:
-                                    print(f"Order instance has no calculate_final_price method, skipping final price calculation.")
-                            else:
-                                print(f"Order instance with pk={order.pk} not found in DB, skipping final price calculation.")
-                        except Exception as calc_err:
-                            import traceback
-                            print(f"Error calculating final price (create): {calc_err}\n{traceback.format_exc()}")
-            return {
-                'instance': order,
-                'created': created
-            } if order else None
-        except Exception as e:
-            print(f'خطأ في معالجة بيانات الطلب في الصف {row_index}: {str(e)}')
-            return None
-
-    def process_inspection_data(self, row_dict, order, row_index):
-        """
-        معالجة بيانات المعاينة
-        """
-        try:
-            # التحقق من وجود تاريخ المعاينة
-            if 'inspection_date' not in row_dict or not row_dict['inspection_date']:
-                return None
-            # تمرير تاريخ المعاينة على parse_date
-            parsed_inspection_date = self.parse_date(row_dict['inspection_date'])
-            if not parsed_inspection_date:
-                return None
-            # هنا يمكن إضافة معالجة المعاينة إذا كان لديك نموذج Inspection
-            # from inspections.models import Inspection
-            return None
-        except Exception as e:
-            print(f'خطأ في معالجة بيانات المعاينة في الصف {row_index}: {str(e)}')
-            return None
-
-    def clean_cell_value(self, value, field_type=None):
-        """
-        تنظيف قيمة الخلية: إزالة الفراغات من البداية والنهاية فقط، وإرجاع القيمة كما هي.
-        """
-        if isinstance(value, str):
-            return value.strip()
-        return value
-
-    def parse_date(self, value):
-        """
-        تحويل التاريخ من أي صيغة شائعة (DD-MM-YYYY أو DD/MM/YYYY أو YYYY-MM-DD) إلى كائن تاريخ أو None.
-        """
-        from datetime import datetime
-        if not value or not str(value).strip():
-            return None
-        value = str(value).strip()
-        for fmt in ("%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d", "%Y/%m/%d"):
-            try:
-                return datetime.strptime(value, fmt).date()
-            except Exception:
-                continue
-        # إذا لم تنجح أي صيغة، أرجع None
-        return None
-
-    def process_row_data(self, row_dict, row_index, task):
-        """
-        معالجة صف واحد: عميل + طلب + معاينة + تركيب (حسب الإعدادات)
-        منطق العميل:
-        - إذا وُجد عميل بنفس الاسم فقط (حتى لو رقم الهاتف مختلف):
-            - إذا كان رقم الهاتف في الصف الجديد مختلف عن أي عميل بنفس الاسم → يتم إنشاء عميل جديد.
-            - إذا كان رقم الهاتف في الصف الجديد مطابق لأحد العملاء بنفس الاسم → استخدم العميل الموجود.
-            - إذا كان رقم الهاتف في الصف الجديد فارغ → يتم إنشاء عميل جديد دائمًا.
-        - إذا لم يوجد عميل بنفس الاسم: يتم إنشاء عميل جديد.
-        """
-        stats = {
-            'customers_created': 0,
-            'customers_updated': 0,
-            'orders_created': 0,
-            'orders_updated': 0,
-            'inspections_created': 0,
-            'installations_created': 0,
-            'warnings': []
-        }
-        customer = None
-        order = None
-        try:
-            from customers.models import Customer
-            customer = None
-            found_by = None
-            # طباعة محتوى الصف وقاموس البيانات الناتج للتشخيص
-            print(f"[SYNC][DEBUG] Row {row_index} raw dict: {row_dict}")
-            logger.info(f"[SYNC][DEBUG] Row {row_index} raw dict: {row_dict}")
-            name = row_dict.get('customer_name', '').strip() if 'customer_name' in row_dict else ''
-            phone = row_dict.get('customer_phone', '').strip() if 'customer_phone' in row_dict else ''
-            if name:
-                customers_qs = Customer.objects.filter(name=name)
-                if not customers_qs.exists():
-                    # لا يوجد عميل بنفس الاسم: أنشئ عميل جديد
-                    customer = Customer.objects.create(
-                        name=name,
-                        phone=phone,
-                        customer_type=self.mapping.default_customer_type if self.mapping.default_customer_type else None,
-                        category=self.mapping.default_customer_category if self.mapping.default_customer_category else None,
-                        branch=self.mapping.default_branch if self.mapping.default_branch else None
-                    )
-                    stats['customers_created'] += 1
-                    print(f"[SYNC][Customer] Row {row_index}: Created new customer (new name): {customer}")
-                    logger.info(f"[SYNC][Customer] Row {row_index}: Created new customer (new name): {customer}")
-                else:
-                    # يوجد عميل بنفس الاسم
-                    if not phone:
-                        # الهاتف فارغ: استخدم أول عميل بنفس الاسم
-                        customer = customers_qs.first()
-                        found_by = 'name_only'
-                        print(f"[SYNC][Customer] Row {row_index}: Used first customer with same name (empty phone): {customer}")
-                        logger.info(f"[SYNC][Customer] Row {row_index}: Used first customer with same name (empty phone): {customer}")
-                    else:
-                        customer_exact = customers_qs.filter(phone=phone).first()
-                        if customer_exact:
-                            customer = customer_exact
-                            found_by = 'name+phone'
-                            print(f"[SYNC][Customer] Row {row_index}: Used existing customer with same name and phone: {customer}")
-                            logger.info(f"[SYNC][Customer] Row {row_index}: Used existing customer with same name and phone: {customer}")
-                        else:
-                            # الهاتف مختلف: أنشئ عميل جديد
-                            customer = Customer.objects.create(
-                                name=name,
-                                phone=phone,
-                                customer_type=self.mapping.default_customer_type if self.mapping.default_customer_type else None,
-                                category=self.mapping.default_customer_category if self.mapping.default_customer_category else None,
-                                branch=self.mapping.default_branch if self.mapping.default_branch else None
-                            )
-                            stats['customers_created'] += 1
-                            print(f"[SYNC][Customer] Row {row_index}: Created new customer (duplicate name, different phone): {customer}")
-                            logger.info(f"[SYNC][Customer] Row {row_index}: Created new customer (duplicate name, different phone): {customer}")
-                # معالجة الطلب: ابحث أولاً، إذا لم يوجد أنشئ جديد (لا تكرر الطلبات)
-                order_result = None
-                if customer:
-                    order_result = self.process_order_data(row_dict, customer, row_index, force_create=False)
-                if order_result:
-                    order = order_result.get('instance')
-                    if order_result.get('created'):
-                        stats['orders_created'] += 1
-                        print(f"[SYNC][Order] Row {row_index}: Created new order: {order}")
-                        logger.info(f"[SYNC][Order] Row {row_index}: Created new order: {order}")
-                    else:
-                        stats['orders_updated'] += 1
-                        print(f"[SYNC][Order] Row {row_index}: Updated order: {order}")
-                        logger.info(f"[SYNC][Order] Row {row_index}: Updated order: {order}")
-                else:
-                    print(f"[SYNC][Order] Row {row_index}: No order created or updated.")
-                    logger.info(f"[SYNC][Order] Row {row_index}: No order created or updated.")
-                # معالجة المعاينة إذا لزم الأمر
-                if self.mapping.auto_create_inspections and order:
-                    inspection_result = self.process_inspection_data(row_dict, order, row_index)
-                    if inspection_result:
-                        stats['inspections_created'] += 1
-            else:
-                # اسم العميل فارغ: تجاهل الصف
-                stats['warnings'].append(f"Row {row_index}: customer_name is empty, skipping row.")
-                print(f"[SYNC][Customer] Row {row_index}: customer_name is empty, skipping row.")
-                logger.info(f"[SYNC][Customer] Row {row_index}: customer_name is empty, skipping row.")
-        except Exception as e:
-            import traceback
-            stats['warnings'].append(f'خطأ في معالجة الصف {row_index}: {str(e)}')
-            print(f'[SYNC][ERROR] Row {row_index}: {str(e)}\n{traceback.format_exc()}')
-            logger.error(f'[SYNC][ERROR] Row {row_index}: {str(e)}\n{traceback.format_exc()}')
-        return stats

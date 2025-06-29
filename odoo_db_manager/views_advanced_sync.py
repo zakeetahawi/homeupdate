@@ -1,10 +1,11 @@
 """
-Views للمزامنة المتقدمة مع Google Sheets
-Advanced Google Sheets Sync Views
+Views للمزامنة المتقدمة مع Google Sheets - محدث ومحسن
+Advanced Google Sheets Sync Views - Updated and Enhanced
 """
 
 import json
 import logging
+import sys
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
@@ -23,6 +24,59 @@ from .google_sheets_import import GoogleSheetsImporter
 from .views import is_staff_or_superuser
 
 logger = logging.getLogger(__name__)
+
+
+def diagnose_mapping_status(mapping):
+    """تشخيص حالة التعيين وإرجاع التقرير"""
+    diagnosis = {
+        'is_valid': True,
+        'issues': [],
+        'warnings': [],
+        'suggestions': []
+    }
+    
+    # فحص الحالة الأساسية
+    if not mapping.is_active:
+        diagnosis['issues'].append('التعيين غير نشط')
+        diagnosis['suggestions'].append('فعّل التعيين من صفحة التعديل')
+        diagnosis['is_valid'] = False
+    
+    # فحص تعيينات الأعمدة
+    column_mappings = mapping.get_column_mappings()
+    if not column_mappings:
+        diagnosis['issues'].append('لا توجد تعيينات أعمدة')
+        diagnosis['suggestions'].append('أضف تعيينات الأعمدة من صفحة التفاصيل')
+        diagnosis['is_valid'] = False
+    else:
+        # فحص التعيينات الأساسية
+        required_fields = ['customer_name', 'customer_phone']
+        missing_fields = []
+        
+        for field in required_fields:
+            if field not in column_mappings.values():
+                missing_fields.append(field)
+        
+        if missing_fields:
+            diagnosis['warnings'].append(f'حقول أساسية مفقودة: {", ".join(missing_fields)}')
+            diagnosis['suggestions'].append('أضف تعيينات للحقول الأساسية للعملاء')
+    
+    # فحص إعدادات الإنشاء التلقائي
+    if not mapping.auto_create_customers:
+        diagnosis['warnings'].append('إنشاء العملاء تلقائياً معطل')
+        diagnosis['suggestions'].append('فعّل إنشاء العملاء تلقائياً')
+    
+    if not mapping.auto_create_orders:
+        diagnosis['warnings'].append('إنشاء الطلبات تلقائياً معطل')
+        diagnosis['suggestions'].append('فعّل إنشاء الطلبات تلقائياً')
+    
+    # فحص التحقق من صحة التعيينات
+    validation_errors = mapping.validate_mappings()
+    if validation_errors:
+        diagnosis['issues'].extend(validation_errors)
+        diagnosis['suggestions'].append('أصلح أخطاء التحقق من التعيينات')
+        diagnosis['is_valid'] = False
+    
+    return diagnosis
 
 
 def _translate_column_name(column_name):
@@ -136,7 +190,7 @@ def advanced_sync_dashboard(request):
     except Exception as e:
         logger.error(f"خطأ في لوحة تحكم المزامنة المتقدمة: {str(e)}")
         messages.error(request, f"حدث خطأ: {str(e)}")
-        return redirect('odoo_db_manager:index')
+        return redirect('odoo_db_manager:dashboard')
 
 
 @login_required
@@ -346,34 +400,95 @@ def mapping_edit(request, mapping_id):
             mapping.header_row = int(request.POST.get('header_row', mapping.header_row))
             mapping.start_row = int(request.POST.get('start_row', mapping.start_row))
 
-            # إعدادات المزامنة
+            # إعدادات المزامنة المحدثة
             mapping.auto_create_customers = request.POST.get('auto_create_customers') == 'on'
             mapping.auto_create_orders = request.POST.get('auto_create_orders') == 'on'
-            mapping.update_existing_customers = request.POST.get('update_existing_customers') == 'on'
-            mapping.update_existing_orders = request.POST.get('update_existing_orders') == 'on'
+            mapping.auto_create_inspections = request.POST.get('auto_create_inspections') == 'on'
+            mapping.auto_create_installations = request.POST.get('auto_create_installations') == 'on'
+            mapping.update_existing = request.POST.get('update_existing') == 'on'
             mapping.enable_reverse_sync = request.POST.get('enable_reverse_sync') == 'on'
+
+            # حل التعارضات
+            mapping.conflict_resolution = request.POST.get('conflict_resolution', 'manual')
+
+            # تعيينات الأعمدة المحدثة
+            column_mappings = {}
+            for key, value in request.POST.items():
+                if key.startswith('column_'):
+                    column_name = key.replace('column_', '')
+                    if value and value != 'ignore':
+                        column_mappings[column_name] = value
+            
+            # حفظ التعيينات إذا كانت موجودة
+            if column_mappings:
+                mapping.set_column_mappings(column_mappings)
+                logger.info(f"تم تحديث تعيينات الأعمدة للتعيين {mapping.name}: {len(column_mappings)} تعيين")
 
             # القيم الافتراضية
             default_customer_category_id = request.POST.get('default_customer_category')
-            mapping.default_customer_category_id = default_customer_category_id if default_customer_category_id else None
+            if default_customer_category_id:
+                try:
+                    from customers.models import CustomerCategory
+                    mapping.default_customer_category = CustomerCategory.objects.get(id=default_customer_category_id)
+                except CustomerCategory.DoesNotExist:
+                    mapping.default_customer_category = None
+            else:
+                mapping.default_customer_category = None
+
             mapping.default_customer_type = request.POST.get('default_customer_type') or None
+            
             default_branch_id = request.POST.get('default_branch')
-            mapping.default_branch_id = default_branch_id if default_branch_id else None
+            if default_branch_id:
+                try:
+                    from accounts.models import Branch
+                    mapping.default_branch = Branch.objects.get(id=default_branch_id)
+                except Branch.DoesNotExist:
+                    mapping.default_branch = None
+            else:
+                mapping.default_branch = None
+
             mapping.use_current_date_as_created = request.POST.get('use_current_date_as_created') == 'on'
+
+            # تعيينات الأعمدة
+            column_mappings = {}
+            for key, value in request.POST.items():
+                if key.startswith('column_'):
+                    column_name = key.replace('column_', '')
+                    if value and value != 'ignore':
+                        column_mappings[column_name] = value
+            mapping.set_column_mappings(column_mappings)
 
             mapping.save()
             messages.success(request, f"تم تحديث التعيين '{mapping.name}' بنجاح")
             return redirect('odoo_db_manager:mapping_detail', mapping_id=mapping.id)
 
-        # جلب قائمة الجداول المتاحة
+        # جلب قائمة الجداول المتاحة وأعمدة الجدول
         try:
-            from .google_sheets_import import GoogleSheetsImporter
             importer = GoogleSheetsImporter()
             importer.initialize()
-            available_sheets = importer.get_available_sheets()
+            
+            # حفظ المعرف الأصلي وتحديثه مؤقتاً
+            original_id = getattr(importer.config, 'spreadsheet_id', None)
+            
+            try:
+                # تحديث معرف الجدول إلى معرف التعيين
+                if hasattr(importer.config, 'spreadsheet_id'):
+                    importer.config.spreadsheet_id = mapping.spreadsheet_id
+                
+                available_sheets = importer.get_available_sheets()
+                
+                # جلب أعمدة الجدول الحالي
+                sheet_data = importer.get_sheet_data(mapping.sheet_name)
+                sheet_columns = sheet_data[mapping.header_row - 1] if sheet_data and len(sheet_data) >= mapping.header_row else []
+            finally:
+                # استعادة المعرف الأصلي
+                if original_id and hasattr(importer.config, 'spreadsheet_id'):
+                    importer.config.spreadsheet_id = original_id
+                    
         except Exception as e:
             logger.error(f"خطأ في جلب قائمة الجداول: {str(e)}")
             available_sheets = []
+            sheet_columns = []
             messages.warning(request, "لا يمكن جلب قائمة الجداول. تأكد من إعدادات Google Sheets.")
 
         # جلب البيانات المطلوبة للقوائم المنسدلة
@@ -386,6 +501,7 @@ def mapping_edit(request, mapping_id):
         context = {
             'mapping': mapping,
             'available_sheets': available_sheets,
+            'sheet_columns': sheet_columns,
             'field_types': GoogleSheetMapping.FIELD_TYPES,
             'customer_categories': customer_categories,
             'branches': branches,
@@ -459,7 +575,6 @@ def api_run_sync(request, mapping_id):
                     raise Exception('لا توجد بيانات في الجدول')
 
                 # تنفيذ المزامنة باستخدام الخدمة المتقدمة
-                from .advanced_sync_service import AdvancedSyncService
                 sync_service = AdvancedSyncService(mapping)
                 result = sync_service.sync_from_sheets(task)
 
@@ -507,6 +622,93 @@ def api_run_sync(request, mapping_id):
             'error': str(e)
         })
 
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+@require_http_methods(["POST"])
+def api_run_sync_all(request):
+    """تشغيل مزامنة جماعية لجميع التعيينات النشطة - محسن"""
+    logger.info(f"=== بدء المزامنة الجماعية بواسطة {request.user.username} ===")
+    
+    results = []
+    try:
+        mappings = GoogleSheetMapping.objects.filter(is_active=True)
+        
+        if not mappings.exists():
+            logger.warning("لا توجد تعيينات نشطة للمزامنة الجماعية")
+            return JsonResponse({
+                'success': False,
+                'message': 'لا توجد تعيينات نشطة للمزامنة.',
+                'results': [],
+                'suggestion': 'تأكد من تفعيل التعيينات المطلوبة'
+            })
+            
+        logger.info(f"تم العثور على {mappings.count()} تعيين نشط للمزامنة")
+        for mapping in mappings:
+            mapping_result = {
+                'mapping_id': mapping.id,
+                'mapping_name': getattr(mapping, 'name', str(mapping.id)),
+                'success': False,
+                'stats': {},
+                'error': None,
+                'task_id': None,
+            }
+            try:
+                # إنشاء مهمة مزامنة
+                task = GoogleSyncTask.objects.create(
+                    mapping=mapping,
+                    status='pending',
+                    created_by=request.user
+                )
+                mapping_result['task_id'] = task.id
+                # بدء المزامنة
+                task.status = 'running'
+                task.save()
+                importer = GoogleSheetsImporter()
+                importer.initialize()
+                original_id = getattr(importer.config, 'spreadsheet_id', None)
+                try:
+                    if hasattr(importer.config, 'spreadsheet_id'):
+                        importer.config.spreadsheet_id = mapping.spreadsheet_id
+                    sheet_data = importer.get_sheet_data(mapping.sheet_name)
+                    if not sheet_data:
+                        raise Exception('لا توجد بيانات في الجدول')
+                    sync_service = AdvancedSyncService(mapping)
+                    result = sync_service.sync_from_sheets(task)
+                    task.status = 'completed'
+                    task.results = result
+                    task.result = json.dumps(result.get('stats', {}), ensure_ascii=False)
+                    task.save()
+                    mapping.last_sync = timezone.now()
+                    mapping.save(update_fields=['last_sync'])
+                    mapping_result['success'] = result.get('success', False)
+                    mapping_result['stats'] = result.get('stats', {})
+                    mapping_result['error'] = result.get('error', None)
+                finally:
+                    if original_id and hasattr(importer.config, 'spreadsheet_id'):
+                        importer.config.spreadsheet_id = original_id
+            except Exception as e:
+                mapping_result['error'] = str(e)
+                try:
+                    task.status = 'failed'
+                    task.error_message = str(e)
+                    task.result = f'فشلت المزامنة: {str(e)}'
+                    task.save()
+                except Exception:
+                    pass
+            results.append(mapping_result)
+        overall_success = all(r['success'] for r in results)
+        return JsonResponse({
+            'success': overall_success,
+            'results': results,
+            'message': 'تمت محاولة مزامنة جميع التعيينات.'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'results': results
+        })
 
 @login_required
 @user_passes_test(is_staff_or_superuser)
@@ -604,99 +806,141 @@ def mapping_update_columns(request, mapping_id):
 @user_passes_test(is_staff_or_superuser)
 @require_http_methods(["POST"])
 def start_sync(request, mapping_id):
-    """بدء المزامنة (تنفيذ منطق السكريبت بالضبط)"""
-    import sys
-    print("=== START_SYNC VIEW CALLED ===", file=sys.stderr, flush=True)
+    """بدء المزامنة - محسن مع تشخيص شامل"""
+    logger.info(f"=== بدء المزامنة للتعيين {mapping_id} بواسطة المستخدم {request.user.username} ===")
+    
     try:
-        # جلب التعيين والمستخدم
+        # جلب التعيين
         mapping = get_object_or_404(GoogleSheetMapping, id=mapping_id)
-        user = request.user
+        mapping.refresh_from_db()
         
-        # طباعة معلومات التعيين للتشخيص
-        print(f'التعيين: {mapping.name}', file=sys.stderr, flush=True)
-        print(f'معرف الجدول: {mapping.spreadsheet_id}', file=sys.stderr, flush=True)
-        print(f'اسم الصفحة: {mapping.sheet_name}', file=sys.stderr, flush=True)
-        print(f'تعيينات الأعمدة: {mapping.column_mappings}', file=sys.stderr, flush=True)
+        logger.info(f"تم جلب التعيين: {mapping.name}")
+        logger.info(f"معرف الجدول: {mapping.spreadsheet_id}")
+        logger.info(f"اسم الصفحة: {mapping.sheet_name}")
+        logger.info(f"نوع تعيينات الأعمدة: {type(mapping.column_mappings)}")
+        logger.info(f"عدد تعيينات الأعمدة: {len(mapping.column_mappings) if mapping.column_mappings else 0}")
         
-        # التحقق من وجود تعيينات الأعمدة
+        # تشخيص حالة التعيين
+        diagnosis = diagnose_mapping_status(mapping)
+        if not diagnosis['is_valid']:
+            logger.error(f"التعيين غير صالح للمزامنة: {diagnosis['issues']}")
+            return JsonResponse({
+                'success': False,
+                'error': 'التعيين غير صالح للمزامنة',
+                'issues': diagnosis['issues'],
+                'suggestions': diagnosis['suggestions'],
+                'solution': 'أصلح المشاكل المذكورة أولاً'
+            })
+        elif diagnosis['warnings']:
+            logger.warning(f"تحذيرات في التعيين: {diagnosis['warnings']}")
+        # التحقق من وتحويل تعيينات الأعمدة
         if isinstance(mapping.column_mappings, str):
             try:
                 mapping.column_mappings = json.loads(mapping.column_mappings)
                 mapping.save(update_fields=["column_mappings"])
+                logger.info("تم تحويل تعيينات الأعمدة من نص إلى قاموس")
             except Exception as conv_exc:
+                logger.error(f"فشل في تحويل تعيينات الأعمدة: {conv_exc}")
                 return JsonResponse({
                     'success': False,
                     'error': f'خطأ في تحويل تعيين الأعمدة: {conv_exc}'
                 })
                 
+        # التحقق من وجود تعيينات الأعمدة
         if not mapping.column_mappings:
+            logger.warning("لا توجد تعيينات أعمدة - المزامنة متوقفة")
             return JsonResponse({
                 'success': False,
-                'error': 'يجب تحديد تعيينات الأعمدة أولاً. انتقل إلى صفحة تفاصيل التعيين وقم بتحديد تعيينات الأعمدة.'
+                'error': 'يجب تحديد تعيينات الأعمدة أولاً. انتقل إلى صفحة تفاصيل التعيين وقم بتحديد تعيينات الأعمدة.',
+                'solution': 'اذهب إلى تفاصيل التعيين → تحديث التعيينات → عيّن الأعمدة'
             })
             
         # التحقق من صحة التعيينات
         errors = mapping.validate_mappings()
         if errors:
+            logger.error(f"أخطاء في التعيين: {errors}")
             return JsonResponse({
                 'success': False,
-                'error': f"أخطاء في التعيين: {', '.join(errors)}"
+                'error': f"أخطاء في التعيين: {', '.join(errors)}",
+                'validation_errors': errors,
+                'solution': 'أصلح الأخطاء في التعيين أولاً'
             })
-            
-        # إنشاء مهمة جديدة
+        # إنشاء مهمة المزامنة
         task = GoogleSyncTask.objects.create(
             mapping=mapping,
             task_type='import',
-            created_by=user
+            created_by=request.user
         )
+        logger.info(f"تم إنشاء مهمة المزامنة #{task.id}")
         
-        print(f'\nتم إنشاء المهمة: {task.id}', file=sys.stderr, flush=True)
-        
-        # تشغيل المهمة
+        # بدء المهمة
         task.start_task()
+        logger.info("تم بدء تنفيذ المهمة")
         
         # تنفيذ المزامنة
-        service = AdvancedSyncService(mapping)
-        result = service.sync_from_sheets(task)
+        logger.info("بدء تنفيذ المزامنة مع AdvancedSyncService")
+        sync_service = AdvancedSyncService(mapping)
+        result = sync_service.sync_from_sheets(task)
         
-        print('\nنتيجة المزامنة:', file=sys.stderr, flush=True)
-        print(f'نجحت: {result["success"]}', file=sys.stderr, flush=True)
+        logger.info(f"انتهت المزامنة - النجاح: {result['success']}")
         
         if result['success']:
+            # تحديث المهمة بالنتائج
             task.mark_completed(result)
-            stats = result['stats']
+            stats = result.get('stats', {})
             
-            # طباعة الإحصائيات للتشخيص
-            print('الإحصائيات:', file=sys.stderr, flush=True)
-            print(f'  - إجمالي الصفوف: {stats["total_rows"]}', file=sys.stderr, flush=True)
-            print(f'  - الصفوف المعالجة: {stats["processed_rows"]}', file=sys.stderr, flush=True)
-            print(f'  - العملاء الجدد: {stats["customers_created"]}', file=sys.stderr, flush=True)
-            print(f'  - العملاء المحدثون: {stats["customers_updated"]}', file=sys.stderr, flush=True)
-            print(f'  - الطلبات الجديدة: {stats["orders_created"]}', file=sys.stderr, flush=True)
-            print(f'  - الطلبات المحدثة: {stats["orders_updated"]}', file=sys.stderr, flush=True)
-            print(f'  - الأخطاء: {len(stats["errors"])}', file=sys.stderr, flush=True)
+            # طباعة إحصائيات مفصلة
+            logger.info("=== إحصائيات المزامنة ===")
+            logger.info(f"إجمالي الصفوف: {stats.get('total_rows', 0)}")
+            logger.info(f"الصفوف المعالجة: {stats.get('processed_rows', 0)}")
+            logger.info(f"العملاء الجدد: {stats.get('customers_created', 0)}")
+            logger.info(f"العملاء المحدثون: {stats.get('customers_updated', 0)}")
+            logger.info(f"الطلبات الجديدة: {stats.get('orders_created', 0)}")
+            logger.info(f"الطلبات المحدثة: {stats.get('orders_updated', 0)}")
+            logger.info(f"المعاينات الجديدة: {stats.get('inspections_created', 0)}")
+            logger.info(f"عدد الأخطاء: {len(stats.get('errors', []))}")
             
-            if stats['errors']:
-                print(f'  - أول خطأ: {stats["errors"][0]}', file=sys.stderr, flush=True)
+            if stats.get('errors'):
+                logger.warning(f"أول خطأ: {stats['errors'][0]}")
+            
+            # رسالة النجاح المخصصة
+            success_message = f"تمت المزامنة بنجاح! "
+            success_message += f"تم معالجة {stats.get('processed_rows', 0)} صف، "
+            success_message += f"إنشاء {stats.get('customers_created', 0)} عميل، "
+            success_message += f"إنشاء {stats.get('orders_created', 0)} طلب"
+            
+            if stats.get('inspections_created', 0) > 0:
+                success_message += f"، إنشاء {stats['inspections_created']} معاينة"
                 
             return JsonResponse({
                 'success': True,
                 'task_id': task.id,
                 'stats': stats,
                 'conflicts': result.get('conflicts', 0),
-                'message': f"تمت المزامنة بنجاح! تم معالجة {stats['processed_rows']} صف"
+                'message': success_message,
+                'details': {
+                    'processed': stats.get('processed_rows', 0),
+                    'customers': stats.get('customers_created', 0),
+                    'orders': stats.get('orders_created', 0),
+                    'inspections': stats.get('inspections_created', 0),
+                    'errors': len(stats.get('errors', []))
+                }
             })
         else:
-            task.mark_failed(result.get('error', 'خطأ غير معروف'))
-            print(f'خطأ: {result.get("error")}', file=sys.stderr, flush=True)
+            # تحديث المهمة بالفشل
+            error_msg = result.get('error', 'خطأ غير معروف')
+            task.mark_failed(error_msg)
+            logger.error(f"فشلت المزامنة: {error_msg}")
             
             return JsonResponse({
                 'success': False,
-                'error': result.get('error', 'خطأ غير معروف')
+                'error': error_msg,
+                'task_id': task.id,
+                'solution': 'تحقق من تعيينات الأعمدة وبيانات Google Sheets'
             })
     except Exception as e:
         import traceback
-        print(f"[SYNC][ERROR] EXCEPTION: {e}\n{traceback.format_exc()}", file=sys.stderr, flush=True)
+        print(f"[SYNC][DEBUG] EXCEPTION: {e}\n{traceback.format_exc()}", file=sys.stderr, flush=True)
         logger.error(f"خطأ في بدء المزامنة: {str(e)}")
         return JsonResponse({
             'success': False,
@@ -972,54 +1216,3 @@ def get_task_status(request, task_id):
             'success': False,
             'error': str(e)
         })
-
-
-@login_required
-@user_passes_test(is_staff_or_superuser)
-@require_http_methods(["POST"])
-def api_run_sync_all(request):
-    """تشغيل مزامنة جميع التعيينات النشطة دفعة واحدة عبر API"""
-    try:
-        active_mappings = GoogleSheetMapping.objects.filter(is_active=True)
-        if not active_mappings.exists():
-            return JsonResponse({'success': False, 'error': 'لا توجد تعيينات نشطة للمزامنة'})
-
-        results = []
-        for mapping in active_mappings:
-            # إنشاء مهمة مزامنة لكل تعيين
-            task = GoogleSyncTask.objects.create(
-                mapping=mapping,
-                status='pending',
-                created_by=request.user
-            )
-            try:
-                task.status = 'running'
-                task.save()
-                sync_service = AdvancedSyncService(mapping)
-                result = sync_service.sync_from_sheets(task)
-                task.status = 'completed' if result.get('success') else 'failed'
-                task.results = result
-                task.result = json.dumps(result.get('stats', {}), ensure_ascii=False)
-                task.save()
-                mapping.last_sync = timezone.now()
-                mapping.save(update_fields=['last_sync'])
-                results.append({
-                    'mapping': mapping.name,
-                    'success': result.get('success', False),
-                    'stats': result.get('stats', {}),
-                    'errors': result.get('stats', {}).get('errors', []),
-                })
-            except Exception as sync_error:
-                task.status = 'failed'
-                task.error_message = str(sync_error)
-                task.result = f'فشلت المزامنة: {str(sync_error)}'
-                task.save()
-                results.append({
-                    'mapping': mapping.name,
-                    'success': False,
-                    'error': str(sync_error)
-                })
-        return JsonResponse({'success': True, 'message': 'تمت مزامنة جميع التعيينات', 'results': results})
-    except Exception as e:
-        logger.error(f"خطأ في مزامنة جميع التعيينات: {str(e)}")
-        return JsonResponse({'success': False, 'error': str(e)})
