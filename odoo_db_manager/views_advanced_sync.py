@@ -280,15 +280,13 @@ def mapping_create(request):
                     auto_create_orders=request.POST.get('auto_create_orders') == 'on',
                     auto_create_inspections=request.POST.get('auto_create_inspections') == 'on',
                     auto_create_installations=request.POST.get('auto_create_installations') == 'on',
-                    update_existing_customers=request.POST.get('update_existing_customers') == 'on',
-                    update_existing_orders=request.POST.get('update_existing_orders') == 'on',
+                    update_existing=request.POST.get('update_existing') == 'on',
                     enable_reverse_sync=request.POST.get('enable_reverse_sync') == 'on',
                     # القيم الافتراضية
                     default_customer_category_id=default_customer_category_id if default_customer_category_id else None,
                     default_customer_type=request.POST.get('default_customer_type') or None,
                     default_branch_id=default_branch_id if default_branch_id else None,
-                    use_current_date_as_created=request.POST.get('use_current_date_as_created') == 'on',
-                    created_by=request.user
+                    use_current_date_as_created=request.POST.get('use_current_date_as_created') == 'on'
                 )
 
                 messages.success(request, f"تم إنشاء التعيين '{mapping.name}' بنجاح")
