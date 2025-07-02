@@ -1,3 +1,4 @@
+import json
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import Order, OrderItem, Payment
@@ -69,13 +70,31 @@ class OrderForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select form-select-sm'})
     )
 
+    # Hidden field for selected order types
+    selected_types = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=True,
+        initial='[]',
+        error_messages={'required': 'يجب اختيار نوع للطلب'}
+    )
+
+    # Hidden fields for delivery
+    delivery_type = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=False
+    )
+
+    delivery_address = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=False
+    )
+
     class Meta:
         model = Order
         fields = [
-            'customer', 'status', 'invoice_number', 
-            'contract_number', 'branch', 'tracking_status', 
-            'notes', 'selected_types', 'delivery_type', 'delivery_address',
-            'salesperson'
+            'customer', 'status', 'invoice_number',
+            'contract_number', 'contract_file', 'branch', 'tracking_status',
+            'notes', 'selected_types', 'delivery_type', 'delivery_address', 'salesperson'
         ]
         widgets = {
             'customer': forms.Select(attrs={
@@ -86,9 +105,19 @@ class OrderForm(forms.ModelForm):
             'invoice_number': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
             'branch': forms.Select(attrs={'class': 'form-select form-select-sm'}),
             'contract_number': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+            'contract_file': forms.FileInput(attrs={
+                'class': 'form-control form-control-sm',
+                'accept': '.pdf',
+                'data-help': 'يجب أن يكون الملف من نوع PDF وأقل من 10 ميجابايت'
+            }),
             'notes': forms.Textarea(attrs={'class': 'form-control notes-field', 'rows': 6}),
             'delivery_type': forms.RadioSelect(attrs={'class': 'form-check-input'}),
             'delivery_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'expected_delivery_date': forms.DateInput(attrs={
+                'class': 'form-control form-control-sm',
+                'type': 'date',
+                'readonly': True
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -136,8 +165,8 @@ class OrderForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        selected_types = self.data.getlist('selected_types')
-        print("[DEBUG] Selected Types:", selected_types)
+        selected_type = self.data.get('selected_types')  # Single value now
+        print("[DEBUG] Selected Type:", selected_type)
         print("[DEBUG] Form Data:", dict(self.data))
 
         # Required fields validation
@@ -146,44 +175,45 @@ class OrderForm(forms.ModelForm):
             if not cleaned_data.get(field):
                 self.add_error(field, f'هذا الحقل مطلوب')
 
-        if not selected_types:
-            print("[DEBUG] No order types selected")
+        if not selected_type:
+            print("[DEBUG] No order type selected")
             raise forms.ValidationError({
-                'selected_types': 'يجب اختيار نوع طلب واحد على الأقل'
+                'selected_types': 'يجب اختيار نوع للطلب'
             })
 
-        # Contract number validation
-        if 'tailoring' in selected_types and not cleaned_data.get('contract_number', '').strip():
-            print("[DEBUG] Missing contract number for tailoring")
-            raise forms.ValidationError({
-                'contract_number': 'رقم العقد مطلوب لخدمة التفصيل'
-            })
+        # التحقق من رقم العقد وملف العقد للتركيب والتفصيل والإكسسوار
+        contract_required_types = ['installation', 'tailoring', 'accessory']
+        if selected_type in contract_required_types:
+            if not cleaned_data.get('contract_number', '').strip():
+                self.add_error('contract_number', 'رقم العقد مطلوب لهذا النوع من الطلبات')
 
-        # Invoice number validation - required for all types
-        if not cleaned_data.get('invoice_number', '').strip():
-            print("[DEBUG] Missing invoice number")
-            raise forms.ValidationError({
-                'invoice_number': 'رقم الفاتورة مطلوب'
-            })
+            if not cleaned_data.get('contract_file'):
+                self.add_error('contract_file', 'ملف العقد مطلوب لهذا النوع من الطلبات')
 
-        # Delivery validation
-        delivery_type = cleaned_data.get('delivery_type')
-        if delivery_type == 'home' and not cleaned_data.get('delivery_address', '').strip():
-            raise forms.ValidationError({
-                'delivery_address': 'عنوان التوصيل مطلوب عند اختيار التوصيل للمنزل'
-            })
-        elif delivery_type == 'branch' and not cleaned_data.get('branch'):
-            raise forms.ValidationError({
-                'branch': 'يجب اختيار الفرع عند اختيار الاستلام من الفرع'
-            })
+        # تحديد نوع الطلب وخيارات التسليم تلقائياً
+        if selected_type:
+            # تحديد نوع الطلب للتوافق مع النظام القديم
+            if selected_type in ['accessory']:
+                cleaned_data['order_type'] = 'product'
+            else:
+                cleaned_data['order_type'] = 'service'
 
-        # Backward compatibility
-        has_products = any(t in ['fabric', 'accessory'] for t in selected_types)
-        has_services = any(t in ['installation', 'inspection', 'transport', 'tailoring'] for t in selected_types)
-        
-        cleaned_data['order_type'] = 'product' if has_products else 'service'
-        if has_services:
-            cleaned_data['service_types'] = [t for t in selected_types if t in ['installation', 'inspection', 'transport', 'tailoring']]
-        
+            # تحديد خيارات التسليم تلقائياً
+            if selected_type == 'tailoring':
+                cleaned_data['delivery_type'] = 'branch'
+                cleaned_data['delivery_address'] = ''
+            elif selected_type == 'installation':
+                cleaned_data['delivery_type'] = 'home'
+                # سيتم ملء العنوان من بيانات العميل أو من النموذج
+                if not cleaned_data.get('delivery_address'):
+                    cleaned_data['delivery_address'] = 'سيتم تحديد العنوان لاحقاً'
+            else:
+                # للإكسسوار والمعاينة - افتراضي استلام من الفرع
+                cleaned_data['delivery_type'] = 'branch'
+                cleaned_data['delivery_address'] = ''
+
+            # حفظ نوع الطلب كـ JSON (قائمة بعنصر واحد)
+            cleaned_data['selected_types'] = json.dumps([selected_type])
+
         print("[DEBUG] Final cleaned data:", cleaned_data)
         return cleaned_data

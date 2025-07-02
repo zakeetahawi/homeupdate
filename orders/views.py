@@ -1,3 +1,4 @@
+import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
@@ -83,6 +84,34 @@ def order_list(request):
 
     return render(request, 'orders/order_list.html', context)
 
+
+@login_required
+def order_success(request, pk):
+    """عرض صفحة نجاح إنشاء الطلب"""
+    try:
+        order = Order.objects.get(pk=pk)
+
+        # التأكد من أن المستخدم له صلاحية عرض هذا الطلب
+        if not request.user.is_superuser:
+            if hasattr(request.user, 'salesperson'):
+                if order.salesperson != request.user.salesperson:
+                    messages.error(request, 'ليس لديك صلاحية لعرض هذا الطلب.')
+                    return redirect('orders:order_list')
+            else:
+                messages.error(request, 'ليس لديك صلاحية لعرض هذا الطلب.')
+                return redirect('orders:order_list')
+
+        context = {
+            'order': order,
+            'title': f'تم إنشاء الطلب بنجاح - {order.order_number}'
+        }
+
+        return render(request, 'orders/order_success.html', context)
+
+    except Order.DoesNotExist:
+        messages.error(request, 'الطلب غير موجود.')
+        return redirect('orders:order_list')
+
 @login_required
 def order_detail(request, pk):
     """
@@ -96,12 +125,17 @@ def order_detail(request, pk):
 
     # Get inspections related to this order
     inspections = []
-    if 'inspection' in order.service_types:
-        # Get inspections for this customer that were created after this order
-        inspections = Inspection.objects.filter(
-            customer=order.customer,
-            created_at__gte=order.created_at
-        ).order_by('-created_at')
+    selected_types = order.get_selected_types_list()
+    if 'inspection' in selected_types:
+        # Get inspections directly related to this order
+        inspections = order.inspections.all().order_by('-created_at')
+
+        # If no direct inspections, get inspections for this customer created after this order
+        if not inspections.exists():
+            inspections = Inspection.objects.filter(
+                customer=order.customer,
+                created_at__gte=order.created_at
+            ).order_by('-created_at')
 
     # Get currency symbol from system settings
     system_settings = SystemSettings.get_settings()
@@ -151,7 +185,6 @@ def order_create(request):
                 # 4. معالجة المنتجات المحددة إن وجدت
                 selected_products_json = request.POST.get('selected_products', '')
                 if selected_products_json:
-                    import json
                     try:
                         selected_products = json.loads(selected_products_json)
 
@@ -182,7 +215,15 @@ def order_create(request):
                         print("Invalid JSON for selected products")
 
                 # 5. إذا كان الطلب يتضمن خدمة معاينة، قم بإنشاء سجل معاينة جديد
-                if 'inspection' in form.cleaned_data.get('selected_types', []):
+                selected_types_json = request.POST.get('selected_types', '[]')
+                try:
+                    selected_types = json.loads(selected_types_json)
+                    print(f"[DEBUG] Parsed selected types: {selected_types}")
+                except json.JSONDecodeError:
+                    selected_types = []
+                    print(f"[DEBUG] Failed to parse selected types: {selected_types_json}")
+
+                if 'inspection' in selected_types:
                     try:
                         # إنشاء معاينة جديدة
                         inspection = Inspection.objects.create(
@@ -220,8 +261,8 @@ def order_create(request):
                 else:
                     print("Formset errors:", formset.errors)
 
-                messages.success(request, 'تم إنشاء الطلب بنجاح!')
-                return redirect('orders:order_detail', pk=order.pk)
+                messages.success(request, f'تم إنشاء الطلب بنجاح! رقم الطلب: {order.order_number}')
+                return redirect('orders:order_success', pk=order.pk)
 
             except Exception as e:
                 messages.error(request, f'حدث خطأ أثناء حفظ الطلب: {str(e)}')

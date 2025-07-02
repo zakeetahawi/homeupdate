@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تم إنشاء الطلب بنجاح{% endblock %}
+
+{% block extra_css %}
+<style>
+    .success-card {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(40, 167, 69, 0.3);
+    }
+    
+    .order-details-card {
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .card-header-custom {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        border: none;
+        padding: 1.5rem;
+    }
+    
+    .delivery-info {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .info-value {
+        color: #212529;
+        font-weight: 500;
+    }
+    
+    .action-buttons {
+        margin-top: 2rem;
+    }
+    
+    .btn-custom {
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        margin: 0.25rem;
+    }
+    
+    .contract-info {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Success Header -->
+    <div class="success-card text-center">
+        <div class="mb-3">
+            <i class="fas fa-check-circle fa-4x"></i>
+        </div>
+        <h2 class="mb-3">تم إنشاء الطلب بنجاح!</h2>
+        <p class="lead mb-0">رقم الطلب: <strong>{{ order.order_number }}</strong></p>
+    </div>
+
+    <div class="row">
+        <!-- Order Details -->
+        <div class="col-lg-8">
+            <div class="card order-details-card">
+                <div class="card-header card-header-custom">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        تفاصيل الطلب
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-user me-2"></i>العميل:
+                                </span>
+                                <span class="info-value">{{ order.customer.name }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-tag me-2"></i>نوع الطلب:
+                                </span>
+                                <span class="info-value">
+                                    {% with types_list=order.get_selected_types_list %}
+                                        {% if types_list %}
+                                            {% for type in types_list %}
+                                                {% if type == 'accessory' %}
+                                                    <span class="badge bg-primary me-1">
+                                                        <i class="fas fa-gem me-1"></i> إكسسوار
+                                                    </span>
+                                                {% elif type == 'installation' %}
+                                                    <span class="badge bg-warning text-dark me-1">
+                                                        <i class="fas fa-tools me-1"></i> تركيب
+                                                    </span>
+                                                {% elif type == 'inspection' %}
+                                                    <span class="badge bg-info me-1">
+                                                        <i class="fas fa-eye me-1"></i> معاينة
+                                                    </span>
+                                                {% elif type == 'tailoring' %}
+                                                    <span class="badge bg-success me-1">
+                                                        <i class="fas fa-cut me-1"></i> تفصيل
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary me-1">{{ type }}</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </span>
+                            </div>
+                            {% if order.status and 'inspection' not in order.get_selected_types_list %}
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-star me-2"></i>وضع الطلب:
+                                </span>
+                                <span class="info-value">
+                                    {% if order.status == 'vip' %}
+                                        <span class="badge bg-warning text-dark">VIP</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">عادي</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% endif %}
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-calendar me-2"></i>تاريخ الطلب:
+                                </span>
+                                <span class="info-value">{{ order.order_date|date:"Y/m/d H:i" }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {% if order.expected_delivery_date %}
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-clock me-2"></i>تاريخ التسليم المتوقع:
+                                </span>
+                                <span class="info-value text-primary">
+                                    <strong>{{ order.expected_delivery_date|date:"Y/m/d" }}</strong>
+                                </span>
+                            </div>
+                            {% endif %}
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-store me-2"></i>الفرع:
+                                </span>
+                                <span class="info-value">{{ order.branch.name|default:"غير محدد" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-user-tie me-2"></i>البائع:
+                                </span>
+                                <span class="info-value">{{ order.salesperson.name|default:"غير محدد" }}</span>
+                            </div>
+                            {% if order.invoice_number %}
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-receipt me-2"></i>رقم الفاتورة:
+                                </span>
+                                <span class="info-value">{{ order.invoice_number }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Contract Information -->
+                    {% if order.contract_number or order.contract_file %}
+                    <div class="contract-info">
+                        <h6 class="mb-3">
+                            <i class="fas fa-file-contract me-2"></i>
+                            معلومات العقد
+                        </h6>
+                        {% if order.contract_number %}
+                        <div class="info-item">
+                            <span class="info-label">رقم العقد:</span>
+                            <span class="info-value">{{ order.contract_number }}</span>
+                        </div>
+                        {% endif %}
+                        {% if order.is_contract_uploaded_to_drive %}
+                        <div class="info-item">
+                            <span class="info-label">ملف العقد:</span>
+                            <span class="info-value">
+                                <span class="badge bg-success me-2">
+                                    <i class="fas fa-cloud-upload-alt me-1"></i>
+                                    تم الرفع إلى Google Drive
+                                </span>
+                                {% if order.contract_google_drive_file_url %}
+                                <a href="{{ order.contract_google_drive_file_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-external-link-alt me-1"></i>
+                                    عرض الملف
+                                </a>
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Inspection Status for inspection orders -->
+                    {% if 'inspection' in order.get_selected_types_list %}
+                    <div class="contract-info">
+                        <h6 class="mb-3">
+                            <i class="fas fa-eye me-2"></i>
+                            حالة المعاينة
+                        </h6>
+                        {% with inspection=order.inspections.first %}
+                            {% if inspection %}
+                                <div class="info-item">
+                                    <span class="info-label">الحالة:</span>
+                                    <span class="info-value">
+                                        <span class="badge {% if inspection.status == 'pending' %}bg-warning text-dark
+                                                       {% elif inspection.status == 'in_progress' %}bg-info
+                                                       {% elif inspection.status == 'completed' %}bg-success
+                                                       {% else %}bg-danger{% endif %}">
+                                            {% if inspection.status == 'pending' %}
+                                                <i class="fas fa-clock me-1"></i> في الانتظار
+                                            {% elif inspection.status == 'in_progress' %}
+                                                <i class="fas fa-spinner me-1"></i> قيد التنفيذ
+                                            {% elif inspection.status == 'completed' %}
+                                                <i class="fas fa-check me-1"></i> مكتملة
+                                            {% else %}
+                                                <i class="fas fa-times me-1"></i> ملغية
+                                            {% endif %}
+                                        </span>
+                                    </span>
+                                </div>
+                                {% if inspection.result %}
+                                <div class="info-item">
+                                    <span class="info-label">النتيجة:</span>
+                                    <span class="info-value">
+                                        <span class="badge {% if inspection.result == 'passed' %}bg-success
+                                                       {% else %}bg-danger{% endif %}">
+                                            {% if inspection.result == 'passed' %}
+                                                <i class="fas fa-thumbs-up me-1"></i> نجحت
+                                            {% else %}
+                                                <i class="fas fa-thumbs-down me-1"></i> فشلت
+                                            {% endif %}
+                                        </span>
+                                    </span>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="info-item">
+                                    <span class="info-label">الحالة:</span>
+                                    <span class="info-value">
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> لم يتم إنشاء المعاينة بعد
+                                        </span>
+                                    </span>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Notes -->
+                    {% if order.notes %}
+                    <div class="mt-3">
+                        <h6><i class="fas fa-sticky-note me-2"></i>ملاحظات:</h6>
+                        <p class="text-muted">{{ order.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Information -->
+        <div class="col-lg-4">
+            <div class="delivery-info">
+                <h5 class="mb-3">
+                    <i class="fas fa-shipping-fast me-2"></i>
+                    معلومات التسليم
+                </h5>
+                
+                {% if order.delivery_type == 'home' %}
+                    <div class="mb-3">
+                        <h6><i class="fas fa-home me-2"></i>توصيل للمنزل</h6>
+                        {% if order.delivery_address %}
+                        <p class="mb-0">
+                            <strong>العنوان:</strong><br>
+                            {{ order.delivery_address }}
+                        </p>
+                        {% endif %}
+                    </div>
+                {% elif order.delivery_type == 'branch' %}
+                    <div class="mb-3">
+                        <h6><i class="fas fa-store me-2"></i>استلام من الفرع</h6>
+                        <p class="mb-0">
+                            <strong>الفرع:</strong> {{ order.branch.name|default:"غير محدد" }}
+                        </p>
+                        {% if order.branch.address %}
+                        <p class="mb-0">
+                            <strong>العنوان:</strong><br>
+                            {{ order.branch.address }}
+                        </p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <!-- Delivery Timeline -->
+                {% if order.expected_delivery_date %}
+                <div class="mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.2);">
+                    <h6><i class="fas fa-calendar-check me-2"></i>الجدولة المتوقعة</h6>
+                    <p class="mb-1">
+                        <strong>التسليم المتوقع:</strong><br>
+                        {{ order.expected_delivery_date|date:"l, j F Y" }}
+                    </p>
+                    {% if order.status == 'vip' %}
+                    <small class="text-warning">
+                        <i class="fas fa-star me-1"></i>
+                        طلب VIP - أولوية عالية
+                    </small>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons text-center">
+                <a href="{% url 'orders:order_detail' order.pk %}" class="btn btn-primary btn-custom">
+                    <i class="fas fa-eye me-2"></i>
+                    عرض تفاصيل الطلب
+                </a>
+                <a href="{% url 'orders:order_list' %}" class="btn btn-secondary btn-custom">
+                    <i class="fas fa-list me-2"></i>
+                    قائمة الطلبات
+                </a>
+                <a href="{% url 'orders:order_create' %}" class="btn btn-success btn-custom">
+                    <i class="fas fa-plus me-2"></i>
+                    طلب جديد
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh page after 30 seconds if order is still processing
+    {% if order.tracking_status == 'pending' %}
+    setTimeout(function() {
+        location.reload();
+    }, 30000);
+    {% endif %}
+</script>
+{% endblock %}

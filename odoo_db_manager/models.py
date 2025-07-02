@@ -557,6 +557,20 @@ class GoogleDriveConfig(models.Model):
         blank=True,
         help_text=_('اسم المجلد في Google Drive')
     )
+    # إعدادات مجلد العقود
+    contracts_folder_id = models.CharField(
+        _('معرف مجلد العقود'),
+        max_length=255,
+        blank=True,
+        help_text=_('معرف المجلد في Google Drive لحفظ ملفات العقود')
+    )
+    contracts_folder_name = models.CharField(
+        _('اسم مجلد العقود'),
+        max_length=255,
+        blank=True,
+        default='العقود - Contracts',
+        help_text=_('اسم المجلد في Google Drive للعقود')
+    )
     # ملف الاعتماد
     credentials_file = models.FileField(
         _('ملف اعتماد Google'),

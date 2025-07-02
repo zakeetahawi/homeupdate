@@ -196,6 +196,7 @@ class GoogleDriveConfigForm(forms.ModelForm):
         model = GoogleDriveConfig
         fields = [
             'name', 'inspections_folder_id', 'inspections_folder_name',
+            'contracts_folder_id', 'contracts_folder_name',
             'credentials_file', 'filename_pattern', 'is_active'
         ]
         widgets = {
@@ -207,6 +208,14 @@ class GoogleDriveConfigForm(forms.ModelForm):
             'inspections_folder_name': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'مثال: ملفات المعاينات'
+            }),
+            'contracts_folder_id': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'مثال: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms'
+            }),
+            'contracts_folder_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'مثال: ملفات العقود'
             }),
             'credentials_file': forms.FileInput(attrs={
                 'class': 'form-control',
@@ -224,6 +233,9 @@ class GoogleDriveConfigForm(forms.ModelForm):
         # إضافة نص المساعدة
         self.fields['inspections_folder_id'].help_text = _(
             'معرف المجلد في Google Drive. يمكن الحصول عليه من رابط المجلد'
+        )
+        self.fields['contracts_folder_id'].help_text = _(
+            'معرف مجلد العقود في Google Drive. يمكن الحصول عليه من رابط المجلد'
         )
         self.fields['credentials_file'].help_text = _(
             'ملف JSON من Google Cloud Console (Service Account Key)'

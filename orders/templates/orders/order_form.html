@@ -97,13 +97,30 @@
                                     {% endif %}
                                 </div>
                                 
-                                <!-- Order Status -->
-                                <div class="mb-3">
-                                    <label for="{{ form.status.id_for_label }}" class="form-label">حالة الطلب *</label>
+                                <!-- Order Status - Hidden for inspection -->
+                                <div class="mb-3 order-status-field">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label">وضع الطلب *</label>
                                     {{ form.status }}
+                                    <div class="form-text text-muted">
+                                        عادي: تسليم خلال 15 يوم | VIP: تسليم خلال 7 أيام
+                                    </div>
                                     {% if form.status.errors %}
                                     <div class="alert alert-danger mt-2">
                                         {{ form.status.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Expected Delivery Date - Hidden -->
+                                <div class="mb-3" style="display: none;">
+                                    <label for="{{ form.expected_delivery_date.id_for_label }}" class="form-label">تاريخ التسليم المتوقع</label>
+                                    {{ form.expected_delivery_date }}
+                                    <div class="form-text text-muted">
+                                        يتم حسابه تلقائياً بناءً على وضع الطلب
+                                    </div>
+                                    {% if form.expected_delivery_date.errors %}
+                                    <div class="alert alert-danger mt-2">
+                                        {{ form.expected_delivery_date.errors }}
                                     </div>
                                     {% endif %}
                                 </div>
@@ -158,44 +175,32 @@
                                     {% endif %}
                                     <div class="d-flex flex-wrap gap-3 mb-3">
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="selected_types" id="order_type_fabric" value="fabric">
-                                            <label class="form-check-label" for="order_type_fabric">
-                                                <i class="fas fa-tshirt me-2"></i> أقمشة
-                                            </label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="selected_types" id="order_type_accessory" value="accessory">
+                                            <input class="form-check-input" type="radio" name="selected_types" id="order_type_accessory" value="accessory">
                                             <label class="form-check-label" for="order_type_accessory">
-                                                <i class="fas fa-gem me-2"></i> إكسسوارات
+                                                <i class="fas fa-gem me-2"></i> إكسسوار
                                             </label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="selected_types" id="order_type_installation" value="installation">
+                                            <input class="form-check-input" type="radio" name="selected_types" id="order_type_installation" value="installation">
                                             <label class="form-check-label" for="order_type_installation">
                                                 <i class="fas fa-tools me-2"></i> تركيب
                                             </label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="selected_types" id="order_type_inspection" value="inspection">
+                                            <input class="form-check-input" type="radio" name="selected_types" id="order_type_inspection" value="inspection">
                                             <label class="form-check-label" for="order_type_inspection">
                                                 <i class="fas fa-eye me-2"></i> معاينة
                                             </label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="selected_types" id="order_type_transport" value="transport">
-                                            <label class="form-check-label" for="order_type_transport">
-                                                <i class="fas fa-truck me-2"></i> نقل
-                                            </label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="selected_types" id="order_type_tailoring" value="tailoring">
+                                            <input class="form-check-input" type="radio" name="selected_types" id="order_type_tailoring" value="tailoring">
                                             <label class="form-check-label" for="order_type_tailoring">
                                                 <i class="fas fa-cut me-2"></i> تفصيل
                                             </label>
                                         </div>
                                     </div>
                                     <div class="form-text text-muted">
-                                        يمكنك اختيار أكثر من نوع طلب في نفس الوقت
+                                        <strong>ملاحظة:</strong> يجب اختيار نوع واحد فقط للطلب
                                     </div>
                                 </div>
                                 
@@ -207,7 +212,7 @@
                                     </label>
                                     {{ form.contract_number }}
                                     <div class="form-text text-danger">
-                                        مطلوب عند اختيار خدمة التفصيل
+                                        مطلوب عند اختيار التركيب، التفصيل، أو الإكسسوار
                                     </div>
                                     {% if form.contract_number.errors %}
                                     <div class="alert alert-danger mt-2">
@@ -218,33 +223,56 @@
                                     {% endif %}
                                 </div>
 
-                                <!-- Delivery Options -->
-                                <div class="mb-4">
-                                    <h5 class="mb-3">خيارات التسليم *</h5>
-                                    <div class="d-flex flex-wrap gap-3 mb-3">
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="delivery_option" id="delivery_option_home" value="home">
-                                            <label class="form-check-label" for="delivery_option_home">
-                                                <i class="fas fa-home me-2"></i> توصيل للمنزل
-                                            </label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="delivery_option" id="delivery_option_branch" value="branch">
-                                            <label class="form-check-label" for="delivery_option_branch">
-                                                <i class="fas fa-store me-2"></i> استلام من الفرع
-                                            </label>
-                                        </div>
+                                <!-- Contract File -->
+                                <div class="mb-3 contract-file-field" style="display: none;">
+                                    <label for="{{ form.contract_file.id_for_label }}" class="form-label">
+                                        ملف العقد (PDF)
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.contract_file }}
+                                    <div class="form-text text-muted">
+                                        يجب أن يكون الملف من نوع PDF وأقل من 10 ميجابايت
+                                        <br><strong>سيتم رفع الملف تلقائياً إلى Google Drive عند الحفظ</strong>
                                     </div>
+                                    {% if form.contract_file.errors %}
+                                    <div class="alert alert-danger mt-2">
+                                        {% for error in form.contract_file.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Google Drive Status -->
+                                    {% if form.instance.is_contract_uploaded_to_drive %}
+                                    <div class="alert alert-success mt-2">
+                                        <i class="fas fa-cloud-upload-alt me-2"></i>
+                                        تم رفع الملف إلى Google Drive بنجاح
+                                        {% if form.instance.contract_google_drive_file_url %}
+                                        <br>
+                                        <a href="{{ form.instance.contract_google_drive_file_url }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                                            <i class="fas fa-external-link-alt me-1"></i>
+                                            عرض الملف في Google Drive
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
                                 </div>
 
-                                <!-- Customer Address (for home delivery) -->
-                                <div class="mb-3 customer-address-field" style="display: none;">
-                                    <label class="form-label">عنوان التوصيل *</label>
-                                    <textarea name="delivery_address" class="form-control" rows="2"></textarea>
-                                </div>
+                                <!-- Hidden Fields for Delivery - Set automatically by JavaScript -->
+                                {{ form.delivery_type }}
+                                {{ form.delivery_address }}
+                                {{ form.selected_types }}
 
-                                <!-- Branch Selection (for branch pickup) -->
-                                <div class="mb-3 branch-selection-field" style="display: none;">
+                                <!-- Debug: Show hidden field info -->
+                                <script>
+                                console.log('Hidden fields in HTML:');
+                                console.log('delivery_type ID:', '{{ form.delivery_type.id_for_label }}');
+                                console.log('delivery_address ID:', '{{ form.delivery_address.id_for_label }}');
+                                console.log('selected_types ID:', '{{ form.selected_types.id_for_label }}');
+                                </script>
+
+                                <!-- Branch Selection - Always visible but will be set automatically -->
+                                <div class="mb-3">
                                     <label for="{{ form.branch.id_for_label }}" class="form-label">الفرع *</label>
                                     {{ form.branch }}
                                     {% if form.branch.errors %}
@@ -330,8 +358,8 @@
         const orderForm = document.getElementById('orderForm');
         const productSelectionSection = document.getElementById('product-selection-section');
         const contractField = document.querySelector('.contract-field');
-        const customerAddressField = document.querySelector('.customer-address-field');
-        const branchSelectionField = document.querySelector('.branch-selection-field');
+        const contractFileField = document.querySelector('.contract-file-field');
+        const orderStatusField = document.querySelector('.order-status-field');
         const customerSelect = document.getElementById('{{ form.customer.id_for_label }}');
         
         // Add event listener for customer select
@@ -345,21 +373,24 @@
             });
         }
         
-        // Delivery option radio buttons
-        const deliveryOptionHome = document.getElementById('delivery_option_home');
-        const deliveryOptionBranch = document.getElementById('delivery_option_branch');
-        
-        // Add event listeners for all order type checkboxes
-        document.querySelectorAll('input[name="selected_types"]').forEach(checkbox => {
-            checkbox.addEventListener('change', handleOrderTypeChange);
+        // Add event listeners for all order type radio buttons
+        document.querySelectorAll('input[name="selected_types"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                // Immediate update of hidden field
+                const hiddenField = document.getElementById('{{ form.selected_types.id_for_label }}');
+                if (hiddenField && this.checked) {
+                    hiddenField.value = JSON.stringify([this.value]);
+                    console.log('Immediate update - Hidden field set to:', hiddenField.value);
+                }
+                // Then call the main handler
+                handleOrderTypeChange();
+            });
         });
-        
-        if (deliveryOptionHome) {
-            deliveryOptionHome.addEventListener('change', handleDeliveryOptionChange);
-        }
-        
-        if (deliveryOptionBranch) {
-            deliveryOptionBranch.addEventListener('change', handleDeliveryOptionChange);
+
+        // Add event listener for status change to update expected delivery date
+        const statusSelect = document.getElementById('{{ form.status.id_for_label }}');
+        if (statusSelect) {
+            statusSelect.addEventListener('change', updateExpectedDeliveryDate);
         }
         
         // Add form submit event listener
@@ -388,12 +419,34 @@
                 }
                 
                 // Update hidden fields before submitting
-            const selectedOrderTypes = Array.from(document.querySelectorAll('input[name="selected_types"]:checked'));
-                document.getElementById('selected_types_hidden').value = JSON.stringify(selectedOrderTypes.map(type => type.value));
-                
-                // Update selected products input if fabric or accessory is selected
-                if (selectedOrderTypes.some(type => ['fabric', 'accessory'].includes(type.value))) {
-                    updateSelectedProductsInput();
+                const selectedOrderType = document.querySelector('input[name="selected_types"]:checked');
+                console.log('Form submission - selected type:', selectedOrderType ? selectedOrderType.value : 'none');
+
+                const hiddenField = document.getElementById('{{ form.selected_types.id_for_label }}');
+                console.log('Hidden field element:', hiddenField);
+                console.log('Hidden field current value:', hiddenField ? hiddenField.value : 'field not found');
+
+                if (selectedOrderType) {
+                    if (hiddenField) {
+                        hiddenField.value = JSON.stringify([selectedOrderType.value]);
+                        console.log('Hidden field value set to:', hiddenField.value);
+
+                        // Double check the value was set
+                        setTimeout(() => {
+                            console.log('Hidden field value after timeout:', hiddenField.value);
+                        }, 100);
+                    } else {
+                        console.error('Hidden field not found!');
+                        return false; // Prevent form submission
+                    }
+
+                    // Update selected products input if accessory is selected
+                    if (selectedOrderType.value === 'accessory') {
+                        updateSelectedProductsInput();
+                    }
+                } else {
+                    console.error('No order type selected!');
+                    return false; // Prevent form submission
                 }
                 
                 // Submit the form
@@ -412,22 +465,38 @@
                 highlightError(customerSelect);
             }
             
-            // Check order types
-            const selectedOrderTypes = Array.from(document.querySelectorAll('input[name="selected_types"]:checked'));
-            if (selectedOrderTypes.length === 0) {
+            // Check order type (single selection)
+            const selectedOrderType = document.querySelector('input[name="selected_types"]:checked');
+            const hiddenOrderTypeField = document.getElementById('{{ form.selected_types.id_for_label }}');
+
+            if (!selectedOrderType) {
                 isValid = false;
+                console.error('No order type selected');
                 // Highlight order type section
                 const orderTypeSection = document.querySelector('.mb-4:has([name="selected_types"])');
                 if (orderTypeSection) {
                     orderTypeSection.classList.add('border', 'border-danger', 'p-2', 'rounded');
                 }
             } else {
-                // Check contract number if tailoring is selected
-                if (selectedOrderTypes.some(type => type.value === 'tailoring')) {
+                // Make sure hidden field is populated
+                if (hiddenOrderTypeField) {
+                    hiddenOrderTypeField.value = JSON.stringify([selectedOrderType.value]);
+                    console.log('Validation - Hidden field set to:', hiddenOrderTypeField.value);
+                }
+
+                // التحقق من رقم العقد وملف العقد للأنواع المطلوبة
+                const contractRequiredTypes = ['installation', 'tailoring', 'accessory'];
+                if (selectedOrderType && contractRequiredTypes.includes(selectedOrderType.value)) {
                     const contractInput = document.getElementById('{{ form.contract_number.id_for_label }}');
                     if (contractInput && !contractInput.value.trim()) {
                         isValid = false;
                         highlightError(contractInput);
+                    }
+
+                    const contractFileInput = document.getElementById('{{ form.contract_file.id_for_label }}');
+                    if (contractFileInput && !contractFileInput.files.length) {
+                        isValid = false;
+                        highlightError(contractFileInput);
                     }
                 }
 
@@ -438,8 +507,8 @@
                     highlightError(invoiceInput);
                 }
                 
-                // Check product selection if fabric or accessory is selected
-                if (selectedOrderTypes.some(type => ['fabric', 'accessory'].includes(type.value))) {
+                // التحقق من اختيار المنتجات للإكسسوار فقط
+                if (selectedOrderType && selectedOrderType.value === 'accessory') {
                     const selectedProducts = document.querySelectorAll('.product-checkbox:checked');
                     if (selectedProducts.length === 0) {
                         isValid = false;
@@ -451,31 +520,21 @@
                 }
             }
             
-            // Check delivery option
-            if (!deliveryOptionHome.checked && !deliveryOptionBranch.checked) {
+            // Check branch selection (always required)
+            const branchSelect = document.getElementById('{{ form.branch.id_for_label }}');
+            if (branchSelect && !branchSelect.value) {
                 isValid = false;
-                // Highlight delivery options section
-                const deliveryOptionsSection = document.querySelector('.mb-4:has(#delivery_option_home)');
-                if (deliveryOptionsSection) {
-                    deliveryOptionsSection.classList.add('border', 'border-danger', 'p-2', 'rounded');
-                }
+                highlightError(branchSelect);
             }
-            
-            // Check branch if branch pickup is selected
-            if (deliveryOptionBranch && deliveryOptionBranch.checked) {
-                const branchSelect = document.getElementById('{{ form.branch.id_for_label }}');
-                if (branchSelect && !branchSelect.value) {
-                    isValid = false;
-                    highlightError(branchSelect);
-                }
-            }
-            
-            // Check delivery address if home delivery is selected
-            if (deliveryOptionHome && deliveryOptionHome.checked) {
-                const deliveryAddressTextarea = document.querySelector('textarea[name="delivery_address"]');
-                if (deliveryAddressTextarea && !deliveryAddressTextarea.value.trim()) {
-                    isValid = false;
-                    highlightError(deliveryAddressTextarea);
+
+            // Final check - ensure hidden field has value
+            if (hiddenOrderTypeField && (!hiddenOrderTypeField.value || hiddenOrderTypeField.value === '[]')) {
+                isValid = false;
+                console.error('Hidden order type field is empty:', hiddenOrderTypeField.value);
+                // Highlight order type section again
+                const orderTypeSection = document.querySelector('.mb-4:has([name="selected_types"])');
+                if (orderTypeSection) {
+                    orderTypeSection.classList.add('border', 'border-danger', 'p-2', 'rounded');
                 }
             }
             
@@ -492,21 +551,90 @@
         
         // Handle order type changes
         function handleOrderTypeChange() {
-            const selectedTypes = Array.from(document.querySelectorAll('input[name="selected_types"]:checked'));
-            
-            // Update the hidden field with JSON array of selected types
-            const orderTypeHidden = document.getElementById('selected_types_hidden');
+            const selectedType = document.querySelector('input[name="selected_types"]:checked');
+            console.log('Selected order type:', selectedType ? selectedType.value : 'none');
+
+            // Debug: Check if hidden field exists
+            const orderTypeHidden = document.getElementById('{{ form.selected_types.id_for_label }}');
+            console.log('Hidden field found:', orderTypeHidden ? 'yes' : 'no');
+            console.log('Hidden field ID:', '{{ form.selected_types.id_for_label }}');
             if (orderTypeHidden) {
-                orderTypeHidden.value = JSON.stringify(selectedTypes.map(type => type.value));
+                if (selectedType) {
+                    orderTypeHidden.value = JSON.stringify([selectedType.value]);
+                    console.log('Hidden field updated with:', orderTypeHidden.value);
+                } else {
+                    orderTypeHidden.value = JSON.stringify([]);
+                    console.log('Hidden field cleared');
+                }
+            } else {
+                console.error('Hidden field not found with ID:', '{{ form.selected_types.id_for_label }}');
             }
-            
-            // Show/hide contract field for tailoring
+
+            if (!selectedType) {
+                // إخفاء جميع الحقول إذا لم يتم اختيار نوع
+                if (contractField) contractField.style.display = 'none';
+                if (contractFileField) contractFileField.style.display = 'none';
+                if (orderStatusField) orderStatusField.style.display = 'none';
+                return;
+            }
+
+            const selectedValue = selectedType.value;
+
+            // إظهار/إخفاء حقول العقد للأنواع المطلوبة
+            const contractRequiredTypes = ['installation', 'tailoring', 'accessory'];
+            const needsContract = contractRequiredTypes.includes(selectedValue);
+
             if (contractField) {
-                const hasTailoring = selectedTypes.some(type => type.value === 'tailoring');
-                contractField.style.display = hasTailoring ? 'block' : 'none';
-                if (hasTailoring) {
-                    contractField.querySelector('.contract-required').style.display = 'inline';
-                    contractField.querySelector('.contract-help').style.display = 'block';
+                contractField.style.display = needsContract ? 'block' : 'none';
+            }
+
+            if (contractFileField) {
+                contractFileField.style.display = needsContract ? 'block' : 'none';
+            }
+
+            // إظهار/إخفاء حقل وضع الطلب (مخفي للمعاينة)
+            if (orderStatusField) {
+                orderStatusField.style.display = selectedValue === 'inspection' ? 'none' : 'block';
+            }
+
+            // منطق التسليم حسب نوع الطلب - تعيين القيم في الحقول المخفية
+            const deliveryTypeHidden = document.getElementById('{{ form.delivery_type.id_for_label }}');
+            const deliveryAddressHidden = document.getElementById('{{ form.delivery_address.id_for_label }}');
+            const branchSelect = document.getElementById('{{ form.branch.id_for_label }}');
+
+            if (selectedValue === 'tailoring') {
+                // تحديد استلام من الفرع تلقائياً للتفصيل
+                if (deliveryTypeHidden) deliveryTypeHidden.value = 'branch';
+                if (deliveryAddressHidden) deliveryAddressHidden.value = '';
+
+                // تحديد الفرع بناءً على المستخدم
+                if (branchSelect && branchSelect.options.length > 1) {
+                    // إذا كان هناك أكثر من فرع، اختر الأول (أو حسب منطق المستخدم)
+                    if (!branchSelect.value) {
+                        branchSelect.selectedIndex = 1; // اختيار أول فرع (تجاهل الخيار الفارغ)
+                    }
+                }
+            } else if (selectedValue === 'installation') {
+                // تفعيل التوصيل للمنزل تلقائياً للتركيب
+                if (deliveryTypeHidden) deliveryTypeHidden.value = 'home';
+
+                // ملء العنوان من بيانات العميل تلقائياً
+                const customerSelect = document.getElementById('{{ form.customer.id_for_label }}');
+                if (customerSelect && customerSelect.value) {
+                    // يمكن إضافة منطق لجلب عنوان العميل من API
+                    fillCustomerAddress(customerSelect.value);
+                } else {
+                    // عنوان افتراضي
+                    if (deliveryAddressHidden) deliveryAddressHidden.value = 'سيتم تحديد العنوان لاحقاً';
+                }
+            } else {
+                // للإكسسوار والمعاينة - افتراضي استلام من الفرع
+                if (deliveryTypeHidden) deliveryTypeHidden.value = 'branch';
+                if (deliveryAddressHidden) deliveryAddressHidden.value = '';
+
+                // تحديد الفرع
+                if (branchSelect && branchSelect.options.length > 1 && !branchSelect.value) {
+                    branchSelect.selectedIndex = 1;
                 }
             }
 
@@ -516,29 +644,75 @@
                 invoiceInput.required = true;
             }
             
-            // Show/hide product selection for fabric and accessory
+            // إظهار/إخفاء قسم اختيار المنتجات للإكسسوار فقط
             if (productSelectionSection) {
-                const hasProductTypes = selectedTypes.some(type => ['fabric', 'accessory'].includes(type.value));
-                if (hasProductTypes) {
+                if (selectedValue === 'accessory') {
                     productSelectionSection.style.display = 'block';
                     loadProducts();
                 } else {
                     productSelectionSection.style.display = 'none';
                 }
             }
-        }
-        
-        // Handle delivery option changes
-        function handleDeliveryOptionChange() {
-            if (deliveryOptionHome && deliveryOptionHome.checked) {
-                if (customerAddressField) customerAddressField.style.display = 'block';
-                if (branchSelectionField) branchSelectionField.style.display = 'none';
-            } else if (deliveryOptionBranch && deliveryOptionBranch.checked) {
-                if (customerAddressField) customerAddressField.style.display = 'none';
-                if (branchSelectionField) branchSelectionField.style.display = 'block';
+
+            // إزالة رسائل الخطأ السابقة
+            const errorMsg = document.querySelector('.tailoring-installation-error');
+            if (errorMsg) {
+                errorMsg.remove();
+            }
+
+            // إزالة تنسيق الخطأ من قسم أنواع الطلب
+            const orderTypeSection = document.querySelector('.mb-4:has([name="selected_types"])');
+            if (orderTypeSection) {
+                orderTypeSection.classList.remove('border', 'border-danger', 'p-2', 'rounded');
             }
         }
+
+        // دالة لملء عنوان العميل تلقائياً
+        function fillCustomerAddress(customerId) {
+            if (!customerId) return;
+
+            const deliveryAddressHidden = document.getElementById('{{ form.delivery_address.id_for_label }}');
+
+            // يمكن إضافة استدعاء API لجلب بيانات العميل
+            // fetch(`/api/customers/${customerId}/`)
+            //     .then(response => response.json())
+            //     .then(data => {
+            //         if (deliveryAddressHidden && data.address) {
+            //             deliveryAddressHidden.value = data.address;
+            //         }
+            //     });
+
+            // مؤقتاً - عنوان افتراضي
+            if (deliveryAddressHidden) {
+                deliveryAddressHidden.value = 'سيتم تحديد العنوان لاحقاً';
+            }
+        }
+
+        // دالة لتحديث تاريخ التسليم المتوقع
+        function updateExpectedDeliveryDate() {
+            const statusSelect = document.getElementById('{{ form.status.id_for_label }}');
+            const expectedDateField = document.getElementById('{{ form.expected_delivery_date.id_for_label }}');
+
+            if (!statusSelect || !expectedDateField) return;
+
+            const status = statusSelect.value;
+            const today = new Date();
+            let daysToAdd = 15; // افتراضي للعادي
+
+            if (status === 'vip') {
+                daysToAdd = 7;
+            }
+
+            // حساب التاريخ المتوقع
+            const expectedDate = new Date(today);
+            expectedDate.setDate(today.getDate() + daysToAdd);
+
+            // تنسيق التاريخ للحقل
+            const formattedDate = expectedDate.toISOString().split('T')[0];
+            expectedDateField.value = formattedDate;
+        }
         
+
         // Load products
         function loadProducts() {
             const productsContainer = document.getElementById('products-container');
@@ -711,6 +885,28 @@
             
             selectedProductsInput.value = JSON.stringify(productsData);
         }
+
+        // Initial calls
+        handleOrderTypeChange();
+        updateExpectedDeliveryDate();
+
+        // Debug: Check if hidden field exists
+        const hiddenFieldCheck = document.getElementById('{{ form.selected_types.id_for_label }}');
+        console.log('Hidden field check on load:', hiddenFieldCheck ? 'found' : 'not found');
+        console.log('Hidden field ID:', '{{ form.selected_types.id_for_label }}');
+
+        // Force update hidden field on any radio button change
+        document.querySelectorAll('input[name="selected_types"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const hiddenField = document.getElementById('{{ form.selected_types.id_for_label }}');
+                if (hiddenField && this.checked) {
+                    hiddenField.value = JSON.stringify([this.value]);
+                    console.log('Radio changed - Hidden field set to:', hiddenField.value);
+                } else {
+                    console.error('Hidden field not found during radio change');
+                }
+            });
+        });
     });
 </script>
 {% endblock %}

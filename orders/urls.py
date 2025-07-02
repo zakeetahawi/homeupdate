@@ -11,6 +11,7 @@ urlpatterns = [
     # Old dashboard (deactivated)
     path('dashboard/', OrdersDashboardView.as_view(), name='dashboard'),
     path('<int:pk>/', views.order_detail, name='order_detail'),
+    path('<int:pk>/success/', views.order_success, name='order_success'),
     path('create/', views.order_create, name='order_create'),
     path('<int:pk>/update/', views.order_update, name='order_update'),
     path('<int:pk>/delete/', views.order_delete, name='order_delete'),

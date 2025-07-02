@@ -388,3 +388,29 @@ class Inspection(models.Model):
             logger = logging.getLogger(__name__)
             logger.error(f"خطأ في رفع ملف المعاينة {self.id} إلى Google Drive: {str(e)}")
             return False
+
+
+# Signal to update order status when inspection is completed
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Inspection)
+def update_order_status_on_inspection_completion(sender, instance, **kwargs):
+    """
+    Update order status to completed when inspection is completed
+    """
+    if instance.status == 'completed' and instance.order:
+        try:
+            # Update order status to completed
+            instance.order.tracking_status = 'completed'
+            instance.order.save(update_fields=['tracking_status'])
+
+            # Log the status change
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"تم تحديث حالة الطلب {instance.order.id} إلى مكتمل بعد اكتمال المعاينة {instance.id}")
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في تحديث حالة الطلب {instance.order.id} بعد اكتمال المعاينة: {str(e)}")

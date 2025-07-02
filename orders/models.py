@@ -1,4 +1,6 @@
 import json
+import os
+from datetime import timedelta
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -12,17 +14,27 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext as _
 from model_utils import FieldTracker
+
+
+def validate_pdf_file(value):
+    """التحقق من أن الملف المرفوع هو PDF"""
+    if value:
+        ext = os.path.splitext(value.name)[1]
+        if ext.lower() != '.pdf':
+            raise ValidationError('يجب أن يكون الملف من نوع PDF فقط')
+
+        # التحقق من حجم الملف (أقل من 10 ميجابايت)
+        if value.size > 10 * 1024 * 1024:
+            raise ValidationError('حجم الملف يجب أن يكون أقل من 10 ميجابايت')
 class Order(models.Model):
     STATUS_CHOICES = [
         ('normal', 'عادي'),
         ('vip', 'VIP'),
     ]
     ORDER_TYPES = [
-        ('fabric', 'قماش'),
         ('accessory', 'إكسسوار'),
         ('installation', 'تركيب'),
         ('inspection', 'معاينة'),
-        ('transport', 'نقل'),
         ('tailoring', 'تفصيل'),
     ]
     TRACKING_STATUS_CHOICES = [
@@ -48,7 +60,7 @@ class Order(models.Model):
     delivery_address = models.TextField(blank=True, null=True, verbose_name='عنوان التسليم')
     order_number = models.CharField(max_length=50, unique=True, verbose_name='رقم الطلب')
     order_date = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الطلب')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='normal', verbose_name='حالة الطلب')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='normal', verbose_name='وضع الطلب')
     # Order type fields
     selected_types = models.JSONField(default=list, verbose_name='أنواع الطلب المختارة')
     # Keep old fields for backward compatibility
@@ -63,6 +75,14 @@ class Order(models.Model):
     last_notification_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ آخر إشعار')
     invoice_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='رقم الفاتورة')
     contract_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='رقم العقد')
+    contract_file = models.FileField(
+        upload_to='contracts/',
+        null=True,
+        blank=True,
+        validators=[validate_pdf_file],
+        verbose_name='ملف العقد',
+        help_text='يجب أن يكون الملف من نوع PDF وأقل من 10 ميجابايت'
+    )
     payment_verified = models.BooleanField(default=False, verbose_name='تم التحقق من السداد')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='المبلغ الإجمالي')
     paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='المبلغ المدفوع')
@@ -77,6 +97,33 @@ class Order(models.Model):
         null=True,
         blank=True,
         verbose_name="السعر النهائي"
+    )
+    expected_delivery_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="تاريخ التسليم المتوقع"
+    )
+    # حقول Google Drive للعقد
+    contract_google_drive_file_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name='معرف ملف العقد في Google Drive'
+    )
+    contract_google_drive_file_url = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name='رابط ملف العقد في Google Drive'
+    )
+    contract_google_drive_file_name = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name='اسم ملف العقد في Google Drive'
+    )
+    is_contract_uploaded_to_drive = models.BooleanField(
+        default=False,
+        verbose_name='تم رفع العقد إلى Google Drive'
     )
     modified_at = models.DateTimeField(auto_now=True, help_text='آخر تحديث للطلب')
     tracker = FieldTracker(fields=['tracking_status', 'status'])
@@ -167,11 +214,27 @@ class Order(models.Model):
             # Validate delivery address for home delivery
             if self.delivery_type == 'home' and not self.delivery_address:
                 raise models.ValidationError('عنوان التسليم مطلوب لخدمة التوصيل للمنزل')
+
+            # حساب تاريخ التسليم المتوقع إذا لم يكن محدداً
+            if not self.expected_delivery_date:
+                self.expected_delivery_date = self.calculate_expected_delivery_date()
+
             # حفظ الطلب أولاً للحصول على مفتاح أساسي
             super().save(*args, **kwargs)
             # التأكد من أن الطلب تم حفظه بنجاح
             if not self.pk:
                 raise models.ValidationError('فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي')
+
+            # رفع ملف العقد إلى Google Drive إذا كان موجوداً ولم يتم رفعه مسبقاً
+            if self.contract_file and not self.is_contract_uploaded_to_drive:
+                try:
+                    success, message = self.upload_contract_to_google_drive()
+                    if success:
+                        print(f"تم رفع ملف العقد للطلب {self.order_number} إلى Google Drive")
+                    else:
+                        print(f"فشل رفع ملف العقد للطلب {self.order_number}: {message}")
+                except Exception as e:
+                    print(f"خطأ في رفع ملف العقد للطلب {self.order_number}: {str(e)}")
             # حساب السعر النهائي بعد الحفظ (بعد وجود pk)
             try:
                 final_price = self.calculate_final_price()
@@ -247,8 +310,117 @@ class Order(models.Model):
             priority='high' if self.status in ['completed', 'cancelled'] else 'medium',
             related_object=self
         )
+
+    def calculate_expected_delivery_date(self):
+        """حساب تاريخ التسليم المتوقع بناءً على وضع الطلب"""
+        if not self.order_date:
+            return None
+
+        # تحديد عدد الأيام بناءً على وضع الطلب
+        if self.status == 'vip':
+            days_to_add = 7
+        else:  # normal
+            days_to_add = 15
+
+        # حساب التاريخ المتوقع
+        expected_date = self.order_date.date() + timedelta(days=days_to_add)
+        return expected_date
+
+    def upload_contract_to_google_drive(self):
+        """رفع ملف العقد إلى Google Drive"""
+        try:
+            if not self.contract_file:
+                return False, "لا يوجد ملف عقد للرفع"
+
+            if self.is_contract_uploaded_to_drive:
+                return False, "تم رفع ملف العقد مسبقاً"
+
+            from orders.services.google_drive_service import get_contract_google_drive_service
+
+            drive_service = get_contract_google_drive_service()
+            if not drive_service:
+                return False, "خدمة Google Drive غير متوفرة"
+
+            # رفع الملف
+            result = drive_service.upload_contract_file(
+                self.contract_file.path,
+                self
+            )
+
+            # تحديث بيانات الطلب
+            self.contract_google_drive_file_id = result['file_id']
+            self.contract_google_drive_file_url = result['view_url']
+            self.contract_google_drive_file_name = result['filename']
+            self.is_contract_uploaded_to_drive = True
+            self.save(update_fields=[
+                'contract_google_drive_file_id',
+                'contract_google_drive_file_url',
+                'contract_google_drive_file_name',
+                'is_contract_uploaded_to_drive'
+            ])
+
+            return True, "تم رفع ملف العقد بنجاح"
+
+        except Exception as e:
+            return False, f"خطأ في رفع ملف العقد: {str(e)}"
+
     def __str__(self):
         return f'{self.order_number} - {self.customer.name}'
+
+    def get_selected_types_list(self):
+        """Convert selected_types JSON to list"""
+        if not self.selected_types:
+            return []
+        try:
+            import json
+            # Handle both string and already parsed data
+            if isinstance(self.selected_types, str):
+                parsed = json.loads(self.selected_types)
+
+                # Handle double-encoded JSON like '["[\"inspection\"]"]'
+                if isinstance(parsed, list) and len(parsed) == 1 and isinstance(parsed[0], str):
+                    try:
+                        # Try to parse the inner JSON
+                        inner_parsed = json.loads(parsed[0])
+                        if isinstance(inner_parsed, list):
+                            return inner_parsed
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+                # Handle normal JSON
+                if isinstance(parsed, list):
+                    return parsed
+                else:
+                    return [parsed]  # Single value
+            elif isinstance(self.selected_types, list):
+                return self.selected_types
+            else:
+                return []
+        except (json.JSONDecodeError, TypeError):
+            # Fallback: try to extract from string representation
+            if isinstance(self.selected_types, str):
+                # Handle cases like "['inspection']" or '["inspection"]'
+                import re
+                matches = re.findall(r"'(\w+)'|\"(\w+)\"", self.selected_types)
+                result = [match[0] or match[1] for match in matches]
+                return result if result else []
+            return []
+
+    def get_selected_type_display(self):
+        """Get display name for the first selected type"""
+        types_list = self.get_selected_types_list()
+        if not types_list:
+            return "غير محدد"
+
+        type_map = {
+            'inspection': 'معاينة',
+            'installation': 'تركيب',
+            'accessory': 'إكسسوار',
+            'tailoring': 'تفصيل'
+        }
+
+        return type_map.get(types_list[0], types_list[0])
+
     @property
     def remaining_amount(self):
         """Calculate remaining amount to be paid"""

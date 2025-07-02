@@ -48,10 +48,89 @@
                             <th>تاريخ الطلب</th>
                             <td>{{ order.order_date|date:"Y-m-d H:i" }}</td>
                         </tr>
-                        <tr>
-                            <th>تاريخ التسليم</th>
-                            <td>{{ order.delivery_date|date:"Y-m-d"|default:"غير محدد" }}</td>
-                        </tr>
+                        <!-- Show different date info for inspection vs other orders -->
+                        {% with types_list=order.get_selected_types_list %}
+                        {% if 'inspection' in types_list or 'inspection' in order.selected_types %}
+                            <!-- For inspection orders, show status and dates -->
+                            {% with inspection=order.inspections.first %}
+                                {% if inspection %}
+                                    {% if inspection.status == 'completed' %}
+                                    <tr>
+                                        <th>حالة المعاينة</th>
+                                        <td>
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>
+                                                مكتملة
+                                            </span>
+                                            {% if inspection.updated_at %}
+                                                <br><small class="text-muted">
+                                                    آخر تحديث: {{ inspection.updated_at|date:"Y-m-d H:i" }}
+                                                </small>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% elif inspection.scheduled_date %}
+                                    <tr>
+                                        <th>تاريخ المعاينة المجدولة</th>
+                                        <td>
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                {{ inspection.scheduled_date|date:"Y-m-d" }}
+                                            </span>
+                                            <br><small class="text-muted">
+                                                الحالة: {{ inspection.get_status_display }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <th>حالة المعاينة</th>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-hourglass-half me-1"></i>
+                                                في انتظار الجدولة
+                                            </span>
+                                            <br><small class="text-muted">
+                                                تاريخ الطلب: {{ inspection.request_date|date:"Y-m-d" }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                {% else %}
+                                <tr>
+                                    <th>حالة المعاينة</th>
+                                    <td>
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            لم يتم إنشاء المعاينة بعد
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <!-- For other orders, show expected delivery date -->
+                            {% if order.expected_delivery_date %}
+                            <tr>
+                                <th>تاريخ التسليم المتوقع</th>
+                                <td>
+                                    <span class="badge bg-info">
+                                        {{ order.expected_delivery_date|date:"Y-m-d" }}
+                                    </span>
+                                    {% if order.status == 'vip' %}
+                                        <small class="text-warning ms-2">
+                                            <i class="fas fa-star"></i> VIP - أولوية عالية
+                                        </small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th>تاريخ التسليم</th>
+                                <td>{{ order.delivery_date|date:"Y-m-d"|default:"غير محدد" }}</td>
+                            </tr>
+                        {% endif %}
+                        {% endwith %}
                         <tr>
                             <th>حالة الطلب</th>
                             <td>
@@ -153,8 +232,87 @@
                     <table class="table table-bordered">
                         <tr>
                             <th style="width: 40%">نوع الطلب</th>
-                            <td>{{ order.get_order_type_display }}</td>
+                            <td>
+                                {% with types_list=order.get_selected_types_list %}
+                                    {% if types_list %}
+                                        {% for type in types_list %}
+                                            {% if type == 'accessory' %}
+                                                <span class="badge bg-primary me-2">
+                                                    <i class="fas fa-gem me-1"></i> إكسسوار
+                                                </span>
+                                            {% elif type == 'installation' %}
+                                                <span class="badge bg-warning me-2">
+                                                    <i class="fas fa-tools me-1"></i> تركيب
+                                                </span>
+                                            {% elif type == 'inspection' %}
+                                                <span class="badge bg-info me-2">
+                                                    <i class="fas fa-eye me-1"></i> معاينة
+                                                </span>
+                                            {% elif type == 'tailoring' %}
+                                                <span class="badge bg-success me-2">
+                                                    <i class="fas fa-cut me-1"></i> تفصيل
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary me-2">{{ type }}</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
                         </tr>
+
+                        <!-- Inspection Status for inspection orders -->
+                        {% with types_list=order.get_selected_types_list %}
+                        {% if 'inspection' in types_list or 'inspection' in order.selected_types %}
+                        <tr>
+                            <th>حالة المعاينة</th>
+                            <td>
+                                {% with inspection=order.inspections.first %}
+                                    {% if inspection %}
+                                        <span class="badge {% if inspection.status == 'pending' %}bg-warning text-dark
+                                                       {% elif inspection.status == 'in_progress' %}bg-info
+                                                       {% elif inspection.status == 'completed' %}bg-success
+                                                       {% else %}bg-danger{% endif %} me-2">
+                                            {% if inspection.status == 'pending' %}
+                                                <i class="fas fa-clock me-1"></i> في الانتظار
+                                            {% elif inspection.status == 'in_progress' %}
+                                                <i class="fas fa-spinner me-1"></i> قيد التنفيذ
+                                            {% elif inspection.status == 'completed' %}
+                                                <i class="fas fa-check me-1"></i> مكتملة
+                                            {% else %}
+                                                <i class="fas fa-times me-1"></i> ملغية
+                                            {% endif %}
+                                        </span>
+
+                                        {% if inspection.result %}
+                                            <span class="badge {% if inspection.result == 'passed' %}bg-success
+                                                           {% else %}bg-danger{% endif %}">
+                                                {% if inspection.result == 'passed' %}
+                                                    <i class="fas fa-thumbs-up me-1"></i> نجحت
+                                                {% else %}
+                                                    <i class="fas fa-thumbs-down me-1"></i> فشلت
+                                                {% endif %}
+                                            </span>
+                                        {% endif %}
+
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                آخر تحديث: {{ inspection.updated_at|date:"Y-m-d H:i" }}
+                                            </small>
+                                        </div>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> لم يتم إنشاء المعاينة بعد
+                                        </span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endwith %}
+
                         {% if order.goods_type %}
                         <tr>
                             <th>نوع البضاعة</th>
@@ -231,7 +389,9 @@
         </div>
     </div>
 
-    <!-- نموذج تحديث الحالة -->
+    <!-- نموذج تحديث الحالة - Hidden for inspection orders -->
+    {% with types_list=order.get_selected_types_list %}
+    {% if 'inspection' not in types_list and 'inspection' not in order.selected_types %}
     <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">تحديث حالة الطلب</h5>
@@ -267,8 +427,12 @@
             </form>
         </div>
     </div>
+    {% endif %}
+    {% endwith %}
 
-    <!-- سجل تغييرات الحالة -->
+    <!-- سجل تغييرات الحالة - Hidden for inspection orders -->
+    {% with types_list=order.get_selected_types_list %}
+    {% if 'inspection' not in types_list and 'inspection' not in order.selected_types %}
     <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">سجل تغييرات الحالة</h5>
@@ -295,8 +459,12 @@
             </div>
         </div>
     </div>
+    {% endif %}
+    {% endwith %}
 
-    <!-- Order Items -->
+    <!-- Order Items - Hidden for inspection orders -->
+    {% with types_list=order.get_selected_types_list %}
+    {% if 'inspection' not in types_list and 'inspection' not in order.selected_types %}
     <div class="card mb-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h5 class="mb-0">عناصر الطلب</h5>
@@ -341,89 +509,170 @@
             </div>
         </div>
     </div>
+    {% endif %}
+    {% endwith %}
 
-    {% if 'inspection' in order.service_types %}
+    {% with types_list=order.get_selected_types_list %}
+    {% if 'inspection' in types_list or 'inspection' in order.selected_types %}
     <!-- Inspection Details -->
     <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">تفاصيل المعاينة</h5>
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-eye me-2"></i>
+                بطاقة تتبع المعاينة
+            </h5>
+            <small>معلومات شاملة عن حالة المعاينة المرتبطة بهذا الطلب</small>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-striped mb-0">
-                    <thead>
+                    <thead class="table-info">
                         <tr>
-                            <th>رقم المعاينة</th>
-                            <th>تاريخ الطلب</th>
-                            <th>تاريخ التنفيذ</th>
-                            <th>عدد الشبابيك</th>
-                            <th>فني المعاينة</th>
-                            <th>الحالة</th>
-                            <th>النتيجة</th>
-                            <th>ملف المعاينة</th>
-                            <th>البائع</th>
-                            <th>الإجراءات</th>
+                            <th width="8%">رقم المعاينة</th>
+                            <th width="12%">تاريخ الطلب</th>
+                            <th width="12%">تاريخ التنفيذ</th>
+                            <th width="8%">عدد الشبابيك</th>
+                            <th width="15%">فني المعاينة</th>
+                            <th width="10%">الحالة</th>
+                            <th width="10%">النتيجة</th>
+                            <th width="8%">ملف المعاينة</th>
+                            <th width="12%">البائع المسؤول</th>
+                            <th width="5%">عرض</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for inspection in inspections %}
-                        <tr>
-                            <td>{{ inspection.id }}</td>
-                            <td>{{ inspection.request_date|date:"Y-m-d" }}</td>
-                            <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
-                            <td>{{ inspection.windows_count|default:"-" }}</td>
+                        <tr class="{% if inspection.status == 'completed' %}table-success{% elif inspection.status == 'in_progress' %}table-info{% elif inspection.status == 'pending' %}table-warning{% endif %}">
+                            <td>
+                                <strong class="text-primary">#{{ inspection.id }}</strong>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ inspection.request_date|date:"Y-m-d" }}</div>
+                                    <small class="text-muted">تاريخ الطلب</small>
+                                </div>
+                            </td>
+                            <td>
+                                {% if inspection.scheduled_date %}
+                                    <div class="text-center">
+                                        <div class="fw-bold">{{ inspection.scheduled_date|date:"Y-m-d" }}</div>
+                                        <small class="text-muted">مجدولة</small>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center">
+                                        <span class="text-muted">غير محدد</span>
+                                        <br><small class="text-muted">لم تُجدول بعد</small>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if inspection.windows_count %}
+                                    <span class="badge bg-secondary">{{ inspection.windows_count }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if inspection.inspector %}
-                                    {% if inspection.inspector.get_full_name %}
-                                        {{ inspection.inspector.get_full_name }}
-                                    {% else %}
-                                        {{ inspection.inspector.username }}
-                                    {% endif %}
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-user-hard-hat me-2 text-primary"></i>
+                                        <div>
+                                            <div class="fw-bold">
+                                                {% if inspection.inspector.get_full_name %}
+                                                    {{ inspection.inspector.get_full_name }}
+                                                {% else %}
+                                                    {{ inspection.inspector.username }}
+                                                {% endif %}
+                                            </div>
+                                            <small class="text-muted">فني معاينة</small>
+                                        </div>
+                                    </div>
                                 {% else %}
-                                    <span class="text-muted">-</span>
+                                    <span class="text-muted">
+                                        <i class="fas fa-user-slash me-1"></i>
+                                        غير محدد
+                                    </span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <span class="badge {% if inspection.status == 'pending' %}bg-warning
+                            <td class="text-center">
+                                <span class="badge {% if inspection.status == 'pending' %}bg-warning text-dark
+                                           {% elif inspection.status == 'in_progress' %}bg-info
                                            {% elif inspection.status == 'completed' %}bg-success
-                                           {% else %}bg-danger{% endif %}">
-                                    {{ inspection.get_status_display }}
+                                           {% else %}bg-danger{% endif %} px-3 py-2">
+                                    {% if inspection.status == 'pending' %}
+                                        <i class="fas fa-clock me-1"></i> في الانتظار
+                                    {% elif inspection.status == 'in_progress' %}
+                                        <i class="fas fa-spinner me-1"></i> قيد التنفيذ
+                                    {% elif inspection.status == 'completed' %}
+                                        <i class="fas fa-check me-1"></i> مكتملة
+                                    {% else %}
+                                        <i class="fas fa-times me-1"></i> ملغية
+                                    {% endif %}
                                 </span>
+                                {% if inspection.status == 'completed' and inspection.updated_at %}
+                                    <br><small class="text-muted mt-1">{{ inspection.updated_at|date:"Y-m-d H:i" }}</small>
+                                {% endif %}
                             </td>
-                            <td>
+                            <td class="text-center">
                                 {% if inspection.result %}
                                     <span class="badge {% if inspection.result == 'passed' %}bg-success
-                                               {% else %}bg-danger{% endif %}">
-                                        {{ inspection.get_result_display }}
+                                               {% else %}bg-danger{% endif %} px-3 py-2">
+                                        {% if inspection.result == 'passed' %}
+                                            <i class="fas fa-thumbs-up me-1"></i> نجحت
+                                        {% else %}
+                                            <i class="fas fa-thumbs-down me-1"></i> فشلت
+                                        {% endif %}
                                     </span>
                                 {% else %}
-                                    <span class="text-muted">-</span>
+                                    <span class="text-muted">
+                                        <i class="fas fa-hourglass-half me-1"></i>
+                                        في الانتظار
+                                    </span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="text-center">
                                 {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                    <a href="{{ inspection.google_drive_file_url }}" target="_blank" title="عرض ملف المعاينة في Google Drive">
-                                        <i class="fas fa-file-pdf text-danger" style="font-size: 20px;"></i>
+                                    <a href="{{ inspection.google_drive_file_url }}" target="_blank"
+                                       class="btn btn-sm btn-outline-danger"
+                                       title="عرض ملف المعاينة في Google Drive">
+                                        <i class="fas fa-file-pdf me-1"></i>
+                                        عرض الملف
                                     </a>
                                 {% elif inspection.inspection_file %}
-                                    <span title="جاري رفع الملف إلى Google Drive">
-                                        <i class="fas fa-file-pdf text-warning" style="font-size: 20px;"></i>
-                                        <i class="fas fa-clock text-warning" style="font-size: 10px; position: relative; top: -8px; left: -3px;"></i>
+                                    <span class="badge bg-warning text-dark" title="جاري رفع الملف إلى Google Drive">
+                                        <i class="fas fa-clock me-1"></i>
+                                        جاري الرفع
                                     </span>
                                 {% else %}
-                                    <i class="fas fa-file-pdf text-muted" style="font-size: 20px;" title="لا يوجد ملف"></i>
+                                    <span class="text-muted">
+                                        <i class="fas fa-file-slash me-1"></i>
+                                        لا يوجد ملف
+                                    </span>
                                 {% endif %}
                             </td>
-                            <td>{% if inspection.responsible_employee %}{{ inspection.responsible_employee }}{% else %}-{% endif %}</td>
                             <td>
-                                <a href="{% url 'inspections:inspection_detail' inspection.pk %}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if not inspection.status == 'completed' or not inspection.result %}
-                                <a href="{% url 'inspections:inspection_update' inspection.pk %}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i>
-                                </a>
+                                {% if inspection.responsible_employee %}
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-user-tie me-2 text-success"></i>
+                                        <div>
+                                            <div class="fw-bold">{{ inspection.responsible_employee }}</div>
+                                            <small class="text-muted">بائع مسؤول</small>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-user-slash me-1"></i>
+                                        غير محدد
+                                    </span>
                                 {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'inspections:inspection_detail' inspection.pk %}"
+                                   class="btn btn-sm btn-outline-info"
+                                   title="عرض تفاصيل المعاينة">
+                                    <i class="fas fa-eye me-1"></i>
+                                    عرض
+                                </a>
                             </td>
                         </tr>
                         {% empty %}
@@ -437,6 +686,7 @@
         </div>
     </div>
     {% endif %}
+    {% endwith %}
 
     <!-- Payments -->
     <div class="card">

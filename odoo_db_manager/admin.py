@@ -5,7 +5,7 @@
 from django.contrib import admin
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .models import Database, Backup
+from .models import Database, Backup, GoogleDriveConfig
 from .google_sync import GoogleSyncConfig, GoogleSyncLog
 from .google_sync_advanced import (
     GoogleSheetMapping, GoogleSyncTask, GoogleSyncConflict, GoogleSyncSchedule
@@ -50,6 +50,45 @@ class BackupAdmin(admin.ModelAdmin):
         }),
         (_('معلومات النظام'), {
             'fields': ('size', 'created_at', 'created_by'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(GoogleDriveConfig)
+class GoogleDriveConfigAdmin(admin.ModelAdmin):
+    """إدارة إعدادات Google Drive"""
+
+    list_display = ('name', 'is_active', 'total_uploads', 'last_upload')
+    list_filter = ('is_active', 'last_upload')
+    search_fields = ('name',)
+    readonly_fields = ('total_uploads', 'last_upload', 'created_at', 'updated_at')
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'is_active')
+        }),
+        (_('إعدادات مجلد المعاينات'), {
+            'fields': ('inspections_folder_id', 'inspections_folder_name'),
+            'classes': ('collapse',)
+        }),
+        (_('إعدادات مجلد العقود'), {
+            'fields': ('contracts_folder_id', 'contracts_folder_name'),
+            'classes': ('collapse',)
+        }),
+        (_('ملف الاعتماد'), {
+            'fields': ('credentials_file',),
+            'classes': ('collapse',)
+        }),
+        (_('إعدادات تسمية الملفات'), {
+            'fields': ('filename_pattern',),
+            'classes': ('collapse',)
+        }),
+        (_('الإحصائيات'), {
+            'fields': ('total_uploads', 'last_upload'),
+            'classes': ('collapse',)
+        }),
+        (_('معلومات النظام'), {
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
