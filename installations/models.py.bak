@@ -3,29 +3,9 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from django.urls import reverse
-from decimal import Decimal
-import json
-from datetime import datetime, timedelta
-
-# استيراد النماذج المطلوبة
-try:
-    from inspections.models import Inspection
-except ImportError:
-    Inspection = None
-
-try:
-    from orders.models import Order
-except ImportError:
-    Order = None
-
-try:
-    from accounts.models import User, Branch
-except ImportError:
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-    Branch = None
-
+from inspections.models import Inspection
+from orders.models import Order
+from accounts.models import User, Branch
 class InstallationTeam(models.Model):
     """فريق التركيب"""
     name = models.CharField(_('اسم الفريق'), max_length=100)

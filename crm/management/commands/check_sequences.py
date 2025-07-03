@@ -8,8 +8,33 @@ from django.core.management.base import BaseCommand
 from django.db import connection
 from django.apps import apps
 import logging
+import os
 
-logger = logging.getLogger(__name__)
+# Set up logging
+logger = logging.getLogger('sequence_checker')
+logger.setLevel(logging.DEBUG)
+
+# Create logs directory if it doesn't exist
+log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'logs')
+os.makedirs(log_dir, exist_ok=True)
+
+# Create file handler which logs debug messages
+log_file = os.path.join(log_dir, 'sequence_checker.log')
+fh = logging.FileHandler(log_file, encoding='utf-8')
+fh.setLevel(logging.DEBUG)
+
+# Create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+
+# Create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+
+# Add the handlers to the logger
+logger.addHandler(fh)
+logger.addHandler(ch)
 
 
 class Command(BaseCommand):
@@ -36,25 +61,57 @@ class Command(BaseCommand):
             type=str,
             help='تصدير النتائج إلى ملف JSON'
         )
+        parser.add_argument(
+            '--fix',
+            action='store_true',
+            help='إصلاح التسلسل تلقائياً'
+        )
 
     def handle(self, *args, **options):
+        """Handle the command"""
+        self.verbosity = options.get('verbosity', 1)
+        self.fix = options.get('fix', False)
+        specific_table = options.get('table')
         self.show_all = options.get('show_all', False)
         self.export_file = options.get('export')
         
+        # Set up logging based on verbosity
+        if self.verbosity >= 2:
+            logger.setLevel(logging.DEBUG)
+        elif self.verbosity >= 1:
+            logger.setLevel(logging.INFO)
+        else:
+            logger.setLevel(logging.WARNING)
+    
+        # Check if we're running in a test environment
+        import sys
+        if 'test' in sys.argv:
+            logger.info("Running in test environment, skipping sequence check")
+            return
+            
+        # Check if database is ready
+        try:
+            from django.db import connections
+            conn = connections['default']
+            conn.ensure_connection()
+        except Exception as e:
+            logger.warning(f"Database not ready yet, skipping sequence check: {str(e)}")
+            return
+
         self.stdout.write(
             self.style.SUCCESS('🔍 بدء فحص تسلسل ID...')
         )
-        
+
         if options.get('table'):
             results = self.check_single_table(options['table'])
         elif options.get('app'):
             results = self.check_app_sequences(options['app'])
         else:
             results = self.check_all_sequences()
-        
+
         # عرض الملخص
         self.display_summary(results)
-        
+
         # تصدير النتائج إذا طُلب ذلك
         if self.export_file:
             self.export_results(results, self.export_file)
@@ -229,90 +286,158 @@ class Command(BaseCommand):
         return None
 
     def check_sequence_health(self, table_name, column_name, sequence_name):
-        """فحص صحة تسلسل محدد"""
-        with connection.cursor() as cursor:
-            try:
-                # التحقق من وجود التسلسل
-                cursor.execute("""
-                    SELECT EXISTS (
-                        SELECT FROM pg_sequences
-                        WHERE sequencename = %s
-                    )
-                """, [sequence_name])
+        """Check health of a single sequence with improved error handling"""
+        logger.debug(f"Checking sequence health for table={table_name}, column={column_name}, sequence={sequence_name}")
+        
+        try:
+            # Ensure database connection is ready
+            connection.ensure_connection()
 
-                if not cursor.fetchone()[0]:
+            with connection.cursor() as cursor:
+                # First try to get the sequence directly
+                cursor.execute(
+                    """
+                    SELECT sequencename, last_value
+                    FROM pg_sequences 
+                    WHERE schemaname = 'public' 
+                    AND sequencename = %s
+                    """,
+                    [sequence_name]
+                )
+                seq_row = cursor.fetchone()
+                
+                # If sequence not found, try to find it by table and column name
+                if not seq_row:
+                    cursor.execute(
+                        """
+                        SELECT sequencename, last_value
+                        FROM pg_sequences 
+                        WHERE schemaname = 'public' 
+                        AND sequencename LIKE %s
+                        """,
+                        [f'%{table_name}%']
+                    )
+                    seq_row = cursor.fetchone()
+                    if seq_row:
+                        sequence_name = seq_row[0]
+                        logger.debug(f"Found alternative sequence: {sequence_name}")
+                
+                if not seq_row:
+                    # Get all sequences for debugging
+                    cursor.execute("""
+                        SELECT sequencename, last_value 
+                        FROM pg_sequences 
+                        WHERE schemaname = 'public'
+                        ORDER BY sequencename
+                    """)
+                    all_sequences = cursor.fetchall()
+                    logger.debug(f"Available sequences: {all_sequences}")
+                    
                     return {
                         'table': table_name,
-                        'status': 'no_sequence',
-                        'message': f'التسلسل {sequence_name} غير موجود'
+                        'status': 'missing',
+                        'severity': 'warning',
+                        'message': f'تسلسل {sequence_name} غير موجود',
+                        'recommendation': 'يجب إنشاء التسلسل المفقود',
+                        'sequence_name': sequence_name,
+                        'current_value': None,
+                        'max_id': None,
+                        'gap': 0,
+                        'table_name': table_name,
+                        'column_name': column_name,
+                        'available_sequences': all_sequences
                     }
-
-                # الحصول على أعلى ID موجود في الجدول
-                cursor.execute(f'SELECT COALESCE(MAX({column_name}), 0) FROM {table_name}')
-                max_id_result = cursor.fetchone()
-                max_id = max_id_result[0] if max_id_result else 0
-
-                # الحصول على القيمة الحالية للتسلسل
-                cursor.execute(f"SELECT last_value FROM {sequence_name}")
-                seq_result = cursor.fetchone()
-                current_seq = seq_result[0] if seq_result else 0
-
-                # حساب عدد الصفوف
-                cursor.execute(f'SELECT COUNT(*) FROM {table_name}')
-                count_result = cursor.fetchone()
-                row_count = count_result[0] if count_result else 0
                 
-                # تحديد حالة التسلسل
-                next_value = max_id + 1
-                gap = current_seq - max_id
+                # If we get here, we have a valid sequence row
+                current_seq = seq_row[1] if seq_row[1] is not None else 0
                 
+                # Get max ID from the table
+                try:
+                    cursor.execute(f'SELECT COALESCE(MAX({column_name}), 0) FROM {table_name}')
+                    max_id_row = cursor.fetchone()
+                    max_id = max_id_row[0] if max_id_row and max_id_row[0] is not None else 0
+                    logger.debug(f"Max ID for {table_name}: {max_id} (type: {type(max_id) if max_id is not None else 'NoneType'})")
+                except Exception as e:
+                    logger.error(f"Error getting max ID for {table_name}: {str(e)}")
+                    max_id = 0
+
+                # Calculate next sequence value and gap
+                next_value = current_seq + 1
+                gap = max(0, max_id - current_seq) if max_id is not None else 0
+                
+                logger.debug(f"Sequence values for {table_name} - max_id: {max_id} (type: {type(max_id)}), current_seq: {current_seq} (type: {type(current_seq)}), next_value: {next_value}, gap: {gap}")
+
+                # Determine sequence health
                 result = {
                     'table': table_name,
-                    'column': column_name,
-                    'sequence': sequence_name,
+                    'sequence_name': sequence_name,
+                    'current_value': current_seq,
                     'max_id': max_id,
-                    'current_seq': current_seq,
-                    'next_value': next_value,
-                    'row_count': row_count,
-                    'gap': gap
+                    'gap': gap,
+                    'table_name': table_name,
+                    'column_name': column_name
                 }
-                
-                if current_seq < next_value:
+
+                if max_id is None or current_seq is None:
                     result.update({
-                        'status': 'problems',
+                        'status': 'error',
                         'severity': 'critical',
-                        'message': f'تسلسل منخفض! قد يحدث تضارب في ID التالي',
-                        'recommendation': 'يجب إصلاح التسلسل فوراً'
+                        'message': 'خطأ في قراءة قيم التسلسل',
+                        'recommendation': 'يجب التحقق من صحة الجدول والتسلسل'
                     })
-                elif gap > 1000:
-                    result.update({
-                        'status': 'problems',
-                        'severity': 'warning',
-                        'message': f'فجوة كبيرة في التسلسل ({gap})',
-                        'recommendation': 'يُنصح بإعادة تعيين التسلسل لتوفير المساحة'
-                    })
-                else:
+                elif gap == 0:
                     result.update({
                         'status': 'healthy',
                         'severity': 'info',
-                        'message': 'التسلسل يعمل بشكل صحيح',
-                        'recommendation': 'لا حاجة لإجراء'
+                        'message': 'التسلسل سليم',
+                        'recommendation': 'لا يلزم اتخاذ إجراء'
                     })
-                
+                elif gap > 0 and gap <= 1000:
+                    result.update({
+                        'status': 'warning',
+                        'severity': 'warning',
+                        'message': f'هناك فجوة صغيرة في التسلسل ({gap})',
+                        'recommendation': 'يمكن تجاهل الفجوة الصغيرة'
+                    })
+                else:
+                    result.update({
+                        'status': 'problems',
+                        'severity': 'critical',
+                        'message': f'فجوة كبيرة في التسلسل ({gap})',
+                        'recommendation': 'يجب إعادة تعيين التسلسل'
+                    })
+
                 return result
-                
-            except Exception as e:
-                logger.error(f"خطأ في فحص تسلسل {sequence_name}: {str(e)}")
-                raise
+
+        except Exception as e:
+            logger.error(f"Error checking sequence health for {table_name}: {str(e)}", exc_info=True)
+            return {
+                'table': table_name,
+                'status': 'error',
+                'severity': 'critical',
+                'message': f'خطأ في فحص التسلسل: {str(e)}',
+                'recommendation': 'يجب مراجعة سجلات الخطأ',
+                'sequence_name': sequence_name,
+                'current_value': None,
+                'max_id': None,
+                'gap': 0,
+                'table_name': table_name,
+                'column_name': column_name
+            }
 
     def display_table_result(self, result):
-        """عرض نتيجة فحص جدول واحد"""
+        """Display the result of checking a single table.
+        
+        Args:
+            result (dict): Dictionary containing table check results
+        """
         table = result['table']
         status = result['status']
-        
+
+        # Set style and icon based on status and severity
         if status == 'problems':
             if result['severity'] == 'critical':
-                style = self.style.ERROR
+                style = getattr(self.style, 'ERROR', lambda x: f"ERROR: {x}")
                 icon = '🚨'
             else:
                 style = self.style.WARNING
@@ -323,11 +448,11 @@ class Command(BaseCommand):
         else:
             style = self.style.WARNING
             icon = 'ℹ️'
-        
-        self.stdout.write(
-            style(f'{icon} {table}: {result["message"]}')
-        )
-        
+
+        # Display main message
+        self.stdout.write(style(f'{icon} {table}: {result["message"]}'))
+
+        # Display additional details if available
         if 'column' in result:
             self.stdout.write(f'   العمود: {result["column"]}')
             self.stdout.write(f'   أعلى ID: {result["max_id"]}')

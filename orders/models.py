@@ -428,7 +428,9 @@ class Order(models.Model):
     @property
     def is_fully_paid(self):
         """Check if order is fully paid"""
-        return self.paid_amount >= self.total_amount
+        if self.paid_amount is None or self.total_amount is None:
+            return False
+        return float(self.paid_amount) >= float(self.total_amount)
 @receiver(post_save, sender=Order)
 def order_post_save(sender, instance, created, **kwargs):
     """دالة تعمل بعد حفظ الطلب مباشرة"""

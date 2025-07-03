@@ -2,13 +2,19 @@
 إشارات النظام لإصلاح تسلسل ID تلقائياً
 """
 
-from django.db.models.signals import post_migrate, post_save
+import threading
+from django.db.models.signals import post_migrate
 from django.dispatch import receiver
 from django.core.management import call_command
 from django.conf import settings
 import logging
 import os
 from datetime import datetime, timedelta
+from django.apps import apps
+
+# Thread-safe initialization tracking
+_sequence_monitor_initialized = False
+_sequence_monitor_lock = threading.Lock()
 
 logger = logging.getLogger(__name__)
 
@@ -23,170 +29,135 @@ def auto_fix_sequences_after_migrate(sender, **kwargs):
         # تجنب التشغيل أثناء الاختبارات
         if hasattr(settings, 'TESTING') and settings.TESTING:
             return
-        
-        # فحص ما إذا كانت هناك حاجة لإصلاح التسلسل
-        from django.core.management import call_command
-        
+            
+        # Skip if this is not the main database
+        if kwargs.get('using') != 'default':
+            return
+
         logger.info("فحص تسلسل ID بعد الترحيل...")
         
         # استخدام الفحص التلقائي
         call_command('auto_fix_sequences', '--check-only', verbosity=0)
         
     except Exception as e:
-        logger.error(f"خطأ في إصلاح التسلسل بعد الترحيل: {str(e)}")
+        logger.error(f"خطأ في إصلاح التسلسل بعد الترحيل: {str(e)}", exc_info=True)
 
 
 def detect_backup_restore():
-    """
-    اكتشاف عملية استعادة نسخة احتياطية حديثة
-    """
+    """اكتشاف عملية استعادة نسخة احتياطية حديثة"""
     try:
         # فحص ملفات النسخ الاحتياطي الحديثة
         backup_dir = os.path.join(settings.BASE_DIR, 'backups')
         if not os.path.exists(backup_dir):
             return False
-        
+
         # البحث عن ملفات تم إنشاؤها في آخر ساعة
         current_time = datetime.now()
         recent_threshold = timedelta(hours=1)
-        
+
         for filename in os.listdir(backup_dir):
-            if filename.endswith('.json') or filename.endswith('.sql'):
+            if filename.endswith(('.json', '.sql')):
                 file_path = os.path.join(backup_dir, filename)
                 file_time = datetime.fromtimestamp(os.path.getmtime(file_path))
-                
+
                 if current_time - file_time < recent_threshold:
                     return True
-        
+
         return False
-        
+
     except Exception as e:
-        logger.error(f"خطأ في اكتشاف استعادة النسخة الاحتياطية: {str(e)}")
+        logger.error(
+            f"خطأ في اكتشاف استعادة النسخة الاحتياطية: {str(e)}",
+            exc_info=True
+        )
         return False
 
 
 def schedule_sequence_check():
-    """
-    جدولة فحص دوري لتسلسل ID
-    """
+    """جدولة فحص دوري لتسلسل ID"""
+    # Check if already scheduled
+    if hasattr(schedule_sequence_check, '_scheduled'):
+        return
+        
     try:
         # يمكن دمج هذا مع django-apscheduler إذا كان متاحاً
         if 'django_apscheduler' in settings.INSTALLED_APPS:
             from django_apscheduler.jobstores import DjangoJobStore
             from apscheduler.schedulers.background import BackgroundScheduler
+            from apscheduler.jobstores.base import ConflictingIdError
+            from apscheduler.executors.pool import ThreadPoolExecutor
             
-            scheduler = BackgroundScheduler()
-            scheduler.add_jobstore(DjangoJobStore(), "default")
-            
+            # Use a single scheduler instance
+            if not hasattr(schedule_sequence_check, '_scheduler'):
+                schedule_sequence_check._scheduler = BackgroundScheduler(
+                    jobstores={'default': DjangoJobStore()},
+                    executors={'default': ThreadPoolExecutor(1)},
+                    job_defaults={
+                        'coalesce': True,
+                        'max_instances': 1,
+                        'misfire_grace_time': 60 * 60  # 1 hour
+                    }
+                )
+                
+            scheduler = schedule_sequence_check._scheduler
+
             # جدولة فحص يومي
-            scheduler.add_job(
-                run_sequence_check,
-                'cron',
-                hour=3,  # 3 صباحاً
-                minute=0,
-                id='daily_sequence_check',
-                replace_existing=True
-            )
-            
-            scheduler.start()
-            logger.info("تم جدولة فحص تسلسل ID اليومي")
-            
+            try:
+                if not scheduler.running:
+                    scheduler.add_job(
+                        run_sequence_check,
+                        'cron',
+                        hour=3,  # 3 صباحاً
+                        minute=0,
+                        id='daily_sequence_check',
+                        replace_existing=True
+                    )
+                    scheduler.start()
+                    logger.info("تم جدولة فحص تسلسل ID اليومي")
+                else:
+                    logger.debug("المجدول يعمل بالفعل")
+                    
+            except ConflictingIdError:
+                logger.debug("مهمة الفحص الدوري موجودة مسبقاً")
+                if not scheduler.running:
+                    scheduler.start()
+                return
+
     except Exception as e:
-        logger.error(f"خطأ في جدولة فحص التسلسل: {str(e)}")
+        logger.error(
+            f"خطأ في جدولة فحص التسلسل: {str(e)}",
+            exc_info=True
+        )
 
 
 def run_sequence_check():
     """
     تشغيل فحص تسلسل ID
     """
+    if hasattr(run_sequence_check, '_running'):
+        logger.debug("الفحص الدوري يعمل حالياً")
+        return
+        
+    run_sequence_check._running = True
     try:
         logger.info("بدء الفحص الدوري لتسلسل ID...")
-        call_command('auto_fix_sequences', verbosity=0)
+        call_command('auto_fix_sequences', '--check-only', verbosity=0)
         logger.info("انتهى الفحص الدوري لتسلسل ID")
-        
     except Exception as e:
-        logger.error(f"خطأ في الفحص الدوري: {str(e)}")
+        logger.error(
+            f"خطأ في فحص التسلسل: {str(e)}",
+            exc_info=True
+        )
+    finally:
+        run_sequence_check._running = False
 
 
 class SequenceMonitor:
-    """
-    مراقب تسلسل ID
-    """
-    
-    @staticmethod
-    def check_and_fix_if_needed():
-        """
-        فحص وإصلاح التسلسل إذا لزم الأمر
-        """
-        try:
-            # فحص سريع للمشاكل الحرجة
-            from django.db import connection
-            
-            with connection.cursor() as cursor:
-                # فحص عينة من الجداول المهمة
-                critical_tables = [
-                    'customers_customer',
-                    'orders_order',
-                    'accounts_user',
-                    'inspections_inspection'
-                ]
-                
-                problems_found = False
-                
-                for table_name in critical_tables:
-                    try:
-                        # فحص وجود الجدول
-                        cursor.execute("""
-                            SELECT EXISTS (
-                                SELECT FROM information_schema.tables 
-                                WHERE table_name = %s
-                            )
-                        """, [table_name])
-                        
-                        if not cursor.fetchone()[0]:
-                            continue
-                        
-                        # فحص التسلسل
-                        cursor.execute(f"""
-                            SELECT
-                                COALESCE(MAX(id), 0) as max_id
-                            FROM {table_name}
-                        """)
-                        max_id_result = cursor.fetchone()
-                        max_id = max_id_result[0] if max_id_result else 0
+    """مراقب تسلسل ID"""
 
-                        # الحصول على قيمة التسلسل
-                        cursor.execute(f"""
-                            SELECT last_value
-                            FROM pg_sequences
-                            WHERE sequencename = '{table_name}_id_seq'
-                        """)
-
-                        seq_result = cursor.fetchone()
-                        seq_value = seq_result[0] if seq_result else 0
-
-                        if max_id >= seq_value:
-                            problems_found = True
-                            logger.warning(f"مشكلة في تسلسل {table_name}: max_id={max_id}, seq={seq_value}")
-                            break
-                    
-                    except Exception as e:
-                        logger.error(f"خطأ في فحص {table_name}: {str(e)}")
-                        continue
-                
-                if problems_found:
-                    logger.info("تم اكتشاف مشاكل في التسلسل - بدء الإصلاح...")
-                    call_command('fix_all_sequences', verbosity=0)
-                    logger.info("تم إصلاح مشاكل التسلسل")
-                
-        except Exception as e:
-            logger.error(f"خطأ في مراقب التسلسل: {str(e)}")
-    
-    @staticmethod
-    def log_sequence_status():
-        """
-        تسجيل حالة التسلسل
-        """
+    @classmethod
+    def check_and_fix_if_needed(cls):
+        """فحص وإصلاح التسلسل إذا لزم الأمر"""
         try:
             log_file = os.path.join(settings.BASE_DIR, 'media', 'sequence_monitor.log')
             timestamp = datetime.now().isoformat()
@@ -202,22 +173,71 @@ class SequenceMonitor:
 def initialize_sequence_monitor():
     """
     تهيئة مراقب التسلسل
+    يتم استدعاؤها بعد اكتمال تحميل التطبيقات
+    """
+    global _sequence_monitor_initialized
+    
+    # Prevent multiple initializations with thread safety
+    with _sequence_monitor_lock:
+        if _sequence_monitor_initialized:
+            logger.debug("مراقب التسلسل مهيأ مسبقاً")
+            return True
+            
+        # Mark as initialized early to prevent re-entry
+        _sequence_monitor_initialized = True
+        
+    try:
+        # التحقق من اكتمال تحميل التطبيقات
+        if not apps.ready:
+            logger.debug(
+                "تأجيل تهيئة مراقب التسلسل - التطبيقات غير جاهزة بعد"
+            )
+            return False
+
+        logger.debug("بدء تهيئة مراقب تسلسل ID...")
+
+        # فحص أولي مع معالجة الأخطاء
+        try:
+            SequenceMonitor.check_and_fix_if_needed()
+        except Exception as e:
+            logger.error(
+                f"خطأ في الفحص الأولي للتسلسل: {str(e)}",
+                exc_info=True
+            )
+
+        # جدولة الفحص الدوري
+        try:
+            schedule_sequence_check()
+        except Exception as e:
+            logger.error(
+                f"خطأ في جدولة الفحص الدوري: {str(e)}",
+                exc_info=True
+            )
+
+        logger.info("تم تهيئة مراقب تسلسل ID بنجاح")
+        _sequence_monitor_initialized = True
+        return True
+
+    except Exception as e:
+        logger.error(
+            f"خطأ في تهيئة مراقب التسلسل: {str(e)}",
+            exc_info=True
+        )
+        return False
+
+
+@receiver(post_migrate)
+def delayed_sequence_monitor_init(sender, **kwargs):
+    """
+    تأجيل تهيئة مراقب التسلسل حتى يكتمل تحميل التطبيقات
     """
     try:
-        # فحص أولي
-        SequenceMonitor.check_and_fix_if_needed()
-        
-        # جدولة الفحص الدوري
-        schedule_sequence_check()
-        
-        logger.info("تم تهيئة مراقب تسلسل ID")
-        
+        if not initialize_sequence_monitor():
+            # إعادة المحاولة بعد ثانية إذا فشلت المحاولة الأولى
+            from threading import Timer
+            Timer(1.0, initialize_sequence_monitor).start()
     except Exception as e:
-        logger.error(f"خطأ في تهيئة مراقب التسلسل: {str(e)}")
-
-
-# تشغيل التهيئة عند استيراد الملف
-try:
-    initialize_sequence_monitor()
-except Exception as e:
-    logger.error(f"خطأ في تشغيل مراقب التسلسل: {str(e)}")
+        logger.error(
+            f"خطأ في تشغيل مراقب التسلسل: {str(e)}",
+            exc_info=True
+        )
