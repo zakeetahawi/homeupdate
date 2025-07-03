@@ -151,7 +151,7 @@ class InstallationStep(models.Model):
             self.completed_at = None
             self.completed_by = None
         super().save(*args, **kwargs)
-class InstallationQualityCheck(models.Model):
+class InstallationQualityCheckOld(models.Model):
     """فحص جودة التركيب"""
     CRITERIA_CHOICES = [
         ('alignment', _('المحاذاة')),

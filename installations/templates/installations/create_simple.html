@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+
+{% block title %}إضافة تركيب جديد - نظام الخواجه{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card" style="border-color: var(--neutral);">
+                <div class="card-header" style="background-color: var(--secondary); color: white;">
+                    <h4 class="mb-0">
+                        <i class="fas fa-tools"></i> إضافة تركيب جديد
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                <h6>يرجى تصحيح الأخطاء التالية:</h6>
+                                <ul class="mb-0">
+                                    {% for field, errors in form.errors.items %}
+                                        {% for error in errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <!-- اختيار الطلب -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px;">
+                                    <i class="fas fa-file-alt"></i> اختيار الطلب (اختياري)
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label for="{{ form.order.id_for_label }}" class="form-label">
+                                    رقم الطلب
+                                </label>
+                                {{ form.order }}
+                                {% if form.order.errors %}
+                                    <div class="text-danger small">{{ form.order.errors.0 }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    اختر طلب موجود لملء البيانات تلقائياً، أو اتركه فارغاً لإدخال البيانات يدوياً
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- معلومات العميل -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px;">
+                                    <i class="fas fa-user"></i> معلومات العميل
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.customer_name.id_for_label }}" class="form-label">
+                                    اسم العميل <span class="text-danger">*</span>
+                                </label>
+                                {{ form.customer_name }}
+                                {% if form.customer_name.errors %}
+                                    <div class="text-danger small">{{ form.customer_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.customer_phone.id_for_label }}" class="form-label">
+                                    رقم الهاتف <span class="text-danger">*</span>
+                                </label>
+                                {{ form.customer_phone }}
+                                {% if form.customer_phone.errors %}
+                                    <div class="text-danger small">{{ form.customer_phone.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label for="{{ form.customer_address.id_for_label }}" class="form-label">
+                                    عنوان العميل <span class="text-danger">*</span>
+                                </label>
+                                {{ form.customer_address }}
+                                {% if form.customer_address.errors %}
+                                    <div class="text-danger small">{{ form.customer_address.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- تفاصيل التركيب -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px;">
+                                    <i class="fas fa-tools"></i> تفاصيل التركيب
+                                </h6>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="{{ form.windows_count.id_for_label }}" class="form-label">
+                                    عدد الشبابيك <span class="text-danger">*</span>
+                                </label>
+                                {{ form.windows_count }}
+                                {% if form.windows_count.errors %}
+                                    <div class="text-danger small">{{ form.windows_count.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.location_type.id_for_label }}" class="form-label">
+                                    نوع الموقع <span class="text-danger">*</span>
+                                </label>
+                                {{ form.location_type }}
+                                {% if form.location_type.errors %}
+                                    <div class="text-danger small">{{ form.location_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.priority.id_for_label }}" class="form-label">
+                                    الأولوية <span class="text-danger">*</span>
+                                </label>
+                                {{ form.priority }}
+                                {% if form.priority.errors %}
+                                    <div class="text-danger small">{{ form.priority.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.scheduled_date.id_for_label }}" class="form-label">
+                                    تاريخ التركيب المجدول <span class="text-danger">*</span>
+                                </label>
+                                {{ form.scheduled_date }}
+                                {% if form.scheduled_date.errors %}
+                                    <div class="text-danger small">{{ form.scheduled_date.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.team.id_for_label }}" class="form-label">
+                                    فريق التركيب
+                                </label>
+                                {{ form.team }}
+                                {% if form.team.errors %}
+                                    <div class="text-danger small">{{ form.team.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- معلومات إضافية -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px;">
+                                    <i class="fas fa-info-circle"></i> معلومات إضافية
+                                </h6>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.salesperson_name.id_for_label }}" class="form-label">
+                                    اسم البائع
+                                </label>
+                                {{ form.salesperson_name }}
+                                {% if form.salesperson_name.errors %}
+                                    <div class="text-danger small">{{ form.salesperson_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.branch_name.id_for_label }}" class="form-label">
+                                    اسم الفرع
+                                </label>
+                                {{ form.branch_name }}
+                                {% if form.branch_name.errors %}
+                                    <div class="text-danger small">{{ form.branch_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                    ملاحظات
+                                </label>
+                                {{ form.notes }}
+                                {% if form.notes.errors %}
+                                    <div class="text-danger small">{{ form.notes.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- أزرار الحفظ -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'installations_new:list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> إلغاء
+                            </a>
+                            <button type="submit" class="btn" style="background-color: var(--primary); color: white;">
+                                <i class="fas fa-save"></i> حفظ التركيب
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const orderSelect = document.getElementById('{{ form.order.id_for_label }}');
+    const customerNameField = document.getElementById('{{ form.customer_name.id_for_label }}');
+    const customerPhoneField = document.getElementById('{{ form.customer_phone.id_for_label }}');
+    const customerAddressField = document.getElementById('{{ form.customer_address.id_for_label }}');
+    const windowsCountField = document.getElementById('{{ form.windows_count.id_for_label }}');
+    const salespersonField = document.getElementById('{{ form.salesperson_name.id_for_label }}');
+    const branchField = document.getElementById('{{ form.branch_name.id_for_label }}');
+
+    if (orderSelect) {
+        orderSelect.addEventListener('change', function() {
+            const orderId = this.value;
+
+            if (orderId) {
+                // إظهار رسالة تحميل
+                showLoadingMessage();
+
+                // جلب بيانات الطلب
+                fetch(`/orders/api/order-details/${orderId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // ملء البيانات تلقائياً
+                            fillOrderData(data.order);
+                        } else {
+                            showErrorMessage('خطأ في جلب بيانات الطلب');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showErrorMessage('خطأ في الاتصال بالخادم');
+                    })
+                    .finally(() => {
+                        hideLoadingMessage();
+                    });
+            } else {
+                // مسح البيانات إذا لم يتم اختيار طلب
+                clearFields();
+            }
+        });
+    }
+
+    function fillOrderData(order) {
+        // ملء بيانات العميل
+        if (customerNameField) customerNameField.value = order.customer_name || '';
+        if (customerPhoneField) customerPhoneField.value = order.customer_phone || '';
+        if (customerAddressField) customerAddressField.value = order.customer_address || '';
+
+        // ملء عدد الشبابيك إذا كان متوفراً
+        if (windowsCountField && order.windows_count) {
+            windowsCountField.value = order.windows_count;
+        }
+
+        // ملء بيانات البائع والفرع
+        if (salespersonField) salespersonField.value = order.salesperson_name || '';
+        if (branchField) branchField.value = order.branch_name || '';
+
+        // إظهار رسالة نجاح
+        showSuccessMessage('تم ملء البيانات من الطلب بنجاح');
+    }
+
+    function clearFields() {
+        if (customerNameField) customerNameField.value = '';
+        if (customerPhoneField) customerPhoneField.value = '';
+        if (customerAddressField) customerAddressField.value = '';
+        if (windowsCountField) windowsCountField.value = '';
+        if (salespersonField) salespersonField.value = '';
+        if (branchField) branchField.value = '';
+    }
+
+    function showLoadingMessage() {
+        // يمكن إضافة spinner أو رسالة تحميل هنا
+        console.log('جاري تحميل البيانات...');
+    }
+
+    function hideLoadingMessage() {
+        console.log('تم الانتهاء من التحميل');
+    }
+
+    function showSuccessMessage(message) {
+        // إظهار رسالة نجاح
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-success alert-dismissible fade show';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        const container = document.querySelector('.card-body');
+        container.insertBefore(alert, container.firstChild);
+
+        // إخفاء الرسالة بعد 3 ثوان
+        setTimeout(() => {
+            alert.remove();
+        }, 3000);
+    }
+
+    function showErrorMessage(message) {
+        // إظهار رسالة خطأ
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        const container = document.querySelector('.card-body');
+        container.insertBefore(alert, container.firstChild);
+
+        // إخفاء الرسالة بعد 5 ثوان
+        setTimeout(() => {
+            alert.remove();
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

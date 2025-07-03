@@ -1,69 +1,335 @@
 {% extends 'base.html' %}
-{% load static %}
-{% load i18n %}
 
-{% block title %}{% trans "لوحة تحكم التركيبات - احترافية" %}{% endblock %}
+{% block title %}لوحة تحكم التركيبات - نظام الخواجه{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        border: 1px solid var(--neutral);
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        background: white;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-color: var(--primary);
+    }
+
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .stats-label {
+        color: var(--secondary);
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .stats-icon {
+        font-size: 3rem;
+        color: var(--primary);
+        opacity: 0.8;
+    }
+
+    .quick-actions {
+        background: white;
+        border: 1px solid var(--neutral);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 20px;
+    }
+
+    .action-btn {
+        margin: 0.25rem;
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Dashboard Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3"><i class="fas fa-tools"></i> لوحة تحكم التركيبات</h1>
-        <div>
-            <a href="{% url 'installations:installation_create' %}" class="btn btn-primary">
+<div class="container">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="mb-3">لوحة تحكم التركيبات</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'installations_new:create' %}" class="btn" style="background-color: var(--primary); color: white;">
                 <i class="fas fa-plus"></i> تركيب جديد
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <h6 style="color: var(--primary); margin-bottom: 1rem;">
+            <i class="fas fa-bolt"></i> الإجراءات السريعة
+        </h6>
+        <div class="d-flex flex-wrap">
+            <a href="{% url 'installations_new:create' %}" class="btn btn-primary action-btn">
+                <i class="fas fa-plus"></i> تركيب جديد
+            </a>
+            <a href="{% url 'installations_new:list' %}" class="btn btn-outline-primary action-btn">
+                <i class="fas fa-list"></i> قائمة التركيبات
+            </a>
+            <a href="{% url 'installations_new:calendar' %}" class="btn btn-outline-info action-btn">
+                <i class="fas fa-calendar"></i> التقويم الذكي
+            </a>
+            <a href="{% url 'installations_new:technician_analytics' %}" class="btn btn-outline-success action-btn">
+                <i class="fas fa-chart-line"></i> تحليل الفنيين
+            </a>
+            <a href="{% url 'installations_new:quick_edit' %}" class="btn btn-outline-warning action-btn">
+                <i class="fas fa-edit"></i> تعديل سريع
+            </a>
+            <a href="{% url 'factory:dashboard' %}" class="btn btn-outline-secondary action-btn">
+                <i class="fas fa-industry"></i> واجهة المصنع
             </a>
         </div>
     </div>
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-warning text-white mb-3">
-                <div class="card-body">
-                    <h6 class="card-title">التركيبات المعلقة</h6>
-                    <h2 class="mb-0">{{ pending_installations_count }}</h2>
-                </div>
-                <div class="card-footer d-flex justify-content-between align-items-center">
-                    <span>بانتظار الجدولة</span>
-                    <i class="fas fa-clock"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white mb-3">
-                <div class="card-body">
-                    <h6 class="card-title">التركيبات قيد التنفيذ</h6>
-                    <h2 class="mb-0">{{ in_progress_installations_count }}</h2>
-                </div>
-                <div class="card-footer d-flex justify-content-between align-items-center">
-                    <span>قيد التنفيذ</span>
-                    <i class="fas fa-cogs"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-danger text-white">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card" onclick="window.location.href='{% url 'installations_new:list' %}?status=pending'">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title">تركيبات متأخرة</h6>
-                            <h2 class="mb-0">{{ overdue_installations_count }}</h2>
+                            <div class="stats-number">{{ pending_installations_count|default:0 }}</div>
+                            <div class="stats-label">التركيبات المعلقة</div>
                         </div>
-                        <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
+                        <div class="stats-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card" onclick="window.location.href='{% url 'installations_new:list' %}?status=in_progress'">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title">تركيبات مكتملة</h6>
-                            <h2 class="mb-0">{{ completed_installations_count }}</h2>
+                            <div class="stats-number">{{ in_progress_installations_count|default:0 }}</div>
+                            <div class="stats-label">التركيبات قيد التنفيذ</div>
                         </div>
-                        <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                        <div class="stats-icon">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card" onclick="window.location.href='{% url 'installations_new:list' %}?overdue=true'">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stats-number">{{ overdue_installations_count|default:0 }}</div>
+                            <div class="stats-label">تركيبات متأخرة</div>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card" onclick="window.location.href='{% url 'installations_new:list' %}?status=completed'">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stats-number">{{ completed_installations_count|default:0 }}</div>
+                            <div class="stats-label">تركيبات مكتملة</div>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Installations Table -->
+    <div class="card mb-4" style="border-color: var(--neutral);">
+        <div class="card-header" style="background-color: var(--primary); color: white;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-tools"></i> جدول التركيبات
+                </h5>
+                <a href="{% url 'installations_new:list' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-external-link-alt"></i> عرض الكل
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if recent_installations %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead style="background-color: var(--light-accent); color: var(--dark-text);">
+                        <tr>
+                            <th>رقم التركيب</th>
+                            <th>اسم العميل</th>
+                            <th>رقم الهاتف</th>
+                            <th>عدد الشبابيك</th>
+                            <th>تاريخ التركيب</th>
+                            <th>الحالة</th>
+                            <th>الأولوية</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for installation in recent_installations %}
+                        <tr style="cursor: pointer;" onclick="window.location.href='{% url 'installations_new:detail' installation.id %}'">
+                            <td><strong>#{{ installation.id }}</strong></td>
+                            <td>{{ installation.customer_name }}</td>
+                            <td>{{ installation.customer_phone }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ installation.windows_count }}</span>
+                            </td>
+                            <td>{{ installation.scheduled_date|date:"Y-m-d" }}</td>
+                            <td>
+                                {% if installation.status == 'pending' %}
+                                    <span class="badge bg-warning">قيد الانتظار</span>
+                                {% elif installation.status == 'in_production' %}
+                                    <span class="badge bg-primary">قيد الإنتاج</span>
+                                {% elif installation.status == 'ready' %}
+                                    <span class="badge bg-success">جاهز للتركيب</span>
+                                {% elif installation.status == 'scheduled' %}
+                                    <span class="badge bg-info">مجدول</span>
+                                {% elif installation.status == 'in_progress' %}
+                                    <span class="badge bg-primary">قيد التنفيذ</span>
+                                {% elif installation.status == 'completed' %}
+                                    <span class="badge bg-success">مكتمل</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ installation.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if installation.priority == 'urgent' %}
+                                    <span class="badge bg-danger">عاجل</span>
+                                {% elif installation.priority == 'high' %}
+                                    <span class="badge bg-warning">عالي</span>
+                                {% elif installation.priority == 'low' %}
+                                    <span class="badge bg-secondary">منخفض</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">عادي</span>
+                                {% endif %}
+                            </td>
+                            <td onclick="event.stopPropagation();">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'installations_new:detail' installation.id %}"
+                                       class="btn btn-sm btn-outline-primary" title="عرض">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'installations_new:edit' installation.id %}"
+                                       class="btn btn-sm btn-outline-secondary" title="تعديل">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-tools fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">لا توجد تركيبات</h5>
+                    <p class="text-muted">ابدأ بإنشاء تركيب جديد</p>
+                    <a href="{% url 'installations_new:create' %}" class="btn" style="background-color: var(--primary); color: white;">
+                        <i class="fas fa-plus"></i> إنشاء تركيب جديد
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Analytics Dashboard -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-chart-bar text-success"></i> تحليلات الأداء
+                    </h5>
+                    <ul class="nav nav-pills mb-3" id="analytics-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="daily-tab" data-bs-toggle="pill" data-bs-target="#daily" type="button" role="tab">
+                                يومي
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="weekly-tab" data-bs-toggle="pill" data-bs-target="#weekly" type="button" role="tab">
+                                أسبوعي
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="monthly-tab" data-bs-toggle="pill" data-bs-target="#monthly" type="button" role="tab">
+                                شهري
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="analytics-content">
+                        <div class="tab-pane fade show active" id="daily" role="tabpanel">
+                            <canvas id="dailyChart" height="100"></canvas>
+                        </div>
+                        <div class="tab-pane fade" id="weekly" role="tabpanel">
+                            <canvas id="weeklyChart" height="100"></canvas>
+                        </div>
+                        <div class="tab-pane fade" id="monthly" role="tabpanel">
+                            <canvas id="monthlyChart" height="100"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="dashboard-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-bell text-warning"></i> الإنذارات النشطة
+                    </h5>
+                    <div id="alerts-container">
+                        {% if active_alerts %}
+                            {% for alert in active_alerts %}
+                            <div class="alert-item {{ alert.severity }}">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">{{ alert.title }}</h6>
+                                        <p class="mb-0 small">{{ alert.message }}</p>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="resolveAlert({{ alert.id }})">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-check-circle fa-3x mb-3"></i>
+                                <p>لا توجد إنذارات نشطة</p>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -119,7 +385,7 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-sm btn-info">
+                                        <a href="{% url 'installations_new:detail' installation.id %}" class="btn btn-sm btn-info">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </td>
@@ -194,8 +460,10 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // بيانات الرسوم البيانية
     const chartData = {
         pendingCount: JSON.parse(document.getElementById('pendingCount').textContent),
         completedCount: JSON.parse(document.getElementById('completedCount').textContent),
@@ -203,6 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
         overdueCount: JSON.parse(document.getElementById('overdueCount').textContent)
     };
 
+    // رسم بياني دائري لحالات التركيب
     const ctx = document.getElementById('installationStats').getContext('2d');
     new Chart(ctx, {
         type: 'doughnut',
@@ -216,18 +485,237 @@ document.addEventListener('DOMContentLoaded', function() {
                     chartData.overdueCount
                 ],
                 backgroundColor: [
-                    '#ffc107',  // warning for pending
-                    '#198754',  // success for completed
-                    '#0d6efd',  // primary for in_progress
-                    '#dc3545'   // danger for overdue
-                ]
+                    '#ffc107',
+                    '#198754',
+                    '#0d6efd',
+                    '#dc3545'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
         }
     });
+
+    // رسم بياني يومي
+    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+    new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'],
+            datasets: [{
+                label: 'التركيبات المكتملة',
+                data: [12, 8, 15, 10, 13, 9, 6],
+                borderColor: '#198754',
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'التركيبات المجدولة',
+                data: [15, 12, 18, 14, 16, 11, 8],
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // رسم بياني أسبوعي
+    const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+    new Chart(weeklyCtx, {
+        type: 'bar',
+        data: {
+            labels: ['الأسبوع 1', 'الأسبوع 2', 'الأسبوع 3', 'الأسبوع 4'],
+            datasets: [{
+                label: 'التركيبات المكتملة',
+                data: [65, 78, 82, 71],
+                backgroundColor: '#198754'
+            }, {
+                label: 'التركيبات المجدولة',
+                data: [85, 92, 95, 88],
+                backgroundColor: '#0d6efd'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // رسم بياني شهري
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'line',
+        data: {
+            labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+            datasets: [{
+                label: 'إجمالي التركيبات',
+                data: [320, 285, 410, 375, 445, 390],
+                borderColor: '#6f42c1',
+                backgroundColor: 'rgba(111, 66, 193, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // تحديث البيانات كل 30 ثانية
+    setInterval(updateDashboard, 30000);
+});
+
+// دوال التفاعل
+function generateReport() {
+    // إظهار رسالة تحميل
+    Swal.fire({
+        title: 'جاري إنشاء التقرير...',
+        text: 'يرجى الانتظار',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // محاكاة إنشاء التقرير
+    setTimeout(() => {
+        Swal.fire({
+            icon: 'success',
+            title: 'تم إنشاء التقرير بنجاح!',
+            text: 'سيتم تحميل التقرير قريباً',
+            showConfirmButton: false,
+            timer: 2000
+        });
+    }, 2000);
+}
+
+function resolveAlert(alertId) {
+    fetch(`/installations/api/resolve-alert/${alertId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // إزالة الإنذار من الواجهة
+            document.querySelector(`[data-alert-id="${alertId}"]`).remove();
+
+            // إظهار رسالة نجاح
+            showToast('تم حل الإنذار بنجاح', 'success');
+        } else {
+            showToast('خطأ في حل الإنذار', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('خطأ في الاتصال', 'error');
+    });
+}
+
+function updateDashboard() {
+    fetch('/installations/api/dashboard-analytics/')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // تحديث الإحصائيات
+            updateStatistics(data.analytics);
+
+            // تحديث الإنذارات
+            updateAlerts(data.alerts);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating dashboard:', error);
+    });
+}
+
+function updateStatistics(analytics) {
+    // تحديث أرقام البطاقات الإحصائية
+    document.querySelector('.stat-card h2').textContent = analytics.today_count || 0;
+    // يمكن إضافة المزيد من التحديثات هنا
+}
+
+function updateAlerts(alerts) {
+    const alertsContainer = document.getElementById('alerts-container');
+    if (alerts && alerts.length > 0) {
+        alertsContainer.innerHTML = alerts.map(alert => `
+            <div class="alert-item ${alert.severity}" data-alert-id="${alert.id}">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="mb-1">${alert.title}</h6>
+                        <p class="mb-0 small">${alert.message}</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="resolveAlert(${alert.id})">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        alertsContainer.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-check-circle fa-3x mb-3"></i>
+                <p>لا توجد إنذارات نشطة</p>
+            </div>
+        `;
+    }
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    // إزالة التوست بعد إخفائه
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+    });
+}
+
+// تفعيل التلميحات
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
 });
 </script>
 {% endblock %}

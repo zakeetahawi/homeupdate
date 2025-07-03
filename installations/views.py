@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 
 from accounts.mixins import DepartmentRequiredMixin, PermissionRequiredMixin, BranchAccessMixin
-from .models import Installation, InstallationQualityCheck, InstallationStep, InstallationTeam
+from .models import Installation, InstallationQualityCheckOld, InstallationStep, InstallationTeam
 from .forms import InstallationForm, InstallationStepForm, InstallationQualityCheckForm
 
 class InstallationDashboardView(LoginRequiredMixin, DepartmentRequiredMixin, TemplateView):

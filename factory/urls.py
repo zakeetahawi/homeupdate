@@ -4,8 +4,9 @@ from . import views
 app_name = 'factory'
 
 urlpatterns = [
-    # Main page as factory list
-    path('', views.factory_list, name='factory_list'),
+    # Main page as factory dashboard
+    path('', views.factory_dashboard, name='dashboard'),
+    path('list/', views.factory_list, name='factory_list'),
     
     # Production Lines
     path('production-lines/', views.production_line_list, name='production_line_list'),

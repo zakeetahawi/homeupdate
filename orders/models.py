@@ -198,11 +198,11 @@ class Order(models.Model):
                 self.selected_types = selected_types
             # Contract number validation
             if 'tailoring' in selected_types and not self.contract_number:
-                raise models.ValidationError('رقم العقد مطلوب لخدمة التفصيل')
+                raise ValidationError('رقم العقد مطلوب لخدمة التفصيل')
             # Invoice number validation - required for all types except inspection alone
             if not (len(selected_types) == 1 and selected_types[0] == 'inspection'):
                 if not self.invoice_number:
-                    raise models.ValidationError('رقم الفاتورة مطلوب')
+                    raise ValidationError('رقم الفاتورة مطلوب')
             # Set legacy fields for backward compatibility
             has_products = any(t in ['fabric', 'accessory'] for t in selected_types)
             has_services = any(t in ['installation', 'inspection', 'transport', 'tailoring'] for t in selected_types)

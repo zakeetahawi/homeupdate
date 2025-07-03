@@ -525,3 +525,74 @@ def update_order_status(request, order_id):
             messages.error(request, 'حالة الطلب غير صالحة.')
 
     return redirect('orders:order_detail', pk=order_id)
+
+
+@login_required
+def get_order_details_api(request, order_id):
+    """
+    API endpoint لجلب تفاصيل الطلب للتركيبات
+    """
+    try:
+        order = get_object_or_404(Order, pk=order_id)
+
+        # جلب بيانات العميل
+        customer_data = {
+            'name': order.customer.name,
+            'phone': order.customer.phone,
+            'address': getattr(order.customer, 'address', ''),
+        }
+
+        # جلب بيانات البائع والفرع
+        salesperson_name = ''
+        branch_name = ''
+
+        if order.salesperson:
+            salesperson_name = order.salesperson.name
+            if order.salesperson.branch:
+                branch_name = order.salesperson.branch.name
+        elif order.branch:
+            branch_name = order.branch.name
+
+        # محاولة استخراج عدد الشبابيك من الملاحظات أو العناصر
+        windows_count = 0
+
+        # البحث في ملاحظات الطلب عن عدد الشبابيك
+        if order.notes:
+            import re
+            windows_match = re.search(r'(\d+)\s*شباك', order.notes)
+            if windows_match:
+                windows_count = int(windows_match.group(1))
+
+        # إذا لم نجد في الملاحظات، نحسب من عناصر الطلب
+        if windows_count == 0:
+            order_items = order.items.all()
+            for item in order_items:
+                if 'شباك' in item.product.name.lower() or 'نافذة' in item.product.name.lower():
+                    windows_count += item.quantity
+
+        response_data = {
+            'success': True,
+            'order': {
+                'id': order.id,
+                'order_number': order.order_number,
+                'customer_name': customer_data['name'],
+                'customer_phone': customer_data['phone'],
+                'customer_address': customer_data['address'],
+                'salesperson_name': salesperson_name,
+                'branch_name': branch_name,
+                'windows_count': windows_count,
+                'total_amount': float(order.total_amount),
+                'delivery_type': order.delivery_type,
+                'delivery_address': order.delivery_address,
+                'notes': order.notes,
+                'created_at': order.created_at.strftime('%Y-%m-%d'),
+            }
+        }
+
+        return JsonResponse(response_data)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)

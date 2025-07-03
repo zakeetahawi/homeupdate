@@ -1,30 +1,154 @@
 {% extends 'base.html' %}
-{% block title %}لوحة تحكم المصنع{% endblock %}
+{% block title %}لوحة تحكم المصنع المتقدمة{% endblock %}
+
+{% block extra_css %}
+<style>
+    .factory-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .factory-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .factory-card.production {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .factory-card.orders {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .factory-card.issues {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+
+    .factory-card.performance {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .quick-action-btn {
+        border-radius: 10px;
+        padding: 12px 20px;
+        margin: 5px;
+        transition: all 0.3s ease;
+        border: none;
+        font-weight: 600;
+    }
+
+    .quick-action-btn:hover {
+        transform: scale(1.05);
+    }
+
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 600;
+    }
+
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-in-progress { background: #d1ecf1; color: #0c5460; }
+    .status-completed { background: #d4edda; color: #155724; }
+    .status-stalled { background: #f8d7da; color: #721c24; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <h2 class="my-4">لوحة تحكم المصنع</h2>
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-0">
+                <i class="fas fa-industry text-primary"></i> لوحة تحكم المصنع
+            </h1>
+            <p class="text-muted mb-0">نظام إدارة الإنتاج المتقدم</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'factory:production_order_create' %}" class="btn btn-primary quick-action-btn">
+                <i class="fas fa-plus"></i> طلب إنتاج جديد
+            </a>
+            <a href="{% url 'factory:production_line_list' %}" class="btn btn-info quick-action-btn">
+                <i class="fas fa-cogs"></i> خطوط الإنتاج
+            </a>
+            <a href="{% url 'factory:production_order_list' %}" class="btn btn-warning quick-action-btn">
+                <i class="fas fa-list"></i> طلبات الإنتاج
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card text-center">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="factory-card">
                 <div class="card-body">
-                    <h5 class="card-title">إجمالي خطوط الإنتاج</h5>
-                    <p class="display-6">{{ total_lines }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">خطوط الإنتاج النشطة</h6>
+                            <h2 class="mb-0 fw-bold">{{ active_production_lines|default:0 }}</h2>
+                            <small class="opacity-75">من أصل {{ total_production_lines|default:0 }}</small>
+                        </div>
+                        <div class="text-end">
+                            <i class="fas fa-cogs fa-3x opacity-50"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card text-center">
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="factory-card orders">
                 <div class="card-body">
-                    <h5 class="card-title">إجمالي الطلبات الإنتاجية</h5>
-                    <p class="display-6">{{ total_orders }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">طلبات قيد التنفيذ</h6>
+                            <h2 class="mb-0 fw-bold">{{ in_progress_orders|default:0 }}</h2>
+                            <small class="opacity-75">من أصل {{ total_orders|default:0 }}</small>
+                        </div>
+                        <div class="text-end">
+                            <i class="fas fa-tasks fa-3x opacity-50"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card text-center">
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="factory-card issues">
                 <div class="card-body">
-                    <h5 class="card-title">طلبات قيد التنفيذ</h5>
-                    <p class="display-6 text-warning">{{ pending_orders }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">المشاكل النشطة</h6>
+                            <h2 class="mb-0 fw-bold">{{ active_issues|default:0 }}</h2>
+                            <small class="opacity-75">تحتاج حل</small>
+                        </div>
+                        <div class="text-end">
+                            <i class="fas fa-exclamation-triangle fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="factory-card performance">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">معدل الإنجاز</h6>
+                            <h2 class="mb-0 fw-bold">{{ completion_rate|default:0 }}%</h2>
+                            <small class="opacity-75">هذا الشهر</small>
+                        </div>
+                        <div class="text-end">
+                            <i class="fas fa-chart-line fa-3x opacity-50"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

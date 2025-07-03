@@ -17,6 +17,81 @@ from .forms import (
 from accounts.utils import send_notification
 
 @login_required
+def factory_dashboard(request):
+    """
+    لوحة تحكم المصنع المتقدمة
+    """
+    # إحصائيات عامة
+    total_production_lines = ProductionLine.objects.count()
+    active_production_lines = ProductionLine.objects.filter(is_active=True).count()
+
+    # طلبات الإنتاج
+    total_orders = ProductionOrder.objects.count()
+    pending_orders = ProductionOrder.objects.filter(status='pending').count()
+    in_progress_orders = ProductionOrder.objects.filter(status='in_progress').count()
+    completed_orders = ProductionOrder.objects.filter(status='completed').count()
+    stalled_orders = ProductionOrder.objects.filter(status='stalled').count()
+
+    # طلبات اليوم
+    today = timezone.now().date()
+    today_orders = ProductionOrder.objects.filter(
+        created_at__date=today
+    ).count()
+
+    # طلبات هذا الأسبوع
+    week_start = today - timedelta(days=today.weekday())
+    week_orders = ProductionOrder.objects.filter(
+        created_at__date__gte=week_start
+    ).count()
+
+    # المشاكل النشطة
+    active_issues = ProductionIssue.objects.filter(
+        resolved=False
+    ).count()
+
+    # أحدث الطلبات
+    recent_orders = ProductionOrder.objects.select_related(
+        'order', 'production_line'
+    ).order_by('-created_at')[:10]
+
+    # أحدث المشاكل
+    recent_issues = ProductionIssue.objects.select_related(
+        'production_order', 'reported_by'
+    ).order_by('-reported_at')[:5]
+
+    # خطوط الإنتاج النشطة
+    active_lines = ProductionLine.objects.filter(
+        is_active=True
+    ).annotate(
+        active_orders_count=Count('production_orders', filter=Q(production_orders__status='in_progress'))
+    )
+
+    # إحصائيات الأداء
+    completion_rate = 0
+    if total_orders > 0:
+        completion_rate = (completed_orders / total_orders) * 100
+
+    context = {
+        'title': 'لوحة تحكم المصنع',
+        'total_production_lines': total_production_lines,
+        'active_production_lines': active_production_lines,
+        'total_orders': total_orders,
+        'pending_orders': pending_orders,
+        'in_progress_orders': in_progress_orders,
+        'completed_orders': completed_orders,
+        'stalled_orders': stalled_orders,
+        'today_orders': today_orders,
+        'week_orders': week_orders,
+        'active_issues': active_issues,
+        'recent_orders': recent_orders,
+        'recent_issues': recent_issues,
+        'active_lines': active_lines,
+        'completion_rate': round(completion_rate, 1),
+    }
+
+    return render(request, 'factory/dashboard.html', context)
+
+@login_required
 def factory_list(request):
     """
     View for displaying the factory dashboard
@@ -87,7 +162,7 @@ def production_line_detail(request, pk):
     View for displaying production line details
     """
     production_line = get_object_or_404(ProductionLine, pk=pk)
-    production_orders = production_line.production_orders.all().order_by('-created_at')
+    production_orders = production_line.production_orders.all().order_by('-start_date')
     
     context = {
         'production_line': production_line,
@@ -209,11 +284,29 @@ def production_order_detail(request, pk):
     View for displaying production order details
     """
     production_order = get_object_or_404(ProductionOrder, pk=pk)
-    stages = production_order.stages.all().order_by('start_date')
-    issues = production_order.issues.all().order_by('-reported_at')
-    
+
+    # الحصول على عناصر الطلب
+    order_items = []
+    if production_order.order:
+        try:
+            order_items = production_order.order.items.all().select_related('product')
+        except:
+            order_items = []
+
+    # الحصول على المراحل والمشاكل (إذا كانت موجودة)
+    stages = []
+    issues = []
+    try:
+        if hasattr(production_order, 'stages'):
+            stages = production_order.stages.all().order_by('start_date')
+        if hasattr(production_order, 'issues'):
+            issues = production_order.issues.all().order_by('-reported_at')
+    except:
+        pass
+
     context = {
         'production_order': production_order,
+        'order_items': order_items,
         'stages': stages,
         'issues': issues,
         'title': f'أمر الإنتاج: {production_order.order.order_number}',

@@ -1,0 +1,483 @@
+{% extends 'base.html' %}
+
+{% block title %}إضافة تركيب جديد - نظام الخواجه{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card" style="border-color: var(--neutral);">
+                <div class="card-header" style="background-color: var(--secondary); color: white;">
+                    <h4 class="mb-0">
+                        <i class="fas fa-tools"></i> إضافة تركيب جديد
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                <h6>يرجى تصحيح الأخطاء التالية:</h6>
+                                <ul class="mb-0">
+                                    {% for field, errors in form.errors.items %}
+                                        {% for error in errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <!-- معلومات العميل -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px;">
+                                    <i class="fas fa-user"></i> معلومات العميل
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.customer_name.id_for_label }}" class="form-label">
+                                    اسم العميل <span class="text-danger">*</span>
+                                </label>
+                                {{ form.customer_name }}
+                                {% if form.customer_name.errors %}
+                                    <div class="text-danger small">{{ form.customer_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.customer_phone.id_for_label }}" class="form-label">
+                                    رقم الهاتف <span class="text-danger">*</span>
+                                </label>
+                                {{ form.customer_phone }}
+                                {% if form.customer_phone.errors %}
+                                    <div class="text-danger small">{{ form.customer_phone.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label for="{{ form.customer_address.id_for_label }}" class="form-label">
+                                    عنوان العميل <span class="text-danger">*</span>
+                                </label>
+                                {{ form.customer_address }}
+                                {% if form.customer_address.errors %}
+                                    <div class="text-danger small">{{ form.customer_address.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+        color: white;
+    }
+
+    .step::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 100%;
+        width: 20px;
+        height: 2px;
+        background: #e9ecef;
+        transform: translateY(-50%);
+    }
+
+    .step:last-child::after {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-plus text-primary"></i> إنشاء تركيب جديد
+            </h1>
+            <p class="text-muted mb-0">إضافة تركيب جديد للنظام</p>
+        </div>
+        <div>
+            <a href="{% url 'installations_new:list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list"></i> قائمة التركيبات
+            </a>
+            <a href="{% url 'installations_new:dashboard' %}" class="btn btn-outline-primary">
+                <i class="fas fa-home"></i> لوحة التحكم
+            </a>
+        </div>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step active">1</div>
+        <div class="step">2</div>
+        <div class="step">3</div>
+        <div class="step">4</div>
+    </div>
+
+    <!-- Form -->
+    <form method="POST" id="installationForm">
+        {% csrf_token %}
+
+        <!-- Customer Information -->
+        <div class="form-section">
+            <h5><i class="fas fa-user"></i> معلومات العميل</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">اسم العميل <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control required-field" name="customer_name"
+                           id="customer_name" list="customers_list" autocomplete="off" required>
+                    <datalist id="customers_list">
+                        {% for customer in customers_data %}
+                        <option value="{{ customer.name }}"
+                                data-phone="{{ customer.phone }}"
+                                data-address="{{ customer.address }}"
+                                data-email="{{ customer.email }}"
+                                data-is-vip="{{ customer.is_vip }}"
+                                data-last-order="{{ customer.last_order_number }}">
+                            {{ customer.name }} - {{ customer.phone }}
+                        </option>
+                        {% endfor %}
+                    </datalist>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">رقم الهاتف <span class="text-danger">*</span></label>
+                    <input type="tel" class="form-control required-field" name="customer_phone"
+                           id="customer_phone" required>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <label class="form-label">العنوان <span class="text-danger">*</span></label>
+                    <textarea class="form-control required-field" name="customer_address"
+                              id="customer_address" rows="2" required></textarea>
+                </div>
+            </div>
+
+            <!-- Customer Info Display -->
+            <div class="row mt-3" id="customer_info" style="display: none;">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-user"></i> معلومات العميل</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small><strong>آخر طلب:</strong> <span id="last_order_info">-</span></small>
+                            </div>
+                            <div class="col-md-6">
+                                <small><strong>نوع العميل:</strong> <span id="customer_type">عادي</span></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Installation Details -->
+        <div class="form-section">
+            <h5><i class="fas fa-tools"></i> تفاصيل التركيب</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label">عدد الشبابيك <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control required-field" name="windows_count" min="1" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">الأولوية</label>
+                    <select class="form-select" name="priority">
+                        <option value="normal">عادي</option>
+                        <option value="high">عالي</option>
+                        <option value="urgent">عاجل</option>
+                        <option value="low">منخفض</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">نوع الموقع</label>
+                    <select class="form-select" name="location_type">
+                        <option value="residential">سكني</option>
+                        <option value="commercial">تجاري</option>
+                        <option value="industrial">صناعي</option>
+                        <option value="office">مكتب</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scheduling -->
+        <div class="form-section">
+            <h5><i class="fas fa-calendar"></i> الجدولة</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label">تاريخ التركيب المطلوب</label>
+                    <input type="date" class="form-control" name="scheduled_date"
+                           min="{{ today|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">وقت البداية المفضل</label>
+                    <input type="time" class="form-control" name="scheduled_time_start">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">الفريق المطلوب</label>
+                    <select class="form-select" name="team">
+                        <option value="">اختيار تلقائي</option>
+                        {% for team in teams %}
+                        <option value="{{ team.id }}">{{ team.name }} - {{ team.branch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="form-section">
+            <h5><i class="fas fa-info-circle"></i> معلومات إضافية</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">اسم البائع</label>
+                    <input type="text" class="form-control" name="salesperson_name"
+                           value="{{ user.get_full_name }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">رقم الطلب (اختياري)</label>
+                    <input type="text" class="form-control" name="order_reference">
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <label class="form-label">ملاحظات خاصة</label>
+                    <textarea class="form-control" name="special_notes" rows="3"
+                              placeholder="أي ملاحظات خاصة بالتركيب..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'installations_new:list' %}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> إلغاء
+            </a>
+            <div>
+                <button type="button" class="btn btn-outline-primary" onclick="saveDraft()">
+                    <i class="fas fa-save"></i> حفظ كمسودة
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check"></i> إنشاء التركيب
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تحديث مؤشر الخطوات
+    updateStepIndicator();
+
+    // التحقق من صحة النموذج
+    setupFormValidation();
+
+    // تحديث الفرق المتاحة عند تغيير التاريخ
+    document.querySelector('[name="scheduled_date"]').addEventListener('change', updateAvailableTeams);
+
+    // إعداد ملء البيانات التلقائي للعملاء
+    setupCustomerAutoFill();
+});
+
+function setupCustomerAutoFill() {
+    const customerNameInput = document.getElementById('customer_name');
+    const customerPhoneInput = document.getElementById('customer_phone');
+    const customerAddressInput = document.getElementById('customer_address');
+    const customerInfo = document.getElementById('customer_info');
+    const lastOrderInfo = document.getElementById('last_order_info');
+    const customerType = document.getElementById('customer_type');
+
+    customerNameInput.addEventListener('input', function() {
+        const selectedName = this.value;
+        const options = document.querySelectorAll('#customers_list option');
+
+        // البحث عن العميل المطابق
+        for (let option of options) {
+            if (option.value === selectedName) {
+                // ملء البيانات تلقائياً
+                customerPhoneInput.value = option.dataset.phone || '';
+                customerAddressInput.value = option.dataset.address || '';
+
+                // عرض معلومات العميل
+                if (option.dataset.lastOrder) {
+                    lastOrderInfo.textContent = option.dataset.lastOrder;
+                } else {
+                    lastOrderInfo.textContent = 'لا يوجد طلبات سابقة';
+                }
+
+                customerType.textContent = option.dataset.isVip === 'True' ? 'VIP' : 'عادي';
+                customerInfo.style.display = 'block';
+
+                // تحديث الأولوية إذا كان VIP
+                if (option.dataset.isVip === 'True') {
+                    document.querySelector('[name="priority"]').value = 'high';
+                }
+
+                break;
+            }
+        }
+
+        // إخفاء معلومات العميل إذا لم يتم العثور على مطابقة
+        if (!selectedName) {
+            customerInfo.style.display = 'none';
+            customerPhoneInput.value = '';
+            customerAddressInput.value = '';
+        }
+    });
+
+    // البحث بالهاتف أيضاً
+    customerPhoneInput.addEventListener('input', function() {
+        const enteredPhone = this.value;
+        const options = document.querySelectorAll('#customers_list option');
+
+        for (let option of options) {
+            if (option.dataset.phone === enteredPhone) {
+                customerNameInput.value = option.value;
+                customerAddressInput.value = option.dataset.address || '';
+
+                // عرض معلومات العميل
+                if (option.dataset.lastOrder) {
+                    lastOrderInfo.textContent = option.dataset.lastOrder;
+                } else {
+                    lastOrderInfo.textContent = 'لا يوجد طلبات سابقة';
+                }
+
+                customerType.textContent = option.dataset.isVip === 'True' ? 'VIP' : 'عادي';
+                customerInfo.style.display = 'block';
+
+                if (option.dataset.isVip === 'True') {
+                    document.querySelector('[name="priority"]').value = 'high';
+                }
+
+                break;
+            }
+        }
+    });
+}
+
+function updateStepIndicator() {
+    const form = document.getElementById('installationForm');
+    const steps = document.querySelectorAll('.step');
+
+    // تحديد الخطوة الحالية بناءً على الحقول المملوءة
+    let currentStep = 1;
+
+    // فحص معلومات العميل
+    const customerFields = ['customer_name', 'customer_phone', 'customer_address'];
+    if (customerFields.every(field => form.querySelector(`[name="${field}"]`).value)) {
+        steps[0].classList.add('completed');
+        steps[0].classList.remove('active');
+        currentStep = 2;
+    }
+
+    // فحص تفاصيل التركيب
+    if (form.querySelector('[name="windows_count"]').value) {
+        steps[1].classList.add('completed');
+        steps[1].classList.remove('active');
+        currentStep = 3;
+    }
+
+    // تحديث الخطوة النشطة
+    steps[currentStep - 1].classList.add('active');
+}
+
+function setupFormValidation() {
+    const form = document.getElementById('installationForm');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (validateForm()) {
+            // إظهار رسالة تحميل
+            showLoadingMessage();
+
+            // إرسال النموذج
+            this.submit();
+        }
+    });
+}
+
+function validateForm() {
+    const requiredFields = document.querySelectorAll('.required-field');
+    let isValid = true;
+
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            field.classList.remove('is-invalid');
+        }
+    });
+
+    if (!isValid) {
+        alert('يرجى ملء جميع الحقول المطلوبة');
+    }
+
+    return isValid;
+}
+
+function updateAvailableTeams() {
+    const selectedDate = document.querySelector('[name="scheduled_date"]').value;
+    const teamSelect = document.querySelector('[name="team"]');
+
+    if (selectedDate) {
+        fetch(`/installations/api/available-teams/?date=${selectedDate}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // تحديث قائمة الفرق
+                teamSelect.innerHTML = '<option value="">اختيار تلقائي</option>';
+                data.teams.forEach(team => {
+                    const option = document.createElement('option');
+                    option.value = team.id;
+                    option.textContent = `${team.name} - متاح (${team.available_capacity} تركيب)`;
+                    teamSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching teams:', error);
+        });
+    }
+}
+
+function saveDraft() {
+    const formData = new FormData(document.getElementById('installationForm'));
+    formData.append('save_as_draft', 'true');
+
+    fetch('{% url "installations_new:create" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('تم حفظ المسودة بنجاح');
+        } else {
+            alert('خطأ في حفظ المسودة');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving draft:', error);
+        alert('حدث خطأ في حفظ المسودة');
+    });
+}
+
+function showLoadingMessage() {
+    const submitBtn = document.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإنشاء...';
+    submitBtn.disabled = true;
+}
+</script>
+{% endblock %}

@@ -67,7 +67,8 @@ urlpatterns = [
     path('orders/', include('orders.urls', namespace='orders')),
     path('reports/', include('reports.urls', namespace='reports')),
     path('inspections/', include('inspections.urls', namespace='inspections')),
-    path('installations/', include('installations.urls', namespace='installations')),
+    path('installations/', include('installations.urls_new', namespace='installations_new')),
+    # path('installations-old/', include('installations.urls', namespace='installations')),
     # إعادة توجيه من المسار القديم إلى المسار الجديد
     path('data_management/', views.data_management_redirect, name='data_management_redirect'),
     path('database/', views.data_management_redirect, name='database_redirect'),
