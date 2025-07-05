@@ -35,7 +35,7 @@ urlpatterns = [
          name='order_delete'),
     
     # API Endpoints
-    path('api/orders/<int:pk>/status/', 
+    path('api/orders/<int:pk>/update_status/', 
          views.update_order_status, 
          name='api_update_order_status'),
     
@@ -49,6 +49,20 @@ urlpatterns = [
              views.print_manufacturing_order
          ), 
          name='order_print'),
+    
+    # Dashboard
+    path('dashboard/', 
+         permission_required('manufacturing.view_manufacturingorder')(
+             views.DashboardView.as_view()
+         ), 
+         name='dashboard'),
+    
+    # Dashboard Data API
+    path('api/dashboard/data/', 
+         permission_required('manufacturing.view_manufacturingorder')(
+             views.dashboard_data
+         ), 
+         name='dashboard_data'),
     
     # Create from Order
     path('from-order/<int:order_id>/', 

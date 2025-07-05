@@ -1,17 +1,19 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
 from weasyprint import HTML
-from django.http import HttpResponse
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.http import HttpResponse, JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
-from django.db.models import Q
+from django.db.models import Q, Count, Sum, F, Case, When, Value, IntegerField
 from django.utils import timezone
+from datetime import timedelta
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
+from django.db.models.functions import TruncDay, TruncMonth, ExtractMonth, ExtractYear
+import json
 
 from .models import ManufacturingOrder, ManufacturingOrderItem
 from orders.models import Order
@@ -21,15 +23,18 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
     model = ManufacturingOrder
     template_name = 'manufacturing/manufacturingorder_list.html'
     context_object_name = 'manufacturing_orders'
-    paginate_by = 20
+    paginate_by = 25
     permission_required = 'manufacturing.view_manufacturingorder'
     
     def get_queryset(self):
-        queryset = ManufacturingOrder.objects.select_related('order').order_by('-created_at')
+        # Optimize the query by selecting related fields that exist
+        queryset = ManufacturingOrder.objects.select_related(
+            'order',  # This is the only direct foreign key in the model
+            'order__customer'  # Access customer through order
+        ).order_by('-order_date')
         
         # Apply filters
         status = self.request.GET.get('status')
-        order_type = self.request.GET.get('order_type')
         search = self.request.GET.get('search')
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
@@ -37,34 +42,67 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         if status:
             queryset = queryset.filter(status=status)
             
-        if order_type:
-            queryset = queryset.filter(order_type=order_type)
-            
         if search:
+            # Search in relevant fields including order and customer fields
             queryset = queryset.filter(
                 Q(order__id__icontains=search) |
                 Q(contract_number__icontains=search) |
                 Q(invoice_number__icontains=search) |
-                Q(exit_permit_number__icontains=search)
+                Q(exit_permit_number__icontains=search) |
+                Q(order__customer__name__icontains=search) |
+                Q(order__customer__phone__icontains=search) |
+                Q(notes__icontains=search)
             )
             
         if date_from:
             queryset = queryset.filter(order_date__gte=date_from)
             
         if date_to:
-            queryset = queryset.filter(order_date__lte=date_to)
+            # Add one day to include the entire end date
+            import datetime
+            end_date = datetime.datetime.strptime(date_to, '%Y-%m-%d') + datetime.timedelta(days=1)
+            queryset = queryset.filter(order_date__lt=end_date)
             
         return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        from django.db.models import Count, Q
+        from django.contrib.auth import get_user_model
+        
+        # Get all manufacturing orders for statistics
+        all_orders = self.get_queryset().model.objects.all()
+        
+        # Prepare status counts for the dashboard
+        status_counts = all_orders.values('status').annotate(count=Count('status'))
+        status_data = {item['status']: item['count'] for item in status_counts}
+        
+        # Add dashboard statistics
+        context.update({
+            'total_orders': all_orders.count(),
+            'pending_orders': status_data.get('pending', 0),
+            'in_progress_orders': status_data.get('in_progress', 0),
+            'completed_orders': status_data.get('completed', 0),
+            'delivered_orders': status_data.get('delivered', 0),
+            'cancelled_orders': status_data.get('cancelled', 0),
+            'ready_for_installation_orders': status_data.get('ready_for_installation', 0),
+            'status_choices': dict(ManufacturingOrder.STATUS_CHOICES),
+            'order_types': dict(ManufacturingOrder.ORDER_TYPE_CHOICES),
+        })
         
         # Add filter values to context
-        context['status_filter'] = self.request.GET.get('status', '')
-        context['order_type_filter'] = self.request.GET.get('order_type', '')
-        context['search_query'] = self.request.GET.get('search', '')
-        context['date_from'] = self.request.GET.get('date_from', '')
-        context['date_to'] = self.request.GET.get('date_to', '')
+        context.update({
+            'status_filter': self.request.GET.get('status', ''),
+            'search_query': self.request.GET.get('search', ''),
+            'date_from': self.request.GET.get('date_from', ''),
+            'date_to': self.request.GET.get('date_to', ''),
+            'branch_filter': self.request.GET.get('branch', ''),
+            'sales_person_filter': self.request.GET.get('sales_person', ''),
+        })
+        
+        # Add current date for date picker max date
+        from datetime import date
+        context['today'] = date.today().isoformat()
         
         return context
 
@@ -122,38 +160,144 @@ class ManufacturingOrderDeleteView(LoginRequiredMixin, PermissionRequiredMixin, 
         return super().delete(request, *args, **kwargs)
 
 
+import logging
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.utils import timezone
+from django.shortcuts import get_object_or_404
+from .models import ManufacturingOrder
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
 @require_http_methods(["POST"])
 @csrf_exempt
 def update_order_status(request, pk):
-    if not request.user.has_perm('manufacturing.change_manufacturingorder'):
-        return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية لتحديث حالة الطلب'}, status=403)
+    """
+    API endpoint to update the status of a manufacturing order.
+    Expected POST data: {'status': 'new_status'}
+    """
+    logger.info(f"[update_order_status] Starting update for order {pk}")
+    logger.debug(f"[update_order_status] Request user: {request.user}")
+    logger.debug(f"[update_order_status] POST data: {request.POST}")
     
     try:
-        order = get_object_or_404(ManufacturingOrder, pk=pk)
-        new_status = request.POST.get('status')
+        # Check authentication
+        if not request.user.is_authenticated:
+            logger.warning("[update_order_status] Unauthenticated access attempt")
+            return JsonResponse({
+                'success': False, 
+                'error': 'يجب تسجيل الدخول أولاً'
+            }, status=401)
+            
+        # Check permission
+        if not request.user.has_perm('manufacturing.change_manufacturingorder'):
+            logger.warning(f"[update_order_status] Permission denied for user {request.user}")
+            return JsonResponse({
+                'success': False, 
+                'error': 'ليس لديك صلاحية لتحديث حالة الطلب'
+            }, status=403)
         
-        if not new_status or new_status not in dict(ManufacturingOrder.STATUS_CHOICES):
-            return JsonResponse({'success': False, 'error': 'حالة غير صالحة'}, status=400)
+        # Get the order
+        try:
+            order = ManufacturingOrder.objects.get(pk=pk)
+            logger.debug(f"[update_order_status] Found order: {order}")
+        except ManufacturingOrder.DoesNotExist:
+            logger.error(f"[update_order_status] Order {pk} not found")
+            return JsonResponse({
+                'success': False, 
+                'error': 'لم يتم العثور على أمر التصنيع'
+            }, status=404)
+        
+        # Get and validate status
+        new_status = request.POST.get('status')
+        logger.debug(f"[update_order_status] Requested status: {new_status}")
+        
+        if not new_status:
+            logger.warning("[update_order_status] No status provided")
+            return JsonResponse({
+                'success': False, 
+                'error': 'لم يتم تحديد الحالة الجديدة'
+            }, status=400)
+            
+        valid_statuses = dict(ManufacturingOrder.STATUS_CHOICES).keys()
+        if new_status not in valid_statuses:
+            logger.warning(f"[update_order_status] Invalid status: {new_status}. Valid statuses: {list(valid_statuses)}")
+            return JsonResponse({
+                'success': False, 
+                'error': f'حالة غير صالحة. الحالات المتاحة: {list(valid_statuses)}',
+                'received_status': new_status,
+                'valid_statuses': list(valid_statuses)
+            }, status=400)
+        
+        # Update order status
+        old_status = order.status
+        logger.info(f"[update_order_status] Updating order {pk} status from {old_status} to {new_status}")
         
         order.status = new_status
+        order.updated_by = request.user
         order.updated_at = timezone.now()
-        order.save()
         
-        # If status is changed to ready_for_installation, update the related installation if exists
-        if new_status == 'ready_for_installation' and hasattr(order, 'installation'):
-            installation = order.installation
-            installation.status = 'ready'
-            installation.ready_date = timezone.now()
-            installation.save()
+        # Set completion date if status is completed or ready for installation
+        if new_status in ['completed', 'ready_for_installation'] and not order.completion_date:
+            order.completion_date = timezone.now()
+            logger.debug(f"[update_order_status] Set completion date to {order.completion_date}")
         
-        return JsonResponse({
+        # Save the order
+        try:
+            order.save(update_fields=['status', 'updated_by', 'updated_at', 'completion_date'])
+            logger.info(f"[update_order_status] Successfully updated order {pk}")
+        except Exception as e:
+            logger.error(f"[update_order_status] Error saving order {pk}: {str(e)}", exc_info=True)
+            return JsonResponse({
+                'success': False,
+                'error': 'حدث خطأ أثناء حفظ التغييرات',
+                'details': str(e),
+                'exception_type': e.__class__.__name__
+            }, status=500)
+        
+        # Log the status change in Django admin
+        try:
+            from django.contrib.admin.models import LogEntry, CHANGE
+            from django.contrib.contenttypes.models import ContentType
+            
+            LogEntry.objects.log_action(
+                user_id=request.user.id,
+                content_type_id=ContentType.objects.get_for_model(order).pk,
+                object_id=order.id,
+                object_repr=str(order),
+                action_flag=CHANGE,
+                change_message=f'تم تغيير الحالة من {dict(ManufacturingOrder.STATUS_CHOICES).get(old_status, "")} إلى {dict(ManufacturingOrder.STATUS_CHOICES).get(new_status, "")}'
+            )
+            logger.debug(f"[update_order_status] Added admin log entry for order {pk}")
+        except Exception as e:
+            logger.error(f"[update_order_status] Error adding admin log entry: {str(e)}", exc_info=True)
+            # Continue even if admin logging fails
+        
+        # Prepare success response
+        response_data = {
             'success': True,
+            'status': order.status,
             'status_display': order.get_status_display(),
-            'updated_at': order.updated_at.strftime('%Y-%m-%d %H:%M')
-        })
+            'updated_at': order.updated_at.strftime('%Y-%m-%d %H:%M'),
+            'message': 'تم تحديث حالة الطلب بنجاح'
+        }
+        logger.info(f"[update_order_status] Success response: {response_data}")
+        
+        return JsonResponse(response_data)
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.critical(f"[update_order_status] Unexpected error: {str(e)}\n{error_trace}")
+        
+        return JsonResponse({
+            'success': False, 
+            'error': 'حدث خطأ غير متوقع',
+            'exception_type': e.__class__.__name__,
+            'details': str(e)
+        }, status=500)
 
 
 @require_http_methods(["POST"])
@@ -247,3 +391,135 @@ def print_manufacturing_order(request, pk):
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'filename=manufacturing_order_{manufacturing_order.id}.pdf'
     return response
+
+
+class DashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    template_name = 'manufacturing/dashboard.html'
+    permission_required = 'manufacturing.view_manufacturingorder'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get date range for the dashboard (last 30 days)
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=30)
+        
+        # Get all manufacturing orders
+        orders = ManufacturingOrder.objects.filter(
+            order_date__date__range=(start_date, end_date)
+        ).select_related('order', 'order__customer')
+        
+        # Calculate status counts
+        status_counts = orders.values('status').annotate(
+            count=Count('status')
+        ).order_by('status')
+        
+        # Prepare status data for the chart
+        status_data = {
+            'labels': [],
+            'data': [],
+            'colors': [],
+        }
+        
+        status_colors = {
+            'pending': '#ffc107',     # Yellow
+            'in_progress': '#0dcaf0', # Blue
+            'completed': '#198754',   # Green
+            'delivered': '#0d6efd',   # Primary blue
+            'cancelled': '#dc3545',   # Red
+        }
+        
+        for status in status_counts:
+            status_display = dict(ManufacturingOrder.STATUS_CHOICES).get(status['status'], status['status'])
+            status_data['labels'].append(status_display)
+            status_data['data'].append(status['count'])
+            status_data['colors'].append(status_colors.get(status['status'], '#6c757d'))
+        
+        # Get monthly order counts
+        monthly_orders = orders.annotate(
+            month=ExtractMonth('order_date'),
+            year=ExtractYear('order_date')
+        ).values('year', 'month').annotate(
+            total=Count('id')
+        ).order_by('year', 'month')
+        
+        # Prepare monthly data for the chart
+        monthly_data = {
+            'labels': [],
+            'data': [],
+        }
+        
+        # Get month names in Arabic
+        month_names = [
+            'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+            'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+        ]
+        
+        for item in monthly_orders:
+            month_name = f"{month_names[item['month']-1]} {item['year']}"
+            monthly_data['labels'].append(month_name)
+            monthly_data['data'].append(item['total'])
+        
+        # Get recent orders
+        recent_orders = orders.order_by('-order_date')[:5]
+        
+        # Get orders by type
+        orders_by_type = orders.values('order_type').annotate(
+            count=Count('id'),
+            total=Sum('order__total_amount')
+        )
+        
+        context.update({
+            'status_data': json.dumps(status_data),
+            'monthly_data': json.dumps(monthly_data),
+            'recent_orders': recent_orders,
+            'orders_by_type': orders_by_type,
+            'total_orders': orders.count(),
+            'pending_orders': orders.filter(status='pending').count(),
+            'in_progress_orders': orders.filter(status='in_progress').count(),
+            'completed_orders': orders.filter(status='completed').count(),
+            'delivered_orders': orders.filter(status='delivered').count(),
+            'cancelled_orders': orders.filter(status='cancelled').count(),
+            'total_revenue': sum(order.order.total_amount for order in orders if order.order and order.order.total_amount),
+            'start_date': start_date,
+            'end_date': end_date,
+        })
+        
+        return context
+
+
+def dashboard_data(request):
+    """
+    API endpoint to get dashboard data for AJAX requests
+    """
+    if not request.user.has_perm('manufacturing.view_manufacturingorder'):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    # Get date range from request or use default (last 30 days)
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
+    
+    # Get all manufacturing orders
+    orders = ManufacturingOrder.objects.filter(
+        order_date__date__range=(start_date, end_date)
+    ).select_related('order', 'order__customer')
+    
+    # Calculate status counts
+    status_counts = orders.values('status').annotate(
+        count=Count('status')
+    ).order_by('status')
+    
+    # Prepare response data
+    data = {
+        'success': True,
+        'total_orders': orders.count(),
+        'pending_orders': orders.filter(status='pending').count(),
+        'in_progress_orders': orders.filter(status='in_progress').count(),
+        'completed_orders': orders.filter(status='completed').count(),
+        'delivered_orders': orders.filter(status='delivered').count(),
+        'cancelled_orders': orders.filter(status='cancelled').count(),
+        'status_data': {item['status']: item['count'] for item in status_counts},
+        'last_updated': timezone.now().isoformat(),
+    }
+    
+    return JsonResponse(data)

@@ -97,6 +97,13 @@ class ManufacturingOrder(models.Model):
         verbose_name='ملاحظات'
     )
     
+    completion_date = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='تاريخ الانتهاء',
+        help_text='يتم تعبئته تلقائياً عند اكتمال التصنيع أو جاهزية المنتج للتركيب'
+    )
+    
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='تاريخ الإنشاء'
