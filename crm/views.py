@@ -10,11 +10,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from customers.models import Customer
 from orders.models import Order
-from factory.models import ProductionOrder
 from inventory.models import Product
 from inspections.models import Inspection
-from installations.models import Installation
 from accounts.models import CompanyInfo, ContactFormSettings, AboutPageSettings, FooterSettings
+from manufacturing.models import ManufacturingOrder, ManufacturingOrderItem
 import re
 
 from django.http import HttpResponse, FileResponse, Http404
@@ -30,18 +29,18 @@ def home(request):
     # Get counts for dashboard
     customers_count = Customer.objects.count()
     orders_count = Order.objects.count()
-    production_count = ProductionOrder.objects.count()
+    production_count = ManufacturingOrder.objects.count()
     products_count = Product.objects.count()
 
     # Get recent orders
     recent_orders = Order.objects.select_related('customer').order_by('-order_date')[:5]
 
-    # Get active production orders
-    production_orders = ProductionOrder.objects.select_related(
-        'order', 'production_line'
+    # Get active manufacturing orders
+    production_orders = ManufacturingOrder.objects.select_related(
+        'order'
     ).exclude(
         status__in=['completed', 'cancelled']
-    ).order_by('estimated_completion')[:5]    # Get low stock products
+    ).order_by('expected_delivery_date')[:5]    # Get low stock products
     low_stock_products = [
         product for product in Product.objects.all()
         if product.current_stock > 0 and product.current_stock <= product.minimum_stock
@@ -194,16 +193,12 @@ def dashboard_api(request):
             'low_stock': Product.objects.filter(current_stock__lte=F('minimum_stock')).count()
         },
         'production': {
-            'active_orders': ProductionOrder.objects.exclude(status__in=['completed', 'cancelled']).count(),
-            'completed_today': ProductionOrder.objects.filter(completed_at__date=today).count()
+            'active_orders': ManufacturingOrder.objects.exclude(status__in=['completed', 'cancelled']).count(),
+            'completed_today': ManufacturingOrder.objects.filter(completed_at__date=today).count()
         },
         'inspections': {
             'pending': Inspection.objects.filter(status='pending').count(),
             'completed': Inspection.objects.filter(status='completed').count()
-        },
-        'installations': {
-            'pending': Installation.objects.filter(status='pending').count(),
-            'completed': Installation.objects.filter(status='completed').count()
         }
     }
     return Response(data)

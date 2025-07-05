@@ -550,7 +550,6 @@ from django.db.models import Sum, Count
 from .models import Product
 from orders.models import Order
 from customers.models import Customer
-from installations.models import Installation
 from accounts.models import ActivityLog
 
 @api_view(['GET'])
@@ -563,8 +562,7 @@ def dashboard_view(request):
             'totalOrders': Order.objects.count(),
             'inventoryValue': Product.objects.aggregate(
                 total=Sum('price', default=0))['total'],
-            'pendingInstallations': Installation.objects.filter(
-                status='pending').count(),
+            'pendingInstallations': 0,
         }
 
         # Get recent activities

@@ -57,11 +57,10 @@ INSTALLED_APPS = [
     'crm',  # إضافة تطبيق CRM لأوامر إدارة التسلسل
     'accounts',
     'customers',
-    'factory',
     'inspections',
-    'installations',
     'inventory',
     'orders',
+    'manufacturing',
     'reports',
     'odoo_db_manager.apps.OdooDbManagerConfig',  # تطبيق إدارة قواعد البيانات على طراز أودو
     'corsheaders',

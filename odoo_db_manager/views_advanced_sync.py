@@ -279,7 +279,7 @@ def mapping_create(request):
                     auto_create_customers=request.POST.get('auto_create_customers') == 'on',
                     auto_create_orders=request.POST.get('auto_create_orders') == 'on',
                     auto_create_inspections=request.POST.get('auto_create_inspections') == 'on',
-                    auto_create_installations=request.POST.get('auto_create_installations') == 'on',
+                    # Removed auto_create_installations parameter
                     update_existing=request.POST.get('update_existing') == 'on',
                     enable_reverse_sync=request.POST.get('enable_reverse_sync') == 'on',
                     # القيم الافتراضية
@@ -402,7 +402,7 @@ def mapping_edit(request, mapping_id):
             mapping.auto_create_customers = request.POST.get('auto_create_customers') == 'on'
             mapping.auto_create_orders = request.POST.get('auto_create_orders') == 'on'
             mapping.auto_create_inspections = request.POST.get('auto_create_inspections') == 'on'
-            mapping.auto_create_installations = request.POST.get('auto_create_installations') == 'on'
+            # Removed auto_create_installations assignment
             mapping.update_existing = request.POST.get('update_existing') == 'on'
             mapping.enable_reverse_sync = request.POST.get('enable_reverse_sync') == 'on'
 

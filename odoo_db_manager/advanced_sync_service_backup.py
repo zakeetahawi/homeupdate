@@ -23,7 +23,7 @@ from customers.models import Customer, CustomerCategory
 from orders.models import Order
 from orders.extended_models import ExtendedOrder
 from inspections.models import Inspection
-from installations.models import Installation, InstallationTeam
+# Removed installations app import - will be reimplemented with new models
 from accounts.models import Branch, Salesperson
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class AdvancedSyncService:
             'orders_created': 0,
             'orders_updated': 0,
             'inspections_created': 0,
-            'installations_created': 0,
+            # Removed installations stats - will be reimplemented
             'errors': [],
         }
 
@@ -163,8 +163,9 @@ class AdvancedSyncService:
                             except ValueError:
                                 self.stats['warnings'].append(f"الصف {sheet_row_number}: تنسيق تاريخ المعاينة غير صحيح {inspection_date}")
 
-                    if self.mapping.auto_create_installations and order:
-                        self._process_installation(mapped_data, customer, order, sheet_row_number, task)
+                    # Removed installation processing - will be reimplemented with new models
+                    # TODO: Remove this comment and the following line once the new models are implemented
+                    # self._process_installation(mapped_data, customer, order, sheet_row_number, task)
 
                     self.stats['processed_rows'] += 1
                     self.stats['successful_rows'] += 1
@@ -530,7 +531,7 @@ class AdvancedSyncService:
                 if team:
                     installation_data['team'] = team
             installation = Installation.objects.create(**installation_data)
-            self.stats['installations_created'] += 1
+            # Removed installations counter - will be reimplemented
             return installation
         except Exception as e:
             self.stats['errors'].append(f"خطأ في معالجة التركيب في الصف {row_index}: {str(e)}")

@@ -1,23 +1,19 @@
 #!/usr/bin/env python
 """
-إنشاء سير عمل بسيط من العميل إلى التركيب
+ملف قديم لإنشاء سير عمل بسيط
+
+ملاحظة: تم إيقاف استخدام هذا الملف بعد إعادة هيكلة نظام المصنع والتركيبات.
+سيتم تحديثه لاحقاً ليعمل مع النماذج الجديدة.
 """
-import os
-import sys
-import django
-from datetime import date, timedelta
-from decimal import Decimal
+print("⚠️  هذا الملف قديم ولم يعد يعمل مع الإصدار الحالي من النظام.")
+print("⚠️  سيتم تحديثه لاحقاً ليعمل مع نظام المصنع والتركيبات الجديد.")
+print("⚠️  لم يتم إنشاء أي بيانات.")
 
-# إعداد Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
-django.setup()
+def main():
+    pass
 
-from django.contrib.auth import get_user_model
-from customers.models import Customer
-from orders.models import Order, OrderItem
-from installations.models_new import InstallationNew
-
-User = get_user_model()
+if __name__ == '__main__':
+    main()
 
 def create_simple_workflow():
     print("🚀 إنشاء سير عمل بسيط...")

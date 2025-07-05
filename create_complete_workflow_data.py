@@ -1,23 +1,19 @@
 #!/usr/bin/env python
 """
-إنشاء بيانات اختبارية شاملة من العميل إلى التركيب
+ملف قديم لإنشاء بيانات اختبارية شاملة
+
+ملاحظة: تم إيقاف استخدام هذا الملف بعد إعادة هيكلة نظام المصنع والتركيبات.
+سيتم تحديثه لاحقاً ليعمل مع النماذج الجديدة.
 """
-import os
-import sys
-import django
-from datetime import date, timedelta
-from decimal import Decimal
+print("⚠️  هذا الملف قديم ولم يعد يعمل مع الإصدار الحالي من النظام.")
+print("⚠️  سيتم تحديثه لاحقاً ليعمل مع نظام المصنع والتركيبات الجديد.")
+print("⚠️  لم يتم إنشاء أي بيانات.")
 
-# إعداد Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
-django.setup()
+def main():
+    pass
 
-from django.contrib.auth import get_user_model
-from customers.models import Customer, Branch
-from orders.models import Order, OrderItem
-from accounts.models import Salesperson
-from installations.models_new import InstallationNew, InstallationTeamNew
-from factory.models import ProductionOrder, ProductionLine
+if __name__ == '__main__':
+    main()
 from inventory.models import Product, Category
 
 User = get_user_model()

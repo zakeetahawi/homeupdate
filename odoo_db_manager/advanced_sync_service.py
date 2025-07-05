@@ -21,7 +21,7 @@ from customers.models import Customer, CustomerCategory
 from orders.models import Order
 from orders.extended_models import ExtendedOrder
 from inspections.models import Inspection
-from installations.models import Installation, InstallationTeam
+# Removed installations app import - will be reimplemented with new models
 from accounts.models import Branch, Salesperson
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ class AdvancedSyncService:
             'orders_created': 0,
             'orders_updated': 0,
             'inspections_created': 0,
-            'installations_created': 0,
+            # Removed installations stats - will be reimplemented
             'errors': [],
             'warnings': []
         }
@@ -261,14 +261,15 @@ class AdvancedSyncService:
                     except Exception as e:
                         logger.error(f"Failed to update extended order branch: {str(e)}", exc_info=True)
 
+                # Removed installation processing - will be reimplemented with new models
                 # 5. معالجة التركيب إذا كان مفعلاً
-                if self.mapping.auto_create_installations and order:
-                    try:
-                        self._process_installation(mapped_data, customer, order, sheet_row_number, task)
-                    except Exception as e:
-                        error_msg = f"خطأ في معالجة التركيب للصف {sheet_row_number}: {str(e)}"
-                        logger.error(error_msg)
-                        self.stats['warnings'].append(error_msg)
+                # if self.mapping.auto_create_installations and order:
+                #     try:
+                #         self._process_installation(mapped_data, customer, order, sheet_row_number, task)
+                #     except Exception as e:
+                #         error_msg = f"خطأ في معالجة التركيب للصف {sheet_row_number}: {str(e)}"
+                #         logger.error(error_msg)
+                #         self.stats['warnings'].append(error_msg)
 
                 self.stats['processed_rows'] += 1
                 self.stats['successful_rows'] += 1
@@ -752,7 +753,7 @@ class AdvancedSyncService:
                 installation_data['status'] = status_mapping.get(installation_status, 'pending')
 
             installation = Installation.objects.create(**installation_data)
-            self.stats['installations_created'] += 1
+            # Removed installations counter - will be reimplemented
             return installation
             
         except Exception as e:

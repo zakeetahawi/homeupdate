@@ -1,0 +1,126 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static manufacturing_tags %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'manufacturing/css/manufacturing.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="manufacturing-container">
+    <div class="header">
+        <h1>تفاصيل أمر التصنيع #{{ manufacturingorder.order.order_number }}</h1>
+        <div class="action-buttons">
+            <a href="{% url 'manufacturing:order_print' manufacturingorder.pk %}" class="button" target="_blank">
+                <i class="fas fa-print"></i> طباعة
+            </a>
+            <a href="{% url 'manufacturing:order_update' manufacturingorder.pk %}" class="button">
+                <i class="fas fa-edit"></i> تعديل
+            </a>
+            <a href="{% url 'manufacturing:order_list' %}" class="button">
+                <i class="fas fa-arrow-right"></i> العودة للقائمة
+            </a>
+        </div>
+    </div>
+
+    <div class="order-details">
+        <div class="detail-section">
+            <h2>معلومات الطلب</h2>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">رقم الطلب:</span>
+                    <span class="detail-value">{{ manufacturingorder.order.order_number }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">تاريخ الطلب:</span>
+                    <span class="detail-value">{{ manufacturingorder.order_date|date:"Y/m/d" }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">نوع الطلب:</span>
+                    <span class="detail-value">{{ manufacturingorder.get_order_type_display }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">الحالة:</span>
+                    <span class="status-badge status-{{ manufacturingorder.status }}">
+                        {{ manufacturingorder.get_status_display }}
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">رقم العقد:</span>
+                    <span class="detail-value">{{ manufacturingorder.contract_number|default:"-" }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">رقم الفاتورة:</span>
+                    <span class="detail-value">{{ manufacturingorder.invoice_number|default:"-" }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">تاريخ التسليم المتوقع:</span>
+                    <span class="detail-value">{{ manufacturingorder.expected_delivery_date|date:"Y/m/d"|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h2>بيانات العميل</h2>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">اسم العميل:</span>
+                    <span class="detail-value">{{ manufacturingorder.order.customer.name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">رقم الهاتف:</span>
+                    <span class="detail-value">{{ manufacturingorder.order.customer.phone }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">العنوان:</span>
+                    <span class="detail-value">{{ manufacturingorder.order.customer.address|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h2>المنتجات</h2>
+            <div class="table-responsive">
+                <table class="manufacturing-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المنتج</th>
+                            <th>الكمية</th>
+                            <th>الملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in manufacturingorder.items.all %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ item.product.name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.notes|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if manufacturingorder.notes %}
+        <div class="detail-section">
+            <h2>ملاحظات</h2>
+            <div class="notes">
+                {{ manufacturingorder.notes|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script>
+    // Add any JavaScript functionality needed for the detail page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add any initialization code here
+    });
+</script>
+{% endblock %}

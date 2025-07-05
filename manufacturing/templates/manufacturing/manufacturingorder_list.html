@@ -1,0 +1,184 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'manufacturing/css/manufacturing.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="manufacturing-container">
+    <div class="header">
+        <h1>أوامر التصنيع</h1>
+        <a href="{% url 'admin:manufacturing_manufacturingorder_add' %}" class="add-button">
+            <i class="fas fa-plus"></i> إضافة أمر تصنيع جديد
+        </a>
+    </div>
+    
+    <div class="filters">
+        <div class="filter-group">
+            <label for="status-filter">الحالة:</label>
+            <select id="status-filter" class="form-control">
+                <option value="">الكل</option>
+                <option value="pending">قيد الانتظار</option>
+                <option value="in_progress">قيد التنفيذ</option>
+                <option value="ready_for_installation">جاهز للتركيب</option>
+                <option value="completed">مكتمل</option>
+                <option value="cancelled">ملغى</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="type-filter">النوع:</label>
+            <select id="type-filter" class="form-control">
+                <option value="">الكل</option>
+                <option value="installation">تركيب</option>
+                <option value="detail">تفصيل</option>
+                <option value="accessory">اكسسوار</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="date-from">من تاريخ:</label>
+            <input type="date" id="date-from" class="form-control">
+        </div>
+        
+        <div class="filter-group">
+            <label for="date-to">إلى تاريخ:</label>
+            <input type="date" id="date-to" class="form-control">
+        </div>
+        
+        <div class="filter-group">
+            <input type="text" id="search" class="form-control" placeholder="ابحث برقم الطلب أو العقد...">
+            <button id="search-btn" class="btn btn-primary">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="manufacturing-table">
+            <thead>
+                <tr>
+                    <th>رقم الأمر</th>
+                    <th>رقم الطلب</th>
+                    <th>رقم العقد</th>
+                    <th>نوع الطلب</th>
+                    <th>الحالة</th>
+                    <th>تاريخ الطلب</th>
+                    <th>تاريخ التسليم المتوقع</th>
+                    <th>إذن الخروج</th>
+                    <th>العمليات</th>
+                </tr>
+            </thead>
+            <tbody id="manufacturing-orders-body">
+                {% for order in manufacturing_orders %}
+                <tr data-status="{{ order.status }}" data-type="{{ order.order_type }}">
+                    <td>#{{ order.id }}</td>
+                    <td>
+                        {% if order.order %}
+                        <a href="{% url 'admin:orders_order_change' order.order.id %}" target="_blank">
+                            #{{ order.order.id }}
+                        </a>
+                        {% else %}-
+                        {% endif %}
+                    </td>
+                    <td>{{ order.contract_number|default:"-" }}</td>
+                    <td>
+                        <span class="badge {{ order.order_type }}">
+                            {{ order.get_order_type_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="status-dropdown" data-order-id="{{ order.id }}">
+                            <span class="status-badge {{ order.status }}">
+                                {{ order.get_status_display }}
+                            </span>
+                            <select class="status-select" data-order-id="{{ order.id }}">
+                                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
+                                <option value="in_progress" {% if order.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
+                                <option value="ready_for_installation" {% if order.status == 'ready_for_installation' %}selected{% endif %}>جاهز للتركيب</option>
+                                <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                                <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>ملغى</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td>{{ order.order_date|date:"Y-m-d" }}</td>
+                    <td>{{ order.expected_delivery_date|date:"Y-m-d" }}</td>
+                    <td>
+                        {% if order.exit_permit_number %}
+                            {{ order.exit_permit_number }}
+                        {% else %}
+                            <button class="btn btn-sm btn-outline-secondary add-exit-permit" data-order-id="{{ order.id }}">
+                                إضافة
+                            </button>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        <a href="{% url 'admin:manufacturing_manufacturingorder_change' order.id %}" 
+                           class="btn btn-sm btn-info" 
+                           title="تعديل">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{% url 'manufacturing:order_detail' order.id %}" 
+                           class="btn btn-sm btn-primary" 
+                           title="عرض التفاصيل"
+                           target="_blank">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{% url 'manufacturing:print_order' order.id %}" 
+                           class="btn btn-sm btn-secondary" 
+                           title="طباعة"
+                           target="_blank">
+                            <i class="fas fa-print"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="pagination">
+        <span class="step-links">
+            {% if page_obj.has_previous %}
+                <a href="?page=1">&laquo; الأولى</a>
+                <a href="?page={{ page_obj.previous_page_number }}">السابق</a>
+            {% endif %}
+
+            <span class="current">
+                صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}.
+            </span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">التالي</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}">الأخيرة &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+</div>
+
+<!-- Exit Permit Modal -->
+<div id="exitPermitModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>إضافة/تعديل إذن خروج</h3>
+        <form id="exitPermitForm">
+            <input type="hidden" id="orderId" name="order_id">
+            <div class="form-group">
+                <label for="exitPermitNumber">رقم إذن الخروج</label>
+                <input type="text" id="exitPermitNumber" name="exit_permit_number" class="form-control" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">حفظ</button>
+                <button type="button" class="btn btn-secondary" id="cancelExitPermit">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+<script src="{% static 'manufacturing/js/manufacturing.js' %}"></script>
+{% endblock %}

@@ -329,10 +329,7 @@
                             {% if mapping.auto_create_inspections %}
                                 <span class="badge badge-success">المعاينات</span>
                             {% endif %}
-                            {% if mapping.auto_create_installations %}
-                                <span class="badge badge-success">التركيبات</span>
-                            {% endif %}
-                            {% if not mapping.auto_create_customers and not mapping.auto_create_orders and not mapping.auto_create_inspections and not mapping.auto_create_installations %}
+                            {% if not mapping.auto_create_customers and not mapping.auto_create_orders and not mapping.auto_create_inspections %}
                                 <span class="text-muted">غير مفعل</span>
                             {% endif %}
                         </div>
