@@ -1,0 +1,175 @@
+from django.db import models
+from django.core.validators import FileExtensionValidator
+from django.urls import reverse
+from django.utils import timezone
+from orders.models import Order
+from django.conf import settings
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+class ManufacturingOrder(models.Model):
+    """نموذج يمثل أمر التصنيع"""
+    
+    ORDER_TYPE_CHOICES = [
+        ('installation', 'تركيب'),
+        ('custom', 'تفصيل'),
+        ('accessory', 'اكسسوار'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'قيد الانتظار'),
+        ('in_progress', 'قيد التصنيع'),
+        ('ready_for_installation', 'جاهز للتركيب'),
+        ('completed', 'مكتمل'),
+        ('cancelled', 'ملغي'),
+    ]
+    
+    order = models.OneToOneField(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='manufacturing_order',
+        verbose_name='رقم الطلب'
+    )
+    
+    contract_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='رقم العقد'
+    )
+    
+    invoice_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='رقم الفاتورة'
+    )
+    
+    contract_file = models.FileField(
+        upload_to='manufacturing/contracts/%Y/%m/%d/',
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'])],
+        blank=True,
+        null=True,
+        verbose_name='ملف العقد'
+    )
+    
+    inspection_file = models.FileField(
+        upload_to='manufacturing/inspections/%Y/%m/%d/',
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'])],
+        blank=True,
+        null=True,
+        verbose_name='ملف المعاينة'
+    )
+    
+    order_date = models.DateField(
+        default=timezone.now,
+        verbose_name='تاريخ استلام الطلب'
+    )
+    
+    expected_delivery_date = models.DateField(
+        verbose_name='تاريخ التسليم المتوقع'
+    )
+    
+    order_type = models.CharField(
+        max_length=20,
+        choices=ORDER_TYPE_CHOICES,
+        verbose_name='نوع الطلب'
+    )
+    
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name='حالة الطلب'
+    )
+    
+    exit_permit_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='رقم إذن الخروج'
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='ملاحظات'
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء'
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='تاريخ التحديث'
+    )
+    
+    class Meta:
+        verbose_name = 'أمر تصنيع'
+        verbose_name_plural = 'أوامر التصنيع'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'أمر تصنيع #{self.id} - {self.get_status_display()}'
+    
+    def get_absolute_url(self):
+        return reverse('manufacturing:order_detail', args=[str(self.id)])
+    
+    def update_order_status(self):
+        """تحديث حالة الطلب الأصلي بناءً على حالة أمر التصنيع"""
+        if self.status == 'completed' and self.order.status != 'completed':
+            self.order.status = 'manufacturing_completed'
+            self.order.save()
+        elif self.status == 'ready_for_installation' and self.order.status != 'ready_for_installation':
+            self.order.status = 'ready_for_installation'
+            self.order.save()
+
+
+class ManufacturingOrderItem(models.Model):
+    """نموذج يمثل عناصر أمر التصنيع"""
+    
+    manufacturing_order = models.ForeignKey(
+        ManufacturingOrder,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name='أمر التصنيع'
+    )
+    
+    product_name = models.CharField(
+        max_length=255,
+        verbose_name='اسم المنتج'
+    )
+    
+    quantity = models.PositiveIntegerField(
+        default=1,
+        verbose_name='الكمية'
+    )
+    
+    specifications = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='المواصفات'
+    )
+    
+    status = models.CharField(
+        max_length=30,
+        choices=ManufacturingOrder.STATUS_CHOICES,
+        default='pending',
+        verbose_name='حالة العنصر'
+    )
+    
+    class Meta:
+        verbose_name = 'عنصر أمر تصنيع'
+        verbose_name_plural = 'عناصر أوامر التصنيع'
+    
+    def __str__(self):
+        return f'{self.product_name} - {self.quantity}'
+
+
+@receiver(post_save, sender=ManufacturingOrder)
+def update_related_models(sender, instance, **kwargs):
+    """تحديث النماذج المرتبطة عند تحديث أمر التصنيع"""
+    instance.update_order_status()

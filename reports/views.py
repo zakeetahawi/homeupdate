@@ -11,7 +11,6 @@ from django.utils import timezone
 
 from .models import Report, SavedReport, ReportSchedule
 from orders.models import Order, Payment, OrderItem
-from factory.models import ProductionOrder
 from inventory.models import Product
 from customers.models import Customer
 
@@ -204,26 +203,23 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
         return data
 
     def generate_production_report(self, report):
-        """Generate production report data"""
-        # Get date range from parameters or default to last 30 days
-        date_range = report.parameters.get('date_range', 30)
-        start_date = datetime.now() - timedelta(days=date_range)
-
-        production_orders = ProductionOrder.objects.filter(
-            created_at__gte=start_date
-        )
-
-        data = {
-            'total_orders': production_orders.count(),
-            'orders_by_status': production_orders.values('status').annotate(count=Count('id')).order_by('status'),
-            'orders_by_line': production_orders.values(
-                'production_line__name'
-            ).annotate(count=Count('id')),
-            'quality_issues': production_orders.filter(
-                issues__isnull=False
-            ).distinct().count()
+        """
+        Generate production report data
+        This will be reimplemented after rebuilding the factory system
+        """
+        return {
+            'total_orders': 0,
+            'completed_orders': 0,
+            'completion_rate': 0,
+            'status_stats': [],
+            'line_stats': [],
+            'avg_production_time': None,
+            'recent_orders': [],
+            'date_from': report.parameters.get('date_from') if report else None,
+            'date_to': report.parameters.get('date_to') if report else None,
+            'message': 'سيتم إعادة تنفيذ هذا التقرير بعد إعادة بناء نظام المصنع',
+            'status': 'not_implemented'
         }
-        return data
 
     def generate_inventory_report(self, report):
         """Generate inventory report data"""

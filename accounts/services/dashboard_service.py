@@ -1,4 +1,4 @@
-from django.db.models import Count, Sum, F, Q
+from django.db.models import Sum, Q
 from django.utils import timezone
 from django.core.cache import cache
 from datetime import timedelta
@@ -6,7 +6,7 @@ from datetime import timedelta
 from customers.models import Customer
 from orders.models import Order
 from inventory.models import Product, StockTransaction
-from factory.models import ProductionOrder
+
 
 class DashboardService:
     @staticmethod
@@ -109,17 +109,7 @@ class DashboardService:
                 'timestamp': trans.date.isoformat()
             })
         
-        # جمع آخر أوامر الإنتاج
-        production_orders = ProductionOrder.objects.select_related(
-            'order'
-        ).order_by('-created_at')[:limit]
-        for prod_order in production_orders:
-            activities.append({
-                'id': f'factory_{prod_order.id}',
-                'type': 'factory',
-                'message': f'تم إنشاء أمر إنتاج جديد #{prod_order.id}',
-                'timestamp': prod_order.created_at.isoformat()
-            })
+        # سيتم إضافة أنشطة أوامر الإنتاج بعد إعادة بناء نظام المصنع
         
         # ترتيب النشاطات حسب التاريخ
         activities.sort(key=lambda x: x['timestamp'], reverse=True)

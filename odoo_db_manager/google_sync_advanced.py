@@ -68,7 +68,6 @@ class GoogleSheetMapping(models.Model):
     auto_create_customers = models.BooleanField(default=True, verbose_name='إنشاء عملاء تلقائياً')
     auto_create_orders = models.BooleanField(default=True, verbose_name='إنشاء طلبات تلقائياً')
     auto_create_inspections = models.BooleanField(default=False, verbose_name='إنشاء معاينات تلقائياً')
-    auto_create_installations = models.BooleanField(default=False, verbose_name='إنشاء تركيبات تلقائياً')
 
     # إعدادات الربط والتحديث
     update_existing = models.BooleanField(default=True, verbose_name='تحديث الموجود')
