@@ -5,91 +5,46 @@
 
 {% block title %}أوامر التصنيع{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Enlarge the main container for the table */
+.card.shadow-sm {
+    width: 100%;
+    max-width: none;
+}
+/* Ensure the table itself uses all available space and dropdowns are visible */
+.table-responsive {
+    overflow: visible; /* Make dropdowns visible */
+}
+.table thead th {
+    white-space: nowrap; /* Prevent header text wrapping */
+    vertical-align: middle;
+}
+.table {
+    table-layout: auto; /* Adjust column width automatically */
+    width: 100%;
+}
+.approval-buttons a, .approval-buttons button {
+    font-size: 1.2rem; /* Make icons larger */
+    padding: 0.3rem 0.6rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
-    <!-- Dashboard Cards -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase mb-1">إجمالي الطلبات</h6>
-                            <h2 class="mb-0">{{ total_orders|default:0|intcomma }}</h2>
-                        </div>
-                        <div class="icon icon-shape bg-white bg-opacity-10 rounded-circle p-3">
-                            <i class="fas fa-clipboard-list fa-2x"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3 small">
-                        <span class="text-white-50">إجمالي أوامر التصنيع</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase mb-1">مكتمل</h6>
-                            <h2 class="mb-0">{{ completed_orders|default:0|intcomma }}</h2>
-                        </div>
-                        <div class="icon icon-shape bg-white bg-opacity-10 rounded-circle p-3">
-                            <i class="fas fa-check-circle fa-2x"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3 small">
-                        <span class="text-white-50">تم الانتهاء من التصنيع</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-dark h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase mb-1">قيد التنفيذ</h6>
-                            <h2 class="mb-0">{{ in_progress_orders|default:0|intcomma }}</h2>
-                        </div>
-                        <div class="icon icon-shape bg-dark bg-opacity-10 rounded-circle p-3">
-                            <i class="fas fa-cog fa-spin fa-2x"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3 small">
-                        <span class="text-muted">قيد التصنيع حالياً</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase mb-1">قيد الانتظار</h6>
-                            <h2 class="mb-0">{{ pending_orders|default:0|intcomma }}</h2>
-                        </div>
-                        <div class="icon icon-shape bg-white bg-opacity-10 rounded-circle p-3">
-                            <i class="fas fa-clock fa-2x"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3 small">
-                        <span class="text-white-50">في انتظار المعالجة</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-white py-3">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">قائمة أوامر التصنيع</h5>
-                <a href="{% url 'manufacturing:order_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i> جديد
-                </a>
+                <div>
+                    <a href="{% url 'manufacturing:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-chart-bar me-1"></i> لوحة التحكم
+                    </a>
+                    <a href="{% url 'manufacturing:order_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> أمر جديد
+                    </a>
+                </div>
             </div>
         </div>
         <div class="card-header bg-light py-3">
@@ -98,10 +53,12 @@
                     <label for="status" class="form-label mb-0">حالة الطلب:</label>
                     <select name="status" id="status" class="form-select form-select-sm">
                         <option value="">الكل</option>
+                        <option value="pending_approval" {% if request.GET.status == 'pending_approval' %}selected{% endif %}>قيد الموافقة</option>
                         <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
                         <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
                         <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
-                        <option value="delivered" {% if request.GET.status == 'delivered' %}selected{% endif %}>تم التسليم</option>
+                        <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>مرفوض</option>
+                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -147,6 +104,8 @@
                             <th>#</th>
                             <th>رقم الطلب</th>
                             <th>رقم العقد</th>
+                            <th>ملف العقد</th>
+                            <th>ملف المعاينة</th>
                             <th>رقم الفاتورة</th>
                             <th>العميل</th>
                             <th>البائع</th>
@@ -166,8 +125,28 @@
                                     #{{ order.id }}
                                 </a>
                             </td>
-                            <td>{{ order.contract_number|default:'-' }}</td>
-                            <td>{{ order.invoice_number|default:'-' }}</td>
+                            <td>{{ order.order.contract_number|default:'-' }}</td>
+                            <td>
+                                {% if order.order.contract_file %}
+                                    <a href="{{ order.order.contract_file.url }}" target="_blank" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="عرض العقد">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% with inspection=order.order.inspections.first %}
+                                    {% if inspection and inspection.inspection_file %}
+                                        <a href="{{ inspection.inspection_file.url }}" target="_blank" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="عرض المعاينة">
+                                            <i class="fas fa-file-alt"></i>
+                                        </a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td>{{ order.order.invoice_number|default:'-' }}</td>
                             <td>
                                 {% if order.order.customer %}
                                     <a href="{% url 'customers:customer_detail' order.order.customer.id %}" class="text-dark">
@@ -191,7 +170,7 @@
                                     -
                                 {% endif %}
                             </td>
-                            <td>{{ order.order_date|date:'Y-m-d'|default:order.order.order_date|date:'Y-m-d'|default:'-' }}</td>
+                            <td>{{ order.order_date|date:'Y-m-d'|default:order.order.created_at|date:'Y-m-d'|default:'-' }}</td>
                             <td>
                                 <span class="{% if order.is_delivery_delayed %}text-danger{% endif %}">
                                     {{ order.expected_delivery_date|date:'Y-m-d'|default:'-' }}
@@ -208,6 +187,8 @@
                                                 {% if order.status == 'completed' %}btn-success
                                                 {% elif order.status == 'in_progress' %}btn-info
                                                 {% elif order.status == 'pending' %}btn-warning
+                                                {% elif order.status == 'pending_approval' %}btn-primary
+                                                {% elif order.status == 'rejected' %}btn-danger
                                                 {% else %}btn-secondary{% endif %}"
                                             type="button" id="statusDropdown{{ order.id }}" 
                                             data-bs-toggle="dropdown" 
@@ -218,6 +199,14 @@
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="statusDropdown{{ order.id }}">
                                         <li>
+                                            <a class="dropdown-item status-option {% if order.status == 'pending_approval' %}active{% endif %}" 
+                                               href="#" 
+                                               data-status="pending_approval">
+                                                <span class="badge bg-primary me-2"></span>
+                                                قيد الموافقة
+                                            </a>
+                                        </li>
+                                        <li>
                                             <a class="dropdown-item status-option {% if order.status == 'pending' %}active{% endif %}" 
                                                href="#" 
                                                data-status="pending">
@@ -226,79 +215,72 @@
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item status-option {% if order.status == 'in_progress' %}active{% endif %}" 
-                                               href="#" 
+                                            <a class="dropdown-item status-option {% if order.status == 'in_progress' %}active{% endif %}"
+                                               href="#"
                                                data-status="in_progress">
                                                 <span class="badge bg-info me-2"></span>
-                                                قيد التنفيذ
+                                                قيد التصنيع
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item status-option {% if order.status == 'completed' %}active{% endif %}" 
-                                               href="#" 
+                                            <a class="dropdown-item status-option {% if order.status == 'completed' %}active{% endif %}"
+                                               href="#"
                                                data-status="completed">
                                                 <span class="badge bg-success me-2"></span>
                                                 مكتمل
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item status-option {% if order.status == 'delivered' %}active{% endif %}" 
-                                               href="#" 
-                                               data-status="delivered">
-                                                <span class="badge bg-primary me-2"></span>
-                                                تم التسليم
+                                            <a class="dropdown-item status-option {% if order.status == 'rejected' %}active{% endif %}"
+                                               href="#"
+                                               data-status="rejected">
+                                                <span class="badge bg-danger me-2"></span>
+                                                مرفوض
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item status-option {% if order.status == 'cancelled' %}active{% endif %}"
+                                               href="#"
+                                               data-status="cancelled">
+                                                <span class="badge bg-secondary me-2"></span>
+                                                ملغي
                                             </a>
                                         </li>
                                     </ul>
                                 </div>
                             </td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <a href="{% url 'manufacturing:order_detail' order.id %}" 
-                                       class="btn btn-outline-info" 
-                                       data-bs-toggle="tooltip"
-                                       title="عرض التفاصيل">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{% url 'manufacturing:order_update' order.id %}" 
-                                       class="btn btn-outline-primary" 
-                                       data-bs-toggle="tooltip" 
-                                       title="تعديل">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'manufacturing:order_print' order.id %}" 
-                                       class="btn btn-outline-secondary" 
-                                       data-bs-toggle="tooltip"
-                                       title="طباعة"
-                                       target="_blank"
-                                       rel="noopener noreferrer">
-                                        <i class="fas fa-print"></i>
-                                    </a>
-                                    {% if perms.manufacturing.delete_manufacturingorder %}
-                                    <button type="button" 
-                                            class="btn btn-outline-danger"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#deleteModal{{ order.id }}"
-                                            data-bs-toggle="tooltip"
-                                            title="حذف">
-                                        <i class="fas fa-trash"></i>
+                            <td class="text-center approval-buttons">
+                                {% if order.status == 'pending_approval' %}
+                                    <button class="btn btn-sm btn-success approve-btn" data-order-id="{{ order.id }}" data-bs-toggle="tooltip" title="موافقة">
+                                        <i class="fas fa-check"></i>
                                     </button>
-                                    {% endif %}
-                                </div>
-                                
-                                <!-- Delete Confirmation Modal -->
-                                <div class="modal fade" id="deleteModal{{ order.id }}" tabindex="-1" aria-hidden="true">
-                                    <!-- Modal Content -->
-                                </div>
+                                    <button class="btn btn-sm btn-danger reject-btn" data-bs-toggle="modal" data-bs-target="#rejectModal" data-order-id="{{ order.id }}" data-bs-toggle="tooltip" title="رفض">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                {% elif order.status == 'rejected' and order.rejection_reason %}
+                                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="popover" data-bs-placement="top" title="سبب الرفض" data-bs-content="{{ order.rejection_reason }}">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                {% endif %}
+
+                                <a href="{% url 'manufacturing:order_detail' order.id %}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="عرض التفاصيل">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'manufacturing:order_update' order.id %}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ order.id }}" data-bs-toggle="tooltip" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </td>
                         </tr>
+                        {% include 'includes/delete_modal.html' with delete_url=order.get_delete_url object_name="أمر التصنيع" object_id=order.id %}
                         {% empty %}
                         <tr>
-                            <td colspan="11" class="text-center py-4">
-                                <h5>لا توجد أوامر تصنيع متاحة.</h5>
-                                <a href="{% url 'manufacturing:order_create' %}" class="btn btn-primary mt-2">
-                                    <i class="fas fa-plus me-1"></i> جديد
-                                </a>
+                            <td colspan="13" class="text-center py-4">
+                                <i class="fas fa-info-circle fa-2x text-muted mb-2"></i>
+                                <p class="mb-0">لا توجد أوامر تصنيع حالياً.</p>
                             </td>
                         </tr>
                         {% endfor %}
@@ -355,6 +337,31 @@
     </div>
 </div>
 
+<!-- Rejection Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="rejectModalLabel">رفض أمر التصنيع</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="rejectForm">
+            {% csrf_token %}
+            <input type="hidden" name="order_id" id="rejectOrderId">
+            <div class="mb-3">
+                <label for="rejection_reason" class="form-label">سبب الرفض:</label>
+                <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="4" required></textarea>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+        <button type="button" class="btn btn-danger" id="submitRejectBtn">تأكيد الرفض</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -368,7 +375,7 @@
             "pageLength": 25,
             "order": [[0, "desc"]],
             "columnDefs": [
-                { "orderable": false, "targets": [9, 10] }
+                { "orderable": false, "targets": [3, 4, 11, 12] } // Adjusted targets for new columns
             ],
             "language": {
                 "url": "{% static 'js/datatables-arabic.js' %}"
@@ -389,16 +396,16 @@
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function (tooltipTriggerEl) {
                 if (!bootstrap.Tooltip.getInstance(tooltipTriggerEl)) {
-                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                return new bootstrap.Tooltip(tooltipTriggerEl);
                 }
             });
         }
-        
+            
         table.on('draw.dt', function () {
             initTooltips();
         });
         initTooltips();
-
+        
         // Status update logic
         $(document).on('click', '.status-option', function(e) {
             e.preventDefault();
@@ -411,13 +418,37 @@
             }
         });
 
+        // Approval and Rejection logic
+        $('.approve-btn').on('click', function() {
+            const orderId = $(this).data('order-id');
+            handleApproval(orderId, 'approve');
+        });
+
+        $('#submitRejectBtn').on('click', function() {
+            const orderId = $('#rejectOrderId').val();
+            const reason = $('#rejection_reason').val();
+            if (reason.trim() === '') {
+                Swal.fire('خطأ', 'سبب الرفض مطلوب.', 'error');
+                return;
+            }
+            handleApproval(orderId, 'reject', reason);
+        });
+
+        // Populate modal with order ID when opened
+        $('#rejectModal').on('show.bs.modal', function(event) {
+            const button = $(event.relatedTarget);
+            const orderId = button.data('order-id');
+            $(this).find('#rejectOrderId').val(orderId);
+            $(this).find('#rejection_reason').val(''); // Clear previous reason
+        });
+
         // Filter logic
         $('#filterForm').on('submit', function(e) { e.preventDefault(); table.draw(); });
         $('#status, #branch').on('change', function() { table.draw(); });
         $('#search').on('keyup', function(){ table.search($(this).val()).draw(); });
         
-        $.fn.dataTable.ext.search.push(
-            function(settings, data, dataIndex) {
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
                 var statusFilter = $('#status').val();
                 var branchFilter = $('#branch').val();
                 var dateFromFilter = $('#date_from').val();
@@ -455,6 +486,31 @@
     }
     function updateOrderStatusWithFeedback(orderId, newStatus, button) {
         // ... function content ...
+    }
+
+    function handleApproval(orderId, action, reason = '') {
+        $.ajax({
+            url: `/factory/approval/${orderId}/`, // Correct URL
+            method: 'POST',
+            data: JSON.stringify({
+                action: action,
+                reason: reason
+            }),
+            contentType: 'application/json',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('تم بنجاح!', `تم ${action === 'approve' ? 'الموافقة على' : 'رفض'} الطلب.`, 'success');
+                    // Simple page reload to see changes. A more advanced implementation would update the row dynamically.
+                    location.reload(); 
+                } else {
+                    Swal.fire('خطأ!', response.error, 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('خطأ!', 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.', 'error');
+            }
+        });
     }
 </script>
 {% endif %}

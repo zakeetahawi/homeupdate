@@ -26,11 +26,11 @@
             "previous": "السابق",
             "next": "التالي",
             "last": "الأخير"
-        },
+            },
         "aria": {
             "sortAscending": ": تفعيل لترتيب العمود تصاعدياً",
             "sortDescending": ": تفعيل لترتيب العمود تنازلياً"
-        },
+            },
         "select": {
             "rows": {
                 "_": "%d صفوف محددة",
@@ -56,7 +56,7 @@
             "pdf": "PDF",
             "colvis": "إظهار/إخفاء الأعمدة",
             "colvisRestore": "إعادة الأعمدة"
-        }
+            }
     };
 
     /**
@@ -113,7 +113,7 @@
             }
         }
     };
-    
+
     /**
      * تهيئة جداول البيانات عند تحميل الصفحة
      */
@@ -134,8 +134,8 @@
         };
 
         // تهيئة كل الجداول التي تحمل الكلاس .datatable
-        $('table.datatable').each(function() {
-            var table = $(this);
+            $('table.datatable').each(function() {
+                var table = $(this);
             
             // تجنب إعادة التهيئة
             if ($.fn.DataTable.isDataTable(table)) {
@@ -145,18 +145,18 @@
             // دمج التكوين الافتراضي مع أي تكوينات خاصة بالجدول
             var config = $.extend(true, {}, defaultConfig);
             
-            if (table.data('order')) {
+                if (table.data('order')) {
                 try {
                     config.order = JSON.parse(table.data('order'));
                 } catch (e) {
                     console.error("Error parsing data-order attribute:", e);
                 }
             }
-            if (table.data('page-length')) {
+                if (table.data('page-length')) {
                 config.pageLength = parseInt(table.data('page-length'), 10);
-            }
+                }
 
-            // تهيئة DataTable
+                // تهيئة DataTable
             table.DataTable(config);
         });
     });

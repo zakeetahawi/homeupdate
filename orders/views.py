@@ -162,9 +162,14 @@ def order_create(request):
     formset = OrderItemFormSet(prefix='items')
 
     if request.method == 'POST':
-        form = OrderForm(request.POST, initial={'user': request.user})
+        print("--- NEW ORDER SUBMISSION ---")
+        print("POST data received:", request.POST)
+        print("FILES data received:", request.FILES)
+
+        form = OrderForm(request.POST, request.FILES, initial={'user': request.user})
 
         if form.is_valid():
+            print("Form is valid. Proceeding to save.")
             try:
                 # Save order
                 # 1. إنشاء كائن الطلب بدون حفظه
@@ -248,7 +253,8 @@ def order_create(request):
                                 priority='high',
                                 sender=request.user,
                                 target_department=dept,
-                                target_branch=order.branch
+                                target_branch=order.branch,
+                                link=f"/inspections/{inspection.id}/"
                             )
                     except Exception as e:
                         print(f"Error creating inspection: {e}")
@@ -261,12 +267,17 @@ def order_create(request):
                 else:
                     print("Formset errors:", formset.errors)
 
-                messages.success(request, f'تم إنشاء الطلب بنجاح! رقم الطلب: {order.order_number}')
+                messages.success(request, f'تم إنشاء الطلب رقم {order.order_number} بنجاح.')
                 return redirect('orders:order_success', pk=order.pk)
 
             except Exception as e:
-                messages.error(request, f'حدث خطأ أثناء حفظ الطلب: {str(e)}')
-                return render(request, 'orders/order_form.html', {'form': form, 'formset': formset})
+                print(f"An exception occurred during order processing: {e}")
+                messages.error(request, f'حدث خطأ غير متوقع أثناء معالجة الطلب: {e}')
+        else:
+            print("--- FORM IS INVALID ---")
+            print("Validation Errors:", form.errors.as_json())
+            messages.error(request, 'يوجد أخطاء في النموذج. يرجى التحقق من الحقول المطلوبة أدناه.')
+
 
     customer = None
     last_order = None

@@ -14,9 +14,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.db.models.functions import TruncDay, TruncMonth, ExtractMonth, ExtractYear
 import json
+from django.db import transaction
 
 from .models import ManufacturingOrder, ManufacturingOrderItem
 from orders.models import Order
+from accounts.models import Notification, Department
 
 
 class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -139,11 +141,26 @@ class ManufacturingOrderCreateView(LoginRequiredMixin, PermissionRequiredMixin, 
 class ManufacturingOrderUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = ManufacturingOrder
     template_name = 'manufacturing/manufacturingorder_form.html'
-    fields = ['order', 'order_type', 'contract_number', 'invoice_number', 
+    fields = ['order_type', 'status', 'contract_number', 'invoice_number', 
               'order_date', 'expected_delivery_date', 'exit_permit_number',
               'notes', 'contract_file', 'inspection_file']
     permission_required = 'manufacturing.change_manufacturingorder'
     
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['order_date'].widget.attrs['type'] = 'date'
+        form.fields['expected_delivery_date'].widget.attrs['type'] = 'date'
+        # The 'order' field should not be editable after creation.
+        # It's better to display it as readonly text.
+        # We can remove it from fields list and handle it in the template.
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass the order instance to the context to display its info
+        context['order'] = self.object.order
+        return context
+
     def get_success_url(self):
         messages.success(self.request, 'تم تحديث أمر التصنيع بنجاح')
         return reverse('manufacturing:order_list')
@@ -406,7 +423,7 @@ class DashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
         
         # Get all manufacturing orders
         orders = ManufacturingOrder.objects.filter(
-            order_date__date__range=(start_date, end_date)
+            order_date__range=(start_date, end_date)
         ).select_related('order', 'order__customer')
         
         # Calculate status counts
@@ -501,7 +518,7 @@ def dashboard_data(request):
     
     # Get all manufacturing orders
     orders = ManufacturingOrder.objects.filter(
-        order_date__date__range=(start_date, end_date)
+        order_date__range=(start_date, end_date)
     ).select_related('order', 'order__customer')
     
     # Calculate status counts
@@ -523,3 +540,78 @@ def dashboard_data(request):
     }
     
     return JsonResponse(data)
+
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from .models import ManufacturingOrder
+import json
+
+@csrf_exempt
+@require_POST
+def update_approval_status(request, pk):
+    try:
+        order = ManufacturingOrder.objects.select_related('order', 'order__created_by').get(pk=pk)
+        data = json.loads(request.body)
+        action = data.get('action')
+
+        if order.status != 'pending_approval':
+            return JsonResponse({'success': False, 'error': 'تمت معالجة هذا الطلب بالفعل.'})
+
+        with transaction.atomic():
+            if action == 'approve':
+                order.status = 'pending' # The manufacturing process itself is now 'pending'
+                order.rejection_reason = None
+                order.save()
+                
+                # Create a notification for the user who created the original order
+                if order.order and order.order.created_by:
+                    recipient = order.order.created_by
+                    title = f'بدء تصنيع طلبك #{order.order.order_number}'
+                    message = f'تمت الموافقة على طلبك ودخل مرحلة التصنيع. رقم العقد في المصنع هو #{order.pk}.'
+                    
+                    Notification.objects.create(
+                        recipient=recipient,
+                        title=title,
+                        message=message,
+                        priority='high',
+                        link=order.get_absolute_url()
+                    )
+
+                return JsonResponse({'success': True, 'message': 'تمت الموافقة على الطلب وبدء التصنيع.'})
+
+            elif action == 'reject':
+                reason = data.get('reason')
+                if not reason:
+                    return JsonResponse({'success': False, 'error': 'سبب الرفض مطلوب.'})
+                
+                order.status = 'rejected'
+                order.rejection_reason = reason
+                order.save()
+
+                # Revert original order status if it was set to 'factory'
+                original_order = order.order
+                if original_order.tracking_status == 'factory':
+                    original_order.tracking_status = 'processing' # Or 'pending'
+                    original_order.save(update_fields=['tracking_status'])
+
+                # Create a notification for the user who created the original order
+                if order.order and order.order.created_by:
+                    Notification.objects.create(
+                        recipient=order.order.created_by,
+                        title=f'تم رفض أمر التصنيع للطلب #{order.order.order_number}',
+                        message=f'تم رفض أمر التصنيع الخاص بك. السبب: "{reason}". يرجى مراجعة الطلب.',
+                        priority='high',
+                        link=order.get_absolute_url()
+                    )
+
+                return JsonResponse({'success': True, 'message': 'تم رفض الطلب.'})
+
+            else:
+                return JsonResponse({'success': False, 'error': 'إجراء غير صالح.'})
+
+    except ManufacturingOrder.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'لم يتم العثور على الطلب.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

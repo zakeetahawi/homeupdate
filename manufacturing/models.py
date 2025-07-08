@@ -20,10 +20,12 @@ class ManufacturingOrder(models.Model):
     ]
     
     STATUS_CHOICES = [
+        ('pending_approval', 'قيد الموافقة'),
         ('pending', 'قيد الانتظار'),
         ('in_progress', 'قيد التصنيع'),
         ('ready_for_installation', 'جاهز للتركيب'),
         ('completed', 'مكتمل'),
+        ('rejected', 'مرفوض'),
         ('cancelled', 'ملغي'),
     ]
     
@@ -82,7 +84,7 @@ class ManufacturingOrder(models.Model):
     status = models.CharField(
         max_length=30,
         choices=STATUS_CHOICES,
-        default='pending',
+        default='pending_approval',
         verbose_name='حالة الطلب'
     )
     
@@ -99,6 +101,12 @@ class ManufacturingOrder(models.Model):
         verbose_name='ملاحظات'
     )
     
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='سبب الرفض'
+    )
+
     completion_date = models.DateTimeField(
         blank=True,
         null=True,
@@ -126,6 +134,9 @@ class ManufacturingOrder(models.Model):
     
     def get_absolute_url(self):
         return reverse('manufacturing:order_detail', args=[str(self.id)])
+
+    def get_delete_url(self):
+        return reverse('manufacturing:order_delete', kwargs={'pk': self.pk})
     
     def update_order_status(self):
         """تحديث حالة الطلب الأصلي بناءً على حالة أمر التصنيع"""

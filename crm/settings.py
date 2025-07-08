@@ -33,10 +33,10 @@ else:
 # في وضع التطوير، يمكن إضافة نطاقات إضافية لتسهيل الاختبار
 if DEBUG:
     ALLOWED_HOSTS.extend([
-        'localhost',
-        '127.0.0.1',
-        '*.trycloudflare.com',
-        '*.ngrok-free.app',
+    'localhost',
+    '127.0.0.1',
+    '*.trycloudflare.com',
+    '*.ngrok-free.app',
     ])
 
 # Application definition

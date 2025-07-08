@@ -20,7 +20,7 @@
         </a>
     </div>
 
-    <form method="post" id="orderForm" novalidate>
+    <form method="post" id="orderForm" novalidate enctype="multipart/form-data">
     {{ formset.management_form }}
     <div style="display:none;">
         {% for form in formset %}
@@ -61,7 +61,6 @@
         
         <!-- Hidden fields for form submission -->
         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-        <input type="hidden" name="selected_types_hidden" id="selected_types_hidden" value="">
         <input type="hidden" name="selected_products" id="selected_products" value="">
         <input type="hidden" name="tracking_status" value="pending">
         
@@ -173,32 +172,38 @@
                                         {% endfor %}
                                     </div>
                                     {% endif %}
+                                    
                                     <div class="d-flex flex-wrap gap-3 mb-3">
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="selected_types" id="order_type_accessory" value="accessory">
+                                            <input class="form-check-input styled-radio" type="radio" name="order_type_selector" id="order_type_accessory" value="accessory">
                                             <label class="form-check-label" for="order_type_accessory">
                                                 <i class="fas fa-gem me-2"></i> إكسسوار
                                             </label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="selected_types" id="order_type_installation" value="installation">
+                                            <input class="form-check-input styled-radio" type="radio" name="order_type_selector" id="order_type_installation" value="installation">
                                             <label class="form-check-label" for="order_type_installation">
                                                 <i class="fas fa-tools me-2"></i> تركيب
                                             </label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="selected_types" id="order_type_inspection" value="inspection">
+                                            <input class="form-check-input styled-radio" type="radio" name="order_type_selector" id="order_type_inspection" value="inspection">
                                             <label class="form-check-label" for="order_type_inspection">
                                                 <i class="fas fa-eye me-2"></i> معاينة
                                             </label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="selected_types" id="order_type_tailoring" value="tailoring">
+                                            <input class="form-check-input styled-radio" type="radio" name="order_type_selector" id="order_type_tailoring" value="tailoring">
                                             <label class="form-check-label" for="order_type_tailoring">
                                                 <i class="fas fa-cut me-2"></i> تفصيل
                                             </label>
                                         </div>
                                     </div>
+
+                                    <div style="display:none;">
+                                        {{ form.selected_types }}
+                                    </div>
+                                    
                                     <div class="form-text text-muted">
                                         <strong>ملاحظة:</strong> يجب اختيار نوع واحد فقط للطلب
                                     </div>
@@ -259,17 +264,10 @@
                                 </div>
 
                                 <!-- Hidden Fields for Delivery - Set automatically by JavaScript -->
-                                {{ form.delivery_type }}
-                                {{ form.delivery_address }}
-                                {{ form.selected_types }}
-
-                                <!-- Debug: Show hidden field info -->
-                                <script>
-                                console.log('Hidden fields in HTML:');
-                                console.log('delivery_type ID:', '{{ form.delivery_type.id_for_label }}');
-                                console.log('delivery_address ID:', '{{ form.delivery_address.id_for_label }}');
-                                console.log('selected_types ID:', '{{ form.selected_types.id_for_label }}');
-                                </script>
+                                <div style="display:none;">
+                                    {{ form.delivery_type }}
+                                    {{ form.delivery_address }}
+                                </div>
 
                                 <!-- Branch Selection - Always visible but will be set automatically -->
                                 <div class="mb-3">
@@ -354,559 +352,80 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Get DOM elements
-        const orderForm = document.getElementById('orderForm');
-        const productSelectionSection = document.getElementById('product-selection-section');
+        // --- Elements ---
+        const styledRadios = document.querySelectorAll('.styled-radio');
+        const realRadios = document.querySelectorAll('input[name="selected_types"]');
+        
         const contractField = document.querySelector('.contract-field');
         const contractFileField = document.querySelector('.contract-file-field');
-        const orderStatusField = document.querySelector('.order-status-field');
-        const customerSelect = document.getElementById('{{ form.customer.id_for_label }}');
+        const productSelection = document.querySelector('#product-selection-section');
+        const tailoringSection = document.querySelector('#tailoring-section');
+        const inspectionFields = document.querySelector('#inspection-fields');
         
-        // Add event listener for customer select
-        if (customerSelect) {
-            customerSelect.addEventListener('change', function() {
-                const customerId = this.value;
-                if (customerId) {
-                    // Redirect to the same page with customer_id parameter
-                    window.location.href = `?customer_id=${customerId}`;
-                }
+        // --- Functions ---
+        
+        // Syncs the hidden Django radio buttons with the visible styled ones
+        function syncRealRadios(selectedValue) {
+            realRadios.forEach(radio => {
+                radio.checked = (radio.value === selectedValue);
             });
         }
-        
-        // Add event listeners for all order type radio buttons
-        document.querySelectorAll('input[name="selected_types"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                // Immediate update of hidden field
-                const hiddenField = document.getElementById('{{ form.selected_types.id_for_label }}');
-                if (hiddenField && this.checked) {
-                    hiddenField.value = JSON.stringify([this.value]);
-                    console.log('Immediate update - Hidden field set to:', hiddenField.value);
-                }
-                // Then call the main handler
-                handleOrderTypeChange();
-            });
-        });
 
-        // Add event listener for status change to update expected delivery date
-        const statusSelect = document.getElementById('{{ form.status.id_for_label }}');
-        if (statusSelect) {
-            statusSelect.addEventListener('change', updateExpectedDeliveryDate);
+        // Updates visibility of form sections based on selected order type
+        function updateFormFields() {
+            const selectedRadio = document.querySelector('.styled-radio:checked');
+            const selectedType = selectedRadio ? selectedRadio.value : 'none';
+
+            syncRealRadios(selectedType);
+
+            const showForContract = ['installation', 'tailoring', 'accessory'].includes(selectedType);
+            const showForAccessory = selectedType === 'accessory';
+            const showForTailoring = selectedType === 'tailoring';
+            const showForInspection = selectedType === 'inspection';
+
+            if (contractField) contractField.style.display = showForContract ? 'block' : 'none';
+            if (contractFileField) contractFileField.style.display = showForContract ? 'block' : 'none';
+            
+            if (productSelection) {
+                productSelection.style.display = showForAccessory ? 'block' : 'none';
+                if (showForAccessory && typeof loadProducts === 'function') {
+                    loadProducts(); 
+                }
+            }
+
+            if (tailoringSection) tailoringSection.style.display = showForTailoring ? 'block' : 'none';
+            if (inspectionFields) inspectionFields.style.display = showForInspection ? 'block' : 'none';
         }
         
-        // Add form submit event listener
+        // --- Event Listeners ---
+        styledRadios.forEach(radio => {
+            radio.addEventListener('change', updateFormFields);
+        });
+        
+        // --- Initial Call ---
+        updateFormFields();
+
+        // --- Submission check for diagnostics ---
+        const orderForm = document.getElementById('orderForm');
         if (orderForm) {
             orderForm.addEventListener('submit', function(e) {
-                // Prevent default form submission
-                e.preventDefault();
+                // Run sync one last time to be sure
+                updateFormFields();
+
+                const selectedRealRadio = document.querySelector('input[name="selected_types"]:checked');
                 
-                // Validate form
-                if (!validateForm()) {
-                    // Show error message
-                    const errorMessage = document.createElement('div');
-                    errorMessage.className = 'alert alert-danger mb-4';
-                    errorMessage.innerHTML = '<h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> يوجد أخطاء في النموذج</h5><p class="mb-0">يرجى التحقق من الحقول المطلوبة أدناه.</p>';
-                    
-                    // Insert at the top of the form
-                    orderForm.insertBefore(errorMessage, orderForm.firstChild);
-                    
-                    // Scroll to top of form
-                    window.scrollTo({
-                        top: orderForm.offsetTop - 100,
-                        behavior: 'smooth'
-                    });
-                    
-                    return;
-                }
-                
-                // Update hidden fields before submitting
-                const selectedOrderType = document.querySelector('input[name="selected_types"]:checked');
-                console.log('Form submission - selected type:', selectedOrderType ? selectedOrderType.value : 'none');
-
-                const hiddenField = document.getElementById('{{ form.selected_types.id_for_label }}');
-                console.log('Hidden field element:', hiddenField);
-                console.log('Hidden field current value:', hiddenField ? hiddenField.value : 'field not found');
-
-                if (selectedOrderType) {
-                    if (hiddenField) {
-                        hiddenField.value = JSON.stringify([selectedOrderType.value]);
-                        console.log('Hidden field value set to:', hiddenField.value);
-
-                        // Double check the value was set
-                        setTimeout(() => {
-                            console.log('Hidden field value after timeout:', hiddenField.value);
-                        }, 100);
-                    } else {
-                        console.error('Hidden field not found!');
-                        return false; // Prevent form submission
-                    }
-
-                    // Update selected products input if accessory is selected
-                    if (selectedOrderType.value === 'accessory') {
-                        updateSelectedProductsInput();
-                    }
+                console.log("--- FORM SUBMISSION DIAGNOSTICS ---");
+                if (selectedRealRadio) {
+                    console.log("SUCCESS: A 'real' radio button is checked.");
+                    console.log("Value being submitted:", selectedRealRadio.value);
                 } else {
-                    console.error('No order type selected!');
-                    return false; // Prevent form submission
+                    console.error("FAILURE: No 'real' radio button was checked before form submission.");
+                    console.log("This is why the form validation is failing.");
+                    // e.preventDefault(); // Uncomment this line to stop submission for further debugging
                 }
-                
-                // Submit the form
-                orderForm.submit();
+                console.log("------------------------------------");
             });
         }
-        
-        // Validate form
-        function validateForm() {
-            let isValid = true;
-            
-            // Check customer
-            const customerSelect = document.getElementById('{{ form.customer.id_for_label }}');
-            if (customerSelect && !customerSelect.value) {
-                isValid = false;
-                highlightError(customerSelect);
-            }
-            
-            // Check order type (single selection)
-            const selectedOrderType = document.querySelector('input[name="selected_types"]:checked');
-            const hiddenOrderTypeField = document.getElementById('{{ form.selected_types.id_for_label }}');
-
-            if (!selectedOrderType) {
-                isValid = false;
-                console.error('No order type selected');
-                // Highlight order type section
-                const orderTypeSection = document.querySelector('.mb-4:has([name="selected_types"])');
-                if (orderTypeSection) {
-                    orderTypeSection.classList.add('border', 'border-danger', 'p-2', 'rounded');
-                }
-            } else {
-                // Make sure hidden field is populated
-                if (hiddenOrderTypeField) {
-                    hiddenOrderTypeField.value = JSON.stringify([selectedOrderType.value]);
-                    console.log('Validation - Hidden field set to:', hiddenOrderTypeField.value);
-                }
-
-                // التحقق من رقم العقد وملف العقد للأنواع المطلوبة
-                const contractRequiredTypes = ['installation', 'tailoring', 'accessory'];
-                if (selectedOrderType && contractRequiredTypes.includes(selectedOrderType.value)) {
-                    const contractInput = document.getElementById('{{ form.contract_number.id_for_label }}');
-                    if (contractInput && !contractInput.value.trim()) {
-                        isValid = false;
-                        highlightError(contractInput);
-                    }
-
-                    const contractFileInput = document.getElementById('{{ form.contract_file.id_for_label }}');
-                    if (contractFileInput && !contractFileInput.files.length) {
-                        isValid = false;
-                        highlightError(contractFileInput);
-                    }
-                }
-
-                // Check invoice number - required for all types
-                const invoiceInput = document.getElementById('{{ form.invoice_number.id_for_label }}');
-                if (invoiceInput && !invoiceInput.value.trim()) {
-                    isValid = false;
-                    highlightError(invoiceInput);
-                }
-                
-                // التحقق من اختيار المنتجات للإكسسوار فقط
-                if (selectedOrderType && selectedOrderType.value === 'accessory') {
-                    const selectedProducts = document.querySelectorAll('.product-checkbox:checked');
-                    if (selectedProducts.length === 0) {
-                        isValid = false;
-                        const productSection = document.getElementById('product-selection-section');
-                        if (productSection) {
-                            productSection.classList.add('border', 'border-danger', 'p-2', 'rounded');
-                        }
-                    }
-                }
-            }
-            
-            // Check branch selection (always required)
-            const branchSelect = document.getElementById('{{ form.branch.id_for_label }}');
-            if (branchSelect && !branchSelect.value) {
-                isValid = false;
-                highlightError(branchSelect);
-            }
-
-            // Final check - ensure hidden field has value
-            if (hiddenOrderTypeField && (!hiddenOrderTypeField.value || hiddenOrderTypeField.value === '[]')) {
-                isValid = false;
-                console.error('Hidden order type field is empty:', hiddenOrderTypeField.value);
-                // Highlight order type section again
-                const orderTypeSection = document.querySelector('.mb-4:has([name="selected_types"])');
-                if (orderTypeSection) {
-                    orderTypeSection.classList.add('border', 'border-danger', 'p-2', 'rounded');
-                }
-            }
-            
-            return isValid;
-        }
-        
-        // Highlight error
-        function highlightError(element) {
-            element.classList.add('is-invalid');
-            element.addEventListener('change', function() {
-                this.classList.remove('is-invalid');
-            }, { once: true });
-        }
-        
-        // Handle order type changes
-        function handleOrderTypeChange() {
-            const selectedType = document.querySelector('input[name="selected_types"]:checked');
-            console.log('Selected order type:', selectedType ? selectedType.value : 'none');
-
-            // Debug: Check if hidden field exists
-            const orderTypeHidden = document.getElementById('{{ form.selected_types.id_for_label }}');
-            console.log('Hidden field found:', orderTypeHidden ? 'yes' : 'no');
-            console.log('Hidden field ID:', '{{ form.selected_types.id_for_label }}');
-            if (orderTypeHidden) {
-                if (selectedType) {
-                    orderTypeHidden.value = JSON.stringify([selectedType.value]);
-                    console.log('Hidden field updated with:', orderTypeHidden.value);
-                } else {
-                    orderTypeHidden.value = JSON.stringify([]);
-                    console.log('Hidden field cleared');
-                }
-            } else {
-                console.error('Hidden field not found with ID:', '{{ form.selected_types.id_for_label }}');
-            }
-
-            if (!selectedType) {
-                // إخفاء جميع الحقول إذا لم يتم اختيار نوع
-                if (contractField) contractField.style.display = 'none';
-                if (contractFileField) contractFileField.style.display = 'none';
-                if (orderStatusField) orderStatusField.style.display = 'none';
-                return;
-            }
-
-            const selectedValue = selectedType.value;
-
-            // إظهار/إخفاء حقول العقد للأنواع المطلوبة
-            const contractRequiredTypes = ['installation', 'tailoring', 'accessory'];
-            const needsContract = contractRequiredTypes.includes(selectedValue);
-
-            if (contractField) {
-                contractField.style.display = needsContract ? 'block' : 'none';
-            }
-
-            if (contractFileField) {
-                contractFileField.style.display = needsContract ? 'block' : 'none';
-            }
-
-            // إظهار/إخفاء حقل وضع الطلب (مخفي للمعاينة)
-            if (orderStatusField) {
-                orderStatusField.style.display = selectedValue === 'inspection' ? 'none' : 'block';
-            }
-
-            // منطق التسليم حسب نوع الطلب - تعيين القيم في الحقول المخفية
-            const deliveryTypeHidden = document.getElementById('{{ form.delivery_type.id_for_label }}');
-            const deliveryAddressHidden = document.getElementById('{{ form.delivery_address.id_for_label }}');
-            const branchSelect = document.getElementById('{{ form.branch.id_for_label }}');
-
-            if (selectedValue === 'tailoring') {
-                // تحديد استلام من الفرع تلقائياً للتفصيل
-                if (deliveryTypeHidden) deliveryTypeHidden.value = 'branch';
-                if (deliveryAddressHidden) deliveryAddressHidden.value = '';
-
-                // تحديد الفرع بناءً على المستخدم
-                if (branchSelect && branchSelect.options.length > 1) {
-                    // إذا كان هناك أكثر من فرع، اختر الأول (أو حسب منطق المستخدم)
-                    if (!branchSelect.value) {
-                        branchSelect.selectedIndex = 1; // اختيار أول فرع (تجاهل الخيار الفارغ)
-                    }
-                }
-            } else if (selectedValue === 'installation') {
-                // تفعيل التوصيل للمنزل تلقائياً للتركيب
-                if (deliveryTypeHidden) deliveryTypeHidden.value = 'home';
-
-                // ملء العنوان من بيانات العميل تلقائياً
-                const customerSelect = document.getElementById('{{ form.customer.id_for_label }}');
-                if (customerSelect && customerSelect.value) {
-                    // يمكن إضافة منطق لجلب عنوان العميل من API
-                    fillCustomerAddress(customerSelect.value);
-                } else {
-                    // عنوان افتراضي
-                    if (deliveryAddressHidden) deliveryAddressHidden.value = 'سيتم تحديد العنوان لاحقاً';
-                }
-            } else {
-                // للإكسسوار والمعاينة - افتراضي استلام من الفرع
-                if (deliveryTypeHidden) deliveryTypeHidden.value = 'branch';
-                if (deliveryAddressHidden) deliveryAddressHidden.value = '';
-
-                // تحديد الفرع
-                if (branchSelect && branchSelect.options.length > 1 && !branchSelect.value) {
-                    branchSelect.selectedIndex = 1;
-                }
-            }
-
-            // Set invoice number as required
-            const invoiceInput = document.getElementById('{{ form.invoice_number.id_for_label }}');
-            if (invoiceInput) {
-                invoiceInput.required = true;
-            }
-            
-            // إظهار/إخفاء قسم اختيار المنتجات للإكسسوار فقط
-            if (productSelectionSection) {
-                if (selectedValue === 'accessory') {
-                    productSelectionSection.style.display = 'block';
-                    loadProducts();
-                } else {
-                    productSelectionSection.style.display = 'none';
-                }
-            }
-
-            // إزالة رسائل الخطأ السابقة
-            const errorMsg = document.querySelector('.tailoring-installation-error');
-            if (errorMsg) {
-                errorMsg.remove();
-            }
-
-            // إزالة تنسيق الخطأ من قسم أنواع الطلب
-            const orderTypeSection = document.querySelector('.mb-4:has([name="selected_types"])');
-            if (orderTypeSection) {
-                orderTypeSection.classList.remove('border', 'border-danger', 'p-2', 'rounded');
-            }
-        }
-
-        // دالة لملء عنوان العميل تلقائياً
-        function fillCustomerAddress(customerId) {
-            if (!customerId) return;
-
-            const deliveryAddressHidden = document.getElementById('{{ form.delivery_address.id_for_label }}');
-
-            // يمكن إضافة استدعاء API لجلب بيانات العميل
-            // fetch(`/api/customers/${customerId}/`)
-            //     .then(response => response.json())
-            //     .then(data => {
-            //         if (deliveryAddressHidden && data.address) {
-            //             deliveryAddressHidden.value = data.address;
-            //         }
-            //     });
-
-            // مؤقتاً - عنوان افتراضي
-            if (deliveryAddressHidden) {
-                deliveryAddressHidden.value = 'سيتم تحديد العنوان لاحقاً';
-            }
-        }
-
-        // دالة لتحديث تاريخ التسليم المتوقع
-        function updateExpectedDeliveryDate() {
-            const statusSelect = document.getElementById('{{ form.status.id_for_label }}');
-            const expectedDateField = document.getElementById('{{ form.expected_delivery_date.id_for_label }}');
-
-            if (!statusSelect || !expectedDateField) return;
-
-            const status = statusSelect.value;
-            const today = new Date();
-            let daysToAdd = 15; // افتراضي للعادي
-
-            if (status === 'vip') {
-                daysToAdd = 7;
-            }
-
-            // حساب التاريخ المتوقع
-            const expectedDate = new Date(today);
-            expectedDate.setDate(today.getDate() + daysToAdd);
-
-            // تنسيق التاريخ للحقل
-            const formattedDate = expectedDate.toISOString().split('T')[0];
-            expectedDateField.value = formattedDate;
-        }
-        
-
-        // Load products
-        function loadProducts() {
-            const productsContainer = document.getElementById('products-container');
-            if (!productsContainer) return;
-            
-            // Show loading indicator
-            const productsLoading = document.getElementById('products-loading');
-            if (productsLoading) productsLoading.style.display = 'block';
-            
-            // Fetch products from API
-            fetch('/inventory/api/products/')
-                .then(response => response.json())
-                .then(data => {
-                    // Process products
-                    displayProducts(data);
-                })
-                .catch(error => {
-                    console.error('Error fetching products:', error);
-                    if (productsContainer) {
-                        productsContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">حدث خطأ أثناء تحميل المنتجات</div></div>';
-                    }
-                });
-        }
-        
-        // Display products
-        function displayProducts(products) {
-            const productsContainer = document.getElementById('products-container');
-            const productsLoading = document.getElementById('products-loading');
-            
-            // Hide loading indicator
-            if (productsLoading) productsLoading.style.display = 'none';
-            
-            // Clear container
-            if (productsContainer) productsContainer.innerHTML = '';
-            
-            if (!products || products.length === 0) {
-                if (productsContainer) {
-                    productsContainer.innerHTML = '<div class="col-12"><p class="text-center">لا توجد منتجات متاحة</p></div>';
-                }
-                return;
-            }
-            
-            // Display products
-            products.forEach(product => {
-                const productCard = document.createElement('div');
-                productCard.className = 'col-md-4 mb-3';
-                productCard.innerHTML = `
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">${product.name}</h5>
-                            <p class="card-text">السعر: ${product.price || 'غير محدد'}</p>
-                            <div class="form-check">
-                                <input class="form-check-input product-checkbox" type="checkbox" value="${product.id}" 
-                                    data-name="${product.name}" data-price="${product.price || 0}" data-type="${product.product_type || 'fabric'}">
-                                <label class="form-check-label">
-                                    اختيار
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                if (productsContainer) productsContainer.appendChild(productCard);
-            });
-            
-            // Add event listeners to checkboxes
-            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', updateSelectedProducts);
-            });
-        }
-        
-        // Update selected products
-        function updateSelectedProducts() {
-            const selectedProducts = Array.from(document.querySelectorAll('.product-checkbox:checked'));
-            const selectedProductsContainer = document.getElementById('selected-products-container');
-            const noProductsMessage = document.getElementById('no-products-message');
-            
-            if (!selectedProductsContainer || !noProductsMessage) return;
-            
-            if (selectedProducts.length === 0) {
-                noProductsMessage.style.display = 'block';
-                selectedProductsContainer.innerHTML = '';
-                selectedProductsContainer.appendChild(noProductsMessage);
-                return;
-            }
-            
-            noProductsMessage.style.display = 'none';
-            
-            // Create table for selected products
-            const table = document.createElement('table');
-            table.className = 'table table-bordered';
-            table.innerHTML = `
-                <thead>
-                    <tr>
-                        <th>المنتج</th>
-                        <th>السعر</th>
-                        <th>الكمية</th>
-                        <th>إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="selected-products-tbody"></tbody>
-            `;
-            
-            selectedProductsContainer.innerHTML = '';
-            selectedProductsContainer.appendChild(table);
-            
-            const tbody = document.getElementById('selected-products-tbody');
-            
-            selectedProducts.forEach(product => {
-                const tr = document.createElement('tr');
-                tr.dataset.productId = product.value;
-                
-                const price = parseFloat(product.dataset.price) || 0;
-                
-                tr.innerHTML = `
-                    <td>${product.dataset.name}</td>
-                    <td>${price.toFixed(2)}</td>
-                    <td>
-                        <input type="number" class="form-control form-control-sm product-quantity" 
-                            min="1" value="1" data-product-id="${product.value}">
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-danger remove-product" data-product-id="${product.value}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                
-                tbody.appendChild(tr);
-            });
-            
-            // Add event listeners to quantity inputs
-            document.querySelectorAll('.product-quantity').forEach(input => {
-                input.addEventListener('change', updateSelectedProductsInput);
-            });
-            
-            // Add event listeners to remove buttons
-            document.querySelectorAll('.remove-product').forEach(button => {
-                button.addEventListener('click', function() {
-                    const productId = this.dataset.productId;
-                    document.querySelector(`.product-checkbox[value="${productId}"]`).checked = false;
-                    updateSelectedProducts();
-                });
-            });
-            
-            // Update selected products input
-            updateSelectedProductsInput();
-        }
-        
-        // Update selected products input
-        function updateSelectedProductsInput() {
-            const selectedProducts = Array.from(document.querySelectorAll('.product-checkbox:checked'));
-            const selectedProductsInput = document.getElementById('selected_products');
-            
-            if (!selectedProductsInput) return;
-            
-            const productsData = selectedProducts.map(product => {
-                const productId = product.value;
-                const quantityInput = document.querySelector(`.product-quantity[data-product-id="${productId}"]`);
-                const quantity = quantityInput ? parseInt(quantityInput.value) || 1 : 1;
-                
-                return {
-                    id: productId,
-                    name: product.dataset.name,
-                    price: parseFloat(product.dataset.price) || 0,
-                    type: product.dataset.type,
-                    quantity: quantity
-                };
-            });
-            
-            selectedProductsInput.value = JSON.stringify(productsData);
-        }
-
-        // Initial calls
-        handleOrderTypeChange();
-        updateExpectedDeliveryDate();
-
-        // Debug: Check if hidden field exists
-        const hiddenFieldCheck = document.getElementById('{{ form.selected_types.id_for_label }}');
-        console.log('Hidden field check on load:', hiddenFieldCheck ? 'found' : 'not found');
-        console.log('Hidden field ID:', '{{ form.selected_types.id_for_label }}');
-
-        // Force update hidden field on any radio button change
-        document.querySelectorAll('input[name="selected_types"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                const hiddenField = document.getElementById('{{ form.selected_types.id_for_label }}');
-                if (hiddenField && this.checked) {
-                    hiddenField.value = JSON.stringify([this.value]);
-                    console.log('Radio changed - Hidden field set to:', hiddenField.value);
-                } else {
-                    console.error('Hidden field not found during radio change');
-                }
-            });
-        });
     });
 </script>
 {% endblock %}

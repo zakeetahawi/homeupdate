@@ -529,7 +529,7 @@ class AdvancedSyncService:
             # order_type = mapped_data.get('order_type', 'standard').lower()
             # if order_type in ['manufacturing', 'sub_contract']:
             #     self._create_manufacturing_order(order, order_type, mapped_data)
-
+            
             self.stats['orders_created'] += 1
             return order
         except IntegrityError as e:

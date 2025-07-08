@@ -1,7 +1,10 @@
+import json
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from datetime import timedelta
+from .models import Order
+from manufacturing.models import ManufacturingOrder
 
 @receiver(pre_save, sender='orders.Order')
 def track_price_changes(sender, instance, **kwargs):
@@ -17,13 +20,60 @@ def track_price_changes(sender, instance, **kwargs):
             pass  # حالة الإنشاء الجديد
 
 
-@receiver(post_save, sender='orders.Order')
-def handle_order_creation(sender, instance, created, **kwargs):
-    """معالجة إنشاء الطلب"""
-
+@receiver(post_save, sender=Order)
+def create_manufacturing_order_on_order_creation(sender, instance, created, **kwargs):
+    """
+    Creates a ManufacturingOrder automatically when a new Order is created
+    with specific types ('installation', 'tailoring', 'accessory').
+    """
     if created:
-        # سيتم تحديث هذه الوظائف لاحقاً بعد إعادة بناء أنظمة المصنع والتركيبات
-        pass
+        print(f"--- SIGNAL TRIGGERED for Order PK: {instance.pk} ---")
+        print(f"Raw selected_types from instance: {instance.selected_types}")
+        
+        MANUFACTURING_TYPES = {'installation', 'tailoring', 'accessory'}
+        
+        order_types = set()
+        try:
+            # selected_types is stored as a JSON string, so we need to parse it.
+            parsed_types = json.loads(instance.selected_types)
+            if isinstance(parsed_types, list):
+                order_types = set(parsed_types)
+            print(f"Successfully parsed types: {order_types}")
+        except (json.JSONDecodeError, TypeError):
+            print(f"Could not parse selected_types. Value was: {instance.selected_types}")
+            # Fallback for plain string if needed, though not expected
+            if isinstance(instance.selected_types, str):
+                order_types = {instance.selected_types}
+
+        if order_types.intersection(MANUFACTURING_TYPES):
+            print(f"MATCH FOUND: Order types {order_types} intersect with {MANUFACTURING_TYPES}. Creating manufacturing order...")
+            
+            # Use a transaction to ensure both creations happen or neither.
+            from django.db import transaction
+            with transaction.atomic():
+                mfg_order, created_mfg = ManufacturingOrder.objects.get_or_create(
+                    order=instance,
+                    defaults={
+                        'status': 'pending_approval',
+                        'notes': instance.notes,
+                        'order_date': instance.created_at.date(),
+                        'expected_delivery_date': instance.expected_delivery_date,
+                        'contract_number': instance.contract_number,
+                        'invoice_number': instance.invoice_number,
+                    }
+                )
+                
+                # Also update the original order's tracking status
+                if created_mfg:
+                    instance.tracking_status = 'factory'
+                    instance.save(update_fields=['tracking_status'])
+                    print(f"SUCCESS: Created ManufacturingOrder PK: {mfg_order.pk} and updated Order PK: {instance.pk} tracking_status to 'factory'")
+                else:
+                    print(f"INFO: ManufacturingOrder already existed for this order. PK: {mfg_order.pk}")
+        else:
+            print(f"NO MATCH: Order types {order_types} do not require manufacturing.")
+    else:
+        print(f"--- SIGNAL TRIGGERED for Order PK: {instance.pk} (UPDATE, not creation) ---")
 
 
 def set_default_delivery_option(order):

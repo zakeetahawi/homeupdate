@@ -3,6 +3,8 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import Order, OrderItem, Payment
 from accounts.models import Salesperson, Branch
+from django.utils import timezone
+from datetime import timedelta
 
 class OrderItemForm(forms.ModelForm):
     class Meta:
@@ -56,11 +58,11 @@ class OrderForm(forms.ModelForm):
         required=False
     )
 
-    # New field for order types
-    selected_types = forms.MultipleChoiceField(
+    # This is the correct field definition for the order types.
+    selected_types = forms.ChoiceField(
         choices=Order.ORDER_TYPES,
         required=True,
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
     )
 
     salesperson = forms.ModelChoiceField(
@@ -70,14 +72,9 @@ class OrderForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select form-select-sm'})
     )
 
-    # Hidden field for selected order types
-    selected_types = forms.CharField(
-        widget=forms.HiddenInput(),
-        required=True,
-        initial='[]',
-        error_messages={'required': 'يجب اختيار نوع للطلب'}
-    )
-
+    # The following hidden fields were causing the issue by redefining 'selected_types'.
+    # This has been removed.
+    
     # Hidden fields for delivery
     delivery_type = forms.CharField(
         widget=forms.HiddenInput(),
@@ -165,21 +162,18 @@ class OrderForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        selected_type = self.data.get('selected_types')  # Single value now
-        print("[DEBUG] Selected Type:", selected_type)
-        print("[DEBUG] Form Data:", dict(self.data))
+        selected_type = cleaned_data.get('selected_types')
 
         # Required fields validation
-        required_fields = ['customer', 'salesperson']
+        required_fields = ['customer', 'salesperson', 'branch']
         for field in required_fields:
             if not cleaned_data.get(field):
                 self.add_error(field, f'هذا الحقل مطلوب')
 
         if not selected_type:
-            print("[DEBUG] No order type selected")
-            raise forms.ValidationError({
-                'selected_types': 'يجب اختيار نوع للطلب'
-            })
+            self.add_error('selected_types', 'يجب اختيار نوع للطلب')
+            # No need for a print or raise here, add_error is enough
+            return cleaned_data # Return early if no type is selected
 
         # التحقق من رقم العقد وملف العقد للتركيب والتفصيل والإكسسوار
         contract_required_types = ['installation', 'tailoring', 'accessory']
@@ -187,33 +181,49 @@ class OrderForm(forms.ModelForm):
             if not cleaned_data.get('contract_number', '').strip():
                 self.add_error('contract_number', 'رقم العقد مطلوب لهذا النوع من الطلبات')
 
-            if not cleaned_data.get('contract_file'):
+            # contract_file is an in-memory file object, so we check for it directly
+            if 'contract_file' not in self.files:
                 self.add_error('contract_file', 'ملف العقد مطلوب لهذا النوع من الطلبات')
 
-        # تحديد نوع الطلب وخيارات التسليم تلقائياً
-        if selected_type:
-            # تحديد نوع الطلب للتوافق مع النظام القديم
-            if selected_type in ['accessory']:
-                cleaned_data['order_type'] = 'product'
-            else:
-                cleaned_data['order_type'] = 'service'
-
-            # تحديد خيارات التسليم تلقائياً
-            if selected_type == 'tailoring':
-                cleaned_data['delivery_type'] = 'branch'
-                cleaned_data['delivery_address'] = ''
-            elif selected_type == 'installation':
-                cleaned_data['delivery_type'] = 'home'
-                # سيتم ملء العنوان من بيانات العميل أو من النموذج
-                if not cleaned_data.get('delivery_address'):
-                    cleaned_data['delivery_address'] = 'سيتم تحديد العنوان لاحقاً'
-            else:
-                # للإكسسوار والمعاينة - افتراضي استلام من الفرع
-                cleaned_data['delivery_type'] = 'branch'
-                cleaned_data['delivery_address'] = ''
-
-            # حفظ نوع الطلب كـ JSON (قائمة بعنصر واحد)
-            cleaned_data['selected_types'] = json.dumps([selected_type])
-
-        print("[DEBUG] Final cleaned data:", cleaned_data)
         return cleaned_data
+
+    def save(self, commit=True):
+        # Get cleaned values before the instance is saved
+        selected_type = self.cleaned_data.get('selected_types')
+        status = self.cleaned_data.get('status')
+
+        # Create the instance but don't commit to DB yet
+        instance = super().save(commit=False)
+        
+        # --- Calculate and set Expected Delivery Date ---
+        days_to_add = 7 if status == 'vip' else 15
+        instance.expected_delivery_date = timezone.now().date() + timedelta(days=days_to_add)
+
+        # Now, modify the instance with the other transformed data
+        if selected_type:
+            # Save selected_types as JSON
+            instance.selected_types = json.dumps([selected_type])
+
+            # Set order_type for compatibility
+            if selected_type in ['accessory']:
+                instance.order_type = 'product'
+            else:
+                instance.order_type = 'service'
+
+            # Set delivery options automatically
+            if selected_type == 'tailoring':
+                instance.delivery_type = 'branch'
+                instance.delivery_address = ''
+            elif selected_type == 'installation':
+                instance.delivery_type = 'home'
+                if not instance.delivery_address:
+                    instance.delivery_address = 'سيتم تحديد العنوان لاحقاً'
+            else:  # accessory and inspection
+                instance.delivery_type = 'branch'
+                instance.delivery_address = ''
+
+        if commit:
+            instance.save()
+            self.save_m2m()  # Important for inline formsets if any
+        
+        return instance

@@ -1,4 +1,4 @@
-default_app_config = 'orders.apps.OrdersConfig'
-
-# تحميل الإشارات
-from . import signals
+"""
+تطبيق الطلبات
+"""
+# from . import signals  <- This line causes a circular import and should be removed.

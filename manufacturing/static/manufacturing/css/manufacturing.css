@@ -93,6 +93,15 @@
     border-radius: 6px;
 }
 
+.table.table-manufacturing {
+    min-width: 1400px; /* Increase width */
+}
+
+.table.table-manufacturing thead th {
+    white-space: nowrap; /* Prevent header text wrapping */
+    vertical-align: middle;
+}
+
 .manufacturing-table {
     width: 100%;
     border-collapse: collapse;
