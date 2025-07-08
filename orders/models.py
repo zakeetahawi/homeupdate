@@ -44,6 +44,18 @@ class Order(models.Model):
         ('ready', 'جاهز للتسليم'),
         ('delivered', 'تم التسليم'),
     ]
+    
+    # حالات الطلب المستمدة من التصنيع
+    ORDER_STATUS_CHOICES = [
+        ('pending_approval', 'قيد الموافقة'),
+        ('pending', 'قيد الانتظار'),
+        ('in_progress', 'قيد التصنيع'),
+        ('ready_install', 'جاهز للتركيب'),
+        ('completed', 'مكتمل'),
+        ('delivered', 'تم التسليم'),
+        ('rejected', 'مرفوض'),
+        ('cancelled', 'ملغي'),
+    ]
     DELIVERY_TYPE_CHOICES = [
         ('home', 'توصيل للمنزل'),
         ('branch', 'استلام من الفرع'),
@@ -91,6 +103,14 @@ class Order(models.Model):
         choices=STATUS_CHOICES,
         default='normal',
         verbose_name='وضع الطلب'
+    )
+    
+    # حالة الطلب المستمدة من التصنيع
+    order_status = models.CharField(
+        max_length=30,
+        choices=ORDER_STATUS_CHOICES,
+        default='pending',
+        verbose_name='حالة الطلب'
     )
     # Order type fields
     selected_types = models.JSONField(
@@ -245,28 +265,8 @@ class Order(models.Model):
                 raise models.ValidationError('يجب اختيار العميل')
             # تحقق من وجود رقم طلب
             if not self.order_number:
-                # Get the last order number for this customer
-                try:
-                    last_order = Order.objects.filter(
-                        customer=self.customer
-                    ).order_by('-order_number').first()
-                    if last_order:
-                        # Extract the number part and increment it
-                        try:
-                            last_num = int(last_order.order_number.split('-')[-1])
-                            next_num = last_num + 1
-                        except ValueError:
-                            next_num = 1
-                    else:
-                        next_num = 1
-                    # Generate new order number
-                    customer_code = self.customer.code if self.customer and self.customer.code else "UNKNOWN"
-                    self.order_number = f"{customer_code}-{next_num:04d}"
-                except Exception as e:
-                    print(f"Error generating order number: {e}")
-                    # Use a fallback order number if we can't generate one
-                    import uuid
-                    self.order_number = f"ORD-{str(uuid.uuid4())[:8]}"
+                self.order_number = self.generate_unique_order_number()
+            
             # Validate selected types
             selected_types = self.selected_types or []
             if isinstance(selected_types, str):
@@ -422,6 +422,52 @@ class Order(models.Model):
         expected_date = self.order_date.date() + timedelta(days=days_to_add)
         return expected_date
 
+    def generate_unique_order_number(self):
+        """توليد رقم طلب فريد للعميل"""
+        if not self.customer:
+            import uuid
+            return f"ORD-{str(uuid.uuid4())[:8]}"
+        
+        try:
+            customer_code = self.customer.code if hasattr(self.customer, 'code') and self.customer.code else "UNKNOWN"
+            
+            # البحث عن آخر رقم طلب لهذا العميل
+            last_order = Order.objects.filter(
+                customer=self.customer,
+                order_number__startswith=customer_code
+            ).exclude(pk=self.pk).order_by('-order_number').first()
+            
+            if last_order:
+                # Extract the number part and increment it
+                try:
+                    last_num = int(last_order.order_number.split('-')[-1])
+                    next_num = last_num + 1
+                except ValueError:
+                    next_num = 1
+            else:
+                next_num = 1
+            
+            # التأكد من عدم تكرار رقم الطلب
+            max_attempts = 100
+            for attempt in range(max_attempts):
+                potential_order_number = f"{customer_code}-{next_num:04d}"
+                
+                # التحقق من عدم وجود رقم مكرر (باستثناء الطلب الحالي)
+                if not Order.objects.filter(order_number=potential_order_number).exclude(pk=self.pk).exists():
+                    return potential_order_number
+                
+                next_num += 1
+            
+            # إذا فشل في العثور على رقم فريد، استخدم UUID
+            import uuid
+            return f"{customer_code}-{str(uuid.uuid4())[:8]}"
+            
+        except Exception as e:
+            print(f"Error generating order number: {e}")
+            # Use a fallback order number if we can't generate one
+            import uuid
+            return f"ORD-{str(uuid.uuid4())[:8]}"
+
     def upload_contract_to_google_drive(self):
         """رفع ملف العقد إلى Google Drive"""
         try:
@@ -523,10 +569,31 @@ class Order(models.Model):
         return self.total_amount - self.paid_amount
     @property
     def is_fully_paid(self):
-        """Check if order is fully paid"""
-        if self.paid_amount is None or self.total_amount is None:
-            return False
-        return float(self.paid_amount) >= float(self.total_amount)
+        """التحقق من سداد الطلب بالكامل"""
+        return self.remaining_amount <= 0
+
+    def get_smart_delivery_date(self):
+        """إرجاع التاريخ المناسب حسب حالة الطلب"""
+        # إذا كان الطلب مكتمل أو جاهز للتركيب أو تم التسليم
+        if self.order_status in ['completed', 'ready_install', 'delivered']:
+            # التحقق من وجود أمر تصنيع وتاريخ إكمال
+            if hasattr(self, 'manufacturing_order') and self.manufacturing_order.completion_date:
+                return self.manufacturing_order.completion_date.date()
+            # إذا كان تم التسليم، التحقق من تاريخ التسليم الفعلي
+            elif self.order_status == 'delivered' and hasattr(self, 'manufacturing_order') and self.manufacturing_order.delivery_date:
+                return self.manufacturing_order.delivery_date.date()
+        
+        # في جميع الحالات الأخرى، إرجاع التاريخ المتوقع
+        return self.expected_delivery_date
+
+    def get_delivery_date_label(self):
+        """إرجاع تسمية التاريخ المناسبة حسب حالة الطلب"""
+        if self.order_status in ['completed', 'ready_install']:
+            return "تاريخ الإكمال"
+        elif self.order_status == 'delivered':
+            return "تاريخ التسليم"
+        else:
+            return "تاريخ التسليم المتوقع"
 
 @receiver(post_save, sender=Order)
 def order_post_save(sender, instance, created, **kwargs):

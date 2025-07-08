@@ -1,119 +1,460 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-{% load i18n %}
 
-{% block title %}أوامر التصنيع{% endblock %}
+{% block title %}قائمة أوامر التصنيع{% endblock %}
+
+{% block extra_head %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
 
 {% block extra_css %}
+<meta name="csrf-token" content="{{ csrf_token }}">
 <style>
-/* Enlarge the main container for the table */
-.card.shadow-sm {
-    width: 100%;
-    max-width: none;
+/* استخدام متغيرات الألوان من النظام */
+.container {
+    max-width: 100%;
+    padding: 1rem;
 }
-/* Ensure the table itself uses all available space and dropdowns are visible */
+
+/* البطاقات الإحصائية */
+.stats-card {
+    border: 1px solid var(--neutral);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stats-card .card-body {
+    padding: 1.5rem;
+}
+
+.stats-card .icon {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+/* تصميم الجدول الرئيسي - نفس تصميم العملاء */
+.main-table-card {
+    border: 1px solid var(--neutral);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.main-table-card .card-header {
+    background-color: var(--primary);
+    color: white;
+    border-bottom: none;
+    padding: 1rem 1.25rem;
+    border-radius: 8px 8px 0 0;
+}
+
+.main-table-card .card-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+/* قسم البحث والتصفية */
+.filter-card {
+    border: 1px solid var(--neutral);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.filter-card .card-body {
+    padding: 1rem;
+}
+
+/* تصميم الجدول */
 .table-responsive {
-    overflow: visible; /* Make dropdowns visible */
+    border-radius: 0 0 8px 8px;
 }
+
+.table {
+    margin-bottom: 0;
+}
+
 .table thead th {
-    white-space: nowrap; /* Prevent header text wrapping */
+    background-color: var(--primary);
+    color: white;
+    font-weight: 600;
+    border: none;
+    padding: 1rem 0.75rem;
+    text-align: center;
     vertical-align: middle;
 }
-.table {
-    table-layout: auto; /* Adjust column width automatically */
-    width: 100%;
+
+.table tbody td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    text-align: center;
+    border-bottom: 1px solid var(--neutral);
 }
-.approval-buttons a, .approval-buttons button {
-    font-size: 1.2rem; /* Make icons larger */
-    padding: 0.3rem 0.6rem;
+
+.table tbody tr:hover {
+    background-color: rgba(139, 115, 90, 0.05);
+}
+
+/* أزرار الإجراءات في صف واحد */
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+    align-items: center;
+}
+
+.action-btn {
+    padding: 0.375rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid;
+    transition: all 0.3s ease;
+    font-size: 0.875rem;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-view {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.btn-view:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    opacity: 0.9;
+}
+
+.btn-edit {
+    background-color: var(--light-accent);
+    border-color: var(--light-accent);
+    color: var(--dark-text);
+}
+
+.btn-edit:hover {
+    background-color: var(--light-accent);
+    border-color: var(--light-accent);
+    color: var(--dark-text);
+    opacity: 0.9;
+}
+
+.btn-delete {
+    background-color: var(--alert);
+    border-color: var(--alert);
+    color: white;
+}
+
+.btn-delete:hover {
+    background-color: var(--alert);
+    border-color: var(--alert);
+    color: white;
+    opacity: 0.9;
+}
+
+/* تصميم زر الحالة */
+.status-btn {
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.status-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ألوان الحالات */
+.status-pending_approval { background-color: #007bff; color: white; }
+.status-pending { background-color: #ffc107; color: #212529; }
+.status-in_progress { background-color: #17a2b8; color: white; }
+.status-completed { background-color: #28a745; color: white; }
+.status-rejected { background-color: #dc3545; color: white; }
+.status-cancelled { background-color: #6c757d; color: white; }
+.status-delivered {
+    background-color: #20c997;
+    color: white;
+}
+
+.status-delivered:hover {
+    background-color: #1aa085;
+    transform: translateY(-1px);
+}
+
+/* تصميم التنقل بين الصفحات */
+.pagination {
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.page-link {
+    color: var(--primary);
+    border-color: var(--neutral);
+    padding: 0.5rem 0.75rem;
+}
+
+.page-link:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.page-item.active .page-link {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+/* ألوان أنواع الطلبات */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.badge.bg-success {
+    background-color: #198754 !important;
+    color: white !important;
+}
+
+.badge.bg-primary {
+    background-color: #0d6efd !important;
+    color: white !important;
+}
+
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #212529 !important;
+}
+
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: white !important;
+}
+
+.badge i {
+    font-size: 0.8em;
+}
+
+/* تحسينات responsive */
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+    
+    .action-btn {
+        width: 100%;
+        padding: 0.25rem;
+        font-size: 0.75rem;
+    }
+    
+    .status-btn {
+        min-width: 100px;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
+    .table {
+        font-size: 0.875rem;
+    }
+    
+    .badge {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.375rem;
+    }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">قائمة أوامر التصنيع</h5>
-                <div>
-                    <a href="{% url 'manufacturing:dashboard' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-chart-bar me-1"></i> لوحة التحكم
-                    </a>
-                    <a href="{% url 'manufacturing:order_create' %}" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> أمر جديد
+{% csrf_token %}
+<div class="container">
+    <!-- البطاقات الإحصائية -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">إجمالي الطلبات</h6>
+                            <h2 class="mb-0">{{ total_orders|default:0|intcomma }}</h2>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 small">
+                        <span class="text-white-50">إجمالي أوامر التصنيع</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">مكتمل</h6>
+                            <h2 class="mb-0">{{ completed_orders|default:0|intcomma }}</h2>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 small">
+                        <span class="text-white-50">تم الانتهاء من التصنيع</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">قيد التنفيذ</h6>
+                            <h2 class="mb-0">{{ in_progress_orders|default:0|intcomma }}</h2>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-cog fa-spin"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 small">
+                        <span class="text-muted">قيد التصنيع حالياً</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">قيد الانتظار</h6>
+                            <h2 class="mb-0">{{ pending_orders|default:0|intcomma }}</h2>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 small">
+                        <span class="text-white-50">في انتظار المعالجة</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قسم البحث والتصفية -->
+    <div class="card filter-card">
+        <div class="card-body">
+            <form id="filterForm" method="get">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label for="status" class="form-label">حالة الطلب:</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">الكل</option>
+                            <option value="pending_approval" {% if request.GET.status == 'pending_approval' %}selected{% endif %}>قيد الموافقة</option>
+                            <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
+                            <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
+                            <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                            <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>مرفوض</option>
+                            <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="branch" class="form-label">الفرع:</label>
+                        <select name="branch" id="branch" class="form-select">
+                            <option value="">الكل</option>
+                            {% for branch in branches %}
+                            <option value="{{ branch.id }}" {% if request.GET.branch == branch.id|stringformat:'s' %}selected{% endif %}>
+                                {{ branch.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="date_from" class="form-label">من تاريخ:</label>
+                        <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="date_to" class="form-label">إلى تاريخ:</label>
+                        <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="search" class="form-label">بحث:</label>
+                        <input type="text" name="search" id="search" class="form-control" placeholder="ابحث..." value="{{ request.GET.search }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="btn-group w-100">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                            <a href="{% url 'manufacturing:order_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-redo"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- الجدول الرئيسي -->
+    <div class="card main-table-card">
+        <div class="card-header">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="mb-0">أوامر التصنيع ({{ total_orders|default:0 }})</h5>
+                </div>
+                <div class="col-md-6 text-end">
+                    <a href="{% url 'manufacturing:order_create' %}" class="btn btn-light">
+                        <i class="fas fa-plus"></i> إضافة أمر جديد
                     </a>
                 </div>
             </div>
         </div>
-        <div class="card-header bg-light py-3">
-            <form id="filterForm" method="get" class="row g-3 align-items-end">
-                <div class="col-md-2">
-                    <label for="status" class="form-label mb-0">حالة الطلب:</label>
-                    <select name="status" id="status" class="form-select form-select-sm">
-                        <option value="">الكل</option>
-                        <option value="pending_approval" {% if request.GET.status == 'pending_approval' %}selected{% endif %}>قيد الموافقة</option>
-                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
-                        <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
-                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
-                        <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>مرفوض</option>
-                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="branch" class="form-label mb-0">الفرع:</label>
-                    <select name="branch" id="branch" class="form-select form-select-sm">
-                        <option value="">الكل</option>
-                        {% for branch in branches %}
-                        <option value="{{ branch.id }}" {% if request.GET.branch == branch.id|stringformat:'s' %}selected{% endif %}>
-                            {{ branch.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="date_from" class="form-label mb-0">من تاريخ:</label>
-                    <input type="date" name="date_from" id="date_from" class="form-control form-control-sm" value="{{ request.GET.date_from }}">
-                </div>
-                <div class="col-md-2">
-                    <label for="date_to" class="form-label mb-0">إلى تاريخ:</label>
-                    <input type="date" name="date_to" id="date_to" class="form-control form-control-sm" value="{{ request.GET.date_to }}">
-                </div>
-                <div class="col-md-2">
-                    <label for="search" class="form-label mb-0">بحث:</label>
-                    <div class="input-group input-group-sm">
-                        <input type="text" name="search" id="search" class="form-control" placeholder="ابحث..." value="{{ request.GET.search }}">
-                    </div>
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
-                        <i class="fas fa-filter me-1"></i> تصفية
-                    </button>
-                    <a href="{% url 'manufacturing:order_list' %}" class="btn btn-outline-secondary btn-sm" title="إعادة تعيين">
-                        <i class="fas fa-redo"></i>
-                    </a>
-                </div>
-            </form>
-        </div>
         <div class="card-body p-0">
+            {% if manufacturing_orders %}
             <div class="table-responsive">
-                <table class="table table-hover table-striped mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>رقم الطلب</th>
-                            <th>رقم العقد</th>
-                            <th>ملف العقد</th>
-                            <th>ملف المعاينة</th>
-                            <th>رقم الفاتورة</th>
-                            <th>العميل</th>
-                            <th>البائع</th>
-                            <th>الفرع</th>
-                            <th>تاريخ الطلب</th>
-                            <th>تاريخ التسليم</th>
-                            <th class="text-center">الحالة</th>
-                            <th class="text-center">الإجراءات</th>
+                <table class="table table-hover mb-0" id="manufacturingTable">
+                    <thead>
+                        <tr style="background-color: #3c2415; color: white;">
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 10%;">رقم الطلب</th>
+                            <th style="width: 8%;">نوع الطلب</th>
+                            <th style="width: 10%;">رقم العقد</th>
+                            <th style="width: 10%;">رقم الفاتورة</th>
+                            <th style="width: 10%;">العميل</th>
+                            <th style="width: 8%;">البائع</th>
+                            <th style="width: 8%;">الفرع</th>
+                            <th style="width: 8%;">تاريخ الطلب</th>
+                            <th style="width: 8%;">تاريخ التسليم</th>
+                            <th style="width: 10%;">الحالة</th>
+                            <th style="width: 8%;">موافقة العقد</th>
+                            <th style="width: 11%;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -121,35 +462,44 @@
                         <tr>
                             <td>{{ forloop.counter }}</td>
                             <td>
-                                <a href="{% url 'manufacturing:order_detail' order.id %}" class="text-primary fw-bold">
-                                    #{{ order.id }}
+                                <a href="{% url 'manufacturing:order_detail' order.id %}" style="color: var(--primary); text-decoration: none;">
+                                    {{ order.order.order_number|default:order.order.id }}
                                 </a>
                             </td>
-                            <td>{{ order.order.contract_number|default:'-' }}</td>
                             <td>
-                                {% if order.order.contract_file %}
-                                    <a href="{{ order.order.contract_file.url }}" target="_blank" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="عرض العقد">
-                                        <i class="fas fa-file-pdf"></i>
-                                    </a>
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% with inspection=order.order.inspections.first %}
-                                    {% if inspection and inspection.inspection_file %}
-                                        <a href="{{ inspection.inspection_file.url }}" target="_blank" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="عرض المعاينة">
-                                            <i class="fas fa-file-alt"></i>
-                                        </a>
+                                {% with selected_types=order.order.get_selected_types_list %}
+                                    {% if selected_types %}
+                                        {% for type in selected_types %}
+                                            {% if type == 'installation' %}
+                                                <span class="badge bg-warning text-dark me-1">
+                                                    <i class="fas fa-tools me-1"></i>تركيب
+                                                </span>
+                                            {% elif type == 'tailoring' %}
+                                                <span class="badge bg-success me-1">
+                                                    <i class="fas fa-cut me-1"></i>تفصيل
+                                                </span>
+                                            {% elif type == 'accessory' %}
+                                                <span class="badge bg-primary me-1">
+                                                    <i class="fas fa-gem me-1"></i>إكسسوار
+                                                </span>
+                                            {% elif type == 'inspection' %}
+                                                <span class="badge bg-info me-1">
+                                                    <i class="fas fa-eye me-1"></i>معاينة
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary me-1">{{ type }}</span>
+                                            {% endif %}
+                                        {% endfor %}
                                     {% else %}
-                                        -
+                                        <span class="badge bg-secondary">غير محدد</span>
                                     {% endif %}
                                 {% endwith %}
                             </td>
-                            <td>{{ order.order.invoice_number|default:'-' }}</td>
+                            <td>{{ order.contract_number|default:'-' }}</td>
+                            <td>{{ order.invoice_number|default:'-' }}</td>
                             <td>
                                 {% if order.order.customer %}
-                                    <a href="{% url 'customers:customer_detail' order.order.customer.id %}" class="text-dark">
+                                    <a href="{% url 'customers:customer_detail' order.order.customer.id %}" style="color: var(--primary); text-decoration: none;">
                                         {{ order.order.customer.name|default:'-' }}
                                     </a>
                                 {% else %}
@@ -157,130 +507,72 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if order.order.sales_person %}
-                                    {{ order.order.sales_person.get_full_name|default:order.order.sales_person.username|default:'-' }}
+                                {% if order.order.salesperson %}
+                                    {{ order.order.salesperson.name }}
                                 {% else %}
                                     -
                                 {% endif %}
                             </td>
-                             <td data-branch-id="{{ order.order.branch.id }}">
+                            <td data-branch-id="{{ order.order.branch.id }}">
                                 {% if order.order.branch %}
                                     {{ order.order.branch.name|default:'-' }}
                                 {% else %}
                                     -
                                 {% endif %}
                             </td>
-                            <td>{{ order.order_date|date:'Y-m-d'|default:order.order.created_at|date:'Y-m-d'|default:'-' }}</td>
+                            <td>{{ order.order_date|date:'Y-m-d'|default:order.order.order_date|date:'Y-m-d'|default:'-' }}</td>
                             <td>
                                 <span class="{% if order.is_delivery_delayed %}text-danger{% endif %}">
                                     {{ order.expected_delivery_date|date:'Y-m-d'|default:'-' }}
                                     {% if order.is_delivery_delayed %}
-                                        <i class="fas fa-exclamation-triangle text-warning" 
-                                           data-bs-toggle="tooltip" 
-                                           title="متأخر"></i>
+                                        <i class="fas fa-exclamation-triangle text-warning" title="متأخر"></i>
                                     {% endif %}
                                 </span>
                             </td>
-                            <td class="text-center">
-                                <div class="dropdown d-inline-block">
-                                    <button class="btn btn-sm dropdown-toggle status-badge 
-                                                {% if order.status == 'completed' %}btn-success
-                                                {% elif order.status == 'in_progress' %}btn-info
-                                                {% elif order.status == 'pending' %}btn-warning
-                                                {% elif order.status == 'pending_approval' %}btn-primary
-                                                {% elif order.status == 'rejected' %}btn-danger
-                                                {% else %}btn-secondary{% endif %}"
-                                            type="button" id="statusDropdown{{ order.id }}" 
-                                            data-bs-toggle="dropdown" 
-                                            aria-expanded="false"
-                                            data-order-id="{{ order.id }}"
-                                            data-current-status="{{ order.status }}">
+                            <td>
+                                {% if order.status == 'pending_approval' %}
+                                    <span class="badge bg-warning">{{ order.get_status_display }}</span>
+                                {% else %}
+                                    <button class="status-btn status-{{ order.status }}" 
+                                            data-order-id="{{ order.id }}" 
+                                            data-current-status="{{ order.status }}"
+                                            onclick="showStatusModal({{ order.id }}, '{{ order.status }}', '{{ order.get_status_display }}')">
                                         {{ order.get_status_display }}
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="statusDropdown{{ order.id }}">
-                                        <li>
-                                            <a class="dropdown-item status-option {% if order.status == 'pending_approval' %}active{% endif %}" 
-                                               href="#" 
-                                               data-status="pending_approval">
-                                                <span class="badge bg-primary me-2"></span>
-                                                قيد الموافقة
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item status-option {% if order.status == 'pending' %}active{% endif %}" 
-                                               href="#" 
-                                               data-status="pending">
-                                                <span class="badge bg-warning me-2"></span>
-                                                قيد الانتظار
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item status-option {% if order.status == 'in_progress' %}active{% endif %}"
-                                               href="#"
-                                               data-status="in_progress">
-                                                <span class="badge bg-info me-2"></span>
-                                                قيد التصنيع
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item status-option {% if order.status == 'completed' %}active{% endif %}"
-                                               href="#"
-                                               data-status="completed">
-                                                <span class="badge bg-success me-2"></span>
-                                                مكتمل
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item status-option {% if order.status == 'rejected' %}active{% endif %}"
-                                               href="#"
-                                               data-status="rejected">
-                                                <span class="badge bg-danger me-2"></span>
-                                                مرفوض
-                                            </a>
-                                        </li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li>
-                                            <a class="dropdown-item status-option {% if order.status == 'cancelled' %}active{% endif %}"
-                                               href="#"
-                                               data-status="cancelled">
-                                                <span class="badge bg-secondary me-2"></span>
-                                                ملغي
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
+                                {% endif %}
                             </td>
-                            <td class="text-center approval-buttons">
+                            <td>
                                 {% if order.status == 'pending_approval' %}
-                                    <button class="btn btn-sm btn-success approve-btn" data-order-id="{{ order.id }}" data-bs-toggle="tooltip" title="موافقة">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger reject-btn" data-bs-toggle="modal" data-bs-target="#rejectModal" data-order-id="{{ order.id }}" data-bs-toggle="tooltip" title="رفض">
-                                        <i class="fas fa-times"></i>
-                                    </button>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-success approve-btn" data-order-id="{{ order.id }}" title="موافقة">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger reject-btn" data-order-id="{{ order.id }}" title="رفض">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
                                 {% elif order.status == 'rejected' and order.rejection_reason %}
-                                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="popover" data-bs-placement="top" title="سبب الرفض" data-bs-content="{{ order.rejection_reason }}">
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="showRejectionDetails('{{ order.rejection_reason|escapejs }}', {{ order.id }})"
+                                            title="عرض تفاصيل الرفض">
                                         <i class="fas fa-info-circle"></i>
                                     </button>
+                                {% else %}
+                                    <span class="text-muted">-</span>
                                 {% endif %}
-
-                                <a href="{% url 'manufacturing:order_detail' order.id %}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="عرض التفاصيل">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{% url 'manufacturing:order_update' order.id %}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="تعديل">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ order.id }}" data-bs-toggle="tooltip" title="حذف">
-                                    <i class="fas fa-trash"></i>
-                                </button>
                             </td>
-                        </tr>
-                        {% include 'includes/delete_modal.html' with delete_url=order.get_delete_url object_name="أمر التصنيع" object_id=order.id %}
-                        {% empty %}
-                        <tr>
-                            <td colspan="13" class="text-center py-4">
-                                <i class="fas fa-info-circle fa-2x text-muted mb-2"></i>
-                                <p class="mb-0">لا توجد أوامر تصنيع حالياً.</p>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="{% url 'manufacturing:order_detail' order.id %}" class="btn btn-sm action-btn btn-view" title="عرض التفاصيل">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'manufacturing:order_update' order.id %}" class="btn btn-sm action-btn btn-edit" title="تعديل">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn btn-sm action-btn btn-delete" onclick="confirmDelete({{ order.id }})" title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -288,6 +580,7 @@
                 </table>
             </div>
             
+            <!-- التنقل بين الصفحات -->
             {% if is_paginated %}
             <div class="card-footer bg-white">
                 <nav aria-label="Page navigation">
@@ -306,15 +599,15 @@
                         {% endif %}
                         
                         {% for num in page_obj.paginator.page_range %}
-                            {% if page_obj.number == num %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ num }}</span>
-                            </li>
-                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                            </li>
-                            {% endif %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
                         {% endfor %}
                         
                         {% if page_obj.has_next %}
@@ -333,201 +626,687 @@
                 </nav>
             </div>
             {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-industry fa-4x mb-3" style="color: var(--neutral);"></i>
+                <h4>لا توجد أوامر تصنيع</h4>
+                <p class="text-muted">لم يتم العثور على أي أوامر تصنيع. يمكنك إضافة أمر جديد من خلال الزر أعلاه.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- Rejection Modal -->
-<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="rejectModalLabel">رفض أمر التصنيع</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="rejectForm">
-            {% csrf_token %}
-            <input type="hidden" name="order_id" id="rejectOrderId">
-            <div class="mb-3">
-                <label for="rejection_reason" class="form-label">سبب الرفض:</label>
-                <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="4" required></textarea>
+<!-- Modal for Status Change -->
+<div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusModalLabel">تغيير حالة الطلب</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-        <button type="button" class="btn btn-danger" id="submitRejectBtn">تأكيد الرفض</button>
-      </div>
+            <div class="modal-body">
+                <form id="statusForm">
+                    <input type="hidden" id="statusOrderId" name="order_id">
+                    <div class="mb-3">
+                        <label for="new_status" class="form-label">الحالة الجديدة:</label>
+                        <select class="form-select" id="new_status" name="new_status" required>
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div id="deliveryFields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="delivery_permit_number" class="form-label">رقم إذن التسليم:</label>
+                            <input type="text" class="form-control" id="delivery_permit_number" name="delivery_permit_number">
+                        </div>
+                        <div class="mb-3">
+                            <label for="delivery_recipient_name" class="form-label">اسم المستلم:</label>
+                            <input type="text" class="form-control" id="delivery_recipient_name" name="delivery_recipient_name">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="submitStatusBtn">تحديث الحالة</button>
+            </div>
+        </div>
     </div>
-  </div>
+</div>
+
+<!-- Modal for Rejection Reason -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rejectModalLabel">سبب الرفض</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="rejectForm">
+                    <input type="hidden" id="rejectOrderId" name="order_id">
+                    <div class="mb-3">
+                        <label for="rejection_reason" class="form-label">سبب الرفض:</label>
+                        <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-danger" id="submitRejectBtn">رفض الطلب</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Rejection Details -->
+<div class="modal fade" id="rejectionDetailsModal" tabindex="-1" aria-labelledby="rejectionDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rejectionDetailsModalLabel">تفاصيل الرفض</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <strong>سبب الرفض:</strong>
+                    <div id="rejectionReasonText"></div>
+                </div>
+                <div class="mt-3">
+                    <label for="reply_message" class="form-label">رد على الرفض:</label>
+                    <textarea class="form-control" id="reply_message" name="reply_message" rows="3" placeholder="اكتب ردك هنا..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-primary" id="submitReplyBtn">إرسال الرد</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-{% if manufacturing_orders %}
 <script>
-    $(document).ready(function() {
-        var table = $('.table').DataTable({
-            "responsive": true,
-            "pageLength": 25,
-            "order": [[0, "desc"]],
-            "columnDefs": [
-                { "orderable": false, "targets": [3, 4, 11, 12] } // Adjusted targets for new columns
-            ],
-            "language": {
-                "url": "{% static 'js/datatables-arabic.js' %}"
+$(document).ready(function() {
+    // تهيئة DataTables
+    $('#manufacturingTable').DataTable({
+        "responsive": true,
+        "pageLength": 25,
+        "order": [[0, "desc"]],
+        "columnDefs": [
+            { "orderable": false, "targets": [2, 10, 11, 12] }
+        ],
+        "language": {
+            "processing": "جاري المعالجة...",
+            "search": "البحث:",
+            "lengthMenu": "أظهر _MENU_ مدخلات",
+            "info": "إظهار _START_ إلى _END_ من أصل _TOTAL_ مدخل",
+            "infoEmpty": "يعرض 0 إلى 0 من أصل 0 مدخل",
+            "infoFiltered": "(منتقاة من مجموع _MAX_ مُدخل)",
+            "infoPostFix": "",
+            "loadingRecords": "جاري التحميل...",
+            "zeroRecords": "لم يعثر على أية سجلات",
+            "emptyTable": "لا توجد بيانات متاحة في الجدول",
+            "paginate": {
+                "first": "الأول",
+                "previous": "السابق",
+                "next": "التالي",
+                "last": "الأخير"
             },
-            "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                   "<'row'<'col-sm-12'tr>>" +
-                   "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-            "initComplete": function() {
-                $('.dataTables_filter input').addClass('form-control-sm');
-                $('.dataTables_length select').addClass('form-select-sm');
+            "aria": {
+                "sortAscending": ": تفعيل لترتيب العمود تصاعدياً",
+                "sortDescending": ": تفعيل لترتيب العمود تنازلياً"
             }
-        });
-
-        // --- All other JavaScript logic (tooltips, status updates, filters) goes here ---
-
-        // Tooltip initialization logic
-        function initTooltips() {
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                if (!bootstrap.Tooltip.getInstance(tooltipTriggerEl)) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-                }
-            });
         }
-            
-        table.on('draw.dt', function () {
-            initTooltips();
-        });
-        initTooltips();
-        
-        // Status update logic
-        $(document).on('click', '.status-option', function(e) {
-            e.preventDefault();
-            const button = $(this).closest('.dropdown').find('.status-badge');
-            const orderId = button.data('order-id');
-            const newStatus = $(this).data('status');
-            const currentStatus = button.data('current-status');
-            if (newStatus !== currentStatus) {
-                updateOrderStatusWithFeedback(orderId, newStatus, button);
-            }
-        });
-
-        // Approval and Rejection logic
-        $('.approve-btn').on('click', function() {
-            const orderId = $(this).data('order-id');
-            handleApproval(orderId, 'approve');
-        });
-
-        $('#submitRejectBtn').on('click', function() {
-            const orderId = $('#rejectOrderId').val();
-            const reason = $('#rejection_reason').val();
-            if (reason.trim() === '') {
-                Swal.fire('خطأ', 'سبب الرفض مطلوب.', 'error');
-                return;
-            }
-            handleApproval(orderId, 'reject', reason);
-        });
-
-        // Populate modal with order ID when opened
-        $('#rejectModal').on('show.bs.modal', function(event) {
-            const button = $(event.relatedTarget);
-            const orderId = button.data('order-id');
-            $(this).find('#rejectOrderId').val(orderId);
-            $(this).find('#rejection_reason').val(''); // Clear previous reason
-        });
-
-        // Filter logic
-        $('#filterForm').on('submit', function(e) { e.preventDefault(); table.draw(); });
-        $('#status, #branch').on('change', function() { table.draw(); });
-        $('#search').on('keyup', function(){ table.search($(this).val()).draw(); });
-        
-            $.fn.dataTable.ext.search.push(
-                function(settings, data, dataIndex) {
-                var statusFilter = $('#status').val();
-                var branchFilter = $('#branch').val();
-                var dateFromFilter = $('#date_from').val();
-                var dateToFilter = $('#date_to').val();
-
-                var rowNode = table.row(dataIndex).node();
-                var rowStatus = $(rowNode).find('.status-badge').data('current-status') || '';
-                var rowBranch = $(rowNode).find('td[data-branch-id]').data('branch-id') || '';
-                var rowDate = data[7];
-
-                if (statusFilter && rowStatus != statusFilter) return false;
-                if (branchFilter && rowBranch != branchFilter) return false;
-
-                if (dateFromFilter || dateToFilter) {
-                    var d = new Date(rowDate);
-                    var from = dateFromFilter ? new Date(dateFromFilter) : null;
-                    var to = dateToFilter ? new Date(dateToFilter) : null;
-                    if (from && d < from) return false;
-                    if (to && d > to) return false;
-                }
-                
-                return true;
-            }
-        );
-
-        $('a[href="{% url 'manufacturing:order_list' %}"]').on('click', function(e) {
-            e.preventDefault();
-            $('#filterForm').trigger('reset');
-            table.search('').columns().search('').draw();
-        });
     });
 
-    function getStatusBadgeClass(status) {
-        // ... function content ...
-    }
-    function updateOrderStatusWithFeedback(orderId, newStatus, button) {
-        // ... function content ...
-    }
+    // معالجة الموافقة
+    $('.approve-btn').on('click', function() {
+        const orderId = $(this).data('order-id');
+        handleApproval(orderId, 'approve');
+    });
 
-    function handleApproval(orderId, action, reason = '') {
-        $.ajax({
-            url: `/factory/approval/${orderId}/`, // Correct URL
-            method: 'POST',
-            data: JSON.stringify({
-                action: action,
-                reason: reason
-            }),
-            contentType: 'application/json',
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
-            success: function(response) {
-                if (response.success) {
-                    Swal.fire('تم بنجاح!', `تم ${action === 'approve' ? 'الموافقة على' : 'رفض'} الطلب.`, 'success');
-                    // Simple page reload to see changes. A more advanced implementation would update the row dynamically.
-                    location.reload(); 
-                } else {
-                    Swal.fire('خطأ!', response.error, 'error');
-                }
-            },
-            error: function() {
-                Swal.fire('خطأ!', 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.', 'error');
+    // معالجة الرفض
+    $('.reject-btn').on('click', function() {
+        const orderId = $(this).data('order-id');
+        console.log('Reject button clicked for order:', orderId);
+        $('#rejectOrderId').val(orderId);
+        $('#rejection_reason').val(''); // Clear previous reason
+        $('#rejectModal').modal('show');
+    });
+
+    // إرسال الرفض
+    $('#submitRejectBtn').on('click', function() {
+        const orderId = $('#rejectOrderId').val();
+        const reason = $('#rejection_reason').val();
+        
+        console.log('Submit reject button clicked for order:', orderId, 'reason:', reason);
+        
+        if (!reason.trim()) {
+            Swal.fire('خطأ', 'سبب الرفض مطلوب.', 'error');
+            return;
+        }
+        
+        handleApproval(orderId, 'reject', reason);
+    });
+
+    // تصفية الجدول
+    $('#filterForm').on('submit', function(e) {
+        e.preventDefault();
+        window.location.href = '?' + $(this).serialize();
+    });
+});
+
+// عرض modal لتغيير الحالة
+function showStatusModal(orderId, currentStatus, currentStatusDisplay) {
+    const statusOptions = {
+        'pending_approval': 'قيد الموافقة',
+        'pending': 'قيد الانتظار',
+        'in_progress': 'قيد التنفيذ',
+        'ready_install': 'جاهز للتركيب',
+        'completed': 'مكتمل',
+        'delivered': 'تم التسليم',
+        'rejected': 'مرفوض',
+        'cancelled': 'ملغي'
+    };
+
+    const statusColors = {
+        'pending_approval': '#007bff',
+        'pending': '#ffc107',
+        'in_progress': '#17a2b8',
+        'ready_install': '#6f42c1',
+        'completed': '#28a745',
+        'delivered': '#20c997',
+        'rejected': '#dc3545',
+        'cancelled': '#6c757d'
+    };
+
+    // Define status hierarchy
+    const statusHierarchy = {
+        'pending_approval': 0,
+        'pending': 1,
+        'in_progress': 2,
+        'ready_install': 3,
+        'completed': 4,
+        'delivered': 5,
+        'rejected': -1,
+        'cancelled': -2
+    };
+
+    const currentLevel = statusHierarchy[currentStatus] || 0;
+    const isAdmin = {{ request.user.is_superuser|yesno:"true,false" }};
+    const hasChangePermission = {{ request.user|yesno:"true,false" }}; // This will be handled server-side
+    
+    let optionsHtml = '';
+    
+    // Define available statuses based on current status (similar to server-side logic)
+    let availableStatuses = [];
+    
+    if (currentStatus === 'pending_approval') {
+        // Only admin/approval users can change from pending_approval
+        if (isAdmin) {
+            availableStatuses = ['pending', 'rejected', 'cancelled'];
+        } else {
+            availableStatuses = []; // No status changes allowed for non-admin users
+        }
+    } else if (currentStatus === 'pending') {
+        availableStatuses = ['in_progress', 'cancelled'];
+    } else if (currentStatus === 'in_progress') {
+        availableStatuses = ['completed', 'ready_install', 'cancelled'];
+    } else if (currentStatus === 'completed' || currentStatus === 'ready_install') {
+        availableStatuses = ['completed', 'ready_install', 'delivered'];
+        // Remove current status from available options
+        availableStatuses = availableStatuses.filter(status => status !== currentStatus);
+    } else if (currentStatus === 'delivered') {
+        availableStatuses = isAdmin ? ['pending', 'in_progress', 'completed', 'ready_install'] : [];
+    } else if (currentStatus === 'rejected' || currentStatus === 'cancelled') {
+        availableStatuses = isAdmin ? ['pending', 'in_progress', 'completed', 'ready_install', 'delivered'] : [];
+    }
+    
+    // Admin can access all statuses
+    if (isAdmin && currentStatus !== 'pending_approval') {
+        // Add rejected and cancelled for all statuses (except themselves)
+        if (currentStatus !== 'rejected') availableStatuses.push('rejected');
+        if (currentStatus !== 'cancelled') availableStatuses.push('cancelled');
+    }
+    
+    // Generate options HTML
+    for (const [value, label] of Object.entries(statusOptions)) {
+        if (value !== currentStatus && availableStatuses.includes(value)) {
+            // Don't show pending_approval unless admin
+            if (value !== 'pending_approval' || isAdmin) {
+                optionsHtml += `<option value="${value}" style="color: ${statusColors[value]}">${label}</option>`;
             }
-        });
+        }
     }
-</script>
-{% endif %}
-{% endblock %}
 
-<!-- Toasts for feedback -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-    <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body"></div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-    </div>
-    <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body"></div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-    </div>
-</div>
+    if (optionsHtml === '') {
+        Swal.fire({
+            title: 'تنبيه',
+            text: 'لا توجد حالات متاحة للتغيير',
+            icon: 'info',
+            confirmButtonText: 'موافق'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'تغيير حالة الطلب',
+        html: `
+            <p class="mb-3">الحالة الحالية: <span class="badge" style="background-color: ${statusColors[currentStatus]}; color: white;">${currentStatusDisplay}</span></p>
+            <select id="newStatus" class="form-select">
+                <option value="">اختر الحالة الجديدة</option>
+                ${optionsHtml}
+            </select>
+            ${!isAdmin ? '<p class="text-muted small mt-2">ملاحظة: لا يمكن العودة للحالات السابقة إلا من قبل مدير النظام</p>' : ''}
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'متابعة',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#007bff',
+        cancelButtonColor: '#6c757d',
+        preConfirm: () => {
+            const newStatus = document.getElementById('newStatus').value;
+            if (!newStatus) {
+                Swal.showValidationMessage('يرجى اختيار الحالة الجديدة');
+                return false;
+            }
+            return newStatus;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const newStatus = result.value;
+            
+            // إذا كانت الحالة الجديدة هي "تم التسليم"، اطلب حقول التسليم
+            if (newStatus === 'delivered') {
+                showDeliveryModal(orderId, newStatus);
+            } else if (newStatus === 'rejected') {
+                // إذا كانت الحالة الجديدة هي "مرفوض"، اطلب سبب الرفض
+                showRejectionModal(orderId, newStatus);
+            } else {
+                updateOrderStatus(orderId, newStatus);
+            }
+        }
+    });
+}
+
+// عرض modal لسبب الرفض
+function showRejectionModal(orderId, newStatus) {
+    Swal.fire({
+        title: 'سبب الرفض',
+        html: `
+            <div class="text-start">
+                <div class="mb-3">
+                    <label for="rejectionReason" class="form-label">سبب الرفض <span class="text-danger">*</span></label>
+                    <textarea id="rejectionReason" class="form-control" rows="4" placeholder="أدخل سبب الرفض..." required></textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'رفض الطلب',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        focusConfirm: false,
+        preConfirm: () => {
+            const rejectionReason = document.getElementById('rejectionReason').value.trim();
+            
+            if (!rejectionReason) {
+                Swal.showValidationMessage('سبب الرفض مطلوب');
+                return false;
+            }
+            
+            return rejectionReason;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            updateOrderStatusWithRejection(orderId, newStatus, result.value);
+        }
+    });
+}
+
+// عرض modal لحقول التسليم
+function showDeliveryModal(orderId, newStatus) {
+    Swal.fire({
+        title: 'بيانات التسليم',
+        html: `
+            <div class="text-start">
+                <div class="mb-3">
+                    <label for="deliveryPermitNumber" class="form-label">رقم إذن التسليم <span class="text-danger">*</span></label>
+                    <input type="text" id="deliveryPermitNumber" class="form-control" placeholder="أدخل رقم إذن التسليم" required>
+                </div>
+                <div class="mb-3">
+                    <label for="deliveryRecipientName" class="form-label">اسم المستلم <span class="text-danger">*</span></label>
+                    <input type="text" id="deliveryRecipientName" class="form-control" placeholder="أدخل اسم المستلم" required>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'تسليم',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        focusConfirm: false,
+        preConfirm: () => {
+            const deliveryPermitNumber = document.getElementById('deliveryPermitNumber').value.trim();
+            const deliveryRecipientName = document.getElementById('deliveryRecipientName').value.trim();
+            
+            if (!deliveryPermitNumber) {
+                Swal.showValidationMessage('رقم إذن التسليم مطلوب');
+                return false;
+            }
+            
+            if (!deliveryRecipientName) {
+                Swal.showValidationMessage('اسم المستلم مطلوب');
+                return false;
+            }
+            
+            return {
+                deliveryPermitNumber: deliveryPermitNumber,
+                deliveryRecipientName: deliveryRecipientName
+            };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            updateOrderStatusWithDelivery(orderId, newStatus, result.value);
+        }
+    });
+}
+
+// تحديث حالة الطلب
+function updateOrderStatus(orderId, newStatus) {
+    Swal.fire({
+        title: 'جاري التحديث...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    $.ajax({
+        url: `/manufacturing/api/update_status/${orderId}/`,
+        method: 'POST',
+        data: {
+            'status': newStatus,
+            'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content')
+        },
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    title: 'تم بنجاح!',
+                    text: 'تم تحديث حالة الطلب بنجاح',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء تحديث الحالة', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'حدث خطأ غير متوقع';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+}
+
+// تحديث حالة الطلب مع سبب الرفض
+function updateOrderStatusWithRejection(orderId, newStatus, rejectionReason) {
+    Swal.fire({
+        title: 'جاري الرفض...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // استخدام API الموافقة/الرفض الموجود
+    const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+    
+    $.ajax({
+        url: `/manufacturing/approval/${orderId}/`,
+        method: 'POST',
+        data: JSON.stringify({
+            'action': 'reject',
+            'reason': rejectionReason
+        }),
+        contentType: 'application/json',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    title: 'تم الرفض بنجاح!',
+                    text: 'تم رفض الطلب وإرسال إشعار للمستخدم',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء رفض الطلب', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'حدث خطأ غير متوقع';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+}
+
+// تحديث حالة الطلب مع بيانات التسليم
+function updateOrderStatusWithDelivery(orderId, newStatus, deliveryData) {
+    Swal.fire({
+        title: 'جاري التحديث...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    const formData = new FormData();
+    formData.append('status', newStatus);
+    formData.append('delivery_permit_number', deliveryData.deliveryPermitNumber);
+    formData.append('delivery_recipient_name', deliveryData.deliveryRecipientName);
+    formData.append('csrfmiddlewaretoken', $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content'));
+
+    $.ajax({
+        url: `/manufacturing/api/update_status/${orderId}/`,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    title: 'تم التسليم بنجاح!',
+                    text: `تم تسليم الطلب إلى: ${deliveryData.deliveryRecipientName}`,
+                    icon: 'success',
+                    timer: 3000,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء تحديث الحالة', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'حدث خطأ غير متوقع';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+}
+
+// معالجة الموافقة والرفض
+function handleApproval(orderId, action, reason = '') {
+    // إظهار loading
+    Swal.fire({
+        title: action === 'approve' ? 'جاري الموافقة...' : 'جاري الرفض...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // الحصول على CSRF token
+    const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+    
+    if (!csrfToken) {
+        Swal.fire('خطأ!', 'لم يتم العثور على رمز الأمان. يرجى إعادة تحميل الصفحة.', 'error');
+        return;
+    }
+
+    $.ajax({
+        url: `/manufacturing/approval/${orderId}/`,
+        method: 'POST',
+        data: JSON.stringify({
+            'action': action,
+            'reason': reason
+        }),
+        contentType: 'application/json',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        success: function(response) {
+            if (response.success) {
+                if (action === 'approve') {
+                    Swal.fire({
+                        title: 'تم بنجاح!',
+                        text: response.message || 'تم قبول الطلب بنجاح',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'تم بنجاح!',
+                        text: response.message || 'تم رفض الطلب وإرسال إشعار للمستخدم',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    $('#rejectModal').modal('hide');
+                }
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء المعالجة', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'حدث خطأ غير متوقع';
+            
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            } else if (xhr.status === 403) {
+                errorMessage = 'ليس لديك صلاحية لتنفيذ هذا الإجراء';
+            } else if (xhr.status === 404) {
+                errorMessage = 'لم يتم العثور على الطلب';
+            } else if (xhr.status === 400) {
+                errorMessage = 'بيانات غير صالحة';
+            }
+            
+            Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+}
+
+// عرض تفاصيل الرفض
+function showRejectionDetails(rejectionReason, orderId) {
+    $('#rejectionReasonText').text(rejectionReason);
+    $('#rejectionDetailsModal').modal('show');
+    
+    // حفظ معرف الطلب للاستخدام في الرد
+    $('#rejectionDetailsModal').data('order-id', orderId);
+}
+
+// معالجة الرد على الرفض
+$('#submitReplyBtn').on('click', function() {
+    const orderId = $('#rejectionDetailsModal').data('order-id');
+    const replyMessage = $('#reply_message').val().trim();
+    
+    if (!replyMessage) {
+        Swal.fire('خطأ', 'يرجى كتابة رد قبل الإرسال.', 'error');
+        return;
+    }
+    
+    // إظهار loading
+    Swal.fire({
+        title: 'جاري إرسال الرد...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+    
+    $.ajax({
+        url: `/manufacturing/send_reply/${orderId}/`,
+        method: 'POST',
+        data: JSON.stringify({
+            'reply_message': replyMessage
+        }),
+        contentType: 'application/json',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    title: 'تم بنجاح!',
+                    text: 'تم إرسال ردك للإدارة بنجاح',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                $('#rejectionDetailsModal').modal('hide');
+                $('#reply_message').val('');
+            } else {
+                Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء إرسال الرد', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'حدث خطأ غير متوقع';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+});
+
+// تأكيد الحذف
+function confirmDelete(orderId) {
+    Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'لن تتمكن من التراجع عن هذا الإجراء!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، احذف!',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = `/manufacturing/orders/${orderId}/delete/`;
+        }
+    });
+}
+</script>
+{% endblock %}

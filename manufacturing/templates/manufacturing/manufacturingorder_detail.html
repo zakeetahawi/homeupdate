@@ -3,222 +3,223 @@
 {% load humanize %}
 {% load i18n %}
 
-{% block title %}تفاصيل أمر التصنيع #{{ manufacturing_order.order.order_number }}{% endblock %}
+{% block title %}تفاصيل أمر التصنيع - {{ manufacturing_order.order.order_number|default:manufacturing_order.order.id }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">
-                    <i class="fas fa-clipboard-list me-2"></i>
-                    تفاصيل أمر التصنيع #{{ manufacturing_order.order.order_number }}
-                </h4>
-                <div class="btn-group">
-                    <a href="{% url 'manufacturing:order_print' manufacturing_order.pk %}" 
-                       class="btn btn-outline-primary" 
-                       target="_blank"
-                       data-bs-toggle="tooltip" 
-                       title="طباعة أمر التصنيع">
-                        <i class="fas fa-print me-1"></i> طباعة
-                    </a>
-                    <a href="{% url 'manufacturing:order_update' manufacturing_order.pk %}" 
-                       class="btn btn-outline-secondary"
-                       data-bs-toggle="tooltip" 
-                       title="تعديل أمر التصنيع">
-                        <i class="fas fa-edit me-1"></i> تعديل
-                    </a>
-                    <a href="{% url 'manufacturing:order_list' %}" 
-                       class="btn btn-outline-dark"
-                       data-bs-toggle="tooltip" 
-                       title="العودة للقائمة">
-                        <i class="fas fa-arrow-right me-1"></i> عودة
-                    </a>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card-body">
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card h-100">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">معلومات الطلب</h5>
-                        </div>
-                        <div class="card-body">
-                            <dl class="row mb-0">
-                                <dt class="col-sm-5">رقم الطلب:</dt>
-                                <dd class="col-sm-7">{{ manufacturing_order.order.order_number }}</dd>
-                                
-                                <dt class="col-sm-5">تاريخ الطلب:</dt>
-                                <dd class="col-sm-7">{{ manufacturing_order.order_date|date:"Y/m/d" }}</dd>
-                                
-                                <dt class="col-sm-5">نوع الطلب:</dt>
-                                <dd class="col-sm-7">
-                                    <span class="badge bg-primary">
-                                        {{ manufacturing_order.order.get_order_type_display }}
-                                    </span>
-                                </dd>
-                                
-                                <dt class="col-sm-5">حالة الطلب:</dt>
-                                <dd class="col-sm-7">
-                                    <span class="badge 
-                                        {% if manufacturing_order.status == 'completed' %}bg-success
-                                        {% elif manufacturing_order.status == 'in_progress' %}bg-info
-                                        {% elif manufacturing_order.status == 'pending' %}bg-warning
-                                        {% elif manufacturing_order.status == 'delivered' %}bg-primary
-                                        {% else %}bg-secondary{% endif %}">
-                                        {{ manufacturing_order.get_status_display }}
-                                    </span>
-                                </dd>
-                                
-                                <dt class="col-sm-5">رقم العقد:</dt>
-                                <dd class="col-sm-7">{{ manufacturing_order.contract_number|default:"-" }}</dd>
-                                
-                                <dt class="col-sm-5">رقم الفاتورة:</dt>
-                                <dd class="col-sm-7">{{ manufacturing_order.invoice_number|default:"-" }}</dd>
-                                
-                                <dt class="col-sm-5">تاريخ التسليم المتوقع:</dt>
-                                <dd class="col-sm-7">{{ manufacturing_order.expected_delivery_date|date:"Y/m/d"|default:"-" }}</dd>
-                                
-                                <dt class="col-sm-5">ملف العقد:</dt>
-                                <dd class="col-sm-7">
-                                    {% with order=manufacturing_order.order %}
-                                        {% if order.contract_file %}
-                                            <div class="file-link">
-                                                <a href="{{ order.contract_file.url }}" target="_blank" class="text-primary">
-                                                    <i class="fas fa-external-link-alt"></i> عرض ملف العقد
-                                                </a>
-                                                {% if order.contract_google_drive_file_url %}
-                                                    <a href="{{ order.contract_google_drive_file_url }}" 
-                                                       target="_blank" class="text-success ms-2">
-                                                        <i class="fab fa-google-drive"></i> فتح في جوجل درايف
-                                                    </a>
-                                                {% endif %}
-                                            </div>
-                                        {% else %}
-                                            <span class="text-muted">لا يوجد ملف عقد مرفق</span>
-                                        {% endif %}
-                                    {% endwith %}
-                                </dd>
-                                
-                                <dt class="col-sm-5">ملف المعاينة:</dt>
-                                <dd class="col-sm-7">
-                                    {% with order=manufacturing_order.order %}
-                                        {% if order.inspection_file %}
-                                            <div class="file-link">
-                                                <a href="{{ order.inspection_file.url }}" target="_blank" class="text-primary">
-                                                    <i class="fas fa-external-link-alt"></i> عرض ملف المعاينة
-                                                </a>
-                                                {% if order.inspection_google_drive_file_url %}
-                                                    <a href="{{ order.inspection_google_drive_file_url }}" 
-                                                       target="_blank" class="text-success ms-2">
-                                                        <i class="fab fa-google-drive"></i> فتح في جوجل درايف
-                                                    </a>
-                                                {% endif %}
-                                            </div>
-                                        {% else %}
-                                            <span class="text-muted">لا يوجد ملف معاينة مرفق</span>
-                                        {% endif %}
-                                    {% endwith %}
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="card h-100">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">معلومات العميل</h5>
-                        </div>
-                        <div class="card-body">
-                            <dl class="row mb-0">
-                                <dt class="col-sm-4">اسم العميل:</dt>
-                                <dd class="col-sm-8">{{ manufacturing_order.order.customer.name }}</dd>
-                                
-                                <dt class="col-sm-4">رقم الهاتف:</dt>
-                                <dd class="col-sm-8">{{ manufacturing_order.order.customer.phone }}</dd>
-                                
-                                <dt class="col-sm-4">العنوان:</dt>
-                                <dd class="col-sm-8">{{ manufacturing_order.order.customer.address|default:"-"|linebreaksbr }}</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">المنتجات</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>اسم المنتج</th>
-                                    <th class="text-center">الكمية</th>
-                                    <th class="text-center">الحالة</th>
-                                    <th>ملاحظات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in manufacturing_order.items.all %}
-                                <tr>
-                                    <td>{{ forloop.counter }}</td>
-                                    <td>{{ item.product.name }}</td>
-                                    <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-center">
-                                        <span class="badge 
-                                            {% if item.status == 'completed' %}bg-success
-                                            {% elif item.status == 'in_progress' %}bg-info
-                                            {% elif item.status == 'pending' %}bg-warning
-                                            {% else %}bg-secondary{% endif %}">
-                                            {{ item.get_status_display }}
-                                        </span>
-                                    </td>
-                                    <td>{{ item.notes|default:"-" }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-center py-4">
-                                        <div class="text-muted">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            لا توجد منتجات مضافة لهذا الطلب
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            
-            {% if manufacturing_order.notes %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
             <div class="card">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">ملاحظات إضافية</h5>
+                <div class="card-header">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4>تفاصيل أمر التصنيع</h4>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <a href="{% url 'manufacturing:order_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> العودة للقائمة
+                            </a>
+                            <a href="{% url 'manufacturing:order_update' manufacturing_order.id %}" class="btn btn-primary">
+                                <i class="fas fa-edit"></i> تعديل
+                            </a>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
-                    {{ manufacturing_order.notes|linebreaks }}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        
-        <div class="card-footer bg-light">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="text-muted small">
-                    <i class="far fa-clock me-1"></i>
-                    تم التحديث: {{ manufacturing_order.updated_at|timesince }} منذ
-                </div>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.history.back()">
-                        <i class="fas fa-arrow-right me-1"></i> رجوع
-                    </button>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>معلومات أساسية</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="30%">رقم الطلب:</th>
+                                    <td>{{ manufacturing_order.order.order_number|default:manufacturing_order.order.id }}</td>
+                                </tr>
+                                <tr>
+                                    <th>رقم العقد:</th>
+                                    <td>{{ manufacturing_order.contract_number|default:'-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>رقم الفاتورة:</th>
+                                    <td>{{ manufacturing_order.invoice_number|default:'-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>نوع الطلب:</th>
+                                    <td>{{ manufacturing_order.get_order_type_display }}</td>
+                                </tr>
+                                <tr>
+                                    <th>الحالة:</th>
+                                    <td>
+                                        <span class="badge bg-{{ manufacturing_order.status }}">
+                                            {{ manufacturing_order.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>تاريخ الطلب:</th>
+                                    <td>{{ manufacturing_order.order_date|date:'Y-m-d' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>تاريخ التسليم المتوقع:</th>
+                                    <td>{{ manufacturing_order.expected_delivery_date|date:'Y-m-d'|default:'-' }}</td>
+                                </tr>
+                                {% if manufacturing_order.completion_date %}
+                                <tr>
+                                    <th>تاريخ الإكمال:</th>
+                                    <td>{{ manufacturing_order.completion_date|date:'Y-m-d H:i' }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if manufacturing_order.delivery_date %}
+                                <tr>
+                                    <th>تاريخ التسليم:</th>
+                                    <td>{{ manufacturing_order.delivery_date|date:'Y-m-d H:i' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>رقم إذن التسليم:</th>
+                                    <td>{{ manufacturing_order.delivery_permit_number|default:'-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>اسم المستلم:</th>
+                                    <td>{{ manufacturing_order.delivery_recipient_name|default:'-' }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>معلومات العميل والبائع</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="30%">العميل:</th>
+                                    <td>{{ manufacturing_order.order.customer.name|default:'-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>البائع:</th>
+                                    <td>
+                                        {% if manufacturing_order.order.sales_person %}
+                                            {{ manufacturing_order.order.sales_person.get_full_name|default:manufacturing_order.order.sales_person.username }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>الفرع:</th>
+                                    <td>{{ manufacturing_order.order.branch.name|default:'-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>أنشأ بواسطة:</th>
+                                    <td>
+                                        {% if manufacturing_order.created_by %}
+                                            {{ manufacturing_order.created_by.get_full_name|default:manufacturing_order.created_by.username }}
+                                        {% else %}
+                                            غير محدد
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>تاريخ الإنشاء:</th>
+                                    <td>{{ manufacturing_order.created_at|date:'Y-m-d H:i' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>آخر تحديث:</th>
+                                    <td>{{ manufacturing_order.updated_at|date:'Y-m-d H:i' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ملفات العقد والمعاينة -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h5>الملفات المرفقة</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h6>ملف العقد</h6>
+                                            {% if manufacturing_order.contract_file %}
+                                                <a href="{{ manufacturing_order.contract_file.url }}" target="_blank" class="btn btn-success">
+                                                    <i class="fas fa-file-pdf"></i> عرض ملف العقد
+                                                </a>
+                                            {% else %}
+                                                <p class="text-muted">لم يتم رفع ملف العقد</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h6>ملف المعاينة</h6>
+                                            {% with inspection=manufacturing_order.order.inspections.first %}
+                                                {% if inspection and inspection.inspection_file %}
+                                                    <a href="{{ inspection.inspection_file.url }}" target="_blank" class="btn btn-info">
+                                                        <i class="fas fa-file-alt"></i> عرض ملف المعاينة
+                                                    </a>
+                                                {% else %}
+                                                    <p class="text-muted">لم يتم رفع ملف المعاينة</p>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- عناصر الطلب -->
+                    {% if items %}
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h5>عناصر الطلب</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>المنتج</th>
+                                            <th>الكمية</th>
+                                            <th>السعر</th>
+                                            <th>الإجمالي</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in items %}
+                                        <tr>
+                                            <td>{{ item.product.name }}</td>
+                                            <td>{{ item.quantity }}</td>
+                                            <td>{{ item.price|floatformat:2 }}</td>
+                                            <td>{{ item.total_price|floatformat:2 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- ملاحظات -->
+                    {% if manufacturing_order.notes %}
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h5>ملاحظات</h5>
+                            <div class="alert alert-info">
+                                {{ manufacturing_order.notes|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- سبب الرفض -->
+                    {% if manufacturing_order.status == 'rejected' and manufacturing_order.rejection_reason %}
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h5>سبب الرفض</h5>
+                            <div class="alert alert-danger">
+                                {{ manufacturing_order.rejection_reason|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

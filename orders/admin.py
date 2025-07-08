@@ -33,7 +33,7 @@ class PaymentInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('order_number', 'customer', 'tracking_status', 'final_price', 'payment_status', 'created_at')
+    list_display = ('order_number', 'customer', 'order_status_display', 'tracking_status', 'final_price', 'payment_status', 'created_at')
     list_filter = (
         'tracking_status',
         'payment_verified',
@@ -72,6 +72,26 @@ class OrderAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
+
+    def order_status_display(self, obj):
+        """عرض حالة الطلب مع الألوان"""
+        colors = {
+            'pending_approval': '#ffc107',
+            'pending': '#17a2b8',
+            'in_progress': '#007bff',
+            'ready_install': '#6f42c1',
+            'completed': '#28a745',
+            'delivered': '#20c997',
+            'rejected': '#dc3545',
+            'cancelled': '#6c757d',
+        }
+        color = colors.get(obj.order_status, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            obj.get_order_status_display()
+        )
+    order_status_display.short_description = 'حالة الطلب'
 
     def payment_status(self, obj):
         if obj.is_fully_paid:

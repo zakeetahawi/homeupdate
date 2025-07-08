@@ -106,7 +106,75 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         from datetime import date
         context['today'] = date.today().isoformat()
         
+        # Add function to get available statuses for each order
+        context['get_available_statuses'] = lambda current_status: self._get_available_statuses(self.request.user, current_status)
+        
         return context
+    
+    def _get_available_statuses(self, user, current_status):
+        """
+        Get list of available statuses for the user based on current status
+        """
+        if user.is_superuser:
+            # Admin can see all statuses except current one
+            return [status for status in ManufacturingOrder.STATUS_CHOICES if status[0] != current_status]
+        
+        available_statuses = []
+        
+        if current_status == 'pending_approval':
+            # Only approval users can change from pending_approval
+            if user.has_perm('manufacturing.can_approve_orders'):
+                available_statuses = [
+                    ('pending', 'قيد الانتظار'),
+                    ('rejected', 'مرفوض'),
+                    ('cancelled', 'ملغي'),
+                ]
+            else:
+                available_statuses = []
+        
+        elif current_status == 'pending':
+            # Factory staff can see manufacturing progression
+            if user.has_perm('manufacturing.change_manufacturingorder'):
+                available_statuses = [
+                    ('in_progress', 'قيد التصنيع'),
+                    ('cancelled', 'ملغي'),
+                ]
+            else:
+                available_statuses = []
+        
+        elif current_status == 'in_progress':
+            # Factory staff can see completion options
+            if user.has_perm('manufacturing.change_manufacturingorder'):
+                available_statuses = [
+                    ('completed', 'مكتمل'),
+                    ('ready_install', 'جاهز للتركيب'),
+                    ('cancelled', 'ملغي'),
+                ]
+            else:
+                available_statuses = []
+        
+        elif current_status in ['completed', 'ready_install']:
+            # Can move between completion states and to delivery
+            if user.has_perm('manufacturing.change_manufacturingorder'):
+                available_statuses = [
+                    ('completed', 'مكتمل'),
+                    ('ready_install', 'جاهز للتركيب'),
+                    ('delivered', 'تم التسليم'),
+                ]
+                # Remove current status from available options
+                available_statuses = [status for status in available_statuses if status[0] != current_status]
+            else:
+                available_statuses = []
+        
+        elif current_status == 'delivered':
+            # Delivered orders are final for non-admin users
+            available_statuses = []
+        
+        elif current_status in ['rejected', 'cancelled']:
+            # Rejected/cancelled orders are final for non-admin users
+            available_statuses = []
+        
+        return available_statuses
 
 
 class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
@@ -207,14 +275,6 @@ def update_order_status(request, pk):
                 'success': False, 
                 'error': 'يجب تسجيل الدخول أولاً'
             }, status=401)
-            
-        # Check permission
-        if not request.user.has_perm('manufacturing.change_manufacturingorder'):
-            logger.warning(f"[update_order_status] Permission denied for user {request.user}")
-            return JsonResponse({
-                'success': False, 
-                'error': 'ليس لديك صلاحية لتحديث حالة الطلب'
-            }, status=403)
         
         # Get the order
         try:
@@ -227,6 +287,21 @@ def update_order_status(request, pk):
                 'error': 'لم يتم العثور على أمر التصنيع'
             }, status=404)
         
+        # Check if order is in pending_approval status
+        if order.status == 'pending_approval':
+            return JsonResponse({
+                'success': False,
+                'error': 'لا يمكن تغيير حالة الطلب قبل الموافقة عليه. يرجى استخدام أزرار الموافقة أو الرفض.'
+            }, status=403)
+        
+        # Check permission for manufacturing status changes
+        if not request.user.has_perm('manufacturing.change_manufacturingorder'):
+            logger.warning(f"[update_order_status] Permission denied for user {request.user}")
+            return JsonResponse({
+                'success': False, 
+                'error': 'ليس لديك صلاحية لتحديث حالة الطلب'
+            }, status=403)
+        
         # Get and validate status
         new_status = request.POST.get('status')
         logger.debug(f"[update_order_status] Requested status: {new_status}")
@@ -237,6 +312,35 @@ def update_order_status(request, pk):
                 'success': False, 
                 'error': 'لم يتم تحديد الحالة الجديدة'
             }, status=400)
+        
+        # Prevent going back to pending_approval unless user is superuser
+        if new_status == 'pending_approval' and not request.user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'error': 'لا يمكن العودة إلى حالة "قيد الموافقة" إلا من قبل مدير النظام'
+            }, status=403)
+        
+        # Define status hierarchy to prevent going backwards (unless superuser)
+        status_hierarchy = {
+            'pending_approval': 0,
+            'pending': 1,
+            'in_progress': 2,
+            'ready_install': 3,
+            'completed': 4,
+            'delivered': 5,
+            'rejected': -1,
+            'cancelled': -2
+        }
+        
+        current_level = status_hierarchy.get(order.status, 0)
+        new_level = status_hierarchy.get(new_status, 0)
+        
+        # Prevent going backwards unless user is superuser
+        if new_level < current_level and not request.user.is_superuser and new_status not in ['rejected', 'cancelled']:
+            return JsonResponse({
+                'success': False,
+                'error': 'لا يمكن العودة إلى حالة سابقة إلا من قبل مدير النظام'
+            }, status=403)
             
         valid_statuses = dict(ManufacturingOrder.STATUS_CHOICES).keys()
         if new_status not in valid_statuses:
@@ -248,22 +352,48 @@ def update_order_status(request, pk):
                 'valid_statuses': list(valid_statuses)
             }, status=400)
         
+        # Handle delivery status - require delivery fields
+        if new_status == 'delivered':
+            delivery_permit_number = request.POST.get('delivery_permit_number', '').strip()
+            delivery_recipient_name = request.POST.get('delivery_recipient_name', '').strip()
+            
+            if not delivery_permit_number:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'رقم إذن التسليم مطلوب عند تغيير الحالة إلى "تم التسليم"'
+                }, status=400)
+            
+            if not delivery_recipient_name:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'اسم المستلم مطلوب عند تغيير الحالة إلى "تم التسليم"'
+                }, status=400)
+        
         # Update order status
         old_status = order.status
         logger.info(f"[update_order_status] Updating order {pk} status from {old_status} to {new_status}")
         
         order.status = new_status
-        order.updated_by = request.user
         order.updated_at = timezone.now()
         
+        # Handle delivery fields
+        if new_status == 'delivered':
+            order.delivery_permit_number = request.POST.get('delivery_permit_number', '').strip()
+            order.delivery_recipient_name = request.POST.get('delivery_recipient_name', '').strip()
+            order.delivery_date = timezone.now()
+            logger.debug(f"[update_order_status] Set delivery fields for order {pk}")
+        
         # Set completion date if status is completed or ready for installation
-        if new_status in ['completed', 'ready_for_installation'] and not order.completion_date:
+        if new_status in ['completed', 'ready_install', 'delivered'] and not order.completion_date:
             order.completion_date = timezone.now()
             logger.debug(f"[update_order_status] Set completion date to {order.completion_date}")
         
         # Save the order
         try:
-            order.save(update_fields=['status', 'updated_by', 'updated_at', 'completion_date'])
+            save_fields = ['status', 'updated_at', 'completion_date']
+            if new_status == 'delivered':
+                save_fields.extend(['delivery_permit_number', 'delivery_recipient_name', 'delivery_date'])
+            order.save(update_fields=save_fields)
             logger.info(f"[update_order_status] Successfully updated order {pk}")
         except Exception as e:
             logger.error(f"[update_order_status] Error saving order {pk}: {str(e)}", exc_info=True)
@@ -367,13 +497,25 @@ def create_from_order(request, order_id):
             created_by=request.user
         )
         
+        # إرسال إشعار بإنشاء أمر التصنيع
+        send_notification(
+            title=f'تم إنشاء أمر تصنيع جديد',
+            message=f'تم إنشاء أمر تصنيع للعميل {order.customer.name} - الطلب #{order.order_number}',
+            sender=request.user,
+            sender_department_code='manufacturing',
+            target_department_code='management',
+            target_branch=order.branch,
+            priority='medium',
+            related_object=manufacturing_order
+        )
+        
         # Add order items to manufacturing order
         for item in order.items.all():
             ManufacturingOrderItem.objects.create(
                 manufacturing_order=manufacturing_order,
-                product_name=item.product.name,
-                quantity=item.quantity,
-                specifications=item.specifications
+                product_name=item.product.name if item.product else f'منتج #{item.id}',
+                quantity=item.quantity or 1,
+                specifications=getattr(item, 'specifications', None) or getattr(item, 'notes', None) or 'لا توجد مواصفات'
             )
         
         messages.success(request, 'تم إنشاء أمر التصنيع بنجاح')
@@ -548,43 +690,117 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import ManufacturingOrder
 import json
 
-@csrf_exempt
 @require_POST
 def update_approval_status(request, pk):
+    """
+    API endpoint to approve or reject manufacturing orders
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
-        order = ManufacturingOrder.objects.select_related('order', 'order__created_by').get(pk=pk)
-        data = json.loads(request.body)
+        # Check authentication
+        if not request.user.is_authenticated:
+            logger.warning("Unauthenticated approval attempt")
+            return JsonResponse({
+                'success': False, 
+                'error': 'يجب تسجيل الدخول أولاً'
+            }, status=401)
+        
+        # Check approval permission - only users with specific permission can approve
+        if not (request.user.has_perm('manufacturing.can_approve_orders') or request.user.is_superuser):
+            logger.warning(f"Permission denied for user {request.user.username}")
+            return JsonResponse({
+                'success': False, 
+                'error': 'ليس لديك صلاحية الموافقة على أوامر التصنيع'
+            }, status=403)
+        
+        # Get the manufacturing order
+        try:
+            order = ManufacturingOrder.objects.select_related('order', 'order__created_by').get(pk=pk)
+        except ManufacturingOrder.DoesNotExist:
+            logger.error(f"Manufacturing order {pk} not found")
+            return JsonResponse({
+                'success': False, 
+                'error': 'لم يتم العثور على الطلب.'
+            }, status=404)
+        
+        # Parse request data
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON in request body")
+            return JsonResponse({
+                'success': False, 
+                'error': 'بيانات غير صالحة'
+            }, status=400)
+        
         action = data.get('action')
+        
+        # Validate action
+        if action not in ['approve', 'reject']:
+            return JsonResponse({
+                'success': False, 
+                'error': 'إجراء غير صالح.'
+            }, status=400)
 
-        if order.status != 'pending_approval':
-            return JsonResponse({'success': False, 'error': 'تمت معالجة هذا الطلب بالفعل.'})
+        # Check if order is still pending approval (allow rejection from other statuses)
+        if order.status != 'pending_approval' and action == 'approve':
+            return JsonResponse({
+                'success': False, 
+                'error': 'تمت معالجة هذا الطلب بالفعل.'
+            }, status=400)
+        
+        # For rejection, allow from any status except already rejected
+        if action == 'reject' and order.status == 'rejected':
+            return JsonResponse({
+                'success': False, 
+                'error': 'هذا الطلب مرفوض بالفعل.'
+            }, status=400)
 
         with transaction.atomic():
             if action == 'approve':
-                order.status = 'pending' # The manufacturing process itself is now 'pending'
+                order.status = 'pending'  # The manufacturing process itself is now 'pending'
                 order.rejection_reason = None
                 order.save()
                 
                 # Create a notification for the user who created the original order
                 if order.order and order.order.created_by:
-                    recipient = order.order.created_by
-                    title = f'بدء تصنيع طلبك #{order.order.order_number}'
-                    message = f'تمت الموافقة على طلبك ودخل مرحلة التصنيع. رقم العقد في المصنع هو #{order.pk}.'
-                    
-                    Notification.objects.create(
-                        recipient=recipient,
-                        title=title,
-                        message=message,
-                        priority='high',
-                        link=order.get_absolute_url()
-                    )
+                    try:
+                        from accounts.models import Notification
+                        recipient = order.order.created_by
+                        title = f'بدء تصنيع طلب {order.order.customer.name}'
+                        message = f'تمت الموافقة على أمر التصنيع للعميل {order.order.customer.name} - الطلب #{order.order.order_number}\nدخل الطلب مرحلة التصنيع. رقم أمر التصنيع #{order.pk}.'
+                        
+                        Notification.objects.create(
+                            recipient=recipient,
+                            title=title,
+                            message=message,
+                            priority='high',
+                            link=order.get_absolute_url()
+                        )
+                        logger.info(f"Approval notification sent to {recipient.username}")
+                    except Exception as e:
+                        logger.error(f"Failed to create approval notification: {e}")
+                
+                # Update order tracking status to in_progress
+                if order.order:
+                    order.order.tracking_status = 'in_progress'
+                    order.order.save(update_fields=['tracking_status'])
 
-                return JsonResponse({'success': True, 'message': 'تمت الموافقة على الطلب وبدء التصنيع.'})
+                logger.info(f"Order {pk} approved by {request.user.username}")
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'تمت الموافقة على الطلب وبدء التصنيع.'
+                })
 
             elif action == 'reject':
-                reason = data.get('reason')
+                reason = data.get('reason', '').strip()
                 if not reason:
-                    return JsonResponse({'success': False, 'error': 'سبب الرفض مطلوب.'})
+                    return JsonResponse({
+                        'success': False, 
+                        'error': 'سبب الرفض مطلوب.'
+                    }, status=400)
                 
                 order.status = 'rejected'
                 order.rejection_reason = reason
@@ -592,26 +808,103 @@ def update_approval_status(request, pk):
 
                 # Revert original order status if it was set to 'factory'
                 original_order = order.order
-                if original_order.tracking_status == 'factory':
-                    original_order.tracking_status = 'processing' # Or 'pending'
+                if hasattr(original_order, 'tracking_status') and original_order.tracking_status == 'factory':
+                    original_order.tracking_status = 'processing'  # Or 'pending'
                     original_order.save(update_fields=['tracking_status'])
 
                 # Create a notification for the user who created the original order
                 if order.order and order.order.created_by:
-                    Notification.objects.create(
-                        recipient=order.order.created_by,
-                        title=f'تم رفض أمر التصنيع للطلب #{order.order.order_number}',
-                        message=f'تم رفض أمر التصنيع الخاص بك. السبب: "{reason}". يرجى مراجعة الطلب.',
-                        priority='high',
-                        link=order.get_absolute_url()
-                    )
+                    try:
+                        from accounts.models import Notification
+                        Notification.objects.create(
+                            recipient=order.order.created_by,
+                            title=f'طلب مرفوض - {order.order.customer.name}',
+                            message=f'تم رفض أمر التصنيع للعميل {order.order.customer.name} - الطلب #{order.order.order_number}\n\nسبب الرفض: "{reason}"\n\nيرجى مراجعة الطلب وإجراء التعديلات المطلوبة.',
+                            priority='high',
+                            link=order.get_absolute_url()
+                        )
+                        logger.info(f"Rejection notification sent to {order.order.created_by.username}")
+                    except Exception as e:
+                        logger.error(f"Failed to create rejection notification: {e}")
+                
+                # Update order tracking status to rejected
+                if order.order:
+                    order.order.tracking_status = 'rejected'
+                    order.order.save(update_fields=['tracking_status'])
 
-                return JsonResponse({'success': True, 'message': 'تم رفض الطلب.'})
+                logger.info(f"Order {pk} rejected by {request.user.username}, reason: {reason}")
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'تم رفض الطلب وإرسال إشعار للمستخدم.'
+                })
 
-            else:
-                return JsonResponse({'success': False, 'error': 'إجراء غير صالح.'})
-
-    except ManufacturingOrder.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'لم يتم العثور على الطلب.'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f"Unexpected error in update_approval_status: {e}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.'
+        }, status=500)
+
+
+@require_POST
+def send_reply(request, pk):
+    """
+    Send reply to rejection notification
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Check authentication
+        if not request.user.is_authenticated:
+            return JsonResponse({'success': False, 'error': 'يجب تسجيل الدخول أولاً'}, status=401)
+        
+        order = ManufacturingOrder.objects.select_related('order', 'order__created_by').get(pk=pk)
+        
+        # Check if user is the order creator or has permission
+        if not (order.order.created_by == request.user or request.user.is_superuser):
+            return JsonResponse({
+                'success': False, 
+                'error': 'ليس لديك صلاحية للرد على هذا الطلب'
+            }, status=403)
+        
+        reply_message = request.POST.get('reply_message', '').strip()
+        if not reply_message:
+            return JsonResponse({'success': False, 'error': 'نص الرد مطلوب'}, status=400)
+        
+        # إرسال إشعار للمدير أو المستخدمين المخولين بالموافقة
+        from django.contrib.auth import get_user_model
+        from django.db import models
+        User = get_user_model()
+        
+        # العثور على المستخدمين المخولين بالموافقة
+        approval_users = User.objects.filter(
+            models.Q(is_superuser=True) | 
+            models.Q(user_permissions__codename='can_approve_orders')
+        ).distinct()
+        
+        # إرسال إشعار لكل مستخدم مخول
+        for user in approval_users:
+            try:
+                from accounts.models import Notification
+                Notification.objects.create(
+                    recipient=user,
+                    title=f'رد على رفض أمر التصنيع #{order.id}',
+                    message=f'رد من {order.order.created_by.get_full_name() or order.order.created_by.username}:\n\n{reply_message}\n\nأمر التصنيع: #{order.id}\nسبب الرفض الأصلي: {order.rejection_reason}',
+                    priority='medium',
+                    link=order.get_absolute_url()
+                )
+                logger.info(f"Reply notification sent to {user.username}")
+            except Exception as e:
+                logger.error(f"Failed to create reply notification for {user.username}: {e}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'تم إرسال الرد بنجاح للإدارة'
+        })
+        
+    except ManufacturingOrder.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'لم يتم العثور على أمر التصنيع'}, status=404)
+    except Exception as e:
+        logger.error(f"Unexpected error in send_reply: {e}")
+        return JsonResponse({'success': False, 'error': f'حدث خطأ غير متوقع: {str(e)}'}, status=500)

@@ -42,11 +42,49 @@
                         </tr>
                         <tr>
                             <th>البائع</th>
-                            <td>{% if order.salesperson %}{{ order.salesperson }}{% else %}-{% endif %}</td>
+                            <td>
+                                {% if order.sales_person %}
+                                    {{ order.sales_person.get_full_name|default:order.sales_person.username }}
+                                {% elif order.salesperson %}
+                                    {{ order.salesperson }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
                         </tr>
                         <tr>
                             <th>تاريخ الطلب</th>
                             <td>{{ order.order_date|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>رقم العقد</th>
+                            <td>{{ order.contract_number|default:'-' }}</td>
+                        </tr>
+                        <tr>
+                            <th>ملف العقد</th>
+                            <td>
+                                {% if order.contract_file %}
+                                    <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-success">
+                                        <i class="fas fa-file-pdf"></i> عرض ملف العقد
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">لم يتم رفع ملف العقد</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>ملف المعاينة</th>
+                            <td>
+                                {% with inspection=order.inspections.first %}
+                                    {% if inspection and inspection.inspection_file %}
+                                        <a href="{{ inspection.inspection_file.url }}" target="_blank" class="btn btn-sm btn-info">
+                                            <i class="fas fa-file-alt"></i> عرض ملف المعاينة
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">لم يتم رفع ملف المعاينة</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
                         </tr>
                         <!-- Show different date info for inspection vs other orders -->
                         {% with types_list=order.get_selected_types_list %}
@@ -109,42 +147,77 @@
                                 {% endif %}
                             {% endwith %}
                         {% else %}
-                            <!-- For other orders, show expected delivery date -->
-                            {% if order.expected_delivery_date %}
+                            <!-- For other orders, show smart delivery date -->
+                            {% if order.get_smart_delivery_date %}
                             <tr>
-                                <th>تاريخ التسليم المتوقع</th>
+                                <th>{{ order.get_delivery_date_label }}</th>
                                 <td>
-                                    <span class="badge bg-info">
-                                        {{ order.expected_delivery_date|date:"Y-m-d" }}
+                                    <span class="badge {% if order.order_status == 'delivered' %}bg-success{% elif order.order_status == 'completed' or order.order_status == 'ready_install' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        {{ order.get_smart_delivery_date|date:"Y-m-d" }}
                                     </span>
                                     {% if order.status == 'vip' %}
                                         <small class="text-warning ms-2">
                                             <i class="fas fa-star"></i> VIP - أولوية عالية
                                         </small>
                                     {% endif %}
+                                    {% if order.order_status in 'completed,ready_install,delivered' %}
+                                        <br><small class="text-muted">
+                                            {% if order.order_status == 'delivered' %}
+                                                تم التسليم فعلياً
+                                            {% elif order.order_status == 'completed' %}
+                                                تم الإكمال في المصنع
+                                            {% elif order.order_status == 'ready_install' %}
+                                                جاهز للتركيب
+                                            {% endif %}
+                                        </small>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endif %}
-                            <tr>
-                                <th>تاريخ التسليم</th>
-                                <td>{{ order.delivery_date|date:"Y-m-d"|default:"غير محدد" }}</td>
-                            </tr>
                         {% endif %}
                         {% endwith %}
                         <tr>
                             <th>حالة الطلب</th>
                             <td>
-                                {% if order.status == 'pending' %}
-                                <span class="badge bg-warning">قيد الانتظار</span>
-                                {% elif order.status == 'processing' %}
-                                <span class="badge bg-info">قيد التنفيذ</span>
-                                {% elif order.status == 'completed' %}
+                                {% if order.order_status == 'pending_approval' %}
+                                <span class="badge bg-warning text-dark">قيد الموافقة</span>
+                                {% elif order.order_status == 'pending' %}
+                                <span class="badge bg-info">قيد الانتظار</span>
+                                {% elif order.order_status == 'in_progress' %}
+                                <span class="badge bg-primary">قيد التصنيع</span>
+                                {% elif order.order_status == 'ready_install' %}
+                                <span class="badge bg-success">جاهز للتركيب</span>
+                                {% elif order.order_status == 'completed' %}
                                 <span class="badge bg-success">مكتمل</span>
-                                {% elif order.status == 'cancelled' %}
+                                {% elif order.order_status == 'delivered' %}
+                                <span class="badge bg-success">تم التسليم</span>
+                                {% elif order.order_status == 'rejected' %}
+                                <span class="badge bg-danger">مرفوض</span>
+                                {% elif order.order_status == 'cancelled' %}
                                 <span class="badge bg-danger">ملغي</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ order.get_order_status_display }}</span>
                                 {% endif %}
                             </td>
                         </tr>
+                        
+                        <!-- إضافة تفاصيل الرفض إذا كان الطلب مرفوضاً -->
+                        {% if order.tracking_status == 'rejected' %}
+                        {% with manufacturing_order=order.manufacturing_order %}
+                            {% if manufacturing_order and manufacturing_order.rejection_reason %}
+                            <tr>
+                                <th>سبب الرفض</th>
+                                <td>
+                                    <div class="alert alert-danger mb-2">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        {{ manufacturing_order.rejection_reason }}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endwith %}
+                        {% endif %}
                         <tr>
                             <th>المبلغ الإجمالي</th>
                             <td>{{ order.total_amount }} {{ currency_symbol }}</td>

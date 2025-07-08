@@ -31,6 +31,7 @@ def create_manufacturing_order_from_order(sender, instance, created, **kwargs):
             )
             
             # إضافة عناصر الطلب إلى أمر التصنيع
+            ManufacturingOrderItem = apps.get_model('manufacturing', 'ManufacturingOrderItem')
             for item in instance.items.all():
                 ManufacturingOrderItem.objects.create(
                     manufacturing_order=manufacturing_order,
@@ -41,44 +42,7 @@ def create_manufacturing_order_from_order(sender, instance, created, **kwargs):
                 )
 
 
-@receiver(pre_save, sender='manufacturing.ManufacturingOrder')
-def update_order_status_from_manufacturing(sender, instance, **kwargs):
-    """
-    تحديث حالة الطلب الأصلي عند تغيير حالة أمر التصنيع
-    """
-    if not instance.pk:
-        return  # New instance, nothing to update
-        
-    Order = apps.get_model('orders', 'Order')
-    ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
-    
-    try:
-        old_instance = ManufacturingOrder.objects.get(pk=instance.pk)
-        
-        # إذا تغيرت حالة أمر التصنيع
-        if old_instance.status != instance.status:
-            # تحديث حالة الطلب الأصلي بناءً على حالة أمر التصنيع
-            if instance.order:
-                if instance.status == 'in_progress' and instance.order.status != 'in_progress':
-                    instance.order.status = 'in_progress'
-                    instance.order.save(update_fields=['status'])
-                
-                elif instance.status == 'ready_for_installation' and instance.order.order_type == 'installation':
-                    # تحديث حالة الطلب إلى "جاهز للتركيب"
-                    instance.order.status = 'ready_for_installation'
-                    instance.order.save(update_fields=['status'])
-                
-                elif instance.status == 'completed':
-                    # إذا كان الطلب من نوع تفصيل، نقوم بتحديث حالته إلى مكتمل
-                    if instance.order_type == 'detail':
-                        instance.order.status = 'completed'
-                        instance.order.completion_date = timezone.now()
-                        instance.order.save(update_fields=['status', 'completion_date'])
-                    # إذا كان الطلب من نوع تركيب، نتركه في حالة "جاهز للتركيب"
-                    # حتى يتم تأكيد التركيب من قسم التركيبات
-
-    except ManufacturingOrder.DoesNotExist:
-        pass  # New instance, nothing to update
+# تم حذف هذه الإشارة لأنها تسبب مشاكل - يتم التحديث عبر نموذج التصنيع مباشرة
 
 
 @receiver(post_save, sender='manufacturing.ManufacturingOrderItem')

@@ -50,4 +50,9 @@ urlpatterns = [
         views.update_approval_status,
         name='update_approval_status'
     ),
+    path(
+        'send_reply/<int:pk>/',
+        views.send_reply,
+        name='send_reply'
+    ),
 ]

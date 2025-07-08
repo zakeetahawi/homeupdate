@@ -23,8 +23,9 @@ class ManufacturingOrder(models.Model):
         ('pending_approval', 'قيد الموافقة'),
         ('pending', 'قيد الانتظار'),
         ('in_progress', 'قيد التصنيع'),
-        ('ready_for_installation', 'جاهز للتركيب'),
+        ('ready_install', 'جاهز للتركيب'),
         ('completed', 'مكتمل'),
+        ('delivered', 'تم التسليم'),
         ('rejected', 'مرفوض'),
         ('cancelled', 'ملغي'),
     ]
@@ -95,6 +96,26 @@ class ManufacturingOrder(models.Model):
         verbose_name='رقم إذن الخروج'
     )
     
+    delivery_permit_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='رقم إذن التسليم'
+    )
+    
+    delivery_recipient_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        verbose_name='اسم المستلم'
+    )
+    
+    delivery_date = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='تاريخ التسليم'
+    )
+    
     notes = models.TextField(
         blank=True,
         null=True,
@@ -128,6 +149,10 @@ class ManufacturingOrder(models.Model):
         verbose_name = 'أمر تصنيع'
         verbose_name_plural = 'أوامر التصنيع'
         ordering = ['-created_at']
+        permissions = [
+            ('can_approve_orders', 'يمكن الموافقة على أوامر التصنيع'),
+            ('can_reject_orders', 'يمكن رفض أوامر التصنيع'),
+        ]
     
     def __str__(self):
         return f'أمر تصنيع #{self.id} - {self.get_status_display()}'
@@ -140,12 +165,38 @@ class ManufacturingOrder(models.Model):
     
     def update_order_status(self):
         """تحديث حالة الطلب الأصلي بناءً على حالة أمر التصنيع"""
-        if self.status == 'completed' and self.order.status != 'completed':
-            self.order.status = 'manufacturing_completed'
-            self.order.save()
-        elif self.status == 'ready_for_installation' and self.order.status != 'ready_for_installation':
-            self.order.status = 'ready_for_installation'
-            self.order.save()
+        from django.apps import apps
+        from django.utils import timezone
+        
+        Order = apps.get_model('orders', 'Order')
+        
+        # تحديث تاريخ الإكمال عند الوصول لحالة مكتمل أو جاهز للتركيب
+        if self.status in ['completed', 'ready_install'] and not self.completion_date:
+            self.completion_date = timezone.now()
+            # حفظ بدون إطلاق الإشارات لتجنب الrecursion
+            ManufacturingOrder.objects.filter(pk=self.pk).update(
+                completion_date=self.completion_date
+            )
+        
+        # تحديث حالة الطلب لتتطابق مع حالة التصنيع
+        status_mapping = {
+            'pending_approval': 'factory',
+            'pending': 'factory',
+            'in_progress': 'factory',
+            'ready_install': 'ready',
+            'completed': 'ready',
+            'delivered': 'delivered',
+            'rejected': 'factory',
+            'cancelled': 'factory',
+        }
+        
+        tracking_status = status_mapping.get(self.status, 'factory')
+        
+        # تحديث بدون إطلاق الإشارات لتجنب الrecursion
+        Order.objects.filter(pk=self.order.pk).update(
+            order_status=self.status,
+            tracking_status=tracking_status
+        )
 
 
 class ManufacturingOrderItem(models.Model):

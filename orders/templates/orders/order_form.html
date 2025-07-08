@@ -265,8 +265,8 @@
 
                                 <!-- Hidden Fields for Delivery - Set automatically by JavaScript -->
                                 <div style="display:none;">
-                                    {{ form.delivery_type }}
-                                    {{ form.delivery_address }}
+                                {{ form.delivery_type }}
+                                {{ form.delivery_address }}
                                 </div>
 
                                 <!-- Branch Selection - Always visible but will be set automatically -->
@@ -389,7 +389,7 @@
             if (productSelection) {
                 productSelection.style.display = showForAccessory ? 'block' : 'none';
                 if (showForAccessory && typeof loadProducts === 'function') {
-                    loadProducts(); 
+                    loadProducts();
                 }
             }
 

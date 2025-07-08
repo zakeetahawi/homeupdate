@@ -71,16 +71,33 @@
                             <td>{{ order.order_number }}</td>
                             <td>{{ order.customer.name }}</td>
                             <td>{{ order.order_date|date:"Y-m-d" }}</td>
-                            <td>{{ order.delivery_date|date:"Y-m-d"|default:"-" }}</td>
                             <td>
-                                {% if order.status == 'pending' %}
-                                <span class="badge bg-warning">قيد الانتظار</span>
-                                {% elif order.status == 'processing' %}
-                                <span class="badge bg-info">قيد التنفيذ</span>
-                                {% elif order.status == 'completed' %}
+                                {% if order.get_smart_delivery_date %}
+                                    <span class="d-block">{{ order.get_smart_delivery_date|date:"Y-m-d" }}</span>
+                                    <small class="text-muted">{{ order.get_delivery_date_label }}</small>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.order_status == 'pending_approval' %}
+                                <span class="badge bg-warning text-dark">قيد الموافقة</span>
+                                {% elif order.order_status == 'pending' %}
+                                <span class="badge bg-info">قيد الانتظار</span>
+                                {% elif order.order_status == 'in_progress' %}
+                                <span class="badge bg-primary">قيد التصنيع</span>
+                                {% elif order.order_status == 'ready_install' %}
+                                <span class="badge bg-success">جاهز للتركيب</span>
+                                {% elif order.order_status == 'completed' %}
                                 <span class="badge bg-success">مكتمل</span>
-                                {% elif order.status == 'cancelled' %}
+                                {% elif order.order_status == 'delivered' %}
+                                <span class="badge bg-success">تم التسليم</span>
+                                {% elif order.order_status == 'rejected' %}
+                                <span class="badge bg-danger">مرفوض</span>
+                                {% elif order.order_status == 'cancelled' %}
                                 <span class="badge bg-danger">ملغي</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ order.get_order_status_display }}</span>
                                 {% endif %}
                             </td>
                             <td>{{ order.total_amount }} {{ currency_symbol }}</td>

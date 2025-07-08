@@ -51,13 +51,16 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
             # Use a transaction to ensure both creations happen or neither.
             from django.db import transaction
             with transaction.atomic():
+                from datetime import timedelta
+                expected_date = instance.expected_delivery_date or (instance.created_at + timedelta(days=15)).date()
+                
                 mfg_order, created_mfg = ManufacturingOrder.objects.get_or_create(
                     order=instance,
                     defaults={
                         'status': 'pending_approval',
                         'notes': instance.notes,
                         'order_date': instance.created_at.date(),
-                        'expected_delivery_date': instance.expected_delivery_date,
+                        'expected_delivery_date': expected_date,
                         'contract_number': instance.contract_number,
                         'invoice_number': instance.invoice_number,
                     }
@@ -65,8 +68,11 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
                 
                 # Also update the original order's tracking status
                 if created_mfg:
-                    instance.tracking_status = 'factory'
-                    instance.save(update_fields=['tracking_status'])
+                    # تحديث بدون إطلاق الإشارات لتجنب الrecursion
+                    Order.objects.filter(pk=instance.pk).update(
+                        tracking_status='factory',
+                        order_status='pending_approval'
+                    )
                     print(f"SUCCESS: Created ManufacturingOrder PK: {mfg_order.pk} and updated Order PK: {instance.pk} tracking_status to 'factory'")
                 else:
                     print(f"INFO: ManufacturingOrder already existed for this order. PK: {mfg_order.pk}")
@@ -74,6 +80,59 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
             print(f"NO MATCH: Order types {order_types} do not require manufacturing.")
     else:
         print(f"--- SIGNAL TRIGGERED for Order PK: {instance.pk} (UPDATE, not creation) ---")
+
+
+@receiver(post_save, sender=Order)
+def create_inspection_on_order_creation(sender, instance, created, **kwargs):
+    """
+    إنشاء معاينة تلقائية عند إنشاء طلب من نوع معاينة
+    """
+    if created:
+        print(f"--- INSPECTION SIGNAL TRIGGERED for Order PK: {instance.pk} ---")
+        
+        # استخدام الدالة الموجودة لتحليل أنواع الطلب
+        order_types = instance.get_selected_types_list()
+        print(f"Successfully parsed types for inspection: {order_types}")
+
+        # إذا كان الطلب يحتوي على نوع معاينة
+        if 'inspection' in order_types:
+            print(f"INSPECTION MATCH FOUND: Creating inspection for order {instance.pk}")
+            
+            try:
+                from django.db import transaction
+                with transaction.atomic():
+                    # استيراد نموذج المعاينة
+                    from inspections.models import Inspection
+                    
+                    # إنشاء معاينة جديدة
+                    inspection = Inspection.objects.create(
+                        customer=instance.customer,
+                        branch=instance.branch,
+                        responsible_employee=instance.salesperson,
+                        order=instance,
+                        is_from_orders=True,
+                        request_date=timezone.now().date(),
+                        scheduled_date=timezone.now().date() + timedelta(days=1),
+                        status='pending',
+                        notes=f'معاينة تلقائية للطلب رقم {instance.order_number}',
+                        order_notes=instance.notes,
+                        created_by=instance.created_by
+                    )
+                    
+                    # تحديث حالة الطلب لتعكس حالة المعاينة
+                    Order.objects.filter(pk=instance.pk).update(
+                        tracking_status='processing',
+                        order_status='pending'
+                    )
+                    
+                    print(f"SUCCESS: Created Inspection PK: {inspection.pk} for Order PK: {instance.pk}")
+                    
+            except Exception as e:
+                print(f"ERROR: Failed to create inspection for order {instance.pk}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print(f"NO INSPECTION MATCH: Order types {order_types} do not require inspection.")
 
 
 def set_default_delivery_option(order):
