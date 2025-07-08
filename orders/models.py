@@ -6,13 +6,9 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
-from customers.models import Customer
-from inventory.models import Product
-from accounts.models import Salesperson
 from accounts.utils import send_notification
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.utils.translation import gettext as _
 from model_utils import FieldTracker
 
 
@@ -26,6 +22,8 @@ def validate_pdf_file(value):
         # التحقق من حجم الملف (أقل من 10 ميجابايت)
         if value.size > 10 * 1024 * 1024:
             raise ValidationError('حجم الملف يجب أن يكون أقل من 10 ميجابايت')
+
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('normal', 'عادي'),
@@ -54,27 +52,86 @@ class Order(models.Model):
         ('fabric', 'قماش'),
         ('accessory', 'إكسسوار'),
     ]
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='customer_orders', verbose_name='العميل')
-    salesperson = models.ForeignKey('accounts.Salesperson', on_delete=models.PROTECT, related_name='orders', verbose_name='البائع', null=True, blank=True)
-    delivery_type = models.CharField(max_length=10, choices=DELIVERY_TYPE_CHOICES, default='branch', verbose_name='نوع التسليم')
-    delivery_address = models.TextField(blank=True, null=True, verbose_name='عنوان التسليم')
-    order_number = models.CharField(max_length=50, unique=True, verbose_name='رقم الطلب')
-    order_date = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الطلب')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='normal', verbose_name='وضع الطلب')
+    customer = models.ForeignKey(
+        'customers.Customer',
+        on_delete=models.CASCADE,
+        related_name='customer_orders',
+        verbose_name='العميل'
+    )
+    salesperson = models.ForeignKey(
+        'accounts.Salesperson',
+        on_delete=models.PROTECT,
+        related_name='orders',
+        verbose_name='البائع',
+        null=True,
+        blank=True
+    )
+    delivery_type = models.CharField(
+        max_length=10,
+        choices=DELIVERY_TYPE_CHOICES,
+        default='branch',
+        verbose_name='نوع التسليم'
+    )
+    delivery_address = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='عنوان التسليم'
+    )
+    order_number = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name='رقم الطلب'
+    )
+    order_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الطلب'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='normal',
+        verbose_name='وضع الطلب'
+    )
     # Order type fields
-    selected_types = models.JSONField(default=list, verbose_name='أنواع الطلب المختارة')
+    selected_types = models.JSONField(
+        default=list,
+        verbose_name='أنواع الطلب المختارة'
+    )
     # Keep old fields for backward compatibility
-    order_type = models.CharField(max_length=10, choices=[('product', 'منتج'), ('service', 'خدمة')], null=True, blank=True)
-    service_types = models.JSONField(default=list, blank=True, verbose_name='أنواع الخدمات')
+    order_type = models.CharField(
+        max_length=10,
+        choices=[('product', 'منتج'), ('service', 'خدمة')],
+        null=True,
+        blank=True
+    )
+    service_types = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='أنواع الخدمات'
+    )
     tracking_status = models.CharField(
         max_length=20,
         choices=TRACKING_STATUS_CHOICES,
         default='pending',
         verbose_name='حالة التتبع'
     )
-    last_notification_date = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ آخر إشعار')
-    invoice_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='رقم الفاتورة')
-    contract_number = models.CharField(max_length=50, null=True, blank=True, verbose_name='رقم العقد')
+    last_notification_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ آخر إشعار'
+    )
+    invoice_number = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        verbose_name='رقم الفاتورة'
+    )
+    contract_number = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        verbose_name='رقم العقد'
+    )
     contract_file = models.FileField(
         upload_to='contracts/',
         null=True,
@@ -83,12 +140,36 @@ class Order(models.Model):
         verbose_name='ملف العقد',
         help_text='يجب أن يكون الملف من نوع PDF وأقل من 10 ميجابايت'
     )
-    payment_verified = models.BooleanField(default=False, verbose_name='تم التحقق من السداد')
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='المبلغ الإجمالي')
-    paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='المبلغ المدفوع')
+    payment_verified = models.BooleanField(
+        default=False,
+        verbose_name='تم التحقق من السداد'
+    )
+    total_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='المبلغ الإجمالي'
+    )
+    paid_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='المبلغ المدفوع'
+    )
     notes = models.TextField(blank=True, verbose_name='ملاحظات')
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='تم الإنشاء بواسطة')
-    branch = models.ForeignKey('accounts.Branch', on_delete=models.CASCADE, related_name='orders', verbose_name='الفرع', null=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name='تم الإنشاء بواسطة'
+    )
+    branch = models.ForeignKey(
+        'accounts.Branch',
+        on_delete=models.CASCADE,
+        related_name='orders',
+        verbose_name='الفرع',
+        null=True
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
     final_price = models.DecimalField(
@@ -158,7 +239,7 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         try:
             # تحقق مما إذا كان هذا كائن جديد (ليس له مفتاح أساسي)
-            is_new = self.pk is None
+            # is_new = self.pk is None <- تم الحذف
             # تحقق من وجود العميل
             if not self.customer:
                 raise models.ValidationError('يجب اختيار العميل')
@@ -192,28 +273,43 @@ class Order(models.Model):
                 try:
                     selected_types = json.loads(selected_types)
                 except json.JSONDecodeError:
-                    selected_types = [st.strip() for st in selected_types.split(',') if st.strip()]
+                    selected_types = [
+                        st.strip() for st in selected_types.split(',') if st.strip()
+                    ]
             if not selected_types:
                 selected_types = ['inspection']  # Default to inspection if no types are selected
                 self.selected_types = selected_types
+            
             # Contract number validation
             if 'tailoring' in selected_types and not self.contract_number:
                 raise ValidationError('رقم العقد مطلوب لخدمة التفصيل')
+            
             # Invoice number validation - required for all types except inspection alone
             if not (len(selected_types) == 1 and selected_types[0] == 'inspection'):
                 if not self.invoice_number:
                     raise ValidationError('رقم الفاتورة مطلوب')
+            
             # Set legacy fields for backward compatibility
             has_products = any(t in ['fabric', 'accessory'] for t in selected_types)
-            has_services = any(t in ['installation', 'inspection', 'transport', 'tailoring'] for t in selected_types)
+            has_services = any(
+                t in ['installation', 'inspection', 'transport', 'tailoring']
+                for t in selected_types
+            )
             if has_products:
                 self.order_type = 'product'
             if has_services:
                 self.order_type = 'service'
-                self.service_types = [t for t in selected_types if t in ['installation', 'inspection', 'transport', 'tailoring']]
+                self.service_types = [
+                    t for t in selected_types if t in [
+                        'installation', 'inspection', 'transport', 'tailoring'
+                    ]
+                ]
+            
             # Validate delivery address for home delivery
             if self.delivery_type == 'home' and not self.delivery_address:
-                raise models.ValidationError('عنوان التسليم مطلوب لخدمة التوصيل للمنزل')
+                raise models.ValidationError(
+                    'عنوان التسليم مطلوب لخدمة التوصيل للمنزل'
+                )
 
             # حساب تاريخ التسليم المتوقع إذا لم يكن محدداً
             if not self.expected_delivery_date:
@@ -431,14 +527,27 @@ class Order(models.Model):
         if self.paid_amount is None or self.total_amount is None:
             return False
         return float(self.paid_amount) >= float(self.total_amount)
+
 @receiver(post_save, sender=Order)
 def order_post_save(sender, instance, created, **kwargs):
     """دالة تعمل بعد حفظ الطلب مباشرة"""
     if not created and instance.tracker.has_changed('status'):
         instance.send_status_notification()
+
+
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', verbose_name='الطلب')
-    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='order_items', verbose_name='المنتج')
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name='الطلب'
+    )
+    product = models.ForeignKey(
+        'inventory.Product',
+        on_delete=models.PROTECT,
+        related_name='order_items',
+        verbose_name='المنتج'
+    )
     quantity = models.PositiveIntegerField(verbose_name='الكمية')
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='سعر الوحدة')
     item_type = models.CharField(
@@ -489,6 +598,8 @@ class OrderItem(models.Model):
         except Exception as e:
             print(f"Error saving order item: {e}")
             raise
+
+
 class Payment(models.Model):
     PAYMENT_METHOD_CHOICES = [
         ('cash', 'نقداً'),
@@ -535,6 +646,8 @@ class Payment(models.Model):
         except Exception as e:
             print(f"Error saving payment: {e}")
             raise
+
+
 class OrderStatusLog(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_logs', verbose_name=_('الطلب'))
     old_status = models.CharField(max_length=20, choices=Order.TRACKING_STATUS_CHOICES, verbose_name=_('الحالة السابقة'))

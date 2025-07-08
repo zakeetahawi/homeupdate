@@ -1,18 +1,24 @@
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
-from .models import ManufacturingOrder, ManufacturingOrderItem
-from orders.models import Order, OrderItem
+from django.apps import apps
 from django.db import transaction
 
+# سيتم استيراد النماذج عند الحاجة باستخدام apps.get_model
 
-@receiver(post_save, sender=Order)
+
+@receiver(post_save, sender='orders.Order')  # استخدام الإشارة النصية
+@receiver(post_save, sender='orders.OrderItem')  # إضافة مستمع لـ OrderItem أيضاً
 def create_manufacturing_order_from_order(sender, instance, created, **kwargs):
     """
     إنشاء أمر تصنيع تلقائياً عند إنشاء طلب جديد من نوع تركيب أو تفصيل
     """
+    # الحصول على النماذج المطلوبة
+    Order = apps.get_model('orders', 'Order')
+    ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+    
     # التحقق من أن الطلب جديد ومن نوع يتطلب تصنيعاً
-    if created and instance.order_type in ['installation', 'detail']:
+    if created and hasattr(instance, 'order_type') and instance.order_type in ['installation', 'detail']:
         with transaction.atomic():
             # إنشاء أمر التصنيع
             manufacturing_order = ManufacturingOrder.objects.create(
@@ -35,7 +41,7 @@ def create_manufacturing_order_from_order(sender, instance, created, **kwargs):
                 )
 
 
-@receiver(pre_save, sender=ManufacturingOrder)
+@receiver(pre_save, sender='manufacturing.ManufacturingOrder')
 def update_order_status_from_manufacturing(sender, instance, **kwargs):
     """
     تحديث حالة الطلب الأصلي عند تغيير حالة أمر التصنيع
@@ -43,6 +49,9 @@ def update_order_status_from_manufacturing(sender, instance, **kwargs):
     if not instance.pk:
         return  # New instance, nothing to update
         
+    Order = apps.get_model('orders', 'Order')
+    ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+    
     try:
         old_instance = ManufacturingOrder.objects.get(pk=instance.pk)
         
@@ -72,12 +81,13 @@ def update_order_status_from_manufacturing(sender, instance, **kwargs):
         pass  # New instance, nothing to update
 
 
-@receiver(post_save, sender=ManufacturingOrderItem)
+@receiver(post_save, sender='manufacturing.ManufacturingOrderItem')
 def update_manufacturing_order_status(sender, instance, created, **kwargs):
     """
     تحديث حالة أمر التصنيع بناءً على حالة عناصره
     """
     if not created:  # نتعامل فقط مع التحديثات وليس الإنشاء
+        ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
         manufacturing_order = instance.manufacturing_order
         
         # الحصول على جميع عناصر أمر التصنيع
@@ -105,7 +115,7 @@ def update_manufacturing_order_status(sender, instance, created, **kwargs):
             manufacturing_order.save(update_fields=['status'])
 
 
-@receiver(post_delete, sender=ManufacturingOrder)
+@receiver(post_delete, sender='manufacturing.ManufacturingOrder')
 def delete_related_installation(sender, instance, **kwargs):
     """
     حذف سجل التركيب المرتبط في حالة حذف أمر التصنيع
@@ -114,13 +124,15 @@ def delete_related_installation(sender, instance, **kwargs):
         instance.installation.delete()
 
 
-@receiver(post_save, sender=Order)
+@receiver(post_save, sender='orders.Order')
 def sync_order_updates(sender, instance, created, **kwargs):
     """
     مزامنة تحديثات الطلب مع أمر التصنيع المرتبط
     """
     if created:
         return  # تم التعامل مع الحالات الجديدة في إشارة أخرى
+    
+    ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
     
     try:
         manufacturing_order = ManufacturingOrder.objects.get(order=instance)

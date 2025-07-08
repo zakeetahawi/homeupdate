@@ -2,10 +2,12 @@ from django.db import models
 from django.core.validators import FileExtensionValidator
 from django.urls import reverse
 from django.utils import timezone
-from orders.models import Order
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+# تمت إزالة استيراد Order لتجنب الاعتماد الدائري
+# سيتم استخدام الإشارة النصية 'orders.Order' بدلاً من ذلك
 
 
 class ManufacturingOrder(models.Model):
@@ -26,7 +28,7 @@ class ManufacturingOrder(models.Model):
     ]
     
     order = models.OneToOneField(
-        Order,
+        'orders.Order',  # استخدام الإشارة النصية بدلاً من الاستيراد المباشر
         on_delete=models.CASCADE,
         related_name='manufacturing_order',
         verbose_name='رقم الطلب'

@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 # from django.utils import timezone
 from .models import Order, OrderItem, Payment, OrderStatusLog
-from .extended_models import ExtendedOrder, AccessoryItem, FabricOrder
+# from .extended_models import ExtendedOrder, AccessoryItem, FabricOrder # Deletion
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -85,60 +85,26 @@ class OrderAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs
 
-class AccessoryItemInline(admin.TabularInline):
-    model = AccessoryItem
-    extra = 1
+@admin.register(OrderStatusLog)
+class OrderStatusLogAdmin(admin.ModelAdmin):
+    list_display = ('order', 'old_status', 'new_status', 'changed_by', 'created_at')
+    list_filter = ('old_status', 'new_status', 'changed_by')
+    search_fields = ('order__order_number',)
 
-    def get_formset(self, request, obj=None, **kwargs):
-        """Override to make sure we don't try to create inline items for unsaved objects"""
-        if obj is None:  # obj is None when we're adding a new object
-            self.extra = 0  # Don't show any extra forms for new objects
-        else:
-            self.extra = 1  # Show extra forms for existing objects
-        return super().get_formset(request, obj, **kwargs)
+# ExtendedOrder models are no longer used and have been removed.
+# class AccessoryItemInline(admin.TabularInline):
+#     model = AccessoryItem
+#     extra = 1
 
-@admin.register(ExtendedOrder)
-class ExtendedOrderAdmin(admin.ModelAdmin):
-    list_display = ('order', 'order_type', 'get_subtype_display', 'branch')
-    list_filter = ('order_type', 'goods_type', 'service_type', 'branch')
-    search_fields = ('order__order_number', 'invoice_number', 'contract_number')
-    inlines = [AccessoryItemInline]
-    fieldsets = (
-        (_('الطلب الأساسي'), {
-            'fields': ('order', 'branch')
-        }),
-        (_('نوع الطلب'), {
-            'fields': ('order_type', 'goods_type', 'service_type')
-        }),
-        (_('معلومات إضافية'), {
-            'fields': ('invoice_number', 'contract_number', 'payment_verified')
-        }),
-    )
+# class FabricOrderInline(admin.StackedInline):
+#     model = FabricOrder
+#     can_delete = False
 
-    def get_subtype_display(self, obj):
-        if obj.order_type == 'goods':
-            return obj.get_goods_type_display() if obj.goods_type else '-'
-        elif obj.order_type == 'services':
-            return obj.get_service_type_display() if obj.service_type else '-'
-        return '-'
-    get_subtype_display.short_description = _('النوع الفرعي')
-
-@admin.register(FabricOrder)
-class FabricOrderAdmin(admin.ModelAdmin):
-    list_display = ('extended_order', 'fabric_type', 'quantity', 'status', 'sent_to_warehouse', 'cutting_completed')
-    list_filter = ('status', 'sent_to_warehouse', 'cutting_completed')
-    search_fields = ('extended_order__order__order_number', 'fabric_type__name', 'notes')
-    fieldsets = (
-        (_('معلومات الطلب'), {
-            'fields': ('extended_order', 'fabric_type', 'quantity')
-        }),
-        (_('حالة التقطيع'), {
-            'fields': ('status', 'sent_to_warehouse', 'cutting_completed')
-        }),
-        (_('ملاحظات'), {
-            'fields': ('notes',)
-        }),
-    )
+# @admin.register(ExtendedOrder)
+# class ExtendedOrderAdmin(admin.ModelAdmin):
+#     list_display = ('order', 'order_type', 'branch', 'payment_verified')
+#     list_filter = ('order_type', 'branch', 'payment_verified')
+#     inlines = [AccessoryItemInline, FabricOrderInline]
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
@@ -158,12 +124,5 @@ class PaymentAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-
-@admin.register(OrderStatusLog)
-class OrderStatusLogAdmin(admin.ModelAdmin):
-    list_display = ('order', 'old_status', 'new_status', 'changed_by', 'created_at')
-    list_filter = ('old_status', 'new_status', 'created_at')
-    search_fields = ('order__order_number', 'notes')
-    readonly_fields = ('order', 'old_status', 'new_status', 'changed_by', 'created_at')
 
 

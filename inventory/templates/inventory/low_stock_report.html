@@ -262,55 +262,27 @@
 
 {% block extra_js %}
 {{ block.super }}
-<script src="https://cdn.jsdelivr.net/npm/datatables.net@1.13.1/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/datatables.net-bs5@1.13.1/js/dataTables.bootstrap5.min.js"></script>
 <script>
+    // السكربت التالي يعتمد الآن على التهيئة العالمية لـ DataTables الموجودة في data-tables-config.js
     document.addEventListener('DOMContentLoaded', function() {
-        // تهيئة جداول البيانات
-        $('.datatable').DataTable({
-            language: {
-                processing: "جارٍ التحميل...",
-                search: "بحث:",
-                lengthMenu: "عرض _MENU_ سجلات",
-                info: "عرض _START_ إلى _END_ من أصل _TOTAL_ سجل",
-                infoEmpty: "عرض 0 إلى 0 من أصل 0 سجل",
-                infoFiltered: "(منتقاة من مجموع _MAX_ سجل)",
-                infoPostFix: "",
-                loadingRecords: "جارٍ التحميل...",
-                zeroRecords: "لم يعثر على أية سجلات",
-                emptyTable: "لا توجد بيانات متاحة في الجدول",
-                paginate: {
-                    first: "الأول",
-                    previous: "السابق",
-                    next: "التالي",
-                    last: "الأخير"
-                },
-                aria: {
-                    sortAscending: ": تفعيل لترتيب العمود تصاعدياً",
-                    sortDescending: ": تفعيل لترتيب العمود تنازلياً"
-                }
-            },
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
-                 '<"row"<"col-sm-12"tr>>' +
-                 '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-            pageLength: 10
-        });
-        
-        // زر تصدير البيانات
-        document.getElementById('exportBtn').addEventListener('click', function(e) {
-            e.preventDefault();
-            alert('سيتم تصدير البيانات إلى ملف Excel');
-            // هنا يمكن إضافة كود لتصدير البيانات
-        });
-        
         // أزرار إنشاء طلب شراء
-        const createPurchaseOrderButtons = document.querySelectorAll('.create-purchase-order');
-        createPurchaseOrderButtons.forEach(button => {
+        document.querySelectorAll('.create-purchase-order').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
                 const productId = this.getAttribute('data-product-id');
-                alert('سيتم إنشاء طلب شراء للمنتج رقم ' + productId);
-                // هنا يمكن إضافة كود لإنشاء طلب شراء
+                Swal.fire({
+                    title: 'إنشاء طلب شراء',
+                    text: 'سيتم إنشاء طلب شراء للمنتج رقم ' + productId,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'متابعة',
+                    cancelButtonText: 'إلغاء'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // TODO: استدعاء API لإنشاء طلب شراء
+                        console.log('Creating purchase order for product', productId);
+                    }
+                });
             });
         });
     });

@@ -3,7 +3,6 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from accounts.models import Branch
 
 User = get_user_model()
 
@@ -138,7 +137,7 @@ class Customer(models.Model):
     )
     name = models.CharField(_('اسم العميل'), max_length=200, db_index=True)
     branch = models.ForeignKey(
-        Branch,
+        'accounts.Branch',
         on_delete=models.PROTECT,
         related_name='customers',
         verbose_name=_('الفرع'),

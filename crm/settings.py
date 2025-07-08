@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 # تحديد ما إذا كان النظام في وضع الاختبار
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
@@ -12,37 +13,31 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# --- إعدادات الأمان ---
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-9s7)mh5d3y9mz4b9@7@zy77fw!pdv3ivw8p8grp+e=6%ybitj1')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured("يجب تعيين المفتاح السري (SECRET_KEY) في متغيرات البيئة.")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# تفعيل وضع التطوير بشكل دائم للكشف عن الأخطاء
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ['true', 't', '1', 'yes', 'y']
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ['true', 't', '1']
 
-# إعداد ALLOWED_HOSTS لدعم جميع المنصات والنطاقات
-ALLOWED_HOSTS_DEFAULT = [
-    'localhost',
-    '127.0.0.1',
-    '192.168.2.6',
-    '0.0.0.0',
-    'testserver',
-    # نطاقات الإنتاج
-    'elkhawaga.uk',
-    'www.elkhawaga.uk',
-    'crm.elkhawaga.uk',
-    'api.elkhawaga.uk',
-    'admin.elkhawaga.uk',
-    # نطاقات Cloudflare
-    '*.trycloudflare.com',
-    '*.cloudflare.com',
-    '*.cfargotunnel.com',
-    '*.ngrok.io',
-    '*.ngrok-free.app',
-]
+# قراءة ALLOWED_HOSTS من متغيرات البيئة. يجب أن تكون سلسلة نصية مفصولة بفاصلة.
+# مثال: ALLOWED_HOSTS="localhost,127.0.0.1,mydomain.com"
+allowed_hosts_str = os.environ.get('ALLOWED_HOSTS')
+if not allowed_hosts_str:
+    ALLOWED_HOSTS = []
+else:
+    ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(',')]
 
-# دمج ALLOWED_HOSTS من متغير البيئة مع القائمة الافتراضية
-env_hosts = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
-ALLOWED_HOSTS = list(set(ALLOWED_HOSTS_DEFAULT + env_hosts))  # إزالة التكرارات
+# في وضع التطوير، يمكن إضافة نطاقات إضافية لتسهيل الاختبار
+if DEBUG:
+    ALLOWED_HOSTS.extend([
+        'localhost',
+        '127.0.0.1',
+        '*.trycloudflare.com',
+        '*.ngrok-free.app',
+    ])
 
 # Application definition
 INSTALLED_APPS = [
@@ -52,9 +47,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.humanize',  # إضافة مكتبة التنسيق البشري
-    'widget_tweaks',
-    'crm',  # إضافة تطبيق CRM لأوامر إدارة التسلسل
+    'django.contrib.humanize',
+    'crm.apps.CrmConfig',
     'accounts',
     'customers',
     'inspections',
@@ -62,13 +56,14 @@ INSTALLED_APPS = [
     'orders',
     'manufacturing',
     'reports',
-    'odoo_db_manager.apps.OdooDbManagerConfig',  # تطبيق إدارة قواعد البيانات على طراز أودو
+    'odoo_db_manager.apps.OdooDbManagerConfig',
     'corsheaders',
-    'django_apscheduler', # إضافة مكتبة جدولة المهام
-    'dbbackup',  # إضافة تطبيق النسخ الاحتياطي
+    'django_apscheduler',
+    'dbbackup',
     'rest_framework',
     'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist'  # إضافة دعم القائمة السوداء للتوكن
+    'rest_framework_simplejwt.token_blacklist',
+    'widget_tweaks',
 ]
 
 # Authentication backends
@@ -77,8 +72,7 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-
-# Debug toolbar معطل مؤقت<|im_start|> لتحسين الأداء
+# Debug toolbar معطل مؤقتاً لتحسين الأداء
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -86,12 +80,13 @@ AUTH_USER_MODEL = 'accounts.User'
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'django.middleware.gzip.GZipMiddleware',  # استخدام وسيط Django الأساسي
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # إذا كنت تستخدم Whitenoise
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',    'django.contrib.messages.middleware.MessageMiddleware',    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'crm.middleware.permission_handler.PermissionDeniedMiddleware',
     'odoo_db_manager.middleware.default_user.DefaultUserMiddleware',  # إنشاء مستخدم افتراضي
     # 'crm.middleware.PerformanceMiddleware',  # تم تعطيل مؤقتاً
@@ -123,7 +118,7 @@ TEMPLATES = [
                 'accounts.context_processors.company_info',
                 'accounts.context_processors.footer_settings',
                 'accounts.context_processors.system_settings',
-                'accounts.context_processors.branch_messages',  # إضافة context processor الجديد
+                'accounts.context_processors.branch_messages',
             ],
         },
     },
@@ -135,68 +130,19 @@ WSGI_APPLICATION = 'crm.wsgi.application'
 # ASGI_APPLICATION = 'crm.asgi.application'
 # CHANNEL_LAYERS = {...}
 
-# Database Configuration (تم تبسيط المنطق)
-def get_database_config():
-    """تحديد إعدادات قاعدة البيانات"""
-    import json    # التكوين الافتراضي - سيتم استخدامه إذا فشلت كل المحاولات الأخرى
-    default_config = {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'crm_system',
-        'USER': 'postgres',
-        'PASSWORD': '5525',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-
-    try:
-        db_settings_file = os.path.join(BASE_DIR, 'db_settings.json')
-        if os.path.exists(db_settings_file):
-            with open(db_settings_file, 'r') as f:
-                settings_data = json.load(f)
-            
-            # التحقق من وجود البيانات المطلوبة
-            if settings_data and isinstance(settings_data, dict):
-                active_db = str(settings_data.get('active_db'))
-                if active_db and active_db in settings_data.get('databases', {}):
-                    db_config = settings_data['databases'][active_db]                    # التحقق من وجود جميع الحقول المطلوبة
-                    required_fields = ['ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT']
-                    if all(field in db_config for field in required_fields):
-                        # print(f"قراءة إعدادات قاعدة البيانات من الملف: {db_config}")  # معلومات حساسة
-                        # print(f"استخدام قاعدة البيانات: {db_config['NAME']} على {db_config['HOST']}:{db_config['PORT']}")
-                        return db_config        # print("استخدام إعدادات قاعدة البيانات الافتراضية")  # معلومات غير ضرورية
-        # print(f"الإعدادات الافتراضية: {default_config}")  # معلومات حساسة
-        return default_config
-
-    except Exception as e:
-        # print(f"خطأ في قراءة إعدادات قاعدة البيانات: {str(e)}")  # معلومات حساسة
-        # print("استخدام الإعدادات الافتراضية")  # معلومات غير ضرورية
-        return default_config
-
-# تكوين قاعدة البيانات
-db_config = get_database_config()
-
-# استخراج TIME_ZONE وإزالته من المعاملات الأساسية لتجنب تمريره إلى PostgreSQL
-time_zone = db_config.pop('TIME_ZONE', 'Africa/Cairo')
-
-# إنشاء تكوين نظيف بدون TIME_ZONE
-clean_db_config = {k: v for k, v in db_config.items() if k != 'TIME_ZONE'}
+# --- قاعدة البيانات ---
+# استخدام dj_database_url لتبسيط تكوين قاعدة البيانات من متغير بيئة واحد.
+# مثال: DATABASE_URL="postgres://user:password@host:port/dbname"
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    raise ImproperlyConfigured("يجب تعيين رابط قاعدة البيانات (DATABASE_URL) في متغيرات البيئة.")
 
 DATABASES = {
-    'default': {
-        'ENGINE': clean_db_config['ENGINE'],
-        'NAME': clean_db_config['NAME'],
-        'USER': clean_db_config['USER'],
-        'PASSWORD': clean_db_config['PASSWORD'],
-        'HOST': clean_db_config['HOST'],
-        'PORT': clean_db_config['PORT'],
-        'ATOMIC_REQUESTS': False,
-        'AUTOCOMMIT': True,
-        'CONN_MAX_AGE': 600,
-        'CONN_HEALTH_CHECKS': True,
-        'OPTIONS': {
-            # إزالة TIME_ZONE من OPTIONS لحل مشكلة PostgreSQL
-        },
-    }
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 # Password validation
@@ -368,8 +314,6 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
     'x-request-id',
 ]
-
-# تم دمج إعدادات الأمان أدناه
 
 # Disable CSRF for /api/ endpoints in development
 if DEBUG:

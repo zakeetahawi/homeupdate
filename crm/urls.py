@@ -9,8 +9,6 @@ from inventory.views import dashboard_view
 from accounts.api_views import dashboard_stats
 from customers.views import customer_list, customer_detail
 
-# Manufacturing app URLs
-from manufacturing import urls as manufacturing_urls
 
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -33,13 +31,13 @@ urlpatterns = [
     # مسارات API للعملاء
     path('api/customers/', customer_list, name='customer_list'),
     
-    # Manufacturing app URLs
-    path('factory/', include(manufacturing_urls)),
     path(
         'api/customers/<int:pk>/',
         customer_detail,
         name='customer_detail'
     ),
+    
+    # Manufacturing app URLs - using include with explicit namespace
 
     # مسارات لوحة التحكم
     path('admin/', admin.site.urls),
@@ -73,7 +71,7 @@ urlpatterns = [
     path('orders/', include('orders.urls', namespace='orders')),
     path('reports/', include('reports.urls', namespace='reports')),
     path('inspections/', include('inspections.urls', namespace='inspections')),
-    path('factory/', include(manufacturing_urls, namespace='manufacturing')),
+    path('factory/', include(('manufacturing.urls', 'manufacturing'), namespace='manufacturing')),
     # إعادة توجيه من المسار القديم إلى المسار الجديد
     path('data_management/', views.data_management_redirect, name='data_management_redirect'),
     path('database/', views.data_management_redirect, name='database_redirect'),

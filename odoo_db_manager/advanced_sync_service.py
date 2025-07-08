@@ -19,7 +19,7 @@ from .google_sync_advanced import (
 from .google_sheets_import import GoogleSheetsImporter
 from customers.models import Customer, CustomerCategory
 from orders.models import Order
-from orders.extended_models import ExtendedOrder
+# from orders.extended_models import ExtendedOrder  # TODO: إعادة التنفيذ باستخدام ManufacturingOrder
 from inspections.models import Inspection
 # Removed installations app import - will be reimplemented with new models
 from accounts.models import Branch, Salesperson
@@ -521,8 +521,16 @@ class AdvancedSyncService:
             logger.info(f"[CREATE_ORDER] تم إنشاء الطلب بنجاح: {order.order_number if hasattr(order, 'order_number') else 'N/A'}")
             
             # إنشاء ExtendedOrder للمعلومات الإضافية
-            self._create_extended_order(order, order_type, mapped_data)
-            
+            # TODO: يجب مراجعة منطق إنشاء الطلبات الموسعة (ManufacturingOrder).
+            # تم استبدال الموديل القديم ExtendedOrder بـ ManufacturingOrder،
+            # والموديل الجديد يتطلب حقولاً مختلفة (مثل expected_delivery_date, order_type)
+            # غير متوفرة في البيانات المستوردة من الشيت.
+            # تم تعطيل هذه الوظيفة مؤقتًا حتى يتم تنفيذها بشكل صحيح.
+            # order_type = mapped_data.get('order_type', 'standard').lower()
+            # if order_type in ['manufacturing', 'sub_contract']:
+            #     self._create_manufacturing_order(order, order_type, mapped_data)
+
+            self.stats['orders_created'] += 1
             return order
         except IntegrityError as e:
             logger.error(f"[CREATE_ORDER] خطأ IntegrityError: {str(e)}")
@@ -532,38 +540,6 @@ class AdvancedSyncService:
             logger.error(f"[CREATE_ORDER] خطأ عام: {str(e)}")
             logger.error(f"[CREATE_ORDER] بيانات الطلب: {order_data}")
             raise Exception(f"فشل إنشاء طلب جديد: {str(e)}")
-
-    def _create_extended_order(self, order: Order, order_type: str, mapped_data: Dict[str, str]):
-        """إنشاء معلومات إضافية للطلب (ExtendedOrder)"""
-        try:
-            # تحديد نوع الطلب الرئيسي وأنواعه الفرعية
-            if order_type in ['fabric', 'accessories']:
-                order_type_main = 'goods'
-                goods_type = order_type
-                service_type = None
-            else:
-                order_type_main = 'services' 
-                goods_type = None
-                service_type = order_type
-
-            extended_data = {
-                'order': order,
-                'order_type': order_type_main,
-                'goods_type': goods_type,
-                'service_type': service_type,
-            }
-
-            # إضافة بيانات إضافية إذا كانت متوفرة
-            additional_notes = mapped_data.get('additional_notes', '')
-            if additional_notes:
-                extended_data['additional_notes'] = additional_notes
-
-            ExtendedOrder.objects.create(**extended_data)
-            logger.info(f"[CREATE_EXTENDED_ORDER] تم إنشاء معلومات إضافية للطلب: {order_type}")
-            
-        except Exception as e:
-            logger.warning(f"[CREATE_EXTENDED_ORDER] فشل في إنشاء معلومات إضافية: {str(e)}")
-            # لا نرفع خطأ هنا لأن الطلب الأساسي تم إنشاؤه بنجاح
 
     def _update_order(self, order: Order, mapped_data: Dict[str, str], customer: Customer) -> bool:
         """

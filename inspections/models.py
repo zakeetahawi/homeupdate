@@ -3,10 +3,9 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from customers.models import Customer
-from accounts.models import User, Branch
 from model_utils.tracker import FieldTracker
 import re
+
 class InspectionEvaluation(models.Model):
     CRITERIA_CHOICES = [
         ('location', _('الموقع')),
@@ -27,7 +26,9 @@ class InspectionEvaluation(models.Model):
     rating = models.IntegerField(_('التقييم'), choices=RATING_CHOICES)
     notes = models.TextField(_('ملاحظات التقييم'), blank=True)
     created_at = models.DateTimeField(_('تاريخ التقييم'), auto_now_add=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='evaluations_created', verbose_name=_('تم التقييم بواسطة'))
+    created_by = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL, null=True, related_name='evaluations_created', verbose_name=_('تم التقييم بواسطة')
+    )
     class Meta:
         verbose_name = _('تقييم المعاينة')
         verbose_name_plural = _('تقييمات المعاينات')
@@ -40,6 +41,7 @@ class InspectionEvaluation(models.Model):
         ]
     def __str__(self):
         return f"تقييم معاينة {self.inspection.contract_number}"
+
 class InspectionNotification(models.Model):
     TYPE_CHOICES = [
         ('scheduled', _('موعد معاينة')),
@@ -69,6 +71,7 @@ class InspectionNotification(models.Model):
     @property
     def is_scheduled(self):
         return bool(self.scheduled_for)
+
 class InspectionReport(models.Model):
     REPORT_TYPE_CHOICES = [
         ('daily', _('يومي')),
@@ -78,7 +81,9 @@ class InspectionReport(models.Model):
     ]
     title = models.CharField(_('عنوان التقرير'), max_length=200)
     report_type = models.CharField(_('نوع التقرير'), max_length=10, choices=REPORT_TYPE_CHOICES)
-    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='inspection_reports', verbose_name=_('الفرع'))
+    branch = models.ForeignKey(
+        'accounts.Branch', on_delete=models.CASCADE, related_name='inspection_reports', verbose_name=_('الفرع')
+    )
     date_from = models.DateField(_('من تاريخ'))
     date_to = models.DateField(_('إلى تاريخ'))
     total_inspections = models.IntegerField(_('إجمالي المعاينات'), default=0)
@@ -87,7 +92,9 @@ class InspectionReport(models.Model):
     cancelled_inspections = models.IntegerField(_('المعاينات الملغاة'), default=0)
     notes = models.TextField(_('ملاحظات'), blank=True)
     created_at = models.DateTimeField(_('تاريخ إنشاء التقرير'), auto_now_add=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='inspection_reports_created', verbose_name=_('تم الإنشاء بواسطة'))
+    created_by = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL, null=True, related_name='inspection_reports_created', verbose_name=_('تم الإنشاء بواسطة')
+    )
     class Meta:
         verbose_name = _('تقرير معاينات')
         verbose_name_plural = _('تقارير المعاينات')
@@ -134,6 +141,7 @@ class InspectionReport(models.Model):
             self.pending_inspections = cached_stats['pending']
             self.cancelled_inspections = cached_stats['cancelled']
         self.save()
+
 class Inspection(models.Model):
     STATUS_CHOICES = [
         ('pending', _('قيد الانتظار')),
@@ -149,7 +157,7 @@ class Inspection(models.Model):
     tracker = FieldTracker(fields=['status', 'result'])
     contract_number = models.CharField(_('رقم العقد'), max_length=50, unique=True, blank=True, null=True)
     customer = models.ForeignKey(
-        Customer,
+        'customers.Customer',
         on_delete=models.PROTECT,
         related_name='inspections',
         verbose_name=_('العميل'),
@@ -157,7 +165,7 @@ class Inspection(models.Model):
         blank=True
     )
     branch = models.ForeignKey(
-        Branch,
+        'accounts.Branch',
         on_delete=models.PROTECT,
         related_name='inspections',
         verbose_name=_('الفرع'),
@@ -165,7 +173,7 @@ class Inspection(models.Model):
         blank=True
     )
     inspector = models.ForeignKey(
-        User,
+        'accounts.User',
         on_delete=models.SET_NULL,
         null=True,
         related_name='assigned_inspections',
