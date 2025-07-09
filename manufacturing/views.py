@@ -367,7 +367,7 @@ def update_order_status(request, pk):
                 return JsonResponse({
                     'success': False,
                     'error': 'اسم المستلم مطلوب عند تغيير الحالة إلى "تم التسليم"'
-                }, status=400)
+            }, status=400)
         
         # Update order status
         old_status = order.status
@@ -736,7 +736,7 @@ def update_approval_status(request, pk):
             }, status=400)
         
         action = data.get('action')
-        
+
         # Validate action
         if action not in ['approve', 'reject']:
             return JsonResponse({
@@ -771,7 +771,7 @@ def update_approval_status(request, pk):
                         recipient = order.order.created_by
                         title = f'بدء تصنيع طلب {order.order.customer.name}'
                         message = f'تمت الموافقة على أمر التصنيع للعميل {order.order.customer.name} - الطلب #{order.order.order_number}\nدخل الطلب مرحلة التصنيع. رقم أمر التصنيع #{order.pk}.'
-                        
+                    
                         Notification.objects.create(
                             recipient=recipient,
                             title=title,
@@ -902,7 +902,7 @@ def send_reply(request, pk):
             'success': True, 
             'message': 'تم إرسال الرد بنجاح للإدارة'
         })
-        
+
     except ManufacturingOrder.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'لم يتم العثور على أمر التصنيع'}, status=404)
     except Exception as e:

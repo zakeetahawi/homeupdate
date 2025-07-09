@@ -18,16 +18,16 @@
                         <div class="col-md-6 text-end">
                             <a href="{% url 'manufacturing:order_list' %}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> العودة للقائمة
-                            </a>
+                    </a>
                             <a href="{% url 'manufacturing:order_update' manufacturing_order.id %}" class="btn btn-primary">
                                 <i class="fas fa-edit"></i> تعديل
-                            </a>
-                        </div>
-                    </div>
+                    </a>
                 </div>
-                <div class="card-body">
+            </div>
+        </div>
+        <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6">
+                <div class="col-md-6">
                             <h5>معلومات أساسية</h5>
                             <table class="table table-sm">
                                 <tr>
@@ -98,7 +98,7 @@
                                             {{ manufacturing_order.order.sales_person.get_full_name|default:manufacturing_order.order.sales_person.username }}
                                         {% else %}
                                             -
-                                        {% endif %}
+                                                {% endif %}
                                     </td>
                                 </tr>
                                 <tr>
@@ -126,7 +126,7 @@
                             </table>
                         </div>
                     </div>
-
+                                
                     <!-- ملفات العقد والمعاينة -->
                     <div class="row mt-4">
                         <div class="col-md-12">
@@ -155,59 +155,59 @@
                                                     <a href="{{ inspection.inspection_file.url }}" target="_blank" class="btn btn-info">
                                                         <i class="fas fa-file-alt"></i> عرض ملف المعاينة
                                                     </a>
-                                                {% else %}
+                                        {% else %}
                                                     <p class="text-muted">لم يتم رفع ملف المعاينة</p>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                        {% endif %}
+                                    {% endwith %}
                         </div>
                     </div>
-
+                </div>
+                    </div>
+                </div>
+            </div>
+            
                     <!-- عناصر الطلب -->
                     {% if items %}
                     <div class="row mt-4">
                         <div class="col-md-12">
                             <h5>عناصر الطلب</h5>
-                            <div class="table-responsive">
+                    <div class="table-responsive">
                                 <table class="table table-bordered">
                                     <thead>
-                                        <tr>
+                                <tr>
                                             <th>المنتج</th>
                                             <th>الكمية</th>
                                             <th>السعر</th>
                                             <th>الإجمالي</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+                                </tr>
+                            </thead>
+                            <tbody>
                                         {% for item in items %}
-                                        <tr>
-                                            <td>{{ item.product.name }}</td>
+                                <tr>
+                                    <td>{{ item.product.name }}</td>
                                             <td>{{ item.quantity }}</td>
                                             <td>{{ item.price|floatformat:2 }}</td>
                                             <td>{{ item.total_price|floatformat:2 }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+            </div>
                     {% endif %}
-
+            
                     <!-- ملاحظات -->
-                    {% if manufacturing_order.notes %}
+            {% if manufacturing_order.notes %}
                     <div class="row mt-4">
                         <div class="col-md-12">
                             <h5>ملاحظات</h5>
                             <div class="alert alert-info">
-                                {{ manufacturing_order.notes|linebreaks }}
+                    {{ manufacturing_order.notes|linebreaks }}
                             </div>
-                        </div>
-                    </div>
-                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
 
                     <!-- سبب الرفض -->
                     {% if manufacturing_order.status == 'rejected' and manufacturing_order.rejection_reason %}
@@ -217,8 +217,8 @@
                             <div class="alert alert-danger">
                                 {{ manufacturing_order.rejection_reason|linebreaks }}
                             </div>
-                        </div>
-                    </div>
+        </div>
+                </div>
                     {% endif %}
                 </div>
             </div>

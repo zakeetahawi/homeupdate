@@ -39,6 +39,16 @@ if DEBUG:
     '*.ngrok-free.app',
     ])
 
+# إضافة دومين elkhawaga.uk وجميع النطاقات الفرعية
+ALLOWED_HOSTS.extend([
+    'elkhawaga.uk',
+    'www.elkhawaga.uk',
+    'crm.elkhawaga.uk',
+    'admin.elkhawaga.uk',
+    'api.elkhawaga.uk',
+    '*.elkhawaga.uk',
+])
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -85,6 +95,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.log_terminal_activity.TerminalActivityLoggerMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'crm.middleware.permission_handler.PermissionDeniedMiddleware',
