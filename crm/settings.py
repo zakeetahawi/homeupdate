@@ -362,6 +362,8 @@ SESSION_COOKIE_SECURE = False  # تعطيل لتجنب مشاكل المصادق
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 86400 * 7  # 7 أيام
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_SAVE_EVERY_REQUEST = True  # حفظ الجلسة مع كل طلب لتجديد انتهاء الصلاحية
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # عدم انتهاء الجلسة عند إغلاق المتصفح
 
 # إعدادات جدولة المهام
 APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"

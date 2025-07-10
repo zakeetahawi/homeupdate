@@ -1,0 +1,22 @@
+[
+    {
+        "model": "auth.user",
+        "pk": 999,
+        "fields": {
+            "username": "test_user_debug",
+            "first_name": "Test",
+            "last_name": "Debug",
+            "email": "test@debug.com",
+            "is_staff": false,
+            "is_active": true,
+            "date_joined": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "auth.group",
+        "pk": 999,
+        "fields": {
+            "name": "test_debug_group"
+        }
+    }
+] 

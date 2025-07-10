@@ -2,12 +2,17 @@
 نماذج إدارة قواعد البيانات على طراز أودو
 """
 
-from django.db import models  # Add this import at the top
+import calendar
+import json
+import os
+from datetime import datetime, timedelta
+
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-# استيراد النماذج المتقدمة للمزامنة
-from .google_sync_advanced import GoogleSheetMapping, GoogleSyncTask, GoogleSyncConflict, GoogleSyncSchedule
 
 class ImportLog(models.Model):
     """سجل عمليات الاستيراد"""
@@ -49,12 +54,7 @@ class ImportLog(models.Model):
 
     def __str__(self):
         return f"استيراد {self.sheet_name} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
-from django.db import models
-from django.utils.translation import gettext_lazy as _
-from django.conf import settings
-from django.utils import timezone
-import calendar
-from datetime import timedelta
+
 class Database(models.Model):
     """نموذج قاعدة البيانات الرئيسي"""
     DB_TYPES = [
@@ -618,3 +618,168 @@ class GoogleDriveConfig(models.Model):
         if self.is_active:
             GoogleDriveConfig.objects.filter(is_active=True).exclude(pk=self.pk).update(is_active=False)
         super().save(*args, **kwargs)
+
+class RestoreProgress(models.Model):
+    """نموذج لتتبع تقدم عملية الاستعادة"""
+    
+    STATUS_CHOICES = [
+        ('starting', 'بدء العملية'),
+        ('reading_file', 'قراءة الملف'),
+        ('processing', 'معالجة البيانات'),
+        ('restoring', 'استعادة البيانات'),
+        ('completed', 'مكتملة'),
+        ('failed', 'فشلت'),
+    ]
+    
+    session_id = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name='معرف الجلسة'
+    )
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='المستخدم'
+    )
+    
+    database = models.ForeignKey(
+        Database,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='قاعدة البيانات'
+    )
+    
+    filename = models.CharField(
+        max_length=255,
+        verbose_name='اسم الملف'
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='starting',
+        verbose_name='الحالة'
+    )
+    
+    total_items = models.IntegerField(
+        default=0,
+        verbose_name='إجمالي العناصر'
+    )
+    
+    processed_items = models.IntegerField(
+        default=0,
+        verbose_name='العناصر المعالجة'
+    )
+    
+    success_count = models.IntegerField(
+        default=0,
+        verbose_name='عدد النجاح'
+    )
+    
+    error_count = models.IntegerField(
+        default=0,
+        verbose_name='عدد الأخطاء'
+    )
+    
+    current_step = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='الخطوة الحالية'
+    )
+    
+    progress_percentage = models.FloatField(
+        default=0.0,
+        verbose_name='نسبة التقدم'
+    )
+    
+    error_message = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='رسالة الخطأ'
+    )
+    
+    result_data = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name='بيانات النتيجة'
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء'
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='تاريخ التحديث'
+    )
+    
+    class Meta:
+        verbose_name = 'تقدم الاستعادة'
+        verbose_name_plural = 'تقدم الاستعادة'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'استعادة {self.filename} - {self.get_status_display()}'
+    
+    def update_progress(self, status=None, processed_items=None, current_step=None, 
+                       success_count=None, error_count=None, error_message=None):
+        """تحديث تقدم العملية"""
+        try:
+            if status:
+                self.status = status
+            if processed_items is not None:
+                self.processed_items = processed_items
+            if current_step:
+                self.current_step = current_step
+            if success_count is not None:
+                self.success_count = success_count
+            if error_count is not None:
+                self.error_count = error_count
+            if error_message:
+                self.error_message = error_message
+            
+            # حساب نسبة التقدم
+            if self.total_items > 0 and self.processed_items is not None:
+                self.progress_percentage = (self.processed_items / self.total_items) * 100
+            else:
+                self.progress_percentage = 0.0
+            
+            # التأكد من أن النسبة لا تتجاوز 100%
+            if self.progress_percentage > 100:
+                self.progress_percentage = 100.0
+            
+            self.save()
+            
+        except Exception as e:
+            # في حالة فشل التحديث، نطبع الخطأ ونستمر
+            print(f"خطأ في تحديث التقدم: {str(e)}")
+            try:
+                # محاولة حفظ الحالة الأساسية على الأقل
+                if status:
+                    self.status = status
+                if current_step:
+                    self.current_step = current_step
+                self.save(update_fields=['status', 'current_step', 'updated_at'])
+            except:
+                pass  # إذا فشل حتى هذا، نتجاهل الخطأ
+    
+    def set_completed(self, result_data=None):
+        """تعيين العملية كمكتملة"""
+        self.status = 'completed'
+        self.progress_percentage = 100.0
+        self.current_step = 'تمت الاستعادة بنجاح'
+        if result_data:
+            self.result_data = result_data
+        self.save()
+    
+    def set_failed(self, error_message):
+        """تعيين العملية كفاشلة"""
+        self.status = 'failed'
+        self.error_message = error_message
+        self.current_step = 'فشلت العملية'
+        self.save()

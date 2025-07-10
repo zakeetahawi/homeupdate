@@ -2,7 +2,7 @@
 مسارات إدارة قواعد البيانات على طراز أودو
 """
 
-from django.urls import path, include
+from django.urls import path
 from . import views
 from . import google_sync_views
 from . import views_advanced_sync
@@ -99,7 +99,9 @@ urlpatterns = [
          name='google_sync_logs_api'),
 
     # نظام Google المتقدم (الرئيسي)
-    path('google-unified/', views_advanced_sync.advanced_sync_dashboard, name='google_unified_dashboard'),
+    path('google-unified/',
+         views_advanced_sync.advanced_sync_dashboard,
+         name='google_unified_dashboard'),
 
     # مسارات المزامنة المتقدمة
     path('advanced-sync/',
@@ -159,5 +161,15 @@ urlpatterns = [
          views_advanced_sync.preview_sheet_data,
          name='preview_sheet_data'),
 
+    # شريط التقدم للاستعادة
+    path('restore-progress/<str:session_id>/stream/',
+         views.restore_progress_stream,
+         name='restore_progress_stream'),
+    path('restore-progress/<str:session_id>/status/',
+         views.restore_progress_status,
+         name='restore_progress_status'),
+    path('refresh-session/',
+         views.refresh_session,
+         name='refresh_session'),
 
 ]
