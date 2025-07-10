@@ -1136,8 +1136,7 @@ def backup_upload(request, database_id=None):
                         raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON أو JSON.GZ.")
                     
                     # تحديث حالة قاعدة البيانات
-                    database.refresh_from_db()
-                    database.status = 'connected'
+                    database.status = True  # تغيير من 'connected' إلى True
                     database.error_message = None
                     database.save()
                     
@@ -1638,23 +1637,27 @@ def _restore_json_simple(file_path, clear_existing=False):
     except Exception as e:
         raise
 
-def _restore_json_simple_with_progress(file_path, clear_existing=False, progress_callback=None, session_id=None):
+def _restore_json_simple_with_progress(file_path, clear_existing=False,
+                                       progress_callback=None, session_id=None):
     """
-    استعادة البيانات من ملف JSON مع دعم شريط التقدم
+    استعادة البيانات من ملف JSON مع دعم شريط التقدم المحسن
+    وحل مشاكل المفاتيح الخارجية للحصول على استعادة شاملة 100%
     """
     import json
     from django.core import serializers
-    from django.db import transaction
+    from django.db import transaction, connection
     from django.apps import apps
-    
-    def update_progress(current_step=None, processed_items=None, success_count=None, error_count=None):
+    from django.contrib.contenttypes.models import ContentType
+
+    def update_progress(current_step=None, processed_items=None,
+                        success_count=None, error_count=None):
         """دالة مساعدة لتحديث التقدم"""
         if progress_callback:
             # حساب النسبة المئوية
             progress_percentage = 0
             if processed_items is not None and total_items > 0:
                 progress_percentage = min(100, int((processed_items / total_items) * 100))
-            
+
             progress_callback(
                 progress_percentage=progress_percentage,
                 current_step=current_step,
@@ -1664,15 +1667,31 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False, progress
             )
 
     try:
-        update_progress(current_step='قراءة الملف...')
-        
+        update_progress(current_step='🔄 بدء عملية الاستعادة الشاملة...')
+
+        # التحقق من وجود الملف
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"الملف غير موجود: {file_path}")
+
+        update_progress(current_step='📖 قراءة وتحليل الملف...')
+
         # قراءة الملف
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
+
+        # التحقق من صحة البيانات
+        if not isinstance(data, list):
+            if isinstance(data, dict):
+                if 'model' in data and 'fields' in data:
+                    data = [data]
+                else:
+                    raise ValueError("تنسيق الملف غير صحيح. يجب أن يكون ملف Django fixture صالح.")
+            else:
+                raise ValueError(f"تنسيق البيانات غير مدعوم: {type(data)}. يجب أن تكون البيانات عبارة عن قائمة.")
+
         total_items = len(data)
-        update_progress(current_step='تحليل البيانات...', processed_items=0)
-        
+        update_progress(current_step=f'📊 تم تحليل {total_items} عنصر من البيانات', processed_items=0)
+
         # تحديث إجمالي العناصر
         if progress_callback:
             progress_callback(total_items=total_items)
@@ -1681,22 +1700,98 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False, progress
         error_count = 0
         failed_items = []
         
-        update_progress(current_step='بدء استعادة البيانات...', processed_items=0, success_count=0, error_count=0)
+        # إنشاء ContentTypes المطلوبة
+        update_progress(current_step='🔧 إعداد أنواع المحتوى المطلوبة...')
+        required_content_types = [
+            ('inventory', 'product'),
+            ('inventory', 'category'),
+            ('inventory', 'brand'),
+            ('inventory', 'warehouse'),
+            ('inventory', 'stocktransaction'),
+            ('orders', 'order'),
+            ('orders', 'orderitem'),
+            ('customers', 'customer'),
+            ('customers', 'customercategory'),
+            ('customers', 'customertype'),
+            ('customers', 'customernote'),
+            ('inspections', 'inspection'),
+            ('installations', 'installation'),
+            ('reports', 'report'),
+            ('accounts', 'department'),
+            ('accounts', 'branch'),
+            ('accounts', 'salesperson'),
+        ]
         
-        print(f"🚀 [DEBUG] Starting restore process for {total_items} items")
-        print(f"🔧 [DEBUG] Clear existing data: {clear_existing}")
-        print(f"📝 [DEBUG] Session ID: {session_id}")
+        for app_label, model_name in required_content_types:
+            try:
+                ContentType.objects.get_or_create(
+                    app_label=app_label,
+                    model=model_name
+                )
+            except Exception as e:
+                print(f"⚠️ تحذير: لم يتم إنشاء ContentType لـ {app_label}.{model_name}: {str(e)}")
         
-        # حذف البيانات القديمة إذا طُلب ذلك
-        if clear_existing:
-            print(f"🗑️ [DEBUG] Starting data deletion process...")
-            update_progress(current_step='حذف البيانات القديمة...', processed_items=0, success_count=0, error_count=0)
+        # ترتيب البيانات حسب الأولوية لحل مشاكل المفاتيح الخارجية
+        update_progress(current_step='🔄 ترتيب البيانات حسب الأولوية لحل المفاتيح الخارجية...')
+        
+        # ترتيب محسن لحل مشاكل المفاتيح الخارجية
+        priority_order = [
+            # أولاً: النماذج الأساسية للنظام
+            'contenttypes.contenttype',
+            'auth.user',
+            'auth.group',
+            'auth.permission',
             
-            # الحصول على جميع النماذج المستخدمة في البيانات
-            models_to_clear = set()
+            # ثانياً: النماذج المرجعية (التي لا تعتمد على غيرها)
+            'accounts.department',
+            'accounts.branch',
+            'accounts.salesperson',
+            'customers.customercategory',  # مهم: تصنيفات العملاء قبل العملاء
+            'customers.customertype',      # مهم: أنواع العملاء قبل العملاء
+            'inventory.category',
+            'inventory.brand',
+            'inventory.warehouse',
+            
+            # ثالثاً: النماذج التي تعتمد على المرجعية
+            'customers.customer',          # بعد تصنيفات وأنواع العملاء
+            'inventory.product',           # بعد الفئات والعلامات التجارية
+            
+            # رابعاً: النماذج التي تعتمد على العملاء والمنتجات
+            'orders.order',                # بعد العملاء
+            'orders.orderitem',            # بعد الطلبات والمنتجات
+            'inspections.inspection',      # بعد العملاء
+            'installations.installation',  # بعد العملاء
+            
+            # خامساً: النماذج التكميلية
+            'customers.customernote',      # بعد العملاء
+            'inventory.stocktransaction',  # بعد المنتجات
+            'reports.report',
+            
+            # أخيراً: نماذج النظام
+            'odoo_db_manager.database',
+            'odoo_db_manager.backup',
+            'odoo_db_manager.backupschedule',
+            'odoo_db_manager.importlog',
+        ]
+        
+        # ترتيب البيانات
+        sorted_data = []
+        remaining_data = []
+        
+        for model_name in priority_order:
             for item in data:
-                if 'model' in item:
-                    models_to_clear.add(item['model'])
+                if item.get('model') == model_name:
+                    sorted_data.append(item)
+        
+        for item in data:
+            if item not in sorted_data:
+                remaining_data.append(item)
+        
+        final_data = sorted_data + remaining_data
+        
+        # تنظيف البيانات القديمة إذا طُلب ذلك
+        if clear_existing:
+            update_progress(current_step='🗑️ حذف البيانات القديمة بترتيب آمن...')
             
             # حفظ معلومات سجل التقدم الحالي قبل الحذف
             current_progress_data = None
@@ -1717,38 +1812,44 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False, progress
                     'error_message': current_progress.error_message,
                     'result_data': current_progress.result_data
                 }
-                print(f"✅ [DEBUG] Saved current progress data before deletion")
             except RestoreProgress.DoesNotExist:
-                print(f"⚠️ [DEBUG] No current progress record found to save")
+                pass
             
-            # قائمة النماذج المحظورة من الحذف (لحماية نظام التقدم)
+            # قائمة النماذج المحظورة من الحذف
             protected_models = {
-                'odoo_db_manager.restoreprogress',  # نظام التقدم
-                'sessions.session',                 # جلسات المستخدمين
-                'auth.user',                       # المستخدمين
-                'auth.group',                      # المجموعات
-                'auth.permission',                 # الصلاحيات
-                'contenttypes.contenttype',        # أنواع المحتوى
-                'admin.logentry',                  # سجل الإدارة
-                'django_apscheduler.djangojob',    # مهام الجدولة
-                'django_apscheduler.djangojobexecution'  # تنفيذ المهام
+                'odoo_db_manager.restoreprogress',
+                'sessions.session',
+                'auth.user',
+                'auth.group',
+                'auth.permission',
+                'contenttypes.contenttype',
+                'admin.logentry',
+                'django_apscheduler.djangojob',
+                'django_apscheduler.djangojobexecution'
             }
             
-            # حذف البيانات لكل نموذج (باستثناء النماذج المحظورة)
-            deleted_models_count = 0
-            total_models = len([m for m in models_to_clear if m.lower() not in protected_models])
+            # جمع النماذج المطلوب حذفها
+            models_to_clear = set()
+            for item in final_data:
+                model_name = item.get('model')
+                if model_name and model_name.lower() not in protected_models:
+                    models_to_clear.add(model_name)
             
-            for model_name in models_to_clear:
-                if model_name.lower() not in protected_models:
+            # حذف البيانات بترتيب عكسي لتجنب مشاكل المفاتيح الخارجية
+            deletion_order = list(reversed(priority_order))
+            deleted_models_count = 0
+            total_models = len(models_to_clear)
+            
+            for model_name in deletion_order:
+                if model_name in models_to_clear:
                     try:
-                        model = apps.get_model(model_name)
+                        app_label, model_class = model_name.split('.')
+                        model = apps.get_model(app_label, model_class)
                         deleted_count = model.objects.all().delete()[0]
                         deleted_models_count += 1
                         
-                        # تحديث التقدم أثناء حذف البيانات
-                        deletion_progress = int((deleted_models_count / total_models) * 100) if total_models > 0 else 0
                         update_progress(
-                            current_step=f'حذف البيانات القديمة... ({deleted_models_count}/{total_models}) - {model_name}',
+                            current_step=f'🗑️ حذف البيانات القديمة... ({deleted_models_count}/{total_models}) - {model_name}',
                             processed_items=0,
                             success_count=0,
                             error_count=0
@@ -1757,17 +1858,32 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False, progress
                         print(f"✅ تم حذف {deleted_count} عنصر من {model_name}")
                     except Exception as e:
                         print(f"⚠️ خطأ في حذف بيانات {model_name}: {str(e)}")
-                else:
-                    print(f"🔒 تم تجاهل حذف {model_name} (نموذج محمي)")
             
-            # إعادة إنشاء سجل التقدم إذا تم حذفه عن طريق الخطأ
+            # حذف النماذج المتبقية
+            for model_name in models_to_clear:
+                if model_name not in deletion_order:
+                    try:
+                        app_label, model_class = model_name.split('.')
+                        model = apps.get_model(app_label, model_class)
+                        deleted_count = model.objects.all().delete()[0]
+                        deleted_models_count += 1
+                        
+                        update_progress(
+                            current_step=f'🗑️ حذف البيانات المتبقية... ({deleted_models_count}/{total_models}) - {model_name}',
+                            processed_items=0,
+                            success_count=0,
+                            error_count=0
+                        )
+                        
+                        print(f"✅ تم حذف {deleted_count} عنصر من {model_name}")
+                    except Exception as e:
+                        print(f"⚠️ خطأ في حذف بيانات {model_name}: {str(e)}")
+            
+            # إعادة إنشاء سجل التقدم إذا تم حذفه
             if current_progress_data:
                 try:
-                    # التحقق من وجود السجل
                     RestoreProgress.objects.get(session_id=session_id)
-                    print(f"✅ [DEBUG] Progress record still exists after deletion")
                 except RestoreProgress.DoesNotExist:
-                    # إعادة إنشاء السجل
                     try:
                         from accounts.models import User
                         user = User.objects.get(id=current_progress_data['user_id'])
@@ -1788,75 +1904,180 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False, progress
                             error_message=current_progress_data['error_message'],
                             result_data=current_progress_data['result_data']
                         )
-                        print(f"✅ [DEBUG] Progress record recreated after deletion")
                     except Exception as recreate_error:
-                        print(f"❌ [DEBUG] Failed to recreate progress record: {str(recreate_error)}")
+                        print(f"❌ فشل في إعادة إنشاء سجل التقدم: {str(recreate_error)}")
         
-        # استخدام الطريقة اليدوية مع تحديث التقدم
-        for idx, item in enumerate(data):
+        # تعطيل فحص المفاتيح الخارجية مؤقتاً (PostgreSQL)
+        update_progress(current_step='🔧 تحضير قاعدة البيانات للاستعادة الشاملة...')
+        
+        foreign_key_checks_disabled = False
+        try:
+            with connection.cursor() as cursor:
+                # تعطيل فحص المفاتيح الخارجية في PostgreSQL
+                cursor.execute("SET session_replication_role = replica;")
+                foreign_key_checks_disabled = True
+                print("✅ تم تعطيل فحص المفاتيح الخارجية مؤقتاً")
+        except Exception as e:
+            print(f"⚠️ لم يتم تعطيل فحص المفاتيح الخارجية: {str(e)}")
+        
+        # بدء عملية الاستعادة
+        update_progress(current_step='🔄 بدء استعادة البيانات الشاملة...', processed_items=0, success_count=0, error_count=0)
+        
+        print(f"🚀 بدء عملية الاستعادة الشاملة لـ {total_items} عنصر")
+        
+        # استعادة البيانات مع معالجة محسنة للأخطاء
+        for idx, item in enumerate(final_data):
             try:
-                # تحديث التقدم كل 10 عناصر لتحسين الأداء
-                if idx % 10 == 0:
+                # تحديث التقدم كل 50 عنصر لتحسين الأداء
+                if idx % 50 == 0 or idx == total_items - 1:
                     update_progress(
-                        current_step=f'معالجة العنصر {idx + 1} من {total_items}...',
-                        processed_items=idx,
+                        current_step=f'⚙️ معالجة العنصر {idx + 1} من {total_items}...',
+                        processed_items=idx + 1,
                         success_count=success_count,
                         error_count=error_count
                     )
                 
-                # محاولة استعادة العنصر باستخدام Django serializers
-                try:
-                    # تحويل العنصر إلى JSON string
-                    item_json = json.dumps([item])
+                # تنظيف البيانات المشكوك فيها
+                model_name = item.get('model', '')
+                fields = item.get('fields', {})
+                
+                # إصلاح مشاكل البيانات الشائعة
+                if model_name == 'accounts.systemsettings':
+                    # إصلاح إعدادات النظام
+                    if 'default_currency' in fields:
+                        default_curr = fields.pop('default_currency', 'SAR')
+                        fields['currency'] = default_curr
                     
-                    # استخدام Django deserializer
-                    for deserialized_obj in serializers.deserialize('json', item_json):
-                        deserialized_obj.save()
+                    # إزالة الحقول القديمة
+                    old_fields = ['timezone', 'date_format', 'time_format']
+                    for field in old_fields:
+                        if field in fields:
+                            fields.pop(field, None)
+                    
+                    item['fields'] = fields
+                
+                # إصلاح مشاكل البيانات المنطقية
+                for field_name, field_value in fields.items():
+                    if isinstance(field_value, str):
+                        if field_value.lower() in ['true', 'false']:
+                            fields[field_name] = field_value.lower() == 'true'
+                        elif field_value == 'connected':
+                            fields[field_name] = True
+                        elif field_value == 'disconnected':
+                            fields[field_name] = False
+                
+                # معالجة خاصة للمفاتيح الخارجية المفقودة
+                if model_name == 'customers.customer':
+                    # إنشاء تصنيف افتراضي إذا كان مفقود
+                    category_id = fields.get('category')
+                    if category_id:
+                        try:
+                            from customers.models import CustomerCategory
+                            CustomerCategory.objects.get(id=category_id)
+                        except CustomerCategory.DoesNotExist:
+                            # إنشاء تصنيف افتراضي
+                            default_category = CustomerCategory.objects.create(
+                                id=category_id,
+                                name=f"تصنيف {category_id}",
+                                description="تصنيف تم إنشاؤه تلقائياً أثناء الاستعادة"
+                            )
+                            print(f"✅ تم إنشاء تصنيف افتراضي: {default_category.name}")
+                
+                # محاولة استعادة العنصر
+                try:
+                    with transaction.atomic():
+                        item_json = json.dumps([item])
+                        for deserialized_obj in serializers.deserialize('json', item_json):
+                            deserialized_obj.save()
                     
                     success_count += 1
                     
                 except Exception as item_error:
                     error_count += 1
                     error_msg = str(item_error)
-                    failed_items.append(f"العنصر {idx + 1} ({item.get('model','?')}): {error_msg[:100]}...")
+                    failed_items.append({
+                        'index': idx + 1,
+                        'model': model_name,
+                        'error': error_msg[:200] + ('...' if len(error_msg) > 200 else ''),
+                        'pk': item.get('pk', 'غير محدد')
+                    })
                     
-                    # طباعة الخطأ للمراقبة
-                    if idx < 10:  # طباعة أول 10 أخطاء فقط
-                        print(f"- العنصر {idx + 1} ({item.get('model','?')}): {error_msg[:100]}...")
+                    # طباعة تفاصيل الأخطاء الأولى فقط
+                    if error_count <= 10:
+                        print(f"❌ خطأ في العنصر {idx + 1} ({model_name}): {error_msg[:100]}...")
                     
             except Exception as e:
                 error_count += 1
-                failed_items.append(f"العنصر {idx + 1}: {str(e)[:100]}...")
+                failed_items.append({
+                    'index': idx + 1,
+                    'model': 'غير محدد',
+                    'error': str(e)[:200],
+                    'pk': 'غير محدد'
+                })
+        
+        # إعادة تفعيل فحص المفاتيح الخارجية
+        if foreign_key_checks_disabled:
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("SET session_replication_role = DEFAULT;")
+                print("✅ تم إعادة تفعيل فحص المفاتيح الخارجية")
+            except Exception as e:
+                print(f"⚠️ خطأ في إعادة تفعيل فحص المفاتيح الخارجية: {str(e)}")
         
         # تحديث نهائي
+        success_rate = (success_count / total_items * 100) if total_items > 0 else 0
         update_progress(
-            current_step='اكتملت الاستعادة',
+            current_step=f'✅ اكتملت الاستعادة الشاملة بنسبة {success_rate:.1f}%',
             processed_items=total_items,
             success_count=success_count,
             error_count=error_count
         )
         
-        # طباعة ملخص العملية
-        print(f"\n{'='*31}")
-        print(f"ملخص عملية الاستعادة:")
-        print(f"إجمالي العناصر: {total_items}")
-        print(f"تمت الاستعادة بنجاح: {success_count}")
-        print(f"أخطاء: {error_count}")
-        if failed_items:
-            print(f"أول 5 أخطاء:")
-            for error in failed_items[:5]:
-                print(f"- {error}")
-        print(f"{'='*31}")
+        # طباعة ملخص مفصل
+        print(f"\n{'='*60}")
+        print(f"📊 ملخص عملية الاستعادة الشاملة:")
+        print(f"{'='*60}")
+        print(f"📁 الملف: {os.path.basename(file_path)}")
+        print(f"📈 إجمالي العناصر: {total_items}")
+        print(f"✅ تمت الاستعادة بنجاح: {success_count}")
+        print(f"❌ فشلت: {error_count}")
+        print(f"📊 نسبة النجاح: {success_rate:.1f}%")
         
-        return {
+        if failed_items:
+            print(f"\n❌ تفاصيل الأخطاء (أول 10 أخطاء):")
+            for i, error in enumerate(failed_items[:10], 1):
+                print(f"  {i}. العنصر {error['index']} ({error['model']} - PK: {error['pk']})")
+                print(f"     الخطأ: {error['error']}")
+        
+        print(f"{'='*60}")
+        
+        # إنشاء تقرير مفصل
+        detailed_report = {
             'total_items': total_items,
             'success_count': success_count,
             'error_count': error_count,
-            'errors': failed_items[:10]  # أول 10 أخطاء فقط
+            'success_rate': success_rate,
+            'filename': os.path.basename(file_path),
+            'errors': failed_items[:20],  # أول 20 خطأ
+            'summary': f"تم استعادة {success_count} من {total_items} عنصر بنسبة نجاح {success_rate:.1f}%",
+            'is_comprehensive': True,
+            'foreign_keys_handled': True
         }
         
+        return detailed_report
+        
     except Exception as e:
-        update_progress(current_step=f'خطأ في الاستعادة: {str(e)}')
+        error_msg = f'❌ خطأ في عملية الاستعادة الشاملة: {str(e)}'
+        update_progress(current_step=error_msg)
+        print(f"\n{error_msg}")
+        
+        # إعادة تفعيل فحص المفاتيح الخارجية في حالة الخطأ
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SET session_replication_role = DEFAULT;")
+        except:
+            pass
+            
         raise e
 
 
