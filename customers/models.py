@@ -249,19 +249,49 @@ class Customer(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.code:
-            latest_customer = Customer.objects.filter(
-                branch=self.branch
-            ).order_by('-code').first()
-            if latest_customer:
+            self.code = self.generate_unique_code()
+        super().save(*args, **kwargs)
+
+    def generate_unique_code(self):
+        """توليد كود عميل فريد"""
+        try:
+            # الحصول على كود الفرع
+            branch_code = self.branch.code if self.branch else "00"
+            
+            # البحث عن آخر كود عميل في نفس الفرع
+            last_customer = Customer.objects.filter(
+                branch=self.branch,
+                code__startswith=f"{branch_code}-"
+            ).exclude(pk=self.pk).order_by('-code').first()
+            
+            if last_customer:
                 try:
-                    sequence = int(latest_customer.code.split('-')[1]) + 1
+                    # استخراج الرقم التسلسلي
+                    sequence = int(last_customer.code.split('-')[-1]) + 1
                 except (IndexError, ValueError):
                     sequence = 1
             else:
                 sequence = 1
-            branch_code = self.branch.code if self.branch else "00"
-            self.code = f"{branch_code}-{str(sequence).zfill(4)}"
-        super().save(*args, **kwargs)
+            
+            # التأكد من عدم تكرار الكود
+            max_attempts = 100
+            for attempt in range(max_attempts):
+                potential_code = f"{branch_code}-{sequence:04d}"
+                
+                # التحقق من عدم وجود كود مكرر
+                if not Customer.objects.filter(code=potential_code).exclude(pk=self.pk).exists():
+                    return potential_code
+                
+                sequence += 1
+            
+            # إذا فشل في العثور على كود فريد، استخدم UUID
+            import uuid
+            return f"{branch_code}-{str(uuid.uuid4())[:8]}"
+            
+        except Exception:
+            # في حالة حدوث خطأ، استخدم UUID
+            import uuid
+            return f"CUST-{str(uuid.uuid4())[:8]}"
 
     @property
     def branch_code(self):

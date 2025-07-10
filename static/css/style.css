@@ -38,6 +38,10 @@
     --dark-text: #3D3427;
     --alert: #C17817;
     --light-accent: #D2B48C;
+    
+    /* حالة أمر تصنيع محذوف */
+    --manufacturing-deleted: #E53935;
+    --manufacturing-deleted-bg: rgba(229, 57, 53, 0.1);
 }
 
 /* Custom Theme - نسخة قابلة للتعديل من الثيم الافتراضي */
@@ -758,4 +762,50 @@ body,
 .table,
 .toast {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* CSS للحالة الجديدة "أمر تصنيع محذوف" */
+.badge.manufacturing-deleted,
+.badge.bg-manufacturing-deleted {
+    background-color: var(--manufacturing-deleted) !important;
+    color: #ffffff !important;
+    border: 1px solid var(--manufacturing-deleted) !important;
+}
+
+.alert.alert-manufacturing-deleted {
+    background-color: var(--manufacturing-deleted-bg) !important;
+    border-color: var(--manufacturing-deleted) !important;
+    color: var(--manufacturing-deleted) !important;
+    border-left: 4px solid var(--manufacturing-deleted) !important;
+}
+
+.text-manufacturing-deleted {
+    color: var(--manufacturing-deleted) !important;
+}
+
+.bg-manufacturing-deleted {
+    background-color: var(--manufacturing-deleted-bg) !important;
+    color: var(--manufacturing-deleted) !important;
+}
+
+/* تأثير وميض للحالة المحذوفة */
+@keyframes manufacturing-deleted-pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.manufacturing-deleted-pulse {
+    animation: manufacturing-deleted-pulse 2s infinite;
+}
+
+/* تنسيق خاص للحالة المحذوفة في الجداول */
+.table tr.manufacturing-deleted {
+    background-color: var(--manufacturing-deleted-bg) !important;
+    border-left: 4px solid var(--manufacturing-deleted) !important;
+}
+
+.table tr.manufacturing-deleted td {
+    color: var(--manufacturing-deleted) !important;
+    font-weight: 500 !important;
 }

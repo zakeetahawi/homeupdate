@@ -1,0 +1,43 @@
+{
+  "timestamp": "2025-07-10T19:35:21.440214",
+  "test_type": "comprehensive_updated",
+  "duration_seconds": 0.58476,
+  "overall_success_rate": 80.0,
+  "test_results": {
+    "customers_with_codes": true,
+    "orders_with_unique_numbers": true,
+    "manufacturing_and_sync": true,
+    "status_transitions": null,
+    "final_status_validation": true
+  },
+  "statistics": {
+    "customers_created": 6,
+    "orders_created": 5,
+    "manufacturing_orders_created": 3,
+    "branches_used": 3,
+    "salespersons_used": 6
+  },
+  "data_integrity": {
+    "unique_customer_codes": {
+      "total_codes": 2277,
+      "unique_codes": 2277,
+      "has_duplicates": false,
+      "duplicate_count": 0
+    },
+    "unique_order_numbers": {
+      "total_numbers": 2480,
+      "unique_numbers": 2480,
+      "has_duplicates": false,
+      "duplicate_count": 0
+    },
+    "status_consistency": {
+      "total_orders_checked": 9,
+      "mismatched_orders": 0,
+      "consistency_rate": 100.0
+    }
+  },
+  "recommendations": [
+    "يُنصح بمراجعة الاختبارات الفاشلة وإصلاح المشاكل",
+    "النظام يحتاج إصلاحات جوهرية قبل الإنتاج"
+  ]
+}

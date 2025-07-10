@@ -7,39 +7,42 @@ from django.db import transaction
 # سيتم استيراد النماذج عند الحاجة باستخدام apps.get_model
 
 
-@receiver(post_save, sender='orders.Order')  # استخدام الإشارة النصية
-@receiver(post_save, sender='orders.OrderItem')  # إضافة مستمع لـ OrderItem أيضاً
-def create_manufacturing_order_from_order(sender, instance, created, **kwargs):
-    """
-    إنشاء أمر تصنيع تلقائياً عند إنشاء طلب جديد من نوع تركيب أو تفصيل
-    """
-    # الحصول على النماذج المطلوبة
-    Order = apps.get_model('orders', 'Order')
-    ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
-    
-    # التحقق من أن الطلب جديد ومن نوع يتطلب تصنيعاً
-    if created and hasattr(instance, 'order_type') and instance.order_type in ['installation', 'detail']:
-        with transaction.atomic():
-            # إنشاء أمر التصنيع
-            manufacturing_order = ManufacturingOrder.objects.create(
-                order=instance,
-                order_type=instance.order_type,
-                contract_number=instance.contract_number,
-                order_date=instance.order_date,
-                expected_delivery_date=instance.expected_delivery_date,
-                status='pending'
-            )
-            
-            # إضافة عناصر الطلب إلى أمر التصنيع
-            ManufacturingOrderItem = apps.get_model('manufacturing', 'ManufacturingOrderItem')
-            for item in instance.items.all():
-                ManufacturingOrderItem.objects.create(
-                    manufacturing_order=manufacturing_order,
-                    product_name=item.product.name,
-                    quantity=item.quantity,
-                    specifications=item.specifications,
-                    status='pending'
-                )
+# تم تعطيل هذا signal لأنه يعتمد على order_type القديم
+# ويتم التعامل مع إنشاء أوامر التصنيع في orders/signals.py بناءً على selected_types
+
+# @receiver(post_save, sender='orders.Order')  # استخدام الإشارة النصية
+# @receiver(post_save, sender='orders.OrderItem')  # إضافة مستمع لـ OrderItem أيضاً
+# def create_manufacturing_order_from_order(sender, instance, created, **kwargs):
+#     """
+#     إنشاء أمر تصنيع تلقائياً عند إنشاء طلب جديد من نوع تركيب أو تفصيل
+#     """
+#     # الحصول على النماذج المطلوبة
+#     Order = apps.get_model('orders', 'Order')
+#     ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+#     
+#     # التحقق من أن الطلب جديد ومن نوع يتطلب تصنيعاً
+#     if created and hasattr(instance, 'order_type') and instance.order_type in ['installation', 'detail']:
+#         with transaction.atomic():
+#             # إنشاء أمر التصنيع
+#             manufacturing_order = ManufacturingOrder.objects.create(
+#                 order=instance,
+#                 order_type=instance.order_type,
+#                 contract_number=instance.contract_number,
+#                 order_date=instance.order_date,
+#                 expected_delivery_date=instance.expected_delivery_date,
+#                 status='pending'
+#             )
+#             
+#             # إضافة عناصر الطلب إلى أمر التصنيع
+#             ManufacturingOrderItem = apps.get_model('manufacturing', 'ManufacturingOrderItem')
+#             for item in instance.items.all():
+#                 ManufacturingOrderItem.objects.create(
+#                     manufacturing_order=manufacturing_order,
+#                     product_name=item.product.name,
+#                     quantity=item.quantity,
+#                     specifications=item.specifications,
+#                     status='pending'
+#                 )
 
 
 # تم حذف هذه الإشارة لأنها تسبب مشاكل - يتم التحديث عبر نموذج التصنيع مباشرة

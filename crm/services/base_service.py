@@ -11,6 +11,90 @@ from django.core.exceptions import ValidationError
 
 T = TypeVar('T', bound=models.Model)
 
+
+class StatusSyncService:
+    """خدمة مزامنة الحالات بين الطلبات والتصنيع"""
+    
+    # تطابق الحالات بين الطلبات والتصنيع
+    ORDER_TO_MANUFACTURING_STATUS = {
+        'pending_approval': 'pending_approval',
+        'pending': 'pending',
+        'in_progress': 'in_progress',
+        'ready_install': 'ready_install',
+        'completed': 'completed',
+        'delivered': 'delivered',
+        'rejected': 'rejected',
+        'cancelled': 'cancelled',
+    }
+    
+    MANUFACTURING_TO_ORDER_STATUS = {
+        'pending_approval': 'pending_approval',
+        'pending': 'pending',
+        'in_progress': 'in_progress',
+        'ready_install': 'ready_install',
+        'completed': 'completed',
+        'delivered': 'delivered',
+        'rejected': 'rejected',
+        'cancelled': 'cancelled',
+    }
+    
+    TRACKING_STATUS_MAPPING = {
+        'pending_approval': 'factory',
+        'pending': 'factory',
+        'in_progress': 'factory',
+        'ready_install': 'ready',
+        'completed': 'ready',
+        'delivered': 'delivered',
+        'rejected': 'factory',
+        'cancelled': 'factory',
+    }
+    
+    @classmethod
+    def sync_order_to_manufacturing(cls, order, manufacturing_order):
+        """مزامنة حالة الطلب مع التصنيع"""
+        new_manufacturing_status = cls.ORDER_TO_MANUFACTURING_STATUS.get(
+            order.order_status, 'pending'
+        )
+        
+        if manufacturing_order.status != new_manufacturing_status:
+            manufacturing_order.status = new_manufacturing_status
+            manufacturing_order.save(update_fields=['status'])
+    
+    @classmethod
+    def sync_manufacturing_to_order(cls, manufacturing_order, order):
+        """مزامنة حالة التصنيع مع الطلب"""
+        new_order_status = cls.MANUFACTURING_TO_ORDER_STATUS.get(
+            manufacturing_order.status, 'pending'
+        )
+        new_tracking_status = cls.TRACKING_STATUS_MAPPING.get(
+            manufacturing_order.status, 'factory'
+        )
+        
+        if (order.order_status != new_order_status or 
+            order.tracking_status != new_tracking_status):
+            order.order_status = new_order_status
+            order.tracking_status = new_tracking_status
+            order.save(update_fields=['order_status', 'tracking_status'])
+    
+    @classmethod
+    def validate_status_consistency(cls, order, manufacturing_order):
+        """التحقق من تطابق الحالات"""
+        expected_manufacturing_status = cls.ORDER_TO_MANUFACTURING_STATUS.get(
+            order.order_status
+        )
+        expected_order_status = cls.MANUFACTURING_TO_ORDER_STATUS.get(
+            manufacturing_order.status
+        )
+        
+        return {
+            'order_status_matches': order.order_status == expected_order_status,
+            'manufacturing_status_matches': manufacturing_order.status == expected_manufacturing_status,
+            'tracking_status_matches': order.tracking_status == cls.TRACKING_STATUS_MAPPING.get(
+                manufacturing_order.status
+            )
+        }
+
+
 class BaseService(Generic[T]):
     """
     فئة أساسية للخدمات في النظام

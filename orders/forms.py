@@ -178,7 +178,8 @@ class OrderForm(forms.ModelForm):
         # التحقق من رقم العقد وملف العقد للتركيب والتفصيل والإكسسوار
         contract_required_types = ['installation', 'tailoring', 'accessory']
         if selected_type in contract_required_types:
-            if not cleaned_data.get('contract_number', '').strip():
+            contract_number = cleaned_data.get('contract_number')
+            if not contract_number or not contract_number.strip():
                 self.add_error('contract_number', 'رقم العقد مطلوب لهذا النوع من الطلبات')
 
             # contract_file is an in-memory file object, so we check for it directly

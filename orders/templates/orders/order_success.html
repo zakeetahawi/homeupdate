@@ -236,6 +236,96 @@
                     </div>
                     {% endif %}
 
+                    <!-- Manufacturing Status for non-inspection orders -->
+                    {% if order.manufacturing_order and 'inspection' not in order.get_selected_types_list %}
+                    <div class="contract-info">
+                        <h6 class="mb-3">
+                            <i class="fas fa-industry me-2"></i>
+                            حالة المصنع
+                        </h6>
+                        {% with manufacturing_order=order.manufacturing_order %}
+                            <div class="info-item">
+                                <span class="info-label">الحالة:</span>
+                                <span class="info-value">
+                                    {% if manufacturing_order.status == 'pending_approval' %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-clock me-1"></i> قيد الموافقة
+                                    </span>
+                                    {% elif manufacturing_order.status == 'pending' %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-hourglass-half me-1"></i> قيد الانتظار
+                                    </span>
+                                    {% elif manufacturing_order.status == 'in_progress' %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-cogs me-1"></i> قيد التصنيع
+                                    </span>
+                                    {% elif manufacturing_order.status == 'ready_install' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-tools me-1"></i> جاهز للتركيب
+                                    </span>
+                                    {% elif manufacturing_order.status == 'completed' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i> مكتمل
+                                    </span>
+                                    {% elif manufacturing_order.status == 'delivered' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-truck me-1"></i> تم التسليم
+                                    </span>
+                                    {% elif manufacturing_order.status == 'rejected' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times me-1"></i> مرفوض
+                                    </span>
+                                    {% elif manufacturing_order.status == 'cancelled' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-ban me-1"></i> ملغي
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ manufacturing_order.get_status_display }}</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            {% if manufacturing_order.status == 'delivered' %}
+                                {% if manufacturing_order.delivery_recipient_name %}
+                                <div class="info-item">
+                                    <span class="info-label">اسم المستلم:</span>
+                                    <span class="info-value text-primary">
+                                        <strong>{{ manufacturing_order.delivery_recipient_name }}</strong>
+                                    </span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if manufacturing_order.delivery_permit_number %}
+                                <div class="info-item">
+                                    <span class="info-label">رقم إذن التسليم:</span>
+                                    <span class="info-value text-info">
+                                        <strong>{{ manufacturing_order.delivery_permit_number }}</strong>
+                                    </span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if manufacturing_order.delivery_date %}
+                                <div class="info-item">
+                                    <span class="info-label">تاريخ التسليم:</span>
+                                    <span class="info-value text-success">
+                                        <strong>{{ manufacturing_order.delivery_date|date:"Y/m/d H:i" }}</strong>
+                                    </span>
+                                </div>
+                                {% endif %}
+                            {% endif %}
+                            
+                            {% if manufacturing_order.updated_at %}
+                            <div class="info-item">
+                                <span class="info-label">آخر تحديث:</span>
+                                <span class="info-value text-muted">
+                                    {{ manufacturing_order.updated_at|date:"Y/m/d H:i" }}
+                                </span>
+                            </div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    {% endif %}
+
                     <!-- Inspection Status for inspection orders -->
                     {% if 'inspection' in order.get_selected_types_list %}
                     <div class="contract-info">
@@ -249,13 +339,13 @@
                                     <span class="info-label">الحالة:</span>
                                     <span class="info-value">
                                         <span class="badge {% if inspection.status == 'pending' %}bg-warning text-dark
-                                                       {% elif inspection.status == 'in_progress' %}bg-info
+                                                       {% elif inspection.status == 'scheduled' %}bg-info
                                                        {% elif inspection.status == 'completed' %}bg-success
                                                        {% else %}bg-danger{% endif %}">
                                             {% if inspection.status == 'pending' %}
                                                 <i class="fas fa-clock me-1"></i> في الانتظار
-                                            {% elif inspection.status == 'in_progress' %}
-                                                <i class="fas fa-spinner me-1"></i> قيد التنفيذ
+                                            {% elif inspection.status == 'scheduled' %}
+                                                <i class="fas fa-calendar-check me-1"></i> مجدولة
                                             {% elif inspection.status == 'completed' %}
                                                 <i class="fas fa-check me-1"></i> مكتملة
                                             {% else %}

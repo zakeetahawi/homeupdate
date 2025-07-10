@@ -43,11 +43,31 @@
                                     <td>{{ manufacturing_order.invoice_number|default:'-' }}</td>
                                 </tr>
                                 <tr>
-                                    <th>نوع الطلب:</th>
-                                    <td>{{ manufacturing_order.get_order_type_display }}</td>
+                                    <th>نوع الطلب الأصلي:</th>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ manufacturing_order.order.get_selected_type_display|default:'-' }}
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr>
-                                    <th>الحالة:</th>
+                                    <th>نوع أمر التصنيع:</th>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {{ manufacturing_order.get_order_type_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>حالة الطلب الأصلي:</th>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            {{ manufacturing_order.order.get_order_status_display|default:'-' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>حالة أمر التصنيع:</th>
                                     <td>
                                         <span class="badge bg-{{ manufacturing_order.status }}">
                                             {{ manufacturing_order.get_status_display }}
@@ -85,7 +105,7 @@
                             </table>
                         </div>
                         <div class="col-md-6">
-                            <h5>معلومات العميل والبائع</h5>
+                            <h5>معلومات العميل والمستخدمين</h5>
                             <table class="table table-sm">
                                 <tr>
                                     <th width="30%">العميل:</th>
@@ -94,11 +114,13 @@
                                 <tr>
                                     <th>البائع:</th>
                                     <td>
-                                        {% if manufacturing_order.order.sales_person %}
-                                            {{ manufacturing_order.order.sales_person.get_full_name|default:manufacturing_order.order.sales_person.username }}
+                                        {% if manufacturing_order.order.salesperson %}
+                                            <span class="badge bg-success">
+                                                {{ manufacturing_order.order.salesperson.get_full_name|default:manufacturing_order.order.salesperson.username }}
+                                            </span>
                                         {% else %}
-                                            -
-                                                {% endif %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 <tr>
@@ -106,17 +128,35 @@
                                     <td>{{ manufacturing_order.order.branch.name|default:'-' }}</td>
                                 </tr>
                                 <tr>
-                                    <th>أنشأ بواسطة:</th>
+                                    <th>منشئ الطلب الأصلي:</th>
                                     <td>
-                                        {% if manufacturing_order.created_by %}
-                                            {{ manufacturing_order.created_by.get_full_name|default:manufacturing_order.created_by.username }}
+                                        {% if manufacturing_order.order.created_by %}
+                                            <span class="badge bg-warning text-dark">
+                                                {{ manufacturing_order.order.created_by.get_full_name|default:manufacturing_order.order.created_by.username }}
+                                            </span>
                                         {% else %}
-                                            غير محدد
+                                            <span class="text-muted">غير محدد</span>
                                         {% endif %}
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th>تاريخ الإنشاء:</th>
+                                    <th>منشئ أمر التصنيع:</th>
+                                    <td>
+                                        {% if manufacturing_order.created_by %}
+                                            <span class="badge bg-info">
+                                                {{ manufacturing_order.created_by.get_full_name|default:manufacturing_order.created_by.username }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>تاريخ إنشاء الطلب الأصلي:</th>
+                                    <td>{{ manufacturing_order.order.order_date|date:'Y-m-d H:i'|default:'-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>تاريخ إنشاء أمر التصنيع:</th>
                                     <td>{{ manufacturing_order.created_at|date:'Y-m-d H:i' }}</td>
                                 </tr>
                                 <tr>
@@ -136,10 +176,19 @@
                                     <div class="card">
                                         <div class="card-body text-center">
                                             <h6>ملف العقد</h6>
-                                            {% if manufacturing_order.contract_file %}
-                                                <a href="{{ manufacturing_order.contract_file.url }}" target="_blank" class="btn btn-success">
-                                                    <i class="fas fa-file-pdf"></i> عرض ملف العقد
-                                                </a>
+                                            {% if manufacturing_order.order.contract_file %}
+                                                <div class="mb-2">
+                                                    <a href="{{ manufacturing_order.order.contract_file.url }}" target="_blank" class="btn btn-success">
+                                                        <i class="fas fa-file-pdf"></i> عرض ملف العقد (محلي)
+                                                    </a>
+                                                </div>
+                                                {% if manufacturing_order.order.is_contract_uploaded_to_drive and manufacturing_order.order.contract_google_drive_file_url %}
+                                                <div>
+                                                    <a href="{{ manufacturing_order.order.contract_google_drive_file_url }}" target="_blank" class="btn btn-outline-success">
+                                                        <i class="fab fa-google-drive"></i> عرض في Google Drive
+                                                    </a>
+                                                </div>
+                                                {% endif %}
                                             {% else %}
                                                 <p class="text-muted">لم يتم رفع ملف العقد</p>
                                             {% endif %}
@@ -152,16 +201,25 @@
                                             <h6>ملف المعاينة</h6>
                                             {% with inspection=manufacturing_order.order.inspections.first %}
                                                 {% if inspection and inspection.inspection_file %}
-                                                    <a href="{{ inspection.inspection_file.url }}" target="_blank" class="btn btn-info">
-                                                        <i class="fas fa-file-alt"></i> عرض ملف المعاينة
-                                                    </a>
-                                        {% else %}
+                                                    <div class="mb-2">
+                                                        <a href="{{ inspection.inspection_file.url }}" target="_blank" class="btn btn-info">
+                                                            <i class="fas fa-file-alt"></i> عرض ملف المعاينة (محلي)
+                                                        </a>
+                                                    </div>
+                                                    {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                                    <div>
+                                                        <a href="{{ inspection.google_drive_file_url }}" target="_blank" class="btn btn-outline-info">
+                                                            <i class="fab fa-google-drive"></i> عرض في Google Drive
+                                                        </a>
+                                                    </div>
+                                                    {% endif %}
+                                                {% else %}
                                                     <p class="text-muted">لم يتم رفع ملف المعاينة</p>
-                                        {% endif %}
-                                    {% endwith %}
-                        </div>
-                    </div>
-                </div>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </div>
+                                    </div>
+                                </div>
                     </div>
                 </div>
             </div>

@@ -25,7 +25,7 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
     model = ManufacturingOrder
     template_name = 'manufacturing/manufacturingorder_list.html'
     context_object_name = 'manufacturing_orders'
-    paginate_by = 25
+    # paginate_by = 25  # تم تعطيل Django pagination لاستخدام DataTables pagination
     permission_required = 'manufacturing.view_manufacturingorder'
     
     def get_queryset(self):
@@ -101,6 +101,10 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
             'branch_filter': self.request.GET.get('branch', ''),
             'sales_person_filter': self.request.GET.get('sales_person', ''),
         })
+        
+        # Add branches for filter dropdown
+        from accounts.models import Branch
+        context['branches'] = Branch.objects.all().order_by('name')
         
         # Add current date for date picker max date
         from datetime import date
@@ -241,8 +245,53 @@ class ManufacturingOrderDeleteView(LoginRequiredMixin, PermissionRequiredMixin, 
     permission_required = 'manufacturing.delete_manufacturingorder'
     
     def delete(self, request, *args, **kwargs):
-        messages.success(request, 'تم حذف أمر التصنيع بنجاح')
-        return super().delete(request, *args, **kwargs)
+        from django.db import transaction
+        from orders.models import ManufacturingDeletionLog
+        import json
+        
+        # الحصول على أمر التصنيع قبل الحذف
+        manufacturing_order = self.get_object()
+        order = manufacturing_order.order
+        
+        # حفظ بيانات أمر التصنيع قبل الحذف
+        manufacturing_data = {
+            'id': manufacturing_order.id,
+            'status': manufacturing_order.status,
+            'status_display': manufacturing_order.get_status_display(),
+            'order_type': manufacturing_order.order_type,
+            'contract_number': manufacturing_order.contract_number,
+            'invoice_number': manufacturing_order.invoice_number,
+            'order_date': manufacturing_order.order_date.isoformat() if manufacturing_order.order_date else None,
+            'expected_delivery_date': manufacturing_order.expected_delivery_date.isoformat() if manufacturing_order.expected_delivery_date else None,
+            'notes': manufacturing_order.notes,
+            'created_at': manufacturing_order.created_at.isoformat() if manufacturing_order.created_at else None,
+            'created_by': manufacturing_order.created_by.username if manufacturing_order.created_by else None,
+        }
+        
+        with transaction.atomic():
+            # إنشاء سجل الحذف
+            ManufacturingDeletionLog.objects.create(
+                order=order,
+                manufacturing_order_id=manufacturing_order.id,
+                deleted_by=request.user,
+                reason=f'تم حذف أمر التصنيع بواسطة {request.user.get_full_name() or request.user.username}',
+                manufacturing_order_data=manufacturing_data
+            )
+            
+            # تحديث حالة الطلب
+            order.order_status = 'manufacturing_deleted'
+            order.tracking_status = 'processing'  # إعادة الطلب لحالة المعالجة
+            order.save(update_fields=['order_status', 'tracking_status'])
+            
+            # حذف أمر التصنيع
+            result = super().delete(request, *args, **kwargs)
+            
+            messages.success(
+                request, 
+                f'تم حذف أمر التصنيع #{manufacturing_order.id} بنجاح وتم تحديث حالة الطلب #{order.order_number} إلى "أمر تصنيع محذوف"'
+            )
+            
+            return result
 
 
 import logging
@@ -498,16 +547,18 @@ def create_from_order(request, order_id):
         )
         
         # إرسال إشعار بإنشاء أمر التصنيع
-        send_notification(
-            title=f'تم إنشاء أمر تصنيع جديد',
-            message=f'تم إنشاء أمر تصنيع للعميل {order.customer.name} - الطلب #{order.order_number}',
-            sender=request.user,
-            sender_department_code='manufacturing',
-            target_department_code='management',
-            target_branch=order.branch,
-            priority='medium',
-            related_object=manufacturing_order
-        )
+        try:
+            from accounts.models import Notification
+            # إنشاء إشعار للإدارة
+            Notification.objects.create(
+                title=f'تم إنشاء أمر تصنيع جديد',
+                message=f'تم إنشاء أمر تصنيع للعميل {order.customer.name} - الطلب #{order.order_number}',
+                priority='medium',
+                link=manufacturing_order.get_absolute_url()
+            )
+        except Exception as e:
+            # لا نريد أن يفشل إنشاء الطلب بسبب الإشعار
+            pass
         
         # Add order items to manufacturing order
         for item in order.items.all():
@@ -751,12 +802,22 @@ def update_approval_status(request, pk):
                 'error': 'تمت معالجة هذا الطلب بالفعل.'
             }, status=400)
         
-        # For rejection, allow from any status except already rejected
-        if action == 'reject' and order.status == 'rejected':
-            return JsonResponse({
-                'success': False, 
-                'error': 'هذا الطلب مرفوض بالفعل.'
-            }, status=400)
+        # For rejection, check if order is in a state that allows rejection
+        if action == 'reject':
+            # يُسمح بالرفض فقط من حالات معينة
+            allowed_rejection_statuses = ['pending_approval', 'pending']
+            
+            if order.status == 'rejected':
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'هذا الطلب مرفوض بالفعل.'
+                }, status=400)
+            
+            if order.status not in allowed_rejection_statuses:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'لا يمكن رفض الطلب بعد دخوله مرحلة التنفيذ. يُسمح بالرفض فقط قبل بدء التصنيع.'
+                }, status=400)
 
         with transaction.atomic():
             if action == 'approve':

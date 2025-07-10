@@ -1,0 +1,49 @@
+{
+  "timestamp": "2025-07-10T19:52:02.308995",
+  "test_type": "inspection_status_sync",
+  "success_rate": 100.0,
+  "total_tests": 4,
+  "successful_tests": 4,
+  "test_results": [
+    {
+      "inspection_status": "pending",
+      "expected_order_status": "pending",
+      "actual_order_status": "pending",
+      "expected_tracking_status": "processing",
+      "actual_tracking_status": "processing",
+      "order_status_match": true,
+      "tracking_status_match": true,
+      "success": true
+    },
+    {
+      "inspection_status": "scheduled",
+      "expected_order_status": "pending",
+      "actual_order_status": "pending",
+      "expected_tracking_status": "processing",
+      "actual_tracking_status": "processing",
+      "order_status_match": true,
+      "tracking_status_match": true,
+      "success": true
+    },
+    {
+      "inspection_status": "completed",
+      "expected_order_status": "completed",
+      "actual_order_status": "completed",
+      "expected_tracking_status": "ready",
+      "actual_tracking_status": "ready",
+      "order_status_match": true,
+      "tracking_status_match": true,
+      "success": true
+    },
+    {
+      "inspection_status": "cancelled",
+      "expected_order_status": "cancelled",
+      "actual_order_status": "cancelled",
+      "expected_tracking_status": "pending",
+      "actual_tracking_status": "pending",
+      "order_status_match": true,
+      "tracking_status_match": true,
+      "success": true
+    }
+  ]
+}

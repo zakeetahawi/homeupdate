@@ -55,6 +55,7 @@ class Order(models.Model):
         ('delivered', 'تم التسليم'),
         ('rejected', 'مرفوض'),
         ('cancelled', 'ملغي'),
+        ('manufacturing_deleted', 'أمر تصنيع محذوف'),
     ]
     DELIVERY_TYPE_CHOICES = [
         ('home', 'توصيل للمنزل'),
@@ -746,3 +747,42 @@ class OrderStatusLog(models.Model):
         except Exception as e:
             pass
             raise
+
+
+class ManufacturingDeletionLog(models.Model):
+    """سجل حذف أوامر التصنيع"""
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='manufacturing_deletion_logs',
+        verbose_name='الطلب'
+    )
+    manufacturing_order_id = models.PositiveIntegerField(
+        verbose_name='معرف أمر التصنيع المحذوف'
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name='تم الحذف بواسطة'
+    )
+    deleted_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الحذف'
+    )
+    reason = models.TextField(
+        blank=True,
+        verbose_name='سبب الحذف'
+    )
+    manufacturing_order_data = models.JSONField(
+        default=dict,
+        verbose_name='بيانات أمر التصنيع المحذوف'
+    )
+
+    class Meta:
+        verbose_name = 'سجل حذف أمر تصنيع'
+        verbose_name_plural = 'سجلات حذف أوامر التصنيع'
+        ordering = ['-deleted_at']
+
+    def __str__(self):
+        return f'حذف أمر تصنيع #{self.manufacturing_order_id} - {self.order.order_number}'

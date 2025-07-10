@@ -158,7 +158,7 @@
         <table class="table table-striped table-hover">
             <thead>
                 <tr>
-                    <th>{% trans 'رقم العقد' %}</th>
+                    <th>{% trans 'رقم الطلب' %}</th>
                     <th>{% trans 'العميل' %}</th>
                     <th>{% trans 'تاريخ الطلب' %}</th>
                     <th>{% trans 'تاريخ التنفيذ' %}</th>
@@ -175,7 +175,13 @@
             <tbody>
                 {% for inspection in inspections %}
                 <tr>
-                    <td>{{ inspection.contract_number }}</td>
+                    <td>
+                        {% if inspection.order and inspection.order.order_number %}
+                            {{ inspection.order.order_number }}
+                        {% else %}
+                            {{ inspection.contract_number }}
+                        {% endif %}
+                    </td>
                     <td>{{ inspection.customer|default:"عميل جديد" }}</td>
                     <td>{{ inspection.request_date }}</td>
                     <td>{{ inspection.scheduled_date }}</td>

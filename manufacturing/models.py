@@ -135,6 +135,14 @@ class ManufacturingOrder(models.Model):
         help_text='يتم تعبئته تلقائياً عند اكتمال التصنيع أو جاهزية المنتج للتركيب'
     )
     
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='تم الإنشاء بواسطة'
+    )
+    
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='تاريخ الإنشاء'
@@ -179,7 +187,20 @@ class ManufacturingOrder(models.Model):
             )
         
         # تحديث حالة الطلب لتتطابق مع حالة التصنيع
-        status_mapping = {
+        # تطابق مباشر بين الحالات
+        order_status_mapping = {
+            'pending_approval': 'pending_approval',
+            'pending': 'pending',
+            'in_progress': 'in_progress',
+            'ready_install': 'ready_install',
+            'completed': 'completed',
+            'delivered': 'delivered',
+            'rejected': 'rejected',
+            'cancelled': 'cancelled',
+        }
+        
+        # تحديث حالة التتبع للطلب
+        tracking_status_mapping = {
             'pending_approval': 'factory',
             'pending': 'factory',
             'in_progress': 'factory',
@@ -190,12 +211,13 @@ class ManufacturingOrder(models.Model):
             'cancelled': 'factory',
         }
         
-        tracking_status = status_mapping.get(self.status, 'factory')
+        new_order_status = order_status_mapping.get(self.status, self.status)
+        new_tracking_status = tracking_status_mapping.get(self.status, 'factory')
         
         # تحديث بدون إطلاق الإشارات لتجنب الrecursion
         Order.objects.filter(pk=self.order.pk).update(
-            order_status=self.status,
-            tracking_status=tracking_status
+            order_status=new_order_status,
+            tracking_status=new_tracking_status
         )
 
 

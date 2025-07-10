@@ -58,7 +58,9 @@
                             <th>العميل</th>
                             <th>تاريخ الطلب</th>
                             <th>تاريخ التسليم</th>
+                            <th>نوع الطلب</th>
                             <th>الحالة</th>
+                            <th>حالة المصنع</th>
                             <th>المبلغ الإجمالي</th>
                             <th>المبلغ المدفوع</th>
                             <th>المبلغ المتبقي</th>
@@ -80,6 +82,19 @@
                                 {% endif %}
                             </td>
                             <td>
+                                {% load order_extras %}
+                                {% with order_types=order.get_selected_types_list %}
+                                    {% if order_types %}
+                                        {% for type in order_types %}
+                                            <span class="badge bg-secondary mb-1">{{ type|get_type_display }}</span>
+                                            {% if not forloop.last %}<br>{% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td>
                                 {% if order.order_status == 'pending_approval' %}
                                 <span class="badge bg-warning text-dark">قيد الموافقة</span>
                                 {% elif order.order_status == 'pending' %}
@@ -96,8 +111,43 @@
                                 <span class="badge bg-danger">مرفوض</span>
                                 {% elif order.order_status == 'cancelled' %}
                                 <span class="badge bg-danger">ملغي</span>
+                                {% elif order.order_status == 'manufacturing_deleted' %}
+                                <span class="badge bg-manufacturing-deleted manufacturing-deleted-pulse">
+                                    <i class="fas fa-trash-alt me-1"></i>أمر تصنيع محذوف
+                                </span>
                                 {% else %}
                                 <span class="badge bg-secondary">{{ order.get_order_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.manufacturing_order %}
+                                    {% with manufacturing_order=order.manufacturing_order %}
+                                        {% if manufacturing_order.status == 'pending_approval' %}
+                                        <span class="badge bg-warning text-dark">قيد الموافقة</span>
+                                        {% elif manufacturing_order.status == 'pending' %}
+                                        <span class="badge bg-info">قيد الانتظار</span>
+                                        {% elif manufacturing_order.status == 'in_progress' %}
+                                        <span class="badge bg-primary">قيد التصنيع</span>
+                                        {% elif manufacturing_order.status == 'ready_install' %}
+                                        <span class="badge bg-success">جاهز للتركيب</span>
+                                        {% elif manufacturing_order.status == 'completed' %}
+                                        <span class="badge bg-success">مكتمل</span>
+                                        {% elif manufacturing_order.status == 'delivered' %}
+                                        <span class="badge bg-success">تم التسليم</span>
+                                        {% elif manufacturing_order.status == 'rejected' %}
+                                        <span class="badge bg-danger">مرفوض</span>
+                                        {% elif manufacturing_order.status == 'cancelled' %}
+                                        <span class="badge bg-danger">ملغي</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ manufacturing_order.get_status_display }}</span>
+                                        {% endif %}
+                                        
+                                        {% if manufacturing_order.status == 'delivered' and manufacturing_order.delivery_recipient_name %}
+                                        <br><small class="text-muted">المستلم: {{ manufacturing_order.delivery_recipient_name }}</small>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
                             <td>{{ order.total_amount }} {{ currency_symbol }}</td>
