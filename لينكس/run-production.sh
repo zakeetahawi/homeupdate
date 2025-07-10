@@ -15,6 +15,9 @@ print_info() { echo -e "${WHITE}$1${NC}"; }
 if [ ! -d "$PROJECT_DIR" ]; then print_error "مجلد المشروع غير موجود: $PROJECT_DIR"; exit 1; fi
 cd "$PROJECT_DIR"
 
+# تفعيل البيئة الافتراضية للمشروع
+source "$PROJECT_DIR/venv/bin/activate"
+
 print_info "تشغيل التحديثات..."
 python manage.py migrate --noinput
 print_status "✔️ تم تطبيق التحديثات"
@@ -77,4 +80,4 @@ while true; do
     print_status "✅ النظام يعمل بشكل طبيعي"
 done
 
-cleanup 
+cleanup
