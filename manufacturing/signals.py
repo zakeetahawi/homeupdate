@@ -76,7 +76,8 @@ def update_manufacturing_order_status(sender, instance, created, **kwargs):
         # تحديث حالة أمر التصنيع إذا تغيرت
         if manufacturing_order.status != new_status:
             manufacturing_order.status = new_status
-            manufacturing_order.save(update_fields=['status'])
+            # manufacturing_order.save(update_fields=['status'])  # معطل لتجنب الرسائل الكثيرة
+            pass
 
 
 @receiver(post_delete, sender='manufacturing.ManufacturingOrder')

@@ -27,8 +27,8 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
     with specific types ('installation', 'tailoring', 'accessory').
     """
     if created:
-        print(f"--- SIGNAL TRIGGERED for Order PK: {instance.pk} ---")
-        print(f"Raw selected_types from instance: {instance.selected_types}")
+        # print(f"--- SIGNAL TRIGGERED for Order PK: {instance.pk} ---")
+        # print(f"Raw selected_types from instance: {instance.selected_types}")
         
         MANUFACTURING_TYPES = {'installation', 'tailoring', 'accessory'}
         
@@ -38,15 +38,15 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
             parsed_types = json.loads(instance.selected_types)
             if isinstance(parsed_types, list):
                 order_types = set(parsed_types)
-            print(f"Successfully parsed types: {order_types}")
+            # print(f"Successfully parsed types: {order_types}")
         except (json.JSONDecodeError, TypeError):
-            print(f"Could not parse selected_types. Value was: {instance.selected_types}")
+            # print(f"Could not parse selected_types. Value was: {instance.selected_types}")
             # Fallback for plain string if needed, though not expected
             if isinstance(instance.selected_types, str):
                 order_types = {instance.selected_types}
 
         if order_types.intersection(MANUFACTURING_TYPES):
-            print(f"MATCH FOUND: Order types {order_types} intersect with {MANUFACTURING_TYPES}. Creating manufacturing order...")
+            # print(f"MATCH FOUND: Order types {order_types} intersect with {MANUFACTURING_TYPES}. Creating manufacturing order...")
             
             # Use a transaction to ensure both creations happen or neither.
             from django.db import transaction
@@ -73,13 +73,11 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
                         tracking_status='factory',
                         order_status='pending_approval'
                     )
-                    print(f"SUCCESS: Created ManufacturingOrder PK: {mfg_order.pk} and updated Order PK: {instance.pk} tracking_status to 'factory'")
+                    # print(f"SUCCESS: Created ManufacturingOrder PK: {mfg_order.pk} and updated Order PK: {instance.pk} tracking_status to 'factory'")
                 else:
-                    print(f"INFO: ManufacturingOrder already existed for this order. PK: {mfg_order.pk}")
+                    pass  # ManufacturingOrder already existed
         else:
-            print(f"NO MATCH: Order types {order_types} do not require manufacturing.")
-    else:
-        print(f"--- SIGNAL TRIGGERED for Order PK: {instance.pk} (UPDATE, not creation) ---")
+            pass
 
 
 @receiver(post_save, sender=Order)
@@ -88,15 +86,15 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
     إنشاء معاينة تلقائية عند إنشاء طلب من نوع معاينة
     """
     if created:
-        print(f"--- INSPECTION SIGNAL TRIGGERED for Order PK: {instance.pk} ---")
+        # print(f"--- INSPECTION SIGNAL TRIGGERED for Order PK: {instance.pk} ---")
         
         # استخدام الدالة الموجودة لتحليل أنواع الطلب
         order_types = instance.get_selected_types_list()
-        print(f"Successfully parsed types for inspection: {order_types}")
+        # print(f"Successfully parsed types for inspection: {order_types}")
 
         # إذا كان الطلب يحتوي على نوع معاينة
         if 'inspection' in order_types:
-            print(f"INSPECTION MATCH FOUND: Creating inspection for order {instance.pk}")
+            # print(f"INSPECTION MATCH FOUND: Creating inspection for order {instance.pk}")
             
             try:
                 from django.db import transaction
@@ -125,14 +123,14 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                         order_status='pending'
                     )
                     
-                    print(f"SUCCESS: Created Inspection PK: {inspection.pk} for Order PK: {instance.pk}")
+                    # print(f"SUCCESS: Created Inspection PK: {inspection.pk} for Order PK: {instance.pk}")
                     
             except Exception as e:
-                print(f"ERROR: Failed to create inspection for order {instance.pk}: {str(e)}")
+                # print(f"ERROR: Failed to create inspection for order {instance.pk}: {str(e)}")
                 import traceback
                 traceback.print_exc()
         else:
-            print(f"NO INSPECTION MATCH: Order types {order_types} do not require inspection.")
+            pass
 
 
 def set_default_delivery_option(order):
@@ -173,26 +171,4 @@ def create_production_order(order):
     return None
 
 
-def set_default_delivery_option(order):
-    """تحديد خيار التسليم الافتراضي حسب نوع الطلب"""
-    try:
-        # التحقق من أن الطلب يحتوي على أنواع مختارة
-        if hasattr(order, 'selected_types') and order.selected_types:
-            # إذا كان نوع الطلب يحتوي على تركيب، التسليم للمنزل
-            if 'installation' in order.selected_types or 'تركيب' in order.selected_types:
-                order.delivery_type = 'home'
-                order.delivery_address = order.customer.address if order.customer else ''
-                order.save(update_fields=['delivery_type', 'delivery_address'])
-                print(f"✅ تم تحديد التسليم للمنزل للطلب #{order.order_number}")
-
-            # إذا كان نوع الطلب تفصيل، الاستلام من الفرع
-            elif 'tailoring' in order.selected_types or 'تفصيل' in order.selected_types:
-                order.delivery_type = 'branch'
-                order.save(update_fields=['delivery_type'])
-                print(f"✅ تم تحديد الاستلام من الفرع للطلب #{order.order_number}")
-
-    except Exception as e:
-        print(f"❌ خطأ في تحديد خيار التسليم للطلب #{order.order_number}: {e}")
-        # Removed installations related code as part of the refactoring
-
-    # Removed installations exception handler as part of the refactoring
+# Duplicate function removed

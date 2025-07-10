@@ -359,7 +359,7 @@ def check_upload_status(request, pk):
                             'google_drive_file_name'
                         ])
 
-                        print(f"تم تحديث حالة المعاينة {pk} - الملف موجود في Google Drive")
+                        # print(f"تم تحديث حالة المعاينة {pk} - الملف موجود في Google Drive")  # معطل لتجنب الرسائل الكثيرة
 
             except Exception as drive_error:
                 print(f"خطأ في التحقق من Google Drive: {str(drive_error)}")

@@ -263,9 +263,9 @@ def update_order_status(request, pk):
     API endpoint to update the status of a manufacturing order.
     Expected POST data: {'status': 'new_status'}
     """
-    logger.info(f"[update_order_status] Starting update for order {pk}")
-    logger.debug(f"[update_order_status] Request user: {request.user}")
-    logger.debug(f"[update_order_status] POST data: {request.POST}")
+    # logger.info(f"[update_order_status] Starting update for order {pk}")  # معطل لتجنب الرسائل الكثيرة
+    # logger.debug(f"[update_order_status] Request user: {request.user}")  # معطل لتجنب الرسائل الكثيرة
+    # logger.debug(f"[update_order_status] POST data: {request.POST}")  # معطل لتجنب الرسائل الكثيرة
     
     try:
         # Check authentication
@@ -281,7 +281,7 @@ def update_order_status(request, pk):
             order = ManufacturingOrder.objects.get(pk=pk)
             logger.debug(f"[update_order_status] Found order: {order}")
         except ManufacturingOrder.DoesNotExist:
-            logger.error(f"[update_order_status] Order {pk} not found")
+            # logger.error(f"[update_order_status] Order {pk} not found")  # معطل لتجنب الرسائل الكثيرة
             return JsonResponse({
                 'success': False, 
                 'error': 'لم يتم العثور على أمر التصنيع'
@@ -371,7 +371,7 @@ def update_order_status(request, pk):
         
         # Update order status
         old_status = order.status
-        logger.info(f"[update_order_status] Updating order {pk} status from {old_status} to {new_status}")
+        # logger.info(f"[update_order_status] Updating order {pk} status from {old_status} to {new_status}")  # معطل لتجنب الرسائل الكثيرة
         
         order.status = new_status
         order.updated_at = timezone.now()
@@ -381,12 +381,12 @@ def update_order_status(request, pk):
             order.delivery_permit_number = request.POST.get('delivery_permit_number', '').strip()
             order.delivery_recipient_name = request.POST.get('delivery_recipient_name', '').strip()
             order.delivery_date = timezone.now()
-            logger.debug(f"[update_order_status] Set delivery fields for order {pk}")
+            # logger.debug(f"[update_order_status] Set delivery fields for order {pk}")  # معطل لتجنب الرسائل الكثيرة
         
         # Set completion date if status is completed or ready for installation
         if new_status in ['completed', 'ready_install', 'delivered'] and not order.completion_date:
             order.completion_date = timezone.now()
-            logger.debug(f"[update_order_status] Set completion date to {order.completion_date}")
+            # logger.debug(f"[update_order_status] Set completion date to {order.completion_date}")  # معطل لتجنب الرسائل الكثيرة
         
         # Save the order
         try:
@@ -394,7 +394,7 @@ def update_order_status(request, pk):
             if new_status == 'delivered':
                 save_fields.extend(['delivery_permit_number', 'delivery_recipient_name', 'delivery_date'])
             order.save(update_fields=save_fields)
-            logger.info(f"[update_order_status] Successfully updated order {pk}")
+            # logger.info(f"[update_order_status] Successfully updated order {pk}")  # معطل لتجنب الرسائل الكثيرة
         except Exception as e:
             logger.error(f"[update_order_status] Error saving order {pk}: {str(e)}", exc_info=True)
             return JsonResponse({
@@ -430,7 +430,7 @@ def update_order_status(request, pk):
             'updated_at': order.updated_at.strftime('%Y-%m-%d %H:%M'),
             'message': 'تم تحديث حالة الطلب بنجاح'
         }
-        logger.info(f"[update_order_status] Success response: {response_data}")
+        # logger.info(f"[update_order_status] Success response: {response_data}")  # معطل لتجنب الرسائل الكثيرة
         
         return JsonResponse(response_data)
         

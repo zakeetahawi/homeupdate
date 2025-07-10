@@ -1,104 +1,433 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}رفع نسخة احتياطية{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+<style>
+    .rtl-popup {
+        direction: rtl;
+        text-align: right;
+    }
+    .rtl-title {
+        text-align: right;
+    }
+    .rtl-content {
+        text-align: right;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="odoo-dashboard">
-    <!-- شريط الأدوات العلوي -->
-    <div class="odoo-toolbar">
-        <div class="odoo-toolbar-left">
-            <h1>{{ title }}</h1>
-        </div>
-        <div class="odoo-toolbar-right">
-            <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> العودة
-            </a>
-        </div>
-    </div>
-
-    <!-- نموذج تحميل ملف النسخة الاحتياطية -->
-    <div class="odoo-form">
-        <div class="alert alert-info">
-            <h4 class="alert-heading">معلومات هامة</h4>
-            <p>يمكنك استعادة قاعدة البيانات من ملف نسخة احتياطية تم إنشاؤه مسبقاً.</p>
-            <p>الملفات المدعومة: <code>.json.gz</code> (ملفات Django dumpdata المضغوطة) و <code>.sql</code> (ملفات PostgreSQL).</p>
-            <p class="mb-0"><strong>ملاحظة:</strong> تأكد من اختيار نوع النسخة الاحتياطية المناسب للملف الذي تقوم بتحميله.</p>
-        </div>
-
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group mb-3">
-                        <label for="database_id">قاعدة البيانات</label>
-                        <select class="form-control" id="database_id" name="database_id" required {% if database %}disabled{% endif %}>
-                            <option value="">-- اختر قاعدة البيانات --</option>
-                            {% for db in databases %}
-                            <option value="{{ db.id }}" {% if database and database.id == db.id %}selected{% endif %}>{{ db.name }}</option>
-                            {% endfor %}
-                        </select>
-                        {% if database %}
-                        <input type="hidden" name="database_id" value="{{ database.id }}">
-                        {% endif %}
-                    </div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">رفع نسخة احتياطية</h3>
+                </div>
+                
+                <div class="card-body">
+                    <form id="restoreForm" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="backup_file">ملف النسخة الاحتياطية:</label>
+                            <input type="file" class="form-control-file" id="backup_file" name="backup_file" accept=".json,.gz" required>
+                            <small class="form-text text-muted">يدعم ملفات JSON و GZ</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="database_id">قاعدة البيانات:</label>
+                            <select class="form-control" id="database_id" name="database_id" required>
+                                <option value="">اختر قاعدة البيانات</option>
+                                {% for db in databases %}
+                                <option value="{{ db.id }}" {% if db.is_active %}selected{% endif %}>
+                                    {{ db.name }} {% if db.is_active %}(نشطة){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="clear_existing" name="clear_existing" value="1">
+                                <label class="form-check-label" for="clear_existing">
+                                    حذف البيانات الموجودة قبل الاستعادة
+                                </label>
+                                <small class="form-text text-muted">تحذير: سيتم حذف جميع البيانات الموجودة في قاعدة البيانات</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> بدء الاستعادة
+                            </button>
+                            <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> العودة
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
-            
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group mb-3">
-                        <label for="backup_file">ملف النسخة الاحتياطية</label>
-                        <input type="file" class="form-control" id="backup_file" name="backup_file" required>
-                        <small class="form-text text-muted">اختر ملف النسخة الاحتياطية الذي تريد استعادته.</small>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group mb-3">
-                        <label for="backup_type">نوع النسخة الاحتياطية</label>
-                        <select class="form-control" id="backup_type" name="backup_type" required>
-                            {% for value, label in backup_types %}
-                            <option value="{{ value }}" {% if value == 'full' %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="form-text text-muted">
-                            <ul class="mt-2">
-                                <li><strong>بيانات العملاء:</strong> تشمل معلومات العملاء وجهات الاتصال والعناوين فقط</li>
-                                <li><strong>بيانات المستخدمين:</strong> تشمل حسابات المستخدمين والمجموعات والصلاحيات</li>
-                                <li><strong>إعدادات النظام:</strong> تشمل إعدادات النظام الأساسية</li>
-                                <li><strong>كل البيانات:</strong> تشمل جميع البيانات في النظام (الخيار الموصى به)</li>
-                            </ul>
-                        </small>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="form-check mb-3">
-                <input type="checkbox" class="form-check-input" id="clear_data" name="clear_data">
-                <label class="form-check-label" for="clear_data">حذف البيانات القديمة قبل الاستعادة (موصى به)</label>
-                <small class="form-text text-muted d-block mt-1">
-                    يساعد هذا الخيار في تجنب تكرار البيانات وتضارب المعرفات. إذا كنت تواجه مشاكل في الاستعادة، جرب تفعيل هذا الخيار.
-                </small>
-            </div>
-            
-            <div class="form-check mb-3">
-                <input type="checkbox" class="form-check-input" id="confirm" name="confirm" required>
-                <label class="form-check-label" for="confirm">أنا أفهم أن هذا الإجراء قد يؤدي إلى استبدال البيانات الحالية</label>
-            </div>
-            
-            <div class="form-group mt-4">
-                <button type="submit" class="btn btn-primary">استعادة من الملف</button>
-                <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">إلغاء</a>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+console.log('🚀 [DEBUG] JavaScript script starting...');
+
+// متغيرات عامة للتتبع
+let tempToken = null;
+let progressInterval;
+let errorCount = 0;
+const maxErrors = 5;
+
+// دالة للحصول على CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// دالة لتجديد الجلسة - تم حذفها لأنها لم تعد مطلوبة مع الحل المبسط
+
+// دالة للتحقق من التقدم مع معالجة محسنة للأخطاء
+async function checkProgress(sessionId) {
+    console.log('🔍 [DEBUG] Checking progress for session:', sessionId);
+    
+    try {
+        const headers = {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCookie('csrftoken')
+        };
+
+        const response = await fetch(`/odoo-db-manager/restore-progress/${sessionId}/status/`, {
+            method: 'GET',
+            headers: headers,
+            credentials: 'same-origin'
+        });
+        
+        console.log('🔍 [DEBUG] Progress response status:', response.status);
+        
+        // التحقق من حالة الاستجابة
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // التحقق من نوع المحتوى
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error('Invalid response format: ' + text.substring(0, 100));
+        }
+        
+        const data = await response.json();
+        console.log('🔍 [DEBUG] Progress data:', data);
+        
+        return data;
+        
+    } catch (error) {
+        console.error('❌ [DEBUG] Error checking progress:', error);
+        throw error;
+    }
+}
+
+// دالة لتحديث عرض التقدم
+function updateProgressDisplay(data) {
+    if (!data) return;
+    
+    // تحديث محتوى SweetAlert
+    Swal.update({
+        html: `
+            <div style="direction: rtl; text-align: right;">
+                <h4 style="margin-bottom: 20px;">استعادة البيانات</h4>
+                <div style="margin-bottom: 15px;">
+                    <div style="background: #e9ecef; border-radius: 10px; height: 20px; overflow: hidden;">
+                        <div style="background: linear-gradient(90deg, #007bff, #0056b3); height: 100%; width: ${data.progress_percentage || 0}%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="text-align: center; margin-top: 5px; font-weight: bold;">${data.progress_percentage || 0}%</div>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>الحالة:</strong> ${data.current_step || 'جاري المعالجة...'}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    ${data.total_items > 0 ? `
+                        <strong>الخطوة الحالية:</strong> معالجة العنصر ${(data.processed_items || 0) + 1} من ${data.total_items}...<br>
+                        <strong>التقدم:</strong> ${data.processed_items || 0} من ${data.total_items} عنصر<br>
+                        <strong>نجح:</strong> ${data.success_count || 0}<br>
+                        <strong>فشل:</strong> ${data.error_count || 0}
+                    ` : data.current_step || 'جاري المعالجة...'}
+                </div>
+            </div>
+        `
+    });
+    
+    // التحقق من انتهاء العملية
+    if (data.status === 'completed') {
+        clearInterval(progressInterval);
+        progressInterval = null;
+        
+        // عرض رسالة النجاح
+        const result = data.result_data || {};
+        let successMessage = `
+            <div style="direction: rtl; text-align: right;">
+                <h4 style="color: #28a745; margin-bottom: 20px;">✅ تمت الاستعادة بنجاح!</h4>
+        `;
+        
+        if (result.total_items) {
+            successMessage += `
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <strong>إحصائيات العملية:</strong><br>
+                    إجمالي العناصر: ${result.total_items}<br>
+                    نجح: ${result.success_count}<br>
+                    فشل: ${result.error_count}
+                </div>
+            `;
+            
+            if (result.errors && result.errors.length > 0) {
+                successMessage += `
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <strong>أول 5 أخطاء:</strong><br>
+                        ${result.errors.slice(0, 5).map(error => `• ${error}`).join('<br>')}
+                    </div>
+                `;
+            }
+        }
+        
+        successMessage += `</div>`;
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'تمت الاستعادة بنجاح!',
+            html: successMessage,
+            confirmButtonText: 'حسناً',
+            customClass: {
+                popup: 'rtl-popup',
+                title: 'rtl-title',
+                content: 'rtl-content'
+            }
+        }).then(() => {
+            window.location.reload();
+        });
+        
+    } else if (data.status === 'failed') {
+        clearInterval(progressInterval);
+        progressInterval = null;
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'فشلت العملية',
+            html: `
+                <div style="direction: rtl; text-align: right;">
+                    <p><strong>سبب الفشل:</strong></p>
+                    <p>${data.error_message || 'حدث خطأ غير متوقع'}</p>
+                </div>
+            `,
+            confirmButtonText: 'حسناً',
+            customClass: {
+                popup: 'rtl-popup',
+                title: 'rtl-title',
+                content: 'rtl-content'
+            }
+        });
+    }
+}
+
+// دالة لتتبع التقدم مع معالجة محسنة للأخطاء
+function startProgressTracking(sessionId) {
+    console.log('🔍 [DEBUG] Starting progress tracking for session:', sessionId);
+    
+    const runCheck = () => {
+        checkProgress(sessionId)
+        .then(data => {
+            errorCount = 0;
+            
+            updateProgressDisplay(data);
+            
+            // إذا لم تكتمل العملية، استمر في التحقق
+            if (data.status !== 'completed' && data.status !== 'failed') {
+                progressInterval = setTimeout(runCheck, 1500); // استمر في التحقق بعد 1.5 ثانية
+            }
+        })
+        .catch(error => {
+            console.error(`❌ [DEBUG] Error checking progress:`, error);
+            
+            errorCount++;
+            console.error(`❌ [DEBUG] Progress tracking error (${errorCount}/${maxErrors}):`, error);
+            
+            if (errorCount >= maxErrors) {
+                clearTimeout(progressInterval);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ في تتبع التقدم',
+                    html: `<div style="direction: rtl; text-align: right;">
+                            <p>حدث خطأ متكرر في تتبع التقدم.</p>
+                            <p><strong>الخطأ:</strong> ${error.message}</p>
+                            <p><strong>ملاحظة:</strong> العملية قد تكون مكتملة في الخلفية.</p>
+                           </div>`,
+                    confirmButtonText: 'إعادة تحميل الصفحة',
+                    customClass: { popup: 'rtl-popup', title: 'rtl-title', content: 'rtl-content' }
+                }).then(() => { window.location.reload(); });
+            } else {
+                // إعادة المحاولة بعد فترة قصيرة
+                progressInterval = setTimeout(runCheck, 2000);
+            }
+        });
+    };
+    
+    // بدء التحقق فوراً
+    runCheck();
+}
+
+
+// عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ [DEBUG] DOM loaded, initializing form handler');
+    
+    const restoreForm = document.getElementById('restoreForm');
+    
+    if (restoreForm) {
+        restoreForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            console.log('🔍 [DEBUG] Form submitted');
+            
+            // التحقق من البيانات
+            const fileInput = document.getElementById('backup_file');
+            const databaseSelect = document.getElementById('database_id');
+            
+            if (!fileInput.files[0]) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ',
+                    text: 'يرجى اختيار ملف النسخة الاحتياطية',
+                    customClass: {
+                        popup: 'rtl-popup',
+                        title: 'rtl-title',
+                        content: 'rtl-content'
+                    }
+                });
+                return;
+            }
+            
+            if (!databaseSelect.value) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ',
+                    text: 'يرجى اختيار قاعدة البيانات',
+                    customClass: {
+                        popup: 'rtl-popup',
+                        title: 'rtl-title',
+                        content: 'rtl-content'
+                    }
+                });
+                return;
+            }
+            
+            // إنشاء معرف جلسة فريد
+            const currentSessionId = 'restore_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            console.log('🔍 [DEBUG] Generated session ID:', currentSessionId);
+            
+            // عرض شريط التقدم
+            Swal.fire({
+                title: 'جاري استعادة البيانات...',
+                html: `
+                    <div style="direction: rtl; text-align: right;">
+                        <h4 style="margin-bottom: 20px;">استعادة البيانات</h4>
+                        <div style="margin-bottom: 15px;">
+                            <div style="background: #e9ecef; border-radius: 10px; height: 20px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, #007bff, #0056b3); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                            </div>
+                            <div style="text-align: center; margin-top: 5px; font-weight: bold;">0%</div>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>الحالة:</strong> جاري بدء العملية...
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>الخطوة الحالية:</strong> إرسال النموذج...
+                        </div>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                customClass: {
+                    popup: 'rtl-popup',
+                    title: 'rtl-title',
+                    content: 'rtl-content'
+                }
+            });
+            
+            // إعداد البيانات وإرسال النموذج
+            const formData = new FormData(restoreForm);
+            formData.append('session_id', currentSessionId);
+            
+            console.log('🔍 [DEBUG] Sending form with session_id:', currentSessionId);
+            
+            // إرسال النموذج
+            fetch(restoreForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                console.log('✅ [DEBUG] Form submitted successfully, status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ [DEBUG] Form submission successful');
+                    tempToken = data.temp_token; // تخزين الرمز المؤقت
+                    console.log('✅ [DEBUG] Temp token stored.');
+                    
+                    // بدء تتبع التقدم فقط بعد نجاح الإرسال
+                    startProgressTracking(currentSessionId);
+
+                } else {
+                    throw new Error(data.message || 'حدث خطأ غير متوقع');
+                }
+            })
+            .catch(error => {
+                console.error('❌ [DEBUG] Form submission error:', error);
+                
+                // إيقاف التتبع
+                if (progressInterval) {
+                    clearTimeout(progressInterval); // استخدام clearTimeout
+                    progressInterval = null;
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ في إرسال النموذج',
+                    text: error.message || 'حدث خطأ غير متوقع',
+                    customClass: {
+                        popup: 'rtl-popup',
+                        title: 'rtl-title',
+                        content: 'rtl-content'
+                    }
+                });
+            });
+        });
+    }
+});
+
+console.log('✅ [DEBUG] Script loaded successfully');
+</script>
+{% endblock %} 

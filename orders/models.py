@@ -326,11 +326,11 @@ class Order(models.Model):
                 try:
                     success, message = self.upload_contract_to_google_drive()
                     if success:
-                        print(f"تم رفع ملف العقد للطلب {self.order_number} إلى Google Drive")
+                        pass
                     else:
-                        print(f"فشل رفع ملف العقد للطلب {self.order_number}: {message}")
+                        pass
                 except Exception as e:
-                    print(f"خطأ في رفع ملف العقد للطلب {self.order_number}: {str(e)}")
+                    pass
             # حساب السعر النهائي بعد الحفظ (بعد وجود pk)
             try:
                 final_price = self.calculate_final_price()
@@ -339,13 +339,12 @@ class Order(models.Model):
                     # حفظ التغيير في السعر النهائي فقط إذا تغير
                     super().save(update_fields=['final_price'])
             except Exception as e:
-                print(f"Error calculating final price after save: {e}")
+                pass
                 self.final_price = 0
                 super().save(update_fields=['final_price'])
-            print(f"Successfully saved order {self.order_number} with primary key {self.pk}")
         except Exception as e:
             # تسجيل الخطأ
-            print(f"Error saving order: {e}")
+            pass
             raise
     def notify_status_change(self, old_status, new_status, changed_by=None, notes=''):
         """إرسال إشعار عند تغيير حالة تتبع الطلب"""
@@ -658,12 +657,10 @@ class OrderItem(models.Model):
             try:
                 self.order.calculate_final_price()
                 self.order.save(update_fields=['final_price'])
-                print(f"Successfully updated final price for order {self.order.order_number}")
             except Exception as e:
-                print(f"Error updating order final price: {e}")
-                # لا نريد إيقاف العملية إذا فشل تحديث السعر النهائي
+                pass
         except Exception as e:
-            print(f"Error saving order item: {e}")
+            pass
             raise
 
 
@@ -706,12 +703,10 @@ class Payment(models.Model):
                 )['total'] or 0
                 self.order.paid_amount = total_payments
                 self.order.save(update_fields=['paid_amount'])
-                print(f"Successfully updated paid amount for order {self.order.order_number}")
             except Exception as e:
-                print(f"Error updating order paid amount: {e}")
-                # لا نريد إيقاف العملية إذا فشل تحديث المبلغ المدفوع
+                pass
         except Exception as e:
-            print(f"Error saving payment: {e}")
+            pass
             raise
 
 
@@ -746,10 +741,8 @@ class OrderStatusLog(models.Model):
                     self.order.tracking_status = self.new_status
                     self.order.last_notification_date = timezone.now()
                     self.order.save(update_fields=['tracking_status', 'last_notification_date'])
-                    print(f"Successfully updated tracking status for order {self.order.order_number} to {self.new_status}")
             except Exception as e:
-                print(f"Error updating order tracking status: {e}")
-                # لا نريد إيقاف العملية إذا فشل تحديث حالة الطلب
+                pass
         except Exception as e:
-            print(f"Error saving order status log: {e}")
+            pass
             raise

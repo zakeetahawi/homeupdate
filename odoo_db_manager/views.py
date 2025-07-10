@@ -6,19 +6,27 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
-from django.http import HttpResponse, JsonResponse, FileResponse
+from django.http import JsonResponse, FileResponse, StreamingHttpResponse
 from django.utils import timezone
 from django.conf import settings
-from django.db.models import Q
 import os
-import datetime
+import time
 import shutil
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import secrets
+from django.core.cache import cache
+from django.contrib.auth import get_user_model
 
-from .models import Database, Backup, BackupSchedule, GoogleDriveConfig
+from .models import (
+    Database, Backup, BackupSchedule,
+    GoogleDriveConfig, RestoreProgress
+)
 from .services.database_service import DatabaseService
-# تم إزالة BackupService لتجنب التضارب
 from .services.scheduled_backup_service import scheduled_backup_service
 from .forms import BackupScheduleForm, GoogleDriveConfigForm, DatabaseForm
+
 
 def is_staff_or_superuser(user):
     """التحقق من أن المستخدم موظف أو مدير"""
@@ -784,7 +792,7 @@ def backup_restore(request, pk):
                     import gzip
                     import tempfile
 
-                    print(f"📦 ملف مضغوط - فك الضغط: {backup.file_path}")
+                    # print(f"📦 ملف مضغوط - فك الضغط: {backup.file_path}")  # تعطيل الطباعة
 
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as temp_file:
                         temp_path = temp_file.name
@@ -798,7 +806,7 @@ def backup_restore(request, pk):
                         with open(temp_path, 'w', encoding='utf-8') as json_file:
                             json_file.write(content)
 
-                        print(f"✅ تم فك الضغط بنجاح إلى: {temp_path}")
+                        # print(f"✅ تم فك الضغط بنجاح إلى: {temp_path}")  # تعطيل الطباعة
 
                         # استعادة من الملف المفكوك
                         result = _restore_json_simple(temp_path, clear_existing=clear_data)
@@ -807,7 +815,7 @@ def backup_restore(request, pk):
                         # حذف الملف المؤقت
                         if os.path.exists(temp_path):
                             os.unlink(temp_path)
-                            print(f"🗑️ تم حذف الملف المؤقت: {temp_path}")
+                            # print(f"🗑️ تم حذف الملف المؤقت: {temp_path}")  # تعطيل الطباعة
                 else:
                     raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON أو JSON.GZ.")
                 
@@ -829,6 +837,11 @@ def backup_restore(request, pk):
                     messages.success(request, success_message)
                 else:
                     messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
+
+            print("\033[92m🎉 تمت الاستعادة بنجاح!\033[0m")
+            print("\033[92m" + "="*50 + "\033[0m")
+            print("\033[92m✨ عملية الاستعادة اكتملت بنجاح! ✨\033[0m")
+            print("\033[92m" + "="*50 + "\033[0m")
 
             return redirect('odoo_db_manager:dashboard')
         except Exception as e:
@@ -898,162 +911,314 @@ def backup_download(request, pk):
 @login_required
 @user_passes_test(is_staff_or_superuser)
 def backup_upload(request, database_id=None):
-    """استعادة من ملف تم تحميله"""
+    """رفع واستعادة نسخة احتياطية"""
+    
     # الحصول على قاعدة البيانات
     database = None
     if database_id:
         database = get_object_or_404(Database, pk=database_id)
-
+    
+    # قائمة قواعد البيانات
+    databases = Database.objects.filter(is_active=True)
+    
     if request.method == 'POST':
-        # التحقق من وجود قاعدة بيانات
-        database_id = request.POST.get('database_id', database_id)
-        if not database_id:
-            messages.error(request, _('يرجى اختيار قاعدة بيانات.'))
-            return redirect('odoo_db_manager:backup_upload')
-
-        # التحقق من وجود ملف
-        if 'backup_file' not in request.FILES or not request.FILES['backup_file']:
-            messages.error(request, _('يرجى اختيار ملف النسخة الاحتياطية.'))
-            return redirect('odoo_db_manager:backup_upload')
-
-        # التحقق من أن الملف ليس فارغاً
-        uploaded_file = request.FILES['backup_file']
-        if uploaded_file.size == 0:
-            messages.error(request, _('الملف المرفوع فارغ. يرجى اختيار ملف صالح.'))
-            return redirect('odoo_db_manager:backup_upload')
-
-        # الحصول على خيارات الاستعادة
-        backup_type = request.POST.get('backup_type', 'full')
-        clear_data = request.POST.get('clear_data', 'off') == 'on'
-
+        print(f"🔍 [DEBUG] POST request received for backup upload")
+        print(f"🔍 [DEBUG] User: {request.user}")
+        print(f"🔍 [DEBUG] Files: {request.FILES}")
+        print(f"🔍 [DEBUG] POST data: {request.POST}")
+        
+        # تمديد الجلسة لمدة 3 ساعات للعمليات الطويلة
+        request.session.set_expiry(10800)  # 3 ساعات
+        print(f"✅ [DEBUG] Session extended to 3 hours for long operation")
+        
         try:
-            print("🚀 بدء عملية الاستعادة المباشرة...")
-            print(f"📁 اسم الملف المرفوع: {uploaded_file.name}")
-            print(f"📊 حجم الملف المرفوع: {uploaded_file.size} بايت")
-
-            # حفظ الملف في مجلد النسخ الاحتياطية مباشرة
-            backup_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
-            os.makedirs(backup_dir, exist_ok=True)
-
-            # إنشاء اسم ملف فريد
-            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            file_name = f"uploaded_{timestamp}_{uploaded_file.name}"
-            file_path = os.path.join(backup_dir, file_name)
-
-            print(f"💾 حفظ الملف في: {file_path}")
-
+            # الحصول على البيانات
+            uploaded_file = request.FILES.get('backup_file')
+            database_id = request.POST.get('database_id', database_id)
+            clear_data = request.POST.get('clear_existing') == '1'  # تصحيح اسم الحقل
+            session_id = request.POST.get('session_id')
+            
+            print(f"🔍 [DEBUG] Session ID: {session_id}")
+            print(f"🔍 [DEBUG] Clear data: {clear_data}")
+            print(f"🔍 [DEBUG] Database ID: {database_id}")
+            
+            if not uploaded_file:
+                return JsonResponse({'success': False, 'message': 'يرجى اختيار ملف النسخة الاحتياطية'})
+            
+            if not database_id:
+                return JsonResponse({'success': False, 'message': 'يرجى اختيار قاعدة البيانات'})
+            
+            # الحصول على قاعدة البيانات
+            database = get_object_or_404(Database, pk=database_id)
+            
+            # إنشاء session_id إذا لم يكن موجوداً
+            if not session_id:
+                session_id = f'restore_{int(time.time() * 1000)}_{secrets.token_urlsafe(8)}'
+                print(f"🔍 [DEBUG] Generated new session ID: {session_id}")
+            
+            # إنشاء رمز مؤقت للتتبع
+            temp_token = secrets.token_urlsafe(32)
+            cache.set(f'temp_token_{temp_token}', request.user.id, 10800)  # 3 ساعات
+            cache.set(f'session_token_{session_id}', temp_token, 10800)  # ربط الجلسة بالرمز
+            
+            print(f"✅ [DEBUG] Created temp token: {temp_token[:10]}...")
+            print(f"✅ [DEBUG] Linked session {session_id} to token")
+            
+            # إنشاء سجل التقدم
+            progress = RestoreProgress.objects.create(
+                session_id=session_id,
+                user=request.user,
+                database=database,
+                filename=uploaded_file.name,  # إضافة اسم الملف
+                status='starting',
+                progress_percentage=0,
+                current_step='بدء العملية...',
+                total_items=0,
+                processed_items=0,
+                success_count=0,
+                error_count=0
+            )
+            
+            print(f"✅ [DEBUG] Created progress record: {progress.id}")
+            
+            # دالة لتحديث التقدم
+            def update_progress(status=None, progress_percentage=None, current_step=None, 
+                              total_items=None, processed_items=None, success_count=None, 
+                              error_count=None, error_message=None, result_data=None):
+                """تحديث تقدم عملية الاستعادة"""
+                try:
+                    progress = RestoreProgress.objects.get(session_id=session_id)
+                    
+                    if status is not None:
+                        progress.status = status
+                    if progress_percentage is not None:
+                        progress.progress_percentage = progress_percentage
+                    if current_step is not None:
+                        progress.current_step = current_step
+                    if total_items is not None:
+                        progress.total_items = total_items
+                    if processed_items is not None:
+                        progress.processed_items = processed_items
+                    if success_count is not None:
+                        progress.success_count = success_count
+                    if error_count is not None:
+                        progress.error_count = error_count
+                    if error_message is not None:
+                        progress.error_message = error_message
+                    if result_data is not None:
+                        progress.result_data = result_data
+                    
+                    progress.save()
+                    
+                    # حفظ نسخة احتياطية في الـ cache
+                    cache_key = f"restore_progress_backup_{session_id}"
+                    cache_data = {
+                        'status': progress.status,
+                        'progress_percentage': progress.progress_percentage,
+                        'current_step': progress.current_step,
+                        'total_items': progress.total_items,
+                        'processed_items': progress.processed_items,
+                        'success_count': progress.success_count,
+                        'error_count': progress.error_count,
+                        'error_message': progress.error_message,
+                        'result_data': progress.result_data,
+                        'updated_at': timezone.now().isoformat()
+                    }
+                    cache.set(cache_key, cache_data, timeout=10800)  # 3 hours
+                    
+                    print(f"✅ [DEBUG] Progress updated: {progress.status} - {progress.progress_percentage}%")
+                except RestoreProgress.DoesNotExist:
+                    print(f"⚠️ [DEBUG] Progress record not found for session {session_id} - may have been deleted during cleanup")
+                    
+                    # محاولة إعادة إنشاء السجل من الـ cache
+                    cache_key = f"restore_progress_backup_{session_id}"
+                    cache_data = cache.get(cache_key)
+                    if cache_data:
+                        try:
+                            # إعادة إنشاء السجل مع جميع الحقول المطلوبة
+                            progress = RestoreProgress.objects.create(
+                                session_id=session_id,
+                                user=request.user,
+                                database=database,  # إضافة حقل database المطلوب
+                                filename=uploaded_file.name,  # إضافة اسم الملف
+                                status=status or cache_data.get('status', 'processing'),
+                                progress_percentage=progress_percentage or cache_data.get('progress_percentage', 0),
+                                current_step=current_step or cache_data.get('current_step', ''),
+                                total_items=total_items or cache_data.get('total_items', 0),
+                                processed_items=processed_items or cache_data.get('processed_items', 0),
+                                success_count=success_count or cache_data.get('success_count', 0),
+                                error_count=error_count or cache_data.get('error_count', 0),
+                                error_message=error_message or cache_data.get('error_message', ''),
+                                result_data=result_data or cache_data.get('result_data', None)
+                            )
+                            print(f"✅ [DEBUG] Progress record recreated from cache: {progress.id}")
+                        except Exception as recreate_error:
+                            print(f"❌ [DEBUG] Failed to recreate progress record: {str(recreate_error)}")
+                    else:
+                        # إذا لم تكن هناك نسخة احتياطية في الـ cache، ننشئ سجل جديد
+                        try:
+                            progress = RestoreProgress.objects.create(
+                                session_id=session_id,
+                                user=request.user,
+                                database=database,
+                                filename=uploaded_file.name,
+                                status=status or 'processing',
+                                progress_percentage=progress_percentage or 0,
+                                current_step=current_step or 'استعادة البيانات...',
+                                total_items=total_items or 0,
+                                processed_items=processed_items or 0,
+                                success_count=success_count or 0,
+                                error_count=error_count or 0,
+                                error_message=error_message or '',
+                                result_data=result_data or None
+                            )
+                            print(f"✅ [DEBUG] New progress record created: {progress.id}")
+                        except Exception as create_error:
+                            print(f"❌ [DEBUG] Failed to create new progress record: {str(create_error)}")
+                except Exception as e:
+                    print(f"❌ [DEBUG] Error updating progress: {str(e)}")
+            
+            # بدء العملية
+            print(f"\033[92m✅ بدء عملية الاستعادة - الملف: {uploaded_file.name}\033[0m")
+            print(f"\033[94m🚀 بدء استعادة الملف: {uploaded_file.name}\033[0m")
+            
             # حفظ الملف
-            with open(file_path, 'wb') as destination:
+            file_path = os.path.join(settings.MEDIA_ROOT, 'backups', uploaded_file.name)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            with open(file_path, 'wb+') as destination:
                 for chunk in uploaded_file.chunks():
                     destination.write(chunk)
-
-            actual_size = os.path.getsize(file_path)
-            print(f"✅ تم حفظ الملف بنجاح - الحجم الفعلي: {actual_size} بايت")
-
-            # استعادة مباشرة
-            from django.core.management import call_command
-
+            
+            print(f"\033[92m📁 تم حفظ الملف بنجاح\033[0m")
+            
             if clear_data:
-                print("⚠️ تم تجاهل خيار حذف البيانات القديمة لتجنب مشاكل قاعدة البيانات")
-
-            # استعادة مبسطة جداً
-            print(f"🔄 بدء استعادة الملف: {file_path}")            # التحقق من نوع الملف (مع دعم الأحرف الكبيرة والصغيرة)
-            if uploaded_file.name.lower().endswith('.gz'):
-                print("📦 ملف مضغوط - فك الضغط...")
-                import gzip
-                import tempfile
-
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as temp_file:
-                    temp_path = temp_file.name
-
-                    try:
-                        print(f"🔓 فك ضغط من: {file_path}")
-                        with gzip.open(file_path, 'rt', encoding='utf-8') as gz_file:
-                            content = gz_file.read()
-
-                        print(f"📝 كتابة المحتوى المفكوك إلى: {temp_path}")
+                print(f"\033[92m✅ تم تفعيل خيار حذف البيانات القديمة\033[0m")
+            else:
+                print(f"\033[93m⚠️ لم يتم تفعيل خيار حذف البيانات القديمة\033[0m")
+            
+            update_progress(status='processing', current_step='معالجة الملف...')
+            
+            # تشغيل عملية الاستعادة في thread منفصل
+            import threading
+            
+            def run_restore():
+                try:
+                    # استعادة النسخة الاحتياطية
+                    result = None
+                    if uploaded_file.name.lower().endswith('.json'):
+                        result = _restore_json_simple_with_progress(file_path, clear_existing=clear_data, 
+                                                    progress_callback=update_progress, session_id=session_id)
+                    elif uploaded_file.name.lower().endswith('.gz'):
+                        # التعامل مع الملفات المضغوطة
+                        import gzip
+                        import tempfile
                         
-                        with open(temp_path, 'w', encoding='utf-8') as json_file:
-                            json_file.write(content)
-
-                        temp_size = os.path.getsize(temp_path)
-                        print(f"✅ تم فك الضغط بنجاح - حجم الملف المفكوك: {temp_size} بايت")
-                          # استعادة من الملف المفكوك
-                        print("🔄 استعادة البيانات من الملف المفكوك...")
-                        result = _restore_json_simple(temp_path, clear_existing=clear_data)
-
-                    except Exception as gz_error:
-                        print(f"❌ خطأ في فك الضغط: {str(gz_error)}")
-                        raise
-                    finally:
-                        # حذف الملف المؤقت مع معالجة أخطاء Windows
-                        if os.path.exists(temp_path):
-                            try:
-                                import time
-                                time.sleep(0.1)  # تأخير صغير للسماح لـ Windows بإغلاق الملف
+                        update_progress(current_step='فك ضغط الملف...')
+                        
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as temp_file:
+                            temp_path = temp_file.name
+                        
+                        try:
+                            with gzip.open(file_path, 'rt', encoding='utf-8') as gz_file:
+                                content = gz_file.read()
+                            
+                            with open(temp_path, 'w', encoding='utf-8') as json_file:
+                                json_file.write(content)
+                            
+                            update_progress(current_step='استعادة البيانات من الملف المفكوك...')
+                            result = _restore_json_simple_with_progress(temp_path, clear_existing=clear_data,
+                                                        progress_callback=update_progress, session_id=session_id)
+                        finally:
+                            if os.path.exists(temp_path):
                                 os.unlink(temp_path)
-                                print(f"🗑️ تم حذف الملف المؤقت: {temp_path}")
-                            except PermissionError:
-                                print(f"⚠️ لا يمكن حذف الملف المؤقت فوراً (مستخدم من عملية أخرى): {temp_path}")
-                                print("💡 سيتم حذفه تلقائياً عند إعادة تشغيل النظام")
-                            except Exception as cleanup_error:
-                                print(f"⚠️ خطأ في حذف الملف المؤقت: {str(cleanup_error)}")
-            else:
-                print("📄 ملف JSON عادي - استعادة مباشرة...")
-                result = _restore_json_simple(file_path, clear_existing=clear_data)
-
-            # إنشاء رسالة تفصيلية بناءً على النتيجة
-            if result:
-                success_count = result.get('success_count', 0)
-                error_count = result.get('error_count', 0)
-                total_count = result.get('total_count', 0)
-                
-                if error_count == 0:
-                    success_message = f"🎉 تم استعادة جميع البيانات بنجاح!\n\n📊 الإحصائيات:\n• إجمالي العناصر: {total_count}\n• تم الاستعادة: {success_count}\n• نسبة النجاح: 100%\n\n✨ تم إصلاح جميع المشاكل تلقائياً!"
-                else:
-                    success_rate = (success_count / total_count * 100) if total_count > 0 else 0
-                    success_message = f"✅ تمت الاستعادة بنجاح!\n\n📊 الإحصائيات:\n• إجمالي العناصر: {total_count}\n• تم الاستعادة: {success_count}\n• فشل: {error_count}\n• نسبة النجاح: {success_rate:.1f}%"
+                    else:
+                        raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON أو JSON.GZ.")
                     
-                    if error_count > 0:
-                        success_message += f"\n\n⚠️ تحذير: {error_count} عنصر لم يتم استعادته (عادة بسبب بيانات غير متوافقة مع النسخة الحالية)."
+                    # تحديث حالة قاعدة البيانات
+                    database.refresh_from_db()
+                    database.status = 'connected'
+                    database.error_message = None
+                    database.save()
+                    
+                    print(f"\033[92mتم تحديث قاعدة البيانات: {database.name}\033[0m")
+                    print(f"\033[92mتم تنشيط قاعدة البيانات: {database.name}\033[0m")
+                    
+                    # تحديث التقدم النهائي
+                    if result:
+                        update_progress(
+                            status='completed',
+                            progress_percentage=100,
+                            current_step='اكتملت العملية بنجاح',
+                            result_data=result
+                        )
+                        
+                        print(f"\033[92m🎉 تمت الاستعادة بنجاح!\033[0m")
+                        print("=" * 50)
+                        print(f"\033[92m✨ عملية الاستعادة اكتملت بنجاح! ✨\033[0m")
+                        print("=" * 50)
+                    else:
+                        update_progress(
+                            status='failed',
+                            current_step='فشلت العملية',
+                            error_message='لم يتم إرجاع نتيجة من عملية الاستعادة'
+                        )
                 
-                messages.success(request, success_message)
-            else:
-                messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
-
-            print("🎉 تمت الاستعادة بنجاح!")
-
-            messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
-            return redirect('odoo_db_manager:database_detail', pk=database_id)
+                except Exception as e:
+                    error_msg = str(e)
+                    print(f"\033[91m❌ خطأ في الاستعادة: {error_msg}\033[0m")
+                    update_progress(
+                        status='failed',
+                        current_step='فشلت العملية',
+                        error_message=error_msg
+                    )
+                finally:
+                    # حذف الملف المؤقت
+                    if os.path.exists(file_path):
+                        try:
+                            os.unlink(file_path)
+                        except:
+                            pass
+                    
+                    # تأخير تنظيف الكاش لمدة 30 ثانية للسماح للواجهة بالحصول على النتيجة النهائية
+                    def delayed_cleanup():
+                        import time
+                        time.sleep(30)  # انتظار 30 ثانية
+                        try:
+                            cache.delete(f'temp_token_{temp_token}')
+                            cache.delete(f'session_token_{session_id}')
+                            print(f"✅ [DEBUG] Cleaned up cache for session {session_id} after 30 seconds")
+                        except:
+                            pass
+                    
+                    # تشغيل التنظيف في thread منفصل
+                    cleanup_thread = threading.Thread(target=delayed_cleanup, daemon=True)
+                    cleanup_thread.start()
+            
+            # بدء Thread
+            restore_thread = threading.Thread(target=run_restore, daemon=True)
+            restore_thread.start()
+            
+            return JsonResponse({
+                'success': True,
+                'session_id': session_id,
+                'temp_token': temp_token
+            })
+            
         except Exception as e:
-            error_message = str(e)
-            print(f"خطأ في الاستعادة: {error_message}")
-
-            # رسالة خطأ مبسطة
-            if "flush" in error_message:
-                error_message = "مشكلة في إعدادات قاعدة البيانات. تم تجاهل حذف البيانات القديمة."
-            elif "JSON" in error_message or "fixture" in error_message:
-                error_message = "مشكلة في تنسيق الملف. تأكد من أن الملف بتنسيق JSON صالح."
-            elif "فشل تثبيت البيانات من الملف المضغوط" in error_message:
-                error_message = "مشكلة في الملف المضغوط. جرب ملف JSON غير مضغوط."
-            else:
-                error_message = f"خطأ في الاستعادة: {error_message[:200]}..."
-
-            messages.error(request, _(f'حدث خطأ أثناء استعادة النسخة الاحتياطية: {error_message}'))
-            return redirect('odoo_db_manager:backup_upload')
-
-    # الحصول على قواعد البيانات
-    databases = Database.objects.all()
-
+            print(f"❌ [DEBUG] Main upload view error: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': f'حدث خطأ: {str(e)}'
+            })
+    
     context = {
-        'database': database,
         'databases': databases,
-        'backup_types': Backup.BACKUP_TYPES,
-        'title': _('استعادة من ملف'),
+        'database': database,
+        'title': 'رفع نسخة احتياطية',
     }
-
+    
     return render(request, 'odoo_db_manager/backup_upload.html', context)
-
 
 @login_required
 @user_passes_test(is_staff_or_superuser)
@@ -1327,41 +1492,34 @@ def _restore_json_simple(file_path, clear_existing=False):
     from django.apps import apps
     from django.db import transaction
 
-    try:
-        print(f"📖 قراءة ملف JSON: {file_path}")
+    summary = {
+        'total': 0,
+        'success': 0,
+        'errors': 0,
+        'failed_items': []
+    }
 
-        # التحقق من نوع الملف أولاً
+    try:
         if file_path.lower().endswith('.gz'):
             raise ValueError("هذا ملف مضغوط (.gz). يجب فك ضغطه أولاً قبل استدعاء هذه الدالة.")
 
         with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)        # التحقق من نوع البيانات مع تحسين التحقق
+            data = json.load(f)
         if not isinstance(data, list):
-            # التحقق من نوع الملف
             if isinstance(data, dict):
-                # فحص إضافي للتأكد من أنه ليس service account credentials
                 if 'private_key' in data and 'client_email' in data and 'project_id' in data:
                     raise ValueError("هذا الملف يبدو وكأنه ملف Google Service Account Credentials وليس نسخة احتياطية للنظام. يرجى رفع ملف نسخة احتياطية صالح بتنسيق Django fixture.")
                 elif 'model' in data and 'fields' in data:
-                    # إذا كان dictionary واحد بدلاً من قائمة، اجعله قائمة
                     data = [data]
-                # فحص لتنسيقات أخرى قد تكون نسخ احتياطية
                 elif 'version' in data or 'created_at' in data or 'database' in data:
-                    # قد يكون تنسيق نسخة احتياطية آخر - محاولة التعامل معه
-                    print("⚠️ تنسيق نسخة احتياطية غير مألوف - سيتم تجاهل هذا الملف")
                     raise ValueError("تنسيق النسخة الاحتياطية غير مدعوم. يرجى استخدام ملف بتنسيق Django fixture (JSON).")
                 else:
                     raise ValueError("تنسيق الملف غير صالح. يجب أن يكون ملف JSON يحتوي على قائمة من البيانات أو بيانات Django fixture.")
             else:
                 raise ValueError(f"تنسيق البيانات غير مدعوم: {type(data)}. يجب أن تكون البيانات عبارة عن قائمة أو قاموس.")
 
-        print(f"✅ تم تحميل {len(data)} عنصر من الملف")
-
-        # تحضير ContentTypes المطلوبة قبل بدء الاستعادة
-        print("🔧 التحضير لاستعادة شاملة...")
+        summary['total'] = len(data)
         from django.contrib.contenttypes.models import ContentType
-        
-        # إنشاء ContentTypes للتطبيقات الأساسية إذا لم تكن موجودة
         required_content_types = [
             ('inventory', 'product'),
             ('inventory', 'category'),
@@ -1378,7 +1536,6 @@ def _restore_json_simple(file_path, clear_existing=False):
             ('accounts', 'department'),
             ('accounts', 'branch'),
         ]
-        
         for app_label, model_name in required_content_types:
             try:
                 ContentType.objects.get_or_create(
@@ -1386,93 +1543,59 @@ def _restore_json_simple(file_path, clear_existing=False):
                     model=model_name
                 )
             except Exception:
-                # تجاهل الأخطاء في إنشاء ContentTypes
                 pass
-        
-        print("✅ تم التحضير لاستعادة شاملة")        # ترتيب البيانات حسب الأولوية (الجداول التي لا تعتمد على غيرها أولاً)
         priority_order = [
-            # ContentTypes أولاً
             'contenttypes.contenttype',
-            # المستخدمين والمجموعات
             'auth.user',
             'auth.group',
-            # الأقسام والفروع
             'accounts.department',
             'accounts.branch',
-            # الصلاحيات (بعد إنشاء ContentTypes)
             'auth.permission',
-            # العملاء والفئات
             'customers.customer',
             'inventory.category',
             'inventory.brand',
-            # المنتجات والمستودعات
             'inventory.warehouse',
             'inventory.product',
-            # الطلبات والفحوصات
             'orders.order',
             'orders.orderitem',
             'inspections.inspection',
             'installations.installation',
-            # التقارير والنسخ الاحتياطية
             'reports.report',
             'odoo_db_manager.database',
             'odoo_db_manager.backup',
             'odoo_db_manager.backupschedule',
             'odoo_db_manager.importlog',
-            # المعاملات والملاحظات (في النهاية)
             'inventory.stocktransaction',
             'customers.customernote',
         ]
-
-        # ترتيب البيانات
         sorted_data = []
         remaining_data = []
-
         for model_name in priority_order:
             for item in data:
                 if item.get('model') == model_name:
                     sorted_data.append(item)
-
-        # إضافة باقي البيانات
         for item in data:
             if item not in sorted_data:
                 remaining_data.append(item)
-
         final_data = sorted_data + remaining_data
-
-        # تطهير البيانات مسبقاً لإصلاح المشاكل المعروفة
-        print("🔧 تطهير البيانات المسبق...")
         for item in final_data:
             model_name = item.get('model', 'unknown')
             fields = item.get('fields', {})
-            
-            # معالجة خاصة لـ SystemSettings
             if model_name == 'accounts.systemsettings':
-                # تحويل default_currency إلى currency
                 if 'default_currency' in fields:
                     default_curr = fields.pop('default_currency', 'SAR')
                     fields['currency'] = default_curr
-                    print(f"🔄 تم تحويل default_currency إلى currency مسبقاً: {default_curr}")
-                
-                # إزالة خصائص قديمة أخرى
                 old_fields = ['timezone', 'date_format', 'time_format']
                 for field in old_fields:
                     if field in fields:
                         removed_value = fields.pop(field, None)
-                        print(f"🗑️ تم إزالة الخاصية القديمة {field}: {removed_value}")
-                
                 item['fields'] = fields
-
-        # حذف البيانات القديمة إذا تم طلب ذلك
         if clear_existing:
-            print("🗑️ حذف البيانات القديمة...")
             models_to_clear = set()
             for item in final_data:
                 model_name = item.get('model')
                 if model_name:
                     models_to_clear.add(model_name)
-
-            # حذف البيانات بترتيب عكسي
             for model_name in reversed(priority_order):
                 if model_name in models_to_clear:
                     try:
@@ -1481,186 +1604,260 @@ def _restore_json_simple(file_path, clear_existing=False):
                         count = model.objects.count()
                         if count > 0:
                             model.objects.all().delete()
-                            print(f"🗑️ تم حذف {count} سجل من {model_name}")
                     except Exception as e:
-                        print(f"⚠️ خطأ في حذف {model_name}: {str(e)}")
-
-        # استعادة البيانات مع معالجة محسنة للأخطاء
+                        pass
         success_count = 0
         error_count = 0
         failed_items = []
-
-        print("🔄 بدء استعادة العناصر...")
-
-        # محاولة أولى
         for i, item in enumerate(final_data):
             try:
                 with transaction.atomic():
                     for obj in serializers.deserialize('json', json.dumps([item])):
                         obj.save()
                 success_count += 1
-
-                # طباعة تقدم كل 50 عنصر
-                if (i + 1) % 50 == 0:
-                    print(f"📊 تم معالجة {i + 1} عنصر...")
-
             except Exception as item_error:
                 error_count += 1
                 failed_items.append((i, item, str(item_error)))
-                # طباعة تفاصيل الخطأ للعناصر القليلة الأولى فقط
-                if error_count <= 5:
-                    print(f"⚠️ خطأ في العنصر {i + 1} ({item.get('model', 'unknown')}): {str(item_error)[:100]}...")        # محاولة ثانية للعناصر الفاشلة (قد تكون فشلت بسبب ترتيب الاعتمادات)
         if failed_items:
-            print(f"🔄 محاولة ثانية لـ {len(failed_items)} عنصر فاشل...")
             second_attempt_success = 0
-            
             for original_index, item, original_error in failed_items:
                 try:
-                    with transaction.atomic():                        # معالجة أخطاء محددة قبل المحاولة الثانية
+                    with transaction.atomic():
                         item_copy = item.copy()
                         fields = item_copy.get('fields', {})
-                        model_name = item_copy.get('model', 'unknown')
-                        
-                        # معالجة مشاكل ContentType (الصلاحيات المفقودة)
-                        if 'ContentType matching query does not exist' in original_error:
-                            print(f"🔧 إصلاح مشكلة ContentType: {model_name}")
-                            # تجاهل هذا العنصر مؤقتاً وإنشاؤه لاحقاً
-                            continue
-                        
-                        # معالجة مشاكل الصلاحيات
-                        elif 'permission_id' in original_error and 'foreign key' in original_error:
-                            print(f"🔧 إصلاح مشكلة الصلاحيات: {model_name}")
-                            fields.pop('user_permissions', None)
-                            fields.pop('groups', None)
-                            item_copy['fields'] = fields
-                          # معالجة مشاكل الخصائص المفقودة
-                        elif 'has no attribute' in original_error:
-                            print(f"🔧 إصلاح مشكلة خاصية مفقودة: {model_name}")
-                            
-                            # معالجة خاصة لـ SystemSettings
-                            if model_name == 'accounts.systemsettings':
-                                # إزالة الخصائص القديمة وإضافة تعيين صحيح
-                                if 'default_currency' in original_error:
-                                    # إزالة default_currency وتعيين currency بدلاً منه
-                                    default_curr = fields.pop('default_currency', 'SAR')
-                                    if 'currency' not in fields:
-                                        fields['currency'] = default_curr
-                                    print(f"🔄 تم تحويل default_currency إلى currency: {default_curr}")
-                                
-                                # إزالة خصائص أخرى مفقودة
-                                problematic_fields = ['timezone', 'date_format', 'time_format']
-                                for field in problematic_fields:
-                                    if field in fields:
-                                        removed_value = fields.pop(field, None)
-                                        print(f"🗑️ تم إزالة الخاصية المفقودة {field}: {removed_value}")
-                            else:
-                                # معالجة عامة للموديلات الأخرى
-                                problematic_fields = ['default_currency', 'timezone', 'date_format', 'time_format']
-                                for field in problematic_fields:
-                                    if field in original_error and field in fields:
-                                        removed_value = fields.pop(field, None)
-                                        print(f"🗑️ تم إزالة الخاصية المفقودة {field}: {removed_value}")
-                            
-                            item_copy['fields'] = fields
-                        
-                        # معالجة مشاكل المفاتيح الخارجية
-                        elif 'foreign key constraint' in original_error or 'violates foreign key constraint' in original_error:
-                            print(f"🔧 محاولة إصلاح مفتاح خارجي مفقود: {model_name}")
-                            # إزالة المفاتيح الخارجية المشكوك فيها
-                            foreign_key_fields = ['customer', 'user', 'order', 'product', 'category']
-                            for field in foreign_key_fields:
-                                if field in fields and fields[field] is None:
-                                    fields.pop(field, None)
-                            item_copy['fields'] = fields
-                        
-                        # معالجة مشاكل القيود الفريدة
-                        elif 'UNIQUE constraint failed' in original_error or 'duplicate key value' in original_error:
-                            print(f"🔧 إصلاح مشكلة التكرار: {model_name}")
-                            # تجاهل هذا العنصر إذا كان مكرراً
-                            continue
-                        
                         for obj in serializers.deserialize('json', json.dumps([item_copy])):
                             obj.save()
-                    second_attempt_success += 1
                     success_count += 1
-                    error_count -= 1
-                    print(f"✅ نجح إصلاح العنصر {original_index + 1}")
-                except Exception as e:
-                    # طباعة تفاصيل الأخطاء المستمرة
-                    if len(failed_items) - second_attempt_success <= 10:
-                        print(f"❌ فشل نهائي في العنصر {original_index + 1} ({item.get('model', 'unknown')}): {str(e)[:200]}...")
-
-            print(f"✅ نجحت المحاولة الثانية في استعادة {second_attempt_success} عنصر إضافي")
-
-        # محاولة ثالثة: إصلاح مشاكل ContentType المتبقية
-        remaining_failed = [item for item in failed_items if 'ContentType matching query does not exist' in item[2]]
-        if remaining_failed:
-            print(f"🔄 محاولة ثالثة لإصلاح {len(remaining_failed)} عنصر بمشاكل ContentType...")
-            
-            # إنشاء ContentTypes المفقودة أولاً
-            from django.contrib.contenttypes.models import ContentType
-            
-            third_attempt_success = 0
-            for original_index, item, original_error in remaining_failed:
-                try:
-                    with transaction.atomic():
-                        model_name = item.get('model', 'unknown')
-                        
-                        # محاولة إنشاء ContentType المفقود
-                        if model_name == 'auth.permission':
-                            fields = item.get('fields', {})
-                            content_type_info = fields.get('content_type', [])
-                            
-                            if content_type_info and len(content_type_info) >= 2:
-                                app_label = content_type_info[0]
-                                model_class = content_type_info[1]
-                                
-                                # محاولة إنشاء أو العثور على ContentType
-                                try:
-                                    content_type, created = ContentType.objects.get_or_create(
-                                        app_label=app_label,
-                                        model=model_class
-                                    )
-                                    if created:
-                                        print(f"🆕 تم إنشاء ContentType مفقود: {app_label}.{model_class}")
-                                except Exception as ct_error:
-                                    print(f"⚠️ لا يمكن إنشاء ContentType: {app_label}.{model_class} - {str(ct_error)[:100]}")
-                                    continue
-                        
-                        # الآن محاولة استعادة العنصر مرة أخرى
-                        for obj in serializers.deserialize('json', json.dumps([item])):
-                            obj.save()
-                        
-                        third_attempt_success += 1
-                        success_count += 1
-                        error_count -= 1
-                        print(f"✅ نجح إصلاح ContentType للعنصر {original_index + 1}")
-                        
-                except Exception as e:
-                    # تجاهل الأخطاء في المحاولة الثالثة
+                    second_attempt_success += 1
+                except Exception as second_error:
                     pass
+        summary['success'] = success_count
+        summary['errors'] = error_count
+        summary['failed_items'] = failed_items
+        return summary
+    except Exception as e:
+        raise
+
+def _restore_json_simple_with_progress(file_path, clear_existing=False, progress_callback=None, session_id=None):
+    """
+    استعادة البيانات من ملف JSON مع دعم شريط التقدم
+    """
+    import json
+    from django.core import serializers
+    from django.db import transaction
+    from django.apps import apps
+    
+    def update_progress(current_step=None, processed_items=None, success_count=None, error_count=None):
+        """دالة مساعدة لتحديث التقدم"""
+        if progress_callback:
+            # حساب النسبة المئوية
+            progress_percentage = 0
+            if processed_items is not None and total_items > 0:
+                progress_percentage = min(100, int((processed_items / total_items) * 100))
             
-            if third_attempt_success > 0:
-                print(f"✅ نجحت المحاولة الثالثة في استعادة {third_attempt_success} عنصر إضافي")
+            progress_callback(
+                progress_percentage=progress_percentage,
+                current_step=current_step,
+                processed_items=processed_items,
+                success_count=success_count,
+                error_count=error_count
+            )
 
-        print(f"🎯 تمت الاستعادة: {success_count} عنصر بنجاح، {error_count} عنصر فشل نهائياً")
+    try:
+        update_progress(current_step='قراءة الملف...')
         
-        if error_count > 0:
-            print(f"⚠️ تحذير: {error_count} عنصر لم يتم استعادته. قد تحتاج لمراجعة البيانات.")
-
+        # قراءة الملف
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        total_items = len(data)
+        update_progress(current_step='تحليل البيانات...', processed_items=0)
+        
+        # تحديث إجمالي العناصر
+        if progress_callback:
+            progress_callback(total_items=total_items)
+        
+        success_count = 0
+        error_count = 0
+        failed_items = []
+        
+        update_progress(current_step='بدء استعادة البيانات...', processed_items=0, success_count=0, error_count=0)
+        
+        print(f"🚀 [DEBUG] Starting restore process for {total_items} items")
+        print(f"🔧 [DEBUG] Clear existing data: {clear_existing}")
+        print(f"📝 [DEBUG] Session ID: {session_id}")
+        
+        # حذف البيانات القديمة إذا طُلب ذلك
+        if clear_existing:
+            print(f"🗑️ [DEBUG] Starting data deletion process...")
+            update_progress(current_step='حذف البيانات القديمة...', processed_items=0, success_count=0, error_count=0)
+            
+            # الحصول على جميع النماذج المستخدمة في البيانات
+            models_to_clear = set()
+            for item in data:
+                if 'model' in item:
+                    models_to_clear.add(item['model'])
+            
+            # حفظ معلومات سجل التقدم الحالي قبل الحذف
+            current_progress_data = None
+            try:
+                current_progress = RestoreProgress.objects.get(session_id=session_id)
+                current_progress_data = {
+                    'session_id': current_progress.session_id,
+                    'user_id': current_progress.user.id,
+                    'database_id': current_progress.database.id,
+                    'filename': current_progress.filename,
+                    'status': current_progress.status,
+                    'progress_percentage': current_progress.progress_percentage,
+                    'current_step': current_progress.current_step,
+                    'total_items': current_progress.total_items,
+                    'processed_items': current_progress.processed_items,
+                    'success_count': current_progress.success_count,
+                    'error_count': current_progress.error_count,
+                    'error_message': current_progress.error_message,
+                    'result_data': current_progress.result_data
+                }
+                print(f"✅ [DEBUG] Saved current progress data before deletion")
+            except RestoreProgress.DoesNotExist:
+                print(f"⚠️ [DEBUG] No current progress record found to save")
+            
+            # قائمة النماذج المحظورة من الحذف (لحماية نظام التقدم)
+            protected_models = {
+                'odoo_db_manager.restoreprogress',  # نظام التقدم
+                'sessions.session',                 # جلسات المستخدمين
+                'auth.user',                       # المستخدمين
+                'auth.group',                      # المجموعات
+                'auth.permission',                 # الصلاحيات
+                'contenttypes.contenttype',        # أنواع المحتوى
+                'admin.logentry',                  # سجل الإدارة
+                'django_apscheduler.djangojob',    # مهام الجدولة
+                'django_apscheduler.djangojobexecution'  # تنفيذ المهام
+            }
+            
+            # حذف البيانات لكل نموذج (باستثناء النماذج المحظورة)
+            deleted_models_count = 0
+            total_models = len([m for m in models_to_clear if m.lower() not in protected_models])
+            
+            for model_name in models_to_clear:
+                if model_name.lower() not in protected_models:
+                    try:
+                        model = apps.get_model(model_name)
+                        deleted_count = model.objects.all().delete()[0]
+                        deleted_models_count += 1
+                        
+                        # تحديث التقدم أثناء حذف البيانات
+                        deletion_progress = int((deleted_models_count / total_models) * 100) if total_models > 0 else 0
+                        update_progress(
+                            current_step=f'حذف البيانات القديمة... ({deleted_models_count}/{total_models}) - {model_name}',
+                            processed_items=0,
+                            success_count=0,
+                            error_count=0
+                        )
+                        
+                        print(f"✅ تم حذف {deleted_count} عنصر من {model_name}")
+                    except Exception as e:
+                        print(f"⚠️ خطأ في حذف بيانات {model_name}: {str(e)}")
+                else:
+                    print(f"🔒 تم تجاهل حذف {model_name} (نموذج محمي)")
+            
+            # إعادة إنشاء سجل التقدم إذا تم حذفه عن طريق الخطأ
+            if current_progress_data:
+                try:
+                    # التحقق من وجود السجل
+                    RestoreProgress.objects.get(session_id=session_id)
+                    print(f"✅ [DEBUG] Progress record still exists after deletion")
+                except RestoreProgress.DoesNotExist:
+                    # إعادة إنشاء السجل
+                    try:
+                        from accounts.models import User
+                        user = User.objects.get(id=current_progress_data['user_id'])
+                        database = Database.objects.get(id=current_progress_data['database_id'])
+                        
+                        RestoreProgress.objects.create(
+                            session_id=current_progress_data['session_id'],
+                            user=user,
+                            database=database,
+                            filename=current_progress_data['filename'],
+                            status=current_progress_data['status'],
+                            progress_percentage=current_progress_data['progress_percentage'],
+                            current_step=current_progress_data['current_step'],
+                            total_items=current_progress_data['total_items'],
+                            processed_items=current_progress_data['processed_items'],
+                            success_count=current_progress_data['success_count'],
+                            error_count=current_progress_data['error_count'],
+                            error_message=current_progress_data['error_message'],
+                            result_data=current_progress_data['result_data']
+                        )
+                        print(f"✅ [DEBUG] Progress record recreated after deletion")
+                    except Exception as recreate_error:
+                        print(f"❌ [DEBUG] Failed to recreate progress record: {str(recreate_error)}")
+        
+        # استخدام الطريقة اليدوية مع تحديث التقدم
+        for idx, item in enumerate(data):
+            try:
+                # تحديث التقدم كل 10 عناصر لتحسين الأداء
+                if idx % 10 == 0:
+                    update_progress(
+                        current_step=f'معالجة العنصر {idx + 1} من {total_items}...',
+                        processed_items=idx,
+                        success_count=success_count,
+                        error_count=error_count
+                    )
+                
+                # محاولة استعادة العنصر باستخدام Django serializers
+                try:
+                    # تحويل العنصر إلى JSON string
+                    item_json = json.dumps([item])
+                    
+                    # استخدام Django deserializer
+                    for deserialized_obj in serializers.deserialize('json', item_json):
+                        deserialized_obj.save()
+                    
+                    success_count += 1
+                    
+                except Exception as item_error:
+                    error_count += 1
+                    error_msg = str(item_error)
+                    failed_items.append(f"العنصر {idx + 1} ({item.get('model','?')}): {error_msg[:100]}...")
+                    
+                    # طباعة الخطأ للمراقبة
+                    if idx < 10:  # طباعة أول 10 أخطاء فقط
+                        print(f"- العنصر {idx + 1} ({item.get('model','?')}): {error_msg[:100]}...")
+                    
+            except Exception as e:
+                error_count += 1
+                failed_items.append(f"العنصر {idx + 1}: {str(e)[:100]}...")
+        
+        # تحديث نهائي
+        update_progress(
+            current_step='اكتملت الاستعادة',
+            processed_items=total_items,
+            success_count=success_count,
+            error_count=error_count
+        )
+        
+        # طباعة ملخص العملية
+        print(f"\n{'='*31}")
+        print(f"ملخص عملية الاستعادة:")
+        print(f"إجمالي العناصر: {total_items}")
+        print(f"تمت الاستعادة بنجاح: {success_count}")
+        print(f"أخطاء: {error_count}")
+        if failed_items:
+            print(f"أول 5 أخطاء:")
+            for error in failed_items[:5]:
+                print(f"- {error}")
+        print(f"{'='*31}")
+        
         return {
+            'total_items': total_items,
             'success_count': success_count,
             'error_count': error_count,
-            'total_count': len(final_data)
+            'errors': failed_items[:10]  # أول 10 أخطاء فقط
         }
-
-    except ValueError as ve:
-        # خطأ في تنسيق الملف
-        print(f"❌ خطأ في تنسيق الملف: {str(ve)}")
-        raise ve
+        
     except Exception as e:
-        print(f"❌ خطأ في قراءة الملف: {str(e)}")
-        raise Exception(f"فشل في قراءة أو معالجة الملف: {str(e)}")
+        update_progress(current_step=f'خطأ في الاستعادة: {str(e)}')
+        raise e
 
 
 # ==================== عروض Google Drive ====================
@@ -2026,3 +2223,189 @@ def _apply_migrations_to_database(database):
     except Exception as e:
         print(f"خطأ في تطبيق migrations: {str(e)}")
         return False
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def restore_progress_stream(request, session_id):
+    """Server-Sent Events endpoint لإرسال تحديثات التقدم"""
+    
+    def event_stream():
+        """دالة لإرسال تحديثات التقدم"""
+        last_update = None
+        
+        while True:
+            try:
+                # الحصول على تحديث التقدم
+                progress = RestoreProgress.objects.filter(session_id=session_id).first()
+                
+                if not progress:
+                    # إرسال رسالة خطأ وإنهاء الاتصال
+                    yield f"data: {json.dumps({'error': 'الجلسة غير موجودة'})}\n\n"
+                    break
+                
+                # التحقق من وجود تحديث جديد
+                if last_update is None or progress.updated_at > last_update:
+                    last_update = progress.updated_at
+                    
+                    # إعداد البيانات للإرسال
+                    data = {
+                        'status': progress.status,
+                        'progress_percentage': progress.progress_percentage,
+                        'current_step': progress.current_step,
+                        'total_items': progress.total_items,
+                        'processed_items': progress.processed_items,
+                        'success_count': progress.success_count,
+                        'error_count': progress.error_count,
+                        'error_message': progress.error_message,
+                        'result_data': progress.result_data,
+                        'updated_at': progress.updated_at.isoformat()
+                    }
+                    
+                    yield f"data: {json.dumps(data)}\n\n"
+                    
+                    # إنهاء الاتصال إذا انتهت العملية
+                    if progress.status in ['completed', 'failed']:
+                        break
+                
+                # انتظار قبل التحقق مرة أخرى
+                time.sleep(1)
+                
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                break
+    
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    response['Access-Control-Allow-Origin'] = '*'
+    return response
+
+
+@csrf_exempt
+def restore_progress_status(request, session_id):
+    """
+    الحصول على حالة تقدم الاستعادة عبر AJAX
+    """
+    print(f"🔍 [DEBUG] restore_progress_status called for session: {session_id}")
+    
+    try:
+        # البحث عن جلسة الاستعادة أولاً
+        progress = RestoreProgress.objects.filter(session_id=session_id).first()
+        
+        if not progress:
+            print(f"❌ [DEBUG] Progress not found for session: {session_id}")
+            return JsonResponse({'error': 'الجلسة غير موجودة'}, status=404)
+        
+        print(f"✅ [DEBUG] Progress found for session: {session_id}")
+        print(f"✅ [DEBUG] Progress status: {progress.status} - {progress.progress_percentage}%")
+        
+        # إعداد البيانات للإرسال
+        data = {
+            'status': progress.status,
+            'progress_percentage': progress.progress_percentage,
+            'current_step': progress.current_step,
+            'total_items': progress.total_items,
+            'processed_items': progress.processed_items,
+            'success_count': progress.success_count,
+            'error_count': progress.error_count,
+            'error_message': progress.error_message,
+            'result_data': progress.result_data,
+            'updated_at': progress.updated_at.isoformat(),
+            'session_valid': True
+        }
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        print(f"❌ [DEBUG] Error in restore_progress_status: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def generate_temp_token(request):
+    """إنشاء رمز مؤقت للعمليات الطويلة"""
+    try:
+        print(f"🔍 [DEBUG] generate_temp_token called")
+        print(f"🔍 [DEBUG] User authenticated: {request.user.is_authenticated}")
+        print(f"🔍 [DEBUG] User: {request.user}")
+        print(f"🔍 [DEBUG] User is_staff: {getattr(request.user, 'is_staff', False)}")
+        print(f"🔍 [DEBUG] User is_superuser: {getattr(request.user, 'is_superuser', False)}")
+        
+        # التحقق من تسجيل الدخول
+        if not request.user.is_authenticated:
+            print("❌ [DEBUG] User not authenticated")
+            return JsonResponse({'error': 'يجب تسجيل الدخول أولاً'}, status=401)
+        
+        if not (request.user.is_staff or request.user.is_superuser):
+            print("❌ [DEBUG] User not staff or superuser")
+            return JsonResponse({
+                'error': 'ليس لديك صلاحية للقيام بهذا الإجراء'
+            }, status=403)
+        
+        # إنشاء رمز مميز
+        temp_token = secrets.token_urlsafe(32)
+        cache.set(f'temp_token_{temp_token}', request.user.id, 10800)  # 3 ساعات
+
+        print(f"✅ [DEBUG] Generated temp token: {temp_token[:10]}...")
+        return JsonResponse({'temp_token': temp_token})
+
+    except Exception as e:
+        print(f"❌ [DEBUG] Error in generate_temp_token: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def refresh_session(request):
+    """
+    تجديد جلسة المستخدم باستخدام رمز مؤقت.
+    """
+    try:
+        print(f"🔍 [DEBUG] refresh_session called")
+        print(f"🔍 [DEBUG] Request method: {request.method}")
+        print(f"🔍 [DEBUG] Request path: {request.path}")
+        print(f"🔍 [DEBUG] Request body: {request.body}")
+        
+        data = json.loads(request.body)
+        temp_token = data.get('temp_token')
+        print(f"🔍 [DEBUG] temp_token received: {temp_token[:10] if temp_token else 'None'}...")
+
+        if not temp_token:
+            return JsonResponse({
+                'success': False, 
+                'message': 'الرمز المؤقت مفقود'
+            }, status=400)
+
+        # التحقق من الرمز المؤقت
+        user_id = cache.get(f'temp_token_{temp_token}')
+        print(f"🔍 [DEBUG] user_id from cache: {user_id}")
+        if not user_id:
+            print(f"❌ [DEBUG] temp_token not found in cache")
+            return JsonResponse({
+                'success': False, 
+                'message': 'الرمز المؤقت غير صالح أو منتهي الصلاحية'
+            }, status=403)
+
+        try:
+            user = get_user_model().objects.get(pk=user_id)
+        except get_user_model().DoesNotExist:
+            # المستخدم قد يكون محذوف أثناء عملية الاستعادة
+            # في هذه الحالة، نسمح بالمتابعة بدون مستخدم فعلي
+            user = None
+        
+        # لا تقم بتسجيل الدخول هنا، لتجنب التعارض مع عملية الاستعادة
+        # login(request, user)
+        
+        # إنشاء رمز API جديد للاستخدام المتعدد
+        api_token = secrets.token_urlsafe(32)
+        # استخدام user_id بدلاً من user.id لتجنب خطأ NoneType
+        cache.set(f'progress_api_token_{api_token}', user_id, timeout=300) # صالح لمدة 5 دقائق
+
+        return JsonResponse({
+            'success': True,
+            'message': 'تم تجديد الجلسة بنجاح',
+            'api_token': api_token  # إرجاع الرمز الجديد
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
