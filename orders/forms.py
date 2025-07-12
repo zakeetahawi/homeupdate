@@ -201,8 +201,19 @@ class OrderForm(forms.ModelForm):
             instance.status = 'normal'  # تعيين وضع الطلب تلقائياً إلى "عادي" للمعاينة
             status = 'normal'  # تحديث المتغير للاستخدام في الحسابات
         
-        # --- Calculate and set Expected Delivery Date ---
-        days_to_add = 7 if status == 'vip' else 15
+        # --- Calculate and set Expected Delivery Date using the new system ---
+        # تحديد نوع الطلب للحصول على عدد الأيام المناسب
+        order_type = 'vip' if status == 'vip' else 'normal'
+        
+        # التحقق من وجود معاينة في الطلب
+        if selected_type == 'inspection':
+            order_type = 'inspection'
+        
+        # الحصول على عدد الأيام من الإعدادات
+        from orders.models import DeliveryTimeSettings
+        days_to_add = DeliveryTimeSettings.get_delivery_days(order_type)
+        
+        # حساب التاريخ المتوقع
         instance.expected_delivery_date = timezone.now().date() + timedelta(days=days_to_add)
 
         # Now, modify the instance with the other transformed data

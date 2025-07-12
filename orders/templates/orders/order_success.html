@@ -170,16 +170,31 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            {% if order.expected_delivery_date %}
-                            <div class="info-item">
-                                <span class="info-label">
-                                    <i class="fas fa-clock me-2"></i>تاريخ التسليم المتوقع:
-                                </span>
-                                <span class="info-value text-primary">
-                                    <strong>{{ order.expected_delivery_date|date:"Y/m/d" }}</strong>
-                                </span>
-                            </div>
-                            {% endif %}
+                            {% with types_list=order.get_selected_types_list %}
+                                {% if types_list|length == 1 and 'inspection' in types_list %}
+                                    <div class="info-item">
+                                        <span class="info-label">
+                                            <i class="fas fa-clock me-2"></i>موعد المعاينة المتوقع:
+                                        </span>
+                                        <span class="info-value text-primary">
+                                            <strong>{{ order.expected_delivery_date|date:"Y/m/d" }}</strong>
+                                            <br><small class="text-info">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                هذا الموعد هو 48 ساعة من تاريخ الطلب
+                                            </small>
+                                        </span>
+                                    </div>
+                                {% elif order.expected_delivery_date %}
+                                    <div class="info-item">
+                                        <span class="info-label">
+                                            <i class="fas fa-clock me-2"></i>تاريخ التسليم المتوقع:
+                                        </span>
+                                        <span class="info-value text-primary">
+                                            <strong>{{ order.expected_delivery_date|date:"Y/m/d" }}</strong>
+                                        </span>
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
                             <div class="info-item">
                                 <span class="info-label">
                                     <i class="fas fa-store me-2"></i>الفرع:
@@ -428,21 +443,35 @@
                 {% endif %}
 
                 <!-- Delivery Timeline -->
-                {% if order.expected_delivery_date %}
-                <div class="mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.2);">
-                    <h6><i class="fas fa-calendar-check me-2"></i>الجدولة المتوقعة</h6>
-                    <p class="mb-1">
-                        <strong>التسليم المتوقع:</strong><br>
-                        {{ order.expected_delivery_date|date:"l, j F Y" }}
-                    </p>
-                    {% if order.status == 'vip' %}
-                    <small class="text-warning">
-                        <i class="fas fa-star me-1"></i>
-                        طلب VIP - أولوية عالية
-                    </small>
+                {% with types_list=order.get_selected_types_list %}
+                    {% if types_list|length == 1 and 'inspection' in types_list and order.expected_delivery_date %}
+                        <div class="mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.2);">
+                            <h6><i class="fas fa-calendar-check me-2"></i>موعد المعاينة المتوقع</h6>
+                            <p class="mb-1">
+                                <strong>موعد المعاينة المتوقع:</strong><br>
+                                {{ order.expected_delivery_date|date:"l, j F Y" }}
+                                <br><small class="text-info">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    هذا الموعد هو 48 ساعة من تاريخ الطلب
+                                </small>
+                            </p>
+                        </div>
+                    {% elif order.expected_delivery_date %}
+                        <div class="mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.2);">
+                            <h6><i class="fas fa-calendar-check me-2"></i>الجدولة المتوقعة</h6>
+                            <p class="mb-1">
+                                <strong>التسليم المتوقع:</strong><br>
+                                {{ order.expected_delivery_date|date:"l, j F Y" }}
+                            </p>
+                            {% if order.status == 'vip' %}
+                            <small class="text-warning">
+                                <i class="fas fa-star me-1"></i>
+                                طلب VIP - أولوية عالية
+                            </small>
+                            {% endif %}
+                        </div>
                     {% endif %}
-                </div>
-                {% endif %}
+                {% endwith %}
             </div>
 
             <!-- Action Buttons -->

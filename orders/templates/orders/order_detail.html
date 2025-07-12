@@ -87,7 +87,7 @@
                         <!-- Show different date info for inspection vs other orders -->
                         {% with types_list=order.get_selected_types_list %}
                         {% if 'inspection' in types_list or 'inspection' in order.selected_types %}
-                            <!-- For inspection orders, show status and dates -->
+                            <!-- For inspection orders, show inspection date -->
                             {% with inspection=order.inspections.first %}
                                 {% if inspection %}
                                     {% if inspection.status == 'completed' %}
@@ -143,6 +143,50 @@
                                     </td>
                                 </tr>
                                 {% endif %}
+                            {% endwith %}
+                            
+                            <!-- Show expected inspection date -->
+                            {% with types_list=order.get_selected_types_list %}
+                            {% if types_list|length == 1 and 'inspection' in types_list and order.expected_delivery_date %}
+                                <tr>
+                                    <th>موعد المعاينة المتوقع</th>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ order.expected_delivery_date|date:"Y-m-d" }}
+                                        </span>
+                                        <br><small class="text-muted">
+                                            هذا الموعد هو 48 ساعة من تاريخ الطلب
+                                        </small>
+                                    </td>
+                                </tr>
+                            {% elif order.get_smart_delivery_date %}
+                                <tr>
+                                    <th>{{ order.get_delivery_date_label }}</th>
+                                    <td>
+                                        <span class="badge {% if order.order_status == 'delivered' %}bg-success{% elif order.order_status == 'completed' or order.order_status == 'ready_install' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            {{ order.get_smart_delivery_date|date:"Y-m-d" }}
+                                        </span>
+                                        {% if order.status == 'vip' %}
+                                            <small class="text-warning ms-2">
+                                                <i class="fas fa-star"></i> VIP - أولوية عالية
+                                            </small>
+                                        {% endif %}
+                                        {% if order.order_status in 'completed,ready_install,delivered' %}
+                                            <br><small class="text-muted">
+                                                {% if order.order_status == 'delivered' %}
+                                                    تم التسليم فعلياً
+                                                {% elif order.order_status == 'completed' %}
+                                                    تم الإكمال في المصنع
+                                                {% elif order.order_status == 'ready_install' %}
+                                                    جاهز للتركيب
+                                                {% endif %}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
                             {% endwith %}
                         {% else %}
                             <!-- For other orders, show smart delivery date -->
