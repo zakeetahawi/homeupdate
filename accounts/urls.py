@@ -28,6 +28,17 @@ urlpatterns = [
          views.mark_notification_read, name='mark_notification_read'),
     path('notifications/mark-all-read/',
          views.mark_all_notifications_read, name='mark_all_notifications_read'),
+    
+    # API Notification URLs
+    path('api/notifications/', api_views.notification_list, name='api_notifications'),
+    path('api/notifications/unread/', api_views.unread_notifications, name='api_unread_notifications'),
+    path('api/notifications/<int:notification_id>/mark-read/', 
+         api_views.mark_notification_read, name='api_mark_notification_read'),
+    path('api/notifications/mark-all-read/', 
+         api_views.mark_all_notifications_read, name='api_mark_all_notifications_read'),
+    path('api/notifications/<int:notification_id>/archive/', 
+         api_views.archive_notification, name='api_archive_notification'),
+    path('api/notifications/stats/', api_views.notification_stats, name='api_notification_stats'),
 
     # Company Info URLs
     path('company-info/', views.company_info_view, name='company_info'),

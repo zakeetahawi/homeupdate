@@ -19,6 +19,13 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ('name', 'code', 'description')
     readonly_fields = ('get_current_stock', 'created_at', 'updated_at')
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'category', 'category__parent'
+        ).prefetch_related(
+            'transactions', 'batches'
+        )
+
     fieldsets = (
         (_('معلومات المنتج'), {
             'fields': ('name', 'code', 'category', 'description')

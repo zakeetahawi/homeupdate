@@ -6,6 +6,8 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.conf import settings
+from datetime import timedelta
+
 class User(AbstractUser):
     """Custom User model for the application."""
     image = models.ImageField(upload_to='users/', verbose_name=_('صورة المستخدم'), blank=True, null=True)
@@ -120,42 +122,171 @@ class Department(models.Model):
         verbose_name_plural = 'الأقسام'
         ordering = ['order', 'name']
 class Notification(models.Model):
+    """نموذج الإشعارات المحسن"""
     PRIORITY_CHOICES = [
-        ('low', 'منخفضة'),
-        ('medium', 'متوسطة'),
-        ('high', 'عالية'),
+        ('low', 'منخفض'),
+        ('medium', 'متوسط'),
+        ('high', 'عالي'),
+        ('urgent', 'عاجل'),
     ]
-    title = models.CharField(max_length=200)
-    message = models.TextField()
-    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    read_at = models.DateTimeField(null=True, blank=True)
-    is_read = models.BooleanField(default=False)
-    read_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='read_notifications')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications')
-    target_users = models.ManyToManyField(User, blank=True, related_name='received_notifications')
-    target_department = models.ForeignKey(Department, on_delete=models.CASCADE, null=True, blank=True)
-    target_branch = models.ForeignKey(Branch, on_delete=models.CASCADE, null=True, blank=True)
-    # Generic relation to any model
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
-    object_id = models.PositiveIntegerField(null=True, blank=True)
-    content_object = GenericForeignKey('content_type', 'object_id')
-    sender_department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='sent_notifications')
-    def mark_as_read(self, user):
-        """
-        Mark notification as read by a specific user
-        """
-        self.is_read = True
-        self.read_at = timezone.now()
-        self.read_by = user
-        self.save()
-    def __str__(self):
-        return self.title
+    
+    TYPE_CHOICES = [
+        ('info', 'معلومات'),
+        ('success', 'نجاح'),
+        ('warning', 'تحذير'),
+        ('error', 'خطأ'),
+        ('order', 'طلب'),
+        ('inspection', 'معاينة'),
+        ('manufacturing', 'تصنيع'),
+        ('inventory', 'مخزون'),
+        ('system', 'نظام'),
+    ]
+    
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    message = models.TextField(verbose_name='الرسالة')
+    notification_type = models.CharField(
+        max_length=20, 
+        choices=TYPE_CHOICES, 
+        default='info',
+        verbose_name='نوع الإشعار'
+    )
+    priority = models.CharField(
+        max_length=10, 
+        choices=PRIORITY_CHOICES, 
+        default='medium',
+        verbose_name='الأولوية'
+    )
+    
+    # المستلمون
+    recipients = models.ManyToManyField(
+        User, 
+        related_name='received_notifications',
+        verbose_name='المستلمون'
+    )
+    target_departments = models.ManyToManyField(
+        Department, 
+        blank=True,
+        verbose_name='الأقسام المستهدفة'
+    )
+    target_branches = models.ManyToManyField(
+        Branch, 
+        blank=True,
+        verbose_name='الفروع المستهدفة'
+    )
+    
+    # الكائن المرتبط
+    content_type = models.ForeignKey(
+        ContentType, 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        verbose_name='نوع المحتوى'
+    )
+    object_id = models.PositiveIntegerField(
+        null=True, 
+        blank=True,
+        verbose_name='معرف الكائن'
+    )
+    
+    # حالة الإشعار
+    is_read = models.BooleanField(default=False, verbose_name='مقروء')
+    is_sent = models.BooleanField(default=False, verbose_name='تم الإرسال')
+    is_archived = models.BooleanField(default=False, verbose_name='مؤرشف')
+    
+    # التواريخ
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    sent_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الإرسال')
+    read_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ القراءة')
+    
+    # المرسل
+    sender = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='sent_notifications',
+        verbose_name='المرسل'
+    )
+    
+    # إعدادات إضافية
+    auto_delete_after_days = models.PositiveIntegerField(
+        default=30,
+        verbose_name='حذف تلقائي بعد (أيام)'
+    )
+    requires_action = models.BooleanField(
+        default=False,
+        verbose_name='يتطلب إجراء'
+    )
+    action_url = models.URLField(
+        blank=True,
+        verbose_name='رابط الإجراء'
+    )
+    
     class Meta:
         verbose_name = 'إشعار'
         verbose_name_plural = 'الإشعارات'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['notification_type', 'priority']),
+            models.Index(fields=['is_read', 'created_at']),
+            models.Index(fields=['content_type', 'object_id']),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} - {self.get_priority_display()}"
+    
+    def mark_as_read(self, user):
+        """تحديد الإشعار كمقروء"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=['is_read', 'read_at'])
+    
+    def mark_as_sent(self):
+        """تحديد الإشعار كمرسل"""
+        if not self.is_sent:
+            self.is_sent = True
+            self.sent_at = timezone.now()
+            self.save(update_fields=['is_sent', 'sent_at'])
+    
+    def archive(self):
+        """أرشفة الإشعار"""
+        self.is_archived = True
+        self.save(update_fields=['is_archived'])
+    
+    @classmethod
+    def create_notification(cls, title, message, notification_type='info', 
+                          priority='medium', recipients=None, **kwargs):
+        """إنشاء إشعار جديد"""
+        notification = cls.objects.create(
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            priority=priority,
+            **kwargs
+        )
+        
+        if recipients:
+            notification.recipients.set(recipients)
+        
+        return notification
+    
+    @classmethod
+    def get_unread_for_user(cls, user):
+        """الحصول على الإشعارات غير المقروءة للمستخدم"""
+        return cls.objects.filter(
+            recipients=user,
+            is_read=False,
+            is_archived=False
+        ).select_related('sender', 'content_type')
+    
+    @classmethod
+    def get_recent_for_user(cls, user, limit=10):
+        """الحصول على أحدث الإشعارات للمستخدم"""
+        return cls.objects.filter(
+            recipients=user,
+            is_archived=False
+        ).select_related('sender', 'content_type').order_by('-created_at')[:limit]
 class CompanyInfo(models.Model):
     # حقول مخصصة للنظام - لا يمكن تغييرها إلا من المبرمج
     version = models.CharField(max_length=50, blank=True, default='1.0.0', verbose_name='إصدار النظام', editable=False)
@@ -485,3 +616,290 @@ class BranchMessage(models.Model):
     def is_valid(self):
         now = timezone.now()
         return self.is_active and self.start_date <= now <= self.end_date
+
+class UnifiedSystemSettings(models.Model):
+    """
+    نموذج موحد لإعدادات النظام ومعلومات الشركة
+    يجمع بين CompanyInfo و SystemSettings في نموذج واحد
+    """
+    CURRENCY_CHOICES = [
+        ('SAR', _('ريال سعودي')),
+        ('EGP', _('جنيه مصري')),
+        ('USD', _('دولار أمريكي')),
+        ('EUR', _('يورو')),
+        ('AED', _('درهم إماراتي')),
+        ('KWD', _('دينار كويتي')),
+        ('QAR', _('ريال قطري')),
+        ('BHD', _('دينار بحريني')),
+        ('OMR', _('ريال عماني')),
+    ]
+    
+    # معلومات الشركة الأساسية
+    company_name = models.CharField(max_length=200, default='Elkhawaga', verbose_name='اسم الشركة')
+    company_logo = models.ImageField(upload_to='company_logos/', null=True, blank=True, verbose_name='شعار الشركة')
+    company_address = models.TextField(blank=True, null=True, verbose_name='عنوان الشركة')
+    company_phone = models.CharField(max_length=20, blank=True, null=True, verbose_name='هاتف الشركة')
+    company_email = models.EmailField(blank=True, null=True, verbose_name='بريد الشركة')
+    company_website = models.URLField(blank=True, null=True, verbose_name='موقع الشركة')
+    
+    # معلومات قانونية
+    tax_number = models.CharField(max_length=50, blank=True, null=True, verbose_name='الرقم الضريبي')
+    commercial_register = models.CharField(max_length=50, blank=True, null=True, verbose_name='السجل التجاري')
+    
+    # إعدادات النظام
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='SAR', verbose_name='العملة')
+    enable_notifications = models.BooleanField(default=True, verbose_name='تفعيل الإشعارات')
+    enable_email_notifications = models.BooleanField(default=False, verbose_name='تفعيل إشعارات البريد الإلكتروني')
+    items_per_page = models.PositiveIntegerField(default=20, verbose_name='عدد العناصر في الصفحة')
+    low_stock_threshold = models.PositiveIntegerField(default=20, verbose_name='حد المخزون المنخفض (%)')
+    enable_analytics = models.BooleanField(default=True, verbose_name='تفعيل التحليلات')
+    
+    # إعدادات الواجهة
+    primary_color = models.CharField(max_length=20, blank=True, null=True, verbose_name='اللون الأساسي')
+    secondary_color = models.CharField(max_length=20, blank=True, null=True, verbose_name='اللون الثانوي')
+    accent_color = models.CharField(max_length=20, blank=True, null=True, verbose_name='لون التمييز')
+    default_theme = models.CharField(max_length=50, default='default', verbose_name='الثيم الافتراضي')
+    
+    # معلومات إضافية
+    working_hours = models.CharField(max_length=100, blank=True, default='', verbose_name='ساعات العمل')
+    about_text = models.TextField(blank=True, null=True, verbose_name='نص عن الشركة')
+    vision_text = models.TextField(blank=True, null=True, verbose_name='رؤية الشركة')
+    mission_text = models.TextField(blank=True, null=True, verbose_name='رسالة الشركة')
+    description = models.TextField(blank=True, null=True, verbose_name='وصف الشركة')
+    
+    # وسائل التواصل الاجتماعي
+    facebook_url = models.URLField(blank=True, null=True, verbose_name='رابط فيسبوك')
+    twitter_url = models.URLField(blank=True, null=True, verbose_name='رابط تويتر')
+    instagram_url = models.URLField(blank=True, null=True, verbose_name='رابط انستغرام')
+    linkedin_url = models.URLField(blank=True, null=True, verbose_name='رابط لينكد إن')
+    social_links = models.JSONField(blank=True, null=True, verbose_name='روابط التواصل الاجتماعي الإضافية')
+    
+    # إعدادات متقدمة
+    maintenance_mode = models.BooleanField(default=False, verbose_name='وضع الصيانة')
+    maintenance_message = models.TextField(blank=True, verbose_name='رسالة الصيانة')
+    
+    # معلومات النظام (للعرض فقط)
+    system_version = models.CharField(max_length=50, default='1.0.0', editable=False, verbose_name='إصدار النظام')
+    system_release_date = models.CharField(max_length=50, default='2025-04-30', editable=False, verbose_name='تاريخ الإطلاق')
+    system_developer = models.CharField(max_length=100, default='zakee tahawi', editable=False, verbose_name='المطور')
+    
+    # حقوق النشر
+    copyright_text = models.CharField(
+        max_length=255,
+        default='جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi',
+        verbose_name='نص حقوق النشر',
+        blank=True
+    )
+    
+    # تواريخ النظام
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    
+    class Meta:
+        verbose_name = 'إعدادات النظام الموحدة'
+        verbose_name_plural = 'إعدادات النظام الموحدة'
+    
+    def __str__(self):
+        return f"إعدادات {self.company_name}"
+    
+    @property
+    def currency_symbol(self):
+        """إرجاع رمز العملة"""
+        symbols = {
+            'SAR': 'ر.س', 'EGP': 'ج.م', 'USD': '$', 'EUR': '€',
+            'AED': 'د.إ', 'KWD': 'د.ك', 'QAR': 'ر.ق', 'BHD': 'د.ب', 'OMR': 'ر.ع'
+        }
+        return symbols.get(self.currency, self.currency)
+    
+    @classmethod
+    def get_settings(cls):
+        """الحصول على إعدادات النظام (إنشاء واحدة إذا لم تكن موجودة)"""
+        settings, created = cls.objects.get_or_create(
+            id=1,
+            defaults={
+                'company_name': 'Elkhawaga',
+                'currency': 'SAR',
+                'enable_notifications': True,
+                'items_per_page': 20,
+                'low_stock_threshold': 20,
+                'enable_analytics': True,
+                'default_theme': 'default',
+                'working_hours': '9 صباحاً - 5 مساءً',
+                'copyright_text': 'جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi'
+            }
+        )
+        return settings
+    
+    def save(self, *args, **kwargs):
+        """حفظ الإعدادات مع التأكد من وجود صف واحد فقط"""
+        if not self.pk:
+            # إذا كان هذا أول صف، تأكد من عدم وجود صفوف أخرى
+            UnifiedSystemSettings.objects.all().delete()
+        super().save(*args, **kwargs)
+
+class UserSecurityProfile(models.Model):
+    """
+    نموذج لملف الأمان المتقدم للمستخدم
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='security_profile')
+    
+    # Two-Factor Authentication
+    two_factor_enabled = models.BooleanField(_('تفعيل المصادقة الثنائية'), default=False)
+    two_factor_secret = models.CharField(_('مفتاح المصادقة الثنائية'), max_length=32, blank=True)
+    backup_codes = models.JSONField(_('رموز النسخ الاحتياطي'), default=list, blank=True)
+    
+    # Password Security
+    password_changed_at = models.DateTimeField(_('تاريخ تغيير كلمة المرور'), auto_now_add=True)
+    password_expires_at = models.DateTimeField(_('تاريخ انتهاء كلمة المرور'), null=True, blank=True)
+    failed_login_attempts = models.PositiveIntegerField(_('محاولات تسجيل الدخول الفاشلة'), default=0)
+    locked_until = models.DateTimeField(_('مقفل حتى'), null=True, blank=True)
+    
+    # Session Security
+    last_login_ip = models.GenericIPAddressField(_('آخر IP لتسجيل الدخول'), null=True, blank=True)
+    last_login_user_agent = models.TextField(_('آخر User Agent'), blank=True)
+    session_timeout = models.PositiveIntegerField(_('مهلة الجلسة (دقائق)'), default=30)
+    
+    # Audit Logging
+    login_history = models.JSONField(_('سجل تسجيل الدخول'), default=list, blank=True)
+    security_events = models.JSONField(_('الأحداث الأمنية'), default=list, blank=True)
+    
+    class Meta:
+        verbose_name = _('ملف الأمان')
+        verbose_name_plural = _('ملفات الأمان')
+    
+    def __str__(self):
+        return f"ملف الأمان - {self.user.username}"
+    
+    def is_locked(self):
+        """التحقق من حالة القفل"""
+        if self.locked_until and timezone.now() < self.locked_until:
+            return True
+        return False
+    
+    def increment_failed_attempts(self):
+        """زيادة محاولات تسجيل الدخول الفاشلة"""
+        self.failed_login_attempts += 1
+        
+        # قفل الحساب بعد 5 محاولات فاشلة
+        if self.failed_login_attempts >= 5:
+            self.locked_until = timezone.now() + timedelta(minutes=30)
+        
+        self.save()
+    
+    def reset_failed_attempts(self):
+        """إعادة تعيين محاولات تسجيل الدخول الفاشلة"""
+        self.failed_login_attempts = 0
+        self.locked_until = None
+        self.save()
+    
+    def log_login_attempt(self, success, ip_address, user_agent):
+        """تسجيل محاولة تسجيل الدخول"""
+        login_record = {
+            'timestamp': timezone.now().isoformat(),
+            'success': success,
+            'ip_address': ip_address,
+            'user_agent': user_agent
+        }
+        
+        self.login_history.append(login_record)
+        
+        # الاحتفاظ بآخر 100 محاولة فقط
+        if len(self.login_history) > 100:
+            self.login_history = self.login_history[-100:]
+        
+        if success:
+            self.last_login_ip = ip_address
+            self.last_login_user_agent = user_agent
+            self.reset_failed_attempts()
+        
+        self.save()
+    
+    def log_security_event(self, event_type, description, severity='medium'):
+        """تسجيل حدث أمني"""
+        event = {
+            'timestamp': timezone.now().isoformat(),
+            'type': event_type,
+            'description': description,
+            'severity': severity
+        }
+        
+        self.security_events.append(event)
+        
+        # الاحتفاظ بآخر 50 حدث فقط
+        if len(self.security_events) > 50:
+            self.security_events = self.security_events[-50:]
+        
+        self.save()
+    
+    def is_password_expired(self):
+        """التحقق من انتهاء صلاحية كلمة المرور"""
+        if self.password_expires_at and timezone.now() > self.password_expires_at:
+            return True
+        return False
+    
+    def set_password_expiry(self, days=90):
+        """تعيين تاريخ انتهاء كلمة المرور"""
+        self.password_expires_at = timezone.now() + timedelta(days=days)
+        self.save()
+
+
+class AuditLog(models.Model):
+    """
+    نموذج لتسجيل الأحداث الأمنية
+    """
+    EVENT_TYPES = [
+        ('login', _('تسجيل دخول')),
+        ('logout', _('تسجيل خروج')),
+        ('password_change', _('تغيير كلمة المرور')),
+        ('permission_change', _('تغيير الصلاحيات')),
+        ('data_access', _('الوصول للبيانات')),
+        ('data_modification', _('تعديل البيانات')),
+        ('security_violation', _('انتهاك أمني')),
+        ('system_event', _('حدث نظام')),
+    ]
+    
+    SEVERITY_LEVELS = [
+        ('low', _('منخفض')),
+        ('medium', _('متوسط')),
+        ('high', _('عالي')),
+        ('critical', _('حرج')),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    event_type = models.CharField(_('نوع الحدث'), max_length=20, choices=EVENT_TYPES)
+    severity = models.CharField(_('مستوى الخطورة'), max_length=10, choices=SEVERITY_LEVELS, default='medium')
+    description = models.TextField(_('الوصف'))
+    ip_address = models.GenericIPAddressField(_('عنوان IP'), null=True, blank=True)
+    user_agent = models.TextField(_('User Agent'), blank=True)
+    related_object_type = models.CharField(_('نوع الكائن المرتبط'), max_length=50, blank=True)
+    related_object_id = models.PositiveIntegerField(_('معرف الكائن المرتبط'), null=True, blank=True)
+    additional_data = models.JSONField(_('بيانات إضافية'), default=dict, blank=True)
+    timestamp = models.DateTimeField(_('التوقيت'), auto_now_add=True)
+    
+    class Meta:
+        verbose_name = _('سجل تدقيق')
+        verbose_name_plural = _('سجلات التدقيق')
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user', 'event_type']),
+            models.Index(fields=['timestamp']),
+            models.Index(fields=['severity']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_event_type_display()} - {self.user.username if self.user else 'Unknown'} - {self.timestamp}"
+    
+    @classmethod
+    def log_event(cls, user, event_type, description, severity='medium', **kwargs):
+        """تسجيل حدث أمني"""
+        return cls.objects.create(
+            user=user,
+            event_type=event_type,
+            severity=severity,
+            description=description,
+            ip_address=kwargs.get('ip_address'),
+            user_agent=kwargs.get('user_agent'),
+            related_object_type=kwargs.get('related_object_type'),
+            related_object_id=kwargs.get('related_object_id'),
+            additional_data=kwargs.get('additional_data', {})
+        )

@@ -15,9 +15,9 @@ def currency(value):
         # سيتم استخدام متغير السياق 'currency_symbol' الذي تم إضافته بواسطة context_processor
 
         # استخدام القيمة الافتراضية (ريال سعودي) إذا لم يتم العثور على رمز العملة في السياق
-        from accounts.models import SystemSettings
-        settings = SystemSettings.get_settings()
-        currency_symbol = settings.currency_symbol
+        from accounts.models import UnifiedSystemSettings
+        settings = UnifiedSystemSettings.objects.first()
+        currency_symbol = settings.currency_symbol if settings else 'ر.س'
 
         return "{:,.2f} {}".format(float(value), currency_symbol)
     except (ValueError, TypeError):

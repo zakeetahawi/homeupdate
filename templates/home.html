@@ -8,8 +8,8 @@
     <div class="col-md-5">
         <div class="card text-center shadow-lg" style="background: transparent;">
             <div class="card-body py-3" style="background: transparent;">
-                {% if company_info.logo %}
-                    <img src="{{ company_info.logo.url }}" alt="{{ company_info.name|default:'شعار النظام' }}" class="img-fluid mb-3 logo-img home-logo" style="width: 180px; height: auto;">
+                {% if company_info.company_logo %}
+                    <img src="{{ company_info.company_logo.url }}" alt="{{ company_info.company_name|default:'شعار النظام' }}" class="img-fluid mb-3 logo-img home-logo" style="width: 180px; height: auto;">
                 {% else %}
                     <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="img-fluid mb-3 logo-img home-logo" style="width: 180px; height: auto;">
                 {% endif %}

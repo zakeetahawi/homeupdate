@@ -5,10 +5,11 @@ from django.contrib.auth.models import Permission
 from django import forms
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 from .models import (
     User, CompanyInfo, Branch, Notification, Department, Salesperson,
-    Role, UserRole, SystemSettings, BranchMessage
+    Role, UserRole, SystemSettings, BranchMessage, UnifiedSystemSettings
 )
 from .forms import THEME_CHOICES
 from manufacturing.models import ManufacturingOrder
@@ -214,55 +215,195 @@ class CustomUserAdmin(UserAdmin):
         )
 
 
-@admin.register(CompanyInfo)
-class CompanyInfoAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone', 'email', 'website')
+@admin.register(UnifiedSystemSettings)
+class UnifiedSystemSettingsAdmin(admin.ModelAdmin):
+    """إدارة إعدادات النظام الموحدة"""
+    list_display = ('company_name', 'company_phone', 'company_email', 'system_version', 'currency', 'created_at')
+    list_filter = ('currency', 'enable_notifications', 'enable_analytics', 'maintenance_mode', 'created_at')
+    search_fields = ('company_name', 'company_phone', 'company_email', 'company_address')
+    readonly_fields = ('created_at', 'updated_at', 'system_version', 'system_release_date', 'system_developer')
+    list_per_page = 20
+    date_hierarchy = 'created_at'
+    
     fieldsets = (
-        (_('معلومات أساسية'), {
+        (_('معلومات الشركة الأساسية'), {
             'fields': (
-                'name', 'logo', 'address', 'phone', 'email', 'website',
+                'company_name', 'company_logo', 'company_address', 
+                'company_phone', 'company_email', 'company_website',
                 'working_hours'
             )
         }),
-        (_('عن النظام'), {
-            'fields': ('description',)
-        }),
-        (_('معلومات قانونية'), {
-            'fields': ('tax_number', 'commercial_register')
+        (_('معلومات الشركة الإضافية'), {
+            'fields': (
+                'about_text', 'vision_text', 'mission_text', 'description',
+                'tax_number', 'commercial_register'
+            )
         }),
         (_('وسائل التواصل الاجتماعي'), {
             'fields': (
-                'facebook', 'twitter', 'instagram', 'linkedin', 'social_links'
+                'facebook_url', 'twitter_url', 'instagram_url', 
+                'linkedin_url', 'social_links'
             )
         }),
-        (_('معلومات إضافية'), {
-            'fields': ('about', 'vision', 'mission')
+        (_('إعدادات النظام الأساسية'), {
+            'fields': (
+                'currency', 'enable_notifications', 'enable_email_notifications',
+                'items_per_page', 'low_stock_threshold', 'enable_analytics'
+            )
         }),
-        (_('إعدادات النظام'), {
+        (_('إعدادات الواجهة'), {
             'fields': (
                 'primary_color', 'secondary_color', 'accent_color',
-                'copyright_text'
+                'default_theme', 'copyright_text'
             )
         }),
-        (_('معلومات النظام - للعرض فقط'), {
-            'fields': ('developer', 'version', 'release_date'),
+        (_('إعدادات متقدمة'), {
+            'fields': (
+                'maintenance_mode', 'maintenance_message'
+            ),
             'classes': ('collapse',),
-            'description': 'هذه المعلومات للعرض فقط ولا يمكن تعديلها إلا من قبل مطور النظام.'
+        }),
+        (_('معلومات النظام - للعرض فقط'), {
+            'fields': ('system_version', 'system_release_date', 'system_developer', 'created_at', 'updated_at'),
+            'classes': ('collapse',),
+            'description': 'هذه المعلومات للعرض فقط ولا يمكن تعديلها.'
         }),
     )
 
-    readonly_fields = ('developer', 'version', 'release_date')
-
     def has_add_permission(self, request):
-        # السماح للموظفين بإضافة معلومات الشركة
-        if request.user.is_staff:
-            return True
-        # Check if there's already an instance
-        return not CompanyInfo.objects.exists()
+        # السماح بإضافة إعدادات جديدة
+        return True
 
     def has_delete_permission(self, request, obj=None):
-        # السماح للموظفين بحذف معلومات الشركة
-        return request.user.is_staff
+        # السماح بحذف إعدادات النظام
+        return True
+
+    def has_change_permission(self, request, obj=None):
+        # السماح بتعديل إعدادات النظام
+        return True
+
+    def duplicate_settings(self, request, queryset):
+        """تكرار الإعدادات المحددة"""
+        count = 0
+        for settings in queryset:
+            # إنشاء نسخة جديدة
+            new_settings = UnifiedSystemSettings.objects.create(
+                company_name=f"{settings.company_name} - نسخة",
+                company_logo=settings.company_logo,
+                company_address=settings.company_address,
+                company_phone=settings.company_phone,
+                company_email=settings.company_email,
+                company_website=settings.company_website,
+                working_hours=settings.working_hours,
+                about_text=settings.about_text,
+                vision_text=settings.vision_text,
+                mission_text=settings.mission_text,
+                description=settings.description,
+                tax_number=settings.tax_number,
+                commercial_register=settings.commercial_register,
+                facebook_url=settings.facebook_url,
+                twitter_url=settings.twitter_url,
+                instagram_url=settings.instagram_url,
+                linkedin_url=settings.linkedin_url,
+                social_links=settings.social_links,
+                currency=settings.currency,
+                enable_notifications=settings.enable_notifications,
+                enable_email_notifications=settings.enable_email_notifications,
+                items_per_page=settings.items_per_page,
+                low_stock_threshold=settings.low_stock_threshold,
+                enable_analytics=settings.enable_analytics,
+                primary_color=settings.primary_color,
+                secondary_color=settings.secondary_color,
+                accent_color=settings.accent_color,
+                default_theme=settings.default_theme,
+                copyright_text=settings.copyright_text,
+                maintenance_mode=settings.maintenance_mode,
+                maintenance_message=settings.maintenance_message
+            )
+            count += 1
+        
+        self.message_user(
+            request, 
+            f'تم تكرار {count} إعدادات بنجاح'
+        )
+    duplicate_settings.short_description = _('تكرار الإعدادات المحددة')
+
+    def reset_to_defaults(self, request, queryset):
+        """إعادة تعيين الإعدادات إلى القيم الافتراضية"""
+        count = 0
+        for settings in queryset:
+            settings.company_name = 'Elkhawaga'
+            settings.company_phone = ''
+            settings.company_email = ''
+            settings.company_website = ''
+            settings.working_hours = ''
+            settings.about_text = ''
+            settings.vision_text = ''
+            settings.mission_text = ''
+            settings.description = ''
+            settings.tax_number = ''
+            settings.commercial_register = ''
+            settings.facebook_url = ''
+            settings.twitter_url = ''
+            settings.instagram_url = ''
+            settings.linkedin_url = ''
+            settings.social_links = None
+            settings.currency = 'SAR'
+            settings.enable_notifications = True
+            settings.enable_email_notifications = False
+            settings.items_per_page = 20
+            settings.low_stock_threshold = 20
+            settings.enable_analytics = True
+            settings.primary_color = ''
+            settings.secondary_color = ''
+            settings.accent_color = ''
+            settings.default_theme = 'default'
+            settings.copyright_text = 'جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi'
+            settings.maintenance_mode = False
+            settings.maintenance_message = ''
+            settings.save()
+            count += 1
+        
+        self.message_user(
+            request, 
+            f'تم إعادة تعيين {count} إعدادات إلى القيم الافتراضية'
+        )
+    reset_to_defaults.short_description = _('إعادة تعيين إلى القيم الافتراضية')
+
+    def export_settings(self, request, queryset):
+        """تصدير الإعدادات المحددة"""
+        from django.http import JsonResponse
+        import json
+        
+        data = []
+        for settings in queryset:
+            data.append({
+                'id': settings.id,
+                'company_name': settings.company_name,
+                'company_phone': settings.company_phone,
+                'company_email': settings.company_email,
+                'currency': settings.currency,
+                'created_at': settings.created_at.isoformat(),
+                'updated_at': settings.updated_at.isoformat()
+            })
+        
+        response = JsonResponse(data, safe=False)
+        response['Content-Disposition'] = 'attachment; filename="settings_export.json"'
+        return response
+    export_settings.short_description = _('تصدير الإعدادات المحددة')
+
+    actions = ['duplicate_settings', 'reset_to_defaults', 'export_settings']
+
+# إزالة النماذج القديمة من الإدارة
+# @admin.register(CompanyInfo)
+# class CompanyInfoAdmin(admin.ModelAdmin):
+#     # تم إزالة هذا النموذج من الإدارة
+#     pass
+
+# @admin.register(SystemSettings)
+# class SystemSettingsAdmin(admin.ModelAdmin):
+#     # تم إزالة هذا النموذج من الإدارة
+#     pass
 
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):
@@ -273,32 +414,81 @@ class BranchAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('title', 'sender', 'sender_department', 'target_department', 'priority', 'created_at', 'is_read')
-    list_filter = ('is_read', 'priority', 'sender_department', 'target_department', 'created_at')
-    search_fields = ('title', 'message')
-    readonly_fields = ('created_at', 'updated_at', 'read_at', 'read_by')
+    """إدارة الإشعارات المحسنة"""
+    list_display = [
+        'title', 'notification_type', 'priority', 'sender', 
+        'is_read', 'is_sent', 'created_at'
+    ]
+    list_filter = [
+        'notification_type', 'priority', 'is_read', 'is_sent', 
+        'is_archived', 'created_at', 'target_departments', 'target_branches'
+    ]
+    search_fields = ['title', 'message', 'sender__username', 'recipients__username']
+    readonly_fields = [
+        'created_at', 'sent_at', 'read_at', 'is_sent', 'is_read'
+    ]
     date_hierarchy = 'created_at'
+    list_per_page = 50
 
     fieldsets = (
-        (None, {
-            'fields': ('title', 'message', 'priority')
+        (_('معلومات الإشعار'), {
+            'fields': ('title', 'message', 'notification_type', 'priority')
         }),
-        (_('معلومات المرسل'), {
-            'fields': ('sender', 'sender_department')
-        }),
-        (_('معلومات المستلم'), {
-            'fields': ('target_department', 'target_branch')
+        (_('المستلمون'), {
+            'fields': ('recipients', 'target_departments', 'target_branches')
         }),
         (_('الكائن المرتبط'), {
-            'fields': ('content_type', 'object_id')
+            'fields': ('content_type', 'object_id', 'action_url'),
+            'classes': ('collapse',)
         }),
         (_('حالة الإشعار'), {
-            'fields': ('is_read', 'read_at', 'read_by')
+            'fields': ('is_read', 'is_sent', 'is_archived', 'requires_action')
         }),
         (_('التواريخ'), {
-            'fields': ('created_at', 'updated_at')
+            'fields': ('created_at', 'sent_at', 'read_at'),
+            'classes': ('collapse',)
+        }),
+        (_('إعدادات إضافية'), {
+            'fields': ('auto_delete_after_days',),
+            'classes': ('collapse',)
         }),
     )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'sender', 'content_type'
+        ).prefetch_related(
+            'recipients', 'target_departments', 'target_branches'
+        )
+    
+    def mark_as_sent(self, request, queryset):
+        """تحديد الإشعارات كمرسلة"""
+        updated = queryset.update(is_sent=True, sent_at=timezone.now())
+        self.message_user(
+            request, 
+            f'تم تحديث {updated} إشعار كمرسل'
+        )
+    mark_as_sent.short_description = _('تحديد كمرسل')
+    
+    def mark_as_read(self, request, queryset):
+        """تحديد الإشعارات كمقروءة"""
+        updated = queryset.update(is_read=True, read_at=timezone.now())
+        self.message_user(
+            request, 
+            f'تم تحديث {updated} إشعار كمقروء'
+        )
+    mark_as_read.short_description = _('تحديد كمقروء')
+    
+    def archive_notifications(self, request, queryset):
+        """أرشفة الإشعارات المحددة"""
+        updated = queryset.update(is_archived=True)
+        self.message_user(
+            request, 
+            f'تم أرشفة {updated} إشعار'
+        )
+    archive_notifications.short_description = _('أرشفة الإشعارات')
+    
+    actions = [mark_as_sent, mark_as_read, archive_notifications]
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
@@ -493,46 +683,6 @@ class PermissionAdmin(admin.ModelAdmin):
         # السماح للموظفين بحذف الصلاحيات
         return request.user.is_staff
 
-
-@admin.register(SystemSettings)
-class SystemSettingsAdmin(admin.ModelAdmin):
-    list_display = ('name', 'currency', 'version')
-    readonly_fields = ('created_at', 'updated_at')
-
-    fieldsets = (
-        (_('معلومات النظام'), {
-            'fields': ('name', 'version')
-        }),
-        (_('إعدادات العملة'), {
-            'fields': ('currency',),
-            'description': _('تحديد العملة المستخدمة في النظام')
-        }),
-        (_('إعدادات العرض'), {
-            'fields': ('items_per_page', 'low_stock_threshold')
-        }),
-        (_('إعدادات الإشعارات'), {
-            'fields': ('enable_notifications', 'enable_email_notifications')
-        }),
-        (_('إعدادات متقدمة'), {
-            'fields': ('enable_analytics', 'maintenance_mode', 'maintenance_message'),
-            'classes': ('collapse',)
-        }),
-        (_('معلومات النظام'), {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-
-    def has_add_permission(self, request):
-        # السماح للموظفين بإضافة إعدادات النظام
-        if request.user.is_staff:
-            return True
-        # Check if there's already an instance
-        return not SystemSettings.objects.exists()
-
-    def has_delete_permission(self, request, obj=None):
-        # السماح للموظفين بحذف إعدادات النظام
-        return request.user.is_staff
 
 @admin.register(BranchMessage)
 class BranchMessageAdmin(admin.ModelAdmin):

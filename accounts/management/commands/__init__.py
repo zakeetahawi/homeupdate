@@ -1,1 +1,1 @@
-# Django management commands package
+# ملف فارغ لتعريف مجلد commands كحزمة Python

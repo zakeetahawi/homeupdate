@@ -9,13 +9,17 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.views.decorators.http import require_POST
+from django.db import transaction
+from datetime import datetime, timedelta
+
 from .models import Order, OrderItem, Payment
 from .forms import OrderForm, OrderItemFormSet, PaymentForm
-from accounts.models import Branch, Salesperson, Department, Notification, SystemSettings
+from accounts.models import Branch, Salesperson, Department, Notification, SystemSettings, UnifiedSystemSettings
 from customers.models import Customer
-from inventory.models import Product
+from inventory.models import Product, Category
 from inspections.models import Inspection
-from datetime import datetime, timedelta
+from manufacturing.models import ManufacturingOrder
 
 class OrdersDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'orders/dashboard.html'
@@ -45,34 +49,38 @@ class OrdersDashboardView(LoginRequiredMixin, TemplateView):
 @login_required
 def order_list(request):
     """
-    View for displaying the list of orders with search and filtering
+    View for displaying list of orders with search and filtering
     """
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
 
-    # Filter orders based on search query and status
-    orders = Order.objects.all().select_related('customer', 'salesperson')
+    # Base queryset
+    orders = Order.objects.select_related('customer', 'salesperson', 'branch').prefetch_related('items')
 
+    # Apply search filter
     if search_query:
         orders = orders.filter(
             Q(order_number__icontains=search_query) |
-            Q(customer__name__icontains=search_query)
+            Q(customer__name__icontains=search_query) |
+            Q(salesperson__name__icontains=search_query) |
+            Q(branch__name__icontains=search_query)
         )
 
+    # Apply status filter
     if status_filter:
         orders = orders.filter(status=status_filter)
 
-    # Order by created_at
+    # Order by creation date (newest first)
     orders = orders.order_by('-created_at')
 
     # Pagination
-    paginator = Paginator(orders, 10)  # Show 10 orders per page
+    paginator = Paginator(orders, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     # Get currency symbol from system settings
-    system_settings = SystemSettings.get_settings()
-    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+    system_settings = UnifiedSystemSettings.objects.first()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ر.س'
 
     context = {
         'page_obj': page_obj,
@@ -138,8 +146,8 @@ def order_detail(request, pk):
             ).order_by('-created_at')
 
     # Get currency symbol from system settings
-    system_settings = SystemSettings.get_settings()
-    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+    system_settings = UnifiedSystemSettings.objects.first()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ر.س'
 
     context = {
         'order': order,
@@ -430,40 +438,30 @@ def payment_create(request, order_pk):
     View for creating a new payment for an order
     """
     order = get_object_or_404(Order, pk=order_pk)
-
+    
     if request.method == 'POST':
         form = PaymentForm(request.POST)
         if form.is_valid():
-            try:
-                # التأكد من أن الطلب له مفتاح أساسي
-                if not order.pk:
-                    messages.error(request, 'لا يمكن إنشاء دفعة: الطلب ليس له مفتاح أساسي')
-                    return redirect('orders:order_detail', pk=order_pk)
-
-                payment = form.save(commit=False)
-                payment.order = order
-                payment.created_by = request.user
-                payment.save()
-
-                messages.success(request, 'تم تسجيل الدفعة بنجاح.')
-                return redirect('orders:order_detail', pk=order.pk)
-            except Exception as e:
-                messages.error(request, f'حدث خطأ أثناء حفظ الدفعة: {str(e)}')
-                return render(request, 'orders/payment_form.html', {'form': form, 'order': order})
+            payment = form.save(commit=False)
+            payment.order = order
+            payment.payment_date = timezone.now()
+            payment.save()
+            
+            messages.success(request, 'تم إضافة الدفعة بنجاح.')
+            return redirect('orders:order_detail', pk=order_pk)
     else:
         form = PaymentForm()
-
+    
     # Get currency symbol from system settings
-    system_settings = SystemSettings.get_settings()
-    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
-
+    system_settings = UnifiedSystemSettings.objects.first()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ر.س'
+    
     context = {
         'form': form,
         'order': order,
-        'title': f'تسجيل دفعة جديدة للطلب: {order.order_number}',
-        'currency_symbol': currency_symbol,  # Add currency symbol to context
+        'currency_symbol': currency_symbol,
     }
-
+    
     return render(request, 'orders/payment_form.html', context)
 
 @login_required
@@ -609,3 +607,77 @@ def get_order_details_api(request, order_id):
             'success': False,
             'error': str(e)
         }, status=400)
+
+@login_required
+@require_POST
+def validate_order_ajax(request):
+    """AJAX validation for order form"""
+    try:
+        data = json.loads(request.body)
+        customer_id = data.get('customer_id')
+        order_number = data.get('order_number')
+        
+        # Validate customer exists
+        if customer_id and not Customer.objects.filter(id=customer_id).exists():
+            return JsonResponse({'valid': False, 'message': 'العميل غير موجود'})
+        
+        # Validate order number uniqueness
+        if order_number:
+            qs = Order.objects.filter(order_number=order_number)
+            if request.POST.get('order_id'):  # Update case
+                qs = qs.exclude(id=request.POST.get('order_id'))
+            if qs.exists():
+                return JsonResponse({'valid': False, 'message': 'رقم الطلب موجود مسبقاً'})
+        
+        return JsonResponse({'valid': True})
+    except Exception as e:
+        return JsonResponse({'valid': False, 'message': str(e)})
+
+@login_required
+@require_POST
+def validate_payment_ajax(request):
+    """AJAX validation for payment form"""
+    try:
+        data = json.loads(request.body)
+        amount = data.get('amount')
+        order_id = data.get('order_id')
+        
+        if not amount or float(amount) <= 0:
+            return JsonResponse({'valid': False, 'message': 'المبلغ يجب أن يكون أكبر من صفر'})
+        
+        if order_id and not Order.objects.filter(id=order_id).exists():
+            return JsonResponse({'valid': False, 'message': 'الطلب غير موجود'})
+        
+        return JsonResponse({'valid': True})
+    except Exception as e:
+        return JsonResponse({'valid': False, 'message': str(e)})
+
+@login_required
+def get_customer_info_ajax(request, customer_id):
+    """Get customer information for AJAX requests"""
+    try:
+        customer = Customer.objects.get(id=customer_id)
+        return JsonResponse({
+            'name': customer.name,
+            'phone': customer.phone,
+            'email': customer.email,
+            'address': customer.address,
+            'customer_type': customer.customer_type,
+            'status': customer.status
+        })
+    except Customer.DoesNotExist:
+        return JsonResponse({'error': 'العميل غير موجود'}, status=404)
+
+@login_required
+def get_product_info_ajax(request, product_id):
+    """Get product information for AJAX requests"""
+    try:
+        product = Product.objects.get(id=product_id)
+        return JsonResponse({
+            'name': product.name,
+            'price': str(product.price),
+            'stock': product.current_stock,
+            'category': product.category.name if product.category else None
+        })
+    except Product.DoesNotExist:
+        return JsonResponse({'error': 'المنتج غير موجود'}, status=404)

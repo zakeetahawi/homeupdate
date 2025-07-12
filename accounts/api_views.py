@@ -9,7 +9,11 @@ from django.contrib.auth.decorators import login_required
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserSerializer, RoleSerializer, RoleDetailSerializer, UserRoleSerializer, PermissionSerializer
 from .models import Role, UserRole
-from .services.dashboard_service import DashboardService
+# from .services.dashboard_service import DashboardService
+from django.views.decorators.http import require_http_methods
+from django.utils import timezone
+from .services import NotificationService
+from .models import Notification
 
 User = get_user_model()
 
@@ -309,3 +313,368 @@ def dashboard_trends(request):
     days = int(request.GET.get('days', 30))
     data = DashboardService.get_trends_data(days=days)
     return JsonResponse(data)
+
+"""
+API views للإشعارات المحسنة
+"""
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from django.utils import timezone
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+
+from .services import NotificationService
+from .models import Notification
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def notifications_list(request):
+    """الحصول على قائمة إشعارات المستخدم"""
+    unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
+    limit = request.GET.get('limit', 20)
+    
+    try:
+        limit = int(limit)
+    except ValueError:
+        limit = 20
+    
+    notifications = NotificationService.get_user_notifications(
+        user=request.user,
+        unread_only=unread_only,
+        limit=limit
+    )
+    
+    data = []
+    for notification in notifications:
+        data.append({
+            'id': notification.id,
+            'title': notification.title,
+            'message': notification.message,
+            'notification_type': notification.notification_type,
+            'priority': notification.priority,
+            'is_read': notification.is_read,
+            'is_sent': notification.is_sent,
+            'requires_action': notification.requires_action,
+            'action_url': notification.action_url,
+            'created_at': notification.created_at.isoformat(),
+            'sender': notification.sender.username if notification.sender else None,
+        })
+    
+    return Response({
+        'notifications': data,
+        'total_count': len(data),
+        'unread_count': NotificationService.get_user_notifications(
+            user=request.user, 
+            unread_only=True
+        ).count()
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_notification_read(request, notification_id):
+    """تحديد إشعار كمقروء"""
+    success = NotificationService.mark_notification_as_read(
+        notification_id=notification_id,
+        user=request.user
+    )
+    
+    if success:
+        return Response({'status': 'success'})
+    else:
+        return Response(
+            {'status': 'error', 'message': 'الإشعار غير موجود'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_all_notifications_read(request):
+    """تحديد جميع الإشعارات كمقروءة"""
+    unread_notifications = NotificationService.get_user_notifications(
+        user=request.user,
+        unread_only=True
+    )
+    
+    updated_count = unread_notifications.update(
+        is_read=True,
+        read_at=timezone.now()
+    )
+    
+    return Response({
+        'status': 'success',
+        'updated_count': updated_count
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def notifications_count(request):
+    """الحصول على عدد الإشعارات غير المقروءة"""
+    unread_count = NotificationService.get_user_notifications(
+        user=request.user,
+        unread_only=True
+    ).count()
+    
+    return Response({
+        'unread_count': unread_count
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_notification(request, notification_id):
+    """حذف إشعار"""
+    try:
+        notification = Notification.objects.get(
+            id=notification_id,
+            recipients=request.user
+        )
+        notification.delete()
+        return Response({'status': 'success'})
+    except Notification.DoesNotExist:
+        return Response(
+            {'status': 'error', 'message': 'الإشعار غير موجود'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def archive_notification(request, notification_id):
+    """أرشفة إشعار"""
+    try:
+        notification = Notification.objects.get(
+            id=notification_id,
+            recipients=request.user
+        )
+        notification.archive()
+        return Response({'status': 'success'})
+    except Notification.DoesNotExist:
+        return Response(
+            {'status': 'error', 'message': 'الإشعار غير موجود'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@login_required
+@require_http_methods(["GET"])
+def notifications_widget(request):
+    """widget للإشعارات للاستخدام في القوالب"""
+    unread_notifications = NotificationService.get_user_notifications(
+        user=request.user,
+        unread_only=True,
+        limit=5
+    )
+    
+    return JsonResponse({
+        'unread_count': unread_notifications.count(),
+        'recent_notifications': [
+            {
+                'id': n.id,
+                'title': n.title,
+                'notification_type': n.notification_type,
+                'priority': n.priority,
+                'created_at': n.created_at.isoformat(),
+            }
+            for n in unread_notifications
+        ]
+    })
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from django.utils import timezone
+from django.db.models import Q
+from .models import Notification
+from .services import NotificationService
+import json
+
+
+@login_required
+def notification_list(request):
+    """قائمة الإشعارات للمستخدم الحالي"""
+    try:
+        notifications = Notification.objects.filter(
+            recipients=request.user,
+            is_archived=False
+        ).select_related('sender', 'content_type').order_by('-created_at')
+        
+        data = []
+        for notification in notifications:
+            data.append({
+                'id': notification.id,
+                'title': notification.title,
+                'message': notification.message,
+                'notification_type': notification.notification_type,
+                'priority': notification.priority,
+                'is_read': notification.is_read,
+                'is_sent': notification.is_sent,
+                'created_at': notification.created_at.isoformat(),
+                'action_url': notification.action_url,
+                'sender_name': notification.sender.get_full_name() if notification.sender else None
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'notifications': data,
+            'count': len(data)
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+def unread_notifications(request):
+    """الإشعارات غير المقروءة للمستخدم الحالي"""
+    try:
+        unread_count = Notification.objects.filter(
+            recipients=request.user,
+            is_read=False,
+            is_archived=False
+        ).count()
+        
+        return JsonResponse({
+            'status': 'success',
+            'unread_count': unread_count
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_notification_read(request, notification_id):
+    """تحديد إشعار كمقروء"""
+    try:
+        notification = Notification.objects.get(
+            id=notification_id,
+            recipients=request.user
+        )
+        
+        notification.is_read = True
+        notification.read_at = timezone.now()
+        notification.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'تم تحديد الإشعار كمقروء'
+        })
+    
+    except Notification.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'الإشعار غير موجود'
+        }, status=404)
+    
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_all_notifications_read(request):
+    """تحديد جميع الإشعارات كمقروءة"""
+    try:
+        updated_count = Notification.objects.filter(
+            recipients=request.user,
+            is_read=False,
+            is_archived=False
+        ).update(
+            is_read=True,
+            read_at=timezone.now()
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'تم تحديد {updated_count} إشعار كمقروء',
+            'updated_count': updated_count
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def archive_notification(request, notification_id):
+    """أرشفة إشعار"""
+    try:
+        notification = Notification.objects.get(
+            id=notification_id,
+            recipients=request.user
+        )
+        
+        notification.is_archived = True
+        notification.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'تم أرشفة الإشعار'
+        })
+    
+    except Notification.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'الإشعار غير موجود'
+        }, status=404)
+    
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+def notification_stats(request):
+    """إحصائيات الإشعارات للمستخدم"""
+    try:
+        user_notifications = Notification.objects.filter(recipients=request.user)
+        
+        stats = {
+            'total': user_notifications.count(),
+            'unread': user_notifications.filter(is_read=False, is_archived=False).count(),
+            'read': user_notifications.filter(is_read=True).count(),
+            'archived': user_notifications.filter(is_archived=True).count(),
+            'high_priority': user_notifications.filter(
+                priority='high',
+                is_read=False,
+                is_archived=False
+            ).count(),
+            'urgent': user_notifications.filter(
+                priority='urgent',
+                is_read=False,
+                is_archived=False
+            ).count()
+        }
+        
+        return JsonResponse({
+            'status': 'success',
+            'stats': stats
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)

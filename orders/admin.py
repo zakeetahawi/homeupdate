@@ -105,8 +105,11 @@ class OrderAdmin(admin.ModelAdmin):
     payment_status.short_description = 'حالة الدفع'
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs
+        return super().get_queryset(request).select_related(
+            'customer', 'customer__branch', 'created_by'
+        ).prefetch_related(
+            'items', 'payments', 'status_logs'
+        )
 
 @admin.register(OrderStatusLog)
 class OrderStatusLogAdmin(admin.ModelAdmin):

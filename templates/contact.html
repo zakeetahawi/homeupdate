@@ -19,10 +19,10 @@
                     <div class="col-md-6">
                         <h5 class="mb-3">معلومات الاتصال</h5>
                         <div class="mb-4">
-                            <p><i class="fas fa-building text-primary"></i> {{ company_info.name|default:'اسم الشركة' }}</p>
-                            <p><i class="fas fa-map-marker-alt text-primary"></i> {{ company_info.address|default:'العنوان' }}</p>
-                            <p><i class="fas fa-phone text-primary"></i> {{ company_info.phone|default:'+20 123 456 7890' }}</p>
-                            <p><i class="fas fa-envelope text-primary"></i> {{ company_info.email|default:'info@latara.com' }}</p>
+                            <p><i class="fas fa-building text-primary"></i> {{ company_info.company_name|default:'اسم الشركة' }}</p>
+                            <p><i class="fas fa-map-marker-alt text-primary"></i> {{ company_info.company_address|default:'العنوان' }}</p>
+                            <p><i class="fas fa-phone text-primary"></i> {{ company_info.company_phone|default:'+20 123 456 7890' }}</p>
+                            <p><i class="fas fa-envelope text-primary"></i> {{ company_info.company_email|default:'info@latara.com' }}</p>
                             <p><i class="fas fa-clock text-primary"></i> {{ company_info.working_hours|default:'ساعات العمل: 9 صباحاً - 5 مساءً' }}</p>
                         </div>
 

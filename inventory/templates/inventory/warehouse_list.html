@@ -13,67 +13,9 @@
                     <h5 class="card-title mb-0">إضافة مستودع جديد</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{% url 'inventory:warehouse_create' %}">
-                        {% csrf_token %}
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label for="name" class="form-label">اسم المستودع</label>
-                                    <input type="text" class="form-control" id="name" name="name" required>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label for="code" class="form-label">رمز المستودع</label>
-                                    <input type="text" class="form-control" id="code" name="code" required>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label for="branch" class="form-label">الفرع</label>
-                                    <select class="form-select" id="branch" name="branch" required>
-                                        {% for branch in branches %}
-                                        <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label for="manager" class="form-label">المدير</label>
-                                    <select class="form-select" id="manager" name="manager">
-                                        <option value="">بدون مدير</option>
-                                        {% for user in users %}
-                                        <option value="{{ user.id }}">{{ user.get_full_name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="address" class="form-label">العنوان</label>
-                                    <textarea class="form-control" id="address" name="address" rows="2"></textarea>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="notes" class="form-label">ملاحظات</label>
-                                    <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
-                            <label class="form-check-label" for="is_active">نشط</label>
-                        </div>
-                        <div class="text-end">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> إضافة مستودع
-                            </button>
-                        </div>
-                    </form>
+                    <a href="{% url 'inventory:warehouse_create' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> مستودع جديد
+                    </a>
                 </div>
             </div>
         </div>
@@ -90,13 +32,6 @@
                         <span class="badge bg-primary">{{ warehouses|length }}</span>
                         {% endif %}
                     </h4>
-                    <div class="data-table-actions">
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-secondary active" data-filter="all">الكل</button>
-                            <button type="button" class="btn btn-outline-success" data-filter="active">نشط</button>
-                            <button type="button" class="btn btn-outline-danger" data-filter="inactive">غير نشط</button>
-                        </div>
-                    </div>
                 </div>
                 <div class="data-table-body">
                     <div class="table-responsive">
@@ -114,14 +49,42 @@
                             </thead>
                             <tbody>
                                 {% for warehouse in warehouses %}
-                                <tr class="warehouse-row {% if not warehouse.is_active %}inactive{% else %}active{% endif %}">
+                                <tr>
                                     <td>
-                                        <strong>{{ warehouse.name }}</strong>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-warehouse text-primary me-2"></i>
+                                            <div>
+                                                <strong>{{ warehouse.name }}</strong>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td>{{ warehouse.code }}</td>
-                                    <td>{{ warehouse.branch.name }}</td>
-                                    <td>{{ warehouse.manager.get_full_name|default:"-" }}</td>
-                                    <td>{{ warehouse.address|default:"-" }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ warehouse.code }}</span>
+                                    </td>
+                                    <td>
+                                        {% if warehouse.branch %}
+                                        <span class="badge bg-info">{{ warehouse.branch.name }}</span>
+                                        {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if warehouse.manager %}
+                                        <div>
+                                            <i class="fas fa-user text-info"></i>
+                                            {{ warehouse.manager.get_full_name|default:warehouse.manager.username }}
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if warehouse.address %}
+                                        <small>{{ warehouse.address|truncatechars:50 }}</small>
+                                        {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if warehouse.is_active %}
                                         <span class="badge bg-success">نشط</span>
@@ -131,21 +94,30 @@
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a href="{% url 'inventory:warehouse_update' warehouse.id %}" class="btn btn-primary btn-sm">
+                                            <a href="{% url 'inventory:warehouse_detail' warehouse.pk %}" 
+                                               class="btn btn-info btn-sm" title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'inventory:warehouse_update' warehouse.pk %}" 
+                                               class="btn btn-primary btn-sm" title="تعديل">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="{% url 'inventory:warehouse_delete' warehouse.id %}" class="btn btn-danger btn-sm">
+                                            <a href="{% url 'inventory:warehouse_delete' warehouse.pk %}" 
+                                               class="btn btn-danger btn-sm" title="حذف">
                                                 <i class="fas fa-trash"></i>
-                                            </a>
-                                            <a href="{% url 'inventory:warehouse_detail' warehouse.id %}" class="btn btn-info btn-sm">
-                                                <i class="fas fa-eye"></i>
                                             </a>
                                         </div>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="7" class="text-center">لا توجد مستودعات مضافة</td>
+                                    <td colspan="7" class="text-center">
+                                        <div class="py-4">
+                                            <i class="fas fa-warehouse fa-3x text-muted mb-3"></i>
+                                            <h5 class="text-muted">لا توجد مستودعات</h5>
+                                            <p class="text-muted">لم يتم إضافة أي مستودعات بعد</p>
+                                        </div>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -155,120 +127,5 @@
             </div>
         </div>
     </div>
-
-    <!-- إحصائيات المستودعات -->
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="chart-container">
-                <div class="chart-header">
-                    <h4 class="chart-title">توزيع المنتجات حسب المستودعات</h4>
-                </div>
-                <div class="chart-body">
-                    <canvas id="warehouseProductsChart" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="chart-container">
-                <div class="chart-header">
-                    <h4 class="chart-title">حالة المستودعات</h4>
-                </div>
-                <div class="chart-body">
-                    <canvas id="warehouseStatusChart" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-{{ block.super }}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // فلترة المستودعات
-        const filterButtons = document.querySelectorAll('[data-filter]');
-        filterButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const filter = this.getAttribute('data-filter');
-                const rows = document.querySelectorAll('.warehouse-row');
-                
-                // تحديث حالة الأزرار
-                filterButtons.forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                
-                // تطبيق الفلتر
-                rows.forEach(row => {
-                    if (filter === 'all') {
-                        row.style.display = 'table-row';
-                    } else if (filter === 'active' && row.classList.contains('active')) {
-                        row.style.display = 'table-row';
-                    } else if (filter === 'inactive' && row.classList.contains('inactive')) {
-                        row.style.display = 'table-row';
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
-            });
-        });
-        
-        // رسم بياني لتوزيع المنتجات حسب المستودعات
-        const productsCtx = document.getElementById('warehouseProductsChart').getContext('2d');
-        const warehouseProductsChart = new Chart(productsCtx, {
-            type: 'bar',
-            data: {
-                labels: [{% for warehouse in warehouses %}'{{ warehouse.name }}',{% endfor %}],
-                datasets: [{
-                    label: 'عدد المنتجات',
-                    data: [{% for warehouse in warehouses %}{{ warehouse.product_count }},{% endfor %}],
-                    backgroundColor: '#4e73df',
-                    borderColor: '#4e73df',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-        
-        // رسم بياني لحالة المستودعات
-        const statusCtx = document.getElementById('warehouseStatusChart').getContext('2d');
-        const warehouseStatusChart = new Chart(statusCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['نشط', 'غير نشط'],
-                datasets: [{
-                    data: [
-                        {{ warehouses|filter:"is_active"|length }},
-                        {{ warehouses|length|sub:warehouses|filter:"is_active"|length }}
-                    ],
-                    backgroundColor: ['#1cc88a', '#e74a3b'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        rtl: true
-                    }
-                }
-            }
-        });
-    });
-</script>
 {% endblock %}

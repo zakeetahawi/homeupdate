@@ -1,4 +1,4 @@
-from .models import Department, CompanyInfo, SystemSettings, BranchMessage
+from .models import Department, UnifiedSystemSettings, BranchMessage
 from .utils import get_user_notifications
 from django.utils import timezone
 from accounts.models import FooterSettings
@@ -79,30 +79,27 @@ def notifications(request):
     }
 
 def company_info(request):
-    """توفير معلومات الشركة لجميع القوالب"""
+    """توفير معلومات الشركة لجميع القوالب من UnifiedSystemSettings"""
     try:
-        company = CompanyInfo.objects.first()
+        # محاولة الحصول على الإعدادات الموجودة فقط، بدون إنشاء جديدة
+        company = UnifiedSystemSettings.objects.first()
         if not company:
-            # إنشاء كائن بقيم افتراضية إذا لم يكن موجوداً
-            company = CompanyInfo.objects.create(
-                name="الخواجة للستائر والمفروشات",
-                description="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
-                version="1.0.0",
-                release_date="2025-04-30",
-                developer="zakee tahawi",
-                working_hours="9 صباحاً - 5 مساءً",
-                copyright_text="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi"
+            # إرجاع كائن افتراضي بدون حفظه في قاعدة البيانات
+            company = UnifiedSystemSettings(
+                company_name="الخواجة للستائر والمفروشات",
+                company_address="العنوان",
+                company_phone="01234567890",
+                company_email="info@example.com",
+                company_logo=None,
             )
     except Exception:
-        # في حالة حدوث أي خطأ، إنشاء كائن بقيم افتراضية
-        company = CompanyInfo(
-            name="الخواجة للستائر والمفروشات",
-            description="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
-            version="1.0.0",
-            release_date="2025-04-30",
-            developer="zakee tahawi",
-            working_hours="9 صباحاً - 5 مساءً",
-            copyright_text="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi"
+        # fallback default
+        company = UnifiedSystemSettings(
+            company_name="الخواجة للستائر والمفروشات",
+            company_address="العنوان",
+            company_phone="01234567890",
+            company_email="info@example.com",
+            company_logo=None,
         )
     return {'company_info': company}
 
@@ -133,29 +130,39 @@ def footer_settings(request):
 
 def system_settings(request):
     """
-    توفير إعدادات النظام لجميع القوالب
+    توفير إعدادات النظام لجميع القوالب من UnifiedSystemSettings
     """
     # محاولة الحصول على الإعدادات من الذاكرة المؤقتة
     settings = cache.get('system_settings')
-
     if not settings:
         try:
-            # الحصول على الإعدادات أو إنشاؤها إذا لم تكن موجودة
-            settings, created = SystemSettings.objects.get_or_create(pk=1)
-            # تخزين في الذاكرة المؤقتة لمدة ساعة
-            cache.set('system_settings', settings, 3600)
+            # محاولة الحصول على الإعدادات الموجودة فقط، بدون إنشاء جديدة
+            settings = UnifiedSystemSettings.objects.first()
+            if settings:
+                cache.set('system_settings', settings, 3600)
+            else:
+                # إرجاع كائن افتراضي بدون حفظه في قاعدة البيانات
+                settings = UnifiedSystemSettings(
+                    company_name="الخواجة للستائر والمفروشات",
+                    currency="SAR",
+                    enable_notifications=True,
+                    items_per_page=20,
+                    low_stock_threshold=20,
+                    enable_analytics=True,
+                    default_theme="default",
+                    working_hours="9 صباحاً - 5 مساءً",
+                    copyright_text="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi"
+                )
         except Exception:
-            # إرجاع قيم افتراضية في حالة حدوث خطأ
             return {
                 'system_settings': None,
                 'currency_code': 'SAR',
                 'currency_symbol': 'ر.س'
             }
-
     return {
         'system_settings': settings,
         'currency_code': settings.currency,
-        'currency_symbol': settings.CURRENCY_SYMBOLS.get(settings.currency, settings.currency)
+        'currency_symbol': settings.currency_symbol
     }
 
 def user_context(request):

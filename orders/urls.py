@@ -28,4 +28,10 @@ urlpatterns = [
 
     # API endpoints
     path('api/order-details/<int:order_id>/', views.get_order_details_api, name='order_details_api'),
+    
+    # AJAX validation endpoints
+    path('ajax/validate-order/', views.validate_order_ajax, name='validate_order_ajax'),
+    path('ajax/validate-payment/', views.validate_payment_ajax, name='validate_payment_ajax'),
+    path('ajax/customer/<int:customer_id>/info/', views.get_customer_info_ajax, name='customer_info_ajax'),
+    path('ajax/product/<int:product_id>/info/', views.get_product_info_ajax, name='product_info_ajax'),
 ]

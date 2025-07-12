@@ -5,54 +5,15 @@ app_name = 'manufacturing'
 
 urlpatterns = [
     path('', views.DashboardView.as_view(), name='dashboard'),
-    path(
-        'orders/',
-        views.ManufacturingOrderListView.as_view(),
-        name='order_list'
-    ),
-    path(
-        'orders/create/',
-        views.ManufacturingOrderCreateView.as_view(),
-        name='order_create'
-    ),
-    path(
-        'orders/<int:pk>/',
-        views.ManufacturingOrderDetailView.as_view(),
-        name='order_detail'
-    ),
-    path(
-        'orders/<int:pk>/update/',
-        views.ManufacturingOrderUpdateView.as_view(),
-        name='order_update'
-    ),
-    path(
-        'orders/<int:pk>/delete/',
-        views.ManufacturingOrderDeleteView.as_view(),
-        name='order_delete'
-    ),
-    path(
-        'orders/<int:pk>/print/',
-        views.print_manufacturing_order,
-        name='order_print'
-    ),
-    path(
-        'api/update_status/<int:pk>/',
-        views.update_order_status,
-        name='update_order_status_api'
-    ),
-    path(
-        'api/update_exit_permit/<int:pk>/',
-        views.update_exit_permit,
-        name='update_exit_permit_api'
-    ),
-    path(
-        'approval/<int:pk>/',
-        views.update_approval_status,
-        name='update_approval_status'
-    ),
-    path(
-        'send_reply/<int:pk>/',
-        views.send_reply,
-        name='send_reply'
-    ),
+    path('list/', views.ManufacturingOrderListView.as_view(), name='order_list'),
+    path('create/', views.ManufacturingOrderCreateView.as_view(), name='order_create'),
+    path('<int:pk>/', views.ManufacturingOrderDetailView.as_view(), name='order_detail'),
+    path('<int:pk>/edit/', views.ManufacturingOrderUpdateView.as_view(), name='order_update'),
+    path('<int:pk>/delete/', views.ManufacturingOrderDeleteView.as_view(), name='order_delete'),
+    
+    # AJAX validation URLs
+    path('ajax/validate-order/', views.validate_manufacturing_order_ajax, name='validate_order_ajax'),
+    path('ajax/validate-item/', views.validate_manufacturing_item_ajax, name='validate_item_ajax'),
+    path('ajax/product/<int:product_id>/', views.get_product_info_ajax, name='get_product_info_ajax'),
+    path('ajax/order/<int:order_id>/', views.get_order_info_ajax, name='get_order_info_ajax'),
 ]

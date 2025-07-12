@@ -139,7 +139,11 @@ class CustomerAdmin(admin.ModelAdmin):
     customer_image.short_description = _('الصورة')
 
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
+        qs = super().get_queryset(request).select_related(
+            'branch', 'category', 'created_by'
+        ).prefetch_related(
+            'orders', 'inspections'
+        )
         if request.user.is_superuser:
             return qs
         # فلترة العملاء حسب فرع المستخدم

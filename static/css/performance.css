@@ -1,0 +1,687 @@
+/**
+ * تحسينات الأداء للواجهة الأمامية
+ */
+
+/* تحسين التحميل الكسول للصور */
+.lazy-loading {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    background: #f5f5f5;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lazy-loading::before {
+    content: "جاري التحميل...";
+    color: #666;
+    font-size: 14px;
+}
+
+.lazy-loaded {
+    opacity: 1;
+}
+
+.lazy-error {
+    background: #fee;
+    border: 1px solid #fcc;
+}
+
+.lazy-error::before {
+    content: "فشل التحميل";
+    color: #c33;
+    font-size: 14px;
+}
+
+/* تحسين الأداء للجداول */
+.table-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.table-optimized tbody {
+    contain: layout style;
+}
+
+.table-optimized tr {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للقوائم */
+.list-optimized {
+    contain: layout style paint;
+}
+
+.list-optimized li {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للنماذج */
+.form-optimized {
+    contain: layout style;
+}
+
+.form-optimized input,
+.form-optimized select,
+.form-optimized textarea {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ modals */
+.modal-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.modal-optimized .modal-content {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ tooltips */
+.tooltip-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ dropdowns */
+.dropdown-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.dropdown-optimized .dropdown-menu {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ alerts */
+.alert-optimized {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ buttons */
+.btn-optimized {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ cards */
+.card-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.card-optimized .card-body {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ navigation */
+.nav-optimized {
+    contain: layout style paint;
+}
+
+.nav-optimized .nav-item {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ sidebar */
+.sidebar-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.sidebar-optimized .sidebar-content {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ main content */
+.main-content-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ footer */
+.footer-optimized {
+    contain: layout style paint;
+}
+
+/* تحسين الأداء للـ header */
+.header-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ breadcrumbs */
+.breadcrumb-optimized {
+    contain: layout style;
+}
+
+.breadcrumb-optimized .breadcrumb-item {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ pagination */
+.pagination-optimized {
+    contain: layout style;
+}
+
+.pagination-optimized .page-item {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ progress bars */
+.progress-optimized {
+    contain: layout style;
+}
+
+.progress-optimized .progress-bar {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ badges */
+.badge-optimized {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ spinners */
+.spinner-optimized {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ loading states */
+.loading-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.loading-optimized .loading-spinner {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ skeleton loading */
+.skeleton-optimized {
+    contain: layout style;
+    will-change: transform;
+}
+
+.skeleton-optimized .skeleton-item {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ infinite scroll */
+.infinite-scroll-optimized {
+    contain: layout style paint;
+}
+
+.infinite-scroll-optimized .scroll-item {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ virtual scrolling */
+.virtual-scroll-optimized {
+    contain: layout style paint;
+    height: 400px;
+    overflow-y: auto;
+}
+
+.virtual-scroll-optimized .virtual-item {
+    contain: layout style;
+    will-change: transform;
+    height: 40px;
+}
+
+/* تحسين الأداء للـ search results */
+.search-results-optimized {
+    contain: layout style paint;
+}
+
+.search-results-optimized .result-item {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ autocomplete */
+.autocomplete-optimized {
+    contain: layout style paint;
+}
+
+.autocomplete-optimized .suggestion-item {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ file upload */
+.file-upload-optimized {
+    contain: layout style;
+}
+
+.file-upload-optimized .upload-item {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ image gallery */
+.gallery-optimized {
+    contain: layout style paint;
+}
+
+.gallery-optimized .gallery-item {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ charts */
+.chart-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.chart-optimized canvas {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ maps */
+.map-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.map-optimized .map-container {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ video player */
+.video-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.video-optimized video {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ audio player */
+.audio-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.audio-optimized audio {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ carousel */
+.carousel-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.carousel-optimized .carousel-item {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ tabs */
+.tabs-optimized {
+    contain: layout style paint;
+}
+
+.tabs-optimized .tab-content {
+    contain: layout style;
+}
+
+.tabs-optimized .tab-pane {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ accordion */
+.accordion-optimized {
+    contain: layout style paint;
+}
+
+.accordion-optimized .accordion-item {
+    contain: layout style;
+}
+
+.accordion-optimized .accordion-collapse {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ collapse */
+.collapse-optimized {
+    contain: layout style paint;
+}
+
+.collapse-optimized .collapse-content {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ offcanvas */
+.offcanvas-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.offcanvas-optimized .offcanvas-body {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ toast */
+.toast-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.toast-optimized .toast-body {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ popover */
+.popover-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.popover-optimized .popover-body {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ tooltip */
+.tooltip-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+.tooltip-optimized .tooltip-inner {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ scrollspy */
+.scrollspy-optimized {
+    contain: layout style paint;
+}
+
+.scrollspy-optimized .scrollspy-item {
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ affix */
+.affix-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ sticky */
+.sticky-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ fixed */
+.fixed-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ absolute */
+.absolute-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ relative */
+.relative-optimized {
+    contain: layout style paint;
+}
+
+/* تحسين الأداء للـ static */
+.static-optimized {
+    contain: layout style paint;
+}
+
+/* تحسين الأداء للـ hidden */
+.hidden-optimized {
+    contain: layout style paint;
+}
+
+/* تحسين الأداء للـ visible */
+.visible-optimized {
+    contain: layout style paint;
+}
+
+/* تحسين الأداء للـ opacity */
+.opacity-optimized {
+    contain: layout style paint;
+    will-change: opacity;
+}
+
+/* تحسين الأداء للـ transform */
+.transform-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ transition */
+.transition-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ animation */
+.animation-optimized {
+    contain: layout style paint;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ keyframes */
+@keyframes fadeIn-optimized {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-optimized {
+    animation: fadeIn-optimized 0.3s ease-out;
+}
+
+/* تحسين الأداء للـ hover effects */
+.hover-optimized:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease-out;
+}
+
+/* تحسين الأداء للـ focus effects */
+.focus-optimized:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    transition: box-shadow 0.2s ease-out;
+}
+
+/* تحسين الأداء للـ active effects */
+.active-optimized:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease-out;
+}
+
+/* تحسين الأداء للـ disabled effects */
+.disabled-optimized:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* تحسين الأداء للـ loading states */
+.loading-state-optimized {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading-state-optimized::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* تحسين الأداء للـ skeleton loading */
+.skeleton-loading-optimized {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* تحسين الأداء للـ responsive images */
+.responsive-image-optimized {
+    max-width: 100%;
+    height: auto;
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ aspect ratio */
+.aspect-ratio-optimized {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+}
+
+.aspect-ratio-optimized > * {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* تحسين الأداء للـ grid layout */
+.grid-optimized {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    contain: layout style;
+}
+
+.grid-optimized .grid-item {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ flexbox layout */
+.flex-optimized {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    contain: layout style;
+}
+
+.flex-optimized .flex-item {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* تحسين الأداء للـ masonry layout */
+.masonry-optimized {
+    columns: 3;
+    column-gap: 1rem;
+    contain: layout style;
+}
+
+.masonry-optimized .masonry-item {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+    contain: layout style;
+}
+
+/* تحسين الأداء للـ print styles */
+@media print {
+    .print-optimized {
+        contain: layout style paint;
+    }
+    
+    .print-optimized * {
+        contain: layout style;
+    }
+}
+
+/* تحسين الأداء للـ high contrast mode */
+@media (prefers-contrast: high) {
+    .high-contrast-optimized {
+        contain: layout style paint;
+    }
+    
+    .high-contrast-optimized * {
+        contain: layout style;
+    }
+}
+
+/* تحسين الأداء للـ reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .reduced-motion-optimized {
+        contain: layout style paint;
+    }
+    
+    .reduced-motion-optimized * {
+        contain: layout style;
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* تحسين الأداء للـ dark mode */
+@media (prefers-color-scheme: dark) {
+    .dark-mode-optimized {
+        contain: layout style paint;
+    }
+    
+    .dark-mode-optimized * {
+        contain: layout style;
+    }
+}
+
+/* تحسين الأداء للـ light mode */
+@media (prefers-color-scheme: light) {
+    .light-mode-optimized {
+        contain: layout style paint;
+    }
+    
+    .light-mode-optimized * {
+        contain: layout style;
+    }
+} 

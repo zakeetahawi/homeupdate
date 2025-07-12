@@ -12,8 +12,8 @@ from customers.models import Customer
 from orders.models import Order
 from inventory.models import Product
 from inspections.models import Inspection
-from accounts.models import CompanyInfo, ContactFormSettings, AboutPageSettings, FooterSettings
-from manufacturing.models import ManufacturingOrder, ManufacturingOrderItem
+from manufacturing.models import ManufacturingOrder
+from accounts.models import UnifiedSystemSettings, ContactFormSettings, AboutPageSettings, FooterSettings
 import re
 
 from django.http import HttpResponse, FileResponse, Http404
@@ -47,14 +47,7 @@ def home(request):
     ][:10]
 
     # Get company info for logo
-    company_info = CompanyInfo.objects.first()
-    if not company_info:
-        company_info = CompanyInfo.objects.create(
-            name='LATARA',
-            version='1.0.0',
-            release_date='2025-04-30',
-            developer='zakee tahawi'
-        )
+    company_info = UnifiedSystemSettings.get_settings()
 
     context = {
         'customers_count': customers_count,
@@ -81,7 +74,7 @@ def about(request):
         about_settings = AboutPageSettings.objects.create()
 
     # جلب معلومات الشركة (logo)
-    company_info = CompanyInfo.objects.first()
+    company_info = UnifiedSystemSettings.get_settings()
     
     context = {
         'title': about_settings.title,
@@ -99,9 +92,8 @@ def contact(request):
     """
     View for the contact page
     """
-    # الحصول على معلومات الشركة من CompanyInfo
-    from accounts.models import CompanyInfo
-    company_info = CompanyInfo.objects.first() or CompanyInfo.objects.create()
+    # الحصول على معلومات الشركة من UnifiedSystemSettings
+    company_info = UnifiedSystemSettings.get_settings()
 
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -120,7 +112,7 @@ def contact(request):
 
     context = {
         'title': 'اتصل بنا',
-        'description': company_info.description,
+        'description': company_info.about_text,
         'form_title': 'نموذج الاتصال',
         'company_info': company_info,
         'current_year': timezone.now().year,

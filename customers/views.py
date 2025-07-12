@@ -4,14 +4,17 @@ from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
-from django.db.models import Q, ProtectedError
+from django.db.models import Q, ProtectedError, Sum
 from django.core.paginator import Paginator
 from django.core.paginator import Paginator
 from django.db.models import Count, Case, When, IntegerField
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from .models import Customer, CustomerCategory, CustomerNote
+import json
+import re
+
+from .models import Customer, CustomerCategory, CustomerNote, CustomerType
 from orders.models import Order
 from .forms import CustomerForm, CustomerSearchForm, CustomerNoteForm
 
@@ -512,3 +515,62 @@ def check_customer_phone(request):
             }
         })
     return JsonResponse({'found': False})
+
+@login_required
+@require_POST
+def validate_customer_ajax(request):
+    """AJAX validation for customer form"""
+    try:
+        data = json.loads(request.body)
+        name = data.get('name')
+        phone = data.get('phone')
+        email = data.get('email')
+        
+        # Validate required fields
+        if not name or not name.strip():
+            return JsonResponse({'valid': False, 'message': 'اسم العميل مطلوب'})
+        
+        if not phone or not phone.strip():
+            return JsonResponse({'valid': False, 'message': 'رقم الهاتف مطلوب'})
+        
+        # Validate phone uniqueness
+        if phone:
+            qs = Customer.objects.filter(phone=phone)
+            if request.POST.get('customer_id'):  # Update case
+                qs = qs.exclude(id=request.POST.get('customer_id'))
+            if qs.exists():
+                return JsonResponse({'valid': False, 'message': 'رقم الهاتف مستخدم بالفعل'})
+        
+        # Validate email format if provided
+        if email and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            return JsonResponse({'valid': False, 'message': 'البريد الإلكتروني غير صحيح'})
+        
+        return JsonResponse({'valid': True})
+    except Exception as e:
+        return JsonResponse({'valid': False, 'message': str(e)})
+
+@login_required
+def get_customer_stats_ajax(request, customer_id):
+    """Get customer statistics for AJAX requests"""
+    try:
+        customer = Customer.objects.get(id=customer_id)
+        
+        # Get customer statistics
+        total_orders = customer.customer_orders.count()
+        total_spent = customer.customer_orders.aggregate(
+            total=Sum('total_amount', default=0)
+        )['total']
+        last_order = customer.customer_orders.order_by('-created_at').first()
+        
+        return JsonResponse({
+            'name': customer.name,
+            'phone': customer.phone,
+            'email': customer.email,
+            'status': customer.status,
+            'total_orders': total_orders,
+            'total_spent': str(total_spent) if total_spent else '0',
+            'last_order_date': last_order.created_at.strftime('%Y-%m-%d') if last_order else None,
+            'last_order_amount': str(last_order.total_amount) if last_order else '0'
+        })
+    except Customer.DoesNotExist:
+        return JsonResponse({'error': 'العميل غير موجود'}, status=404)

@@ -134,7 +134,9 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(
-            'order', 'order__customer'
+            'order', 'order__customer', 'order__customer__branch', 'created_by'
+        ).prefetch_related(
+            'items', 'items__product'
         )
 
     def has_change_permission(self, request, obj=None):

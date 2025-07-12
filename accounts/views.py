@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 
-from .models import Notification, CompanyInfo, FormField, Department, Salesperson, Branch, Role, UserRole
+from .models import Notification, CompanyInfo, FormField, Department, Salesperson, Branch, Role, UserRole, UnifiedSystemSettings
 from .utils import get_user_notifications
 from .forms import CompanyInfoForm, FormFieldForm, DepartmentForm, SalespersonForm, RoleForm, RoleAssignForm
 
@@ -220,24 +220,42 @@ def company_info_view(request):
         """
         View for managing company information
         """
-        # Get or create company info
-        company, _ = CompanyInfo.objects.get_or_create(
-            defaults={
-                'name': 'شركة الخواجه',
-                'address': 'العنوان',
-                'phone': '01234567890',
-                'email': 'info@example.com',
-            }
-        )
+        # Get or create unified company info
+        company = UnifiedSystemSettings.get_settings()
 
         if request.method == 'POST':
-            form = CompanyInfoForm(request.POST, request.FILES, instance=company)
-            if form.is_valid():
-                form.save()
-                messages.success(request, 'تم تحديث معلومات الشركة بنجاح.')
-                return redirect('accounts:company_info')
+            # تحديث الحقول الأساسية فقط
+            fields = [
+                'company_name', 'company_logo', 'company_address', 'company_phone',
+                'company_email', 'company_website', 'tax_number', 'commercial_register',
+                'working_hours', 'about_text', 'vision_text', 'mission_text',
+                'facebook_url', 'twitter_url', 'instagram_url', 'linkedin_url',
+                'primary_color', 'secondary_color', 'accent_color', 'copyright_text'
+            ]
+            for field in fields:
+                if field in request.POST or field in request.FILES:
+                    value = request.POST.get(field, None)
+                    if value is not None:
+                        setattr(company, field, value)
+            if 'company_logo' in request.FILES:
+                company.company_logo = request.FILES['company_logo']
+            company.save()
+            messages.success(request, 'تم تحديث معلومات الشركة بنجاح.')
+            return redirect('accounts:company_info')
         else:
-            form = CompanyInfoForm(instance=company)
+            # بناء نموذج ديناميكي بسيط
+            from django import forms
+            class UnifiedCompanyInfoForm(forms.ModelForm):
+                class Meta:
+                    model = UnifiedSystemSettings
+                    fields = [
+                        'company_name', 'company_logo', 'company_address', 'company_phone',
+                        'company_email', 'company_website', 'tax_number', 'commercial_register',
+                        'working_hours', 'about_text', 'vision_text', 'mission_text',
+                        'facebook_url', 'twitter_url', 'instagram_url', 'linkedin_url',
+                        'primary_color', 'secondary_color', 'accent_color', 'copyright_text'
+                    ]
+            form = UnifiedCompanyInfoForm(instance=company)
 
         context = {
             'form': form,

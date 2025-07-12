@@ -22,8 +22,8 @@
                 
                 <div class="row mb-4">
                     <div class="col-md-12 text-center mb-4">
-                        {% if company.logo %}
-                            <img src="{{ company.logo.url }}" alt="{{ company.name }}" class="img-fluid mb-3" style="max-height: 150px;">
+                        {% if company.company_logo %}
+                            <img src="{{ company.company_logo.url }}" alt="{{ company.company_name }}" class="img-fluid mb-3" style="max-height: 150px;">
                         {% else %}
                             <div class="alert alert-info">
                                 لم يتم تحميل شعار الشركة بعد

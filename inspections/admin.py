@@ -53,7 +53,11 @@ class InspectionAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('customer', 'branch', 'created_by')
+        return super().get_queryset(request).select_related(
+            'customer', 'customer__branch', 'branch', 'created_by'
+        ).prefetch_related(
+            'evaluations', 'reports'
+        )
 
 @admin.register(InspectionEvaluation)
 class InspectionEvaluationAdmin(admin.ModelAdmin):
