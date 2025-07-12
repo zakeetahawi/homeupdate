@@ -196,6 +196,11 @@ class OrderForm(forms.ModelForm):
         # Create the instance but don't commit to DB yet
         instance = super().save(commit=False)
         
+        # تعيين وضع الطلب تلقائياً للمعاينة
+        if selected_type == 'inspection':
+            instance.status = 'normal'  # تعيين وضع الطلب تلقائياً إلى "عادي" للمعاينة
+            status = 'normal'  # تحديث المتغير للاستخدام في الحسابات
+        
         # --- Calculate and set Expected Delivery Date ---
         days_to_add = 7 if status == 'vip' else 15
         instance.expected_delivery_date = timezone.now().date() + timedelta(days=days_to_add)

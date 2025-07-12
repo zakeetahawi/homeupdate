@@ -102,7 +102,7 @@
                                 </div>
                                 
                                 <!-- Order Status - Hidden for inspection -->
-                                <div class="mb-3 order-status-field">
+                                <div class="mb-3 order-status-field" id="order-status-container" style="display: none;">
                                     <label for="{{ form.status.id_for_label }}" class="form-label">وضع الطلب *</label>
                                     {{ form.status }}
                                     <div class="form-text text-muted">
@@ -115,6 +115,16 @@
                                     {% endif %}
                                 </div>
 
+                                <!-- Inspection Status Info -->
+                                <div class="mb-3 inspection-status-info" id="inspection-status-info" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>وضع الطلب للمعاينة:</strong>
+                                        <br>
+                                        سيتم تعيين وضع الطلب تلقائياً إلى "عادي" مع موعد تسليم خلال 48 ساعة
+                                    </div>
+                                </div>
+                                
                                 <!-- Expected Delivery Date - Hidden -->
                                 <div class="mb-3" style="display: none;">
                                     <label for="{{ form.expected_delivery_date.id_for_label }}" class="form-label">تاريخ التسليم المتوقع</label>
@@ -367,6 +377,11 @@
         const tailoringSection = document.querySelector('#tailoring-section');
         const inspectionFields = document.querySelector('#inspection-fields');
         
+        // إضافة عناصر وضع الطلب
+        const orderStatusContainer = document.querySelector('#order-status-container');
+        const inspectionStatusInfo = document.querySelector('#inspection-status-info');
+        const statusField = document.querySelector('#{{ form.status.id_for_label }}');
+        
         // --- Functions ---
         
         // Syncs the hidden Django radio buttons with the visible styled ones
@@ -387,6 +402,27 @@
             const showForAccessory = selectedType === 'accessory';
             const showForTailoring = selectedType === 'tailoring';
             const showForInspection = selectedType === 'inspection';
+
+            // التحكم في إظهار/إخفاء حقل وضع الطلب
+            if (orderStatusContainer) {
+                if (showForInspection) {
+                    // إخفاء حقل وضع الطلب للمعاينة
+                    orderStatusContainer.style.display = 'none';
+                    if (inspectionStatusInfo) {
+                        inspectionStatusInfo.style.display = 'block';
+                    }
+                    // تعيين وضع الطلب تلقائياً إلى "عادي" للمعاينة
+                    if (statusField) {
+                        statusField.value = 'normal';
+                    }
+                } else {
+                    // إظهار حقل وضع الطلب للخدمات الأخرى
+                    orderStatusContainer.style.display = 'block';
+                    if (inspectionStatusInfo) {
+                        inspectionStatusInfo.style.display = 'none';
+                    }
+                }
+            }
 
             if (contractField) contractField.style.display = showForContract ? 'block' : 'none';
             if (contractFileField) contractFileField.style.display = showForContract ? 'block' : 'none';
