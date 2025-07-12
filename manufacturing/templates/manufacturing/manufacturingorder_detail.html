@@ -116,7 +116,7 @@
                                     <td>
                                         {% if manufacturing_order.order.salesperson %}
                                             <span class="badge bg-success">
-                                                {{ manufacturing_order.order.salesperson.get_full_name|default:manufacturing_order.order.salesperson.username }}
+                                                {{ manufacturing_order.order.salesperson.name }}
                                             </span>
                                         {% else %}
                                             <span class="text-muted">غير محدد</span>

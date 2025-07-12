@@ -162,6 +162,7 @@
                     <th>{% trans 'العميل' %}</th>
                     <th>{% trans 'تاريخ الطلب' %}</th>
                     <th>{% trans 'تاريخ التنفيذ' %}</th>
+                    <th>{% trans 'تاريخ التسليم المتوقع' %}</th>
                     <th>{% trans 'عدد الشبابيك' %}</th>
                     <th>{% trans 'فني المعاينة' %}</th>
                     <th>{% trans 'البائع' %}</th>
@@ -185,6 +186,7 @@
                     <td>{{ inspection.customer|default:"عميل جديد" }}</td>
                     <td>{{ inspection.request_date }}</td>
                     <td>{{ inspection.scheduled_date }}</td>
+                    <td>{{ inspection.expected_delivery_date }}</td>
                     <td>{{ inspection.windows_count|default:"-" }}</td>
                     <td>
                         {% if inspection.inspector %}

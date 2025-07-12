@@ -408,15 +408,19 @@ class Order(models.Model):
         )
 
     def calculate_expected_delivery_date(self):
-        """حساب تاريخ التسليم المتوقع بناءً على وضع الطلب"""
+        """حساب تاريخ التسليم المتوقع بناءً على وضع الطلب ونوع الطلب"""
         if not self.order_date:
             return None
 
-        # تحديد عدد الأيام بناءً على وضع الطلب
-        if self.status == 'vip':
-            days_to_add = 7
-        else:  # normal
-            days_to_add = 15
+        # تحديد نوع الطلب للحصول على عدد الأيام المناسب
+        order_type = 'vip' if self.status == 'vip' else 'normal'
+        
+        # التحقق من وجود معاينة في الطلب
+        if 'inspection' in self.get_selected_types_list():
+            order_type = 'inspection'
+        
+        # الحصول على عدد الأيام من الإعدادات
+        days_to_add = DeliveryTimeSettings.get_delivery_days(order_type)
 
         # حساب التاريخ المتوقع
         expected_date = self.order_date.date() + timedelta(days=days_to_add)
@@ -786,3 +790,58 @@ class ManufacturingDeletionLog(models.Model):
 
     def __str__(self):
         return f'حذف أمر تصنيع #{self.manufacturing_order_id} - {self.order.order_number}'
+
+
+class DeliveryTimeSettings(models.Model):
+    """إعدادات مواعيد التسليم للطلبات والمعاينات"""
+    ORDER_TYPE_CHOICES = [
+        ('normal', 'طلب عادي'),
+        ('vip', 'طلب VIP'),
+        ('inspection', 'معاينة'),
+    ]
+    
+    order_type = models.CharField(
+        max_length=20,
+        choices=ORDER_TYPE_CHOICES,
+        verbose_name='نوع الطلب'
+    )
+    delivery_days = models.PositiveIntegerField(
+        verbose_name='عدد أيام التسليم',
+        help_text='عدد الأيام المتوقعة للتسليم'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='مفعل'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='تاريخ التحديث'
+    )
+    
+    class Meta:
+        verbose_name = 'إعداد موعد التسليم'
+        verbose_name_plural = 'إعدادات مواعيد التسليم'
+        unique_together = ['order_type']
+        ordering = ['order_type']
+    
+    def __str__(self):
+        return f"{self.get_order_type_display()} - {self.delivery_days} يوم"
+    
+    @classmethod
+    def get_delivery_days(cls, order_type):
+        """الحصول على عدد أيام التسليم لنوع طلب معين"""
+        try:
+            setting = cls.objects.get(order_type=order_type, is_active=True)
+            return setting.delivery_days
+        except cls.DoesNotExist:
+            # القيم الافتراضية
+            defaults = {
+                'normal': 15,
+                'vip': 7,
+                'inspection': 2,  # 48 ساعة
+            }
+            return defaults.get(order_type, 15)

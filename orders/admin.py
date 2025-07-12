@@ -2,7 +2,10 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 # from django.utils import timezone
-from .models import Order, OrderItem, Payment, OrderStatusLog
+from .models import (
+    Order, OrderItem, Payment, OrderStatusLog, 
+    ManufacturingDeletionLog, DeliveryTimeSettings
+)
 # from .extended_models import ExtendedOrder, AccessoryItem, FabricOrder # Deletion
 
 class OrderItemInline(admin.TabularInline):
@@ -110,6 +113,51 @@ class OrderStatusLogAdmin(admin.ModelAdmin):
     list_display = ('order', 'old_status', 'new_status', 'changed_by', 'created_at')
     list_filter = ('old_status', 'new_status', 'changed_by')
     search_fields = ('order__order_number',)
+
+@admin.register(DeliveryTimeSettings)
+class DeliveryTimeSettingsAdmin(admin.ModelAdmin):
+    """إدارة إعدادات مواعيد التسليم"""
+    list_display = [
+        'order_type', 'delivery_days', 'is_active', 
+        'created_at', 'updated_at'
+    ]
+    list_filter = ['order_type', 'is_active', 'created_at']
+    search_fields = ['order_type']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        (_('معلومات أساسية'), {
+            'fields': ('order_type', 'delivery_days', 'is_active')
+        }),
+        (_('معلومات النظام'), {
+            'classes': ('collapse',),
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related()
+    
+    def has_delete_permission(self, request, obj=None):
+        """منع حذف الإعدادات الافتراضية"""
+        if obj and obj.order_type in ['normal', 'vip', 'inspection']:
+            return False
+        return super().has_delete_permission(request, obj)
+    
+    def save_model(self, request, obj, form, change):
+        """تأكد من وجود إعداد واحد فقط لكل نوع طلب"""
+        if not change:  # إنشاء جديد
+            # التحقق من وجود إعداد آخر لنفس النوع
+            existing = DeliveryTimeSettings.objects.filter(
+                order_type=obj.order_type
+            ).first()
+            if existing:
+                # تحديث الإعداد الموجود بدلاً من إنشاء واحد جديد
+                existing.delivery_days = obj.delivery_days
+                existing.is_active = obj.is_active
+                existing.save()
+                return
+        super().save_model(request, obj, form, change)
 
 # ExtendedOrder models are no longer used and have been removed.
 # class AccessoryItemInline(admin.TabularInline):

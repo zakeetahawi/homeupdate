@@ -136,11 +136,17 @@ class InspectionForm(forms.ModelForm):
         fields = [
             'customer', 'contract_number', 'inspector', 'request_date',
             'scheduled_date', 'windows_count', 'notes', 'inspection_file',
-            'branch', 'responsible_employee', 'status', 'result'
+            'branch', 'responsible_employee', 'status', 'result',
+            'expected_delivery_date'
         ]
         widgets = {
             'request_date': forms.DateInput(attrs={'type': 'date'}),
             'scheduled_date': forms.DateInput(attrs={'type': 'date'}),
+            'expected_delivery_date': forms.DateInput(attrs={
+                'type': 'date',
+                'readonly': True,
+                'class': 'form-control form-control-sm'
+            }),
             'notes': forms.Textarea(attrs={'rows': 4}),
             'inspection_file': forms.FileInput(attrs={'accept': '.pdf'}),
             'status': forms.Select(attrs={'class': 'form-control'}),

@@ -16,6 +16,7 @@ class InspectionAdmin(admin.ModelAdmin):
         'scheduled_date',
         'status',
         'result',
+        'expected_delivery_date',
         'created_by'
     ]
     list_filter = ['status', 'result', 'request_date', 'scheduled_date', 'branch']
@@ -26,7 +27,7 @@ class InspectionAdmin(admin.ModelAdmin):
         'created_by__username'
     ]
     date_hierarchy = 'request_date'
-    readonly_fields = ['created_at', 'updated_at', 'created_by']
+    readonly_fields = ['created_at', 'updated_at', 'created_by', 'expected_delivery_date']
 
     fieldsets = (
         (_('معلومات أساسية'), {
@@ -34,6 +35,9 @@ class InspectionAdmin(admin.ModelAdmin):
         }),
         (_('حالة المعاينة'), {
             'fields': ('status', 'result', 'notes')
+        }),
+        (_('موعد التسليم'), {
+            'fields': ('expected_delivery_date',)
         }),
         (_('معلومات النظام'), {
             'classes': ('collapse',),

@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from model_utils.tracker import FieldTracker
 import re
+from datetime import timedelta
 
 class InspectionEvaluation(models.Model):
     CRITERIA_CHOICES = [
@@ -230,6 +231,13 @@ class Inspection(models.Model):
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
     completed_at = models.DateTimeField(_('تاريخ الإكتمال'), null=True, blank=True)
+    expected_delivery_date = models.DateField(
+        _('تاريخ التسليم المتوقع'),
+        null=True,
+        blank=True,
+        help_text=_('يتم حسابه تلقائياً بناءً على نوع الطلب')
+    )
+    
     class Meta:
         verbose_name = _('معاينة')
         verbose_name_plural = _('المعاينات')
@@ -293,6 +301,11 @@ class Inspection(models.Model):
         # توليد اسم الملف لـ Google Drive فقط إذا تغير الملف
         if self.inspection_file and (file_changed or not self.google_drive_file_name):
             self.google_drive_file_name = self.generate_drive_filename()
+        
+        # حساب تاريخ التسليم المتوقع إذا لم يكن محدداً
+        if not self.expected_delivery_date:
+            self.expected_delivery_date = self.calculate_expected_delivery_date()
+        
         super().save(*args, **kwargs)
         # رفع تلقائي إلى Google Drive فقط إذا تغير الملف ولم يتم رفعه بعد
         if file_changed and self.inspection_file and not self.is_uploaded_to_drive:
@@ -351,6 +364,21 @@ class Inspection(models.Model):
         # استبدال المسافات بـ underscore
         cleaned = re.sub(r'\s+', '_', cleaned)
         return cleaned[:50]  # تحديد الطول الأقصى
+
+    def calculate_expected_delivery_date(self):
+        """حساب تاريخ التسليم المتوقع للمعاينة"""
+        from orders.models import DeliveryTimeSettings
+        
+        if not self.request_date:
+            return None
+        
+        # الحصول على عدد الأيام من إعدادات المعاينة
+        delivery_days = DeliveryTimeSettings.get_delivery_days('inspection')
+        
+        # حساب التاريخ المتوقع
+        expected_date = self.request_date + timedelta(days=delivery_days)
+        return expected_date
+
     def upload_to_google_drive_async(self):
         """رفع الملف إلى Google Drive بشكل تلقائي"""
         try:
