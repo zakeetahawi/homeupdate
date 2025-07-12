@@ -22,4 +22,6 @@ urlpatterns = [
     # Category Management
     path('categories/', views.customer_category_list, name='category_list'),
     path('categories/add/', views.add_customer_category, name='add_category'),
+    path('api/customer/<int:pk>/', views.get_customer_details, name='get_customer_details'),
+    path('api/check-phone/', views.check_customer_phone, name='check_customer_phone'),
 ]

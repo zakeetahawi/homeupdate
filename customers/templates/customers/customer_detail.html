@@ -70,6 +70,9 @@
                         </div>
                         <div class="col-md-2 text-end">
                             <div class="btn-group-vertical d-grid gap-2">
+                                <a href="{% url 'orders:order_create' %}?customer_id={{ customer.pk }}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-plus"></i> {% trans 'إنشاء طلب' %}
+                                </a>
                                 <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-primary btn-sm">
                                     <i class="fas fa-edit"></i> {% trans 'تعديل' %}
                                 </a>

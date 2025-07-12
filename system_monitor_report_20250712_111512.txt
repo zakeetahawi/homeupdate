@@ -1,0 +1,24 @@
+تقرير مراقبة النظام - System Monitor Report
+===========================================
+التاريخ: Sat Jul 12 11:15:12 AM EEST 2025
+Date: Sat Jul 12 11:15:12 AM EEST 2025
+
+حالة النظام - System Status:
+- Django: يعمل - Django: Running
+- قاعدة البيانات: متصلة - Database: Connected
+- الذاكرة المؤقتة: تعمل - Cache: Working
+- الملفات الثابتة: موجودة - Static files: Available
+
+استخدام الموارد - Resource Usage:
+- الذاكرة: 39.2%
+- القرص: 12%
+- المعالج: 0.0%
+
+إحصائيات قاعدة البيانات - Database Statistics:
+66 objects imported automatically (use -v 2 for details).
+
+ملاحظات - Notes:
+- تم فحص جميع المكونات الأساسية - All core components checked
+- النظام يعمل بشكل طبيعي - System is running normally
+- لا توجد مشاكل حرجة - No critical issues detected
+

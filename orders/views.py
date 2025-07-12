@@ -289,6 +289,8 @@ def order_create(request):
 
             if form and 'customer' in form.fields:
                 form.fields['customer'].initial = customer.id
+                form.fields['customer'].widget.attrs['readonly'] = True
+                form.fields['customer'].disabled = True
         except Customer.DoesNotExist:
             pass
 

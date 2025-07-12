@@ -180,6 +180,16 @@ def customer_create(request):
                 messages.error(request, _('حدث خطأ أثناء حفظ العميل: {}').format(str(e)))
         else:
             print(f"Form errors: {form.errors}")  # للتشخيص
+            # التحقق من وجود عميل مكرر لعرض البطاقة
+            if 'phone' in form.errors and hasattr(form, 'existing_customer'):
+                existing_customer = form.existing_customer
+                context = {
+                    'form': form,
+                    'title': _('إضافة عميل جديد'),
+                    'existing_customer': existing_customer,
+                    'show_duplicate_alert': True
+                }
+                return render(request, 'customers/customer_form.html', context)
     else:
         form = CustomerForm(user=request.user)
 
@@ -458,6 +468,7 @@ def test_customer_form(request):
     form = CustomerForm(user=request.user)
     return render(request, '../test_form.html', {'form': form})
 
+@login_required
 def find_customer_by_phone(request):
     """API: البحث عن عميل برقم الهاتف وإرجاع بياناته JSON"""
     phone = request.GET.get('phone')
@@ -467,12 +478,37 @@ def find_customer_by_phone(request):
     if customer:
         return JsonResponse({
             'found': True,
-            'id': customer.pk,
-            'name': customer.name,
-            'branch': customer.branch.name if customer.branch else '',
-            'phone': customer.phone,
-            'email': customer.email,
-            'address': customer.address,
-            'url': f"/customers/{customer.pk}/"
+            'customer': {
+                'id': customer.pk,
+                'name': customer.name,
+                'branch': customer.branch.name if customer.branch else 'غير محدد',
+                'phone': customer.phone,
+                'email': customer.email,
+                'address': customer.address,
+                'url': f"/customers/{customer.pk}/"
+            }
+        })
+    return JsonResponse({'found': False})
+
+@login_required
+def check_customer_phone(request):
+    """API: التحقق من وجود عميل برقم الهاتف"""
+    phone = request.GET.get('phone')
+    if not phone:
+        return JsonResponse({'found': False, 'error': 'رقم الهاتف مطلوب'}, status=400)
+    
+    customer = Customer.objects.filter(phone=phone).first()
+    if customer:
+        return JsonResponse({
+            'found': True,
+            'customer': {
+                'id': customer.pk,
+                'name': customer.name,
+                'branch': customer.branch.name if customer.branch else 'غير محدد',
+                'phone': customer.phone,
+                'email': customer.email,
+                'address': customer.address,
+                'url': f"/customers/{customer.pk}/"
+            }
         })
     return JsonResponse({'found': False})

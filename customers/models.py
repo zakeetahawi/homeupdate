@@ -315,3 +315,8 @@ class Customer(models.Model):
         
         customer_types_dict = dict(get_customer_types())
         return customer_types_dict.get(self.customer_type, self.customer_type)
+
+    def get_absolute_url(self):
+        """الحصول على رابط تفاصيل العميل"""
+        from django.urls import reverse
+        return reverse('customers:customer_detail', kwargs={'pk': self.pk})

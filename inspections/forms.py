@@ -147,7 +147,7 @@ class InspectionForm(forms.ModelForm):
             'result': forms.Select(attrs={'class': 'form-control'}),
         }
 
-    def __init__(self, *args, user=None, order=None, **kwargs):
+    def __init__(self, *args, user=None, order=None, customer=None, **kwargs):
         super().__init__(*args, **kwargs)
         
         # Set inspector queryset
@@ -221,6 +221,12 @@ class InspectionForm(forms.ModelForm):
             self.fields['responsible_employee'].disabled = True
             self.fields['responsible_employee'].widget.attrs['readonly'] = True
             self.fields['responsible_employee'].help_text = _('لا يمكن تغيير البائع بعد إنشاء المعاينة من طلب')
+
+        # تثبيت العميل إذا تم تمريره
+        if customer:
+            self.fields['customer'].initial = customer.pk
+            self.fields['customer'].widget.attrs['readonly'] = True
+            self.fields['customer'].disabled = True
 
         # Make fields optional as needed
         self.fields['notes'].required = False

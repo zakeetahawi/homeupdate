@@ -92,10 +92,17 @@ class CustomerForm(forms.ModelForm):
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 existing = qs.first()
+                # إضافة معلومات العميل الموجود للاستخدام في القالب
+                self.existing_customer = existing
                 raise ValidationError(
-                    _('رقم الهاتف مستخدم بالفعل للعميل: %(name)s (الفرع: %(branch)s)\nيمكنك إنشاء الطلب مباشرة باسم العميل الموجود.'),
+                    _('رقم الهاتف مستخدم بالفعل للعميل: %(name)s (الفرع: %(branch)s)'),
                     code='duplicate_phone',
-                    params={'name': existing.name, 'branch': existing.branch.name if existing.branch else '-'}
+                    params={
+                        'name': existing.name, 
+                        'branch': existing.branch.name if existing.branch else '-',
+                        'customer_id': existing.pk,
+                        'customer_url': f'/customers/{existing.pk}/'
+                    }
                 )
         return phone
 

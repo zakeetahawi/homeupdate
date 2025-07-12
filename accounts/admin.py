@@ -1,17 +1,18 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Permission
 from django import forms
-from django.urls import path
-from django.utils.html import format_html
-from django.contrib.admin.widgets import FilteredSelectMultiple
+from django.contrib import messages
+from django.contrib.contenttypes.models import ContentType
+
 from .models import (
     User, CompanyInfo, Branch, Notification, Department, Salesperson,
     Role, UserRole, SystemSettings, BranchMessage
 )
 from .forms import THEME_CHOICES
+from manufacturing.models import ManufacturingOrder
+
 
 class DepartmentFilter(admin.SimpleListFilter):
     title = _('Department')
@@ -31,13 +32,80 @@ class DepartmentFilter(admin.SimpleListFilter):
                 return queryset.filter(departments__id=self.value())
             elif hasattr(queryset.model, 'department'):
                 return queryset.filter(department__id=self.value())
-            elif hasattr(queryset.model, 'user') and hasattr(queryset.model.user.field.related_model, 'departments'):
+            elif (hasattr(queryset.model, 'user') and
+                  hasattr(
+                      queryset.model.user.field.related_model, 'departments'
+                  )):
                 return queryset.filter(user__departments__id=self.value())
         return queryset
 
 
+def add_manufacturing_approval_permission(modeladmin, request, queryset):
+    """Grant manufacturing approval permission to selected users."""
+    content_type = ContentType.objects.get_for_model(ManufacturingOrder)
+    approve_permission, _ = Permission.objects.get_or_create(
+        codename='can_approve_orders',
+        content_type=content_type,
+        defaults={'name': 'Can approve manufacturing orders'}
+    )
+    reject_permission, _ = Permission.objects.get_or_create(
+        codename='can_reject_orders',
+        content_type=content_type,
+        defaults={'name': 'Can reject manufacturing orders'}
+    )
+
+    count = 0
+    for user in queryset:
+        if not user.user_permissions.filter(id=approve_permission.id).exists():
+            user.user_permissions.add(approve_permission, reject_permission)
+            count += 1
+
+    messages.success(
+        request,
+        f'تم إعطاء صلاحيات الموافقة على التصنيع لـ {count} مستخدم'
+    )
+
+
+add_manufacturing_approval_permission.short_description = _(
+    'إعطاء صلاحيات الموافقة على التصنيع'
+)
+
+
+def remove_manufacturing_approval_permission(modeladmin, request, queryset):
+    """Remove manufacturing approval permission from selected users."""
+    content_type = ContentType.objects.get_for_model(ManufacturingOrder)
+    try:
+        approve_permission = Permission.objects.get(
+            codename='can_approve_orders',
+            content_type=content_type
+        )
+        reject_permission = Permission.objects.get(
+            codename='can_reject_orders',
+            content_type=content_type
+        )
+    except Permission.DoesNotExist:
+        messages.warning(request, "لم يتم العثور على صلاحيات التصنيع.")
+        return
+
+    count = 0
+    for user in queryset:
+        if user.user_permissions.filter(id=approve_permission.id).exists():
+            user.user_permissions.remove(approve_permission, reject_permission)
+            count += 1
+
+    messages.success(
+        request,
+        f'تم إزالة صلاحيات الموافقة على التصنيع من {count} مستخدم'
+    )
+
+
+remove_manufacturing_approval_permission.short_description = _(
+    'إزالة صلاحيات الموافقة على التصنيع'
+)
+
+
 class UserRoleInline(admin.TabularInline):
-    """إدارة أدوار المستخدم مباشرة من صفحة المستخدم"""
+    """Manage user roles directly from the user page."""
     model = UserRole
     extra = 1
     verbose_name = _('دور المستخدم')
@@ -49,65 +117,112 @@ class UserRoleInline(admin.TabularInline):
             kwargs["queryset"] = Role.objects.all().order_by('name')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'branch', 'first_name', 'last_name', 'is_staff', 'is_inspection_technician', 'get_roles')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'branch', 'is_inspection_technician', 'user_roles__role')
+    list_display = (
+        'username', 'email', 'branch', 'first_name', 'last_name', 'is_staff',
+        'is_inspection_technician', 'get_roles', 'has_manufacturing_approval'
+    )
+    list_filter = (
+        'is_staff', 'is_superuser', 'is_active', 'branch',
+        'is_inspection_technician', 'user_roles__role'
+    )
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
     inlines = [UserRoleInline]
-    
+    actions = [
+        add_manufacturing_approval_permission,
+        remove_manufacturing_approval_permission
+    ]
+
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('معلومات شخصية'), {'fields': ('first_name', 'last_name', 'email', 'phone', 'image', 'branch', 'departments', 'default_theme')}),
+        (_('معلومات شخصية'), {
+            'fields': (
+                'first_name', 'last_name', 'email', 'phone', 'image', 'branch',
+                'departments', 'default_theme'
+            )
+        }),
         (_('الصلاحيات'), {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'is_inspection_technician', 'groups', 'user_permissions'),
+            'fields': (
+                'is_active', 'is_staff', 'is_superuser',
+                'is_inspection_technician', 'groups', 'user_permissions'
+            ),
             'classes': ('collapse',),
-            'description': _('يمكنك إدارة أدوار المستخدم بشكل أسهل من خلال قسم "أدوار المستخدم" أدناه.')
+            'description': _(
+                'يمكنك إدارة أدوار المستخدم بشكل أسهل '
+                'من خلال قسم "أدوار المستخدم" أدناه.'
+            )
         }),
         (_('تواريخ مهمة'), {'fields': ('last_login', 'date_joined')}),
     )
-    
+
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'password1', 'password2', 'first_name', 'last_name', 'email', 'phone', 'image', 'branch', 'departments', 'default_theme'),
+            'fields': (
+                'username', 'password', 'password2', 'first_name',
+                'last_name', 'email', 'phone', 'image', 'branch',
+                'departments', 'default_theme'
+            ),
         }),
     )
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         if 'default_theme' in form.base_fields:
-            form.base_fields['default_theme'].widget = forms.Select(choices=THEME_CHOICES)
+            form.base_fields['default_theme'].widget = forms.Select(
+                choices=THEME_CHOICES
+            )
         return form
 
     def get_roles(self, obj):
-        """عرض أدوار المستخدم في قائمة المستخدمين"""
+        """Display user roles in the user list."""
         roles = obj.user_roles.all().select_related('role')
         if not roles:
             return "-"
         return ", ".join([role.role.name for role in roles])
     get_roles.short_description = _('الأدوار')
 
+    def has_manufacturing_approval(self, obj):
+        """Display if the user has manufacturing approval permission."""
+        content_type = ContentType.objects.get_for_model(ManufacturingOrder)
+        return obj.user_permissions.filter(
+            codename='can_approve_orders',
+            content_type=content_type
+        ).exists()
+
+    has_manufacturing_approval.boolean = True
+    has_manufacturing_approval.short_description = _(
+        'صلاحية الموافقة على التصنيع'
+    )
+
     def get_inline_instances(self, request, obj=None):
-        """إضافة رسالة توضيحية فوق قسم أدوار المستخدم"""
+        """Add a help message above the user roles section."""
         if not obj:
             return []
         return super().get_inline_instances(request, obj)
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
-        """إضافة رابط لإدارة الأدوار من صفحة المستخدم"""
+        """Add a link to the roles management page."""
         extra_context = extra_context or {}
         extra_context['show_roles_management'] = True
         extra_context['roles_list_url'] = '/admin/accounts/role/'
         extra_context['add_role_url'] = '/admin/accounts/role/add/'
-        return super().change_view(request, object_id, form_url, extra_context)
+        return super().change_view(
+            request, object_id, form_url, extra_context
+        )
+
 
 @admin.register(CompanyInfo)
 class CompanyInfoAdmin(admin.ModelAdmin):
     list_display = ('name', 'phone', 'email', 'website')
     fieldsets = (
         (_('معلومات أساسية'), {
-            'fields': ('name', 'logo', 'address', 'phone', 'email', 'website', 'working_hours')
+            'fields': (
+                'name', 'logo', 'address', 'phone', 'email', 'website',
+                'working_hours'
+            )
         }),
         (_('عن النظام'), {
             'fields': ('description',)
@@ -116,13 +231,18 @@ class CompanyInfoAdmin(admin.ModelAdmin):
             'fields': ('tax_number', 'commercial_register')
         }),
         (_('وسائل التواصل الاجتماعي'), {
-            'fields': ('facebook', 'twitter', 'instagram', 'linkedin', 'social_links')
+            'fields': (
+                'facebook', 'twitter', 'instagram', 'linkedin', 'social_links'
+            )
         }),
         (_('معلومات إضافية'), {
             'fields': ('about', 'vision', 'mission')
         }),
         (_('إعدادات النظام'), {
-            'fields': ('primary_color', 'secondary_color', 'accent_color', 'copyright_text')
+            'fields': (
+                'primary_color', 'secondary_color', 'accent_color',
+                'copyright_text'
+            )
         }),
         (_('معلومات النظام - للعرض فقط'), {
             'fields': ('developer', 'version', 'release_date'),

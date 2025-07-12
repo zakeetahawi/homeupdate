@@ -77,7 +77,12 @@
                                 <!-- Customer Selection -->
                                 <div class="mb-3">
                                     <label for="{{ form.customer.id_for_label }}" class="form-label">العميل *</label>
+                                    {% if customer %}
+                                    <input type="text" class="form-control" value="{{ customer.name }}" readonly>
+                                    <input type="hidden" name="customer" value="{{ customer.pk }}">
+                                    {% else %}
                                     {{ form.customer }}
+                                    {% endif %}
                                     {% if form.customer.errors %}
                                     <div class="alert alert-danger mt-2">
                                         {{ form.customer.errors }}

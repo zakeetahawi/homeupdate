@@ -181,13 +181,31 @@ class InspectionCreateView(LoginRequiredMixin, CreateView):
         kwargs['user'] = self.request.user
         # إضافة الطلب المرتبط إلى النموذج إذا كان موجوداً
         order_id = self.request.GET.get('order_id')
+        customer_id = self.request.GET.get('customer_id')
         if order_id:
             from orders.models import Order
             try:
                 kwargs['order'] = Order.objects.get(id=order_id)
             except Order.DoesNotExist:
                 pass
+        if customer_id:
+            try:
+                from customers.models import Customer
+                kwargs['customer'] = Customer.objects.get(id=customer_id)
+            except Exception:
+                pass
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        customer_id = self.request.GET.get('customer_id')
+        if customer_id:
+            try:
+                from customers.models import Customer
+                context['customer'] = Customer.objects.get(id=customer_id)
+            except Exception:
+                pass
+        return context
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
