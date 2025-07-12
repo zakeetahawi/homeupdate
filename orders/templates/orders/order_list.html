@@ -18,21 +18,7 @@
     margin-bottom: 0;
 }
 
-/* تنسيق ثابت لهيد الجدول باللون البني */
-.table thead th {
-    background-color: #8B4513 !important; /* لون بني غامق ثابت */
-    color: white !important;
-    font-weight: 600;
-    border: none;
-    padding: 1rem 0.75rem;
-    text-align: center;
-    vertical-align: middle;
-}
-
-/* إزالة تأثير التمرير للحفاظ على اللون البني الثابت */
-.table thead th:hover {
-    background-color: #8B4513 !important; /* نفس اللون البني */
-}
+/* تنسيق هيد الجدول - سيتم تطبيق التنسيق من CSS العام */
 
 .table tbody td {
     padding: 0.75rem;
@@ -67,15 +53,6 @@
 
 .table th {
     font-size: 0.9rem;
-}
-
-/* إزالة أي تنسيقات أخرى قد تؤثر على لون الهيد */
-.table-striped thead th {
-    background-color: #8B4513 !important;
-}
-
-.table-hover thead th:hover {
-    background-color: #8B4513 !important;
 }
 </style>
 {% endblock %}
@@ -129,7 +106,7 @@
         <div class="card-body p-0">
             {% if page_obj %}
             <div class="table-responsive">
-                <table class="table table-hover table-striped mb-0">
+                <table class="table table-hover table-striped mb-0 orders-table">
                     <thead>
                         <tr>
                             <th class="text-center" style="width: 8%;">رقم الطلب</th>

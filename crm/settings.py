@@ -37,6 +37,7 @@ if DEBUG:
     '127.0.0.1',
     '*.trycloudflare.com',
     '*.ngrok-free.app',
+    'testserver',  # للاختبارات
     ])
 
 # إضافة دومين elkhawaga.uk وجميع النطاقات الفرعية

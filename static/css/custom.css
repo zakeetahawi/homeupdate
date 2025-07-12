@@ -198,6 +198,38 @@ a:hover {
     border-top: 1px solid var(--border-color);
 }
 
+/* ===== هيد جدول الطلبات - نفس ألوان جدول العملاء ===== */
+.orders-table thead th {
+    background-color: var(--primary) !important;
+    color: #fff !important;
+    border-bottom: 1px solid var(--border) !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    padding: 12px 8px !important;
+    font-size: 0.9rem !important;
+}
+
+/* ===== تنسيق هيد الجدول للثيم الافتراضي ===== */
+.orders-table thead th {
+    background-color: #8B735A !important;
+    color: #fff !important;
+    border-bottom: 1px solid #DED5CE !important;
+}
+
+/* ===== تنسيق هيد الجدول للثيم المخصص ===== */
+[data-theme="custom-theme"] .orders-table thead th {
+    background-color: #6A5743 !important;
+    color: #fff !important;
+    border-bottom: 1px solid #C9BEB4 !important;
+}
+
+/* ===== تنسيق هيد الجدول للثيم الأسود ===== */
+[data-theme="modern-black"] .orders-table thead th {
+    background-color: #00D2FF !important;
+    color: #000 !important;
+    border-bottom: 1px solid #333333 !important;
+}
+
 .table thead th {
     vertical-align: bottom;
     border-bottom: 2px solid var(--border-color);
