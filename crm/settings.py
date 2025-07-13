@@ -395,14 +395,14 @@ CSRF_COOKIE_SECURE = False  # تعطيل لتجنب مشاكل المصادقة
 CSRF_USE_SESSIONS = False
 
 # إعدادات Session موحدة
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = False  # تعطيل لتجنب مشاكل المصادقة
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_AGE = 86400 * 7  # 7 أيام
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_CACHE_ALIAS = 'session'
-SESSION_SAVE_EVERY_REQUEST = True  # حفظ الجلسة مع كل طلب لتجديد انتهاء الصلاحية
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # عدم انتهاء الجلسة عند إغلاق المتصفح
+SESSION_COOKIE_AGE = 86400 * 7  # 7 أيام
+SESSION_COOKIE_SECURE = False  # اجعلها True إذا كنت تستخدم HTTPS فقط
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # يبقى المستخدم مسجلاً حتى بعد إغلاق المتصفح
 
 # إعدادات جدولة المهام
 APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"
