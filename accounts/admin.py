@@ -8,8 +8,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
 from .models import (
-    User, CompanyInfo, Branch, Notification, Department, Salesperson,
-    Role, UserRole, SystemSettings, BranchMessage, UnifiedSystemSettings
+    User, Branch, Notification, Department, Salesperson,
+    Role, UserRole, BranchMessage, UnifiedSystemSettings,
+    FormField, ContactFormSettings, FooterSettings, AboutPageSettings,
+    UserSecurityProfile, AuditLog
 )
 from .forms import THEME_CHOICES
 from manufacturing.models import ManufacturingOrder
@@ -286,8 +288,7 @@ class UnifiedSystemSettingsAdmin(admin.ModelAdmin):
         """تكرار الإعدادات المحددة"""
         count = 0
         for settings in queryset:
-            # إنشاء نسخة جديدة
-            new_settings = UnifiedSystemSettings.objects.create(
+            UnifiedSystemSettings.objects.create(
                 company_name=f"{settings.company_name} - نسخة",
                 company_logo=settings.company_logo,
                 company_address=settings.company_address,
@@ -321,9 +322,8 @@ class UnifiedSystemSettingsAdmin(admin.ModelAdmin):
                 maintenance_message=settings.maintenance_message
             )
             count += 1
-        
         self.message_user(
-            request, 
+            request,
             f'تم تكرار {count} إعدادات بنجاح'
         )
     duplicate_settings.short_description = _('تكرار الإعدادات المحددة')
@@ -701,3 +701,42 @@ class BranchMessageAdmin(admin.ModelAdmin):
             'fields': ('start_date', 'end_date', 'is_active')
         })
     )
+
+@admin.register(FormField)
+class FormFieldAdmin(admin.ModelAdmin):
+    list_display = (
+        'field_name', 'field_label', 'form_type', 'field_type',
+        'required', 'enabled', 'order'
+    )
+    search_fields = ('field_name', 'field_label')
+    list_filter = ('form_type', 'field_type', 'required', 'enabled')
+
+@admin.register(ContactFormSettings)
+class ContactFormSettingsAdmin(admin.ModelAdmin):
+    list_display = ('contact_email', 'contact_phone', 'title')
+    search_fields = ('contact_email', 'contact_phone', 'title')
+    list_filter = ('title',)
+
+@admin.register(FooterSettings)
+class FooterSettingsAdmin(admin.ModelAdmin):
+    list_display = ('left_column_title', 'middle_column_title', 'right_column_title')
+
+@admin.register(AboutPageSettings)
+class AboutPageSettingsAdmin(admin.ModelAdmin):
+    list_display = ('title',)
+
+@admin.register(UserSecurityProfile)
+class UserSecurityProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        'user', 'two_factor_enabled', 'failed_login_attempts'
+    )
+    search_fields = ('user__username',)
+    list_filter = ('two_factor_enabled',)
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = (
+        'user', 'event_type', 'severity', 'timestamp', 'ip_address'
+    )
+    search_fields = ('user__username', 'event_type', 'ip_address')
+    list_filter = ('event_type', 'severity', 'timestamp')
