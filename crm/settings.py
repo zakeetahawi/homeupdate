@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'orders',
     'manufacturing',
     'reports',
+    'installations',
     'odoo_db_manager.apps.OdooDbManagerConfig',
     'corsheaders',
     'django_apscheduler',

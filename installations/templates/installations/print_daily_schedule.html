@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الجدول اليومي - {{ date|date:"d/m/Y" }}</title>
+    <style>
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none !important; }
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            direction: rtl;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .header .date {
+            color: #666;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: right;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .status-scheduled {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        .status-in-progress {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        .summary {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .summary h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .team-info {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .no-print {
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 2px;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()" class="btn btn-primary">طباعة</button>
+        <a href="{% url 'installations:daily_schedule' %}" class="btn btn-secondary">العودة</a>
+    </div>
+
+    <div class="header">
+        <h1>جدول التركيبات اليومي</h1>
+        <div class="date">{{ date|date:"d/m/Y" }}</div>
+    </div>
+
+    {% if installations %}
+    <table>
+        <thead>
+            <tr>
+                <th>الموعد</th>
+                <th>رقم الطلب</th>
+                <th>العميل</th>
+                <th>رقم الهاتف</th>
+                <th>العنوان</th>
+                <th>الفريق</th>
+                <th>الحالة</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for installation in installations %}
+            <tr>
+                <td><strong>{{ installation.scheduled_time|time:"H:i" }}</strong></td>
+                <td><strong>{{ installation.order.order_number }}</strong></td>
+                <td>{{ installation.order.customer.name }}</td>
+                <td>{{ installation.order.customer.phone }}</td>
+                <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
+                <td>
+                    {% if installation.team %}
+                        <strong>{{ installation.team.name }}</strong>
+                        <div class="team-info">
+                            {% if installation.team.driver %}
+                                السائق: {{ installation.team.driver.name }}
+                            {% endif %}
+                            {% for technician in installation.team.technicians.all %}
+                                <br>فني: {{ technician.name }}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <span style="color: #999;">غير محدد</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if installation.status == 'scheduled' %}
+                        <span class="status-scheduled">مجدول</span>
+                    {% elif installation.status == 'in_progress' %}
+                        <span class="status-in-progress">قيد التنفيذ</span>
+                    {% else %}
+                        <span>{{ installation.get_status_display }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="summary">
+        <h3>ملخص الجدول</h3>
+        <p><strong>إجمالي التركيبات:</strong> {{ installations.count }}</p>
+        <p><strong>مجدول:</strong> {{ installations|dictsort:"status"|length }}</p>
+        <p><strong>قيد التنفيذ:</strong> {{ installations|dictsort:"status"|length }}</p>
+        
+        {% if installations %}
+        <h4>الفرق المشاركة:</h4>
+        <ul>
+            {% for team in installations|dictsort:"team.name"|unique:"team.name" %}
+                {% if team %}
+                <li>{{ team.name }}</li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 50px;">
+        <h3>لا توجد تركيبات مجدولة في هذا التاريخ</h3>
+        <p>لم يتم العثور على تركيبات في {{ date|date:"d/m/Y" }}</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 50px; text-align: center; font-size: 12px; color: #666;">
+        <p>تم إنشاء هذا التقرير في {{ "now"|date:"d/m/Y H:i" }}</p>
+    </div>
+</body>
+</html> 

@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}قائمة التركيبات{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- عنوان الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-list text-primary"></i>
+            قائمة التركيبات
+        </h1>
+        <a href="{% url 'installations:dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+        </a>
+    </div>
+
+    <!-- فلاتر البحث -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-filter"></i>
+                فلاتر البحث
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    {{ filter_form.status.label_tag }}
+                    {{ filter_form.status }}
+                </div>
+                <div class="col-md-3">
+                    {{ filter_form.team.label_tag }}
+                    {{ filter_form.team }}
+                </div>
+                <div class="col-md-2">
+                    {{ filter_form.date_from.label_tag }}
+                    {{ filter_form.date_from }}
+                </div>
+                <div class="col-md-2">
+                    {{ filter_form.date_to.label_tag }}
+                    {{ filter_form.date_to }}
+                </div>
+                <div class="col-md-2">
+                    {{ filter_form.search.label_tag }}
+                    {{ filter_form.search }}
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> بحث
+                    </button>
+                    <a href="{% url 'installations:installation_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> مسح الفلاتر
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- جدول التركيبات -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-table"></i>
+                التركيبات ({{ page_obj.paginator.count }})
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if installations %}
+                <div class="table-responsive">
+                    <table class="table table-bordered" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>رقم الطلب</th>
+                                <th>العميل</th>
+                                <th>رقم الهاتف</th>
+                                <th>العنوان</th>
+                                <th>الفريق</th>
+                                <th>التاريخ</th>
+                                <th>الموعد</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for installation in installations %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                       class="font-weight-bold text-primary">
+                                        {{ installation.order.order_number }}
+                                    </a>
+                                </td>
+                                <td>{{ installation.order.customer.name }}</td>
+                                <td>{{ installation.order.customer.phone }}</td>
+                                <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
+                                <td>{{ installation.team.name|default:"غير محدد" }}</td>
+                                <td>{{ installation.scheduled_date|date:"d/m/Y"|default:"غير محدد" }}</td>
+                                <td>{{ installation.scheduled_time|time:"H:i"|default:"غير محدد" }}</td>
+                                <td>
+                                    {% if installation.status == 'pending' %}
+                                        <span class="badge badge-warning">في الانتظار</span>
+                                    {% elif installation.status == 'scheduled' %}
+                                        <span class="badge badge-info">مجدول</span>
+                                    {% elif installation.status == 'in_progress' %}
+                                        <span class="badge badge-primary">قيد التنفيذ</span>
+                                    {% elif installation.status == 'completed' %}
+                                        <span class="badge badge-success">مكتمل</span>
+                                    {% elif installation.status == 'cancelled' %}
+                                        <span class="badge badge-danger">ملغي</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ installation.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                           class="btn btn-sm btn-info" title="عرض التفاصيل">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if installation.status == 'pending' %}
+                                            <a href="{% url 'installations:schedule_installation' installation.id %}" 
+                                               class="btn btn-sm btn-success" title="جدولة">
+                                                <i class="fas fa-calendar-plus"></i>
+                                            </a>
+                                        {% endif %}
+                                        {% if installation.status == 'scheduled' %}
+                                            <button type="button" class="btn btn-sm btn-primary update-status" 
+                                                    data-installation-id="{{ installation.id }}" 
+                                                    data-status="in_progress" title="بدء التركيب">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                        {% endif %}
+                                        {% if installation.status == 'in_progress' %}
+                                            <button type="button" class="btn btn-sm btn-success update-status" 
+                                                    data-installation-id="{{ installation.id }}" 
+                                                    data-status="completed" title="إكمال التركيب">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ترقيم الصفحات -->
+                {% if page_obj.has_other_pages %}
+                <nav aria-label="ترقيم الصفحات">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-4x text-gray-300 mb-3"></i>
+                    <h5 class="text-gray-500">لا توجد تركيبات</h5>
+                    <p class="text-gray-400">لم يتم العثور على تركيبات تطابق معايير البحث</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// تحديث حالة التركيب
+document.querySelectorAll('.update-status').forEach(button => {
+    button.addEventListener('click', function() {
+        const installationId = this.dataset.installationId;
+        const newStatus = this.dataset.status;
+        
+        if (confirm('هل أنت متأكد من تحديث حالة التركيب؟')) {
+            fetch(`/installations/update-status/${installationId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `status=${newStatus}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('حدث خطأ أثناء تحديث الحالة');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %} 
