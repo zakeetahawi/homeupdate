@@ -1,0 +1,331 @@
+/* أنماط قسم التركيبات */
+
+/* لوحة التحكم */
+.installations-dashboard {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px 0;
+}
+
+.installations-dashboard .card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.installations-dashboard .card:hover {
+    transform: translateY(-5px);
+}
+
+/* إحصائيات سريعة */
+.stats-card {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.stats-card .icon {
+    font-size: 3rem;
+    opacity: 0.8;
+}
+
+.stats-card .number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.stats-card .label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* الجداول */
+.installations-table {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.installations-table th {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 15px;
+    font-weight: 600;
+}
+
+.installations-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.installations-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* حالات التركيب */
+.status-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-scheduled {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-in-progress {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-completed {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.status-cancelled {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* الأزرار */
+.installations-btn {
+    border-radius: 25px;
+    padding: 8px 20px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.installations-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.installations-btn-primary {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+}
+
+.installations-btn-success {
+    background: linear-gradient(45deg, #56ab2f, #a8e6cf);
+    color: white;
+}
+
+.installations-btn-warning {
+    background: linear-gradient(45deg, #f093fb, #f5576c);
+    color: white;
+}
+
+/* النماذج */
+.installations-form {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.installations-form .form-control {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    padding: 12px 15px;
+    transition: all 0.3s ease;
+}
+
+.installations-form .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.installations-form .form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+/* البطاقات */
+.installation-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.installation-card:hover {
+    transform: translateY(-3px);
+}
+
+.installation-card .card-header {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 10px 10px 0 0;
+    padding: 15px 20px;
+    border: none;
+}
+
+/* التنبيهات */
+.installations-alert {
+    border-radius: 10px;
+    border: none;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+}
+
+.installations-alert-info {
+    background: linear-gradient(45deg, #d1ecf1, #bee5eb);
+    color: #0c5460;
+}
+
+.installations-alert-warning {
+    background: linear-gradient(45deg, #fff3cd, #ffeaa7);
+    color: #856404;
+}
+
+.installations-alert-success {
+    background: linear-gradient(45deg, #d4edda, #c3e6cb);
+    color: #155724;
+}
+
+/* الفرق */
+.team-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border-left: 5px solid #667eea;
+}
+
+.team-card .team-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.team-card .team-members {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.team-card .team-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.team-status-active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.team-status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* الطباعة */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .installations-dashboard {
+        background: white !important;
+    }
+    
+    .installations-table {
+        box-shadow: none !important;
+    }
+    
+    .installations-table th {
+        background: #f8f9fa !important;
+        color: #495057 !important;
+    }
+}
+
+/* الاستجابة للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .installations-dashboard {
+        padding: 10px;
+    }
+    
+    .installations-table {
+        font-size: 0.9rem;
+    }
+    
+    .installations-table th,
+    .installations-table td {
+        padding: 8px 10px;
+    }
+    
+    .installations-btn {
+        padding: 6px 15px;
+        font-size: 0.9rem;
+    }
+    
+    .stats-card .number {
+        font-size: 2rem;
+    }
+    
+    .stats-card .icon {
+        font-size: 2.5rem;
+    }
+}
+
+/* الرسوم المتحركة */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.installations-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* تحسينات إضافية */
+.installations-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+}
+
+.installations-loading .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+} 

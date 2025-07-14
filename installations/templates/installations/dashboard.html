@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}لوحة تحكم قسم التركيبات{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- عنوان الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-tools text-primary"></i>
+            لوحة تحكم قسم التركيبات
+        </h1>
+        <div class="btn-group">
+            <a href="{% url 'installations:installation_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> قائمة التركيبات
+            </a>
+            <a href="{% url 'installations:daily_schedule' %}" class="btn btn-outline-success">
+                <i class="fas fa-calendar-day"></i> الجدول اليومي
+            </a>
+            <a href="{% url 'installations:team_management' %}" class="btn btn-outline-info">
+                <i class="fas fa-users"></i> إدارة الفرق
+            </a>
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-right-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                إجمالي التركيبات
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_installations }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-tools fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-right-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                في الانتظار
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_installations }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-right-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                مجدول
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ scheduled_installations }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-right-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                مكتمل
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ completed_installations }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- التركيبات المجدولة اليوم -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-calendar-day"></i>
+                        التركيبات المجدولة اليوم
+                    </h6>
+                    <a href="{% url 'installations:daily_schedule' %}" class="btn btn-sm btn-primary">
+                        عرض الكل
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if today_installations %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>الموعد</th>
+                                        <th>رقم الطلب</th>
+                                        <th>العميل</th>
+                                        <th>الفريق</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for installation in today_installations %}
+                                    <tr>
+                                        <td>{{ installation.scheduled_time|time:"H:i" }}</td>
+                                        <td>
+                                            <a href="{% url 'installations:installation_detail' installation.id %}">
+                                                {{ installation.order.order_number }}
+                                            </a>
+                                        </td>
+                                        <td>{{ installation.order.customer.name }}</td>
+                                        <td>{{ installation.team.name|default:"غير محدد" }}</td>
+                                        <td>
+                                            <span class="badge badge-{{ installation.status|yesno:'success,warning' }}">
+                                                {{ installation.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                               class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-times fa-3x text-gray-300 mb-3"></i>
+                            <p class="text-gray-500">لا توجد تركيبات مجدولة اليوم</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- التركيبات القادمة -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-calendar-alt"></i>
+                        التركيبات القادمة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_installations %}
+                        <div class="list-group list-group-flush">
+                            {% for installation in upcoming_installations %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ installation.order.customer.name }}</h6>
+                                    <small class="text-muted">
+                                        {{ installation.scheduled_date|date:"d/m/Y" }} - 
+                                        {{ installation.scheduled_time|time:"H:i" }}
+                                    </small>
+                                </div>
+                                <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-check fa-3x text-gray-300 mb-3"></i>
+                            <p class="text-gray-500">لا توجد تركيبات قادمة</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات الفرق -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-users"></i>
+                        إحصائيات الفرق
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if teams_stats %}
+                        <div class="row">
+                            {% for team in teams_stats %}
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-left-primary">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <h6 class="card-title">{{ team.name }}</h6>
+                                                <p class="card-text text-muted">
+                                                    {{ team.installations_count }} تركيب
+                                                </p>
+                                            </div>
+                                            <div class="text-primary">
+                                                <i class="fas fa-users fa-2x"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-users fa-3x text-gray-300 mb-3"></i>
+                            <p class="text-gray-500">لا توجد فرق مسجلة</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// تحديث الإحصائيات كل 30 ثانية
+setInterval(function() {
+    fetch('{% url "installations:installation_stats_api" %}')
+        .then(response => response.json())
+        .then(data => {
+            // تحديث الأرقام في الصفحة
+            document.querySelector('.text-gray-800').textContent = data.total;
+        });
+}, 30000);
+</script>
+{% endblock %}
