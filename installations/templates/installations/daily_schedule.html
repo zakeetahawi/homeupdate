@@ -116,6 +116,21 @@
                                        class="btn btn-sm btn-info" title="عرض التفاصيل">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    {% if installation.status != 'completed' and installation.status != 'cancelled' %}
+                                        <select class="form-control form-control-sm status-select" 
+                                                onchange="updateInstallationStatus('{{ installation.id }}', this.value)"
+                                                style="width: auto; display: inline-block;">
+                                            <option value="">تحديث الحالة</option>
+                                            <option value="pending" {% if installation.status == 'pending' %}selected{% endif %}>في الانتظار</option>
+                                            <option value="scheduled" {% if installation.status == 'scheduled' %}selected{% endif %}>مجدول</option>
+                                            <option value="in_progress" {% if installation.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
+                                            <option value="completed" {% if installation.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                                            <option value="cancelled" {% if installation.status == 'cancelled' %}selected{% endif %}>ملغي</option>
+                                            <option value="modification_required" {% if installation.status == 'modification_required' %}selected{% endif %}>يحتاج تعديل</option>
+                                            <option value="modification_in_progress" {% if installation.status == 'modification_in_progress' %}selected{% endif %}>التعديل قيد التنفيذ</option>
+                                            <option value="modification_completed" {% if installation.status == 'modification_completed' %}selected{% endif %}>التعديل مكتمل</option>
+                                        </select>
+                                    {% endif %}
                                     {% if installation.status == 'scheduled' %}
                                         <button type="button" class="btn btn-sm btn-primary update-status" 
                                                 data-installation-id="{{ installation.id }}" 
@@ -191,8 +206,70 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+.status-select {
+    min-width: 150px;
+    font-size: 0.875rem;
+}
+
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #d1d3e2;
+}
+
+.form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.card {
+    border-radius: 12px;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.badge {
+    font-size: 0.8em;
+    padding: 0.5em 0.8em;
+}
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
+// تحديث حالة التركيب عبر القائمة المنسدلة
+function updateInstallationStatus(installationId, newStatus) {
+    if (!newStatus) return; // إذا لم يتم اختيار حالة
+    
+    if (confirm('هل أنت متأكد من تحديث حالة التركيب؟')) {
+        fetch(`/installations/update-status/${installationId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `status=${newStatus}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('حدث خطأ أثناء تحديث الحالة');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('حدث خطأ أثناء تحديث الحالة');
+        });
+    }
+}
+
 // تحديث حالة التركيب
 document.querySelectorAll('.update-status').forEach(button => {
     button.addEventListener('click', function() {

@@ -297,7 +297,7 @@ class InstallationTeamForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         technicians = cleaned_data.get('technicians')
-
+        
         if not technicians:
             raise ValidationError(_('يجب اختيار فني واحد على الأقل'))
 
@@ -348,7 +348,7 @@ class ModificationReportForm(forms.ModelForm):
             allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
             if file.content_type not in allowed_types:
                 raise ValidationError(_('يجب أن يكون الملف من نوع PDF أو صورة'))
-
+            
             # التحقق من حجم الملف (5MB كحد أقصى)
             if file.size > 5 * 1024 * 1024:
                 raise ValidationError(_('حجم الملف يجب أن يكون أقل من 5 ميجابايت'))
@@ -376,7 +376,7 @@ class ReceiptMemoForm(forms.ModelForm):
             allowed_types = ['image/jpeg', 'image/png', 'image/jpg']
             if image.content_type not in allowed_types:
                 raise ValidationError(_('يجب أن تكون الصورة من نوع JPG أو PNG'))
-
+            
             # التحقق من حجم الصورة (2MB كحد أقصى)
             if image.size > 2 * 1024 * 1024:
                 raise ValidationError(_('حجم الصورة يجب أن يكون أقل من 2 ميجابايت'))
@@ -417,26 +417,26 @@ class InstallationFilterForm(forms.Form):
         required=False,
         label=_('حالة التركيب')
     )
-
+    
     team = forms.ModelChoiceField(
         queryset=InstallationTeam.objects.filter(is_active=True),
         required=False,
         label=_('الفريق'),
         empty_label=_('جميع الفرق')
     )
-
+    
     date_from = forms.DateField(
         required=False,
         label=_('من تاريخ'),
         widget=forms.DateInput(attrs={'type': 'date'})
     )
-
+    
     date_to = forms.DateField(
         required=False,
         label=_('إلى تاريخ'),
         widget=forms.DateInput(attrs={'type': 'date'})
     )
-
+    
     search = forms.CharField(
         required=False,
         label=_('بحث'),
@@ -451,7 +451,7 @@ class DailyScheduleForm(forms.Form):
         widget=forms.DateInput(attrs={'type': 'date'}),
         initial=timezone.now().date()
     )
-
+    
     team = forms.ModelChoiceField(
         queryset=InstallationTeam.objects.filter(is_active=True),
         required=False,

@@ -422,7 +422,10 @@ def installation_detail(request, installation_id):
     
     # الحصول على المدفوعات والتقارير
     payments = InstallationPayment.objects.filter(installation=installation)
-    modification_reports = ModificationReport.objects.filter(installation=installation)
+    # تصحيح العلاقة مع ModificationReport
+    modification_reports = ModificationReport.objects.filter(
+        modification_request__installation=installation
+    )
     receipt_memo = ReceiptMemo.objects.filter(installation=installation).first()
     
     context = {
@@ -1105,3 +1108,26 @@ def add_error_analysis(request, modification_id):
     }
     
     return render(request, 'installations/add_error_analysis.html', context)
+
+
+@login_required
+def edit_schedule(request, installation_id):
+    """تعديل جدولة التركيب"""
+    installation = get_object_or_404(InstallationSchedule, id=installation_id)
+    
+    if request.method == 'POST':
+        form = InstallationScheduleForm(request.POST, instance=installation)
+        if form.is_valid():
+            installation = form.save()
+            messages.success(request, _('تم تعديل جدولة التركيب بنجاح'))
+            return redirect('installations:installation_detail', installation_id=installation.id)
+    else:
+        form = InstallationScheduleForm(instance=installation)
+    
+    context = {
+        'form': form,
+        'installation': installation,
+        'title': 'تعديل جدولة التركيب'
+    }
+    
+    return render(request, 'installations/edit_schedule.html', context)

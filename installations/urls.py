@@ -49,6 +49,7 @@ urlpatterns = [
     path('installation/<int:installation_id>/add-modification-report/', views.add_modification_report, name='add_modification_report'),
     path('installation/<int:installation_id>/add-receipt-memo/', views.add_receipt_memo, name='add_receipt_memo'),
     path('installation/<int:installation_id>/complete/', views.complete_installation, name='complete_installation'),
+    path('installation/<int:installation_id>/edit-schedule/', views.edit_schedule, name='edit_schedule'),
     
     # تحليل الأخطاء
     path('error-analysis/', views.modification_error_analysis, name='modification_error_analysis'),

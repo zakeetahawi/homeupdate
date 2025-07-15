@@ -1530,7 +1530,7 @@ def _restore_json_simple(file_path, clear_existing=False):
             ('customers', 'customer'),
             ('customers', 'customernote'),
             ('inspections', 'inspection'),
-            ('installations', 'installation'),
+            ('installations', 'installationschedule'),
             ('reports', 'report'),
             ('accounts', 'department'),
             ('accounts', 'branch'),
