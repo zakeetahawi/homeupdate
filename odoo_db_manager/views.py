@@ -1558,7 +1558,7 @@ def _restore_json_simple(file_path, clear_existing=False):
             'orders.order',
             'orders.orderitem',
             'inspections.inspection',
-            'installations.installation',
+            'installations.installationschedule',
             'reports.report',
             'odoo_db_manager.database',
             'odoo_db_manager.backup',
@@ -1715,7 +1715,7 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
             ('customers', 'customertype'),
             ('customers', 'customernote'),
             ('inspections', 'inspection'),
-            ('installations', 'installation'),
+            ('installations', 'installationschedule'),
             ('reports', 'report'),
             ('accounts', 'department'),
             ('accounts', 'branch'),
@@ -1760,7 +1760,7 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
             'orders.order',                # بعد العملاء
             'orders.orderitem',            # بعد الطلبات والمنتجات
             'inspections.inspection',      # بعد العملاء
-            'installations.installation',  # بعد العملاء
+            'installations.installationschedule',  # بعد العملاء
             
             # خامساً: النماذج التكميلية
             'customers.customernote',      # بعد العملاء
