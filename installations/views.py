@@ -463,6 +463,9 @@ def schedule_installation(request, installation_id):
 def quick_schedule_installation(request, order_id):
     """جدولة سريعة للتركيب من الطلب"""
     
+    # الحصول على الطلب من قاعدة البيانات
+    order = get_object_or_404(Order, id=order_id)
+    
     # التحقق من عدم وجود جدولة سابقة
     if InstallationSchedule.objects.filter(order=order).exists():
         messages.warning(request, _('يوجد جدولة تركيب سابقة لهذا الطلب'))
