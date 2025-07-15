@@ -17,6 +17,7 @@ ENV/
 *.sqlite3
 *.db
 db.sqlite3
+db_settings.json
 
 # Ignore secret files
 passwords.txt
