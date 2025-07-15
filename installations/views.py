@@ -501,6 +501,7 @@ def quick_schedule_installation(request, order_id):
 
 
 @login_required
+@csrf_exempt
 def update_status(request, installation_id):
     """تحديث حالة التركيب"""
     installation = get_object_or_404(InstallationSchedule, id=installation_id)

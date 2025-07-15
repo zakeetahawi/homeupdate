@@ -38,6 +38,7 @@
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid">
     <!-- عنوان الصفحة -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -194,7 +195,7 @@
                         {% if installation.status != 'completed' and installation.status != 'cancelled' %}
                             <div class="mb-3">
                                 <label for="status-select" class="form-label">تحديث الحالة:</label>
-                                <select id="status-select" class="form-control status-select" onchange="updateInstallationStatus('{{ installation.id }}', this.value)">
+                                <select id="status-select" class="form-control" onchange="updateInstallationStatus('{{ installation.id }}', this.value)">
                                     <option value="">اختر الحالة الجديدة</option>
                                     <option value="pending" {% if installation.status == 'pending' %}selected{% endif %}>في الانتظار</option>
                                     <option value="scheduled" {% if installation.status == 'scheduled' %}selected{% endif %}>مجدول</option>
@@ -260,11 +261,6 @@
                             <a href="{% url 'installations:add_payment' installation.id %}" 
                                class="btn btn-outline-primary">
                                 <i class="fas fa-money-bill"></i> إضافة دفعة
-                            </a>
-                            
-                            <a href="{% url 'installations:add_receipt_memo' installation.id %}" 
-                               class="btn btn-outline-info">
-                                <i class="fas fa-receipt"></i> مذكرة استلام
                             </a>
                             
                             <!-- زر تعديل الجدولة -->
@@ -459,10 +455,12 @@ function updateInstallationStatus(installationId, newStatus) {
     if (!newStatus) return; // إذا لم يتم اختيار حالة
     
     if (confirm('هل أنت متأكد من تحديث حالة التركيب؟')) {
-        fetch(`/installations/update-status/${installationId}/`, {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`/installations/installation/${installationId}/update-status/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-CSRFToken': csrfToken,
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: `status=${newStatus}`
@@ -487,12 +485,13 @@ document.querySelectorAll('.update-status').forEach(button => {
     button.addEventListener('click', function() {
         const installationId = this.dataset.installationId;
         const newStatus = this.dataset.status;
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
         
         if (confirm('هل أنت متأكد من تحديث حالة التركيب؟')) {
-            fetch(`/installations/update-status/${installationId}/`, {
+            fetch(`/installations/installation/${installationId}/update-status/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-CSRFToken': csrfToken,
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: `status=${newStatus}`
