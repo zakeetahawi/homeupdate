@@ -1,0 +1,121 @@
+{% if orders %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover modal-table" width="100%" cellspacing="0">
+            <thead class="thead-dark">
+                <tr>
+                    <th class="text-white">رقم الطلب</th>
+                    <th class="text-white">رقم العقد</th>
+                    <th class="text-white">العميل</th>
+                    <th class="text-white">البائع</th>
+                    <th class="text-white">الفرع</th>
+                    <th class="text-white">تاريخ الطلب</th>
+                    <th class="text-white">تاريخ التركيب المتوقع</th>
+                    <th class="text-white">المبلغ الإجمالي</th>
+                    <th class="text-white">المبلغ المدفوع</th>
+                    <th class="text-white">المتبقي</th>
+                    <th class="text-white">الحالة</th>
+                    <th class="text-white">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white">
+                {% for order in orders %}
+                <tr class="border-bottom">
+                    <td class="text-dark">
+                        <a href="{% url 'orders:order_detail' order.id %}" class="text-primary font-weight-bold">
+                            {{ order.order_number }}
+                        </a>
+                    </td>
+                    <td class="text-dark">
+                        {% if order.contract_number %}
+                            <span class="badge badge-info">{{ order.contract_number }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-dark font-weight-bold">{{ order.customer.name }}</td>
+                    <td class="text-dark">
+                        {% if order.salesperson %}
+                            {{ order.salesperson.name }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-dark">
+                        {% if order.branch %}
+                            <span class="badge badge-secondary">{{ order.branch.name }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-dark">{{ order.created_at|date:"d/m/Y" }}</td>
+                    <td class="text-dark">
+                        {% if order.expected_delivery_date %}
+                            <span class="badge badge-info">{{ order.expected_delivery_date|date:"d/m/Y" }}</span>
+                        {% else %}
+                            <span class="text-muted">غير محدد</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-dark font-weight-bold">{{ order.total_amount|floatformat:2 }} {{ currency_symbol }}</td>
+                    <td class="text-dark">{{ order.paid_amount|floatformat:2 }} {{ currency_symbol }}</td>
+                    <td>
+                        {% if order.remaining_amount > 0 %}
+                            <span class="badge badge-danger font-weight-bold">{{ order.remaining_amount|floatformat:2 }} {{ currency_symbol }}</span>
+                        {% else %}
+                            <span class="badge badge-success">0.00 {{ currency_symbol }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if order.order_status == 'completed' %}
+                            <span class="badge badge-success font-weight-bold">
+                                <i class="fas fa-check-circle"></i> مكتمل
+                            </span>
+                        {% elif order.order_status == 'in_progress' %}
+                            <span class="badge badge-warning font-weight-bold">
+                                <i class="fas fa-cogs"></i> قيد التصنيع
+                            </span>
+                        {% elif order.order_status == 'pending' %}
+                            <span class="badge badge-info font-weight-bold">
+                                <i class="fas fa-clock"></i> في الانتظار
+                            </span>
+                        {% else %}
+                            <span class="badge badge-secondary font-weight-bold">
+                                {{ order.get_order_status_display }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'orders:order_detail' order.id %}" 
+                               class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i> عرض
+                            </a>
+                            {% if order_type == 'ready' and not order.installationschedule_set.exists %}
+                                <a href="#" 
+                                   class="btn btn-sm btn-success"
+                                   onclick="scheduleInstallationFromModal({{ order.id }}, this)">
+                                    <i class="fas fa-calendar-plus"></i> جدولة
+                                </a>
+                            {% elif order_type == 'ready' %}
+                                <span class="badge badge-info">
+                                    <i class="fas fa-calendar-check"></i> مجدول
+                                </span>
+                            {% endif %}
+                            {% if order_type == 'debt' %}
+                                <a href="{% url 'installations:manage_customer_debt' order.id %}" 
+                                   class="btn btn-sm btn-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> إدارة المديونية
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="text-center py-4">
+        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+        <p class="text-muted font-weight-bold">لا توجد طلبات في هذه الفئة</p>
+    </div>
+{% endif %} 

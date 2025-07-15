@@ -198,6 +198,32 @@ a:hover {
     border-top: 1px solid var(--border-color);
 }
 
+/* ===== رؤوس الجداول في النوافذ المنبثقة ===== */
+.modal .table thead th,
+.modal-table thead th {
+    background-color: #8B4513 !important; /* اللون الترابي */
+    color: white !important;
+    border-color: #8B4513 !important;
+    font-weight: bold;
+}
+
+.modal .table thead th:hover,
+.modal-table thead th:hover {
+    background-color: #A0522D !important; /* لون ترابي أفتح عند التمرير */
+}
+
+/* ===== رؤوس الجداول في صفحة العملاء ===== */
+.customers-table thead th {
+    background-color: #8B4513 !important;
+    color: white !important;
+    border-color: #8B4513 !important;
+    font-weight: bold;
+}
+
+.customers-table thead th:hover {
+    background-color: #A0522D !important;
+}
+
 /* ===== هيد جدول الطلبات - نفس ألوان جدول العملاء ===== */
 .orders-table thead th {
     background-color: var(--primary) !important;

@@ -34,7 +34,7 @@ class InstallationsTestCase(TestCase):
             order_number='TEST-001',
             customer=self.customer,
             total_amount=1000,
-            remaining_amount=500
+            paid_amount=500
         )
         
         # إنشاء فني

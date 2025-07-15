@@ -1,0 +1,82 @@
+{% if installations %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+            <thead class="thead-dark">
+                <tr>
+                    <th class="text-white">رقم الطلب</th>
+                    <th class="text-white">العميل</th>
+                    <th class="text-white">تاريخ التركيب</th>
+                    <th class="text-white">موعد التركيب</th>
+                    <th class="text-white">الفريق</th>
+                    <th class="text-white">الحالة</th>
+                    <th class="text-white">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white">
+                {% for installation in installations %}
+                <tr class="border-bottom">
+                    <td class="text-dark">
+                        <a href="{% url 'orders:order_detail' installation.order.id %}" class="text-primary font-weight-bold">
+                            {{ installation.order.order_number }}
+                        </a>
+                    </td>
+                    <td class="text-dark font-weight-bold">{{ installation.order.customer.name }}</td>
+                    <td class="text-dark">
+                        <span class="badge badge-info">{{ installation.scheduled_date|date:"d/m/Y" }}</span>
+                    </td>
+                    <td class="text-dark">
+                        <span class="badge badge-warning">{{ installation.scheduled_time|time:"H:i" }}</span>
+                    </td>
+                    <td class="text-dark">
+                        {% if installation.team %}
+                            <span class="badge badge-primary">{{ installation.team.name }}</span>
+                        {% else %}
+                            <span class="text-muted">غير محدد</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if installation.status == 'scheduled' %}
+                            <span class="badge badge-info font-weight-bold">
+                                <i class="fas fa-calendar-check"></i> مجدول
+                            </span>
+                        {% elif installation.status == 'in_progress' %}
+                            <span class="badge badge-warning font-weight-bold">
+                                <i class="fas fa-tools"></i> قيد التنفيذ
+                            </span>
+                        {% elif installation.status == 'completed' %}
+                            <span class="badge badge-success font-weight-bold">
+                                <i class="fas fa-check-circle"></i> مكتمل
+                            </span>
+                        {% elif installation.status == 'pending' %}
+                            <span class="badge badge-secondary font-weight-bold">
+                                <i class="fas fa-clock"></i> في الانتظار
+                            </span>
+                        {% else %}
+                            <span class="badge badge-secondary font-weight-bold">
+                                {{ installation.get_status_display }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'installations:installation_detail' installation.id %}" 
+                               class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i> عرض التركيب
+                            </a>
+                            <a href="{% url 'orders:order_detail' installation.order.id %}" 
+                               class="btn btn-sm btn-secondary">
+                                <i class="fas fa-file-alt"></i> عرض الطلب
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="text-center py-4">
+        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+        <p class="text-muted font-weight-bold">لا توجد تركيبات مجدولة</p>
+    </div>
+{% endif %} 

@@ -4,8 +4,201 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from .models import (
     InstallationSchedule, InstallationTeam, Technician, Driver,
-    ModificationReport, ReceiptMemo, InstallationPayment
+    ModificationRequest, ModificationImage, ManufacturingOrder,
+    ModificationReport, ReceiptMemo, InstallationPayment, CustomerDebt,
+    InstallationAnalytics, ModificationErrorAnalysis
 )
+
+
+class InstallationStatusForm(forms.ModelForm):
+    """نموذج تغيير حالة التركيب"""
+    class Meta:
+        model = InstallationSchedule
+        fields = ['status', 'completion_date', 'notes']
+        widgets = {
+            'status': forms.Select(attrs={
+                'class': 'form-control',
+                'id': 'installation-status'
+            }),
+            'completion_date': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local',
+                'id': 'completion-date'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'ملاحظات إضافية...'
+            })
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # إخفاء حقل تاريخ الإكمال إذا لم تكن الحالة مكتمل
+        if self.instance and self.instance.status != 'completed':
+            self.fields['completion_date'].widget = forms.HiddenInput()
+
+
+class ModificationRequestForm(forms.ModelForm):
+    """نموذج طلب التعديل"""
+    class Meta:
+        model = ModificationRequest
+        fields = ['modification_type', 'description', 'priority', 'estimated_cost', 'customer_approval']
+        widgets = {
+            'modification_type': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'نوع التعديل المطلوب'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'تفاصيل التعديل المطلوب...'
+            }),
+            'priority': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'estimated_cost': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'customer_approval': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+
+
+class ModificationImageForm(forms.ModelForm):
+    """نموذج رفع صور التعديل"""
+    class Meta:
+        model = ModificationImage
+        fields = ['image', 'description']
+        widgets = {
+            'image': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*'
+            }),
+            'description': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'وصف الصورة'
+            })
+        }
+
+
+class ManufacturingOrderForm(forms.ModelForm):
+    """نموذج أمر التصنيع للتعديلات"""
+    class Meta:
+        model = ManufacturingOrder
+        fields = ['order_type', 'status', 'description', 'estimated_completion_date', 'assigned_to', 'manager_notes']
+        widgets = {
+            'order_type': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'status': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'تفاصيل أمر التصنيع...'
+            }),
+            'estimated_completion_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'assigned_to': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'manager_notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'ملاحظات المدير...'
+            })
+        }
+
+
+class ModificationReportForm(forms.ModelForm):
+    """نموذج تقرير التعديل"""
+    class Meta:
+        model = ModificationReport
+        fields = ['report_file', 'description', 'completion_notes']
+        widgets = {
+            'report_file': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'وصف التعديل المنجز...'
+            }),
+            'completion_notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'ملاحظات الإكمال...'
+            })
+        }
+
+
+class CustomerDebtForm(forms.ModelForm):
+    """نموذج إدارة مديونية العميل"""
+    class Meta:
+        model = CustomerDebt
+        fields = ['debt_amount', 'notes', 'is_paid', 'payment_receipt_number', 'payment_receiver_name']
+        widgets = {
+            'debt_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'ملاحظات حول المديونية...'
+            }),
+            'is_paid': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'payment_receipt_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم إذن استلام المبلغ'
+            }),
+            'payment_receiver_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'اسم المستلم'
+            })
+        }
+
+
+class CustomerDebtPaymentForm(forms.ModelForm):
+    """نموذج دفع المديونية"""
+    class Meta:
+        model = CustomerDebt
+        fields = ['payment_receipt_number', 'payment_receiver_name', 'notes']
+        widgets = {
+            'payment_receipt_number': forms.TextInput(attrs={
+                'placeholder': 'رقم إذن استلام المبلغ'
+            }),
+            'payment_receiver_name': forms.TextInput(attrs={
+                'placeholder': 'اسم المستلم'
+            }),
+            'notes': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'ملاحظات الدفع...'
+            }),
+        }
+
+    def clean_payment_receipt_number(self):
+        receipt_number = self.cleaned_data.get('payment_receipt_number')
+        if not receipt_number:
+            raise ValidationError(_('رقم إذن استلام المبلغ مطلوب'))
+        return receipt_number
+
+    def clean_payment_receiver_name(self):
+        receiver_name = self.cleaned_data.get('payment_receiver_name')
+        if not receiver_name:
+            raise ValidationError(_('اسم المستلم مطلوب'))
+        return receiver_name
 
 
 class InstallationScheduleForm(forms.ModelForm):
@@ -46,6 +239,52 @@ class InstallationScheduleForm(forms.ModelForm):
         return cleaned_data
 
 
+class QuickScheduleForm(forms.ModelForm):
+    """نموذج جدولة سريعة للتركيب"""
+    scheduled_date = forms.DateField(
+        label=_('تاريخ التركيب'),
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        required=True,
+        help_text=_('اختر تاريخ التركيب')
+    )
+    scheduled_time = forms.TimeField(
+        label=_('موعد التركيب'),
+        widget=forms.TimeInput(attrs={'type': 'time'}),
+        required=True,
+        help_text=_('اختر موعد التركيب')
+    )
+
+    class Meta:
+        model = InstallationSchedule
+        fields = ['team', 'scheduled_date', 'scheduled_time', 'notes']
+        widgets = {
+            'notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'أضف ملاحظات هنا...'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        scheduled_date = cleaned_data.get('scheduled_date')
+        scheduled_time = cleaned_data.get('scheduled_time')
+
+        if not scheduled_date:
+            raise ValidationError(_('تاريخ التركيب مطلوب'))
+
+        if not scheduled_time:
+            raise ValidationError(_('موعد التركيب مطلوب'))
+
+        if scheduled_date and scheduled_date < timezone.now().date():
+            raise ValidationError(_('لا يمكن جدولة تركيب في تاريخ ماضي'))
+
+        if scheduled_date and scheduled_time:
+            scheduled_datetime = timezone.make_aware(
+                timezone.datetime.combine(scheduled_date, scheduled_time)
+            )
+            if scheduled_datetime < timezone.now():
+                raise ValidationError(_('لا يمكن جدولة تركيب في وقت ماضي'))
+
+        return cleaned_data
+
+
 class InstallationTeamForm(forms.ModelForm):
     """نموذج فريق التركيب"""
     class Meta:
@@ -58,7 +297,7 @@ class InstallationTeamForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         technicians = cleaned_data.get('technicians')
-        
+
         if not technicians:
             raise ValidationError(_('يجب اختيار فني واحد على الأقل'))
 
@@ -109,7 +348,7 @@ class ModificationReportForm(forms.ModelForm):
             allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
             if file.content_type not in allowed_types:
                 raise ValidationError(_('يجب أن يكون الملف من نوع PDF أو صورة'))
-            
+
             # التحقق من حجم الملف (5MB كحد أقصى)
             if file.size > 5 * 1024 * 1024:
                 raise ValidationError(_('حجم الملف يجب أن يكون أقل من 5 ميجابايت'))
@@ -137,7 +376,7 @@ class ReceiptMemoForm(forms.ModelForm):
             allowed_types = ['image/jpeg', 'image/png', 'image/jpg']
             if image.content_type not in allowed_types:
                 raise ValidationError(_('يجب أن تكون الصورة من نوع JPG أو PNG'))
-            
+
             # التحقق من حجم الصورة (2MB كحد أقصى)
             if image.size > 2 * 1024 * 1024:
                 raise ValidationError(_('حجم الصورة يجب أن يكون أقل من 2 ميجابايت'))
@@ -178,26 +417,26 @@ class InstallationFilterForm(forms.Form):
         required=False,
         label=_('حالة التركيب')
     )
-    
+
     team = forms.ModelChoiceField(
         queryset=InstallationTeam.objects.filter(is_active=True),
         required=False,
         label=_('الفريق'),
         empty_label=_('جميع الفرق')
     )
-    
+
     date_from = forms.DateField(
         required=False,
         label=_('من تاريخ'),
         widget=forms.DateInput(attrs={'type': 'date'})
     )
-    
+
     date_to = forms.DateField(
         required=False,
         label=_('إلى تاريخ'),
         widget=forms.DateInput(attrs={'type': 'date'})
     )
-    
+
     search = forms.CharField(
         required=False,
         label=_('بحث'),
@@ -212,10 +451,58 @@ class DailyScheduleForm(forms.Form):
         widget=forms.DateInput(attrs={'type': 'date'}),
         initial=timezone.now().date()
     )
-    
+
     team = forms.ModelChoiceField(
         queryset=InstallationTeam.objects.filter(is_active=True),
         required=False,
         label=_('الفريق'),
         empty_label=_('جميع الفرق')
     )
+
+
+class ModificationReportForm_new(forms.ModelForm):
+    """نموذج تقرير التعديل الجديد"""
+    class Meta:
+        model = ModificationReport
+        fields = ['report_file', 'description', 'completion_notes']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'completion_notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+
+
+class InstallationAnalyticsForm(forms.ModelForm):
+    """نموذج تحليل التركيبات"""
+    class Meta:
+        model = InstallationAnalytics
+        fields = ['month', 'total_installations', 'completed_installations', 'pending_installations', 
+                 'in_progress_installations', 'total_customers', 'new_customers', 'total_visits', 
+                 'total_modifications']
+        widgets = {
+            'month': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'total_installations': forms.NumberInput(attrs={'class': 'form-control'}),
+            'completed_installations': forms.NumberInput(attrs={'class': 'form-control'}),
+            'pending_installations': forms.NumberInput(attrs={'class': 'form-control'}),
+            'in_progress_installations': forms.NumberInput(attrs={'class': 'form-control'}),
+            'total_customers': forms.NumberInput(attrs={'class': 'form-control'}),
+            'new_customers': forms.NumberInput(attrs={'class': 'form-control'}),
+            'total_visits': forms.NumberInput(attrs={'class': 'form-control'}),
+            'total_modifications': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+
+class ModificationErrorAnalysisForm(forms.ModelForm):
+    """نموذج تحليل خطأ التعديل"""
+    class Meta:
+        model = ModificationErrorAnalysis
+        fields = ['error_type', 'error_description', 'root_cause', 'solution_applied', 
+                 'prevention_measures', 'cost_impact', 'time_impact_hours']
+        widgets = {
+            'error_type': forms.Select(attrs={'class': 'form-control'}),
+            'error_description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'root_cause': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'solution_applied': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'prevention_measures': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'cost_impact': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'time_impact_hours': forms.NumberInput(attrs={'class': 'form-control'}),
+        }

@@ -4,21 +4,43 @@
 {% block title %}لوحة تحكم قسم التركيبات{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="fas fa-tools text-primary"></i>
-            لوحة تحكم قسم التركيبات
-        </h1>
-        <div class="btn-group">
-            <a href="{% url 'installations:installation_list' %}" class="btn btn-outline-primary">
+    <!-- قائمة التنقل -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">لوحة تحكم التركيبات</h1>
+        <div>
+            <a href="{% url 'installations:installation_analytics' %}" class="btn btn-info btn-sm">
+                <i class="fas fa-chart-line"></i> التحليل الشهري
+            </a>
+            <a href="{% url 'installations:modification_error_analysis' %}" class="btn btn-warning btn-sm">
+                <i class="fas fa-exclamation-triangle"></i> تحليل الأخطاء
+            </a>
+            <a href="{% url 'installations:installation_list' %}" class="btn btn-primary btn-sm">
                 <i class="fas fa-list"></i> قائمة التركيبات
             </a>
-            <a href="{% url 'installations:daily_schedule' %}" class="btn btn-outline-success">
-                <i class="fas fa-calendar-day"></i> الجدول اليومي
+        </div>
+    </div>
+
+    <!-- روابط سريعة -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="{% url 'installations:installation_analytics' %}" class="btn btn-info btn-block">
+                <i class="fas fa-chart-line"></i> تحليل التركيبات الشهري
             </a>
-            <a href="{% url 'installations:team_management' %}" class="btn btn-outline-info">
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="{% url 'installations:modification_error_analysis' %}" class="btn btn-warning btn-block">
+                <i class="fas fa-exclamation-triangle"></i> تحليل أخطاء التعديلات
+            </a>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="{% url 'installations:installation_list' %}" class="btn btn-primary btn-block">
+                <i class="fas fa-list"></i> قائمة التركيبات
+            </a>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="{% url 'installations:team_management' %}" class="btn btn-success btn-block">
                 <i class="fas fa-users"></i> إدارة الفرق
             </a>
         </div>
@@ -27,7 +49,7 @@
     <!-- إحصائيات سريعة -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-right-primary shadow h-100 py-2">
+            <div class="card border-right-primary shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('total')">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
@@ -35,6 +57,42 @@
                                 إجمالي التركيبات
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_installations }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-right-success shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('completed')">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                مكتمل
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ completed_installations }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-right-warning shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('modifications')">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                التعديلات
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_modifications }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-tools fa-2x text-gray-300"></i>
@@ -45,17 +103,17 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-right-warning shadow h-100 py-2">
+            <div class="card border-right-info shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('ready')">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                في الانتظار
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                جاهز للتركيب
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_installations }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ orders_ready_for_installation }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -63,7 +121,7 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-right-info shadow h-100 py-2">
+            <div class="card border-right-info shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('scheduled')">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
@@ -81,17 +139,53 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-right-success shadow h-100 py-2">
+            <div class="card border-right-warning shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('in_progress')">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                مكتمل
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                قيد التنفيذ
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ completed_installations }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ in_progress_installations }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                            <i class="fas fa-spinner fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-right-danger shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('debt')">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                مع مديونية
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ orders_with_debt }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-right-secondary shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('manufacturing')">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                تحت التصنيع
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ orders_in_manufacturing }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-industry fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -202,6 +296,150 @@
         </div>
     </div>
 
+    <!-- سجل الأحداث للطلبات الجديدة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-history"></i>
+                        سجل الأحداث - الطلبات الجديدة (آخر 7 أيام)
+                    </h6>
+                    <span class="badge badge-primary">{{ recent_orders.count }}</span>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>رقم الطلب</th>
+                                        <th>العميل</th>
+                                        <th>تاريخ الطلب</th>
+                                        <th>تاريخ التركيب المتوقع</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in recent_orders %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'orders:order_detail' order.id %}" class="text-primary">
+                                                {{ order.order_number }}
+                                            </a>
+                                        </td>
+                                        <td>{{ order.customer.name }}</td>
+                                        <td>{{ order.created_at|date:"d/m/Y" }}</td>
+                                        <td>
+                                            {% if order.expected_delivery_date %}
+                                                {{ order.expected_delivery_date|date:"d/m/Y" }}
+                                            {% else %}
+                                                <span class="text-muted">غير محدد</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-success">
+                                                مكتمل في التصنيع
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'orders:order_detail' order.id %}" 
+                                               class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i> عرض الطلب
+                                            </a>
+                                            {% if not order.installationschedule_set.exists %}
+                                                <a href="#" 
+                                                   class="btn btn-sm btn-success"
+                                                   onclick="scheduleInstallation({{ order.id }})">
+                                                    <i class="fas fa-calendar-plus"></i> جدولة تركيب
+                                                </a>
+                                            {% else %}
+                                                <span class="badge badge-info">مجدول</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-check fa-3x text-success mb-3"></i>
+                            <p class="text-success">لا توجد طلبات جديدة في آخر 7 أيام</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الطلبات التي تحتاج جدولة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        الطلبات الجاهزة للتركيب (تحتاج جدولة)
+                    </h6>
+                    <span class="badge badge-danger">{{ orders_needing_scheduling.count }}</span>
+                </div>
+                <div class="card-body">
+                    {% if orders_needing_scheduling %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>رقم الطلب</th>
+                                        <th>العميل</th>
+                                        <th>تاريخ الطلب</th>
+                                        <th>حالة الطلب</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in orders_needing_scheduling %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'orders:order_detail' order.id %}" class="text-primary">
+                                                {{ order.order_number }}
+                                            </a>
+                                        </td>
+                                        <td>{{ order.customer.name }}</td>
+                                        <td>{{ order.created_at|date:"d/m/Y" }}</td>
+                                        <td>
+                                            <span class="badge badge-success">
+                                                مكتمل في التصنيع
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'orders:order_detail' order.id %}" 
+                                               class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i> عرض الطلب
+                                            </a>
+                                            <a href="#" 
+                                               class="btn btn-sm btn-success"
+                                               onclick="scheduleInstallation({{ order.id }})">
+                                                <i class="fas fa-calendar-plus"></i> جدولة تركيب
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <p class="text-success">جميع الطلبات المكتملة تم جدولة تركيبها</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- إحصائيات الفرق -->
     <div class="row">
         <div class="col-12">
@@ -259,5 +497,331 @@ setInterval(function() {
             document.querySelector('.text-gray-800').textContent = data.total;
         });
 }, 30000);
+
+// وظيفة جدولة التركيب
+function scheduleInstallation(orderId) {
+    if (confirm('هل تريد جدولة تركيب لهذا الطلب؟')) {
+        // الانتقال إلى صفحة الجدولة السريعة
+        window.location.href = `{% url 'installations:quick_schedule_installation' 0 %}`.replace('0', orderId);
+    }
+}
+
+// وظيفة جدولة التركيب من الـ modal
+function scheduleInstallationFromModal(orderId, buttonElement) {
+    if (confirm('هل تريد جدولة تركيب لهذا الطلب؟')) {
+        // الانتقال إلى صفحة الجدولة السريعة
+        window.location.href = `{% url 'installations:quick_schedule_installation' 0 %}`.replace('0', orderId);
+    }
+}
+
+// وظيفة إظهار الإشعارات
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // إزالة الإشعار بعد 5 ثواني
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// وظيفة عرض الطلبات في modal
+function showOrdersModal(type) {
+    let title = '';
+    let url = '';
+    
+    switch(type) {
+        case 'total':
+            title = 'جميع طلبات التركيب';
+            url = '{% url "installations:orders_modal" %}?type=total';
+            break;
+        case 'ready':
+            title = 'الطلبات الجاهزة للتركيب';
+            url = '{% url "installations:orders_modal" %}?type=ready';
+            break;
+        case 'manufacturing':
+            title = 'الطلبات تحت التصنيع';
+            url = '{% url "installations:orders_modal" %}?type=manufacturing';
+            break;
+        case 'completed':
+            title = 'الطلبات المكتملة في المصنع';
+            url = '{% url "installations:orders_modal" %}?type=completed';
+            break;
+        case 'scheduled':
+            title = 'الطلبات المجدولة للتركيب';
+            url = '{% url "installations:orders_modal" %}?type=scheduled';
+            break;
+        case 'in_progress':
+            title = 'التركيبات قيد التنفيذ';
+            url = '{% url "installations:orders_modal" %}?type=in_progress';
+            break;
+        case 'debt':
+            title = 'الطلبات مع مديونية';
+            url = '{% url "installations:orders_modal" %}?type=debt';
+            break;
+        case 'modifications':
+            title = 'التعديلات';
+            url = '{% url "installations:orders_modal" %}?type=modifications';
+            break;
+    }
+    
+    // فتح modal مع البيانات
+    $('#ordersModal .modal-title').text(title);
+    $('#ordersModal .modal-body').html('<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>جاري التحميل...</p></div>');
+    $('#ordersModal').modal('show');
+    
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            $('#ordersModal .modal-body').html(html);
+        })
+        .catch(error => {
+            $('#ordersModal .modal-body').html('<div class="alert alert-danger">حدث خطأ في تحميل البيانات</div>');
+        });
+}
+
+// إصلاح مشكلة إغلاق الـ modal
+$(document).ready(function() {
+    // إغلاق الـ modal عند النقر خارج النافذة
+    $('#ordersModal').on('click', function(e) {
+        if (e.target === this) {
+            $(this).modal('hide');
+        }
+    });
+    
+    // إغلاق الـ modal عند الضغط على ESC
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape' && $('#ordersModal').hasClass('show')) {
+            $('#ordersModal').modal('hide');
+        }
+    });
+});
+
+// تحديث الصفحة كل دقيقة للتأكد من أحدث البيانات
+setInterval(function() {
+    location.reload();
+}, 60000);
+
+// إضافة CSS للـ cursor pointer
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.cursor-pointer');
+    cards.forEach(card => {
+        card.style.cursor = 'pointer';
+    });
+});
 </script>
+
+<!-- Modal للطلبات -->
+<div class="modal fade" id="ordersModal" tabindex="-1" role="dialog" aria-labelledby="ordersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ordersModalLabel">الطلبات</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- سيتم تحميل المحتوى هنا -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.cursor-pointer {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cursor-pointer:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+}
+
+.modal-xl {
+    max-width: 90%;
+}
+
+.modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+}
+
+.table-responsive {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.badge {
+    font-size: 0.8em;
+    padding: 0.5em 0.8em;
+}
+
+.btn-sm {
+    margin: 2px;
+    font-size: 0.8em;
+}
+
+.card {
+    border-radius: 10px;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.modal-content {
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    border-radius: 15px 15px 0 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom: none;
+}
+
+.modal-header .close {
+    color: white;
+    opacity: 0.8;
+    font-size: 1.5em;
+}
+
+.modal-header .close:hover {
+    opacity: 1;
+}
+
+.modal-footer {
+    border-radius: 0 0 15px 15px;
+    border-top: none;
+    background-color: #f8f9fa;
+}
+
+/* تحسين مظهر الجداول */
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    border-top: none;
+    font-weight: bold;
+    text-align: center;
+    vertical-align: middle;
+    padding: 12px 8px;
+}
+
+.table tbody td {
+    vertical-align: middle;
+    padding: 10px 8px;
+    border-top: 1px solid #dee2e6;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.01);
+    transition: all 0.2s ease;
+}
+
+/* تحسين مظهر الأزرار */
+.btn-group .btn {
+    border-radius: 4px;
+    margin: 1px;
+}
+
+/* تحسين مظهر البادجات */
+.badge {
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.badge-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* تحسين مظهر الروابط */
+.text-primary {
+    color: #007bff !important;
+    text-decoration: none;
+}
+
+.text-primary:hover {
+    color: #0056b3 !important;
+    text-decoration: underline;
+}
+
+/* تحسين مظهر النص */
+.text-dark {
+    color: #343a40 !important;
+}
+
+.font-weight-bold {
+    font-weight: 600 !important;
+}
+
+/* تحسين مظهر الرسائل الفارغة */
+.text-muted {
+    color: #6c757d !important;
+}
+
+/* تحسين مظهر الأيقونات */
+.fas {
+    margin-right: 4px;
+}
+
+/* تحسين مظهر الجداول الفارغة */
+.table-responsive:empty::before {
+    content: "لا توجد بيانات";
+    display: block;
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+</style>
 {% endblock %}

@@ -3,9 +3,20 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import (
-    Technician, Driver, InstallationTeam, InstallationSchedule,
-    ModificationReport, ReceiptMemo, InstallationPayment, InstallationArchive
+    InstallationSchedule, InstallationTeam, Technician, Driver,
+    ModificationRequest, ModificationImage, ManufacturingOrder,
+    ModificationReport, ReceiptMemo, InstallationPayment, InstallationArchive, CustomerDebt,
+    InstallationAnalytics, ModificationErrorAnalysis, ModificationErrorType
 )
+
+
+@admin.register(CustomerDebt)
+class CustomerDebtAdmin(admin.ModelAdmin):
+    list_display = ['customer', 'order', 'debt_amount', 'is_paid', 'payment_date', 'created_at']
+    list_filter = ['is_paid', 'created_at', 'payment_date']
+    search_fields = ['customer__name', 'order__order_number']
+    list_editable = ['is_paid']
+    ordering = ['-created_at']
 
 
 @admin.register(Technician)
@@ -79,11 +90,46 @@ class InstallationScheduleAdmin(admin.ModelAdmin):
     customer_name.short_description = 'اسم العميل'
 
 
+@admin.register(ModificationRequest)
+class ModificationRequestAdmin(admin.ModelAdmin):
+    list_display = ['installation', 'customer', 'modification_type', 'priority', 'customer_approval', 'created_at']
+    list_filter = ['priority', 'customer_approval', 'created_at']
+    search_fields = ['installation__order__order_number', 'customer__name', 'modification_type']
+    list_editable = ['priority', 'customer_approval']
+    ordering = ['-created_at']
+
+
+@admin.register(ModificationImage)
+class ModificationImageAdmin(admin.ModelAdmin):
+    list_display = ['modification', 'image_preview', 'description', 'uploaded_at']
+    list_filter = ['uploaded_at']
+    search_fields = ['modification__installation__order__order_number', 'description']
+    ordering = ['-uploaded_at']
+
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="max-height: 50px; max-width: 50px;" />',
+                obj.image.url
+            )
+        return '-'
+    image_preview.short_description = 'معاينة الصورة'
+
+
+@admin.register(ManufacturingOrder)
+class ManufacturingOrderAdmin(admin.ModelAdmin):
+    list_display = ['modification_request', 'order_type', 'status', 'assigned_to', 'created_at']
+    list_filter = ['order_type', 'status', 'assigned_to', 'created_at']
+    search_fields = ['modification_request__installation__order__order_number']
+    list_editable = ['status', 'assigned_to']
+    ordering = ['-created_at']
+
+
 @admin.register(ModificationReport)
 class ModificationReportAdmin(admin.ModelAdmin):
-    list_display = ['installation', 'description', 'created_at']
-    list_filter = ['created_at']
-    search_fields = ['installation__order__order_number', 'description']
+    list_display = ['modification_request', 'manufacturing_order', 'created_by', 'created_at']
+    list_filter = ['created_at', 'created_by']
+    search_fields = ['modification_request__installation__order__order_number', 'description']
     ordering = ['-created_at']
 
 
@@ -119,6 +165,36 @@ class InstallationArchiveAdmin(admin.ModelAdmin):
     search_fields = ['installation__order__order_number']
     ordering = ['-completion_date']
     readonly_fields = ['completion_date', 'archived_by']
+
+
+@admin.register(InstallationAnalytics)
+class InstallationAnalyticsAdmin(admin.ModelAdmin):
+    list_display = ['month', 'total_installations', 'completed_installations', 'total_customers', 
+                   'total_modifications', 'completion_rate', 'modification_rate']
+    list_filter = ['month']
+    search_fields = ['month']
+    readonly_fields = ['completion_rate', 'modification_rate']
+    
+    def save_model(self, request, obj, form, change):
+        obj.calculate_rates()
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(ModificationErrorAnalysis)
+class ModificationErrorAnalysisAdmin(admin.ModelAdmin):
+    list_display = ['modification_request', 'error_type', 'cost_impact', 'time_impact_hours', 'created_at']
+    list_filter = ['error_type', 'created_at']
+    search_fields = ['modification_request__installation__order__order_number', 'error_description']
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(ModificationErrorType)
+class ModificationErrorTypeAdmin(admin.ModelAdmin):
+    list_display = ['name', 'description', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'updated_at']
+    list_editable = ['is_active']
 
 
 # تخصيص عنوان لوحة الإدارة
