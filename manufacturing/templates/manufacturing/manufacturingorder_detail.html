@@ -50,14 +50,7 @@
                                         </span>
                                     </td>
                                 </tr>
-                                <tr>
-                                    <th>نوع أمر التصنيع:</th>
-                                    <td>
-                                        <span class="badge bg-secondary">
-                                            {{ manufacturing_order.get_order_type_display }}
-                                        </span>
-                                    </td>
-                                </tr>
+
                                 <tr>
                                     <th>حالة الطلب الأصلي:</th>
                                     <td>
@@ -69,9 +62,43 @@
                                 <tr>
                                     <th>حالة أمر التصنيع:</th>
                                     <td>
-                                        <span class="badge bg-{{ manufacturing_order.status }}">
+                                        {% if manufacturing_order.status == 'pending_approval' %}
+                                            <span class="badge bg-warning text-dark">
+                                                {{ manufacturing_order.get_status_display }}
+                                            </span>
+                                        {% elif manufacturing_order.status == 'pending' %}
+                                            <span class="badge bg-info text-white">
+                                                {{ manufacturing_order.get_status_display }}
+                                            </span>
+                                        {% elif manufacturing_order.status == 'in_progress' %}
+                                            <span class="badge bg-primary text-white">
+                                                {{ manufacturing_order.get_status_display }}
+                                            </span>
+                                        {% elif manufacturing_order.status == 'ready_install' %}
+                                            <span class="badge bg-success text-white">
+                                                {{ manufacturing_order.get_status_display }}
+                                            </span>
+                                        {% elif manufacturing_order.status == 'completed' %}
+                                            <span class="badge bg-success text-white">
+                                                {{ manufacturing_order.get_status_display }}
+                                            </span>
+                                        {% elif manufacturing_order.status == 'delivered' %}
+                                            <span class="badge bg-dark text-white">
+                                                {{ manufacturing_order.get_status_display }}
+                                            </span>
+                                        {% elif manufacturing_order.status == 'rejected' %}
+                                            <span class="badge bg-danger text-white">
+                                                {{ manufacturing_order.get_status_display }}
+                                            </span>
+                                        {% elif manufacturing_order.status == 'cancelled' %}
+                                            <span class="badge bg-secondary text-white">
+                                                {{ manufacturing_order.get_status_display }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary text-white">
                                             {{ manufacturing_order.get_status_display }}
                                         </span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 <tr>

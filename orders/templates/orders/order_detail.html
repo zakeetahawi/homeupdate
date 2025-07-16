@@ -659,7 +659,11 @@
                         <h6 class="mb-0">{{ log.get_new_status_display }}</h6>
                         <small class="text-muted">
                             {{ log.created_at|date:"Y-m-d H:i" }} -
+                            {% if log.changed_by %}
                             بواسطة {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+                            {% else %}
+                                بواسطة نظام
+                            {% endif %}
                         </small>
                         {% if log.notes %}
                         <p class="mb-0 mt-2">{{ log.notes }}</p>
@@ -709,7 +713,7 @@
                                         {{ deletion_log.deleted_by.get_full_name|default:deletion_log.deleted_by.username }}
                                     </span>
                                 {% else %}
-                                    <span class="text-muted">غير محدد</span>
+                                    <span class="text-muted">نظام</span>
                                 {% endif %}
                             </p>
                         </div>
@@ -720,12 +724,7 @@
                                 <span class="badge bg-secondary">{{ deletion_log.manufacturing_order_data.status_display }}</span>
                             </p>
                             {% endif %}
-                            {% if deletion_log.manufacturing_order_data.order_type %}
-                            <p class="mb-1">
-                                <strong>نوع أمر التصنيع:</strong> 
-                                {{ deletion_log.manufacturing_order_data.order_type }}
-                            </p>
-                            {% endif %}
+
                         </div>
                     </div>
                     {% if deletion_log.reason %}

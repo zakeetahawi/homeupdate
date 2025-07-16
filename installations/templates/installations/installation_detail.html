@@ -94,23 +94,23 @@
                                     <th>حالة التركيب:</th>
                                     <td>
                                         {% if installation.status == 'pending' %}
-                                            <span class="badge badge-warning">في الانتظار</span>
+                                            <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">في الانتظار</span>
                                         {% elif installation.status == 'scheduled' %}
-                                            <span class="badge badge-info">مجدول</span>
+                                            <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">مجدول</span>
                                         {% elif installation.status == 'in_progress' %}
-                                            <span class="badge badge-primary">قيد التنفيذ</span>
+                                            <span class="badge badge-primary" style="background-color: #007bff; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">قيد التنفيذ</span>
                                         {% elif installation.status == 'completed' %}
-                                            <span class="badge badge-success">مكتمل</span>
+                                            <span class="badge badge-success" style="background-color: #28a745; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">مكتمل</span>
                                         {% elif installation.status == 'cancelled' %}
-                                            <span class="badge badge-danger">ملغي</span>
+                                            <span class="badge badge-danger" style="background-color: #dc3545; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">ملغي</span>
                                         {% elif installation.status == 'modification_required' %}
-                                            <span class="badge badge-warning">يحتاج تعديل</span>
+                                            <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">يحتاج تعديل</span>
                                         {% elif installation.status == 'modification_in_progress' %}
-                                            <span class="badge badge-info">التعديل قيد التنفيذ</span>
+                                            <span class="badge badge-info" style="background-color: #6f42c1; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">التعديل قيد التنفيذ</span>
                                         {% elif installation.status == 'modification_completed' %}
-                                            <span class="badge badge-success">التعديل مكتمل</span>
+                                            <span class="badge badge-success" style="background-color: #20c997; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">التعديل مكتمل</span>
                                         {% else %}
-                                            <span class="badge badge-secondary">{{ installation.get_status_display }}</span>
+                                            <span class="badge badge-secondary" style="background-color: #6c757d; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">{{ installation.get_status_display }}</span>
                                         {% endif %}
                                     </td>
                                 </tr>

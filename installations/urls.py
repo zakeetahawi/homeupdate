@@ -29,6 +29,7 @@ urlpatterns = [
     # API Views
     path('api/orders-modal/', views.orders_modal, name='orders_modal'),
     path('api/installation-stats/', views.installation_stats_api, name='installation_stats_api'),
+    path('schedule-manufacturing-order/<int:manufacturing_order_id>/', views.schedule_manufacturing_order, name='schedule_manufacturing_order'),
     
     # URLs الموجودة مسبقاً
     path('schedule/', views.schedule_installation, name='schedule_installation'),

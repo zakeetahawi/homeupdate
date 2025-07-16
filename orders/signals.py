@@ -1,10 +1,16 @@
 import json
-from django.db.models.signals import pre_save, post_save
+from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from datetime import timedelta
-from .models import Order
+from .models import Order, OrderItem, Payment, OrderStatusLog, ManufacturingDeletionLog
 from manufacturing.models import ManufacturingOrder
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
 
 @receiver(pre_save, sender='orders.Order')
 def track_price_changes(sender, instance, **kwargs):
@@ -141,16 +147,13 @@ def set_default_delivery_option(order):
     # إذا كان الطلب يحتوي على تركيب، تحديد التسليم مع التركيب
     if hasattr(order, 'selected_types') and order.selected_types:
         if 'installation' in order.selected_types or 'تركيب' in order.selected_types:
-            order.delivery_option = 'with_installation'
-            order.save(update_fields=['delivery_option'])
+            Order.objects.filter(pk=order.pk).update(delivery_option='with_installation')
     # إذا كان الطلب تسليم في الفرع
     elif hasattr(order, 'delivery_type') and order.delivery_type == 'branch':
-        order.delivery_option = 'branch_pickup'
-        order.save(update_fields=['delivery_option'])
+        Order.objects.filter(pk=order.pk).update(delivery_option='branch_pickup')
     # إذا كان الطلب توصيل منزلي
     elif hasattr(order, 'delivery_type') and order.delivery_type == 'home':
-        order.delivery_option = 'home_delivery'
-        order.save(update_fields=['delivery_option'])
+        Order.objects.filter(pk=order.pk).update(delivery_option='home_delivery')
 
 
 def find_available_team(target_date, branch=None):
@@ -171,4 +174,114 @@ def create_production_order(order):
     return None
 
 
-# Duplicate function removed
+@receiver(post_save, sender=Order)
+def order_post_save(sender, instance, created, **kwargs):
+    """معالج حفظ الطلب"""
+    if created:
+        # إنشاء سجل حالة أولية
+        OrderStatusLog.objects.create(
+            order=instance,
+            old_status='',
+            new_status=instance.tracking_status,
+            notes='تم إنشاء الطلب'
+        )
+    else:
+        # التحقق من تغيير الحالة
+        if hasattr(instance, '_tracking_status_changed') and instance._tracking_status_changed:
+            OrderStatusLog.objects.create(
+                order=instance,
+                old_status=instance.tracker.previous('tracking_status'),
+                new_status=instance.tracking_status,
+                notes='تم تغيير حالة الطلب'
+            )
+
+@receiver(post_save, sender=OrderItem)
+def order_item_post_save(sender, instance, created, **kwargs):
+    """معالج حفظ عنصر الطلب"""
+    if created:
+        # تحديث المبلغ الإجمالي للطلب
+        instance.order.calculate_final_price()
+        # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
+        Order.objects.filter(pk=instance.order.pk).update(
+            final_price=instance.order.final_price
+        )
+
+@receiver(post_save, sender=Payment)
+def payment_post_save(sender, instance, created, **kwargs):
+    """معالج حفظ الدفعة"""
+    if created:
+        # تحديث المبلغ المدفوع للطلب
+        order = instance.order
+        paid_amount = order.payments.aggregate(
+            total=models.Sum('amount')
+        )['total'] or 0
+        # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
+        Order.objects.filter(pk=order.pk).update(paid_amount=paid_amount)
+
+# إشارات تحديث حالة الطلب من الأقسام الأخرى
+@receiver(post_save, sender='installations.InstallationSchedule')
+def update_order_installation_status(sender, instance, created, **kwargs):
+    """تحديث حالة الطلب عند تغيير حالة التركيب"""
+    try:
+        order = instance.order
+        order.update_installation_status()
+        order.update_completion_status()
+    except Exception as e:
+        logger.error(f"خطأ في تحديث حالة التركيب للطلب {instance.order.id}: {str(e)}")
+
+@receiver(post_save, sender='inspections.Inspection')
+def update_order_inspection_status(sender, instance, created, **kwargs):
+    """تحديث حالة الطلب عند تغيير حالة المعاينة"""
+    try:
+        order = instance.order
+        order.update_inspection_status()
+        order.update_completion_status()
+    except Exception as e:
+        logger.error(f"خطأ في تحديث حالة المعاينة للطلب {instance.order.id}: {str(e)}")
+
+@receiver(post_save, sender='manufacturing.ManufacturingOrder')
+def update_order_manufacturing_status(sender, instance, created, **kwargs):
+    """تحديث حالة الطلب عند تغيير حالة التصنيع"""
+    try:
+        order = instance.order
+        # تحديث حالة الطلب بناءً على حالة التصنيع
+        new_status = None
+        if instance.status in ['completed', 'ready_install']:
+            new_status = instance.status
+        elif instance.status == 'delivered':
+            new_status = 'delivered'
+        
+        # تحديث الحالة فقط إذا تغيرت لتجنب التكرار الذاتي
+        if new_status and new_status != order.order_status:
+            Order.objects.filter(pk=order.pk).update(order_status=new_status)
+            order.refresh_from_db()
+            order.update_completion_status()
+    except Exception as e:
+        logger.error(f"خطأ في تحديث حالة التصنيع للطلب {instance.order.id}: {str(e)}")
+
+# إشارة حذف أوامر التصنيع
+@receiver(post_delete, sender='manufacturing.ManufacturingOrder')
+def log_manufacturing_order_deletion(sender, instance, **kwargs):
+    """تسجيل حذف أمر التصنيع"""
+    try:
+        # حفظ بيانات أمر التصنيع قبل الحذف
+        manufacturing_data = {
+            'id': instance.id,
+            'status': instance.status,
+            'order_type': instance.order_type,
+            'contract_number': instance.contract_number,
+            'created_at': instance.created_at.isoformat() if instance.created_at else None,
+        }
+        
+        ManufacturingDeletionLog.objects.create(
+            order=instance.order,
+            manufacturing_order_id=instance.id,
+            manufacturing_order_data=manufacturing_data,
+            reason='تم حذف أمر التصنيع'
+        )
+        
+        # تحديث حالة الطلب
+        Order.objects.filter(pk=instance.order.pk).update(order_status='manufacturing_deleted')
+        
+    except Exception as e:
+        logger.error(f"خطأ في تسجيل حذف أمر التصنيع: {str(e)}")

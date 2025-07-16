@@ -1,25 +1,47 @@
-{% if orders %}
+{% if orders or manufacturing_orders %}
+    <!-- أزرار الفلترة -->
+    <div class="mb-3">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary btn-sm filter-btn" data-filter="all">
+                <i class="fas fa-list"></i> جميع الطلبات
+            </button>
+            <button type="button" class="btn btn-outline-success btn-sm filter-btn" data-filter="completed">
+                <i class="fas fa-check-circle"></i> مكتمل
+            </button>
+            <button type="button" class="btn btn-outline-warning btn-sm filter-btn" data-filter="in_progress">
+                <i class="fas fa-cogs"></i> قيد التصنيع
+            </button>
+            <button type="button" class="btn btn-outline-info btn-sm filter-btn" data-filter="pending">
+                <i class="fas fa-clock"></i> في الانتظار
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="cancelled">
+                <i class="fas fa-times-circle"></i> ملغي
+            </button>
+        </div>
+    </div>
+
     <div class="table-responsive">
         <table class="table table-bordered table-hover modal-table" width="100%" cellspacing="0">
-            <thead class="thead-dark">
+            <thead style="background-color: #6c757d !important;">
                 <tr>
-                    <th class="text-white">رقم الطلب</th>
-                    <th class="text-white">رقم العقد</th>
-                    <th class="text-white">العميل</th>
-                    <th class="text-white">البائع</th>
-                    <th class="text-white">الفرع</th>
-                    <th class="text-white">تاريخ الطلب</th>
-                    <th class="text-white">تاريخ التركيب المتوقع</th>
-                    <th class="text-white">المبلغ الإجمالي</th>
-                    <th class="text-white">المبلغ المدفوع</th>
-                    <th class="text-white">المتبقي</th>
-                    <th class="text-white">الحالة</th>
-                    <th class="text-white">الإجراءات</th>
+                    <th style="color: white !important;">رقم الطلب</th>
+                    <th style="color: white !important;">رقم العقد</th>
+                    <th style="color: white !important;">العميل</th>
+                    <th style="color: white !important;">البائع</th>
+                    <th style="color: white !important;">الفرع</th>
+                    <th style="color: white !important;">تاريخ الطلب</th>
+                    <th style="color: white !important;">تاريخ التركيب المتوقع</th>
+                    <th style="color: white !important;">المبلغ الإجمالي</th>
+                    <th style="color: white !important;">المبلغ المدفوع</th>
+                    <th style="color: white !important;">المتبقي</th>
+                    <th style="color: white !important;">حالة الطلب</th>
+                    <th style="color: white !important;">حالة التركيب</th>
+                    <th style="color: white !important;">الإجراءات</th>
                 </tr>
             </thead>
             <tbody class="bg-white">
                 {% for order in orders %}
-                <tr class="border-bottom">
+                <tr class="border-bottom order-row" data-status="{{ order.order_status }}">
                     <td class="text-dark">
                         <a href="{% url 'orders:order_detail' order.id %}" class="text-primary font-weight-bold">
                             {{ order.order_number }}
@@ -65,7 +87,11 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if order.order_status == 'completed' %}
+                        {% if order.is_manufacturing_order %}
+                            <span class="badge badge-warning font-weight-bold">
+                                <i class="fas fa-industry"></i> جاهز للتركيب (أمر تصنيع)
+                            </span>
+                        {% elif order.order_status == 'completed' %}
                             <span class="badge badge-success font-weight-bold">
                                 <i class="fas fa-check-circle"></i> مكتمل
                             </span>
@@ -77,10 +103,41 @@
                             <span class="badge badge-info font-weight-bold">
                                 <i class="fas fa-clock"></i> في الانتظار
                             </span>
+                        {% elif order.order_status == 'cancelled' %}
+                            <span class="badge badge-secondary font-weight-bold">
+                                <i class="fas fa-times-circle"></i> ملغي
+                            </span>
                         {% else %}
                             <span class="badge badge-secondary font-weight-bold">
                                 {{ order.get_order_status_display }}
                             </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if order.installationschedule_set.exists %}
+                            {% with installation=order.installationschedule_set.first %}
+                                {% if installation.status == 'pending' %}
+                                    <span class="badge badge-warning" style="background-color: #ffc107; color: #000;">في الانتظار</span>
+                                {% elif installation.status == 'scheduled' %}
+                                    <span class="badge badge-info" style="background-color: #17a2b8; color: #fff;">مجدول</span>
+                                {% elif installation.status == 'in_progress' %}
+                                    <span class="badge badge-primary" style="background-color: #007bff; color: #fff;">قيد التنفيذ</span>
+                                {% elif installation.status == 'completed' %}
+                                    <span class="badge badge-success" style="background-color: #28a745; color: #fff;">مكتمل</span>
+                                {% elif installation.status == 'cancelled' %}
+                                    <span class="badge badge-danger" style="background-color: #dc3545; color: #fff;">ملغي</span>
+                                {% elif installation.status == 'modification_required' %}
+                                    <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff;">يحتاج تعديل</span>
+                                {% elif installation.status == 'modification_in_progress' %}
+                                    <span class="badge badge-info" style="background-color: #6f42c1; color: #fff;">التعديل قيد التنفيذ</span>
+                                {% elif installation.status == 'modification_completed' %}
+                                    <span class="badge badge-success" style="background-color: #20c997; color: #fff;">التعديل مكتمل</span>
+                                {% else %}
+                                    <span class="badge badge-secondary" style="background-color: #6c757d; color: #fff;">{{ installation.get_status_display }}</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="badge badge-light" style="background-color: #f8f9fa; color: #6c757d;">غير مجدول</span>
                         {% endif %}
                     </td>
                     <td>
@@ -89,7 +146,13 @@
                                class="btn btn-sm btn-info">
                                 <i class="fas fa-eye"></i> عرض
                             </a>
-                            {% if order_type == 'ready' and not order.installationschedule_set.exists %}
+                            {% if order.is_manufacturing_order %}
+                                <a href="#" 
+                                   class="btn btn-sm btn-success"
+                                   onclick="scheduleManufacturingOrder({{ order.manufacturing_order.id }}, this)">
+                                    <i class="fas fa-calendar-plus"></i> جدولة أمر التصنيع
+                                </a>
+                            {% elif order_type == 'ready' and not order.installationschedule_set.exists %}
                                 <a href="#" 
                                    class="btn btn-sm btn-success"
                                    onclick="scheduleInstallationFromModal({{ order.id }}, this)">
@@ -113,6 +176,96 @@
             </tbody>
         </table>
     </div>
+
+    <!-- JavaScript للفلترة -->
+    <script>
+        $(document).ready(function() {
+            $('.filter-btn').click(function() {
+                var filter = $(this).data('filter');
+                
+                // إزالة الفئة النشطة من جميع الأزرار
+                $('.filter-btn').removeClass('btn-primary').addClass('btn-outline-primary');
+                $('.filter-btn').removeClass('btn-success').addClass('btn-outline-success');
+                $('.filter-btn').removeClass('btn-warning').addClass('btn-outline-warning');
+                $('.filter-btn').removeClass('btn-info').addClass('btn-outline-info');
+                $('.filter-btn').removeClass('btn-secondary').addClass('btn-outline-secondary');
+                
+                // إضافة الفئة النشطة للزر المحدد
+                if (filter === 'all') {
+                    $(this).removeClass('btn-outline-primary').addClass('btn-primary');
+                    $('.order-row').show();
+                } else if (filter === 'completed') {
+                    $(this).removeClass('btn-outline-success').addClass('btn-success');
+                    $('.order-row').hide();
+                    $('.order-row[data-status="completed"]').show();
+                } else if (filter === 'in_progress') {
+                    $(this).removeClass('btn-outline-warning').addClass('btn-warning');
+                    $('.order-row').hide();
+                    $('.order-row[data-status="in_progress"]').show();
+                } else if (filter === 'pending') {
+                    $(this).removeClass('btn-outline-info').addClass('btn-info');
+                    $('.order-row').hide();
+                    $('.order-row[data-status="pending"]').show();
+                } else if (filter === 'cancelled') {
+                    $(this).removeClass('btn-outline-secondary').addClass('btn-secondary');
+                    $('.order-row').hide();
+                    $('.order-row[data-status="cancelled"]').show();
+                }
+            });
+        });
+        
+        // دالة جدولة أوامر التصنيع
+        window.scheduleManufacturingOrder = function(manufacturingOrderId, button) {
+            Swal.fire({
+                title: 'جدولة أمر التصنيع',
+                text: 'هل تريد جدولة هذا أمر التصنيع للتركيب؟',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، جدولة',
+                cancelButtonText: 'إلغاء',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // إرسال طلب جدولة أمر التصنيع
+                    $.ajax({
+                        url: '/installations/schedule-manufacturing-order/' + manufacturingOrderId + '/',
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    title: 'تم الجدولة بنجاح',
+                                    text: response.message,
+                                    icon: 'success',
+                                    confirmButtonText: 'موافق'
+                                }).then(() => {
+                                    // إعادة تحميل الصفحة أو تحديث الجدول
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    title: 'خطأ في الجدولة',
+                                    text: response.message,
+                                    icon: 'error',
+                                    confirmButtonText: 'موافق'
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                title: 'خطأ في الاتصال',
+                                text: 'حدث خطأ أثناء محاولة الجدولة',
+                                icon: 'error',
+                                confirmButtonText: 'موافق'
+                            });
+                        }
+                    });
+                }
+            });
+        };
+    </script>
 {% else %}
     <div class="text-center py-4">
         <i class="fas fa-inbox fa-3x text-muted mb-3"></i>

@@ -257,6 +257,83 @@
     font-size: 0.8em;
 }
 
+/* تحسينات المؤشرات البصرية للموافقة */
+.approval-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.approval-indicator i {
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.approval-indicator i:hover {
+    transform: scale(1.1);
+}
+
+.approval-indicator .text-success {
+    color: #28a745 !important;
+}
+
+.approval-indicator .text-danger {
+    color: #dc3545 !important;
+}
+
+/* تحسين مظهر الأيقونات */
+.approval-indicator .fa-check-circle {
+    color: #28a745 !important;
+    font-size: 1.4rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+.approval-indicator .fa-times-circle {
+    color: #dc3545 !important;
+    font-size: 1.4rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+/* تأثيرات hover */
+.approval-indicator .fa-check-circle:hover {
+    color: #198754 !important;
+    transform: scale(1.2);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.approval-indicator .fa-times-circle:hover {
+    color: #bb2d3b !important;
+    transform: scale(1.2);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* تحسين مظهر عمود الموافقة */
+.approval-column {
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.5rem;
+}
+
+/* تحسين مظهر المؤشرات في الجدول */
+.approval-column .approval-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    min-height: 2rem;
+}
+
+/* تحسين مظهر الأزرار في عمود الموافقة */
+.approval-column .action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
 /* تحسينات responsive */
 @media (max-width: 768px) {
     .action-buttons {
@@ -541,7 +618,7 @@
                                     </button>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="approval-column">
                                 {% if order.status == 'pending_approval' %}
                                     <div class="action-buttons">
                                         <button class="btn btn-sm btn-success approve-btn" data-order-id="{{ order.id }}" title="موافقة">
@@ -551,12 +628,21 @@
                                             <i class="fas fa-times"></i>
                                         </button>
                                     </div>
-                                {% elif order.status == 'rejected' and order.rejection_reason %}
-                                    <button class="btn btn-sm btn-outline-danger" 
-                                            onclick="showRejectionDetails('{{ order.rejection_reason|escapejs }}', {{ order.id }})"
-                                            title="عرض تفاصيل الرفض">
-                                        <i class="fas fa-info-circle"></i>
-                                    </button>
+                                {% elif order.status == 'rejected' %}
+                                    <div class="approval-indicator">
+                                        <i class="fas fa-times-circle" title="مرفوض - {{ order.get_status_display }}"></i>
+                                        {% if order.rejection_reason %}
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="showRejectionDetails('{{ order.rejection_reason|escapejs }}', {{ order.id }})"
+                                                    title="عرض تفاصيل الرفض">
+                                                <i class="fas fa-info-circle"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                {% elif order.status in 'pending,in_progress,ready_install,completed,delivered' %}
+                                    <div class="approval-indicator">
+                                        <i class="fas fa-check-circle" title="تمت الموافقة - {{ order.get_status_display }}"></i>
+                                    </div>
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}

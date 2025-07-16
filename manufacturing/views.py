@@ -111,13 +111,13 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         context['today'] = date.today().isoformat()
         
         # Add function to get available statuses for each order
-        context['get_available_statuses'] = lambda current_status: self._get_available_statuses(self.request.user, current_status)
+        context['get_available_statuses'] = lambda current_status, order_type=None: self._get_available_statuses(self.request.user, current_status, order_type)
         
         return context
     
-    def _get_available_statuses(self, user, current_status):
+    def _get_available_statuses(self, user, current_status, order_type=None):
         """
-        Get list of available statuses for the user based on current status
+        Get list of available statuses for the user based on current status and order type
         """
         if user.is_superuser:
             # Admin can see all statuses except current one
@@ -147,26 +147,34 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
                 available_statuses = []
         
         elif current_status == 'in_progress':
-            # Factory staff can see completion options
+            # Factory staff can see completion options based on order type
             if user.has_perm('manufacturing.change_manufacturingorder'):
-                available_statuses = [
-                    ('completed', 'مكتمل'),
-                    ('ready_install', 'جاهز للتركيب'),
-                    ('cancelled', 'ملغي'),
-                ]
+                if order_type == 'installation':
+                    # طلبات التركيب: يمكن أن تصبح جاهزة للتركيب
+                    available_statuses = [
+                        ('ready_install', 'جاهز للتركيب'),
+                        ('cancelled', 'ملغي'),
+                    ]
+                elif order_type == 'custom':
+                    # طلبات التفصيل: تصبح مكتملة فقط
+                    available_statuses = [
+                        ('completed', 'مكتمل'),
+                        ('cancelled', 'ملغي'),
+                    ]
+                else:
+                    # طلبات أخرى: يمكن أن تصبح مكتملة أو جاهزة للتركيب
+                    available_statuses = [
+                        ('completed', 'مكتمل'),
+                        ('ready_install', 'جاهز للتركيب'),
+                        ('cancelled', 'ملغي'),
+                    ]
             else:
                 available_statuses = []
         
         elif current_status in ['completed', 'ready_install']:
-            # Can move between completion states and to delivery
+            # Can move to delivery only (no rejection or cancellation after completion)
             if user.has_perm('manufacturing.change_manufacturingorder'):
-                available_statuses = [
-                    ('completed', 'مكتمل'),
-                    ('ready_install', 'جاهز للتركيب'),
-                    ('delivered', 'تم التسليم'),
-                ]
-                # Remove current status from available options
-                available_statuses = [status for status in available_statuses if status[0] != current_status]
+                available_statuses = [('delivered', 'تم التسليم')]
             else:
                 available_statuses = []
         
@@ -362,6 +370,34 @@ def update_order_status(request, pk):
                 'error': 'لم يتم تحديد الحالة الجديدة'
             }, status=400)
         
+        # التحقق من نوع الطلب والحالة المطلوبة
+        if new_status == 'ready_install' and order.order_type != 'installation':
+            return JsonResponse({
+                'success': False,
+                'error': 'لا يمكن تعيين حالة "جاهز للتركيب" إلا لأوامر التصنيع من نوع تركيب (installation) فقط.'
+            }, status=400)
+        
+        # منع تعيين حالة "مكتمل" لطلبات التركيب
+        if new_status == 'completed' and order.order_type == 'installation':
+            return JsonResponse({
+                'success': False,
+                'error': 'لا يمكن تعيين حالة "مكتمل" لطلبات التركيب. طلبات التركيب تصبح "جاهزة للتركيب" ثم "تم التسليم" فقط.'
+            }, status=400)
+        
+        # منع تعيين حالة "جاهز للتركيب" لطلبات التفصيل
+        if new_status == 'ready_install' and order.order_type == 'custom':
+            return JsonResponse({
+                'success': False,
+                'error': 'لا يمكن تعيين حالة "جاهز للتركيب" لطلبات التفصيل (custom). طلبات التفصيل تصبح "مكتملة" فقط.'
+            }, status=400)
+        
+        # منع الرفض والإلغاء بعد الحالات المكتملة
+        if order.status in ['completed', 'ready_install'] and new_status in ['rejected', 'cancelled']:
+            return JsonResponse({
+                'success': False,
+                'error': 'لا يمكن رفض أو إلغاء الطلب بعد أن يصبح مكتملاً أو جاهزاً للتركيب. يمكن فقط تسليمه.'
+            }, status=400)
+        
         # Prevent going back to pending_approval unless user is superuser
         if new_status == 'pending_approval' and not request.user.is_superuser:
             return JsonResponse({
@@ -541,7 +577,7 @@ def create_from_order(request, order_id):
             order=order,
             order_type='installation' if order.order_type == 'installation' else 'detail',
             contract_number=order.contract_number,
-            order_date=order.order_date,
+            order_date=order.order_date.date() if order.order_date else timezone.now().date(),
             expected_delivery_date=order.expected_delivery_date,
             created_by=request.user
         )
@@ -799,7 +835,7 @@ def update_approval_status(request, pk):
         if order.status != 'pending_approval' and action == 'approve':
             return JsonResponse({
                 'success': False, 
-                'error': 'تمت معالجة هذا الطلب بالفعل.'
+                'error': f'لا يمكن الموافقة على الطلب. الحالة الحالية: {order.get_status_display()}. يمكن الموافقة فقط على الطلبات في حالة "قيد الموافقة".'
             }, status=400)
         
         # For rejection, check if order is in a state that allows rejection

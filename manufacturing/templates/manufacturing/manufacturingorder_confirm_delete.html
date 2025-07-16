@@ -190,28 +190,29 @@
                     </span>
                 </div>
                 
-                <div class="info-row">
-                    <span class="info-label">نوع أمر التصنيع:</span>
-                    <span class="info-value">
-                        {{ object.get_order_type_display|default:'غير محدد' }}
-                    </span>
-                </div>
+
                 
                 <div class="info-row">
                     <span class="info-label">حالة أمر التصنيع:</span>
                     <span class="info-value">
                         {% if object.status == 'pending_approval' %}
-                            <span class="status-badge status-pending">قيد الموافقة</span>
+                            <span class="badge bg-warning text-dark">قيد الموافقة</span>
                         {% elif object.status == 'pending' %}
-                            <span class="status-badge status-approved">قيد الانتظار</span>
+                            <span class="badge bg-info text-white">قيد الانتظار</span>
                         {% elif object.status == 'in_progress' %}
-                            <span class="status-badge status-in-progress">قيد التصنيع</span>
+                            <span class="badge bg-primary text-white">قيد التصنيع</span>
+                        {% elif object.status == 'ready_install' %}
+                            <span class="badge bg-success text-white">جاهز للتركيب</span>
                         {% elif object.status == 'completed' %}
-                            <span class="status-badge status-completed">مكتمل</span>
+                            <span class="badge bg-success text-white">مكتمل</span>
+                        {% elif object.status == 'delivered' %}
+                            <span class="badge bg-dark text-white">تم التسليم</span>
                         {% elif object.status == 'rejected' %}
-                            <span class="status-badge status-rejected">مرفوض</span>
+                            <span class="badge bg-danger text-white">مرفوض</span>
+                        {% elif object.status == 'cancelled' %}
+                            <span class="badge bg-secondary text-white">ملغي</span>
                         {% else %}
-                            <span class="status-badge">{{ object.get_status_display }}</span>
+                            <span class="badge bg-secondary text-white">{{ object.get_status_display }}</span>
                         {% endif %}
                     </span>
                 </div>

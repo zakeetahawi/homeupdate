@@ -54,12 +54,12 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                إجمالي التركيبات
+                                إجمالي طلبات التركيب في النظام
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_installations }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                            <i class="fas fa-clipboard-check fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -72,7 +72,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                مكتمل
+                                تركيب مكتمل
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ completed_installations }}</div>
                         </div>
@@ -90,7 +90,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                التعديلات
+                                طلبات التعديل
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_modifications }}</div>
                         </div>
@@ -108,12 +108,12 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                جاهز للتركيب
+                                بانتظار الجدولة
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ orders_ready_for_installation }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -126,7 +126,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                مجدول
+                                تركيب مجدول
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ scheduled_installations }}</div>
                         </div>
@@ -144,7 +144,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                قيد التنفيذ
+                                تركيب قيد التنفيذ
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ in_progress_installations }}</div>
                         </div>
@@ -162,7 +162,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                مع مديونية
+                                بانتظار الدفع
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ orders_with_debt }}</div>
                         </div>
@@ -180,7 +180,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
-                                تحت التصنيع
+                                طلبات تحت التصنيع
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ orders_in_manufacturing }}</div>
                         </div>
@@ -303,7 +303,7 @@
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary">
                         <i class="fas fa-history"></i>
-                        سجل الأحداث - الطلبات الجديدة (آخر 7 أيام)
+                        سجل الأحداث - طلبات التركيب الجديدة (آخر 7 أيام)
                     </h6>
                     <span class="badge badge-primary">{{ recent_orders.count }}</span>
                 </div>
@@ -381,7 +381,7 @@
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-danger">
                         <i class="fas fa-exclamation-triangle"></i>
-                        الطلبات الجاهزة للتركيب (تحتاج جدولة)
+                        طلبات التركيب الجاهزة (تحتاج جدولة)
                     </h6>
                     <span class="badge badge-danger">{{ orders_needing_scheduling.count }}</span>
                 </div>
@@ -591,7 +591,7 @@ function showOrdersModal(type) {
         });
 }
 
-// إصلاح مشكلة إغلاق الـ modal
+// إصلاح مشكلة إغلاق الـ modal بعد تحميل محتوى جديد
 $(document).ready(function() {
     // إغلاق الـ modal عند النقر خارج النافذة
     $('#ordersModal').on('click', function(e) {
@@ -599,12 +599,17 @@ $(document).ready(function() {
             $(this).modal('hide');
         }
     });
-    
     // إغلاق الـ modal عند الضغط على ESC
     $(document).on('keydown', function(e) {
         if (e.key === 'Escape' && $('#ordersModal').hasClass('show')) {
             $('#ordersModal').modal('hide');
         }
+    });
+    // إصلاح زر X وزر الإغلاق بعد تحميل محتوى جديد
+    $('#ordersModal').on('shown.bs.modal', function() {
+        $('#ordersModal .close, #ordersModal .btn-secondary').off('click').on('click', function() {
+            $('#ordersModal').modal('hide');
+        });
     });
 });
 

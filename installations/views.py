@@ -1,46 +1,48 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.core.paginator import Paginator
-from django.db.models import Q, Count, Sum, F
+from django.db.models import Q, Count, F
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.views.decorators.http import require_http_methods, require_POST
 from django.views.decorators.csrf import csrf_exempt
-from django.template.loader import render_to_string
-from django.core.serializers import serialize
+from django.views.decorators.http import require_http_methods
 from django.db import models
 import json
-from datetime import datetime, timedelta
-from accounts.models import SystemSettings
+from datetime import timedelta
 from orders.models import Order
-from customers.models import Customer
-
 from .models import (
     InstallationSchedule, InstallationTeam, Technician, Driver,
     ModificationRequest, ModificationImage, ManufacturingOrder,
     ModificationReport, ReceiptMemo, InstallationPayment, InstallationArchive, CustomerDebt,
-    InstallationAnalytics, ModificationErrorAnalysis, ModificationErrorType
+    ModificationErrorAnalysis, ModificationErrorType
 )
 from .forms import (
-    InstallationScheduleForm, QuickScheduleForm, InstallationTeamForm, TechnicianForm, DriverForm,
+    InstallationScheduleForm, InstallationTeamForm, TechnicianForm, DriverForm,
+    ModificationRequestForm, ModificationImageForm, ManufacturingOrderForm,
     ModificationReportForm, ReceiptMemoForm, InstallationPaymentForm,
-    InstallationFilterForm, DailyScheduleForm, CustomerDebtForm, CustomerDebtPaymentForm,
-    InstallationStatusForm, ModificationRequestForm, ModificationImageForm,
-    ManufacturingOrderForm, ModificationReportForm as ModificationReportForm_new,
-    InstallationAnalyticsForm, ModificationErrorAnalysisForm
+    InstallationStatusForm, ModificationErrorAnalysisForm
 )
 
 
 @login_required
 def dashboard(request):
     """لوحة تحكم التركيبات"""
-    # إحصائيات عامة
-    total_installations = InstallationSchedule.objects.count()
+    # إحصائيات عامة - إجمالي طلبات التركيب في النظام
+    from django.db.models import Q
+    # البحث بطريقة أكثر دقة في JSON field
+    total_installation_orders = Order.objects.filter(
+        Q(selected_types__contains='installation') |
+        Q(selected_types__contains='"installation"') |
+        Q(selected_types__contains="'installation'")
+    ).count()
+    
+    # إحصائيات التركيبات المجدولة
     completed_installations = InstallationSchedule.objects.filter(status='completed').count()
     pending_installations = InstallationSchedule.objects.filter(status='pending').count()
     in_progress_installations = InstallationSchedule.objects.filter(status='in_progress').count()
+    scheduled_installations = InstallationSchedule.objects.filter(status='scheduled').count()
     
     # إحصائيات التعديلات
     total_modifications = ModificationRequest.objects.count()
@@ -48,27 +50,49 @@ def dashboard(request):
     in_progress_modifications = ModificationRequest.objects.filter(installation__status='modification_in_progress').count()
     completed_modifications = ModificationRequest.objects.filter(installation__status='modification_completed').count()
     
-    # الطلبات الجاهزة للتركيب (مكتملة في التصنيع)
+    # الطلبات الجاهزة للتركيب (مكتملة في التصنيع) - فقط طلبات التركيب
     orders_ready_for_installation = Order.objects.filter(
+        Q(selected_types__contains='installation') |
+        Q(selected_types__contains='"installation"') |
+        Q(selected_types__contains="'installation'"),
         order_status='completed',
         installationschedule__isnull=True
     ).count()
     
-    # الطلبات الجاهزة للتركيب مع مديونية
+    # أوامر التصنيع الجاهزة للتركيب من قسم manufacturing (فقط طلبات التركيب)
+    from manufacturing.models import ManufacturingOrder
+    manufacturing_orders_ready = ManufacturingOrder.objects.filter(
+        status='ready_install',
+        order_type='installation'  # فقط طلبات التركيب
+    ).count()
+    
+    # إجمالي الطلبات الجاهزة للتركيب
+    total_orders_ready_for_installation = orders_ready_for_installation + manufacturing_orders_ready
+    
+    # الطلبات الجاهزة للتركيب مع مديونية - فقط طلبات التركيب
     orders_with_debt = Order.objects.filter(
+        Q(selected_types__contains='installation') |
+        Q(selected_types__contains='"installation"') |
+        Q(selected_types__contains="'installation'"),
         order_status='completed',
         installationschedule__isnull=True
     ).filter(
         total_amount__gt=F('paid_amount')
     ).count()
     
-    # الطلبات تحت التصنيع
+    # الطلبات تحت التصنيع - فقط طلبات التركيب
     orders_in_manufacturing = Order.objects.filter(
+        Q(selected_types__contains='installation') |
+        Q(selected_types__contains='"installation"') |
+        Q(selected_types__contains="'installation'"),
         order_status='in_progress'
     ).count()
     
-    # الطلبات المكتملة في المصنع
+    # الطلبات المكتملة في المصنع - فقط طلبات التركيب
     orders_completed_in_factory = Order.objects.filter(
+        Q(selected_types__contains='installation') |
+        Q(selected_types__contains='"installation"') |
+        Q(selected_types__contains="'installation'"),
         order_status='completed'
     ).count()
     
@@ -83,14 +107,19 @@ def dashboard(request):
         scheduled_date__gt=today
     ).select_related('order', 'order__customer', 'team')[:5]
     
-    # الطلبات الجديدة (آخر 7 أيام)
+    # الطلبات الجديدة (آخر 7 أيام) - فقط طلبات التركيب
     recent_orders = Order.objects.filter(
-        created_at__gte=timezone.now() - timezone.timedelta(days=7),
-        order_status='completed'
-    ).select_related('customer')[:10]
+        Q(selected_types__contains='installation') |
+        Q(selected_types__contains='"installation"') |
+        Q(selected_types__contains="'installation'"),
+        created_at__gte=timezone.now() - timezone.timedelta(days=7)
+    ).select_related('customer').order_by('-created_at')[:10]
     
-    # الطلبات التي تحتاج جدولة
+    # الطلبات التي تحتاج جدولة - فقط طلبات التركيب
     orders_needing_scheduling = Order.objects.filter(
+        Q(selected_types__contains='installation') |
+        Q(selected_types__contains='"installation"') |
+        Q(selected_types__contains="'installation'"),
         order_status='completed',
         installationschedule__isnull=True
     ).select_related('customer')[:10]
@@ -101,18 +130,18 @@ def dashboard(request):
     ).filter(is_active=True)
     
     context = {
-        'total_installations': total_installations,
+        'total_installations': total_installation_orders,
         'completed_installations': completed_installations,
         'pending_installations': pending_installations,
         'in_progress_installations': in_progress_installations,
-        'scheduled_installations': InstallationSchedule.objects.filter(status='scheduled').count(),
-        'orders_ready_for_installation': orders_ready_for_installation,
-        'ready_for_installation_orders': orders_ready_for_installation,
+        'scheduled_installations': scheduled_installations,
+        'orders_ready_for_installation': total_orders_ready_for_installation,
+        'ready_for_installation_orders': total_orders_ready_for_installation,
         'orders_with_debt': orders_with_debt,
         'ready_with_debt': orders_with_debt,
         'orders_in_manufacturing': orders_in_manufacturing,
         'orders_completed_in_factory': orders_completed_in_factory,
-        'scheduled_orders': InstallationSchedule.objects.filter(status='scheduled').count(),
+        'scheduled_orders': scheduled_installations,
         'today_installations': today_installations,
         'upcoming_installations': upcoming_installations,
         'recent_orders': recent_orders,
@@ -912,44 +941,68 @@ def orders_modal(request):
     order_type = request.GET.get('type', 'total')
     
     if order_type == 'total':
+        # إجمالي طلبات التركيب فقط
         orders = Order.objects.filter(
-            installationschedule__isnull=False
+            Q(selected_types__contains='installation') |
+            Q(selected_types__contains='"installation"') |
+            Q(selected_types__contains="'installation'")
         ).select_related('customer', 'branch', 'salesperson')
     elif order_type == 'ready':
-        orders = Order.objects.filter(
+        # جلب الطلبات العادية الجاهزة للتركيب - فقط طلبات التركيب
+        regular_orders = Order.objects.filter(
+            Q(selected_types__contains='installation') |
+            Q(selected_types__contains='"installation"') |
+            Q(selected_types__contains="'installation'"),
             order_status='completed',
             installationschedule__isnull=True
         ).select_related('customer', 'branch', 'salesperson')
+        
+        # جلب أوامر التصنيع الجاهزة للتركيب (فقط من نوع تركيب)
+        from manufacturing.models import ManufacturingOrder
+        manufacturing_orders = ManufacturingOrder.objects.filter(
+            status='ready_install',
+            order_type='installation'  # فقط طلبات التركيب
+        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
+        
+        # دمج الطلبات مع تمييز أوامر التصنيع
+        orders = list(regular_orders)
+        for mfg_order in manufacturing_orders:
+            # إضافة علامة خاصة لأمر التصنيع
+            mfg_order.order.is_manufacturing_order = True
+            mfg_order.order.manufacturing_order = mfg_order
+            orders.append(mfg_order.order)
     elif order_type == 'manufacturing':
+        # الطلبات تحت التصنيع - فقط طلبات التركيب
         orders = Order.objects.filter(
+            Q(selected_types__contains='installation') |
+            Q(selected_types__contains='"installation"') |
+            Q(selected_types__contains="'installation'"),
             order_status='in_progress'
         ).select_related('customer', 'branch', 'salesperson')
     elif order_type == 'completed':
+        # الطلبات المكتملة - فقط طلبات التركيب
         orders = Order.objects.filter(
+            Q(selected_types__contains='installation') |
+            Q(selected_types__contains='"installation"') |
+            Q(selected_types__contains="'installation'"),
             order_status='completed'
         ).select_related('customer', 'branch', 'salesperson')
-    elif order_type == 'scheduled':
-        # تحويل InstallationSchedule إلى Order objects للتوافق مع template
-        installations = InstallationSchedule.objects.filter(
-            status='scheduled'
-        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
-        orders = [installation.order for installation in installations]
-    elif order_type == 'in_progress':
-        # جلب التركيبات قيد التنفيذ ثم استخراج الطلبات الفريدة
-        installations = InstallationSchedule.objects.filter(
-            status='in_progress'
-        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
-        orders = list({installation.order for installation in installations})
     elif order_type == 'debt':
+        # الطلبات مع المديونية - فقط طلبات التركيب
         orders = Order.objects.filter(
+            Q(selected_types__contains='installation') |
+            Q(selected_types__contains='"installation"') |
+            Q(selected_types__contains="'installation'"),
             order_status='completed',
             installationschedule__isnull=True
         ).filter(
             total_amount__gt=F('paid_amount')
         ).select_related('customer', 'branch', 'salesperson')
     elif order_type == 'modifications':
-        # جلب التعديلات مع الطلبات المرتبطة
-        modifications = ModificationRequest.objects.select_related(
+        # جلب التعديلات مع الطلبات المرتبطة - فقط طلبات التركيب
+        modifications = ModificationRequest.objects.filter(
+            installation__order__selected_types__contains='installation'
+        ).select_related(
             'installation', 'installation__order', 'installation__order__customer',
             'installation__order__branch', 'installation__order__salesperson'
         ).order_by('-created_at')
@@ -959,10 +1012,51 @@ def orders_modal(request):
     
     context = {
         'orders': orders,
+        'manufacturing_orders': [],  # سيتم إضافة أوامر التصنيع إذا لزم الأمر
         'currency_symbol': 'ج.م'
     }
     
     return render(request, 'installations/orders_modal.html', context)
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def schedule_manufacturing_order(request, manufacturing_order_id):
+    """جدولة أمر التصنيع للتركيب"""
+    try:
+        from manufacturing.models import ManufacturingOrder
+        manufacturing_order = get_object_or_404(ManufacturingOrder, id=manufacturing_order_id)
+        
+        # التحقق من أن أمر التصنيع جاهز للتركيب
+        if manufacturing_order.status != 'ready_install':
+            return JsonResponse({
+                'success': False,
+                'message': 'أمر التصنيع ليس جاهزاً للتركيب'
+            })
+        
+        # إنشاء جدولة تركيب جديدة
+        installation_schedule = InstallationSchedule.objects.create(
+            order=manufacturing_order.order,
+            scheduled_date=timezone.now().date() + timedelta(days=1),  # جدولة للغد
+            status='scheduled',
+            notes=f'تم الجدولة تلقائياً من أمر التصنيع #{manufacturing_order.id}'
+        )
+        
+        # تحديث حالة أمر التصنيع
+        manufacturing_order.status = 'completed'
+        manufacturing_order.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'تم جدولة أمر التصنيع بنجاح للتاريخ {installation_schedule.scheduled_date}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ أثناء الجدولة: {str(e)}'
+        })
 
 
 @login_required

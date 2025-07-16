@@ -113,6 +113,47 @@ class Order(models.Model):
         default='pending',
         verbose_name='حالة الطلب'
     )
+    
+    # حالة التركيب (مزامنة مع قسم التركيبات)
+    installation_status = models.CharField(
+        max_length=30,
+        choices=[
+            ('not_scheduled', 'غير مجدول'),
+            ('pending', 'في الانتظار'),
+            ('scheduled', 'مجدول'),
+            ('in_progress', 'قيد التنفيذ'),
+            ('completed', 'مكتمل'),
+            ('cancelled', 'ملغي'),
+            ('modification_required', 'يحتاج تعديل'),
+            ('modification_in_progress', 'التعديل قيد التنفيذ'),
+            ('modification_completed', 'التعديل مكتمل'),
+        ],
+        default='not_scheduled',
+        verbose_name='حالة التركيب'
+    )
+    
+    # حالة المعاينة (مزامنة مع قسم المعاينات)
+    inspection_status = models.CharField(
+        max_length=30,
+        choices=[
+            ('not_scheduled', 'غير مجدولة'),
+            ('pending', 'في الانتظار'),
+            ('scheduled', 'مجدولة'),
+            ('in_progress', 'قيد التنفيذ'),
+            ('completed', 'مكتملة'),
+            ('cancelled', 'ملغية'),
+        ],
+        default='not_scheduled',
+        verbose_name='حالة المعاينة'
+    )
+    
+    # إشارة إكمال جميع المراحل
+    is_fully_completed = models.BooleanField(
+        default=False,
+        verbose_name='مكتمل بالكامل',
+        help_text='إشارة خضراء عند اكتمال جميع مراحل الطلب'
+    )
+    
     # Order type fields
     selected_types = models.JSONField(
         default=list,
@@ -589,6 +630,64 @@ class Order(models.Model):
         
         # في جميع الحالات الأخرى، إرجاع التاريخ المتوقع
         return self.expected_delivery_date
+    
+    def update_installation_status(self):
+        """تحديث حالة التركيب بناءً على قسم التركيبات"""
+        try:
+            from installations.models import InstallationSchedule
+            installation = InstallationSchedule.objects.filter(order=self).first()
+            
+            if installation:
+                self.installation_status = installation.status
+            else:
+                self.installation_status = 'not_scheduled'
+            
+            self.save(update_fields=['installation_status'])
+        except Exception:
+            pass
+    
+    def update_inspection_status(self):
+        """تحديث حالة المعاينة بناءً على قسم المعاينات"""
+        try:
+            from inspections.models import Inspection
+            inspection = Inspection.objects.filter(order=self).first()
+            
+            if inspection:
+                self.inspection_status = inspection.status
+            else:
+                self.inspection_status = 'not_scheduled'
+            
+            self.save(update_fields=['inspection_status'])
+        except Exception:
+            pass
+    
+    def update_completion_status(self):
+        """تحديث إشارة الإكمال بناءً على جميع المراحل"""
+        is_completed = True
+        
+        # التحقق من حالة التصنيع
+        if 'installation' in self.get_selected_types_list() or 'tailoring' in self.get_selected_types_list():
+            if self.order_status not in ['completed', 'delivered']:
+                is_completed = False
+        
+        # التحقق من حالة التركيب
+        if 'installation' in self.get_selected_types_list():
+            if self.installation_status != 'completed':
+                is_completed = False
+        
+        # التحقق من حالة المعاينة
+        if 'inspection' in self.get_selected_types_list():
+            if self.inspection_status != 'completed':
+                is_completed = False
+        
+        self.is_fully_completed = is_completed
+        self.save(update_fields=['is_fully_completed'])
+    
+    def update_all_statuses(self):
+        """تحديث جميع الحالات"""
+        self.update_installation_status()
+        self.update_inspection_status()
+        self.update_completion_status()
 
     def get_delivery_date_label(self):
         """إرجاع تسمية التاريخ المناسبة حسب حالة الطلب"""

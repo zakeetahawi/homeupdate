@@ -26,29 +26,24 @@ def update_order_status_on_inspection_change(sender, instance, created,
         current_order_status = instance.order.order_status
         
         if (current_order_status != new_order_status):
-            # تحديث حالة الطلب
-            instance.order.order_status = new_order_status
+            # تحديث حالة الطلب باستخدام update لتجنب التكرار الذاتي
+            from django.utils import timezone
+            from orders.models import Order
+            
+            update_fields = {'order_status': new_order_status}
             
             # إذا كانت المعاينة مكتملة، تحديث تاريخ التسليم
             if new_order_status == 'completed':
-                from django.utils import timezone
-                instance.order.expected_delivery_date = timezone.now().date()
-                instance.order.save(update_fields=['order_status', 'expected_delivery_date'])
-                
-                # تسجيل التحديث
-                success_msg = (
-                    f"✅ تم مزامنة حالة الطلب {instance.order.order_number} لتكون مطابقة لحالة المعاينة: {new_order_status} "
-                    f"وتم تحديث تاريخ التسليم إلى {instance.order.expected_delivery_date}"
-                )
-                print(f"\033[32m{success_msg}\033[0m")
-            else:
-                instance.order.save(update_fields=['order_status'])
-                
-                # تسجيل التحديث
-                success_msg = (
-                    f"✅ تم مزامنة حالة الطلب {instance.order.order_number} لتكون مطابقة لحالة المعاينة: {new_order_status}"
-                )
-                print(f"\033[32m{success_msg}\033[0m")
+                update_fields['expected_delivery_date'] = timezone.now().date()
+            
+            # تحديث الطلب مباشرة في قاعدة البيانات
+            Order.objects.filter(pk=instance.order.pk).update(**update_fields)
+            
+            # تسجيل التحديث
+            success_msg = (
+                f"✅ تم مزامنة حالة الطلب {instance.order.order_number} لتكون مطابقة لحالة المعاينة: {new_order_status}"
+            )
+            print(f"\033[32m{success_msg}\033[0m")
         
     except Exception as e:
         # تسجيل الخطأ
