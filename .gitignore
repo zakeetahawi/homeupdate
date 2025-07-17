@@ -18,6 +18,8 @@ ENV/
 *.db
 db.sqlite3
 db_settings.json
+cloudflare-credentials.json
+cloudflared
 
 # Ignore secret files
 passwords.txt
