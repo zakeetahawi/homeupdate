@@ -6,12 +6,23 @@ from .models import (
     InstallationSchedule, InstallationTeam, Technician, Driver,
     ModificationRequest, ModificationImage, ManufacturingOrder,
     ModificationReport, ReceiptMemo, InstallationPayment, CustomerDebt,
-    InstallationAnalytics, ModificationErrorAnalysis
+    InstallationAnalytics, ModificationErrorAnalysis, InstallationSchedulingSettings
 )
 
 
 class InstallationStatusForm(forms.ModelForm):
     """نموذج تغيير حالة التركيب"""
+    reason = forms.CharField(
+        label=_('سبب التغيير'),
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'اكتب سبب تغيير الحالة...'
+        }),
+        required=False,
+        help_text='مطلوب لبعض التغييرات مثل الإلغاء أو طلب التعديل'
+    )
+    
     class Meta:
         model = InstallationSchedule
         fields = ['status', 'completion_date', 'notes']
@@ -34,9 +45,39 @@ class InstallationStatusForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # تحديد الحالات المتاحة بناءً على الحالة الحالية
+        if self.instance and self.instance.pk:
+            possible_statuses = self.instance.get_next_possible_statuses()
+            # إضافة الحالة الحالية للقائمة
+            current_status = (self.instance.status, self.instance.get_status_display())
+            if current_status not in possible_statuses:
+                possible_statuses.insert(0, current_status)
+            
+            self.fields['status'].choices = possible_statuses
+        
         # إخفاء حقل تاريخ الإكمال إذا لم تكن الحالة مكتمل
         if self.instance and self.instance.status != 'completed':
             self.fields['completion_date'].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_status = cleaned_data.get('status')
+        reason = cleaned_data.get('reason')
+        
+        # التحقق من صحة تغيير الحالة
+        if self.instance and self.instance.pk:
+            if new_status != self.instance.status:
+                if not self.instance.can_change_status_to(new_status):
+                    raise forms.ValidationError(
+                        f'لا يمكن تغيير الحالة من {self.instance.get_status_display()} إلى {dict(self.instance.STATUS_CHOICES)[new_status]}'
+                    )
+                
+                # التحقق من وجود سبب للتغييرات المهمة
+                if new_status in ['cancelled', 'modification_required'] and not reason:
+                    raise forms.ValidationError('سبب التغيير مطلوب لهذا النوع من التغيير')
+        
+        return cleaned_data
 
 
 class ModificationRequestForm(forms.ModelForm):
@@ -506,3 +547,120 @@ class ModificationErrorAnalysisForm(forms.ModelForm):
             'cost_impact': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'time_impact_hours': forms.NumberInput(attrs={'class': 'form-control'}),
         }
+
+
+class InstallationSchedulingSettingsForm(forms.ModelForm):
+    """نموذج إعدادات جدولة التركيب"""
+    class Meta:
+        model = InstallationSchedulingSettings
+        fields = [
+            'technician_name', 'driver_name', 'customer_address', 'customer_phone',
+            'contract_number', 'invoice_number', 'salesperson_name', 'branch_name',
+            'special_instructions'
+        ]
+        widgets = {
+            'technician_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'اسم الفني'
+            }),
+            'driver_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'اسم السائق'
+            }),
+            'customer_address': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'عنوان العميل'
+            }),
+            'customer_phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم هاتف العميل'
+            }),
+            'contract_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم العقد'
+            }),
+            'invoice_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم الفاتورة'
+            }),
+            'salesperson_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'اسم البائع'
+            }),
+            'branch_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'اسم الفرع'
+            }),
+            'special_instructions': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'تعليمات خاصة للتركيب...'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # ملء البيانات تلقائياً من الطلب إذا لم تكن موجودة
+        if self.instance and self.instance.pk and not any([
+            self.instance.customer_phone,
+            self.instance.contract_number,
+            self.instance.salesperson_name
+        ]):
+            self.instance.populate_from_order()
+
+
+class ScheduleEditForm(forms.ModelForm):
+    """نموذج تعديل الجدولة مع سبب التغيير"""
+    reason = forms.CharField(
+        label=_('سبب تعديل الجدولة'),
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'اكتب سبب تعديل الجدولة...'
+        }),
+        required=True,
+        help_text='مطلوب كتابة سبب تعديل الجدولة'
+    )
+    
+    class Meta:
+        model = InstallationSchedule
+        fields = ['team', 'scheduled_date', 'scheduled_time', 'notes']
+        widgets = {
+            'team': forms.Select(attrs={'class': 'form-control'}),
+            'scheduled_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'scheduled_time': forms.TimeInput(attrs={
+                'class': 'form-control',
+                'type': 'time'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'ملاحظات الجدولة...'
+            }),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        scheduled_date = cleaned_data.get('scheduled_date')
+        scheduled_time = cleaned_data.get('scheduled_time')
+        reason = cleaned_data.get('reason')
+
+        if not reason:
+            raise ValidationError(_('سبب تعديل الجدولة مطلوب'))
+
+        if scheduled_date and scheduled_date < timezone.now().date():
+            raise ValidationError(_('لا يمكن جدولة تركيب في تاريخ ماضي'))
+
+        if scheduled_date and scheduled_time:
+            scheduled_datetime = timezone.make_aware(
+                timezone.datetime.combine(scheduled_date, scheduled_time)
+            )
+            if scheduled_datetime < timezone.now():
+                raise ValidationError(_('لا يمكن جدولة تركيب في وقت ماضي'))
+
+        return cleaned_data
