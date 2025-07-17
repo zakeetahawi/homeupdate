@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load unified_status_tags %}
 
 {% block title %}قائمة التركيبات{% endblock %}
 
@@ -93,26 +94,14 @@
                                         {{ installation.order.order_number }}
                                     </a>
                                 </td>
-                                <td>{{ installation.order.customer.name }}</td>
+                                <td><strong>{{ installation.order.customer.name }}</strong></td>
                                 <td>{{ installation.order.customer.phone }}</td>
                                 <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
                                 <td>{{ installation.team.name|default:"غير محدد" }}</td>
                                 <td>{{ installation.scheduled_date|date:"d/m/Y"|default:"غير محدد" }}</td>
                                 <td>{{ installation.scheduled_time|time:"H:i"|default:"غير محدد" }}</td>
                                 <td>
-                                    {% if installation.status == 'pending' %}
-                                        <span class="badge badge-warning">في الانتظار</span>
-                                    {% elif installation.status == 'scheduled' %}
-                                        <span class="badge badge-info">مجدول</span>
-                                    {% elif installation.status == 'in_progress' %}
-                                        <span class="badge badge-primary">قيد التنفيذ</span>
-                                    {% elif installation.status == 'completed' %}
-                                        <span class="badge badge-success">مكتمل</span>
-                                    {% elif installation.status == 'cancelled' %}
-                                        <span class="badge badge-danger">ملغي</span>
-                                    {% else %}
-                                        <span class="badge badge-secondary">{{ installation.get_status_display }}</span>
-                                    {% endif %}
+                                    {% get_status_badge installation.status "installation" %}
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">

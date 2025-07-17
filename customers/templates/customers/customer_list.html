@@ -84,7 +84,7 @@
                         <tr>                            <td>{{ forloop.counter }}</td>
                             <td>{{ customer.code|default:"-" }}</td>                            <td>
                                 <a href="{% url 'customers:customer_detail' customer.pk %}" style="color: var(--primary); text-decoration: none; font-weight: bold;">
-                                    {{ customer.name }}
+                                    <strong>{{ customer.name }}</strong>
                                 </a>
                             </td>
                             <td>

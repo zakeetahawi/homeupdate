@@ -229,7 +229,7 @@
                                                 {{ installation.order.order_number }}
                                             </a>
                                         </td>
-                                        <td>{{ installation.order.customer.name }}</td>
+                                        <td><strong>{{ installation.order.customer.name }}</strong></td>
                                         <td>{{ installation.team.name|default:"غير محدد" }}</td>
                                         <td>
                                             <span class="badge badge-{{ installation.status|yesno:'success,warning' }}">
@@ -272,7 +272,7 @@
                             {% for installation in upcoming_installations %}
                             <div class="list-group-item d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="mb-1">{{ installation.order.customer.name }}</h6>
+                                    <h6 class="mb-1"><strong>{{ installation.order.customer.name }}</strong></h6>
                                     <small class="text-muted">
                                         {{ installation.scheduled_date|date:"d/m/Y" }} - 
                                         {{ installation.scheduled_time|time:"H:i" }}
@@ -406,7 +406,7 @@
                                                 {{ order.order_number }}
                                             </a>
                                         </td>
-                                        <td>{{ order.customer.name }}</td>
+                                        <td><strong>{{ order.customer.name }}</strong></td>
                                         <td>{{ order.created_at|date:"d/m/Y" }}</td>
                                         <td>
                                             <span class="badge badge-success">

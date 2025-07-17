@@ -120,11 +120,26 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         Get list of available statuses for the user based on current status and order type
         """
         if user.is_superuser:
-            # Admin can see all statuses except current one
-            return [status for status in ManufacturingOrder.STATUS_CHOICES if status[0] != current_status]
-        
+            # Admin can see all statuses except current one, but follow the new logic
+            all_statuses = [status for status in ManufacturingOrder.STATUS_CHOICES if status[0] != current_status]
+            
+            # Apply the new logic for admin users too
+            if current_status == 'in_progress':
+                if order_type == 'installation':
+                    return [('ready_install', 'جاهز للتركيب')]
+                elif order_type in ['custom', 'accessory']:
+                    return [('completed', 'مكتمل')]
+                else:
+                    return []
+            elif current_status == 'ready_install':
+                return [('delivered', 'تم التسليم')]
+            elif current_status == 'completed':
+                return [('delivered', 'تم التسليم')]
+            else:
+                return all_statuses
+
         available_statuses = []
-        
+
         if current_status == 'pending_approval':
             # Only approval users can change from pending_approval
             if user.has_perm('manufacturing.can_approve_orders'):
@@ -135,7 +150,7 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
                 ]
             else:
                 available_statuses = []
-        
+
         elif current_status == 'pending':
             # Factory staff can see manufacturing progression
             if user.has_perm('manufacturing.change_manufacturingorder'):
@@ -145,47 +160,46 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
                 ]
             else:
                 available_statuses = []
-        
+
         elif current_status == 'in_progress':
-            # Factory staff can see completion options based on order type
             if user.has_perm('manufacturing.change_manufacturingorder'):
                 if order_type == 'installation':
-                    # طلبات التركيب: يمكن أن تصبح جاهزة للتركيب
+                    # بعد قيد التنفيذ لطلبات التركيب: فقط جاهز للتركيب
                     available_statuses = [
                         ('ready_install', 'جاهز للتركيب'),
-                        ('cancelled', 'ملغي'),
                     ]
-                elif order_type == 'custom':
-                    # طلبات التفصيل: تصبح مكتملة فقط
+                elif order_type in ['custom', 'accessory']:
+                    # بعد قيد التنفيذ لطلبات التفصيل أو الاكسسوار: فقط مكتمل
                     available_statuses = [
                         ('completed', 'مكتمل'),
-                        ('cancelled', 'ملغي'),
                     ]
                 else:
-                    # طلبات أخرى: يمكن أن تصبح مكتملة أو جاهزة للتركيب
-                    available_statuses = [
-                        ('completed', 'مكتمل'),
-                        ('ready_install', 'جاهز للتركيب'),
-                        ('cancelled', 'ملغي'),
-                    ]
+                    available_statuses = []
             else:
                 available_statuses = []
-        
-        elif current_status in ['completed', 'ready_install']:
-            # Can move to delivery only (no rejection or cancellation after completion)
+
+        elif current_status == 'ready_install':
+            # بعد جاهز للتركيب: فقط تم التسليم
             if user.has_perm('manufacturing.change_manufacturingorder'):
                 available_statuses = [('delivered', 'تم التسليم')]
             else:
                 available_statuses = []
-        
+
+        elif current_status == 'completed':
+            # بعد مكتمل: فقط تم التسليم
+            if user.has_perm('manufacturing.change_manufacturingorder'):
+                available_statuses = [('delivered', 'تم التسليم')]
+            else:
+                available_statuses = []
+
         elif current_status == 'delivered':
             # Delivered orders are final for non-admin users
             available_statuses = []
-        
+
         elif current_status in ['rejected', 'cancelled']:
             # Rejected/cancelled orders are final for non-admin users
             available_statuses = []
-        
+
         return available_statuses
 
 
@@ -370,25 +384,28 @@ def update_order_status(request, pk):
                 'error': 'لم يتم تحديد الحالة الجديدة'
             }, status=400)
         
+        # التحقق من نوع الطلب الأصلي والحالة المطلوبة
+        order_types = order.order.get_selected_types_list() if hasattr(order.order, 'get_selected_types_list') else []
+        
         # التحقق من نوع الطلب والحالة المطلوبة
-        if new_status == 'ready_install' and order.order_type != 'installation':
+        if new_status == 'ready_install' and 'installation' not in order_types:
             return JsonResponse({
                 'success': False,
                 'error': 'لا يمكن تعيين حالة "جاهز للتركيب" إلا لأوامر التصنيع من نوع تركيب (installation) فقط.'
             }, status=400)
         
         # منع تعيين حالة "مكتمل" لطلبات التركيب
-        if new_status == 'completed' and order.order_type == 'installation':
+        if new_status == 'completed' and 'installation' in order_types:
             return JsonResponse({
                 'success': False,
                 'error': 'لا يمكن تعيين حالة "مكتمل" لطلبات التركيب. طلبات التركيب تصبح "جاهزة للتركيب" ثم "تم التسليم" فقط.'
             }, status=400)
         
-        # منع تعيين حالة "جاهز للتركيب" لطلبات التفصيل
-        if new_status == 'ready_install' and order.order_type == 'custom':
+        # منع تعيين حالة "جاهز للتركيب" لطلبات التفصيل والاكسسوار
+        if new_status == 'ready_install' and ('tailoring' in order_types or 'accessory' in order_types):
             return JsonResponse({
                 'success': False,
-                'error': 'لا يمكن تعيين حالة "جاهز للتركيب" لطلبات التفصيل (custom). طلبات التفصيل تصبح "مكتملة" فقط.'
+                'error': 'لا يمكن تعيين حالة "جاهز للتركيب" لطلبات التفصيل أو الاكسسوار. هذه الطلبات تصبح "مكتملة" فقط.'
             }, status=400)
         
         # منع الرفض والإلغاء بعد الحالات المكتملة

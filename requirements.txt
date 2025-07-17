@@ -51,6 +51,7 @@ sqlparse==0.5.3
 Pillow==11.2.1
 python-magic==0.4.27
 reportlab==4.4.1
+WeasyPrint==65.1
 
 # ======================================
 # Import/Export Support

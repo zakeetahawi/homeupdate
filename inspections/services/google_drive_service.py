@@ -33,22 +33,26 @@ class GoogleDriveService:
     def _initialize(self):
         """تهيئة خدمة Google Drive"""
         if not GOOGLE_AVAILABLE:
-            raise Exception("مكتبات Google API غير متوفرة. يرجى تثبيت google-api-python-client و google-auth")
+            logger.warning("مكتبات Google API غير متوفرة. سيتم تجاهل وظائف Google Drive")
+            return
 
         try:
             from odoo_db_manager.models import GoogleDriveConfig
             self.config = GoogleDriveConfig.get_active_config()
 
             if not self.config:
-                raise Exception("لا توجد إعدادات Google Drive نشطة")
+                logger.warning("لا توجد إعدادات Google Drive نشطة")
+                return
 
             if not self.config.credentials_file:
-                raise Exception("ملف اعتماد Google غير موجود")
+                logger.warning("ملف اعتماد Google غير موجود")
+                return
 
             # تحميل ملف الاعتماد
             credentials_path = self.config.credentials_file.path
             if not os.path.exists(credentials_path):
-                raise Exception("ملف اعتماد Google غير موجود في المسار المحدد")
+                logger.warning("ملف اعتماد Google غير موجود في المسار المحدد")
+                return
 
             # إنشاء الاعتماد
             scopes = ['https://www.googleapis.com/auth/drive.file']
@@ -56,10 +60,11 @@ class GoogleDriveService:
 
             # إنشاء خدمة Google Drive
             self.service = build('drive', 'v3', credentials=credentials)
+            logger.info("تم تهيئة خدمة Google Drive بنجاح")
 
         except Exception as e:
-            logger.error(f"خطأ في تهيئة خدمة Google Drive: {str(e)}")
-            raise Exception(f"فشل في تهيئة خدمة Google Drive: {str(e)}")
+            logger.warning(f"خطأ في تهيئة خدمة Google Drive: {str(e)}")
+            # لا نرفع استثناء، فقط نسجل تحذير
 
     def upload_inspection_file(self, file_path, inspection):
         """رفع ملف معاينة إلى Google Drive مع التسمية الجديدة"""

@@ -146,15 +146,15 @@
                                         <span class="text-danger">*</span>
                                     </label>
                                     {{ form.invoice_number }}
-                                    <div class="form-text text-danger" id="invoice_help">
+                                    <div class="form-text text-danger">
                                         مطلوب لجميع أنواع الطلبات
                                     </div>
                                     {% if form.invoice_number.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        {% for error in form.invoice_number.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.invoice_number.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
                                     {% endif %}
                                 </div>
 
@@ -278,11 +278,31 @@
                                     {% endif %}
                                 </div>
 
+                                <!-- Related Inspection -->
+                                <div class="mb-3 related-inspection-field" style="display: none;">
+                                    <label for="{{ form.related_inspection.id_for_label }}" class="form-label">
+                                        معاينة مرتبطة
+                                    </label>
+                                    {{ form.related_inspection }}
+                                    <div class="form-text text-muted">
+                                        اختر المعاينة المرتبطة بهذا الطلب (اختياري)
+                                    </div>
+                                    {% if form.related_inspection.errors %}
+                                    <div class="alert alert-danger mt-2">
+                                        {% for error in form.related_inspection.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+
                                 <!-- Hidden Fields for Delivery - Set automatically by JavaScript -->
                                 <div style="display:none;">
                                 {{ form.delivery_type }}
                                 {{ form.delivery_address }}
                                 </div>
+
+
 
                                 <!-- Branch Selection - Always visible but will be set automatically -->
                                 <div class="mb-3">
@@ -373,6 +393,7 @@
         
         const contractField = document.querySelector('.contract-field');
         const contractFileField = document.querySelector('.contract-file-field');
+        const relatedInspectionField = document.querySelector('.related-inspection-field');
         const productSelection = document.querySelector('#product-selection-section');
         const tailoringSection = document.querySelector('#tailoring-section');
         const inspectionFields = document.querySelector('#inspection-fields');
@@ -402,6 +423,7 @@
             const showForAccessory = selectedType === 'accessory';
             const showForTailoring = selectedType === 'tailoring';
             const showForInspection = selectedType === 'inspection';
+            const showRelatedInspection = ['installation', 'tailoring', 'accessory'].includes(selectedType);
 
             // التحكم في إظهار/إخفاء حقل وضع الطلب
             if (orderStatusContainer) {
@@ -424,8 +446,41 @@
                 }
             }
 
+            // Invoice number handling - required for all types
+            const invoiceRequired = document.querySelector('.text-danger');
+            const invoiceHelp = document.querySelector('.form-text.text-danger');
+            const inspectionInvoiceHelp = document.querySelector('.inspection-invoice-help');
+            
+            if (showForInspection) {
+                // للمعاينات: إظهار علامة * ورسالة "مطلوب" مثل باقي الأنواع
+                if (invoiceRequired) invoiceRequired.style.display = 'inline';
+                if (invoiceHelp) invoiceHelp.style.display = 'block';
+                if (inspectionInvoiceHelp) inspectionInvoiceHelp.style.display = 'none';
+            } else {
+                // للخدمات الأخرى: إظهار علامة * ورسالة "مطلوب"
+                if (invoiceRequired) invoiceRequired.style.display = 'inline';
+                if (invoiceHelp) invoiceHelp.style.display = 'block';
+                if (inspectionInvoiceHelp) inspectionInvoiceHelp.style.display = 'none';
+            }
+
             if (contractField) contractField.style.display = showForContract ? 'block' : 'none';
             if (contractFileField) contractFileField.style.display = showForContract ? 'block' : 'none';
+            
+            // إخفاء حقل المعاينة المرتبطة للمعاينات وإظهاره للخدمات الأخرى فقط
+            if (relatedInspectionField) {
+                if (showForInspection) {
+                    // إخفاء حقل المعاينة المرتبطة للمعاينات
+                    relatedInspectionField.style.display = 'none';
+                    // إفراغ قيمة الحقل للمعاينات
+                    const relatedInspectionSelect = relatedInspectionField.querySelector('select');
+                    if (relatedInspectionSelect) {
+                        relatedInspectionSelect.value = '';
+                    }
+                } else {
+                    // إظهار حقل المعاينة المرتبطة للخدمات الأخرى
+                    relatedInspectionField.style.display = showRelatedInspection ? 'block' : 'none';
+                }
+            }
             
             if (productSelection) {
                 productSelection.style.display = showForAccessory ? 'block' : 'none';
@@ -466,6 +521,61 @@
                 }
                 console.log("------------------------------------");
             });
+        }
+    });
+    
+    // --- Dynamic Inspection Loading ---
+    // إضافة كود لتحديث قائمة المعاينات عند تغيير العميل
+    document.addEventListener('DOMContentLoaded', function() {
+        const customerSelect = document.querySelector('#{{ form.customer.id_for_label }}');
+        const relatedInspectionSelect = document.querySelector('#{{ form.related_inspection.id_for_label }}');
+        
+        if (customerSelect && relatedInspectionSelect) {
+            customerSelect.addEventListener('change', function() {
+                const customerId = this.value;
+                
+                if (customerId) {
+                    // إظهار مؤشر التحميل
+                    relatedInspectionSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+                    relatedInspectionSelect.disabled = true;
+                    
+                    // جلب معاينات العميل عبر AJAX
+                    fetch(`{% url 'orders:customer_inspections_api' %}?customer_id=${customerId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // تحديث قائمة المعاينات
+                                relatedInspectionSelect.innerHTML = '';
+                                data.choices.forEach(choice => {
+                                    const option = document.createElement('option');
+                                    option.value = choice.value;
+                                    option.textContent = choice.text;
+                                    relatedInspectionSelect.appendChild(option);
+                                });
+                                relatedInspectionSelect.disabled = false;
+                            } else {
+                                // في حالة الخطأ، إظهار رسالة خطأ
+                                relatedInspectionSelect.innerHTML = '<option value="">خطأ في تحميل المعاينات</option>';
+                                relatedInspectionSelect.disabled = true;
+                                console.error('Error loading inspections:', data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching inspections:', error);
+                            relatedInspectionSelect.innerHTML = '<option value="">خطأ في الاتصال</option>';
+                            relatedInspectionSelect.disabled = true;
+                        });
+                } else {
+                    // إذا لم يتم اختيار عميل، إظهار رسالة
+                    relatedInspectionSelect.innerHTML = '<option value="">اختر العميل أولاً</option>';
+                    relatedInspectionSelect.disabled = true;
+                }
+            });
+            
+            // تشغيل الحدث مرة واحدة عند تحميل الصفحة إذا كان العميل محدد مسبقاً
+            if (customerSelect.value) {
+                customerSelect.dispatchEvent(new Event('change'));
+            }
         }
     });
 </script>

@@ -407,9 +407,9 @@ class InspectionDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         inspection = self.get_object()
         return self.request.user.is_superuser or inspection.created_by == self.request.user
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'تم حذف المعاينة بنجاح')
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        messages.success(self.request, 'تم حذف المعاينة بنجاح')
+        return super().form_valid(form)
 
     def handle_no_permission(self):
         messages.error(self.request, 'ليس لديك صلاحية لحذف هذه المعاينة')

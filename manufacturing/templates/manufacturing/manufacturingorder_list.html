@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
+{% load unified_status_tags %}
 
 {% block title %}قائمة أوامر التصنيع{% endblock %}
 
@@ -536,7 +537,7 @@
                     </thead>
                     <tbody>
                         {% for order in manufacturing_orders %}
-                        <tr>
+                        <tr data-order-id="{{ order.id }}" data-order-type="{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}">
                             <td>{{ forloop.counter }}</td>
                             <td>
                                 <a href="{% url 'manufacturing:order_detail' order.id %}" style="color: var(--primary); text-decoration: none;">
@@ -547,28 +548,11 @@
                                 {% with selected_types=order.order.get_selected_types_list %}
                                     {% if selected_types %}
                                         {% for type in selected_types %}
-                                            {% if type == 'installation' %}
-                                                <span class="badge bg-warning text-dark me-1">
-                                                    <i class="fas fa-tools me-1"></i>تركيب
-                                                </span>
-                                            {% elif type == 'tailoring' %}
-                                                <span class="badge bg-success me-1">
-                                                    <i class="fas fa-cut me-1"></i>تفصيل
-                                                </span>
-                                            {% elif type == 'accessory' %}
-                                                <span class="badge bg-primary me-1">
-                                                    <i class="fas fa-gem me-1"></i>إكسسوار
-                                                </span>
-                                            {% elif type == 'inspection' %}
-                                                <span class="badge bg-info me-1">
-                                                    <i class="fas fa-eye me-1"></i>معاينة
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-secondary me-1">{{ type }}</span>
-                                            {% endif %}
+                                            {% get_order_type_badge type order.order %}
+                                            {% if not forloop.last %}<br>{% endif %}
                                         {% endfor %}
                                     {% else %}
-                                        <span class="badge bg-secondary">غير محدد</span>
+                                        <span class="text-muted">-</span>
                                     {% endif %}
                                 {% endwith %}
                             </td>
@@ -577,7 +561,7 @@
                             <td>
                                 {% if order.order.customer %}
                                     <a href="{% url 'customers:customer_detail' order.order.customer.id %}" style="color: var(--primary); text-decoration: none;">
-                                        {{ order.order.customer.name|default:'-' }}
+                                        <strong>{{ order.order.customer.name|default:'-' }}</strong>
                                     </a>
                                 {% else %}
                                     -
@@ -597,7 +581,15 @@
                                     -
                                 {% endif %}
                             </td>
-                            <td>{{ order.order_date|date:'Y-m-d'|default:order.order.order_date|date:'Y-m-d'|default:'-' }}</td>
+                            <td>
+                                {% if order.order_date %}
+                                    {{ order.order_date|date:'Y-m-d' }}
+                                {% elif order.order.order_date %}
+                                    {{ order.order.order_date|date:'Y-m-d' }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <span class="{% if order.is_delivery_delayed %}text-danger{% endif %}">
                                     {{ order.expected_delivery_date|date:'Y-m-d'|default:'-' }}
@@ -608,12 +600,12 @@
                             </td>
                             <td>
                                 {% if order.status == 'pending_approval' %}
-                                    <span class="badge bg-warning">{{ order.get_status_display }}</span>
+                                    {% get_status_badge order.status "manufacturing" %}
                                 {% else %}
-                                    <button class="status-btn status-{{ order.status }}" 
+                                    <button class="status-btn status-{{ order.status }} unified-badge status-{{ order.status }}" 
                                             data-order-id="{{ order.id }}" 
                                             data-current-status="{{ order.status }}"
-                                            onclick="showStatusModal({{ order.id }}, '{{ order.status }}', '{{ order.get_status_display }}')">
+                                            onclick="showStatusModal({{ order.id }}, '{{ order.status }}', '{{ order.get_status_display }}', '{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}')">
                                         {{ order.get_status_display }}
                                     </button>
                                 {% endif %}
@@ -770,6 +762,8 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+// التأكد من تحميل الجافاسكريبت
+console.log('Manufacturing JavaScript loaded');
 $(document).ready(function() {
     // تهيئة DataTables مع إعدادات محسنة
     var table = $('#manufacturingTable').DataTable({
@@ -916,7 +910,8 @@ $(document).ready(function() {
 });
 
 // عرض modal لتغيير الحالة
-function showStatusModal(orderId, currentStatus, currentStatusDisplay) {
+window.showStatusModal = function(orderId, currentStatus, currentStatusDisplay, orderType) {
+    console.log('showStatusModal called with:', {orderId, currentStatus, currentStatusDisplay, orderType});
     const statusOptions = {
         'pending_approval': 'قيد الموافقة',
         'pending': 'قيد الانتظار',
@@ -957,8 +952,11 @@ function showStatusModal(orderId, currentStatus, currentStatusDisplay) {
     
     let optionsHtml = '';
     
-    // Define available statuses based on current status (similar to server-side logic)
+    // Define available statuses based on current status and order type
     let availableStatuses = [];
+    
+    // Use the orderType parameter passed to the function
+    const orderTypeValue = orderType || null;
     
     if (currentStatus === 'pending_approval') {
         // Only admin/approval users can change from pending_approval
@@ -970,22 +968,32 @@ function showStatusModal(orderId, currentStatus, currentStatusDisplay) {
     } else if (currentStatus === 'pending') {
         availableStatuses = ['in_progress', 'cancelled'];
     } else if (currentStatus === 'in_progress') {
-        availableStatuses = ['completed', 'ready_install', 'cancelled'];
-    } else if (currentStatus === 'completed' || currentStatus === 'ready_install') {
-        availableStatuses = ['completed', 'ready_install', 'delivered'];
-        // Remove current status from available options
-        availableStatuses = availableStatuses.filter(status => status !== currentStatus);
+        // Apply new logic based on order type
+        if (orderTypeValue === 'installation') {
+            // For installation orders: only show 'ready_install' after 'in_progress'
+            availableStatuses = ['ready_install'];
+        } else {
+            // For manufacturing/accessory orders: only show 'completed' after 'in_progress'
+            availableStatuses = ['completed'];
+        }
+    } else if (currentStatus === 'ready_install') {
+        // After 'ready_install', only show 'delivered'
+        availableStatuses = ['delivered'];
+    } else if (currentStatus === 'completed') {
+        // After 'completed', only show 'delivered'
+        availableStatuses = ['delivered'];
     } else if (currentStatus === 'delivered') {
         availableStatuses = isAdmin ? ['pending', 'in_progress', 'completed', 'ready_install'] : [];
     } else if (currentStatus === 'rejected' || currentStatus === 'cancelled') {
         availableStatuses = isAdmin ? ['pending', 'in_progress', 'completed', 'ready_install', 'delivered'] : [];
     }
     
-    // Admin can access all statuses
+    // Admin can access all statuses (but still follow the new logic)
     if (isAdmin && currentStatus !== 'pending_approval') {
         // Add rejected and cancelled for all statuses (except themselves)
-        if (currentStatus !== 'rejected') availableStatuses.push('rejected');
-        if (currentStatus !== 'cancelled') availableStatuses.push('cancelled');
+        // لكن لا نضيفهم بعد "قيد التنفيذ" حسب الشروط الجديدة
+        if (currentStatus !== 'rejected' && currentStatus !== 'in_progress') availableStatuses.push('rejected');
+        if (currentStatus !== 'cancelled' && currentStatus !== 'in_progress') availableStatuses.push('cancelled');
     }
     
     // Generate options HTML

@@ -233,11 +233,12 @@ def update_order_installation_status(sender, instance, created, **kwargs):
 def update_order_inspection_status(sender, instance, created, **kwargs):
     """تحديث حالة الطلب عند تغيير حالة المعاينة"""
     try:
-        order = instance.order
-        order.update_inspection_status()
-        order.update_completion_status()
+        if instance.order:
+            order = instance.order
+            order.update_inspection_status()
+            order.update_completion_status()
     except Exception as e:
-        logger.error(f"خطأ في تحديث حالة المعاينة للطلب {instance.order.id}: {str(e)}")
+        logger.error(f"خطأ في تحديث حالة المعاينة للطلب: {str(e)}")
 
 @receiver(post_save, sender='manufacturing.ManufacturingOrder')
 def update_order_manufacturing_status(sender, instance, created, **kwargs):

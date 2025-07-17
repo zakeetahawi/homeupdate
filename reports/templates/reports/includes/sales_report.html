@@ -78,7 +78,7 @@
                         <tbody>
                             {% for customer in data.top_customers %}
                             <tr>
-                                <td>{{ customer.name }}</td>
+                                <td><strong>{{ customer.name }}</strong></td>
                                 <td>{{ customer.total_orders }}</td>
                                 <td>{{ customer.total_spent|floatformat:2 }} {% trans 'جنيه' %}</td>
                                 <td>{{ customer.total_spent|div:customer.total_orders|floatformat:2 }} {% trans 'جنيه' %}</td>

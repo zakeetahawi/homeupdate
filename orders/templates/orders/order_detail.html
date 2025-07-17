@@ -71,17 +71,34 @@
                             </td>
                         </tr>
                         <tr>
-                            <th>ملف المعاينة</th>
+                            <th>المعاينة المرتبطة</th>
                             <td>
-                                {% with inspection=order.inspections.first %}
-                                    {% if inspection and inspection.inspection_file %}
-                                        <a href="{{ inspection.inspection_file.url }}" target="_blank" class="btn btn-sm btn-info">
-                                            <i class="fas fa-file-alt"></i> عرض ملف المعاينة
-                                        </a>
-                                    {% else %}
-                                        <span class="text-muted">لم يتم رفع ملف المعاينة</span>
-                                    {% endif %}
-                                {% endwith %}
+                                {% if order.related_inspection_type == 'customer_side' %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-user me-1"></i>طرف العميل
+                                    </span>
+                                    <br><small class="text-muted">
+                                        تم تحديد المعاينة كطرف العميل
+                                    </small>
+                                {% elif order.related_inspection %}
+                                    <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye me-1"></i>عرض تفاصيل المعاينة
+                                    </a>
+                                    <br>
+                                    <span class="badge {% if order.related_inspection.status == 'completed' %}bg-success{% elif order.related_inspection.status == 'scheduled' %}bg-warning text-dark{% elif order.related_inspection.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        <i class="fas fa-clipboard-check me-1"></i>
+                                        {{ order.related_inspection.get_status_display }}
+                                    </span>
+                                    <br><small class="text-muted">
+                                        {% if order.related_inspection.contract_number %}
+                                            {{ order.related_inspection.contract_number }}
+                                        {% else %}
+                                            معاينة {{ order.related_inspection.id }}
+                                        {% endif %} - {{ order.related_inspection.created_at|date:"Y-m-d" }}
+                                    </small>
+                                {% else %}
+                                    <span class="text-muted">لا توجد معاينة مرتبطة</span>
+                                {% endif %}
                             </td>
                         </tr>
                         <!-- Show different date info for inspection vs other orders -->
@@ -222,29 +239,30 @@
                         <tr>
                             <th>حالة الطلب</th>
                             <td>
-                                {% if order.order_status == 'pending_approval' %}
-                                <span class="badge bg-warning text-dark">قيد الموافقة</span>
-                                {% elif order.order_status == 'pending' %}
-                                <span class="badge bg-info">قيد الانتظار</span>
-                                {% elif order.order_status == 'in_progress' %}
-                                <span class="badge bg-primary">قيد التصنيع</span>
-                                {% elif order.order_status == 'ready_install' %}
-                                <span class="badge bg-success">جاهز للتركيب</span>
-                                {% elif order.order_status == 'completed' %}
-                                <span class="badge bg-success">مكتمل</span>
-                                {% elif order.order_status == 'delivered' %}
-                                <span class="badge bg-success">تم التسليم</span>
-                                {% elif order.order_status == 'rejected' %}
-                                <span class="badge bg-danger">مرفوض</span>
-                                {% elif order.order_status == 'cancelled' %}
-                                <span class="badge bg-danger">ملغي</span>
-                                {% elif order.order_status == 'manufacturing_deleted' %}
-                                <span class="badge bg-manufacturing-deleted manufacturing-deleted-pulse">
-                                    <i class="fas fa-trash-alt me-1"></i>أمر تصنيع محذوف
-                                </span>
-                                {% else %}
-                                <span class="badge bg-secondary">{{ order.get_order_status_display }}</span>
-                                {% endif %}
+                                {% with display_info=order.get_display_status %}
+                                    <span class="badge {{ order.get_display_status_badge_class }}" style="font-size: 0.9rem;">
+                                        <i class="{{ order.get_display_status_icon }} me-1"></i>
+                                        {{ order.get_display_status_text }}
+                                    </span>
+                                    
+                                    <!-- إظهار مصدر الحالة إذا كان مختلفاً عن الحالة الأساسية -->
+                                    {% if display_info.source != 'order' %}
+                                        <br><small class="text-muted" style="font-size: 0.75rem;">
+                                            {% if display_info.source == 'installation' %}
+                                                <i class="fas fa-tools me-1"></i>تركيب
+                                            {% elif display_info.source == 'manufacturing' %}
+                                                <i class="fas fa-industry me-1"></i>مصنع
+                                            {% endif %}
+                                        </small>
+                                    {% endif %}
+                                    
+                                    <!-- إظهار اسم المستلم إذا كانت الحالة تم التسليم -->
+                                    {% if order.get_display_status_text == 'تم التسليم' and order.delivery_recipient_name %}
+                                        <br><small class="text-muted" style="font-size: 0.75rem;">
+                                            <i class="fas fa-user me-1"></i>المستلم: {{ order.delivery_recipient_name }}
+                                        </small>
+                                    {% endif %}
+                                {% endwith %}
                             </td>
                         </tr>
                         
@@ -294,6 +312,92 @@
                                     <br><small class="text-muted">
                                         آخر تحديث: {{ manufacturing_order.updated_at|date:"Y-m-d H:i" }}
                                     </small>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        
+                        <!-- إضافة حالة التركيب إذا كان نوع الطلب تركيب -->
+                        {% if 'installation' in order.get_selected_types_list %}
+                        <tr>
+                            <th>حالة التركيب</th>
+                            <td>
+                                {% if order.installation_status == 'not_scheduled' %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-clock me-1"></i> غير مجدول
+                                </span>
+                                <br><small class="text-muted">
+                                    لم يتم جدولة التركيب بعد
+                                </small>
+                                {% elif order.installation_status == 'pending' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-hourglass-half me-1"></i> في الانتظار
+                                </span>
+                                <br><small class="text-muted">
+                                    تم جدولة التركيب
+                                </small>
+                                {% elif order.installation_status == 'scheduled' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-calendar me-1"></i> مجدول
+                                </span>
+                                <br><small class="text-muted">
+                                    تم تحديد موعد التركيب
+                                </small>
+                                {% elif order.installation_status == 'in_progress' %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-tools me-1"></i> قيد التنفيذ
+                                </span>
+                                <br><small class="text-muted">
+                                    الفريق يعمل على التركيب
+                                </small>
+                                {% elif order.installation_status == 'completed' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i> مكتمل
+                                </span>
+                                <br><small class="text-muted">
+                                    تم الانتهاء من التركيب
+                                </small>
+                                {% elif order.installation_status == 'cancelled' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times me-1"></i> ملغي
+                                </span>
+                                <br><small class="text-muted">
+                                    تم إلغاء التركيب
+                                </small>
+                                {% elif order.installation_status == 'modification_required' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> يحتاج تعديل
+                                </span>
+                                <br><small class="text-muted">
+                                    الطلب يحتاج تعديلات
+                                </small>
+                                {% elif order.installation_status == 'modification_in_progress' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-wrench me-1"></i> التعديل قيد التنفيذ
+                                </span>
+                                <br><small class="text-muted">
+                                    الفريق يعمل على التعديلات
+                                </small>
+                                {% elif order.installation_status == 'modification_completed' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-double me-1"></i> التعديل مكتمل
+                                </span>
+                                <br><small class="text-muted">
+                                    تم الانتهاء من التعديلات
+                                </small>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-question me-1"></i> {{ order.get_installation_status_display }}
+                                </span>
+                                {% endif %}
+                                
+                                <!-- إضافة رابط لتفاصيل التركيب إذا كان موجوداً -->
+                                {% with installation=order.installationschedule_set.first %}
+                                    {% if installation %}
+                                    <br><a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-sm btn-outline-primary mt-2">
+                                        <i class="fas fa-eye me-1"></i> عرض تفاصيل التركيب
+                                    </a>
                                     {% endif %}
                                 {% endwith %}
                             </td>

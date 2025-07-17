@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
+{% load unified_status_tags %}
 
 {% block title %}{% trans 'المعاينات' %}{% endblock %}
 
@@ -219,18 +220,15 @@
                         {% endif %}
                     </td>
                     <td>
-                        <span class="badge {% if inspection.status == 'pending' %}bg-warning
-                                         {% elif inspection.status == 'scheduled' %}bg-info
-                                         {% elif inspection.status == 'completed' %}bg-success
-                                         {% else %}bg-danger{% endif %}">
-                            {{ inspection.get_status_display }}
-                        </span>
+                        {% get_status_badge inspection.status "inspection" %}
                     </td>
                     <td>
                         {% if inspection.result %}
-                            <span class="badge {% if inspection.result == 'passed' %}bg-success{% else %}bg-danger{% endif %}">
-                                {{ inspection.get_result_display }}
-                            </span>
+                            {% if inspection.result == 'passed' %}
+                                {% get_completion_indicator True %}
+                            {% else %}
+                                {% get_completion_indicator False %}
+                            {% endif %}
                         {% else %}
                             <span class="text-muted">-</span>
                         {% endif %}

@@ -157,17 +157,18 @@ def order_create(request):
     """
     View for creating a new order
     """
-    customer_id = request.GET.get('customer_id')
-    form = OrderForm(initial={'user': request.user})
-    formset = OrderItemFormSet(prefix='items')
-
     if request.method == 'POST':
-        print("--- NEW ORDER SUBMISSION ---")
-        print("POST data received:", request.POST)
-        print("FILES data received:", request.FILES)
-
-        form = OrderForm(request.POST, request.FILES, initial={'user': request.user})
-
+        # الحصول على معرف العميل من POST أو GET
+        customer_id = request.POST.get('customer')
+        customer = None
+        if customer_id:
+            try:
+                customer = Customer.objects.get(id=customer_id)
+            except Customer.DoesNotExist:
+                customer = None
+        
+        form = OrderForm(request.POST, request.FILES, user=request.user, customer=customer)
+        
         if form.is_valid():
             print("Form is valid. Proceeding to save.")
             try:
@@ -180,126 +181,83 @@ def order_create(request):
                 if not order.branch:
                     order.branch = request.user.branch
 
-                # 3. حفظ الطلب في قاعدة البيانات للحصول على مفتاح أساسي
+                # 3. معالجة حقل المعاينة المرتبطة
+                related_inspection_value = form.cleaned_data.get('related_inspection')
+                if related_inspection_value == 'customer_side':
+                    order.related_inspection_type = 'customer_side'
+                    order.related_inspection = None
+                elif related_inspection_value and related_inspection_value != '':
+                    try:
+                        from inspections.models import Inspection
+                        inspection = Inspection.objects.get(id=related_inspection_value)
+                        order.related_inspection = inspection
+                        order.related_inspection_type = 'inspection'
+                    except Inspection.DoesNotExist:
+                        order.related_inspection = None
+                        order.related_inspection_type = None
+                else:
+                    order.related_inspection = None
+                    order.related_inspection_type = None
+
+                # 4. حفظ الطلب في قاعدة البيانات للحصول على مفتاح أساسي
                 order.save()
 
                 # التأكد من أن الطلب تم حفظه بنجاح وله مفتاح أساسي
                 if not order.pk:
                     raise Exception("فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي")
 
-                # 4. معالجة المنتجات المحددة إن وجدت
+                # 5. معالجة المنتجات المحددة إن وجدت
                 selected_products_json = request.POST.get('selected_products', '')
                 if selected_products_json:
                     try:
                         selected_products = json.loads(selected_products_json)
-
                         for product_data in selected_products:
-                            try:
-                                product_id = product_data.get('id')
-                                quantity = product_data.get('quantity', 1)
-
-                                product = Product.objects.get(id=product_id)
-
-                                # التحقق من نوع المنتج
-                                product_type = 'fabric' if product.category and 'قماش' in product.category.name.lower() else 'accessory'
-
-                                # إنشاء عنصر الطلب
-                                OrderItem.objects.create(
-                                    order=order,
-                                    product=product,
-                                    quantity=quantity,
-                                    unit_price=product.price or 0,
-                                    item_type=product_type
-                                )
-                                print(f"تم إنشاء عنصر الطلب بنجاح: {product.name}")
-                            except Product.DoesNotExist:
-                                print(f"Product {product_id} does not exist")
-                            except Exception as e:
-                                print(f"Error creating order item: {e}")
-                    except json.JSONDecodeError:
-                        print("Invalid JSON for selected products")
-
-                # 5. إذا كان الطلب يتضمن خدمة معاينة، قم بإنشاء سجل معاينة جديد
-                selected_types_json = request.POST.get('selected_types', '[]')
-                try:
-                    selected_types = json.loads(selected_types_json)
-                    print(f"[DEBUG] Parsed selected types: {selected_types}")
-                except json.JSONDecodeError:
-                    selected_types = []
-                    print(f"[DEBUG] Failed to parse selected types: {selected_types_json}")
-
-                if 'inspection' in selected_types:
-                    try:
-                        # إنشاء معاينة جديدة
-                        inspection = Inspection.objects.create(
-                            customer=order.customer,
-                            branch=order.branch,
-                            request_date=datetime.now().date(),
-                            scheduled_date=datetime.now().date() + timedelta(days=3),
-                            status='pending',
-                            notes=f'تم إنشاء المعاينة تلقائياً من الطلب رقم {order.order_number}',
-                            created_by=request.user,
-                            is_from_orders=True,  # إضافة هذه العلامة
-                            order=order  # الربط بالطلب
-                        )
-                        print(f"تم إنشاء معاينة جديدة بنجاح للطلب {order.order_number}")
-
-                        # إنشاء إشعار لقسم المعاينات
-                        dept = Department.objects.filter(code='inspections').first()
-                        if dept:
-                            Notification.objects.create(
-                                title='طلب معاينة جديد',
-                                message=f'تم إنشاء طلب معاينة جديد للعميل {order.customer.name} من الطلب {order.order_number}',
-                                priority='high',
-                                sender=request.user,
-                                target_department=dept,
-                                target_branch=order.branch,
-                                link=f"/inspections/{inspection.id}/"
+                            OrderItem.objects.create(
+                                order=order,
+                                product_id=product_data['product_id'],
+                                quantity=product_data['quantity'],
+                                unit_price=product_data['unit_price'],
+                                item_type=product_data.get('item_type', 'product')
                             )
-                    except Exception as e:
-                        print(f"Error creating inspection: {e}")
-                        messages.warning(request, f'تم إنشاء الطلب بنجاح ولكن فشل إنشاء المعاينة: {str(e)}')
+                    except (json.JSONDecodeError, KeyError) as e:
+                        print(f"Error processing selected products: {e}")
 
-                # 6. الآن نقوم بمعالجة الـ formset بعد حفظ الطلب
+                # 6. معالجة عناصر الطلب من النموذج
                 formset = OrderItemFormSet(request.POST, prefix='items', instance=order)
                 if formset.is_valid():
                     formset.save()
                 else:
                     print("Formset errors:", formset.errors)
 
-                messages.success(request, f'تم إنشاء الطلب رقم {order.order_number} بنجاح.')
-                return redirect('orders:order_success', pk=order.pk)
+                messages.success(request, 'تم إنشاء الطلب بنجاح!')
+                return redirect('orders:order_detail', pk=order.pk)
 
             except Exception as e:
-                print(f"An exception occurred during order processing: {e}")
-                messages.error(request, f'حدث خطأ غير متوقع أثناء معالجة الطلب: {e}')
+                print(f"Error saving order: {e}")
+                messages.error(request, f'حدث خطأ أثناء حفظ الطلب: {str(e)}')
         else:
             print("--- FORM IS INVALID ---")
-            print("Validation Errors:", form.errors.as_json())
-            messages.error(request, 'يوجد أخطاء في النموذج. يرجى التحقق من الحقول المطلوبة أدناه.')
+            print("Validation Errors:", form.errors)
+            messages.error(request, 'يرجى تصحيح الأخطاء في النموذج.')
+    else:
+        # GET request - الحصول على معرف العميل من GET إذا كان موجوداً
+        customer_id = request.GET.get('customer')
+        customer = None
+        if customer_id:
+            try:
+                customer = Customer.objects.get(id=customer_id)
+            except Customer.DoesNotExist:
+                customer = None
+        
+        form = OrderForm(user=request.user, customer=customer)
 
-
-    customer = None
-    last_order = None
-
-    if customer_id:
-        try:
-            customer = Customer.objects.get(id=customer_id)
-            last_order = Order.objects.filter(customer=customer).order_by('-created_at').first()
-
-            if form and 'customer' in form.fields:
-                form.fields['customer'].initial = customer.id
-                form.fields['customer'].widget.attrs['readonly'] = True
-                form.fields['customer'].disabled = True
-        except Customer.DoesNotExist:
-            pass
+    # Get currency symbol from system settings
+    currency_symbol = 'ج.م'
 
     context = {
         'form': form,
-        'formset': formset,
-        'title': 'إنشاء طلب جديد',
-        'customer': customer,
-        'last_order': last_order,
+        'currency_symbol': currency_symbol,
+        'title': 'إنشاء طلب جديد'
     }
 
     return render(request, 'orders/order_form.html', context)
@@ -311,91 +269,80 @@ def order_update(request, pk):
     View for updating an existing order
     """
     order = get_object_or_404(Order, pk=pk)
+    
     if request.method == 'POST':
-        # Print request.POST for debugging
-        print("UPDATE - POST data:", request.POST)
+        # الحصول على معرف العميل من POST
+        customer_id = request.POST.get('customer')
+        customer = None
+        if customer_id:
+            try:
+                customer = Customer.objects.get(id=customer_id)
+            except Customer.DoesNotExist:
+                customer = None
+        
+        form = OrderForm(request.POST, request.FILES, instance=order, user=request.user, customer=customer)
+        
+        if form.is_valid():
+            try:
+                # Save order
+                order = form.save(commit=False)
+                
+                # معالجة حقل المعاينة المرتبطة
+                related_inspection_value = form.cleaned_data.get('related_inspection')
+                if related_inspection_value == 'customer_side':
+                    order.related_inspection_type = 'customer_side'
+                    order.related_inspection = None
+                elif related_inspection_value and related_inspection_value != '':
+                    try:
+                        from inspections.models import Inspection
+                        inspection = Inspection.objects.get(id=related_inspection_value)
+                        order.related_inspection = inspection
+                        order.related_inspection_type = 'inspection'
+                    except Inspection.DoesNotExist:
+                        order.related_inspection = None
+                        order.related_inspection_type = None
+                else:
+                    order.related_inspection = None
+                    order.related_inspection_type = None
 
-        form = OrderForm(request.POST, instance=order)
+                # حفظ الطلب
+                order.save()
 
-        # Print form errors if any
-        if not form.is_valid():
-            print("UPDATE - Form errors:", form.errors)
-            messages.error(request, 'يوجد أخطاء في النموذج. يرجى التحقق من البيانات المدخلة.')
-            return render(request, 'orders/order_form.html', {
-                'form': form,
-                'formset': OrderItemFormSet(request.POST, prefix='items', instance=order),
-                'title': f'تحديث الطلب: {order.order_number}',
-                'order': order,
-            })
+                # التأكد من أن الطلب تم حفظه بنجاح وله مفتاح أساسي
+                if not order.pk:
+                    raise Exception("فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي")
 
-        try:
-            # Save order
-            order = form.save(commit=False)
+                # Save order items
+                formset = OrderItemFormSet(request.POST, prefix='items', instance=order)
+                if formset.is_valid():
+                    formset.save()
+                else:
+                    print("UPDATE - Formset errors:", formset.errors)
+                    messages.warning(request, 'تم تحديث الطلب ولكن هناك أخطاء في عناصر الطلب.')
 
-            # Handle delivery options
-            delivery_option = request.POST.get('delivery_option')
-            if delivery_option == 'home':
-                order.delivery_type = 'home'
-                order.delivery_address = request.POST.get('delivery_address', '')
-            elif delivery_option == 'branch':
-                order.delivery_type = 'branch'
-                # Branch is already set in the form
+                messages.success(request, 'تم تحديث الطلب بنجاح!')
+                return redirect('orders:order_detail', pk=order.pk)
 
-            # Handle order type field
-            order_types = request.POST.get('order_type_hidden', '')
-            if order_types:
-                order_types = [ot.strip() for ot in order_types.split(',') if ot.strip()]
-                if order_types:  # Check if there are any valid order types
-                    # Set the first order type as the primary type
-                    order.order_type = order_types[0]
-            else:
-                # Fallback to radio button value
-                order_type = request.POST.get('order_type', '')
-                if order_type:
-                    order.order_type = order_type
+            except Exception as e:
+                print(f"Error updating order: {e}")
+                messages.error(request, f'حدث خطأ أثناء تحديث الطلب: {str(e)}')
+        else:
+            print("--- UPDATE FORM IS INVALID ---")
+            print("Validation Errors:", form.errors)
+            messages.error(request, 'يرجى تصحيح الأخطاء في النموذج.')
+    else:
+        # GET request - استخدام عميل الطلب الحالي
+        customer = order.customer
+        form = OrderForm(instance=order, user=request.user, customer=customer)
 
-            # Handle service_types field
-            if order_types and 'service' in order_types:
-                service_types = request.POST.get('service_types_hidden', '')
-                if service_types:
-                    service_types = [st.strip() for st in service_types.split(',') if st.strip()]
-                    order.service_types = service_types
-
-            # حفظ الطلب
-            order.save()
-
-            # التأكد من أن الطلب تم حفظه بنجاح وله مفتاح أساسي
-            if not order.pk:
-                raise Exception("فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي")
-
-            # Save order items
-            formset = OrderItemFormSet(request.POST, prefix='items', instance=order)
-            if formset.is_valid():
-                formset.save()
-            else:
-                print("UPDATE - Formset errors:", formset.errors)
-                messages.warning(request, 'تم تحديث الطلب ولكن هناك أخطاء في عناصر الطلب.')
-
-            messages.success(request, 'تم تحديث الطلب بنجاح!')
-            return redirect('orders:order_detail', pk=order.pk)
-
-        except Exception as e:
-            messages.error(request, f'حدث خطأ أثناء تحديث الطلب: {str(e)}')
-            return render(request, 'orders/order_form.html', {
-                'form': form,
-                'formset': OrderItemFormSet(request.POST, prefix='items', instance=order),
-                'title': f'تحديث الطلب: {order.order_number}',
-                'order': order,
-            })
-
-    form = OrderForm(instance=order)
-    formset = OrderItemFormSet(instance=order)
+    # Get currency symbol from system settings
+    currency_symbol = 'ج.م'
 
     context = {
         'form': form,
-        'formset': formset,
-        'title': f'تحديث الطلب: {order.order_number}',
         'order': order,
+        'currency_symbol': currency_symbol,
+        'title': f'تعديل الطلب: {order.order_number}'
     }
 
     return render(request, 'orders/order_form.html', context)
@@ -609,3 +556,48 @@ def get_order_details_api(request, order_id):
             'success': False,
             'error': str(e)
         }, status=400)
+
+@login_required
+def get_customer_inspections(request):
+    """
+    API endpoint لجلب معاينات العميل المحدد
+    """
+    customer_id = request.GET.get('customer_id')
+    
+    if not customer_id:
+        return JsonResponse({
+            'success': False,
+            'message': 'معرف العميل مطلوب'
+        })
+    
+    try:
+        customer = Customer.objects.get(id=customer_id)
+        inspections = Inspection.objects.filter(customer=customer).order_by('-created_at')
+        
+        # تحضير قائمة المعاينات
+        inspection_choices = [
+            {'value': 'customer_side', 'text': 'طرف العميل'}
+        ]
+        
+        for inspection in inspections:
+            # تأكد من أن القيمة نصية
+            inspection_choices.append({
+                'value': str(inspection.id),  # تأكد من أن القيمة نصية
+                'text': f"{inspection.customer.name if inspection.customer else 'عميل غير محدد'} - {inspection.contract_number or f'معاينة {inspection.id}'} - {inspection.created_at.strftime('%Y-%m-%d')}"
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'choices': inspection_choices
+        })
+        
+    except Customer.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'العميل غير موجود'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'خطأ في جلب المعاينات: {str(e)}'
+        })

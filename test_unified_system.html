@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار النظام الموحد للحالات والألوان</title>
+    
+    <!-- Bootstrap RTL CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    
+    <!-- Unified Status System CSS -->
+    <link rel="stylesheet" href="/static/css/unified-status-system.css">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .test-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-5">
+                    <i class="fas fa-palette text-primary"></i>
+                    اختبار النظام الموحد للحالات والألوان
+                </h1>
+                
+                <!-- اختبار الحالات -->
+                <div class="test-section">
+                    <h3><i class="fas fa-list-check"></i> اختبار الحالات الموحدة</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="test-item">
+                                <h5>الحالات الأساسية:</h5>
+                                <span class="unified-badge status-pending status-badge">
+                                    <i class="fas fa-clock me-1"></i>قيد الانتظار
+                                </span>
+                                <span class="unified-badge status-pending_approval status-badge">
+                                    <i class="fas fa-hourglass-half me-1"></i>قيد الموافقة
+                                </span>
+                                <span class="unified-badge status-in_progress status-badge">
+                                    <i class="fas fa-tools me-1"></i>قيد التصنيع
+                                </span>
+                                <span class="unified-badge status-ready_install status-badge">
+                                    <i class="fas fa-check-circle me-1"></i>جاهز للتركيب
+                                </span>
+                                <span class="unified-badge status-completed status-badge">
+                                    <i class="fas fa-check me-1"></i>مكتمل
+                                </span>
+                                <span class="unified-badge status-delivered status-badge">
+                                    <i class="fas fa-truck me-1"></i>تم التسليم
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="test-item">
+                                <h5>الحالات السلبية:</h5>
+                                <span class="unified-badge status-rejected status-badge">
+                                    <i class="fas fa-times me-1"></i>مرفوض
+                                </span>
+                                <span class="unified-badge status-cancelled status-badge">
+                                    <i class="fas fa-ban me-1"></i>ملغي
+                                </span>
+                                <span class="unified-badge status-scheduled status-badge">
+                                    <i class="fas fa-calendar-check me-1"></i>مجدول
+                                </span>
+                                <span class="unified-badge status-not_scheduled status-badge">
+                                    <i class="fas fa-calendar-times me-1"></i>غير مجدول
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- اختبار أنواع الطلبات -->
+                <div class="test-section">
+                    <h3><i class="fas fa-tags"></i> اختبار أنواع الطلبات</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="test-item">
+                                <h5>أنواع الطلبات العادية:</h5>
+                                <span class="unified-badge order-type-installation order-type-badge">
+                                    <i class="fas fa-tools me-1"></i>تركيب
+                                </span>
+                                <span class="unified-badge order-type-tailoring order-type-badge">
+                                    <i class="fas fa-cut me-1"></i>خياطة
+                                </span>
+                                <span class="unified-badge order-type-accessory order-type-badge">
+                                    <i class="fas fa-puzzle-piece me-1"></i>إكسسوارات
+                                </span>
+                                <span class="unified-badge order-type-inspection order-type-badge">
+                                    <i class="fas fa-search me-1"></i>معاينة
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="test-item">
+                                <h5>أنواع الطلبات VIP:</h5>
+                                <span class="unified-badge order-type-vip order-type-badge">
+                                    <i class="fas fa-star me-1"></i>VIP
+                                </span>
+                                <span class="unified-badge status-urgent">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>عاجل
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- اختبار مؤشرات الحالة -->
+                <div class="test-section">
+                    <h3><i class="fas fa-circle"></i> اختبار مؤشرات الحالة</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="test-item">
+                                <h5>مؤشرات الإكمال:</h5>
+                                <span class="status-indicator success" title="مكتمل">
+                                    <i class="fas fa-check"></i>
+                                </span>
+                                <span class="status-indicator error" title="غير مكتمل">
+                                    <i class="fas fa-times"></i>
+                                </span>
+                                <span class="status-indicator warning" title="تحذير">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </span>
+                                <span class="status-indicator info" title="معلومات">
+                                    <i class="fas fa-info"></i>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="test-item">
+                                <h5>أنواع الطلبات النصية:</h5>
+                                <span class="order-type-text">تركيب</span><br>
+                                <span class="order-type-text">خياطة</span><br>
+                                <span class="order-type-text">إكسسوارات</span><br>
+                                <span class="order-type-text">معاينة</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- اختبار التأثيرات -->
+                <div class="test-section">
+                    <h3><i class="fas fa-magic"></i> اختبار التأثيرات البصرية</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="test-item">
+                                <h5>تأثيرات التحويم:</h5>
+                                <p>جرب تحويم الماوس فوق البطاقات أدناه:</p>
+                                
+                                <span class="unified-badge status-pending status-badge" style="margin: 0.5rem;">
+                                    <i class="fas fa-clock me-1"></i>قيد الانتظار
+                                </span>
+                                <span class="unified-badge status-completed status-badge" style="margin: 0.5rem;">
+                                    <i class="fas fa-check me-1"></i>مكتمل
+                                </span>
+                                <span class="unified-badge order-type-installation order-type-badge" style="margin: 0.5rem;">
+                                    <i class="fas fa-tools me-1"></i>تركيب
+                                </span>
+                                <span class="unified-badge order-type-vip order-type-badge" style="margin: 0.5rem;">
+                                    <i class="fas fa-star me-1"></i>VIP
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ملخص الألوان -->
+                <div class="test-section">
+                    <h3><i class="fas fa-palette"></i> ملخص الألوان المستخدمة</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>ألوان الحالات:</h5>
+                            <ul>
+                                <li><span style="color: #ffc107;">🟡 قيد الانتظار/الموافقة</span></li>
+                                <li><span style="color: #17a2b8;">🔵 قيد التنفيذ/التصنيع</span></li>
+                                <li><span style="color: #6f42c1;">🟣 جاهز للتركيب</span></li>
+                                <li><span style="color: #28a745;">🟢 مكتمل</span></li>
+                                <li><span style="color: #20c997;">🟢 فاتح تم التسليم</span></li>
+                                <li><span style="color: #dc3545;">🔴 مرفوض</span></li>
+                                <li><span style="color: #6c757d;">⚫ ملغي</span></li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>ألوان أنواع الطلبات:</h5>
+                            <ul>
+                                <li><span style="color: #ffc107;">🟡 تركيب</span></li>
+                                <li><span style="color: #28a745;">🟢 خياطة</span></li>
+                                <li><span style="color: #007bff;">🔵 إكسسوارات</span></li>
+                                <li><span style="color: #17a2b8;">🔵 فاتح معاينة</span></li>
+                                <li><span style="color: #ffd700;">🟡 ذهبي VIP</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- معلومات النظام -->
+                <div class="test-section">
+                    <h3><i class="fas fa-info-circle"></i> معلومات النظام</h3>
+                    
+                    <div class="alert alert-info">
+                        <h5>مميزات النظام الموحد:</h5>
+                        <ul>
+                            <li>✅ ألوان موحدة في جميع أقسام النظام</li>
+                            <li>✅ تصميم متناسق للـ badges</li>
+                            <li>✅ تأثيرات بصرية متقدمة</li>
+                            <li>✅ دعم الأجهزة المحمولة</li>
+                            <li>✅ دعم الوضع المظلم</li>
+                            <li>✅ سهولة الصيانة والتحديث</li>
+                            <li>✅ أداء محسن</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-success">
+                        <h5>كيفية الاستخدام:</h5>
+                        <ol>
+                            <li>إضافة <code>{% load unified_status_tags %}</code> في بداية القالب</li>
+                            <li>استخدام <code>{% get_status_badge status "type" %}</code> لعرض الحالة</li>
+                            <li>استخدام <code>{% get_order_type_badge type order %}</code> لعرض نوع الطلب</li>
+                            <li>استخدام <code>{% get_completion_indicator is_completed %}</code> لمؤشر الإكمال</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

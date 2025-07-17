@@ -49,7 +49,7 @@
                                     <input type="text" class="form-control" value="{{ customer.name|default:'' }}" readonly>
                                     <input type="hidden" name="customer" value="{{ customer.pk }}">
                                     {% else %}
-                                    {% render_field form.customer class="form-control select2" id="customer-select" %}
+                                    {% render_field form.customer class="form-control select2" %}
                                     {% endif %}
                                     {% if form.customer.errors %}
                                     <div class="invalid-feedback d-block">

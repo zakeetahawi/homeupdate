@@ -43,7 +43,7 @@
         <tbody>
             {% for customer in recent_customers %}
             <tr>
-                <td>{{ customer.name }}</td>
+                                            <td><strong>{{ customer.name }}</strong></td>
                 <td>{{ customer.code }}</td>
                 <td>{{ customer.phone }}</td>
                 <td>{{ customer.get_status_display }}</td>

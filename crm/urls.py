@@ -8,6 +8,7 @@ from accounts.views import admin_logout_view
 from inventory.views import dashboard_view
 from accounts.api_views import dashboard_stats
 from customers.views import customer_list, customer_detail
+# تم حذف test_completion_view
 
 
 from rest_framework_simplejwt.views import (
@@ -46,6 +47,8 @@ urlpatterns = [
     # مسارات فحص الصحة
     path('health-check/', health_check, name='health_check'),
     path('health/', health_check, name='health'),
+    
+    # مسار اختبار إشارات الإكمال - تم حذفه مؤقتاً
 
     # مسار خدمة ملفات الوسائط
     re_path(

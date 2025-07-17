@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار منطق الحالات</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        h2 {
+            color: #fff;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .form-select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 اختبار منطق الحالات الجديد</h1>
+        
+        <div class="test-section">
+            <h2>🔧 اختبار طلب تركيب</h2>
+            <button onclick="testInstallationOrder()">اختبار طلب تركيب - قيد التنفيذ</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>✂️ اختبار طلب تفصيل</h2>
+            <button onclick="testTailoringOrder()">اختبار طلب تفصيل - قيد التنفيذ</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>💎 اختبار طلب اكسسوار</h2>
+            <button onclick="testAccessoryOrder()">اختبار طلب اكسسوار - قيد التنفيذ</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 ملاحظات الاختبار</h2>
+            <ul>
+                <li><strong>طلب التركيب:</strong> قيد التنفيذ → جاهز للتركيب → تم التسليم</li>
+                <li><strong>طلب التفصيل/الاكسسوار:</strong> قيد التنفيذ → مكتمل → تم التسليم</li>
+                <li><strong>لا تظهر:</strong> مكتمل/ملغي/مرفوض في التركيب بعد قيد التنفيذ</li>
+                <li><strong>لا تظهر:</strong> جاهز للتركيب في التفصيل/الاكسسوار بعد قيد التنفيذ</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // نسخة مبسطة من دالة showStatusModal للاختبار
+        function testShowStatusModal(orderId, currentStatus, currentStatusDisplay, orderType) {
+            console.log('testShowStatusModal called with:', {orderId, currentStatus, currentStatusDisplay, orderType});
+            
+            const statusOptions = {
+                'pending_approval': 'قيد الموافقة',
+                'pending': 'قيد الانتظار',
+                'in_progress': 'قيد التنفيذ',
+                'ready_install': 'جاهز للتركيب',
+                'completed': 'مكتمل',
+                'delivered': 'تم التسليم',
+                'rejected': 'مرفوض',
+                'cancelled': 'ملغي'
+            };
+
+            const statusColors = {
+                'pending_approval': '#007bff',
+                'pending': '#ffc107',
+                'in_progress': '#17a2b8',
+                'ready_install': '#6f42c1',
+                'completed': '#28a745',
+                'delivered': '#20c997',
+                'rejected': '#dc3545',
+                'cancelled': '#6c757d'
+            };
+
+            const isAdmin = true; // للاختبار
+            let availableStatuses = [];
+            
+            if (currentStatus === 'pending_approval') {
+                if (isAdmin) {
+                    availableStatuses = ['pending', 'rejected', 'cancelled'];
+                } else {
+                    availableStatuses = [];
+                }
+            } else if (currentStatus === 'pending') {
+                availableStatuses = ['in_progress', 'cancelled'];
+            } else if (currentStatus === 'in_progress') {
+                // المنطق الجديد
+                if (orderType === 'installation') {
+                    availableStatuses = ['ready_install'];
+                } else {
+                    availableStatuses = ['completed'];
+                }
+            } else if (currentStatus === 'ready_install') {
+                availableStatuses = ['delivered'];
+            } else if (currentStatus === 'completed') {
+                availableStatuses = ['delivered'];
+            } else if (currentStatus === 'delivered') {
+                availableStatuses = isAdmin ? ['pending', 'in_progress', 'completed', 'ready_install'] : [];
+            } else if (currentStatus === 'rejected' || currentStatus === 'cancelled') {
+                availableStatuses = isAdmin ? ['pending', 'in_progress', 'completed', 'ready_install', 'delivered'] : [];
+            }
+            
+            if (isAdmin && currentStatus !== 'pending_approval') {
+                if (currentStatus !== 'rejected') availableStatuses.push('rejected');
+                if (currentStatus !== 'cancelled') availableStatuses.push('cancelled');
+            }
+            
+            let optionsHtml = '';
+            for (const [value, label] of Object.entries(statusOptions)) {
+                if (value !== currentStatus && availableStatuses.includes(value)) {
+                    if (value !== 'pending_approval' || isAdmin) {
+                        optionsHtml += `<option value="${value}" style="color: ${statusColors[value]}">${label}</option>`;
+                    }
+                }
+            }
+
+            Swal.fire({
+                title: '🧪 اختبار منطق الحالات',
+                html: `
+                    <div style="text-align: right;">
+                        <p><strong>نوع الطلب:</strong> ${orderType}</p>
+                        <p><strong>الحالة الحالية:</strong> <span style="background-color: ${statusColors[currentStatus]}; color: white; padding: 4px 12px; border-radius: 6px; font-weight: bold;">${currentStatusDisplay}</span></p>
+                        <p><strong>الحالات المتاحة:</strong></p>
+                        <select id="testStatusSelect" class="form-select">
+                            <option value="">اختر الحالة الجديدة</option>
+                            ${optionsHtml}
+                        </select>
+                        <p class="mt-3 text-muted small">الحالات المتاحة: ${availableStatuses.join(', ')}</p>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'اختبار',
+                cancelButtonText: 'إغلاق',
+                confirmButtonColor: '#667eea',
+                cancelButtonColor: '#6c757d',
+                width: '500px'
+            });
+        }
+
+        function testInstallationOrder() {
+            testShowStatusModal(1, 'in_progress', 'قيد التنفيذ', 'installation');
+        }
+
+        function testTailoringOrder() {
+            testShowStatusModal(2, 'in_progress', 'قيد التنفيذ', 'tailoring');
+        }
+
+        function testAccessoryOrder() {
+            testShowStatusModal(3, 'in_progress', 'قيد التنفيذ', 'accessory');
+        }
+    </script>
+</body>
+</html> 

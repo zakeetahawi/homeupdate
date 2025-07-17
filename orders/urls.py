@@ -28,4 +28,5 @@ urlpatterns = [
 
     # API endpoints
     path('api/order-details/<int:order_id>/', views.get_order_details_api, name='order_details_api'),
+    path('api/customer-inspections/', views.get_customer_inspections, name='customer_inspections_api'),
 ]

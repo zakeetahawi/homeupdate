@@ -116,7 +116,7 @@
                                 {% for inspection in recent_inspections %}
                                 <tr>
                                     <td>#{{ inspection.id }}</td>
-                                    <td>{{ inspection.customer.name|default:"عميل جديد" }}</td>
+                                    <td><strong>{{ inspection.customer.name|default:"عميل جديد" }}</strong></td>
                                     <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
                                     <td>
                                         <span class="badge bg-{{ inspection.get_status_color }}">
