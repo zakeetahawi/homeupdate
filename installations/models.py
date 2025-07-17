@@ -107,12 +107,11 @@ class InstallationTeam(models.Model):
 class InstallationSchedule(models.Model):
     """نموذج جدولة التركيب"""
     STATUS_CHOICES = [
-        ('pending', _('في الانتظار')),
+        ('needs_scheduling', _('بحاجة جدولة')),
         ('scheduled', _('مجدول')),
-        ('in_progress', _('قيد التنفيذ')),
+        ('in_installation', _('قيد التركيب')),
         ('completed', _('مكتمل')),
         ('cancelled', _('ملغي')),
-        ('rescheduled', _('إعادة جدولة')),
         ('modification_required', _('يحتاج تعديل')),
         ('modification_in_progress', _('التعديل قيد التنفيذ')),
         ('modification_completed', _('التعديل مكتمل')),
@@ -149,6 +148,62 @@ class InstallationSchedule(models.Model):
             self.order.order_status = 'completed'
             self.order.save()
         super().save(*args, **kwargs)
+
+    def can_change_status_to(self, new_status):
+        """التحقق من إمكانية تغيير الحالة إلى الحالة الجديدة"""
+        status_flow = {
+            'needs_scheduling': ['scheduled', 'cancelled'],
+            'scheduled': ['in_installation', 'cancelled', 'modification_required'],
+            'in_installation': ['completed', 'modification_required', 'cancelled'],
+            'completed': [],  # لا يمكن تغيير الحالة من مكتمل
+            'cancelled': ['scheduled'],  # يمكن إعادة جدولة المُلغى
+            'modification_required': ['modification_in_progress', 'cancelled'],
+            'modification_in_progress': ['modification_completed', 'modification_required'],
+            'modification_completed': ['completed', 'modification_required'],
+        }
+        
+        return new_status in status_flow.get(self.status, [])
+
+    def get_next_possible_statuses(self):
+        """الحصول على الحالات الممكنة التالية"""
+        status_flow = {
+            'needs_scheduling': [
+                ('scheduled', 'مجدول'),
+                ('cancelled', 'ملغي')
+            ],
+            'scheduled': [
+                ('in_installation', 'قيد التركيب'),
+                ('modification_required', 'يحتاج تعديل'),
+                ('cancelled', 'ملغي')
+            ],
+            'in_installation': [
+                ('completed', 'مكتمل'),
+                ('modification_required', 'يحتاج تعديل'),
+                ('cancelled', 'ملغي')
+            ],
+            'completed': [],
+            'cancelled': [
+                ('scheduled', 'مجدول')
+            ],
+            'modification_required': [
+                ('modification_in_progress', 'التعديل قيد التنفيذ'),
+                ('cancelled', 'ملغي')
+            ],
+            'modification_in_progress': [
+                ('modification_completed', 'التعديل مكتمل'),
+                ('modification_required', 'يحتاج تعديل')
+            ],
+            'modification_completed': [
+                ('completed', 'مكتمل'),
+                ('modification_required', 'يحتاج تعديل')
+            ],
+        }
+        
+        return status_flow.get(self.status, [])
+
+    def requires_scheduling_settings(self):
+        """التحقق من الحاجة لإعدادات الجدولة"""
+        return self.status in ['needs_scheduling', 'scheduled']
 
 
 class ModificationRequest(models.Model):
@@ -378,3 +433,203 @@ class ModificationErrorAnalysis(models.Model):
 
     def __str__(self):
         return f"تحليل خطأ - {self.modification_request.installation.order.order_number}"
+
+
+class InstallationStatusLog(models.Model):
+    """نموذج سجل تغيير حالات التركيب"""
+    installation = models.ForeignKey(
+        InstallationSchedule,
+        on_delete=models.CASCADE,
+        related_name='status_logs',
+        verbose_name=_('التركيب')
+    )
+    old_status = models.CharField(
+        _('الحالة السابقة'),
+        max_length=30,
+        choices=InstallationSchedule.STATUS_CHOICES
+    )
+    new_status = models.CharField(
+        _('الحالة الجديدة'),
+        max_length=30,
+        choices=InstallationSchedule.STATUS_CHOICES
+    )
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name=_('تم التغيير بواسطة')
+    )
+    reason = models.TextField(
+        _('سبب التغيير'),
+        blank=True,
+        help_text='سبب تغيير الحالة (مطلوب لبعض التغييرات)'
+    )
+    notes = models.TextField(
+        _('ملاحظات'),
+        blank=True
+    )
+    created_at = models.DateTimeField(
+        _('تاريخ التغيير'),
+        auto_now_add=True
+    )
+
+    class Meta:
+        verbose_name = _('سجل حالة التركيب')
+        verbose_name_plural = _('سجلات حالات التركيب')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"تغيير حالة {self.installation.order.order_number} من {self.get_old_status_display()} إلى {self.get_new_status_display()}"
+
+
+class InstallationSchedulingSettings(models.Model):
+    """نموذج إعدادات جدولة التركيب"""
+    installation = models.OneToOneField(
+        InstallationSchedule,
+        on_delete=models.CASCADE,
+        related_name='scheduling_settings',
+        verbose_name=_('التركيب')
+    )
+    technician_name = models.CharField(
+        _('اسم الفني'),
+        max_length=100,
+        blank=True
+    )
+    driver_name = models.CharField(
+        _('اسم السائق'),
+        max_length=100,
+        blank=True
+    )
+    customer_address = models.TextField(
+        _('عنوان العميل'),
+        blank=True
+    )
+    customer_phone = models.CharField(
+        _('رقم هاتف العميل'),
+        max_length=20,
+        blank=True
+    )
+    contract_number = models.CharField(
+        _('رقم العقد'),
+        max_length=100,
+        blank=True
+    )
+    invoice_number = models.CharField(
+        _('رقم الفاتورة'),
+        max_length=100,
+        blank=True
+    )
+    salesperson_name = models.CharField(
+        _('اسم البائع'),
+        max_length=100,
+        blank=True
+    )
+    branch_name = models.CharField(
+        _('اسم الفرع'),
+        max_length=100,
+        blank=True
+    )
+    special_instructions = models.TextField(
+        _('تعليمات خاصة'),
+        blank=True
+    )
+    created_at = models.DateTimeField(
+        _('تاريخ الإنشاء'),
+        auto_now_add=True
+    )
+    updated_at = models.DateTimeField(
+        _('تاريخ التحديث'),
+        auto_now=True
+    )
+
+    class Meta:
+        verbose_name = _('إعدادات ج��ولة التركيب')
+        verbose_name_plural = _('إعدادات جدولة التركيبات')
+
+    def __str__(self):
+        return f"إعدادات جدولة {self.installation.order.order_number}"
+
+    def populate_from_order(self):
+        """ملء البيانات من الطلب المرتبط"""
+        order = self.installation.order
+        
+        # بيانات العميل
+        if order.customer:
+            self.customer_phone = order.customer.phone
+            if hasattr(order.customer, 'address'):
+                self.customer_address = order.customer.address
+        
+        # بيانات الطلب
+        self.contract_number = order.contract_number or ''
+        self.invoice_number = order.invoice_number or ''
+        
+        # بيانات البائع والفرع
+        if order.salesperson:
+            self.salesperson_name = order.salesperson.user.get_full_name() or order.salesperson.user.username
+        
+        if order.branch:
+            self.branch_name = order.branch.name
+        
+        # بيانات الفريق
+        if self.installation.team:
+            # أسماء الفنيين
+            technicians = self.installation.team.technicians.all()
+            if technicians:
+                self.technician_name = ', '.join([tech.name for tech in technicians])
+            
+            # اسم السائق
+            if self.installation.team.driver:
+                self.driver_name = self.installation.team.driver.name
+        
+        self.save()
+
+
+class InstallationEventLog(models.Model):
+    """نموذج سجل أحداث التركيبات"""
+    EVENT_TYPES = [
+        ('status_change', _('تغيير حالة')),
+        ('schedule_change', _('تغيير جدولة')),
+        ('team_assignment', _('تعيين فريق')),
+        ('modification_request', _('طلب تعديل')),
+        ('payment_received', _('استلام دفعة')),
+        ('completion', _('إكمال')),
+        ('cancellation', _('إلغاء')),
+    ]
+
+    installation = models.ForeignKey(
+        InstallationSchedule,
+        on_delete=models.CASCADE,
+        related_name='event_logs',
+        verbose_name=_('التركيب')
+    )
+    event_type = models.CharField(
+        _('نوع الحدث'),
+        max_length=20,
+        choices=EVENT_TYPES
+    )
+    description = models.TextField(
+        _('وصف الحدث')
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name=_('المستخدم')
+    )
+    metadata = models.JSONField(
+        _('بيانات إضافية'),
+        default=dict,
+        blank=True
+    )
+    created_at = models.DateTimeField(
+        _('تاريخ الحدث'),
+        auto_now_add=True
+    )
+
+    class Meta:
+        verbose_name = _('سجل حدث التركيب')
+        verbose_name_plural = _('سجل أحداث التركيبات')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_event_type_display()} - {self.installation.order.order_number}"

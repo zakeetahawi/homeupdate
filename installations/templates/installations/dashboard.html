@@ -139,17 +139,35 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-right-warning shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('in_progress')">
+            <div class="card border-right-warning shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('in_installation')">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                تركيب قيد التنفيذ
+                                قيد التركيب
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ in_progress_installations }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ in_installation_installations }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-spinner fa-2x text-gray-300"></i>
+                            <i class="fas fa-tools fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-right-info shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('needs_scheduling')">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                بحاجة جدولة
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ needs_scheduling_installations }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-plus fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>

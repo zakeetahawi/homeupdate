@@ -60,4 +60,13 @@ urlpatterns = [
 
     # التحليل الشهري
     path('analytics/', views.installation_analytics, name='installation_analytics'),
+    
+    # سجل الأحداث والتركيبات قيد التنفيذ
+    path('event-logs/', views.installation_event_logs, name='installation_event_logs'),
+    path('in-progress/', views.installation_in_progress_list, name='installation_in_progress_list'),
+    path('print-schedule/', views.print_installation_schedule, name='print_installation_schedule'),
+    
+    # إعدادات الجدولة
+    path('installation/<int:installation_id>/scheduling-details/', views.view_scheduling_details, name='view_scheduling_details'),
+    path('installation/<int:installation_id>/edit-scheduling-settings/', views.edit_scheduling_settings, name='edit_scheduling_settings'),
 ]
