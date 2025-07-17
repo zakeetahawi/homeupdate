@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from .models import InstallationSchedule, InstallationArchive
 
 
@@ -11,7 +11,7 @@ def installation_status_changed(sender, instance, created, **kwargs):
         # إنشاء أرشيف تلقائياً عند إكمال التركيب
         InstallationArchive.objects.get_or_create(
             installation=instance,
-            defaults={'archived_by': User.objects.first()}  # سيتم تحديثه لاحقاً
+            defaults={'archived_by': get_user_model().objects.first()}  # سيتم تحديثه لاحقاً
         )
 
 

@@ -129,7 +129,7 @@
                             </table>
                         </div>
                     </div>
-                    
+
                     {% if installation.notes %}
                     <div class="mt-3">
                         <h6>ملاحظات:</h6>
@@ -169,7 +169,7 @@
                             {% if installation.order.contract_file %}
                             <div class="text-center">
                                 <h6>ملف العقد:</h6>
-                                <a href="{{ installation.order.contract_file.url }}" 
+                                <a href="{{ installation.order.contract_file.url }}"
                                    class="btn btn-outline-primary" target="_blank">
                                     <i class="fas fa-file-pdf"></i> عرض العقد
                                 </a>
@@ -177,6 +177,110 @@
                             {% endif %}
                         </div>
                     </div>
+
+                    <!-- معلومات المعاينة المرتبطة -->
+                    {% if related_inspection %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="m-0 font-weight-bold">
+                                        <i class="fas fa-search"></i>
+                                        معلومات المعاينة المرتبطة
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <table class="table table-borderless">
+                                                <tr>
+                                                    <th>رقم العقد:</th>
+                                                    <td>{{ related_inspection.contract_number|default:"-" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>تاريخ طلب المعاينة:</th>
+                                                    <td>{{ related_inspection.request_date|date:"d/m/Y" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>تاريخ تنفيذ المعاينة:</th>
+                                                    <td>{{ related_inspection.scheduled_date|date:"d/m/Y"|default:"-" }}</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <table class="table table-borderless">
+                                                <tr>
+                                                    <th>نوع المعاينة:</th>
+                                                    <td>
+                                                        {% if inspection_type == 'customer_side' %}
+                                                            <span class="badge badge-warning">
+                                                                <i class="fas fa-user"></i> طرف العميل
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge badge-info">
+                                                                <i class="fas fa-search"></i> معاينة فعلية
+                                                            </span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>المعاين:</th>
+                                                    <td>{{ related_inspection.inspector.get_full_name|default:"-" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>حالة المعاينة:</th>
+                                                    <td>
+                                                        {% if related_inspection.status == 'pending' %}
+                                                            <span class="badge badge-warning">قيد الانتظار</span>
+                                                        {% elif related_inspection.status == 'scheduled' %}
+                                                            <span class="badge badge-info">مجدولة</span>
+                                                        {% elif related_inspection.status == 'completed' %}
+                                                            <span class="badge badge-success">مكتملة</span>
+                                                        {% elif related_inspection.status == 'cancelled' %}
+                                                            <span class="badge badge-danger">ملغية</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- ملف المعاينة -->
+                                    {% if related_inspection.inspection_file %}
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <div class="alert alert-info">
+                                                <h6><i class="fas fa-file-alt"></i> ملف المعاينة:</h6>
+                                                <a href="{{ related_inspection.inspection_file.url }}"
+                                                   class="btn btn-outline-info btn-sm"
+                                                   target="_blank">
+                                                    <i class="fas fa-download"></i> تحميل ملف المعاينة
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% elif related_inspection.google_drive_file_url %}
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <div class="alert alert-info">
+                                                <h6><i class="fas fa-cloud"></i> ملف المعاينة (Google Drive):</h6>
+                                                <a href="{{ related_inspection.google_drive_file_url }}"
+                                                   class="btn btn-outline-info btn-sm"
+                                                   target="_blank">
+                                                    <i class="fab fa-google-drive"></i> عرض ملف المعاينة
+                                                </a>
+                                                <small class="text-muted d-block mt-1">
+                                                    اسم الملف: {{ related_inspection.google_drive_file_name|default:"ملف المعاينة" }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -208,67 +312,63 @@
                                 </select>
                             </div>
                         {% endif %}
-                        
+
                         <div class="d-grid gap-2">
                             <!-- زر تفاصيل الطلب -->
-                            <a href="{% url 'orders:order_detail' installation.order.id %}" 
+                            <a href="{% url 'orders:order_detail' installation.order.id %}"
                                class="btn btn-outline-info">
                                 <i class="fas fa-shopping-cart"></i> تفاصيل الطلب
                             </a>
-                            
-                            <!-- زر تفاصيل التركيب -->
-                            <a href="{% url 'installations:installation_detail' installation.id %}" 
-                               class="btn btn-outline-primary">
-                                <i class="fas fa-tools"></i> تفاصيل التركيب
-                            </a>
-                            
+
+
+
                             {% if installation.status == 'pending' %}
-                                <a href="{% url 'installations:schedule_installation' installation.id %}" 
+                                <a href="{% url 'installations:schedule_installation' installation.id %}"
                                    class="btn btn-success">
                                     <i class="fas fa-calendar-plus"></i> جدولة التركيب
                                 </a>
                             {% endif %}
-                            
+
                             {% if installation.status == 'scheduled' %}
-                                <button type="button" class="btn btn-primary update-status" 
-                                        data-installation-id="{{ installation.id }}" 
+                                <button type="button" class="btn btn-primary update-status"
+                                        data-installation-id="{{ installation.id }}"
                                         data-status="in_progress">
                                     <i class="fas fa-play"></i> بدء التركيب
                                 </button>
                             {% endif %}
-                            
+
                             {% if installation.status == 'in_progress' %}
-                                <a href="{% url 'installations:change_installation_status' installation.id %}" 
+                                <a href="{% url 'installations:change_installation_status' installation.id %}"
                                    class="btn btn-success">
                                     <i class="fas fa-check"></i> إكمال التركيب
                                 </a>
                             {% endif %}
-                            
+
                             {% if installation.status != 'modification_required' and installation.status != 'modification_in_progress' and installation.status != 'modification_completed' %}
-                                <a href="{% url 'installations:create_modification_request' installation.id %}" 
+                                <a href="{% url 'installations:create_modification_request' installation.id %}"
                                    class="btn btn-outline-warning">
                                     <i class="fas fa-tools"></i> طلب تعديل
                                 </a>
                             {% endif %}
-                            
+
                             {% if installation.status == 'modification_required' or installation.status == 'modification_in_progress' %}
                                 {% with first_modification=installation.modificationrequest_set.first %}
                                     {% if first_modification %}
-                                        <a href="{% url 'installations:modification_detail' first_modification.id %}" 
+                                        <a href="{% url 'installations:modification_detail' first_modification.id %}"
                                            class="btn btn-outline-info">
                                             <i class="fas fa-eye"></i> عرض طلب التعديل
                                         </a>
                                     {% endif %}
                                 {% endwith %}
                             {% endif %}
-                            
-                            <a href="{% url 'installations:add_payment' installation.id %}" 
+
+                            <a href="{% url 'installations:add_payment' installation.id %}"
                                class="btn btn-outline-primary">
                                 <i class="fas fa-money-bill"></i> إضافة دفعة
                             </a>
-                            
+
                             <!-- زر تعديل الجدولة -->
-                            <a href="{% url 'installations:edit_schedule' installation.id %}" 
+                            <a href="{% url 'installations:edit_schedule' installation.id %}"
                                class="btn btn-outline-secondary">
                                 <i class="fas fa-edit"></i> تعديل الجدولة
                             </a>
@@ -288,7 +388,7 @@
                 </div>
                 <div class="card-body">
                     <h6>{{ installation.team.name }}</h6>
-                    
+
                     {% if installation.team.technicians.all %}
                     <div class="mt-3">
                         <h6>الفنيين:</h6>
@@ -299,7 +399,7 @@
                         </ul>
                     </div>
                     {% endif %}
-                    
+
                     {% if installation.team.driver %}
                     <div class="mt-3">
                         <h6>السائق:</h6>
@@ -376,7 +476,7 @@
                                 <p class="text-muted">{{ report.description }}</p>
                             </div>
                             {% if report.report_file %}
-                            <a href="{{ report.report_file.url }}" 
+                            <a href="{{ report.report_file.url }}"
                                class="btn btn-sm btn-outline-primary" target="_blank">
                                 <i class="fas fa-download"></i> تحميل التقرير
                             </a>
@@ -424,7 +524,7 @@
                                     <td>{{ receipt_memo.created_at|date:"d/m/Y H:i" }}</td>
                                 </tr>
                             </table>
-                            
+
                             {% if receipt_memo.notes %}
                             <div class="mt-3">
                                 <h6>ملاحظات:</h6>
@@ -436,9 +536,9 @@
                             {% if receipt_memo.receipt_image %}
                             <div class="text-center">
                                 <h6>صورة المذكرة:</h6>
-                                <img src="{{ receipt_memo.receipt_image.url }}" 
-                                     class="img-fluid rounded" 
-                                     style="max-height: 200px;" 
+                                <img src="{{ receipt_memo.receipt_image.url }}"
+                                     class="img-fluid rounded"
+                                     style="max-height: 200px;"
                                      alt="صورة مذكرة الاستلام">
                             </div>
                             {% endif %}
@@ -457,10 +557,10 @@
 // تحديث حالة التركيب عبر القائمة المنسدلة
 function updateInstallationStatus(installationId, newStatus) {
     if (!newStatus) return; // إذا لم يتم اختيار حالة
-    
+
     if (confirm('هل أنت متأكد من تحديث حالة التركيب؟')) {
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        
+
         fetch(`/installations/installation/${installationId}/update-status/`, {
             method: 'POST',
             headers: {
@@ -490,7 +590,7 @@ document.querySelectorAll('.update-status').forEach(button => {
         const installationId = this.dataset.installationId;
         const newStatus = this.dataset.status;
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        
+
         if (confirm('هل أنت متأكد من تحديث حالة التركيب؟')) {
             fetch(`/installations/installation/${installationId}/update-status/`, {
                 method: 'POST',
@@ -512,4 +612,4 @@ document.querySelectorAll('.update-status').forEach(button => {
     });
 });
 </script>
-{% endblock %} 
+{% endblock %}

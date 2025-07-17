@@ -340,13 +340,26 @@ if not DEBUG and os.environ.get('ENABLE_SSL_SECURITY', 'false').lower() == 'true
     SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
     # Cross-Origin Opener Policy
-    SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+    # COOP header commented out - was causing issues in development
 
     # Additional Security Headers
     CSRF_TRUSTED_ORIGINS = [
         'https://localhost',
         'https://127.0.0.1',
     ]
+
+# Cross-Origin Opener Policy - explicitly disabled for HTTP development
+# Django 4.2+ sets this to 'same-origin' by default, which causes browser warnings on HTTP
+# We explicitly set it to None to disable the header in development
+if DEBUG:
+    # Disable COOP header in development to prevent browser warnings on HTTP
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+elif os.environ.get('ENABLE_SSL_SECURITY', 'false').lower() == 'true':
+    # Enable COOP header only in production with HTTPS
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+else:
+    # Default: disable COOP header
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
 # CORS settings (تم دمج الإعدادات المكررة)
 CORS_ALLOWED_ORIGINS = [

@@ -43,9 +43,15 @@
                 {% for order in orders %}
                 <tr class="border-bottom order-row" data-status="{{ order.order_status }}">
                     <td class="text-dark">
-                        <a href="{% url 'orders:order_detail' order.id %}" class="text-primary font-weight-bold">
-                            {{ order.order_number }}
-                        </a>
+                        {% if order.installationschedule_set.exists %}
+                            <a href="{% url 'installations:installation_detail' order.installationschedule_set.first.id %}" class="text-primary font-weight-bold">
+                                {{ order.order_number }}
+                            </a>
+                        {% else %}
+                            <a href="{% url 'orders:order_detail' order.id %}" class="text-primary font-weight-bold">
+                                {{ order.order_number }}
+                            </a>
+                        {% endif %}
                     </td>
                     <td class="text-dark">
                         {% if order.contract_number %}
@@ -142,18 +148,25 @@
                     </td>
                     <td>
                         <div class="btn-group" role="group">
-                            <a href="{% url 'orders:order_detail' order.id %}" 
-                               class="btn btn-sm btn-info">
-                                <i class="fas fa-eye"></i> عرض
-                            </a>
+                            {% if order.installationschedule_set.exists %}
+                                <a href="{% url 'installations:installation_detail' order.installationschedule_set.first.id %}"
+                                   class="btn btn-sm btn-info">
+                                    <i class="fas fa-tools"></i> تفاصيل التركيب
+                                </a>
+                            {% else %}
+                                <a href="{% url 'orders:order_detail' order.id %}"
+                                   class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i> عرض الطلب
+                                </a>
+                            {% endif %}
                             {% if order.is_manufacturing_order %}
-                                <a href="#" 
+                                <a href="#"
                                    class="btn btn-sm btn-success"
                                    onclick="scheduleManufacturingOrder({{ order.manufacturing_order.id }}, this)">
                                     <i class="fas fa-calendar-plus"></i> جدولة أمر التصنيع
                                 </a>
                             {% elif order_type == 'ready' and not order.installationschedule_set.exists %}
-                                <a href="#" 
+                                <a href="#"
                                    class="btn btn-sm btn-success"
                                    onclick="scheduleInstallationFromModal({{ order.id }}, this)">
                                     <i class="fas fa-calendar-plus"></i> جدولة
@@ -164,7 +177,7 @@
                                 </span>
                             {% endif %}
                             {% if order_type == 'debt' %}
-                                <a href="{% url 'installations:manage_customer_debt' order.id %}" 
+                                <a href="{% url 'installations:manage_customer_debt' order.id %}"
                                    class="btn btn-sm btn-warning">
                                     <i class="fas fa-exclamation-triangle"></i> إدارة المديونية
                                 </a>
@@ -182,14 +195,14 @@
         $(document).ready(function() {
             $('.filter-btn').click(function() {
                 var filter = $(this).data('filter');
-                
+
                 // إزالة الفئة النشطة من جميع الأزرار
                 $('.filter-btn').removeClass('btn-primary').addClass('btn-outline-primary');
                 $('.filter-btn').removeClass('btn-success').addClass('btn-outline-success');
                 $('.filter-btn').removeClass('btn-warning').addClass('btn-outline-warning');
                 $('.filter-btn').removeClass('btn-info').addClass('btn-outline-info');
                 $('.filter-btn').removeClass('btn-secondary').addClass('btn-outline-secondary');
-                
+
                 // إضافة الفئة النشطة للزر المحدد
                 if (filter === 'all') {
                     $(this).removeClass('btn-outline-primary').addClass('btn-primary');
@@ -213,7 +226,7 @@
                 }
             });
         });
-        
+
         // دالة جدولة أوامر التصنيع
         window.scheduleManufacturingOrder = function(manufacturingOrderId, button) {
             Swal.fire({
@@ -271,4 +284,4 @@
         <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
         <p class="text-muted font-weight-bold">لا توجد طلبات في هذه الفئة</p>
     </div>
-{% endif %} 
+{% endif %}
