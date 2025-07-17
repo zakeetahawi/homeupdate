@@ -90,6 +90,13 @@ class Order(models.Model):
         null=True,
         verbose_name='عنوان التسليم'
     )
+    delivery_recipient_name = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='اسم المستلم',
+        help_text='اسم الشخص الذي استلم الطلب'
+    )
     order_number = models.CharField(
         max_length=50,
         unique=True,
@@ -268,6 +275,31 @@ class Order(models.Model):
         default=False,
         verbose_name='تم رفع العقد إلى Google Drive'
     )
+    
+    # المعاينة المرتبطة بالطلب
+    related_inspection = models.ForeignKey(
+        'inspections.Inspection',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='معاينة مرتبطة',
+        help_text='المعاينة المرتبطة بهذا الطلب',
+        related_name='related_orders'
+    )
+    
+    # نوع المعاينة المرتبطة
+    related_inspection_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('inspection', 'معاينة فعلية'),
+            ('customer_side', 'طرف العميل'),
+        ],
+        blank=True,
+        null=True,
+        verbose_name='نوع المعاينة المرتبطة',
+        help_text='نوع المعاينة المرتبطة بالطلب'
+    )
+    
     modified_at = models.DateTimeField(auto_now=True, help_text='آخر تحديث للطلب')
     tracker = FieldTracker(fields=['tracking_status', 'status'])
     class Meta:
@@ -697,6 +729,330 @@ class Order(models.Model):
             return "تاريخ التسليم"
         else:
             return "تاريخ التسليم المتوقع"
+    
+    def get_display_status(self):
+        """إرجاع الحالة المعروضة بناءً على منطق العرض الجديد"""
+        # إذا كان الطلب من نوع معاينة
+        if 'inspection' in self.get_selected_types_list():
+            # البحث عن المعاينة المرتبطة بالطلب
+            inspection = self.inspections.first()
+            if inspection:
+                # إذا كانت المعاينة مكتملة، اعرض "مكتمل"
+                if inspection.status == 'completed':
+                    return {
+                        'status': 'completed',
+                        'source': 'inspection',
+                        'manufacturing_status': None
+                    }
+                else:
+                    # اعرض حالة المعاينة
+                    return {
+                        'status': inspection.status,
+                        'source': 'inspection',
+                        'manufacturing_status': None
+                    }
+            else:
+                # لا توجد معاينة، اعرض حالة الطلب الأساسية
+                return {
+                    'status': self.order_status,
+                    'source': 'order',
+                    'manufacturing_status': None
+                }
+        
+        # إذا كان الطلب يحتوي على تركيب
+        elif 'installation' in self.get_selected_types_list():
+            # التحقق من وجود أمر تصنيع
+            if hasattr(self, 'manufacturing_order') and self.manufacturing_order:
+                manufacturing_status = self.manufacturing_order.status
+                
+                # إذا كانت حالة المصنع "جاهز للتركيب" أو ما بعدها، اعرض حالة التركيب
+                if manufacturing_status in ['ready_install', 'completed', 'delivered']:
+                    return {
+                        'status': self.installation_status,
+                        'source': 'installation',
+                        'manufacturing_status': manufacturing_status
+                    }
+                else:
+                    # قبل "جاهز للتركيب"، اعرض حالة المصنع
+                    return {
+                        'status': manufacturing_status,
+                        'source': 'manufacturing',
+                        'manufacturing_status': manufacturing_status
+                    }
+            else:
+                # لا يوجد أمر تصنيع، اعرض حالة الطلب الأساسية
+                return {
+                    'status': self.order_status,
+                    'source': 'order',
+                    'manufacturing_status': None
+                }
+        else:
+            # الطلب لا يحتوي على تركيب، اعرض حالة الطلب الأساسية
+            return {
+                'status': self.order_status,
+                'source': 'order',
+                'manufacturing_status': None
+            }
+    
+    def get_display_status_badge_class(self):
+        """إرجاع فئة البادج المناسبة للحالة المعروضة"""
+        display_info = self.get_display_status()
+        status = display_info['status']
+        source = display_info['source']
+        
+        # فئات البادج حسب المصدر والحالة - ألوان موحدة
+        if source == 'inspection':
+            inspection_badges = {
+                'not_scheduled': 'bg-secondary',  # فضي
+                'pending': 'bg-warning text-dark',  # برتقالي
+                'scheduled': 'bg-info',  # أزرق فاتح
+                'in_progress': 'bg-primary',  # أزرق
+                'completed': 'bg-success',  # أخضر
+                'cancelled': 'bg-danger',  # أحمر
+            }
+            return inspection_badges.get(status, 'bg-secondary')
+        
+        elif source == 'installation':
+            installation_badges = {
+                'not_scheduled': 'bg-secondary',  # فضي
+                'pending': 'bg-warning text-dark',  # برتقالي
+                'scheduled': 'bg-info',  # أزرق فاتح
+                'in_progress': 'bg-primary',  # أزرق
+                'completed': 'bg-success',  # أخضر
+                'cancelled': 'bg-danger',  # أحمر
+                'modification_required': 'bg-warning text-dark',  # برتقالي
+                'modification_in_progress': 'bg-info',  # أزرق فاتح
+                'modification_completed': 'bg-success',  # أخضر
+            }
+            return installation_badges.get(status, 'bg-secondary')
+        
+        elif source == 'manufacturing':
+            manufacturing_badges = {
+                'pending_approval': 'bg-warning text-dark',  # برتقالي
+                'pending': 'bg-warning text-dark',  # برتقالي
+                'in_progress': 'bg-primary',  # أزرق
+                'ready_install': 'bg-success',  # أخضر
+                'completed': 'bg-success',  # أخضر
+                'delivered': 'bg-success',  # أخضر
+                'rejected': 'bg-danger',  # أحمر
+                'cancelled': 'bg-danger',  # أحمر
+            }
+            return manufacturing_badges.get(status, 'bg-secondary')
+        
+        else:  # source == 'order'
+            order_badges = {
+                'pending_approval': 'bg-warning text-dark',  # برتقالي
+                'pending': 'bg-warning text-dark',  # برتقالي
+                'in_progress': 'bg-primary',  # أزرق
+                'ready_install': 'bg-success',  # أخضر
+                'completed': 'bg-success',  # أخضر
+                'delivered': 'bg-success',  # أخضر
+                'rejected': 'bg-danger',  # أحمر
+                'cancelled': 'bg-danger',  # أحمر
+                'manufacturing_deleted': 'bg-secondary',  # فضي
+            }
+            return order_badges.get(status, 'bg-secondary')
+    
+    def get_display_status_icon(self):
+        """إرجاع الأيقونة المناسبة للحالة المعروضة"""
+        display_info = self.get_display_status()
+        status = display_info['status']
+        source = display_info['source']
+        
+        # أيقونات حسب المصدر والحالة
+        if source == 'inspection':
+            inspection_icons = {
+                'not_scheduled': 'fas fa-clock',
+                'pending': 'fas fa-hourglass-half',
+                'scheduled': 'fas fa-calendar',
+                'in_progress': 'fas fa-search',
+                'completed': 'fas fa-check',
+                'cancelled': 'fas fa-times',
+            }
+            return inspection_icons.get(status, 'fas fa-question')
+        
+        elif source == 'installation':
+            installation_icons = {
+                'not_scheduled': 'fas fa-clock',
+                'pending': 'fas fa-hourglass-half',
+                'scheduled': 'fas fa-calendar',
+                'in_progress': 'fas fa-tools',
+                'completed': 'fas fa-check',
+                'cancelled': 'fas fa-times',
+                'modification_required': 'fas fa-exclamation-triangle',
+                'modification_in_progress': 'fas fa-wrench',
+                'modification_completed': 'fas fa-check-double',
+            }
+            return installation_icons.get(status, 'fas fa-question')
+        
+        elif source == 'manufacturing':
+            manufacturing_icons = {
+                'pending_approval': 'fas fa-clock',
+                'pending': 'fas fa-hourglass-half',
+                'in_progress': 'fas fa-cogs',
+                'ready_install': 'fas fa-tools',
+                'completed': 'fas fa-check',
+                'delivered': 'fas fa-truck',
+                'rejected': 'fas fa-times',
+                'cancelled': 'fas fa-ban',
+            }
+            return manufacturing_icons.get(status, 'fas fa-question')
+        
+        else:  # source == 'order'
+            order_icons = {
+                'pending_approval': 'fas fa-clock',
+                'pending': 'fas fa-hourglass-half',
+                'in_progress': 'fas fa-cogs',
+                'ready_install': 'fas fa-tools',
+                'completed': 'fas fa-check',
+                'delivered': 'fas fa-truck',
+                'rejected': 'fas fa-times',
+                'cancelled': 'fas fa-ban',
+                'manufacturing_deleted': 'fas fa-trash-alt',
+            }
+            return order_icons.get(status, 'fas fa-question')
+    
+    def get_display_status_text(self):
+        """إرجاع النص المناسب للحالة المعروضة"""
+        display_info = self.get_display_status()
+        status = display_info['status']
+        source = display_info['source']
+        
+        # نصوص الحالات حسب المصدر
+        if source == 'inspection':
+            inspection_texts = {
+                'not_scheduled': 'غير مجدولة',
+                'pending': 'في الانتظار',
+                'scheduled': 'مجدولة',
+                'in_progress': 'قيد التنفيذ',
+                'completed': 'مكتمل',
+                'cancelled': 'ملغية',
+            }
+            return inspection_texts.get(status, status)
+        
+        elif source == 'installation':
+            installation_texts = {
+                'not_scheduled': 'غير مجدول',
+                'pending': 'في الانتظار',
+                'scheduled': 'مجدول',
+                'in_progress': 'قيد التنفيذ',
+                'completed': 'مكتمل',
+                'cancelled': 'ملغي',
+                'modification_required': 'يحتاج تعديل',
+                'modification_in_progress': 'التعديل قيد التنفيذ',
+                'modification_completed': 'التعديل مكتمل',
+            }
+            return installation_texts.get(status, status)
+        
+        elif source == 'manufacturing':
+            manufacturing_texts = {
+                'pending_approval': 'قيد الموافقة',
+                'pending': 'قيد الانتظار',
+                'in_progress': 'قيد التصنيع',
+                'ready_install': 'جاهز للتركيب',
+                'completed': 'مكتمل',
+                'delivered': 'تم التسليم',
+                'rejected': 'مرفوض',
+                'cancelled': 'ملغي',
+            }
+            return manufacturing_texts.get(status, status)
+        
+        else:  # source == 'order'
+            order_texts = {
+                'pending_approval': 'قيد الموافقة',
+                'pending': 'قيد الانتظار',
+                'in_progress': 'قيد التصنيع',
+                'ready_install': 'جاهز للتركيب',
+                'completed': 'مكتمل',
+                'delivered': 'تم التسليم',
+                'rejected': 'مرفوض',
+                'cancelled': 'ملغي',
+                'manufacturing_deleted': 'أمر تصنيع محذوف',
+            }
+            return order_texts.get(status, status)
+
+    def get_display_inspection_status(self):
+        """
+        إرجاع حالة المعاينة حسب نوع الطلب:
+        1. طلب معاينة: يعرض حالة المعاينة التلقائية المنشأة
+        2. طلب تفصيل/تركيب: يعرض زر تفاصيل المعاينة أو طرف العميل
+        """
+        # إذا كان طلب معاينة - يجب أن تكون هناك معاينة تلقائية
+        if 'inspection' in self.get_selected_types_list():
+            # البحث عن المعاينة المرتبطة بالطلب
+            inspection = self.inspections.first()
+            if inspection:
+                return {
+                    'status': inspection.status,
+                    'text': inspection.get_status_display(),
+                    'badge_class': inspection.get_status_badge_class(),
+                    'icon': inspection.get_status_icon(),
+                    'inspection_id': inspection.id,
+                    'contract_number': inspection.contract_number,
+                    'created_at': inspection.created_at,
+                    'is_inspection_order': True
+                }
+            else:
+                # إذا لم توجد معاينة (حالة نادرة)
+                return {
+                    'status': 'not_created',
+                    'text': 'لم يتم إنشاء المعاينة',
+                    'badge_class': 'bg-warning',
+                    'icon': 'fas fa-exclamation-triangle',
+                    'inspection_id': None,
+                    'contract_number': None,
+                    'created_at': None,
+                    'is_inspection_order': True
+                }
+        
+        # إذا كان طلب تفصيل أو تركيب
+        elif 'tailoring' in self.get_selected_types_list() or 'installation' in self.get_selected_types_list():
+            if self.related_inspection_type == 'customer_side':
+                return {
+                    'status': 'customer_side',
+                    'text': 'طرف العميل',
+                    'badge_class': 'bg-info',
+                    'icon': 'fas fa-user',
+                    'inspection_id': None,
+                    'contract_number': None,
+                    'created_at': None,
+                    'is_inspection_order': False
+                }
+            elif self.related_inspection:
+                return {
+                    'status': self.related_inspection.status,
+                    'text': self.related_inspection.get_status_display(),
+                    'badge_class': self.related_inspection.get_status_badge_class(),
+                    'icon': self.related_inspection.get_status_icon(),
+                    'inspection_id': self.related_inspection.id,
+                    'contract_number': self.related_inspection.contract_number,
+                    'created_at': self.related_inspection.created_at,
+                    'is_inspection_order': False
+                }
+            else:
+                return {
+                    'status': 'not_related',
+                    'text': 'لا يوجد',
+                    'badge_class': 'bg-secondary',
+                    'icon': 'fas fa-minus',
+                    'inspection_id': None,
+                    'contract_number': None,
+                    'created_at': None,
+                    'is_inspection_order': False
+                }
+        
+        # للأنواع الأخرى
+        else:
+            return {
+                'status': 'not_applicable',
+                'text': 'لا ينطبق',
+                'badge_class': 'bg-secondary',
+                'icon': 'fas fa-minus',
+                'inspection_id': None,
+                'contract_number': None,
+                'created_at': None,
+                'is_inspection_order': False
+            }
 
 @receiver(post_save, sender=Order)
 def order_post_save(sender, instance, created, **kwargs):

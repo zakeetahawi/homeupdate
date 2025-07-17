@@ -318,6 +318,28 @@ class Inspection(models.Model):
             'cancelled': 'danger'
         }
         return status_colors.get(self.status, 'secondary')
+    
+    def get_status_badge_class(self):
+        """إرجاع فئة الـ badge المناسبة لحالة المعاينة - ألوان موحدة"""
+        status_badges = {
+            'not_scheduled': 'bg-secondary',  # فضي
+            'pending': 'bg-warning text-dark',  # برتقالي
+            'scheduled': 'bg-info',  # أزرق فاتح
+            'in_progress': 'bg-primary',  # أزرق
+            'completed': 'bg-success',  # أخضر
+            'cancelled': 'bg-danger'  # أحمر
+        }
+        return status_badges.get(self.status, 'bg-secondary')
+    
+    def get_status_icon(self):
+        """إرجاع أيقونة الحالة المناسبة"""
+        status_icons = {
+            'pending': 'fas fa-clock',
+            'scheduled': 'fas fa-calendar',
+            'completed': 'fas fa-check-circle',
+            'cancelled': 'fas fa-times-circle'
+        }
+        return status_icons.get(self.status, 'fas fa-minus')
     @property
     def is_scheduled(self):
         return self.status == 'scheduled'
