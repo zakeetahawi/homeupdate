@@ -256,6 +256,7 @@ def order_create(request):
 
     context = {
         'form': form,
+        'customer': customer,  # إضافة العميل للسياق
         'currency_symbol': currency_symbol,
         'title': 'إنشاء طلب جديد'
     }
