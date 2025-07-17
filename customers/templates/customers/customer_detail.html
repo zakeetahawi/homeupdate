@@ -349,10 +349,9 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="badge {% if order.tracking_status == 'pending' %}bg-warning
-                                                   {% elif order.tracking_status == 'delivered' %}bg-success
-                                                   {% else %}bg-info{% endif %}">
-                                            {{ order.get_tracking_status_display }}
+                                        <span class="badge {{ order.get_display_status_badge_class }}">
+                                            <i class="{{ order.get_display_status_icon }} me-1"></i>
+                                            {{ order.get_display_status_text }}
                                         </span>
                                     </td>
                                     <td>{{ order.total_amount }} {{ currency_symbol }}</td>

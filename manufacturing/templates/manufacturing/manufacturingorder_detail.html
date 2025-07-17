@@ -169,9 +169,9 @@
                                 <tr>
                                     <th>منشئ أمر التصنيع:</th>
                                     <td>
-                                        {% if manufacturing_order.created_by %}
+                                        {% if manufacturing_order.order.created_by %}
                                             <span class="badge bg-info">
-                                                {{ manufacturing_order.created_by.get_full_name|default:manufacturing_order.created_by.username }}
+                                                {{ manufacturing_order.order.created_by.get_full_name|default:manufacturing_order.order.created_by.username }}
                                             </span>
                                         {% else %}
                                             <span class="text-muted">غير محدد</span>
@@ -226,24 +226,28 @@
                                     <div class="card">
                                         <div class="card-body text-center">
                                             <h6>ملف المعاينة</h6>
-                                            {% with inspection=manufacturing_order.order.inspections.first %}
-                                                {% if inspection and inspection.inspection_file %}
-                                                    <div class="mb-2">
-                                                        <a href="{{ inspection.inspection_file.url }}" target="_blank" class="btn btn-info">
-                                                            <i class="fas fa-file-alt"></i> عرض ملف المعاينة (محلي)
-                                                        </a>
-                                                    </div>
-                                                    {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                                    <div>
-                                                        <a href="{{ inspection.google_drive_file_url }}" target="_blank" class="btn btn-outline-info">
-                                                            <i class="fab fa-google-drive"></i> عرض في Google Drive
-                                                        </a>
-                                                    </div>
-                                                    {% endif %}
-                                                {% else %}
-                                                    <p class="text-muted">لم يتم رفع ملف المعاينة</p>
+                                            {% if manufacturing_order.order.related_inspection_type == 'customer_side' %}
+                                                <div class="mb-2">
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="fas fa-user-check"></i> معاينة طرف العميل
+                                                    </span>
+                                                </div>
+                                            {% elif manufacturing_order.order.related_inspection and manufacturing_order.order.related_inspection.inspection_file %}
+                                                <div class="mb-2">
+                                                    <a href="{{ manufacturing_order.order.related_inspection.inspection_file.url }}" target="_blank" class="btn btn-info">
+                                                        <i class="fas fa-file-alt"></i> {{ manufacturing_order.order.customer.name }} - ملف المعاينة
+                                                    </a>
+                                                </div>
+                                                {% if manufacturing_order.order.related_inspection.is_uploaded_to_drive and manufacturing_order.order.related_inspection.google_drive_file_url %}
+                                                <div>
+                                                    <a href="{{ manufacturing_order.order.related_inspection.google_drive_file_url }}" target="_blank" class="btn btn-outline-info">
+                                                        <i class="fab fa-google-drive"></i> {{ manufacturing_order.order.customer.name }} - Google Drive
+                                                    </a>
+                                                </div>
                                                 {% endif %}
-                                            {% endwith %}
+                                            {% else %}
+                                                <p class="text-muted">لم يتم رفع ملف المعاينة</p>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
