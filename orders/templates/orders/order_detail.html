@@ -208,10 +208,10 @@
                                 <tr>
                                     <th>{{ order.get_installation_date_label }}</th>
                                     <td>
-                                        {% if order.get_expected_installation_date %}
+                                        {% if order.get_installation_date %}
                                             <span class="badge bg-info">
                                                 <i class="fas fa-tools me-1"></i>
-                                                {{ order.get_expected_installation_date|date:"Y-m-d" }}
+                                                {{ order.get_installation_date|date:"Y-m-d" }}
                                             </span>
                                             <br><small class="text-muted">
                                                 {% if order.get_installation_date %}

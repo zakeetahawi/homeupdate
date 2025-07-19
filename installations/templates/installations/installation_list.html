@@ -78,6 +78,11 @@
                                 <th>العميل</th>
                                 <th>رقم الهاتف</th>
                                 <th>العنوان</th>
+                                <th>المكان</th> <!-- عمود جديد -->
+                                <th>البائع</th>
+                                <th>رقم العقد</th>
+                                <th>رقم الفاتورة</th>
+                                <th>الفرع</th>
                                 <th>الفريق</th>
                                 <th>التاريخ</th>
                                 <th>الموعد</th>
@@ -97,17 +102,69 @@
                                 <td><strong>{{ installation.order.customer.name }}</strong></td>
                                 <td>{{ installation.order.customer.phone }}</td>
                                 <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
+                                <td>
+                                    {% if installation.location_type == 'open' %}
+                                        <span class="badge badge-success">مفتوح</span>
+                                    {% elif installation.location_type == 'compound' %}
+                                        <span class="badge badge-info">كومبوند</span>
+                                    {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ installation.order.salesperson.name|default:"غير محدد" }}</td>
+                                <td>{{ installation.order.contract_number|default:"غير محدد" }}</td>
+                                <td>{{ installation.order.invoice_number|default:"غير محدد" }}</td>
+                                <td>{{ installation.order.branch.name|default:"غير محدد" }}</td>
                                 <td>{{ installation.team.name|default:"غير محدد" }}</td>
                                 <td>
                                     {% if installation.get_installation_date %}
                                         {{ installation.get_installation_date|date:"d/m/Y" }}
+                                        {% if installation.scheduled_time %}
+                                            <br><small class="text-muted">{{ installation.scheduled_time|time:"H:i" }}</small>
+                                        {% endif %}
                                     {% else %}
                                         <span class="text-muted">غير محدد</span>
                                     {% endif %}
                                 </td>
                                 <td>{{ installation.scheduled_time|time:"H:i"|default:"غير محدد" }}</td>
-                                <td>
-                                    {% get_status_badge installation.status "installation" %}
+                                <td class="text-center">
+                                    {% if installation.status == 'needs_scheduling' %}
+                                        <span class="badge badge-warning">
+                                            <i class="fas fa-calendar-plus"></i> بحاجة جدولة
+                                        </span>
+                                    {% elif installation.status == 'scheduled' %}
+                                        <span class="badge badge-info">
+                                            <i class="fas fa-calendar-check"></i> مجدول
+                                        </span>
+                                    {% elif installation.status == 'in_installation' %}
+                                        <span class="badge badge-primary">
+                                            <i class="fas fa-tools"></i> قيد التركيب
+                                        </span>
+                                    {% elif installation.status == 'completed' %}
+                                        <span class="badge badge-success">
+                                            <i class="fas fa-check-circle"></i> مكتمل
+                                        </span>
+                                    {% elif installation.status == 'cancelled' %}
+                                        <span class="badge badge-danger">
+                                            <i class="fas fa-times-circle"></i> ملغي
+                                        </span>
+                                    {% elif installation.status == 'modification_required' %}
+                                        <span class="badge badge-warning">
+                                            <i class="fas fa-exclamation-triangle"></i> يحتاج تعديل
+                                        </span>
+                                    {% elif installation.status == 'modification_in_progress' %}
+                                        <span class="badge badge-info">
+                                            <i class="fas fa-cogs"></i> التعديل قيد التنفيذ
+                                        </span>
+                                    {% elif installation.status == 'modification_completed' %}
+                                        <span class="badge badge-success">
+                                            <i class="fas fa-check-circle"></i> التعديل مكتمل
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">
+                                            {{ installation.get_status_display }}
+                                        </span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
@@ -119,9 +176,9 @@
                                            class="btn btn-sm btn-outline-info" title="عرض تفاصيل الطلب">
                                             <i class="fas fa-shopping-cart"></i>
                                         </a>
-                                        {% if installation.status == 'pending' or installation.status == 'needs_scheduling' %}
+                                        {% if installation.status == 'needs_scheduling' %}
                                             <a href="{% url 'installations:schedule_installation' installation.id %}" 
-                                               class="btn btn-sm btn-success" title="جدولة">
+                                               class="btn btn-sm btn-success schedule-btn" title="جدولة">
                                                 <i class="fas fa-calendar-plus"></i>
                                             </a>
                                         {% endif %}
@@ -204,38 +261,87 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // تحديث حالة التركيب
+// استبدال confirm بـ SweetAlert2
+
 document.querySelectorAll('.update-status').forEach(button => {
     button.addEventListener('click', function() {
         const installationId = this.dataset.installationId;
         const newStatus = this.dataset.status;
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        
-        if (confirm('هل أنت متأكد من تحديث حالة التركيب؟')) {
-            fetch(`/installations/installation/${installationId}/update-status/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `status=${newStatus}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('حدث خطأ أثناء تحديث الحالة');
-                }
-            });
-        }
+
+        Swal.fire({
+            title: 'تأكيد العملية',
+            text: 'هل أنت متأكد من تحديث حالة التركيب؟',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، تحديث',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/installations/installation/${installationId}/update-status/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `status=${newStatus}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'تم التحديث!',
+                            text: 'تم تحديث حالة التركيب بنجاح',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('خطأ', 'حدث خطأ أثناء تحديث الحالة', 'error');
+                    }
+                });
+            }
+        });
+    });
+});
+
+// استبدال تأكيد زر الجدولة بـ SweetAlert2
+
+document.querySelectorAll('.schedule-btn').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const href = this.getAttribute('href');
+        Swal.fire({
+            title: 'تأكيد الجدولة',
+            text: 'هل أنت متأكد من جدولة التركيب لهذا الطلب؟',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، جدولة',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = href;
+            }
+        });
     });
 });
 </script>
 {% endblock %} 
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 <style>
 .status-select {
     min-width: 150px;
@@ -263,8 +369,48 @@ document.querySelectorAll('.update-status').forEach(button => {
 }
 
 .badge {
-    font-size: 0.8em;
-    padding: 0.5em 0.8em;
+    font-size: 0.95em;
+    font-weight: bold;
+    border-radius: 8px;
+    padding: 6px 14px;
+    box-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
+    border: 1.5px solid #e0e0e0;
+    letter-spacing: 0.5px;
+}
+.badge-success, .badge-info, .badge-primary, .badge-warning, .badge-danger, .badge-secondary {
+    color: #222 !important;
+    background: linear-gradient(90deg, #fff 60%, rgba(0,0,0,0.03) 100%);
+    border-width: 2px;
+}
+.badge-success {
+    border-color: #28a745;
+    color: #155724 !important;
+    background: linear-gradient(90deg, #d4edda 60%, #c3e6cb 100%);
+}
+.badge-info {
+    border-color: #17a2b8;
+    color: #0c5460 !important;
+    background: linear-gradient(90deg, #d1ecf1 60%, #bee5eb 100%);
+}
+.badge-primary {
+    border-color: #007bff;
+    color: #004085 !important;
+    background: linear-gradient(90deg, #cce5ff 60%, #b8daff 100%);
+}
+.badge-warning {
+    border-color: #ffc107;
+    color: #856404 !important;
+    background: linear-gradient(90deg, #fff3cd 60%, #ffeeba 100%);
+}
+.badge-danger {
+    border-color: #dc3545;
+    color: #721c24 !important;
+    background: linear-gradient(90deg, #f8d7da 60%, #f5c6cb 100%);
+}
+.badge-secondary {
+    border-color: #6c757d;
+    color: #383d41 !important;
+    background: linear-gradient(90deg, #e2e3e5 60%, #d6d8db 100%);
 }
 </style>
 {% endblock %}

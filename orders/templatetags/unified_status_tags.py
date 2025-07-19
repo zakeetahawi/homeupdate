@@ -24,6 +24,7 @@ def get_status_badge(status, status_type="default"):
         'pending': 'status-pending',
         'pending_approval': 'status-pending_approval',
         'modification_required': 'status-modification_required',
+        'needs_scheduling': 'status-needs_scheduling',
         
         # حالات غير مجدول - فضي
         'not_scheduled': 'status-not_scheduled',
@@ -33,6 +34,7 @@ def get_status_badge(status, status_type="default"):
         'modification_in_progress': 'status-modification_in_progress',
         'processing': 'status-processing',
         'in_progress': 'status-in_progress',
+        'in_installation': 'status-in_installation',
         
         # حالات ملغية - أحمر
         'cancelled': 'status-cancelled',
@@ -44,6 +46,7 @@ def get_status_badge(status, status_type="default"):
         'pending_approval': 'fas fa-hourglass-half',
         'processing': 'fas fa-cogs',
         'in_progress': 'fas fa-tools',
+        'in_installation': 'fas fa-tools',
         'ready_install': 'fas fa-check-circle',
         'completed': 'fas fa-check',
         'delivered': 'fas fa-truck',
@@ -51,6 +54,7 @@ def get_status_badge(status, status_type="default"):
         'cancelled': 'fas fa-ban',
         'scheduled': 'fas fa-calendar-check',
         'not_scheduled': 'fas fa-calendar-times',
+        'needs_scheduling': 'fas fa-calendar-plus',
         'modification_required': 'fas fa-exclamation-triangle',
         'modification_in_progress': 'fas fa-wrench',
         'modification_completed': 'fas fa-check-double',
@@ -61,6 +65,7 @@ def get_status_badge(status, status_type="default"):
         'pending_approval': 'قيد الموافقة',
         'processing': 'قيد التنفيذ',
         'in_progress': 'قيد التصنيع',
+        'in_installation': 'قيد التركيب',
         'ready_install': 'جاهز للتركيب',
         'completed': 'مكتمل',
         'delivered': 'تم التسليم',
@@ -68,6 +73,7 @@ def get_status_badge(status, status_type="default"):
         'cancelled': 'ملغي',
         'scheduled': 'مجدول',
         'not_scheduled': 'غير مجدول',
+        'needs_scheduling': 'بحاجة جدولة',
         'modification_required': 'يحتاج تعديل',
         'modification_in_progress': 'التعديل قيد التنفيذ',
         'modification_completed': 'التعديل مكتمل',

@@ -90,6 +90,23 @@ class Order(models.Model):
         null=True,
         verbose_name='عنوان التسليم'
     )
+    location_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('open', 'مفتوح'),
+            ('compound', 'كومبوند'),
+        ],
+        blank=True,
+        null=True,
+        verbose_name='نوع المكان',
+        help_text='نوع المكان (مفتوح أو كومبوند)'
+    )
+    location_address = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='عنوان التركيب',
+        help_text='عنوان التركيب بالتفصيل'
+    )
     delivery_recipient_name = models.CharField(
         max_length=100,
         blank=True,
@@ -125,17 +142,16 @@ class Order(models.Model):
     installation_status = models.CharField(
         max_length=30,
         choices=[
-            ('not_scheduled', 'غير مجدول'),
-            ('pending', 'في الانتظار'),
+            ('needs_scheduling', 'بحاجة جدولة'),
             ('scheduled', 'مجدول'),
-            ('in_progress', 'قيد التنفيذ'),
+            ('in_installation', 'قيد التركيب'),
             ('completed', 'مكتمل'),
             ('cancelled', 'ملغي'),
             ('modification_required', 'يحتاج تعديل'),
             ('modification_in_progress', 'التعديل قيد التنفيذ'),
             ('modification_completed', 'التعديل مكتمل'),
         ],
-        default='not_scheduled',
+        default='needs_scheduling',
         verbose_name='حالة التركيب'
     )
     
@@ -395,16 +411,17 @@ class Order(models.Model):
             if not self.pk:
                 raise models.ValidationError('فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي')
 
+            # تم إزالة التحقق من Google Drive بناءً على طلب المستخدم
             # رفع ملف العقد إلى Google Drive إذا كان موجوداً ولم يتم رفعه مسبقاً
-            if self.contract_file and not self.is_contract_uploaded_to_drive:
-                try:
-                    success, message = self.upload_contract_to_google_drive()
-                    if success:
-                        pass
-                    else:
-                        pass
-                except Exception as e:
-                    pass
+            # if self.contract_file and not self.is_contract_uploaded_to_drive:
+            #     try:
+            #         success, message = self.upload_contract_to_google_drive()
+            #         if success:
+            #             pass
+            #         else:
+            #             pass
+            #     except Exception as e:
+            #         pass
             # حساب السعر النهائي بعد الحفظ (بعد وجود pk)
             try:
                 final_price = self.calculate_final_price()
@@ -651,6 +668,16 @@ class Order(models.Model):
 
     def get_smart_delivery_date(self):
         """إرجاع التاريخ المناسب حسب حالة الطلب"""
+        # إذا كان الطلب يحتوي على تركيب وتمت الجدولة، اعرض تاريخ الجدولة
+        if 'installation' in self.get_selected_types_list():
+            try:
+                from installations.models import InstallationSchedule
+                installation = InstallationSchedule.objects.filter(order=self).first()
+                if installation and installation.scheduled_date:
+                    return installation.scheduled_date
+            except:
+                pass
+        
         # إذا كان الطلب مكتمل أو جاهز للتركيب أو تم التسليم
         if self.order_status in ['completed', 'ready_install', 'delivered']:
             # التحقق من وجود أمر تصنيع وتاريخ إكمال
@@ -706,12 +733,21 @@ class Order(models.Model):
             installation = InstallationSchedule.objects.filter(order=self).first()
             
             if installation:
+                # تحديث حالة التركيب من قسم التركيبات
+                old_status = self.installation_status
                 self.installation_status = installation.status
+                
+                # حفظ التغيير فقط إذا كان مختلفاً
+                if old_status != self.installation_status:
+                    self.save(update_fields=['installation_status'])
             else:
-                self.installation_status = 'not_scheduled'
-            
-            self.save(update_fields=['installation_status'])
-        except Exception:
+                # إذا لم توجد جدولة، تأكد من أن الحالة صحيحة
+                if self.installation_status != 'needs_scheduling':
+                    self.installation_status = 'needs_scheduling'
+                    self.save(update_fields=['installation_status'])
+        except Exception as e:
+            # تسجيل الخطأ بدون إيقاف العملية
+            print(f"خطأ في تحديث حالة التركيب للطلب {self.order_number}: {e}")
             pass
     
     def update_inspection_status(self):
@@ -748,8 +784,22 @@ class Order(models.Model):
             if self.inspection_status != 'completed':
                 is_completed = False
         
-        self.is_fully_completed = is_completed
-        self.save(update_fields=['is_fully_completed'])
+        # تحديث الحقل فقط إذا تغيرت القيمة
+        if self.is_fully_completed != is_completed:
+            self.is_fully_completed = is_completed
+            self.save(update_fields=['is_fully_completed'])
+            
+            # إرسال إشعار عند اكتمال الطلب
+            if is_completed:
+                try:
+                    send_notification(
+                        user=self.created_by,
+                        title="تم إكمال الطلب",
+                        message=f"تم إكمال الطلب {self.order_number} بنجاح",
+                        notification_type='order_completed'
+                    )
+                except Exception as e:
+                    print(f"خطأ في إرسال إشعار إكمال الطلب: {e}")
     
     def update_all_statuses(self):
         """تحديث جميع الحالات"""
@@ -759,6 +809,16 @@ class Order(models.Model):
 
     def get_delivery_date_label(self):
         """إرجاع تسمية التاريخ المناسبة حسب حالة الطلب"""
+        # إذا كان الطلب يحتوي على تركيب وتمت الجدولة
+        if 'installation' in self.get_selected_types_list():
+            try:
+                from installations.models import InstallationSchedule
+                installation = InstallationSchedule.objects.filter(order=self).first()
+                if installation and installation.scheduled_date:
+                    return "تاريخ الجدولة"
+            except:
+                pass
+        
         if self.order_status in ['completed', 'ready_install']:
             return "تاريخ الإكمال"
         elif self.order_status == 'delivered':
@@ -803,6 +863,8 @@ class Order(models.Model):
                 
                 # إذا كانت حالة المصنع "جاهز للتركيب" أو ما بعدها، اعرض حالة التركيب
                 if manufacturing_status in ['ready_install', 'completed', 'delivered']:
+                    # تحديث حالة التركيب من قسم التركيبات
+                    self.update_installation_status()
                     return {
                         'status': self.installation_status,
                         'source': 'installation',
@@ -850,10 +912,9 @@ class Order(models.Model):
         
         elif source == 'installation':
             installation_badges = {
-                'not_scheduled': 'bg-secondary',  # فضي
-                'pending': 'bg-warning text-dark',  # برتقالي
+                'needs_scheduling': 'bg-secondary',  # فضي
                 'scheduled': 'bg-info',  # أزرق فاتح
-                'in_progress': 'bg-primary',  # أزرق
+                'in_installation': 'bg-warning text-dark',  # برتقالي
                 'completed': 'bg-success',  # أخضر
                 'cancelled': 'bg-danger',  # أحمر
                 'modification_required': 'bg-warning text-dark',  # برتقالي
@@ -909,10 +970,9 @@ class Order(models.Model):
         
         elif source == 'installation':
             installation_icons = {
-                'not_scheduled': 'fas fa-clock',
-                'pending': 'fas fa-hourglass-half',
+                'needs_scheduling': 'fas fa-clock',
                 'scheduled': 'fas fa-calendar',
-                'in_progress': 'fas fa-tools',
+                'in_installation': 'fas fa-tools',
                 'completed': 'fas fa-check',
                 'cancelled': 'fas fa-times',
                 'modification_required': 'fas fa-exclamation-triangle',
@@ -968,10 +1028,9 @@ class Order(models.Model):
         
         elif source == 'installation':
             installation_texts = {
-                'not_scheduled': 'غير مجدول',
-                'pending': 'في الانتظار',
+                'needs_scheduling': 'بحاجة جدولة',
                 'scheduled': 'مجدول',
-                'in_progress': 'قيد التنفيذ',
+                'in_installation': 'قيد التركيب',
                 'completed': 'مكتمل',
                 'cancelled': 'ملغي',
                 'modification_required': 'يحتاج تعديل',
@@ -1092,9 +1151,38 @@ class Order(models.Model):
 
 @receiver(post_save, sender=Order)
 def order_post_save(sender, instance, created, **kwargs):
-    """دالة تعمل بعد حفظ الطلب مباشرة"""
-    if not created and instance.tracker.has_changed('status'):
-        instance.send_status_notification()
+    """تحديث الحالات المرتبطة عند حفظ الطلب"""
+    if not created:
+        # تحديث جميع الحالات المرتبطة
+        instance.update_all_statuses()
+
+# Signal لتحديث حالة الطلب عند تغيير حالة التركيب
+@receiver(post_save, sender='installations.InstallationSchedule')
+def update_order_installation_status(sender, instance, **kwargs):
+    """تحديث حالة الطلب عند تغيير حالة التركيب"""
+    try:
+        if instance.order:
+            # تحديث حالة التركيب في الطلب فقط إذا تغيرت
+            if instance.order.installation_status != instance.status:
+                instance.order.installation_status = instance.status
+                # استخدام update_fields لتجنب استدعاء دالة save الكاملة
+                instance.order.save(update_fields=['installation_status'])
+                
+                # تحديث إشارة الإكمال بدون استدعاء save الكاملة
+                try:
+                    instance.order.update_completion_status()
+                except Exception as e:
+                    print(f"خطأ في تحديث حالة الإكمال: {e}")
+                
+                # إذا تم إكمال التركيب، تحديث حالة الطلب إلى مكتمل
+                if instance.status == 'completed':
+                    if instance.order.order_status not in ['completed', 'delivered']:
+                        instance.order.order_status = 'completed'
+                        # استخدام update_fields لتجنب استدعاء دالة save الكاملة
+                        instance.order.save(update_fields=['order_status'])
+    except Exception as e:
+        print(f"خطأ في تحديث حالة الطلب من التركيب: {e}")
+        pass
 
 
 class OrderItem(models.Model):
@@ -1336,3 +1424,21 @@ class DeliveryTimeSettings(models.Model):
                 'inspection': 2,  # 48 ساعة
             }
             return defaults.get(order_type, 15)
+
+    def get_scheduling_date(self):
+        """إرجاع تاريخ الجدولة للعرض في الجدول"""
+        try:
+            from installations.models import InstallationSchedule
+            installation = InstallationSchedule.objects.filter(order=self).first()
+            if installation and installation.scheduled_date:
+                return installation.scheduled_date
+        except:
+            pass
+        return None
+
+    def get_scheduling_date_display(self):
+        """إرجاع تاريخ الجدولة مع التنسيق للعرض"""
+        scheduling_date = self.get_scheduling_date()
+        if scheduling_date:
+            return scheduling_date.strftime('%Y-%m-%d')
+        return None

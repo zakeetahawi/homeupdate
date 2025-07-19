@@ -121,6 +121,23 @@ class InstallationSchedule(models.Model):
     team = models.ForeignKey(InstallationTeam, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_('الفريق'))
     scheduled_date = models.DateField(_('تاريخ التركيب'), null=True, blank=True)
     scheduled_time = models.TimeField(_('موعد التركيب'), null=True, blank=True)
+    location_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('open', 'مفتوح'),
+            ('compound', 'كومبوند'),
+        ],
+        blank=True,
+        null=True,
+        verbose_name=_('نوع المكان'),
+        help_text='نوع المكان (مفتوح أو كومبوند)'
+    )
+    location_address = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_('عنوان التركيب'),
+        help_text='عنوان التركيب بالتفصيل'
+    )
     status = models.CharField(_('الحالة'), max_length=30, choices=STATUS_CHOICES, default='needs_scheduling')
     notes = models.TextField(_('ملاحظات'), blank=True)
     completion_date = models.DateTimeField(_('تاريخ الإكمال'), null=True, blank=True)
@@ -141,12 +158,57 @@ class InstallationSchedule(models.Model):
             raise ValidationError(_('لا يمكن جدولة تركيب في تاريخ ماضي'))
 
     def save(self, *args, **kwargs):
+        # حفظ الحالة السابقة قبل التحديث
+        old_status = None
+        old_scheduled_date = None
+        if self.pk:
+            try:
+                old_instance = InstallationSchedule.objects.get(pk=self.pk)
+                old_status = old_instance.status
+                old_scheduled_date = old_instance.scheduled_date
+            except InstallationSchedule.DoesNotExist:
+                pass
+        
         # تحديث حالة الطلب عند إكمال التركيب
         if self.status == 'completed' and not self.completion_date:
             self.completion_date = timezone.now()
-            # تحديث حالة الطلب إلى مكتمل
-            self.order.order_status = 'completed'
-            self.order.save()
+            
+            # تحديث تاريخ الجدولة إلى تاريخ الإكمال إذا كان مختلفاً
+            if self.scheduled_date and self.scheduled_date != self.completion_date.date():
+                old_date = self.scheduled_date
+                self.scheduled_date = self.completion_date.date()
+                
+                # إضافة ملاحظة عن تغيير التاريخ
+                date_note = f"\n--- ملاحظة تغيير التاريخ ---\n"
+                date_note += f"الموعد كان مجدولاً في: {old_date.strftime('%Y-%m-%d')}\n"
+                date_note += f"تم تنفيذ التركيب في: {self.completion_date.strftime('%Y-%m-%d')}\n"
+                date_note += f"تم تحديث التاريخ تلقائياً إلى تاريخ التنفيذ الفعلي\n"
+                date_note += f"--- نهاية الملاحظة ---\n"
+                
+                if self.notes:
+                    self.notes += date_note
+                else:
+                    self.notes = date_note
+        
+        # تحديث تاريخ الجدولة عند بدء التركيب في يوم مختلف
+        elif self.status == 'in_installation' and old_status == 'scheduled':
+            current_date = timezone.now().date()
+            if self.scheduled_date and self.scheduled_date != current_date:
+                old_date = self.scheduled_date
+                self.scheduled_date = current_date
+                
+                # إضافة ملاحظة عن تغيير التاريخ
+                date_note = f"\n--- ملاحظة تغيير التاريخ ---\n"
+                date_note += f"الموعد كان مجدولاً في: {old_date.strftime('%Y-%m-%d')}\n"
+                date_note += f"تم بدء التركيب في: {current_date.strftime('%Y-%m-%d')}\n"
+                date_note += f"تم تحديث التاريخ تلقائياً إلى تاريخ البدء الفعلي\n"
+                date_note += f"--- نهاية الملاحظة ---\n"
+                
+                if self.notes:
+                    self.notes += date_note
+                else:
+                    self.notes = date_note
+        
         super().save(*args, **kwargs)
 
     def can_change_status_to(self, new_status):

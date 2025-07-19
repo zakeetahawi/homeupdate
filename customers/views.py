@@ -512,3 +512,50 @@ def check_customer_phone(request):
             }
         })
     return JsonResponse({'found': False})
+
+@login_required
+@require_POST
+def update_customer_address(request, pk):
+    """تحديث عنوان العميل ونوع المكان"""
+    try:
+        customer = get_object_or_404(Customer, pk=pk)
+        
+        # التحقق من الصلاحيات
+        if not request.user.is_superuser and request.user.branch != customer.branch:
+            return JsonResponse({
+                'success': False,
+                'error': 'ليس لديك صلاحية لتحديث هذا العميل'
+            })
+        
+        address = request.POST.get('address', '').strip()
+        location_type = request.POST.get('location_type', '').strip()
+        
+        if not address:
+            return JsonResponse({
+                'success': False,
+                'error': 'العنوان مطلوب'
+            })
+        
+        # تحديث عنوان العميل ونوع المكان
+        customer.address = address
+        if location_type:
+            customer.location_type = location_type
+        customer.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم تحديث عنوان العميل بنجاح',
+            'address': customer.address,
+            'location_type': customer.location_type
+        })
+        
+    except Customer.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'العميل غير موجود'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'حدث خطأ أثناء تحديث عنوان العميل: {str(e)}'
+        })

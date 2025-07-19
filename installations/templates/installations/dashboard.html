@@ -9,17 +9,6 @@
     <!-- قائمة التنقل -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">لوحة تحكم التركيبات</h1>
-        <div>
-            <a href="{% url 'installations:installation_analytics' %}" class="btn btn-info btn-sm">
-                <i class="fas fa-chart-line"></i> التحليل الشهري
-            </a>
-            <a href="{% url 'installations:modification_error_analysis' %}" class="btn btn-warning btn-sm">
-                <i class="fas fa-exclamation-triangle"></i> تحليل الأخطاء
-            </a>
-            <a href="{% url 'installations:installation_list' %}" class="btn btn-primary btn-sm">
-                <i class="fas fa-list"></i> قائمة التركيبات
-            </a>
-        </div>
     </div>
 
     <!-- روابط سريعة -->
@@ -216,6 +205,10 @@
                                         <th>الموعد</th>
                                         <th>رقم الطلب</th>
                                         <th>العميل</th>
+                                        <th>البائع</th>
+                                        <th>رقم العقد</th>
+                                        <th>رقم الفاتورة</th>
+                                        <th>الفرع</th>
                                         <th>الفريق</th>
                                         <th>الحالة</th>
                                         <th>الإجراءات</th>
@@ -231,11 +224,49 @@
                                             </a>
                                         </td>
                                         <td><strong>{{ installation.order.customer.name }}</strong></td>
+                                        <td>{{ installation.order.salesperson.name|default:"غير محدد" }}</td>
+                                        <td>{{ installation.order.contract_number|default:"غير محدد" }}</td>
+                                        <td>{{ installation.order.invoice_number|default:"غير محدد" }}</td>
+                                        <td>{{ installation.order.branch.name|default:"غير محدد" }}</td>
                                         <td>{{ installation.team.name|default:"غير محدد" }}</td>
                                         <td>
-                                            <span class="badge badge-{{ installation.status|yesno:'success,warning' }}">
-                                                {{ installation.get_status_display }}
-                                            </span>
+                                            {% if installation.status == 'needs_scheduling' %}
+                                                <span class="badge badge-warning">
+                                                    <i class="fas fa-calendar-plus"></i> بحاجة جدولة
+                                                </span>
+                                            {% elif installation.status == 'scheduled' %}
+                                                <span class="badge badge-info">
+                                                    <i class="fas fa-calendar-check"></i> مجدول
+                                                </span>
+                                            {% elif installation.status == 'in_installation' %}
+                                                <span class="badge badge-primary">
+                                                    <i class="fas fa-tools"></i> قيد التركيب
+                                                </span>
+                                            {% elif installation.status == 'completed' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check-circle"></i> مكتمل
+                                                </span>
+                                            {% elif installation.status == 'cancelled' %}
+                                                <span class="badge badge-danger">
+                                                    <i class="fas fa-times-circle"></i> ملغي
+                                                </span>
+                                            {% elif installation.status == 'modification_required' %}
+                                                <span class="badge badge-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i> يحتاج تعديل
+                                                </span>
+                                            {% elif installation.status == 'modification_in_progress' %}
+                                                <span class="badge badge-info">
+                                                    <i class="fas fa-cogs"></i> التعديل قيد التنفيذ
+                                                </span>
+                                            {% elif installation.status == 'modification_completed' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check-circle"></i> التعديل مكتمل
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">
+                                                    {{ installation.get_status_display }}
+                                                </span>
+                                            {% endif %}
                                         </td>
                                         <td>
                                             <a href="{% url 'installations:installation_detail' installation.id %}" 
@@ -333,11 +364,24 @@
                                         <td>{{ order.customer.name }}</td>
                                         <td>{{ order.created_at|date:"d/m/Y" }}</td>
                                         <td>
-                                            {% if order.expected_delivery_date %}
-                                                {{ order.expected_delivery_date|date:"d/m/Y" }}
-                                            {% else %}
-                                                <span class="text-muted">غير محدد</span>
-                                            {% endif %}
+                                            {% with installation=order.installationschedule_set.first %}
+                                                {% if installation and installation.get_installation_date %}
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        {{ installation.get_installation_date|date:"d/m/Y" }}
+                                                    </span>
+                                                    {% if installation.scheduled_time %}
+                                                        <br><small class="text-muted">{{ installation.scheduled_time|time:"H:i" }}</small>
+                                                    {% endif %}
+                                                {% elif order.expected_delivery_date %}
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        {{ order.expected_delivery_date|date:"d/m/Y" }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">غير محدد</span>
+                                                {% endif %}
+                                            {% endwith %}
                                         </td>
                                         <td>
                                             {% with display_info=order.get_display_status %}
@@ -357,10 +401,17 @@
                                             {% endwith %}
                                         </td>
                                         <td>
-                                            <a href="{% url 'orders:order_detail' order.id %}" 
-                                               class="btn btn-sm btn-info">
-                                                <i class="fas fa-eye"></i> عرض الطلب
-                                            </a>
+                                            {% if order.installationschedule_set.exists %}
+                                                <a href="{% url 'installations:installation_detail' order.installationschedule_set.first.id %}" 
+                                                   class="btn btn-sm btn-info">
+                                                    <i class="fas fa-tools"></i> تفاصيل التركيب
+                                                </a>
+                                            {% else %}
+                                                <a href="{% url 'orders:order_detail' order.id %}" 
+                                                   class="btn btn-sm btn-info">
+                                                    <i class="fas fa-eye"></i> عرض الطلب
+                                                </a>
+                                            {% endif %}
                                             {% if not order.installationschedule_set.exists %}
                                                 {% with display_info=order.get_display_status %}
                                                     {% if display_info.status == 'ready_install' or display_info.status == 'completed' or display_info.manufacturing_status == 'ready_install' %}
@@ -370,7 +421,7 @@
                                                             <i class="fas fa-calendar-plus"></i> جدولة تركيب
                                                         </a>
                                                     {% else %}
-                                                        <span class="badge badge-warning">ليس جاهز للترك��ب</span>
+                                                        <span class="badge badge-warning">ليس جاهز للتركيب</span>
                                                     {% endif %}
                                                 {% endwith %}
                                             {% else %}
@@ -409,7 +460,7 @@
                             <table class="table table-bordered" width="100%" cellspacing="0">
                                 <thead>
                                     <tr>
-                                        <th>رقم ال��لب</th>
+                                        <th>رقم الطلب</th>
                                         <th>العميل</th>
                                         <th>تاريخ الطلب</th>
                                         <th>حالة الطلب</th>
@@ -444,10 +495,17 @@
                                             {% endwith %}
                                         </td>
                                         <td>
-                                            <a href="{% url 'orders:order_detail' order.id %}"
-                                               class="btn btn-sm btn-info">
-                                                <i class="fas fa-eye"></i> عرض الطلب
-                                            </a>
+                                            {% if order.installationschedule_set.exists %}
+                                                <a href="{% url 'installations:installation_detail' order.installationschedule_set.first.id %}"
+                                                   class="btn btn-sm btn-info">
+                                                    <i class="fas fa-tools"></i> تفاصيل التركيب
+                                                </a>
+                                            {% else %}
+                                                <a href="{% url 'orders:order_detail' order.id %}"
+                                                   class="btn btn-sm btn-info">
+                                                    <i class="fas fa-eye"></i> عرض الطلب
+                                                </a>
+                                            {% endif %}
                                             {% with display_info=order.get_display_status %}
                                                 {% if display_info.status == 'ready_install' or display_info.status == 'completed' or display_info.manufacturing_status == 'ready_install' %}
                                                     <a href="#"
@@ -522,9 +580,12 @@
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // تحديث الإحصائيات كل 30 ثانية
 setInterval(function() {
@@ -538,18 +599,42 @@ setInterval(function() {
 
 // وظيفة جدولة التركيب
 function scheduleInstallation(orderId) {
-    if (confirm('هل تريد جدولة تركيب لهذا الطلب؟')) {
-        // الانتقال إلى صفحة الجدولة السريعة
-        window.location.href = `{% url 'installations:quick_schedule_installation' 0 %}`.replace('0', orderId);
-    }
+    Swal.fire({
+        title: 'تأكيد الجدولة',
+        text: 'هل تريد جدولة تركيب لهذا الطلب؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، جدولة',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // الانتقال إلى صفحة الجدولة السريعة
+            window.location.href = `{% url 'installations:quick_schedule_installation' 0 %}`.replace('0', orderId);
+        }
+    });
 }
 
 // وظيفة جدولة التركيب من الـ modal
 function scheduleInstallationFromModal(orderId, buttonElement) {
-    if (confirm('هل تريد جدولة تركيب لهذا الطلب؟')) {
-        // الانتقال إلى صفحة الجدولة السريعة
-        window.location.href = `{% url 'installations:quick_schedule_installation' 0 %}`.replace('0', orderId);
-    }
+    Swal.fire({
+        title: 'تأكيد الجدولة',
+        text: 'هل تريد جدولة تركيب لهذا الطلب؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، جدولة',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // الانتقال إلى صفحة الجدولة السريعة
+            window.location.href = `{% url 'installations:quick_schedule_installation' 0 %}`.replace('0', orderId);
+        }
+    });
 }
 
 // وظيفة إظهار الإشعارات
@@ -581,7 +666,7 @@ function showOrdersModal(type) {
     
     switch(type) {
         case 'total':
-            title = 'جميع طلبات التركي��';
+            title = 'جميع طلبات التركيبات';
             url = '{% url "installations:orders_modal" %}?type=total';
             break;
         case 'ready':
@@ -691,7 +776,9 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/arabic-fonts.css' %}">
 <style>
+/* تحسين مظهر البطاقات */
 .cursor-pointer {
     cursor: pointer;
     transition: all 0.3s ease;
@@ -813,7 +900,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .badge-warning {
     background-color: #ffc107;
-    color: #212529;
+    color: #000;
 }
 
 .badge-info {
@@ -831,44 +918,89 @@ document.addEventListener('DOMContentLoaded', function() {
     color: white;
 }
 
-/* تحسين مظهر الروابط */
-.text-primary {
-    color: #007bff !important;
-    text-decoration: none;
+/* تحسين مظهر النصوص العربية */
+.text-right {
+    text-align: right !important;
 }
 
-.text-primary:hover {
-    color: #0056b3 !important;
-    text-decoration: underline;
+.text-center {
+    text-align: center !important;
 }
 
-/* تحسين مظهر النص */
-.text-dark {
-    color: #343a40 !important;
+/* تحسين مظهر العناوين */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
 }
 
-.font-weight-bold {
-    font-weight: 600 !important;
+/* تحسين مظهر النماذج */
+.form-control, .form-select {
+    font-family: 'Cairo', sans-serif !important;
 }
 
-/* تحسين مظهر الرسائل الفارغة */
-.text-muted {
-    color: #6c757d !important;
+/* تحسين مظهر القوائم المنسدلة */
+.dropdown-menu {
+    font-family: 'Cairo', sans-serif !important;
 }
 
-/* تحسين مظهر الأيقونات */
-.fas {
-    margin-right: 4px;
+/* تحسين مظهر التنبيهات */
+.alert {
+    font-family: 'Cairo', sans-serif !important;
 }
 
-/* تحسين مظهر الجداول الفارغة */
-.table-responsive:empty::before {
-    content: "لا توجد بيانات";
-    display: block;
-    text-align: center;
-    padding: 20px;
-    color: #6c757d;
-    font-style: italic;
+/* تحسين مظهر البطاقات الإحصائية */
+.card-body .h5 {
+    font-weight: 700;
+}
+
+.card-body .text-xs {
+    font-weight: 500;
+}
+
+/* تحسين مظهر الأيقونات مع النصوص العربية */
+.fas, .far, .fab {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+/* تحسين مظهر الجداول في الـ modal */
+.modal-table {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+.modal-table th,
+.modal-table td {
+    font-family: 'Cairo', sans-serif !important;
+    vertical-align: middle;
+}
+
+/* تحسين مظهر البطاقات الإحصائية */
+.border-right-primary,
+.border-right-success,
+.border-right-warning,
+.border-right-info,
+.border-right-danger,
+.border-right-secondary {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر الأزرار في البطاقات */
+.btn-group-sm .btn {
+    font-size: 0.75rem;
+}
+
+/* تحسين مظهر النصوص في البطاقات */
+.card-body .text-gray-800 {
+    font-weight: 600;
+}
+
+/* تحسين مظهر العناوين في البطاقات */
+.card-body .text-primary,
+.card-body .text-success,
+.card-body .text-warning,
+.card-body .text-info,
+.card-body .text-danger,
+.card-body .text-secondary {
+    font-weight: 600;
 }
 </style>
 {% endblock %}

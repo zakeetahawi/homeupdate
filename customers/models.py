@@ -154,6 +154,17 @@ class Customer(models.Model):
     )
     email = models.EmailField(_('البريد الإلكتروني'), blank=True, null=True)
     address = models.TextField(_('العنوان'))
+    location_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('open', 'مفتوح'),
+            ('compound', 'كومبوند'),
+        ],
+        blank=True,
+        null=True,
+        verbose_name=_('نوع المكان'),
+        help_text='نوع المكان (مفتوح أو كومبوند)'
+    )
     interests = models.TextField(
         _('اهتمامات العميل'),
         blank=True,

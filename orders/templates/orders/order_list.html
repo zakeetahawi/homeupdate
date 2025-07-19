@@ -120,7 +120,6 @@
                             <th class="text-center" style="width: 8%;">حالة المصنع</th>
                             <th class="text-center" style="width: 8%;">حالة التركيب</th>
                             <th class="text-center" style="width: 8%;">حالة المعاينة</th>
-                            <th class="text-center" style="width: 5%;">الإكمال</th>
                             <th class="text-end" style="width: 8%;">المبلغ الإجمالي</th>
                             <th class="text-end" style="width: 8%;">المبلغ المدفوع</th>
                             <th class="text-end" style="width: 8%;">المبلغ المتبقي</th>
@@ -224,6 +223,28 @@
                             <td class="text-center">
                                 {% if 'installation' in order.get_selected_types_list %}
                                     {% get_status_badge order.installation_status "installation" %}
+                                    
+                                    <!-- إظهار تاريخ الجدولة إذا كانت الحالة مجدول -->
+                                    {% if order.installation_status == 'scheduled' %}
+                                        {% with scheduling_date=order.get_scheduling_date_display %}
+                                            {% if scheduling_date %}
+                                                <br><small class="text-muted" style="font-size: 0.65rem;">
+                                                    <i class="fas fa-calendar me-1"></i>تاريخ الجدولة: {{ scheduling_date }}
+                                                </small>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endif %}
+                                    
+                                    <!-- إظهار تاريخ الجدولة إذا كانت الحالة قيد التركيب -->
+                                    {% if order.installation_status == 'in_installation' %}
+                                        {% with scheduling_date=order.get_scheduling_date_display %}
+                                            {% if scheduling_date %}
+                                                <br><small class="text-muted" style="font-size: 0.65rem;">
+                                                    <i class="fas fa-calendar me-1"></i>تاريخ الجدولة: {{ scheduling_date }}
+                                                </small>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endif %}
                                 {% elif 'tailoring' in order.get_selected_types_list or 'accessory' in order.get_selected_types_list %}
                                     <span class="text-muted">لا يوجد</span>
                                 {% elif 'inspection' in order.get_selected_types_list %}
@@ -263,10 +284,6 @@
                                         </span>
                                     {% endif %}
                                 {% endwith %}
-                            </td>
-                            <!-- إشارة الإكمال -->
-                            <td class="text-center">
-                                {% get_completion_indicator order.is_fully_completed %}
                             </td>
                             <td class="text-end" style="font-size: 0.85rem;">{{ order.total_amount|floatformat:2|default:"0.00" }} {{ currency_symbol }}</td>
                             <td class="text-end" style="font-size: 0.85rem;">{{ order.paid_amount|floatformat:2|default:"0.00" }} {{ currency_symbol }}</td>

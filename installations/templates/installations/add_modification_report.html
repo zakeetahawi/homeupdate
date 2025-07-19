@@ -92,6 +92,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // معاينة الملف
 document.getElementById('{{ form.report_file.id_for_label }}').addEventListener('change', function() {
@@ -133,7 +135,7 @@ document.getElementById('{{ form.report_file.id_for_label }}').addEventListener(
     const maxSize = 5 * 1024 * 1024; // 5MB
     
     if (file && file.size > maxSize) {
-        alert('حجم الملف يجب أن يكون أقل من 5 ميجابايت');
+        Swal.fire('خطأ', 'حجم الملف يجب أن يكون أقل من 5 ميجابايت', 'error');
         this.value = '';
         document.getElementById('file-preview').style.display = 'none';
     }

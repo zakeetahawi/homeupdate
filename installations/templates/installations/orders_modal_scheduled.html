@@ -36,23 +36,47 @@
                     </td>
                     <td>
                         {% if installation.status == 'scheduled' %}
-                            <span class="badge badge-info font-weight-bold">
+                            <span class="badge badge-info font-weight-bold" style="font-family: 'Cairo', sans-serif;">
                                 <i class="fas fa-calendar-check"></i> مجدول
                             </span>
                         {% elif installation.status == 'in_progress' %}
-                            <span class="badge badge-warning font-weight-bold">
+                            <span class="badge badge-warning font-weight-bold" style="font-family: 'Cairo', sans-serif;">
                                 <i class="fas fa-tools"></i> قيد التنفيذ
                             </span>
                         {% elif installation.status == 'completed' %}
-                            <span class="badge badge-success font-weight-bold">
+                            <span class="badge badge-success font-weight-bold" style="font-family: 'Cairo', sans-serif;">
                                 <i class="fas fa-check-circle"></i> مكتمل
                             </span>
                         {% elif installation.status == 'pending' %}
-                            <span class="badge badge-secondary font-weight-bold">
+                            <span class="badge badge-secondary font-weight-bold" style="font-family: 'Cairo', sans-serif;">
                                 <i class="fas fa-clock"></i> في الانتظار
                             </span>
+                        {% elif installation.status == 'needs_scheduling' %}
+                            <span class="badge badge-warning font-weight-bold" style="font-family: 'Cairo', sans-serif;">
+                                <i class="fas fa-calendar-plus"></i> بحاجة جدولة
+                            </span>
+                        {% elif installation.status == 'in_installation' %}
+                            <span class="badge badge-primary font-weight-bold" style="font-family: 'Cairo', sans-serif;">
+                                <i class="fas fa-tools"></i> قيد التركيب
+                            </span>
+                        {% elif installation.status == 'cancelled' %}
+                            <span class="badge badge-danger font-weight-bold" style="font-family: 'Cairo', sans-serif;">
+                                <i class="fas fa-times-circle"></i> ملغي
+                            </span>
+                        {% elif installation.status == 'modification_required' %}
+                            <span class="badge badge-warning font-weight-bold" style="font-family: 'Cairo', sans-serif;">
+                                <i class="fas fa-exclamation-triangle"></i> يحتاج تعديل
+                            </span>
+                        {% elif installation.status == 'modification_in_progress' %}
+                            <span class="badge badge-info font-weight-bold" style="font-family: 'Cairo', sans-serif;">
+                                <i class="fas fa-cogs"></i> التعديل قيد التنفيذ
+                            </span>
+                        {% elif installation.status == 'modification_completed' %}
+                            <span class="badge badge-success font-weight-bold" style="font-family: 'Cairo', sans-serif;">
+                                <i class="fas fa-check-circle"></i> التعديل مكتمل
+                            </span>
                         {% else %}
-                            <span class="badge badge-secondary font-weight-bold">
+                            <span class="badge badge-secondary font-weight-bold" style="font-family: 'Cairo', sans-serif;">
                                 {{ installation.get_status_display }}
                             </span>
                         {% endif %}

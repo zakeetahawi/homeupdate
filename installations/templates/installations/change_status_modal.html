@@ -155,6 +155,8 @@
     </div>
 </form>
 
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 $(document).ready(function() {
     // مراقبة تغيير الحالة لإظهار/إخفاء الحقول المطلوبة
@@ -241,16 +243,22 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    // إظهار رسالة نجاح
-                    showNotification(response.message, 'success');
-                    
-                    // إغلاق النافذة المنبثقة
-                    $('#statusModal').modal('hide');
-                    
-                    // تحديث الصفحة أو العنصر المحدد
-                    setTimeout(function() {
+                    // إظهار رسالة نجاح جميلة
+                    Swal.fire({
+                        title: 'تم التحديث بنجاح!',
+                        text: response.message,
+                        icon: 'success',
+                        confirmButtonText: 'حسناً',
+                        confirmButtonColor: '#28a745',
+                        timer: 2000,
+                        timerProgressBar: true
+                    }).then(() => {
+                        // إغلاق النافذة المنبثقة
+                        $('#statusModal').modal('hide');
+                        
+                        // تحديث الصفحة
                         location.reload();
-                    }, 1000);
+                    });
                 } else {
                     // إظهار أخطاء النموذج
                     if (response.errors) {
@@ -258,12 +266,24 @@ $(document).ready(function() {
                         for (var field in response.errors) {
                             errorMessages = errorMessages.concat(response.errors[field]);
                         }
-                        showNotification('خطأ: ' + errorMessages.join(', '), 'error');
+                        Swal.fire({
+                            title: 'خطأ في التحديث',
+                            text: 'خطأ: ' + errorMessages.join(', '),
+                            icon: 'error',
+                            confirmButtonText: 'حسناً',
+                            confirmButtonColor: '#dc3545'
+                        });
                     }
                 }
             },
             error: function(xhr, status, error) {
-                showNotification('حدث خطأ أثناء حفظ التغيير', 'error');
+                Swal.fire({
+                    title: 'خطأ في التحديث',
+                    text: 'حدث خطأ أثناء حفظ التغيير',
+                    icon: 'error',
+                    confirmButtonText: 'حسناً',
+                    confirmButtonColor: '#dc3545'
+                });
             },
             complete: function() {
                 // إعادة تفعيل الزر
@@ -272,30 +292,6 @@ $(document).ready(function() {
         });
     });
 });
-
-// وظيفة إظهار الإشعارات
-function showNotification(message, type) {
-    var alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-    var iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
-    
-    var notification = $(`
-        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
-             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
-            <i class="fas ${iconClass}"></i>
-            ${message}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-    `);
-    
-    $('body').append(notification);
-    
-    // إزالة الإشعار بعد 5 ثواني
-    setTimeout(function() {
-        notification.alert('close');
-    }, 5000);
-}
 </script>
 
 <style>

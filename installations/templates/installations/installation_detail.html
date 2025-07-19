@@ -28,11 +28,69 @@
 .card {
     border-radius: 12px;
     box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    padding: 1rem 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
 }
 
 .badge {
     font-size: 0.8em;
     padding: 0.5em 0.8em;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.table-borderless th {
+    font-weight: 600;
+    color: #495057;
+    padding: 0.75rem 0.5rem;
+    border: none;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+}
+
+.table-borderless td {
+    padding: 0.75rem 0.5rem;
+    border: none;
+    vertical-align: middle;
+}
+
+.table-borderless tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: 6px;
+}
+
+.info-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.info-card h6 {
+    color: white;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.info-card p {
+    margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.info-card strong {
+    color: white;
+    font-weight: 600;
 }
 </style>
 {% endblock %}
@@ -58,7 +116,7 @@
 
     <div class="row">
         <!-- معلومات الطلب -->
-        <div class="col-lg-8">
+        <div class="col-lg-6">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">
@@ -86,6 +144,27 @@
                                     <th class="bg-dark text-white">عنوان العميل</th>
                                     <td>{% if installation.order.customer.address %}{{ installation.order.customer.address }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
                                 </tr>
+                                <tr>
+                                    <th>نوع المكان:</th>
+                                    <td>
+                                        {% if installation.order.customer.location_type %}
+                                            {% if installation.order.customer.location_type == 'open' %}
+                                                <span class="badge badge-success" style="background-color: #28a745; color: #fff;">
+                                                    <i class="fas fa-door-open"></i> مفتوح
+                                                </span>
+                                            {% elif installation.order.customer.location_type == 'compound' %}
+                                                <span class="badge badge-info" style="background-color: #17a2b8; color: #fff;">
+                                                    <i class="fas fa-building"></i> كومبوند
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">غير محدد</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+
                             </table>
                         </div>
                         <div class="col-md-6">
@@ -93,24 +172,42 @@
                                 <tr>
                                     <th>حالة التركيب:</th>
                                     <td>
-                                        {% if installation.status == 'pending' %}
-                                            <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">في الانتظار</span>
+                                        {% if installation.status == 'needs_scheduling' %}
+                                            <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">
+                                                <i class="fas fa-calendar-plus"></i> بحاجة جدولة
+                                            </span>
                                         {% elif installation.status == 'scheduled' %}
-                                            <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">مجدول</span>
-                                        {% elif installation.status == 'in_progress' %}
-                                            <span class="badge badge-primary" style="background-color: #007bff; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">قيد التنفيذ</span>
+                                            <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">
+                                                <i class="fas fa-calendar-check"></i> مجدول
+                                            </span>
+                                        {% elif installation.status == 'in_installation' %}
+                                            <span class="badge badge-primary" style="background-color: #007bff; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">
+                                                <i class="fas fa-tools"></i> قيد التركيب
+                                            </span>
                                         {% elif installation.status == 'completed' %}
-                                            <span class="badge badge-success" style="background-color: #28a745; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">مكتمل</span>
+                                            <span class="badge badge-success" style="background-color: #28a745; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">
+                                                <i class="fas fa-check-circle"></i> مكتمل
+                                            </span>
                                         {% elif installation.status == 'cancelled' %}
-                                            <span class="badge badge-danger" style="background-color: #dc3545; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">ملغي</span>
+                                            <span class="badge badge-danger" style="background-color: #dc3545; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">
+                                                <i class="fas fa-times-circle"></i> ملغي
+                                            </span>
                                         {% elif installation.status == 'modification_required' %}
-                                            <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">يحتاج تعديل</span>
+                                            <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">
+                                                <i class="fas fa-exclamation-triangle"></i> يحتاج تعديل
+                                            </span>
                                         {% elif installation.status == 'modification_in_progress' %}
-                                            <span class="badge badge-info" style="background-color: #6f42c1; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">التعديل قيد التنفيذ</span>
+                                            <span class="badge badge-info" style="background-color: #6f42c1; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">
+                                                <i class="fas fa-cogs"></i> التعديل قيد التنفيذ
+                                            </span>
                                         {% elif installation.status == 'modification_completed' %}
-                                            <span class="badge badge-success" style="background-color: #20c997; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">التعديل مكتمل</span>
+                                            <span class="badge badge-success" style="background-color: #20c997; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">
+                                                <i class="fas fa-check-circle"></i> التعديل مكتمل
+                                            </span>
                                         {% else %}
-                                            <span class="badge badge-secondary" style="background-color: #6c757d; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">{{ installation.get_status_display }}</span>
+                                            <span class="badge badge-secondary" style="background-color: #6c757d; color: #fff; font-weight: bold; padding: 8px 12px; font-size: 0.9em;">
+                                                {{ installation.get_status_display }}
+                                            </span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -123,10 +220,21 @@
                                     <td>
                                         {% if installation.get_installation_date %}
                                             {{ installation.get_installation_date|date:"d/m/Y" }}
+                                            {% if installation.scheduled_time %}
+                                                <br><small class="text-muted">{{ installation.scheduled_time|time:"H:i" }}</small>
+                                            {% endif %}
+                                            
+                                            {% if installation.notes and "--- ملاحظة تغيير التاريخ ---" in installation.notes %}
+                                                <br><small class="text-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                    تم تغيير التاريخ تلقائياً
+                                                </small>
+                                            {% endif %}
                                         {% else %}
                                             <span class="text-muted">غير محدد</span>
                                         {% endif %}
                                     </td>
+                                </tr>
                                 <tr>
                                     <th>موعد التركيب:</th>
                                     <td>{{ installation.scheduled_time|time:"H:i"|default:"غير محدد" }}</td>
@@ -138,7 +246,16 @@
                     {% if installation.notes %}
                     <div class="mt-3">
                         <h6>ملاحظات:</h6>
-                        <p class="text-muted">{{ installation.notes }}</p>
+                        {% if "--- ملاحظة تغيير التاريخ ---" in installation.notes %}
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-calendar-alt"></i> ملاحظة تغيير التاريخ:</h6>
+                                <div style="white-space: pre-line; font-family: monospace; background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                                    {{ installation.notes }}
+                                </div>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">{{ installation.notes }}</p>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
@@ -168,17 +285,102 @@
                                     <th>تاريخ الطلب:</th>
                                     <td>{{ installation.order.created_at|date:"d/m/Y" }}</td>
                                 </tr>
+                                <tr>
+                                    <th>البائع:</th>
+                                    <td>{{ installation.order.salesperson.name|default:"غير محدد" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>رقم العقد:</th>
+                                    <td>{{ installation.order.contract_number|default:"غير محدد" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>رقم الفاتورة:</th>
+                                    <td>{{ installation.order.invoice_number|default:"غير محدد" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>الفرع:</th>
+                                    <td>{{ installation.order.branch.name|default:"غير محدد" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>فني المعاينة:</th>
+                                    <td>
+                                        {% if installation.order.related_inspection and installation.order.related_inspection.inspector %}
+                                            {{ installation.order.related_inspection.inspector.get_full_name|default:"غير محدد" }}
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
                             </table>
                         </div>
                         <div class="col-md-6">
                             {% if installation.order.contract_file %}
-                            <div class="text-center">
+                            <div class="text-center mb-3">
                                 <h6>ملف العقد:</h6>
+                                <div class="mb-2">
+                                    <strong>رقم العقد:</strong> {{ installation.order.contract_number|default:"غير محدد" }}
+                                </div>
                                 <a href="{{ installation.order.contract_file.url }}"
                                    class="btn btn-outline-primary" target="_blank">
                                     <i class="fas fa-file-pdf"></i> عرض العقد
                                 </a>
                             </div>
+                            {% endif %}
+                            
+                            <!-- معلومات المعاينة -->
+                            {% if installation.order.related_inspection and installation.order.related_inspection.inspection_file %}
+                                <div class="text-center">
+                                    <h6>ملف المعاينة:</h6>
+                                    <div class="mb-2">
+                                        <strong>نوع المعاينة:</strong> 
+                                        {% if installation.order.related_inspection_type == 'customer_side' %}
+                                            <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                                <i class="fas fa-user"></i> طرف العميل
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                                <i class="fas fa-search"></i> معاينة فعلية
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <a href="{{ installation.order.related_inspection.inspection_file.url }}"
+                                       class="btn btn-outline-info" target="_blank">
+                                        <i class="fas fa-file-alt"></i> عرض المعاينة
+                                    </a>
+                                </div>
+                            {% elif installation.order.related_inspection and installation.order.related_inspection.google_drive_file_url %}
+                                <div class="text-center">
+                                    <h6>ملف المعاينة (Google Drive):</h6>
+                                    <div class="mb-2">
+                                        <strong>نوع المعاينة:</strong> 
+                                        {% if installation.order.related_inspection_type == 'customer_side' %}
+                                            <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                                <i class="fas fa-user"></i> طرف العميل
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                                <i class="fas fa-search"></i> معاينة فعلية
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <a href="{{ installation.order.related_inspection.google_drive_file_url }}"
+                                       class="btn btn-outline-info" target="_blank">
+                                        <i class="fab fa-google-drive"></i> عرض المعاينة
+                                    </a>
+                                    <small class="text-muted d-block mt-1">
+                                        {{ installation.order.related_inspection.google_drive_file_name|default:"ملف المعاينة" }}
+                                    </small>
+                                </div>
+                            {% elif installation.order.related_inspection_type == 'customer_side' %}
+                                <div class="text-center">
+                                    <h6>معاينة طرف العميل:</h6>
+                                    <div class="mb-2">
+                                        <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                            <i class="fas fa-user"></i> طرف العميل
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">لا يوجد ملف معاينة مرفوع</small>
+                                </div>
                             {% endif %}
                         </div>
                     </div>
@@ -218,11 +420,11 @@
                                                     <th>نوع المعاينة:</th>
                                                     <td>
                                                         {% if inspection_type == 'customer_side' %}
-                                                            <span class="badge badge-warning">
+                                                            <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
                                                                 <i class="fas fa-user"></i> طرف العميل
                                                             </span>
                                                         {% else %}
-                                                            <span class="badge badge-info">
+                                                            <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
                                                                 <i class="fas fa-search"></i> معاينة فعلية
                                                             </span>
                                                         {% endif %}
@@ -236,13 +438,21 @@
                                                     <th>حالة المعاينة:</th>
                                                     <td>
                                                         {% if related_inspection.status == 'pending' %}
-                                                            <span class="badge badge-warning">قيد الانتظار</span>
+                                                            <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                                                <i class="fas fa-clock"></i> قيد الانتظار
+                                                            </span>
                                                         {% elif related_inspection.status == 'scheduled' %}
-                                                            <span class="badge badge-info">مجدولة</span>
+                                                            <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                                                <i class="fas fa-calendar-check"></i> مجدولة
+                                                            </span>
                                                         {% elif related_inspection.status == 'completed' %}
-                                                            <span class="badge badge-success">مكتملة</span>
+                                                            <span class="badge badge-success" style="background-color: #28a745; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                                                <i class="fas fa-check-circle"></i> مكتملة
+                                                            </span>
                                                         {% elif related_inspection.status == 'cancelled' %}
-                                                            <span class="badge badge-danger">ملغية</span>
+                                                            <span class="badge badge-danger" style="background-color: #dc3545; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                                                <i class="fas fa-times-circle"></i> ملغية
+                                                            </span>
                                                         {% endif %}
                                                     </td>
                                                 </tr>
@@ -291,7 +501,7 @@
         </div>
 
         <!-- الإجراءات السريعة -->
-        <div class="col-lg-4">
+        <div class="col-lg-6">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">
@@ -306,9 +516,9 @@
                                 <label for="status-select" class="form-label">تحديث الحالة:</label>
                                 <select id="status-select" class="form-control" onchange="updateInstallationStatus('{{ installation.id }}', this.value)">
                                     <option value="">اختر الحالة الجديدة</option>
-                                    <option value="pending" {% if installation.status == 'pending' %}selected{% endif %}>في الانتظار</option>
+                                    <option value="needs_scheduling" {% if installation.status == 'needs_scheduling' %}selected{% endif %}>بحاجة جدولة</option>
                                     <option value="scheduled" {% if installation.status == 'scheduled' %}selected{% endif %}>مجدول</option>
-                                    <option value="in_progress" {% if installation.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
+                                    <option value="in_installation" {% if installation.status == 'in_installation' %}selected{% endif %}>قيد التركيب</option>
                                     <option value="completed" {% if installation.status == 'completed' %}selected{% endif %}>مكتمل</option>
                                     <option value="cancelled" {% if installation.status == 'cancelled' %}selected{% endif %}>ملغي</option>
                                     <option value="modification_required" {% if installation.status == 'modification_required' %}selected{% endif %}>يحتاج تعديل</option>
@@ -327,7 +537,7 @@
 
 
 
-                            {% if installation.status == 'pending' %}
+                            {% if installation.status == 'needs_scheduling' %}
                                 <a href="{% url 'installations:schedule_installation' installation.id %}"
                                    class="btn btn-success">
                                     <i class="fas fa-calendar-plus"></i> جدولة التركيب
@@ -337,12 +547,12 @@
                             {% if installation.status == 'scheduled' %}
                                 <button type="button" class="btn btn-primary update-status"
                                         data-installation-id="{{ installation.id }}"
-                                        data-status="in_progress">
+                                        data-status="in_installation">
                                     <i class="fas fa-play"></i> بدء التركيب
                                 </button>
                             {% endif %}
 
-                            {% if installation.status == 'in_progress' %}
+                            {% if installation.status == 'in_installation' %}
                                 <a href="{% url 'installations:change_installation_status' installation.id %}"
                                    class="btn btn-success">
                                     <i class="fas fa-check"></i> إكمال التركيب
@@ -518,9 +728,13 @@
                                     <th>توقيع العميل:</th>
                                     <td>
                                         {% if receipt_memo.customer_signature %}
-                                            <span class="badge badge-success">نعم</span>
+                                            <span class="badge badge-success" style="background-color: #28a745; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                                <i class="fas fa-check"></i> نعم
+                                            </span>
                                         {% else %}
-                                            <span class="badge badge-warning">لا</span>
+                                            <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                                <i class="fas fa-times"></i> لا
+                                            </span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -558,62 +772,194 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // تحديث حالة التركيب عبر القائمة المنسدلة
 function updateInstallationStatus(installationId, newStatus) {
     if (!newStatus) return; // إذا لم يتم اختيار حالة
 
-    if (confirm('هل أنت متأكد من تحديث حالة التركيب؟')) {
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    Swal.fire({
+        title: 'تأكيد تحديث الحالة',
+        text: 'هل أنت متأكد من تحديث حالة التركيب؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، تحديث',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            // إنشاء FormData
+            const formData = new FormData();
+            formData.append('status', newStatus);
 
-        fetch(`/installations/installation/${installationId}/update-status/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `status=${newStatus}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('حدث خطأ أثناء تحديث الحالة');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('حدث خطأ أثناء تحديث الحالة');
-        });
-    }
-}
-
-// تحديث حالة التركيب
-document.querySelectorAll('.update-status').forEach(button => {
-    button.addEventListener('click', function() {
-        const installationId = this.dataset.installationId;
-        const newStatus = this.dataset.status;
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-        if (confirm('هل أنت متأكد من تحديث حالة التركيب؟')) {
             fetch(`/installations/installation/${installationId}/update-status/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `status=${newStatus}`
+                body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
-                    location.reload();
+                    // إظهار رسالة نجاح جميلة
+                    Swal.fire({
+                        title: 'تم التحديث بنجاح!',
+                        text: data.message || 'تم تحديث الحالة بنجاح',
+                        icon: 'success',
+                        confirmButtonText: 'حسناً',
+                        confirmButtonColor: '#28a745',
+                        timer: 2000,
+                        timerProgressBar: true
+                    }).then(() => {
+                        // إعادة تحميل الصفحة
+                        location.reload();
+                    });
                 } else {
-                    alert('حدث خطأ أثناء تحديث الحالة');
+                    // إظهار رسالة خطأ
+                    Swal.fire({
+                        title: 'خطأ في التحديث',
+                        text: data.error || 'حدث خطأ أثناء تحديث الحالة',
+                        icon: 'error',
+                        confirmButtonText: 'حسناً',
+                        confirmButtonColor: '#dc3545'
+                    });
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'خطأ في التحديث',
+                    text: 'حدث خطأ أثناء تحديث الحالة: ' + error.message,
+                    icon: 'error',
+                    confirmButtonText: 'حسناً',
+                    confirmButtonColor: '#dc3545'
+                });
             });
         }
+    });
+}
+
+// تحديث حالة التركيب
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.update-status').forEach(button => {
+        button.addEventListener('click', function() {
+            const installationId = this.dataset.installationId;
+            const newStatus = this.dataset.status;
+            
+            if (!installationId || !newStatus) {
+                Swal.fire({
+                    title: 'خطأ في البيانات',
+                    text: 'بيانات غير صحيحة',
+                    icon: 'error',
+                    confirmButtonText: 'حسناً',
+                    confirmButtonColor: '#dc3545'
+                });
+                return;
+            }
+            
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            if (!csrfToken) {
+                Swal.fire({
+                    title: 'خطأ في الأمان',
+                    text: 'خطأ في الحصول على رمز الأمان',
+                    icon: 'error',
+                    confirmButtonText: 'حسناً',
+                    confirmButtonColor: '#dc3545'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'تأكيد تحديث الحالة',
+                text: 'هل أنت متأكد من تحديث حالة التركيب؟',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، تحديث',
+                cancelButtonText: 'إلغاء',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // إظهار مؤشر التحميل
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+                    this.disabled = true;
+                    
+                    // إنشاء FormData
+                    const formData = new FormData();
+                    formData.append('status', newStatus);
+                    
+                    fetch(`/installations/installation/${installationId}/update-status/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                        },
+                        body: formData
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // إظهار رسالة نجاح جميلة
+                            Swal.fire({
+                                title: 'تم التحديث بنجاح!',
+                                text: data.message || 'تم تحديث الحالة بنجاح',
+                                icon: 'success',
+                                confirmButtonText: 'حسناً',
+                                confirmButtonColor: '#28a745',
+                                timer: 2000,
+                                timerProgressBar: true
+                            }).then(() => {
+                                // إعادة تحميل الصفحة
+                                location.reload();
+                            });
+                        } else {
+                            // إظهار رسالة خطأ
+                            Swal.fire({
+                                title: 'خطأ في التحديث',
+                                text: data.error || 'حدث خطأ أثناء تحديث الحالة',
+                                icon: 'error',
+                                confirmButtonText: 'حسناً',
+                                confirmButtonColor: '#dc3545'
+                            });
+                            // إعادة تعيين الزر
+                            this.innerHTML = originalText;
+                            this.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire({
+                            title: 'خطأ في التحديث',
+                            text: 'حدث خطأ أثناء تحديث الحالة: ' + error.message,
+                            icon: 'error',
+                            confirmButtonText: 'حسناً',
+                            confirmButtonColor: '#dc3545'
+                        });
+                        // إعادة تعيين الزر
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                    });
+                }
+            });
+        });
     });
 });
 </script>

@@ -109,6 +109,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // التحقق من قائمة التحقق
 function checkAllCompleted() {
@@ -132,9 +134,22 @@ document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
 
 // تأكيد الإكمال
 document.getElementById('complete-form').addEventListener('submit', function(e) {
-    if (!confirm('هل أنت متأكد من إكمال التركيب؟ هذا الإجراء لا يمكن التراجع عنه.')) {
-        e.preventDefault();
-    }
+    e.preventDefault();
+    Swal.fire({
+        title: 'تأكيد إكمال التركيب',
+        text: 'هل أنت متأكد من إكمال التركيب؟ هذا الإجراء لا يمكن التراجع عنه.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، إكمال التركيب',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            this.submit();
+        }
+    });
 });
 </script>
 {% endblock %} 

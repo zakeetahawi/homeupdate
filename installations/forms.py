@@ -8,6 +8,7 @@ from .models import (
     ModificationReport, ReceiptMemo, InstallationPayment, CustomerDebt,
     InstallationAnalytics, ModificationErrorAnalysis, InstallationSchedulingSettings
 )
+from accounts.models import Salesperson, Branch
 
 
 class InstallationStatusForm(forms.ModelForm):
@@ -256,11 +257,25 @@ class InstallationScheduleForm(forms.ModelForm):
         help_text=_('اختر موعد التركيب'),
         required=False
     )
+    windows_count = forms.IntegerField(
+        label=_('عدد الشبابيك'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '1',
+            'placeholder': 'أدخل عدد الشبابيك'
+        }),
+        required=False,
+        help_text=_('عدد الشبابيك المطلوبة للتركيب')
+    )
 
     class Meta:
         model = InstallationSchedule
-        fields = ['team', 'scheduled_date', 'scheduled_time', 'notes']
+        fields = ['team', 'scheduled_date', 'scheduled_time', 'location_type', 'notes']
         widgets = {
+            'location_type': forms.Select(attrs={
+                'class': 'form-control',
+                'placeholder': 'اختر نوع المكان'
+            }),
             'notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'أضف ملاحظات هنا...'}),
         }
 
@@ -303,11 +318,48 @@ class QuickScheduleForm(forms.ModelForm):
         required=True,
         help_text=_('اختر موعد التركيب')
     )
+    location_address = forms.CharField(
+        label=_('عنوان التركيب'),
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'سيتم جلب العنوان من معلومات العميل'
+        }),
+        required=False,
+        help_text=_('عنوان التركيب (سيتم جلبه من معلومات العميل)')
+    )
+    
+    def __init__(self, *args, **kwargs):
+        order = kwargs.pop('order', None)
+        super().__init__(*args, **kwargs)
+        
+        if order and order.customer:
+            # تعيين العنوان الافتراضي من معلومات العميل
+            customer_address = order.customer.address or ''
+            customer_location_type = getattr(order.customer, 'location_type', '') or ''
+            
+            # إضافة نوع المكان إلى العنوان إذا كان متوفراً
+            if customer_location_type:
+                location_type_display = dict(order.customer._meta.get_field('location_type').choices).get(customer_location_type, '')
+                if location_type_display:
+                    customer_address = f"{customer_address}\nنوع المكان: {location_type_display}"
+            
+            self.fields['location_address'].initial = customer_address
+            self.fields['location_type'].initial = customer_location_type
 
     class Meta:
         model = InstallationSchedule
-        fields = ['team', 'scheduled_date', 'scheduled_time', 'notes']
+        fields = ['team', 'scheduled_date', 'scheduled_time', 'location_type', 'location_address', 'notes']
         widgets = {
+            'location_type': forms.Select(attrs={
+                'class': 'form-control',
+                'placeholder': 'اختر نوع المكان'
+            }),
+            'location_address': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'أدخل عنوان التركيب بالتفصيل'
+            }),
             'notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'أضف ملاحظات هنا...'}),
         }
 
@@ -495,10 +547,10 @@ class InstallationFilterForm(forms.Form):
 
 
 class DailyScheduleForm(forms.Form):
-    """نموذج الجدول اليومي"""
+    """نموذج الجدول اليومي المحسن"""
     date = forms.DateField(
         label=_('التاريخ'),
-        widget=forms.DateInput(attrs={'type': 'date'}),
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         initial=timezone.now().date()
     )
     
@@ -506,7 +558,50 @@ class DailyScheduleForm(forms.Form):
         queryset=InstallationTeam.objects.filter(is_active=True),
         required=False,
         label=_('الفريق'),
-        empty_label=_('جميع الفرق')
+        empty_label=_('جميع الفرق'),
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    status = forms.ChoiceField(
+        choices=[
+            ('', _('جميع الحالات')),
+            ('scheduled', _('مجدول')),
+            ('in_installation', _('قيد التركيب')),
+            ('in_progress', _('قيد التنفيذ')),
+            ('completed', _('مكتمل')),
+            ('cancelled', _('ملغي')),
+            ('modification_required', _('يحتاج تعديل')),
+            ('modification_in_progress', _('التعديل قيد التنفيذ')),
+            ('modification_completed', _('التعديل مكتمل')),
+        ],
+        required=False,
+        label=_('حالة التركيب'),
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    salesperson = forms.ModelChoiceField(
+        queryset=Salesperson.objects.filter(is_active=True),
+        required=False,
+        label=_('البائع'),
+        empty_label=_('جميع البائعين'),
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    branch = forms.ModelChoiceField(
+        queryset=Branch.objects.filter(is_active=True),
+        required=False,
+        label=_('الفرع'),
+        empty_label=_('جميع الفروع'),
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    search = forms.CharField(
+        required=False,
+        label=_('بحث'),
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'بحث في أرقام الطلبات أو أسماء العملاء...'
+        })
     )
 
 
@@ -636,7 +731,7 @@ class ScheduleEditForm(forms.ModelForm):
     
     class Meta:
         model = InstallationSchedule
-        fields = ['team', 'scheduled_date', 'scheduled_time', 'notes']
+        fields = ['team', 'scheduled_date', 'scheduled_time', 'location_type', 'notes']
         widgets = {
             'team': forms.Select(attrs={'class': 'form-control'}),
             'scheduled_date': forms.DateInput(attrs={
@@ -646,6 +741,10 @@ class ScheduleEditForm(forms.ModelForm):
             'scheduled_time': forms.TimeInput(attrs={
                 'class': 'form-control',
                 'type': 'time'
+            }),
+            'location_type': forms.Select(attrs={
+                'class': 'form-control',
+                'placeholder': 'اختر نوع المكان'
             }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',

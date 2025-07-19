@@ -219,15 +219,7 @@ def payment_post_save(sender, instance, created, **kwargs):
         Order.objects.filter(pk=order.pk).update(paid_amount=paid_amount)
 
 # إشارات تحديث حالة الطلب من الأقسام الأخرى
-@receiver(post_save, sender='installations.InstallationSchedule')
-def update_order_installation_status(sender, instance, created, **kwargs):
-    """تحديث حالة الطلب عند تغيير حالة التركيب"""
-    try:
-        order = instance.order
-        order.update_installation_status()
-        order.update_completion_status()
-    except Exception as e:
-        logger.error(f"خطأ في تحديث حالة التركيب للطلب {instance.order.id}: {str(e)}")
+# تم إزالة signal التركيب لتجنب الحلقة اللانهائية - يتم التعامل معه في orders/models.py
 
 @receiver(post_save, sender='inspections.Inspection')
 def update_order_inspection_status(sender, instance, created, **kwargs):

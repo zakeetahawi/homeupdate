@@ -2,6 +2,7 @@
 {% load i18n %}
 
 <div class="container-fluid">
+{% csrf_token %}
     <!-- الطلبات الجاهزة للتركيب -->
     <div class="card mb-4">
         <div class="card-header bg-warning text-white">
@@ -130,7 +131,7 @@
                             {% for installation in scheduled_installations %}
                                 <tr>
                                     <td>
-                                        <a href="{% url 'orders:order_detail' installation.order.id %}" class="text-primary font-weight-bold">
+                                        <a href="{% url 'installations:installation_detail' installation.id %}" class="text-primary font-weight-bold">
                                             {{ installation.order.order_number }}
                                         </a>
                                     </td>
@@ -172,10 +173,12 @@
                                                class="btn btn-info btn-sm">
                                                 <i class="fas fa-eye"></i> عرض
                                             </a>
-                                            <a href="{% url 'installations:update_status' installation.id %}" 
-                                               class="btn btn-success btn-sm">
+                                            <button type="button" 
+                                                    class="btn btn-success btn-sm update-status"
+                                                    data-installation-id="{{ installation.id }}"
+                                                    data-status="in_installation">
                                                 <i class="fas fa-play"></i> بدء التركيب
-                                            </a>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -222,7 +225,7 @@
                             {% for installation in in_progress_installations %}
                                 <tr>
                                     <td>
-                                        <a href="{% url 'orders:order_detail' installation.order.id %}" class="text-primary font-weight-bold">
+                                        <a href="{% url 'installations:installation_detail' installation.id %}" class="text-primary font-weight-bold">
                                             {{ installation.order.order_number }}
                                         </a>
                                     </td>
@@ -313,7 +316,7 @@
                             {% for installation in completed_installations %}
                                 <tr>
                                     <td>
-                                        <a href="{% url 'orders:order_detail' installation.order.id %}" class="text-primary font-weight-bold">
+                                        <a href="{% url 'installations:installation_detail' installation.id %}" class="text-primary font-weight-bold">
                                             {{ installation.order.order_number }}
                                         </a>
                                     </td>
@@ -369,4 +372,93 @@
             {% endif %}
         </div>
     </div>
-</div> 
+</div>
+
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// معالجة زر بدء التركيب
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.update-status').forEach(button => {
+        button.addEventListener('click', function() {
+            const installationId = this.dataset.installationId;
+            const newStatus = this.dataset.status;
+            
+            if (!installationId || !newStatus) {
+                Swal.fire('خطأ', 'بيانات غير صحيحة', 'error');
+                return;
+            }
+            
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            if (!csrfToken) {
+                Swal.fire('خطأ', 'خطأ في الحصول على رمز الأمان', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: 'تأكيد بدء التركيب',
+                text: 'هل أنت متأكد من بدء التركيب؟',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، بدء التركيب',
+                cancelButtonText: 'إلغاء',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                // إظهار مؤشر التحميل
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+                this.disabled = true;
+                
+                // إنشاء FormData
+                const formData = new FormData();
+                formData.append('status', newStatus);
+                
+                fetch(`/installations/installation/${installationId}/update-status/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // إظهار رسالة نجاح
+                        Swal.fire({
+                            title: 'تم بنجاح!',
+                            text: data.message || 'تم بدء التركيب بنجاح',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        // إظهار رسالة خطأ
+                        Swal.fire('خطأ', data.error || 'حدث خطأ أثناء بدء التركيب', 'error');
+                        // إعادة تعيين الزر
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('خطأ', 'حدث خطأ أثناء بدء التركيب: ' + error.message, 'error');
+                    // إعادة تعيين الزر
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                });
+            });
+        });
+    });
+});
+</script> 

@@ -126,6 +126,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // معاينة الصورة
 document.getElementById('{{ form.receipt_image.id_for_label }}').addEventListener('change', function() {
@@ -147,7 +149,7 @@ document.getElementById('{{ form.receipt_image.id_for_label }}').addEventListene
             };
             reader.readAsDataURL(file);
         } else {
-            alert('يرجى اختيار ملف صورة صالح');
+            Swal.fire('خطأ', 'يرجى اختيار ملف صورة صالح', 'error');
             this.value = '';
             preview.style.display = 'none';
         }
@@ -162,7 +164,7 @@ document.getElementById('{{ form.receipt_image.id_for_label }}').addEventListene
     const maxSize = 2 * 1024 * 1024; // 2MB
     
     if (file && file.size > maxSize) {
-        alert('حجم الصورة يجب أن يكون أقل من 2 ميجابايت');
+        Swal.fire('خطأ', 'حجم الصورة يجب أن يكون أقل من 2 ميجابايت', 'error');
         this.value = '';
         document.getElementById('image-preview').style.display = 'none';
     }

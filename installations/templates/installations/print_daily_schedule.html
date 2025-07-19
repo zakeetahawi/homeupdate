@@ -3,198 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الجدول اليومي - {{ date|date:"d/m/Y" }}</title>
+    <title>جدول التركيبات اليومي - {{ form.date.value|date:"d/m/Y" }}</title>
     <style>
-        @media print {
-            body { margin: 0; }
-            .no-print { display: none !important; }
+        @page {
+            size: landscape;
+            margin: 10mm;
         }
         
         body {
             font-family: 'Arial', sans-serif;
-            margin: 20px;
-            direction: rtl;
+            margin: 0;
+            padding: 0;
+            font-size: 12px;
+            line-height: 1.4;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             border-bottom: 2px solid #333;
-            padding-bottom: 20px;
+            padding-bottom: 10px;
         }
         
         .header h1 {
-            color: #333;
             margin: 0;
             font-size: 24px;
+            color: #333;
         }
         
-        .header .date {
-            color: #666;
+        .header h2 {
+            margin: 5px 0;
             font-size: 18px;
-            margin-top: 10px;
+            color: #666;
+        }
+        
+        .header p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #888;
+        }
+        
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-bottom: 20px;
+            font-size: 10px;
         }
         
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
-            text-align: right;
+            padding: 6px 4px;
+            text-align: center;
+            vertical-align: middle;
         }
         
         th {
             background-color: #f8f9fa;
             font-weight: bold;
+            color: #333;
         }
         
-        .status-scheduled {
-            background-color: #d1ecf1;
-            color: #0c5460;
+        .status-badge {
             padding: 2px 6px;
             border-radius: 3px;
+            font-size: 9px;
+            font-weight: bold;
         }
         
-        .status-in-progress {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 2px 6px;
-            border-radius: 3px;
+        .badge-info { background-color: #17a2b8; color: white; }
+        .badge-warning { background-color: #ffc107; color: black; }
+        .badge-primary { background-color: #007bff; color: white; }
+        .badge-success { background-color: #28a745; color: white; }
+        .badge-danger { background-color: #dc3545; color: white; }
+        .badge-secondary { background-color: #6c757d; color: white; }
+        
+        .customer-name {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .order-number {
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .time {
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .team-info {
+            font-size: 9px;
+            color: #666;
+        }
+        
+        .technician-info {
+            font-size: 8px;
+            color: #888;
         }
         
         .summary {
-            margin-top: 30px;
-            padding: 20px;
+            margin-top: 20px;
+            padding: 10px;
             background-color: #f8f9fa;
+            border: 1px solid #ddd;
             border-radius: 5px;
         }
         
         .summary h3 {
-            margin-top: 0;
+            margin: 0 0 10px 0;
+            font-size: 14px;
             color: #333;
         }
         
-        .team-info {
-            font-size: 12px;
+        .summary-stats {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+            margin: 5px;
+        }
+        
+        .stat-number {
+            font-size: 16px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 10px;
             color: #666;
         }
         
-        .no-print {
-            margin-bottom: 20px;
-        }
-        
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            margin: 2px;
-        }
-        
-        .btn-primary {
-            background-color: #007bff;
-            color: white;
-        }
-        
-        .btn-secondary {
-            background-color: #6c757d;
-            color: white;
+        @media print {
+            body { margin: 0; }
+            .table-container { page-break-inside: avoid; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
         }
     </style>
 </head>
 <body>
-    <div class="no-print">
-        <button onclick="window.print()" class="btn btn-primary">طباعة</button>
-        <a href="{% url 'installations:daily_schedule' %}" class="btn btn-secondary">العودة</a>
-    </div>
-
     <div class="header">
         <h1>جدول التركيبات اليومي</h1>
-        <div class="date">{{ date|date:"d/m/Y" }}</div>
+        <h2>{{ form.date.value|date:"d/m/Y" }}</h2>
+        <p>تاريخ الطباعة: {% now "d/m/Y H:i" %}</p>
     </div>
 
-    {% if installations %}
-    <table>
-        <thead>
-            <tr>
-                <th>الموعد</th>
-                <th>رقم الطلب</th>
-                <th>العميل</th>
-                <th>رقم الهاتف</th>
-                <th>العنوان</th>
-                <th>الفريق</th>
-                <th>الحالة</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for installation in installations %}
-            <tr>
-                <td><strong>{{ installation.scheduled_time|time:"H:i" }}</strong></td>
-                <td><strong>{{ installation.order.order_number }}</strong></td>
-                <td>{{ installation.order.customer.name }}</td>
-                <td>{{ installation.order.customer.phone }}</td>
-                <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
-                <td>
-                    {% if installation.team %}
-                        <strong>{{ installation.team.name }}</strong>
-                        <div class="team-info">
-                            {% if installation.team.driver %}
-                                السائق: {{ installation.team.driver.name }}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>الموعد</th>
+                    <th>رقم الطلب</th>
+                    <th>العميل</th>
+                    <th>رقم الهاتف</th>
+                    <th>البائع</th>
+                    <th>الفرع</th>
+                    <th>الفريق/الفني</th>
+                    <th>السائق</th>
+                    <th>نوع المكان</th>
+                    <th>عنوان العميل</th>
+                    <th>الحالة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for installation in installations %}
+                <tr>
+                    <td class="time">{{ installation.scheduled_time|time:"H:i" }}</td>
+                    <td class="order-number">{{ installation.order.order_number }}</td>
+                    <td class="customer-name">{{ installation.order.customer.name }}</td>
+                    <td>{{ installation.order.customer.phone }}</td>
+                    <td>{{ installation.order.salesperson.name|default:"غير محدد" }}</td>
+                    <td>{{ installation.order.branch.name|default:"غير محدد" }}</td>
+                    <td>
+                        {% if installation.team %}
+                            <div class="team-info">
+                                <strong>{{ installation.team.name }}</strong>
+                                {% for technician in installation.team.technicians.all %}
+                                    <div class="technician-info">فني: {{ technician.name }}</div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <span class="text-muted">غير محدد</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if installation.team.driver %}
+                            {{ installation.team.driver.name }}
+                        {% else %}
+                            <span class="text-muted">غير محدد</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if installation.location_type %}
+                            {% if installation.location_type == 'open' %}
+                                مفتوح
+                            {% elif installation.location_type == 'compound' %}
+                                كومبوند
+                            {% else %}
+                                غير محدد
                             {% endif %}
-                            {% for technician in installation.team.technicians.all %}
-                                <br>فني: {{ technician.name }}
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <span style="color: #999;">غير محدد</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if installation.status == 'scheduled' %}
-                        <span class="status-scheduled">مجدول</span>
-                    {% elif installation.status == 'in_progress' %}
-                        <span class="status-in-progress">قيد التنفيذ</span>
-                    {% else %}
-                        <span>{{ installation.get_status_display }}</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                        {% else %}
+                            غير محدد
+                        {% endif %}
+                    </td>
+                    <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
+                                                        <td>
+                                        {% if installation.status == 'scheduled' %}
+                                            <span class="status-badge badge-info" style="background-color: #17a2b8; color: #fff; font-weight: bold; padding: 2px 6px; font-size: 9px;">مجدول</span>
+                                        {% elif installation.status == 'in_installation' %}
+                                            <span class="status-badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 2px 6px; font-size: 9px;">قيد التركيب</span>
+                                        {% elif installation.status == 'in_progress' %}
+                                            <span class="status-badge badge-primary" style="background-color: #007bff; color: #fff; font-weight: bold; padding: 2px 6px; font-size: 9px;">قيد التنفيذ</span>
+                                        {% elif installation.status == 'completed' %}
+                                            <span class="status-badge badge-success" style="background-color: #28a745; color: #fff; font-weight: bold; padding: 2px 6px; font-size: 9px;">مكتمل</span>
+                                        {% elif installation.status == 'cancelled' %}
+                                            <span class="status-badge badge-danger" style="background-color: #dc3545; color: #fff; font-weight: bold; padding: 2px 6px; font-size: 9px;">ملغي</span>
+                                        {% else %}
+                                            <span class="status-badge badge-secondary" style="background-color: #6c757d; color: #fff; font-weight: bold; padding: 2px 6px; font-size: 9px;">{{ installation.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     <div class="summary">
         <h3>ملخص الجدول</h3>
-        <p><strong>إجمالي التركيبات:</strong> {{ installations.count }}</p>
-        <p><strong>مجدول:</strong> {{ installations|dictsort:"status"|length }}</p>
-        <p><strong>قيد التنفيذ:</strong> {{ installations|dictsort:"status"|length }}</p>
-        
-        {% if installations %}
-        <h4>الفرق المشاركة:</h4>
-        <ul>
-            {% for team in installations|dictsort:"team.name"|unique:"team.name" %}
-                {% if team %}
-                <li>{{ team.name }}</li>
-                {% endif %}
-            {% endfor %}
-        </ul>
-        {% endif %}
+        <div class="summary-stats">
+            <div class="stat-item">
+                <div class="stat-number">{{ installations.count }}</div>
+                <div class="stat-label">إجمالي التركيبات</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ installations|dictsort:"status"|length }}</div>
+                <div class="stat-label">مجدول</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ installations|dictsort:"status"|length }}</div>
+                <div class="stat-label">قيد التركيب</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ installations|dictsort:"status"|length }}</div>
+                <div class="stat-label">قيد التنفيذ</div>
+            </div>
+        </div>
     </div>
-    {% else %}
-    <div style="text-align: center; padding: 50px;">
-        <h3>لا توجد تركيبات مجدولة في هذا التاريخ</h3>
-        <p>لم يتم العثور على تركيبات في {{ date|date:"d/m/Y" }}</p>
-    </div>
-    {% endif %}
 
-    <div style="margin-top: 50px; text-align: center; font-size: 12px; color: #666;">
-        <p>تم إنشاء هذا التقرير في {{ "now"|date:"d/m/Y H:i" }}</p>
-    </div>
+    <script>
+        // طباعة تلقائية عند تحميل الصفحة
+        window.onload = function() {
+            window.print();
+        };
+    </script>
 </body>
 </html> 
