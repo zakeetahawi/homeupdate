@@ -464,22 +464,34 @@ def salesperson_list(request):
 @permission_required('orders.change_order', raise_exception=True)
 def update_order_status(request, order_id):
     """
-    View for updating order status
+    View for updating order status with detailed logging
     """
     order = get_object_or_404(Order, pk=order_id)
 
     if request.method == 'POST':
         new_status = request.POST.get('status')
-        if new_status and new_status in dict(Order.STATUS_CHOICES).keys():
+        notes = request.POST.get('notes', '')
+        
+        if new_status and new_status in dict(Order.TRACKING_STATUS_CHOICES).keys():
             try:
-                # التأكد من أن الطلب له مفتاح أساسي
-                if not order.pk:
-                    messages.error(request, 'لا يمكن تحديث حالة الطلب: الطلب ليس له مفتاح أساسي')
-                    return redirect('orders:order_detail', pk=order_id)
-
-                order.status = new_status
+                # حفظ الحالة القديمة
+                old_status = order.tracking_status
+                
+                # تحديث الحالة
+                order.tracking_status = new_status
                 order.save()
-                messages.success(request, 'تم تحديث حالة الطلب بنجاح.')
+                
+                # تسجيل تغيير الحالة في السجل
+                from .models import OrderStatusLog
+                OrderStatusLog.objects.create(
+                    order=order,
+                    old_status=old_status,
+                    new_status=new_status,
+                    changed_by=request.user,
+                    notes=notes
+                )
+                
+                messages.success(request, f'تم تحديث حالة الطلب بنجاح من "{dict(Order.TRACKING_STATUS_CHOICES).get(old_status, old_status)}" إلى "{dict(Order.TRACKING_STATUS_CHOICES).get(new_status, new_status)}"')
             except Exception as e:
                 messages.error(request, f'حدث خطأ أثناء تحديث حالة الطلب: {str(e)}')
         else:
