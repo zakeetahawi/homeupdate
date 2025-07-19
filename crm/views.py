@@ -44,6 +44,7 @@ def admin_dashboard(request):
     selected_year = request.GET.get('year', timezone.now().year)
     comparison_month = request.GET.get('comparison_month', '')
     comparison_year = request.GET.get('comparison_year', '')
+    comparison_type = request.GET.get('comparison_type', 'month')  # 'month' or 'year'
     
     # تحويل المعاملات إلى أرقام
     try:
@@ -60,11 +61,15 @@ def admin_dashboard(request):
         comparison_year = ''
     
     # تحديد الفترة الزمنية
-    start_date = datetime(selected_year, selected_month, 1)
-    if selected_month == 12:
-        end_date = datetime(selected_year + 1, 1, 1) - timedelta(days=1)
-    else:
-        end_date = datetime(selected_year, selected_month + 1, 1) - timedelta(days=1)
+    if selected_month == 'year':  # إذا تم اختيار سنة كاملة
+        start_date = datetime(selected_year, 1, 1)
+        end_date = datetime(selected_year, 12, 31)
+    else:  # إذا تم اختيار شهر محدد
+        start_date = datetime(selected_year, selected_month, 1)
+        if selected_month == 12:
+            end_date = datetime(selected_year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = datetime(selected_year, selected_month + 1, 1) - timedelta(days=1)
     
     # فلترة البيانات حسب الفرع
     branch_filter = {}
@@ -89,22 +94,30 @@ def admin_dashboard(request):
     # إحصائيات المخزون
     inventory_stats = get_inventory_statistics(selected_branch)
     
-    # مقارنة مع الشهر السابق إذا تم تحديده
+    # مقارنة مع الفترة المحددة إذا تم تحديدها
     comparison_data = {}
-    if comparison_month and comparison_year:
-        comp_start_date = datetime(comparison_year, comparison_month, 1)
-        if comparison_month == 12:
-            comp_end_date = datetime(comparison_year + 1, 1, 1) - timedelta(days=1)
+    if comparison_year:
+        if comparison_type == 'year':  # مقارنة سنة كاملة
+            comp_start_date = datetime(comparison_year, 1, 1)
+            comp_end_date = datetime(comparison_year, 12, 31)
+        elif comparison_month and comparison_month != 'year':  # مقارنة شهر محدد
+            comp_start_date = datetime(comparison_year, comparison_month, 1)
+            if comparison_month == 12:
+                comp_end_date = datetime(comparison_year + 1, 1, 1) - timedelta(days=1)
+            else:
+                comp_end_date = datetime(comparison_year, comparison_month + 1, 1) - timedelta(days=1)
         else:
-            comp_end_date = datetime(comparison_year, comparison_month + 1, 1) - timedelta(days=1)
+            comp_start_date = None
+            comp_end_date = None
         
-        comparison_data = {
-            'customers': get_customers_statistics(selected_branch, comp_start_date, comp_end_date),
-            'orders': get_orders_statistics(selected_branch, comp_start_date, comp_end_date),
-            'manufacturing': get_manufacturing_statistics(selected_branch, comp_start_date, comp_end_date),
-            'inspections': get_inspections_statistics(selected_branch, comp_start_date, comp_end_date),
-            'installations': get_installations_statistics(selected_branch, comp_start_date, comp_end_date),
-        }
+        if comp_start_date and comp_end_date:
+            comparison_data = {
+                'customers': get_customers_statistics(selected_branch, comp_start_date, comp_end_date),
+                'orders': get_orders_statistics(selected_branch, comp_start_date, comp_end_date),
+                'manufacturing': get_manufacturing_statistics(selected_branch, comp_start_date, comp_end_date),
+                'inspections': get_inspections_statistics(selected_branch, comp_start_date, comp_end_date),
+                'installations': get_installations_statistics(selected_branch, comp_start_date, comp_end_date),
+            }
     
     # البيانات للرسوم البيانية
     chart_data = get_chart_data(selected_branch, selected_year)
@@ -151,6 +164,7 @@ def admin_dashboard(request):
         'selected_year': selected_year,
         'comparison_month': comparison_month,
         'comparison_year': comparison_year,
+        'comparison_type': comparison_type,
         'start_date': start_date,
         'end_date': end_date,
         'timezone': timezone,

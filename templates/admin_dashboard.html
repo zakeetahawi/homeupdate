@@ -237,7 +237,12 @@
             داش بورد الإدارة
         </h1>
         <p class="dashboard-subtitle">
-            تحليلات شاملة لجميع أقسام النظام - {{ selected_month|default:timezone.now.month }}/{{ selected_year|default:timezone.now.year }}
+            تحليلات شاملة لجميع أقسام النظام - 
+            {% if selected_month == 'year' %}
+                سنة {{ selected_year|default:timezone.now.year }}
+            {% else %}
+                {{ selected_month|default:timezone.now.month }}/{{ selected_year|default:timezone.now.year }}
+            {% endif %}
         </p>
     </div>
 
@@ -261,8 +266,9 @@
             </div>
             
             <div class="filter-group">
-                <label class="filter-label">الشهر:</label>
-                <select name="month" class="filter-select">
+                <label class="filter-label">الفترة:</label>
+                <select name="month" class="filter-select" id="period-select">
+                    <option value="year" {% if selected_month == 'year' %}selected{% endif %}>السنة الكاملة</option>
                     {% for month_num, month_name in months %}
                         <option value="{{ month_num }}" {% if selected_month == month_num %}selected{% endif %}>
                             {{ month_name }}
@@ -283,6 +289,14 @@
             </div>
             
             <div class="filter-group">
+                <label class="filter-label">نوع المقارنة:</label>
+                <select name="comparison_type" class="filter-select" id="comparison-type-select">
+                    <option value="month" {% if comparison_type == 'month' %}selected{% endif %}>مقارنة شهرية</option>
+                    <option value="year" {% if comparison_type == 'year' %}selected{% endif %}>مقارنة سنوية</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" id="comparison-month-group">
                 <label class="filter-label">مقارنة مع الشهر:</label>
                 <select name="comparison_month" class="filter-select">
                     <option value="">بدون مقارنة</option>
@@ -560,7 +574,11 @@
     <div class="comparison-card">
         <h4 class="mb-3">
             <i class="fas fa-chart-bar me-2"></i>
-            مقارنة مع {{ comparison_month }}/{{ comparison_year }}
+            {% if comparison_type == 'year' %}
+                مقارنة مع سنة {{ comparison_year }}
+            {% else %}
+                مقارنة مع {{ comparison_month }}/{{ comparison_year }}
+            {% endif %}
         </h4>
         <div class="row">
             <div class="col-md-3 mb-3">
@@ -706,6 +724,26 @@ const customersChart = new Chart(customersCtx, {
             }
         }
     }
+});
+
+// Comparison Type Control
+document.addEventListener('DOMContentLoaded', function() {
+    const comparisonTypeSelect = document.getElementById('comparison-type-select');
+    const comparisonMonthGroup = document.getElementById('comparison-month-group');
+    
+    function toggleComparisonMonth() {
+        if (comparisonTypeSelect.value === 'year') {
+            comparisonMonthGroup.style.display = 'none';
+        } else {
+            comparisonMonthGroup.style.display = 'block';
+        }
+    }
+    
+    // Initial state
+    toggleComparisonMonth();
+    
+    // Listen for changes
+    comparisonTypeSelect.addEventListener('change', toggleComparisonMonth);
 });
 </script>
 {% endblock %} 
