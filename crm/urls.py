@@ -22,6 +22,7 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     # المسارات الأساسية
     path('', views.home, name='home'),
+    path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('about/', views.about, name='about'),
     path('contact/', views.contact, name='contact'),
 
