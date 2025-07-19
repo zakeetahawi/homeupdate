@@ -63,7 +63,8 @@ def dashboard(request):
     # البحث عن أوامر التصنيع الجاهزة للتركيب بناءً على الطلب الأصلي
     manufacturing_orders_ready = ManufacturingOrder.objects.filter(
         status='ready_install',
-        order__selected_types__icontains='installation'
+        order__selected_types__icontains='installation',
+        order__installationschedule__isnull=True  # التأكد من عدم وجود جدولة تركيب
     ).count()
 
     # إجمالي الطلبات الجاهزة للتركيب
@@ -255,6 +256,341 @@ def change_installation_status(request, installation_id):
     return render(request, 'installations/change_status.html', context)
 
 
+@login_required
+def installation_list(request):
+    """قائمة التركيبات"""
+    installations = InstallationSchedule.objects.select_related(
+        'order', 'order__customer', 'team'
+    ).order_by('-created_at')
+
+    # تطبيق الفلاتر
+    filter_form = InstallationFilterForm(request.GET)
+    if filter_form.is_valid():
+        status = filter_form.cleaned_data.get('status')
+        team = filter_form.cleaned_data.get('team')
+        date_from = filter_form.cleaned_data.get('date_from')
+        date_to = filter_form.cleaned_data.get('date_to')
+        search = filter_form.cleaned_data.get('search')
+
+        if status:
+            installations = installations.filter(status=status)
+        if team:
+            installations = installations.filter(team=team)
+        if date_from:
+            installations = installations.filter(scheduled_date__gte=date_from)
+        if date_to:
+            installations = installations.filter(scheduled_date__lte=date_to)
+        if search:
+            installations = installations.filter(
+                Q(order__order_number__icontains=search) |
+                Q(order__customer__name__icontains=search)
+            )
+
+    # ترقيم الصفحات
+    paginator = Paginator(installations, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'filter_form': filter_form,
+        'installations': page_obj,
+    }
+
+    return render(request, 'installations/installation_list.html', context)
+
+
+@login_required
+def installation_detail(request, installation_id):
+    """تفاصيل التركيب"""
+    installation = get_object_or_404(
+        InstallationSchedule.objects.select_related('order', 'order__customer', 'team'),
+        id=installation_id
+    )
+
+    # الحصول على المدفوعات والتقارير
+    payments = InstallationPayment.objects.filter(installation=installation)
+    # تصحيح ��لعلاقة مع ModificationReport
+    modification_reports = ModificationReport.objects.filter(
+        modification_request__installation=installation
+    )
+    receipt_memo = ReceiptMemo.objects.filter(installation=installation).first()
+
+    # الحصول على معلومات المعاينة المرتبطة بالطلب
+    related_inspection = None
+    inspection_type = None
+    if installation.order.related_inspection:
+        related_inspection = installation.order.related_inspection
+        inspection_type = installation.order.related_inspection_type
+
+    context = {
+        'installation': installation,
+        'payments': payments,
+        'modification_reports': modification_reports,
+        'receipt_memo': receipt_memo,
+        'related_inspection': related_inspection,
+        'inspection_type': inspection_type,
+    }
+
+    return render(request, 'installations/installation_detail.html', context)
+
+
+@login_required
+def schedule_installation(request, installation_id):
+    """جدولة تركيب"""
+    installation = get_object_or_404(InstallationSchedule, id=installation_id)
+    
+    # التحقق من أن التركيب بحاجة جدولة
+    if installation.status not in ['needs_scheduling', 'pending']:
+        messages.warning(request, 'هذا التركيب لا يحتاج جدولة أو تم جدولته بالفعل')
+        return redirect('installations:installation_detail', installation_id=installation.id)
+
+    if request.method == 'POST':
+        form = InstallationScheduleForm(request.POST, instance=installation)
+        if form.is_valid():
+            installation = form.save(commit=False)
+            installation.status = 'scheduled'  # تغيير الحالة إلى مجدول
+            installation.save()
+            
+            # إنشاء سجل حدث
+            from .models import InstallationEventLog
+            InstallationEventLog.objects.create(
+                installation=installation,
+                event_type='schedule_change',
+                description=f'تم جدولة التركيب للتاريخ {installation.scheduled_date} في الساعة {installation.scheduled_time}',
+                user=request.user,
+                metadata={
+                    'scheduled_date': str(installation.scheduled_date),
+                    'scheduled_time': str(installation.scheduled_time),
+                    'team': installation.team.name if installation.team else None
+                }
+            )
+            
+            messages.success(request, _('تم جدولة التركيب بنجاح'))
+            return redirect('installations:installation_detail', installation_id=installation.id)
+    else:
+        # تعيين قيم افتراضية للجدولة
+        tomorrow = timezone.now().date() + timezone.timedelta(days=1)
+        default_time = timezone.datetime.strptime('09:00', '%H:%M').time()
+        
+        form = InstallationScheduleForm(instance=installation, initial={
+            'scheduled_date': tomorrow,
+            'scheduled_time': default_time
+        })
+
+    context = {
+        'form': form,
+        'installation': installation,
+        'title': 'جدولة التركيب'
+    }
+
+    return render(request, 'installations/schedule_installation.html', context)
+
+
+@login_required
+@csrf_exempt
+def update_status(request, installation_id):
+    """تحديث حالة التركيب"""
+    installation = get_object_or_404(InstallationSchedule, id=installation_id)
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in dict(InstallationSchedule.STATUS_CHOICES):
+            installation.status = new_status
+            installation.save()
+            messages.success(request, _('تم تحديث حالة التركيب بنجاح'))
+            return JsonResponse({'success': True})
+
+    return JsonResponse({'success': False})
+
+
+# API Views
+@csrf_exempt
+@require_http_methods(["POST"])
+def receive_completed_order(request):
+    """استقبال الطلبات المكتملة من قسم التصنيع"""
+    try:
+        data = json.loads(request.body)
+        order_id = data.get('order_id')
+
+        # التحقق من وجود الطلب
+        order = get_object_or_404(Order, id=order_id)
+
+        # التحقق من عدم وجود جدولة سابقة
+        if InstallationSchedule.objects.filter(order=order).exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'يوجد جدولة تركيب سابقة لهذا الطلب'
+            }, status=400)
+
+        # إنشاء جدولة تركيب جديدة بحالة "بحاجة جدولة" (بدون تاريخ محدد)
+        installation = InstallationSchedule.objects.create(
+            order=order,
+            status='needs_scheduling',  # تغيير الحالة إلى "بحاجة جدولة"
+            notes='تم استلام الطلب من قسم التصنيع - بحاجة جدولة'
+        )
+
+        return JsonResponse({
+            'success': True,
+            'installation_id': installation.id,
+            'message': 'تم استقبال الطلب بنجاح - بحاجة جدولة'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+# API Views للطلبات
+@login_required
+def orders_modal(request):
+    """عرض الطلبات في modal"""
+    order_type = request.GET.get('type', 'total')
+
+    if order_type == 'total':
+        # إجمالي طلبات التركيب فقط
+        orders = Order.objects.filter(
+            selected_types__icontains='installation'
+        ).select_related('customer', 'branch', 'salesperson')
+    elif order_type == 'ready':
+        # جلب الطلبات العادية الجاهزة للتركيب - فقط طلبات التركيب
+        regular_orders = Order.objects.filter(
+            selected_types__icontains='installation',
+            order_status__in=['ready_install', 'completed'],
+            installationschedule__isnull=True
+        ).select_related('customer', 'branch', 'salesperson')
+
+        # جلب أوامر التصنيع الجاهزة للتركيب (فقط من نوع تركيب)
+        from manufacturing.models import ManufacturingOrder
+        manufacturing_orders = ManufacturingOrder.objects.filter(
+            status='ready_install',
+            order__selected_types__icontains='installation',
+            order__installationschedule__isnull=True  # التأكد من عدم وجود جدولة
+        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
+
+        # دمج الطلبات مع تمييز أوامر التصنيع
+        orders = list(regular_orders)
+        for mfg_order in manufacturing_orders:
+            # إضافة علامة خاصة لأمر التصنيع
+            mfg_order.order.is_manufacturing_order = True
+            mfg_order.order.manufacturing_order = mfg_order
+            orders.append(mfg_order.order)
+    elif order_type == 'manufacturing':
+        # الطلبات تحت التصنيع - فقط طلبات التركيب
+        orders = Order.objects.filter(
+            selected_types__icontains='installation',
+            order_status__in=['pending', 'in_progress']
+        ).select_related('customer', 'branch', 'salesperson')
+    elif order_type == 'completed':
+        # الطلبات المكتملة - فقط طلبات التركيب
+        orders = Order.objects.filter(
+            selected_types__icontains='installation',
+            order_status__in=['ready_install', 'completed', 'delivered']
+        ).select_related('customer', 'branch', 'salesperson')
+    elif order_type == 'debt':
+        # الطلبات مع المديونية - فقط طلبات التركيب
+        orders = Order.objects.filter(
+            selected_types__icontains='installation',
+            order_status__in=['ready_install', 'completed'],
+            installationschedule__isnull=True
+        ).filter(
+            total_amount__gt=F('paid_amount')
+        ).select_related('customer', 'branch', 'salesperson')
+    elif order_type == 'modifications':
+        # جلب التعديلات مع الطلبات المرتبطة - فقط طلبات التركيب
+        modifications = ModificationRequest.objects.filter(
+            installation__order__selected_types__icontains='installation'
+        ).select_related(
+            'installation', 'installation__order', 'installation__order__customer',
+            'installation__order__branch', 'installation__order__salesperson'
+        ).order_by('-created_at')
+        orders = [mod.installation.order for mod in modifications]
+    elif order_type == 'scheduled':
+        # التركيبات المجدولة
+        schedules = InstallationSchedule.objects.filter(
+            status='scheduled'
+        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
+        orders = [schedule.order for schedule in schedules]
+    elif order_type == 'in_installation':
+        # التركيبات قيد التركيب
+        schedules = InstallationSchedule.objects.filter(
+            status='in_installation'
+        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
+        orders = [schedule.order for schedule in schedules]
+    elif order_type == 'needs_scheduling':
+        # التركيبات بحاجة جدولة
+        schedules = InstallationSchedule.objects.filter(
+            status='needs_scheduling'
+        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
+        orders = [schedule.order for schedule in schedules]
+    else:
+        orders = Order.objects.none()
+
+    context = {
+        'orders': orders,
+        'manufacturing_orders': [],  # سيتم إضافة أوامر التصنيع إذا لزم الأمر
+        'currency_symbol': 'ج.م',
+        'order_type': order_type  # إضافة نوع الطلب للسياق
+    }
+
+    return render(request, 'installations/orders_modal.html', context)
+
+
+@login_required
+def schedule_from_needs_scheduling(request, installation_id):
+    """جدولة تركيب من قائمة بحاجة جدولة"""
+    installation = get_object_or_404(InstallationSchedule, id=installation_id)
+    
+    # التحقق من أن التركيب بحاجة جدولة
+    if installation.status != "needs_scheduling":
+        messages.warning(request, "هذا التركيب لا يحتاج جدولة أو تم جدولته بالفعل")
+        return redirect("installations:dashboard")
+
+    if request.method == "POST":
+        form = InstallationScheduleForm(request.POST, instance=installation)
+        if form.is_valid():
+            installation = form.save(commit=False)
+            installation.status = "scheduled"  # تغيير الحالة إلى مجدول
+            installation.save()
+            
+            # إنشاء سجل حدث
+            from .models import InstallationEventLog
+            InstallationEventLog.objects.create(
+                installation=installation,
+                event_type="schedule_change",
+                description=f"تم جدولة التركيب للتاريخ {installation.scheduled_date} في الساعة {installation.scheduled_time}",
+                user=request.user,
+                metadata={
+                    "scheduled_date": str(installation.scheduled_date),
+                    "scheduled_time": str(installation.scheduled_time),
+                    "team": installation.team.name if installation.team else None
+                }
+            )
+            
+            messages.success(request, _("تم جدولة التركيب بنجاح"))
+            return redirect("installations:dashboard")
+    else:
+        # ��عيين قيم افتراضية للجدولة
+        tomorrow = timezone.now().date() + timezone.timedelta(days=1)
+        default_time = timezone.datetime.strptime("09:00", "%H:%M").time()
+        
+        form = InstallationScheduleForm(instance=installation, initial={
+            "scheduled_date": tomorrow,
+            "scheduled_time": default_time
+        })
+
+    context = {
+        "form": form,
+        "installation": installation,
+        "title": "جدولة التركيب"
+    }
+
+    return render(request, "installations/schedule_installation.html", context)
+
+
+# باقي الدوال المطلوبة للنظام
 @login_required
 def create_modification_request(request, installation_id):
     """إنشاء طلب تعديل"""
@@ -464,109 +800,6 @@ def manufacturing_orders_list(request):
 
 
 @login_required
-def installation_list(request):
-    """قائمة التركيبات"""
-    installations = InstallationSchedule.objects.select_related(
-        'order', 'order__customer', 'team'
-    ).order_by('-created_at')
-
-    # تطبيق الفلاتر
-    filter_form = InstallationFilterForm(request.GET)
-    if filter_form.is_valid():
-        status = filter_form.cleaned_data.get('status')
-        team = filter_form.cleaned_data.get('team')
-        date_from = filter_form.cleaned_data.get('date_from')
-        date_to = filter_form.cleaned_data.get('date_to')
-        search = filter_form.cleaned_data.get('search')
-
-        if status:
-            installations = installations.filter(status=status)
-        if team:
-            installations = installations.filter(team=team)
-        if date_from:
-            installations = installations.filter(scheduled_date__gte=date_from)
-        if date_to:
-            installations = installations.filter(scheduled_date__lte=date_to)
-        if search:
-            installations = installations.filter(
-                Q(order__order_number__icontains=search) |
-                Q(order__customer__name__icontains=search)
-            )
-
-    # ترقيم الصفحات
-    paginator = Paginator(installations, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'page_obj': page_obj,
-        'filter_form': filter_form,
-        'installations': page_obj,
-    }
-
-    return render(request, 'installations/installation_list.html', context)
-
-
-@login_required
-def installation_detail(request, installation_id):
-    """تفاصيل التركيب"""
-    installation = get_object_or_404(
-        InstallationSchedule.objects.select_related('order', 'order__customer', 'team'),
-        id=installation_id
-    )
-
-    # الحصول على المدفوعات والتقارير
-    payments = InstallationPayment.objects.filter(installation=installation)
-    # تصحيح العلاقة مع ModificationReport
-    modification_reports = ModificationReport.objects.filter(
-        modification_request__installation=installation
-    )
-    receipt_memo = ReceiptMemo.objects.filter(installation=installation).first()
-
-    # الحصول على معلومات المعاينة المرتبطة بالطلب
-    related_inspection = None
-    inspection_type = None
-    if installation.order.related_inspection:
-        related_inspection = installation.order.related_inspection
-        inspection_type = installation.order.related_inspection_type
-
-    context = {
-        'installation': installation,
-        'payments': payments,
-        'modification_reports': modification_reports,
-        'receipt_memo': receipt_memo,
-        'related_inspection': related_inspection,
-        'inspection_type': inspection_type,
-    }
-
-    return render(request, 'installations/installation_detail.html', context)
-
-
-@login_required
-def schedule_installation(request, installation_id):
-    """جدولة تركيب"""
-    installation = get_object_or_404(InstallationSchedule, id=installation_id)
-
-    if request.method == 'POST':
-        form = InstallationScheduleForm(request.POST, instance=installation)
-        if form.is_valid():
-            installation = form.save(commit=False)
-            installation.status = 'scheduled'
-            installation.save()
-            messages.success(request, _('تم جدولة التركيب بنجاح'))
-            return redirect('installations:installation_detail', installation_id=installation.id)
-    else:
-        form = InstallationScheduleForm(instance=installation)
-
-    context = {
-        'form': form,
-        'installation': installation,
-    }
-
-    return render(request, 'installations/schedule_installation.html', context)
-
-
-@login_required
 def quick_schedule_installation(request, order_id):
     """جدولة سريعة للتركيب من الطلب"""
 
@@ -602,23 +835,6 @@ def quick_schedule_installation(request, order_id):
     }
 
     return render(request, 'installations/quick_schedule_installation.html', context)
-
-
-@login_required
-@csrf_exempt
-def update_status(request, installation_id):
-    """تحديث حالة التركيب"""
-    installation = get_object_or_404(InstallationSchedule, id=installation_id)
-
-    if request.method == 'POST':
-        new_status = request.POST.get('status')
-        if new_status in dict(InstallationSchedule.STATUS_CHOICES):
-            installation.status = new_status
-            installation.save()
-            messages.success(request, _('تم تحديث حالة التركيب بنجاح'))
-            return JsonResponse({'success': True})
-
-    return JsonResponse({'success': False})
 
 
 @login_required
@@ -866,50 +1082,6 @@ def archive_list(request):
     return render(request, 'installations/archive_list.html', context)
 
 
-# API Views
-@csrf_exempt
-@require_http_methods(["POST"])
-def receive_completed_order(request):
-    """استقبال الطلبات المكتملة من قسم التصنيع"""
-    try:
-        data = json.loads(request.body)
-        order_id = data.get('order_id')
-
-        # التحقق من وجود الطلب
-
-        order = get_object_or_404(Order, id=order_id)
-
-        # التحقق من عدم وجود جدولة سابقة
-        if InstallationSchedule.objects.filter(order=order).exists():
-            return JsonResponse({
-                'success': False,
-                'error': 'يوجد جدولة تركيب سابقة لهذا الطلب'
-            }, status=400)
-
-        # إنشاء جدولة تركيب جديدة مع تاريخ افتراضي
-        tomorrow = timezone.now().date() + timezone.timedelta(days=1)
-        default_time = timezone.datetime.strptime('09:00', '%H:%M').time()
-
-        installation = InstallationSchedule.objects.create(
-            order=order,
-            scheduled_date=tomorrow,
-            scheduled_time=default_time,
-            status='pending'
-        )
-
-        return JsonResponse({
-            'success': True,
-            'installation_id': installation.id,
-            'message': 'تم استقبال الطلب بنجاح'
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=400)
-
-
 @login_required
 def installation_stats_api(request):
     """API لإحصائيات التركيبات"""
@@ -1009,99 +1181,6 @@ def debt_list(request):
     return render(request, 'installations/debt_list.html', context)
 
 
-# API Views للطلبات
-@login_required
-def orders_modal(request):
-    """عرض الطلبات في modal"""
-    order_type = request.GET.get('type', 'total')
-
-    if order_type == 'total':
-        # إجمالي طلبات التركيب فقط
-        orders = Order.objects.filter(
-            selected_types__icontains='installation'
-        ).select_related('customer', 'branch', 'salesperson')
-    elif order_type == 'ready':
-        # جلب الطلبات العادية الجاهزة للتركيب - فقط طلبات التركيب
-        regular_orders = Order.objects.filter(
-            selected_types__icontains='installation',
-            order_status__in=['ready_install', 'completed'],
-            installationschedule__isnull=True
-        ).select_related('customer', 'branch', 'salesperson')
-
-        # جلب أوامر التصنيع الجاهزة للتركيب (فقط من نوع تركيب)
-        from manufacturing.models import ManufacturingOrder
-        manufacturing_orders = ManufacturingOrder.objects.filter(
-            status='ready_install',
-            order__selected_types__icontains='installation'
-        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
-
-        # دمج الطلبات مع تمييز أوامر التصنيع
-        orders = list(regular_orders)
-        for mfg_order in manufacturing_orders:
-            # إضافة علامة خاصة لأمر التصنيع
-            mfg_order.order.is_manufacturing_order = True
-            mfg_order.order.manufacturing_order = mfg_order
-            orders.append(mfg_order.order)
-    elif order_type == 'manufacturing':
-        # الطلبات تحت التصنيع - فقط طلبات التركيب
-        orders = Order.objects.filter(
-            selected_types__icontains='installation',
-            order_status__in=['pending', 'in_progress']
-        ).select_related('customer', 'branch', 'salesperson')
-    elif order_type == 'completed':
-        # الطلبات المكتملة - فقط طلبات التركيب
-        orders = Order.objects.filter(
-            selected_types__icontains='installation',
-            order_status__in=['ready_install', 'completed', 'delivered']
-        ).select_related('customer', 'branch', 'salesperson')
-    elif order_type == 'debt':
-        # الطلبات مع المديونية - فقط طلبات التركيب
-        orders = Order.objects.filter(
-            selected_types__icontains='installation',
-            order_status__in=['ready_install', 'completed'],
-            installationschedule__isnull=True
-        ).filter(
-            total_amount__gt=F('paid_amount')
-        ).select_related('customer', 'branch', 'salesperson')
-    elif order_type == 'modifications':
-        # جلب التعديلات مع الطلبات المرتبطة - فقط طلبات التركيب
-        modifications = ModificationRequest.objects.filter(
-            installation__order__selected_types__icontains='installation'
-        ).select_related(
-            'installation', 'installation__order', 'installation__order__customer',
-            'installation__order__branch', 'installation__order__salesperson'
-        ).order_by('-created_at')
-        orders = [mod.installation.order for mod in modifications]
-    elif order_type == 'scheduled':
-        # التركيبات المجدولة
-        schedules = InstallationSchedule.objects.filter(
-            status='scheduled'
-        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
-        orders = [schedule.order for schedule in schedules]
-    elif order_type == 'in_installation':
-        # التركيبات قيد التركيب
-        schedules = InstallationSchedule.objects.filter(
-            status='in_installation'
-        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
-        orders = [schedule.order for schedule in schedules]
-    elif order_type == 'needs_scheduling':
-        # التركيبات بحاجة جدولة
-        schedules = InstallationSchedule.objects.filter(
-            status='needs_scheduling'
-        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
-        orders = [schedule.order for schedule in schedules]
-    else:
-        orders = Order.objects.none()
-
-    context = {
-        'orders': orders,
-        'manufacturing_orders': [],  # سيتم إضافة أوامر التصنيع إذا لزم الأمر
-        'currency_symbol': 'ج.م'
-    }
-
-    return render(request, 'installations/orders_modal.html', context)
-
-
 @login_required
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1143,87 +1222,48 @@ def schedule_manufacturing_order(request, manufacturing_order_id):
 
 
 @login_required
-def installation_analytics(request):
-    """تحليل التركيبات الشهري"""
-    from datetime import datetime, timedelta
-    from django.db.models import Count, Q
+def edit_schedule(request, installation_id):
+    """تعديل جدولة التركيب"""
+    installation = get_object_or_404(InstallationSchedule, id=installation_id)
 
-    # تحديد الفترة الزمنية
-    months_back = int(request.GET.get('months', 6))
-    end_date = timezone.now().date()
-    start_date = end_date - timedelta(days=months_back * 30)
-
-    # جلب البيانات الشهرية
-    analytics_data = []
-    current_date = start_date
-
-    while current_date <= end_date:
-        month_start = current_date.replace(day=1)
-        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-
-        # إحصائيات التركيبات
-        installations = InstallationSchedule.objects.filter(
-            created_at__date__gte=month_start,
-            created_at__date__lte=month_end
-        )
-
-        total_installations = installations.count()
-        completed_installations = installations.filter(status='completed').count()
-        pending_installations = installations.filter(status='pending').count()
-        in_progress_installations = installations.filter(status='in_progress').count()
-
-        # إحصائيات العملاء
-        customers = Order.objects.filter(
-            installationschedule__created_at__date__gte=month_start,
-            installationschedule__created_at__date__lte=month_end
-        ).values('customer').distinct().count()
-
-        new_customers = Order.objects.filter(
-            installationschedule__created_at__date__gte=month_start,
-            installationschedule__created_at__date__lte=month_end
-        ).values('customer').distinct().count()
-
-        # إحصائيات التعديلات
-        modifications = ModificationRequest.objects.filter(
-            created_at__date__gte=month_start,
-            created_at__date__lte=month_end
-        ).count()
-
-        # حساب النسب
-        completion_rate = (completed_installations / total_installations * 100) if total_installations > 0 else 0
-        modification_rate = (modifications / total_installations * 100) if total_installations > 0 else 0
-
-        analytics_data.append({
-            'month': month_start,
-            'total_installations': total_installations,
-            'completed_installations': completed_installations,
-            'pending_installations': pending_installations,
-            'in_progress_installations': in_progress_installations,
-            'total_customers': customers,
-            'new_customers': new_customers,
-            'total_modifications': modifications,
-            'completion_rate': round(completion_rate, 2),
-            'modification_rate': round(modification_rate, 2),
-        })
-
-        current_date = (month_start + timedelta(days=32)).replace(day=1)
-
-    # إحصائيات إضافية
-    total_stats = {
-        'total_installations': sum(d['total_installations'] for d in analytics_data),
-        'total_completed': sum(d['completed_installations'] for d in analytics_data),
-        'total_modifications': sum(d['total_modifications'] for d in analytics_data),
-        'avg_completion_rate': sum(d['completion_rate'] for d in analytics_data) / len(analytics_data) if analytics_data else 0,
-        'avg_modification_rate': sum(d['modification_rate'] for d in analytics_data) / len(analytics_data) if analytics_data else 0,
-    }
+    if request.method == 'POST':
+        form = InstallationScheduleForm(request.POST, instance=installation)
+        if form.is_valid():
+            old_date = installation.scheduled_date
+            old_time = installation.scheduled_time
+            old_team = installation.team
+            
+            installation = form.save()
+            
+            # إنشاء سجل حدث للتعديل
+            from .models import InstallationEventLog
+            InstallationEventLog.objects.create(
+                installation=installation,
+                event_type='schedule_change',
+                description=f'تم تعديل الجدولة من {old_date} {old_time} إلى {installation.scheduled_date} {installation.scheduled_time}',
+                user=request.user,
+                metadata={
+                    'old_date': str(old_date) if old_date else None,
+                    'old_time': str(old_time) if old_time else None,
+                    'new_date': str(installation.scheduled_date),
+                    'new_time': str(installation.scheduled_time),
+                    'old_team': old_team.name if old_team else None,
+                    'new_team': installation.team.name if installation.team else None
+                }
+            )
+            
+            messages.success(request, 'تم تعديل جدولة التركيب بنجاح')
+            return redirect('installations:installation_detail', installation_id=installation.id)
+    else:
+        form = InstallationScheduleForm(instance=installation)
 
     context = {
-        'analytics_data': analytics_data,
-        'total_stats': total_stats,
-        'months_back': months_back,
+        'form': form,
+        'installation': installation,
+        'title': 'تعديل جدولة التركيب'
     }
 
-    return render(request, 'installations/analytics.html', context)
+    return render(request, 'installations/edit_schedule.html', context)
 
 
 @login_required
@@ -1231,33 +1271,45 @@ def modification_error_analysis(request):
     """تحليل أخطاء التعديلات"""
     error_analyses = ModificationErrorAnalysis.objects.select_related(
         'modification_request', 'modification_request__installation',
-        'modification_request__installation__order', 'error_type'
+        'modification_request__installation__order', 'error_type', 'analyzed_by'
     ).order_by('-created_at')
 
-    # إحصائيات الأخطاء حسب نوع السبب
-    error_stats = {}
-    error_types = ModificationErrorType.objects.filter(is_active=True)
-    for error_type in error_types:
-        error_stats[error_type.name] = error_analyses.filter(error_type=error_type).count()
+    # فلترة حسب نوع الخطأ
+    error_type_filter = request.GET.get('error_type')
+    if error_type_filter:
+        error_analyses = error_analyses.filter(error_type_id=error_type_filter)
 
-    # إجمالي التكاليف والوقت
-    total_cost_impact = error_analyses.aggregate(total=models.Sum('cost_impact'))['total'] or 0
-    total_time_impact = error_analyses.aggregate(total=models.Sum('time_impact_hours'))['total'] or 0
+    # فلترة حسب الشدة
+    severity_filter = request.GET.get('severity')
+    if severity_filter:
+        error_analyses = error_analyses.filter(severity=severity_filter)
+
+    # إحصائيات الأخطاء
+    error_stats = {
+        'total_errors': error_analyses.count(),
+        'critical_errors': error_analyses.filter(severity='critical').count(),
+        'high_errors': error_analyses.filter(severity='high').count(),
+        'medium_errors': error_analyses.filter(severity='medium').count(),
+        'low_errors': error_analyses.filter(severity='low').count(),
+    }
+
+    # أنواع الأخطاء الأكثر شيوعاً
+    common_error_types = ModificationErrorType.objects.annotate(
+        error_count=Count('modificationerroranalysis')
+    ).order_by('-error_count')[:5]
 
     # ترقيم الصفحات
     paginator = Paginator(error_analyses, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # تحويل error_types إلى التنسيق المطلوب للقالب
-    error_types_choices = [(error_type.name, error_type.name) for error_type in error_types]
-
     context = {
+        'page_obj': page_obj,
         'error_analyses': page_obj,
         'error_stats': error_stats,
-        'total_cost_impact': total_cost_impact,
-        'total_time_impact': total_time_impact,
-        'error_types': error_types_choices,
+        'common_error_types': common_error_types,
+        'error_types': ModificationErrorType.objects.all(),
+        'title': 'تحليل أخطاء التعديلات'
     }
 
     return render(request, 'installations/error_analysis.html', context)
@@ -1265,15 +1317,17 @@ def modification_error_analysis(request):
 
 @login_required
 def add_error_analysis(request, modification_id):
-    """إضافة تحليل خطأ"""
+    """إضافة تحليل خطأ للتعديل"""
     modification_request = get_object_or_404(ModificationRequest, id=modification_id)
 
     if request.method == 'POST':
-        form = ModificationErrorAnalysisForm(request.POST)
+        form = ModificationErrorAnalysisForm(request.POST, request.FILES)
         if form.is_valid():
             error_analysis = form.save(commit=False)
             error_analysis.modification_request = modification_request
+            error_analysis.analyzed_by = request.user
             error_analysis.save()
+            
             messages.success(request, 'تم إضافة تحليل الخطأ بنجاح')
             return redirect('installations:modification_error_analysis')
     else:
@@ -1289,52 +1343,88 @@ def add_error_analysis(request, modification_id):
 
 
 @login_required
-def edit_schedule(request, installation_id):
-    """تعديل جدولة ا��تركيب مع سبب التغيير"""
-    installation = get_object_or_404(InstallationSchedule, id=installation_id)
+def installation_analytics(request):
+    """تحليل التركيبات الشهري"""
+    from django.db.models import Count, Avg
+    from django.utils import timezone
+    import calendar
 
-    if request.method == 'POST':
-        from .forms import ScheduleEditForm
-        form = ScheduleEditForm(request.POST, instance=installation)
-        if form.is_valid():
-            reason = form.cleaned_data['reason']
-            old_date = installation.scheduled_date
-            old_time = installation.scheduled_time
-            old_team = installation.team
-            
-            installation = form.save()
-            
-            # إنشاء سجل تعديل الجدولة
-            from .models import InstallationEventLog
-            InstallationEventLog.objects.create(
-                installation=installation,
-                event_type='schedule_change',
-                description=f'تم تعديل الجدولة - السبب: {reason}',
-                user=request.user,
-                metadata={
-                    'reason': reason,
-                    'old_date': str(old_date),
-                    'new_date': str(installation.scheduled_date),
-                    'old_time': str(old_time),
-                    'new_time': str(installation.scheduled_time),
-                    'old_team': old_team.name if old_team else None,
-                    'new_team': installation.team.name if installation.team else None
-                }
-            )
-            
-            messages.success(request, _('تم تعديل جدولة التركيب بنجاح'))
-            return redirect('installations:installation_detail', installation_id=installation.id)
+    # الحصول على الشهر والسنة من الطلب
+    current_date = timezone.now()
+    year = int(request.GET.get('year', current_date.year))
+    month = int(request.GET.get('month', current_date.month))
+
+    # إحصائيات الشهر المحدد
+    start_date = timezone.datetime(year, month, 1).date()
+    if month == 12:
+        end_date = timezone.datetime(year + 1, 1, 1).date()
     else:
-        from .forms import ScheduleEditForm
-        form = ScheduleEditForm(instance=installation)
+        end_date = timezone.datetime(year, month + 1, 1).date()
+
+    # إحصائيات التركيبات للشهر
+    monthly_installations = InstallationSchedule.objects.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lt=end_date
+    )
+
+    # إحصائيات حسب الح��لة
+    status_stats = monthly_installations.values('status').annotate(
+        count=Count('id')
+    ).order_by('-count')
+
+    # إحصائيات حسب الفريق
+    team_stats = monthly_installations.filter(team__isnull=False).values(
+        'team__name'
+    ).annotate(
+        count=Count('id'),
+        avg_completion_time=Avg('completion_time')
+    ).order_by('-count')
+
+    # إحصائيات يومية للشهر
+    daily_stats = []
+    for day in range(1, calendar.monthrange(year, month)[1] + 1):
+        day_date = timezone.datetime(year, month, day).date()
+        day_installations = monthly_installations.filter(
+            created_at__date=day_date
+        ).count()
+        daily_stats.append({
+            'date': day_date,
+            'count': day_installations
+        })
+
+    # إحصائيات التعديلات
+    modification_stats = ModificationRequest.objects.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lt=end_date
+    ).values('modification_type').annotate(
+        count=Count('id')
+    ).order_by('-count')
+
+    # متوسط وقت الإكمال
+    completed_installations = monthly_installations.filter(
+        status='completed',
+        completion_time__isnull=False
+    )
+    avg_completion_time = completed_installations.aggregate(
+        avg_time=Avg('completion_time')
+    )['avg_time']
 
     context = {
-        'form': form,
-        'installation': installation,
-        'title': 'تعديل جدولة التركيب'
+        'year': year,
+        'month': month,
+        'month_name': calendar.month_name[month],
+        'monthly_installations': monthly_installations,
+        'status_stats': status_stats,
+        'team_stats': team_stats,
+        'daily_stats': daily_stats,
+        'modification_stats': modification_stats,
+        'avg_completion_time': avg_completion_time,
+        'total_installations': monthly_installations.count(),
+        'completed_installations': monthly_installations.filter(status='completed').count(),
+        'title': f'تحليل التركيبات - {calendar.month_name[month]} {year}'
     }
 
-    return render(request, 'installations/edit_schedule.html', context)
+    return render(request, 'installations/installation_analytics.html', context)
 
 
 @login_required
@@ -1342,50 +1432,45 @@ def installation_event_logs(request):
     """سجل أحداث التركيبات"""
     from .models import InstallationEventLog
     
-    # جلب سجل الأحداث مع الفلترة
     event_logs = InstallationEventLog.objects.select_related(
         'installation', 'installation__order', 'installation__order__customer', 'user'
     ).order_by('-created_at')
-    
+
     # فلترة حسب نوع الحدث
-    event_type = request.GET.get('event_type')
-    if event_type:
-        event_logs = event_logs.filter(event_type=event_type)
-    
+    event_type_filter = request.GET.get('event_type')
+    if event_type_filter:
+        event_logs = event_logs.filter(event_type=event_type_filter)
+
+    # فلترة حسب التركيب
+    installation_filter = request.GET.get('installation')
+    if installation_filter:
+        event_logs = event_logs.filter(installation_id=installation_filter)
+
     # فلترة حسب التاريخ
     date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
     if date_from:
         event_logs = event_logs.filter(created_at__date__gte=date_from)
-    
-    date_to = request.GET.get('date_to')
     if date_to:
         event_logs = event_logs.filter(created_at__date__lte=date_to)
-    
-    # البحث في رقم الطلب أو اسم العميل
-    search = request.GET.get('search')
-    if search:
-        event_logs = event_logs.filter(
-            Q(installation__order__order_number__icontains=search) |
-            Q(installation__order__customer__name__icontains=search)
-        )
-    
+
     # ترقيم الصفحات
-    paginator = Paginator(event_logs, 25)
+    paginator = Paginator(event_logs, 50)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+
+    # أنواع الأحداث المتاحة
+    event_types = InstallationEventLog.objects.values_list(
+        'event_type', flat=True
+    ).distinct()
+
     context = {
         'page_obj': page_obj,
         'event_logs': page_obj,
-        'event_types': InstallationEventLog.EVENT_TYPES,
-        'current_filters': {
-            'event_type': event_type,
-            'date_from': date_from,
-            'date_to': date_to,
-            'search': search
-        }
+        'event_types': event_types,
+        'title': 'سجل أحداث التركيبات'
     }
-    
+
     return render(request, 'installations/event_logs.html', context)
 
 
@@ -1393,45 +1478,70 @@ def installation_event_logs(request):
 def installation_in_progress_list(request):
     """قائمة التركيبات قيد التنفيذ"""
     installations = InstallationSchedule.objects.filter(
-        status='in_installation'
-    ).select_related('order', 'order__customer', 'team').order_by('scheduled_date', 'scheduled_time')
-    
+        status__in=['in_progress', 'in_installation']
+    ).select_related(
+        'order', 'order__customer', 'team'
+    ).order_by('scheduled_date', 'scheduled_time')
+
+    # فلترة حسب الفريق
+    team_filter = request.GET.get('team')
+    if team_filter:
+        installations = installations.filter(team_id=team_filter)
+
+    # فلترة حسب التاريخ
+    date_filter = request.GET.get('date')
+    if date_filter:
+        installations = installations.filter(scheduled_date=date_filter)
+
+    # إحصائيات سريعة
+    stats = {
+        'total_in_progress': installations.count(),
+        'today_in_progress': installations.filter(
+            scheduled_date=timezone.now().date()
+        ).count(),
+        'overdue': installations.filter(
+            scheduled_date__lt=timezone.now().date()
+        ).count()
+    }
+
     context = {
         'installations': installations,
+        'stats': stats,
+        'teams': InstallationTeam.objects.filter(is_active=True),
         'title': 'التركيبات قيد التنفيذ'
     }
-    
+
     return render(request, 'installations/in_progress_list.html', context)
 
 
 @login_required
 def print_installation_schedule(request):
-    """طباعة جدول التركيبات بتنسيق جميل"""
-    # جلب التركيبات قيد التنفيذ
-    installations = InstallationSchedule.objects.filter(
-        status='in_installation'
-    ).select_related(
-        'order', 'order__customer', 'order__branch', 'order__salesperson', 'team'
+    """طباعة جدول التركيبات"""
+    date = request.GET.get('date', timezone.now().date())
+    team_id = request.GET.get('team')
+    status = request.GET.get('status')
+
+    installations = InstallationSchedule.objects.select_related(
+        'order', 'order__customer', 'team'
     ).order_by('scheduled_date', 'scheduled_time')
-    
-    # إضافة إعدادات الجدولة لكل تركيب
-    for installation in installations:
-        try:
-            from .models import InstallationSchedulingSettings
-            settings = InstallationSchedulingSettings.objects.get(installation=installation)
-            installation.scheduling_settings = settings
-        except InstallationSchedulingSettings.DoesNotExist:
-            # إنشاء إعدادات جدولة جديدة وملؤها من الطلب
-            settings = InstallationSchedulingSettings.objects.create(installation=installation)
-            settings.populate_from_order()
-            installation.scheduling_settings = settings
-    
+
+    # تطبيق الفلاتر
+    if date:
+        installations = installations.filter(scheduled_date=date)
+    if team_id:
+        installations = installations.filter(team_id=team_id)
+    if status:
+        installations = installations.filter(status=status)
+
     context = {
         'installations': installations,
+        'date': date,
+        'team': InstallationTeam.objects.get(id=team_id) if team_id else None,
+        'status': status,
         'print_date': timezone.now(),
-        'title': 'جدول التركيبات قيد التنفيذ'
+        'title': 'جدول التركيبات'
     }
-    
+
     return render(request, 'installations/print_schedule.html', context)
 
 
@@ -1440,30 +1550,25 @@ def view_scheduling_details(request, installation_id):
     """عرض تفاصيل الجدولة"""
     installation = get_object_or_404(InstallationSchedule, id=installation_id)
     
-    # الحصول على إعدادات الجدولة أو إنشاؤها
-    try:
-        from .models import InstallationSchedulingSettings
-        settings = InstallationSchedulingSettings.objects.get(installation=installation)
-    except InstallationSchedulingSettings.DoesNotExist:
-        settings = InstallationSchedulingSettings.objects.create(installation=installation)
-        settings.populate_from_order()
-    
-    # إرجاع JSON للنافذة المنبثقة
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        context = {
-            'installation': installation,
-            'settings': settings
-        }
-        from django.template.loader import render_to_string
-        html = render_to_string('installations/scheduling_details_modal.html', context, request=request)
-        return JsonResponse({'html': html})
-    
+    # الحصول على سجل تغييرات الجدولة
+    from .models import InstallationEventLog
+    schedule_events = InstallationEventLog.objects.filter(
+        installation=installation,
+        event_type='schedule_change'
+    ).order_by('-created_at')
+
+    # الحصول على التركيبات المجدولة في نفس اليوم
+    same_day_installations = InstallationSchedule.objects.filter(
+        scheduled_date=installation.scheduled_date
+    ).exclude(id=installation.id).select_related('order', 'order__customer', 'team')
+
     context = {
         'installation': installation,
-        'settings': settings,
+        'schedule_events': schedule_events,
+        'same_day_installations': same_day_installations,
         'title': 'تفاصيل الجدولة'
     }
-    
+
     return render(request, 'installations/scheduling_details.html', context)
 
 
@@ -1471,41 +1576,54 @@ def view_scheduling_details(request, installation_id):
 def edit_scheduling_settings(request, installation_id):
     """تعديل إعدادات الجدولة"""
     installation = get_object_or_404(InstallationSchedule, id=installation_id)
-    
-    # الحصول على إعدادات الجدولة أو إنشاؤها
-    try:
-        from .models import InstallationSchedulingSettings
-        settings = InstallationSchedulingSettings.objects.get(installation=installation)
-    except InstallationSchedulingSettings.DoesNotExist:
-        settings = InstallationSchedulingSettings.objects.create(installation=installation)
-        settings.populate_from_order()
-    
+
     if request.method == 'POST':
-        from .forms import InstallationSchedulingSettingsForm
-        form = InstallationSchedulingSettingsForm(request.POST, instance=settings)
+        form = InstallationScheduleForm(request.POST, instance=installation)
         if form.is_valid():
-            form.save()
+            # حفظ الإعدادات القديمة للمقارنة
+            old_settings = {
+                'scheduled_date': installation.scheduled_date,
+                'scheduled_time': installation.scheduled_time,
+                'team': installation.team,
+                'priority': getattr(installation, 'priority', None),
+                'estimated_duration': getattr(installation, 'estimated_duration', None)
+            }
             
-            # إنشاء سجل حدث
+            installation = form.save()
+            
+            # إنشاء سجل للتغييرات
             from .models import InstallationEventLog
-            InstallationEventLog.objects.create(
-                installation=installation,
-                event_type='schedule_change',
-                description='تم تحديث إعدادات الجدولة',
-                user=request.user
-            )
+            changes = []
+            if old_settings['scheduled_date'] != installation.scheduled_date:
+                changes.append(f"التاريخ: {old_settings['scheduled_date']} → {installation.scheduled_date}")
+            if old_settings['scheduled_time'] != installation.scheduled_time:
+                changes.append(f"الوقت: {old_settings['scheduled_time']} → {installation.scheduled_time}")
+            if old_settings['team'] != installation.team:
+                old_team = old_settings['team'].name if old_settings['team'] else 'غير محدد'
+                new_team = installation.team.name if installation.team else 'غير محدد'
+                changes.append(f"الفريق: {old_team} → {new_team}")
+            
+            if changes:
+                InstallationEventLog.objects.create(
+                    installation=installation,
+                    event_type='settings_change',
+                    description=f'تم تعديل إعدادات الجدولة: {", ".join(changes)}',
+                    user=request.user,
+                    metadata={
+                        'old_settings': old_settings,
+                        'changes': changes
+                    }
+                )
             
             messages.success(request, 'تم تحديث إعدادات الجدولة بنجاح')
             return redirect('installations:installation_detail', installation_id=installation.id)
     else:
-        from .forms import InstallationSchedulingSettingsForm
-        form = InstallationSchedulingSettingsForm(instance=settings)
-    
+        form = InstallationScheduleForm(instance=installation)
+
     context = {
         'form': form,
         'installation': installation,
-        'settings': settings,
         'title': 'تعديل إعدادات الجدولة'
     }
-    
+
     return render(request, 'installations/edit_scheduling_settings.html', context)

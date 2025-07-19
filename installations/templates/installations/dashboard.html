@@ -156,23 +156,6 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-right-info shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('needs_scheduling')">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                بحاجة جدولة
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ needs_scheduling_installations }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-calendar-plus fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-right-danger shadow h-100 py-2 cursor-pointer" onclick="showOrdersModal('debt')">
@@ -439,7 +422,7 @@
                                             <a href="#" 
                                                class="btn btn-sm btn-success"
                                                onclick="scheduleInstallation({{ order.id }})">
-                                                <i class="fas fa-calendar-plus"></i> جدولة تركيب
+                                                <i class="fas fa-calendar-plus"></i> جدولة ترك��ب
                                             </a>
                                         </td>
                                     </tr>
@@ -561,7 +544,7 @@ function showOrdersModal(type) {
     
     switch(type) {
         case 'total':
-            title = 'جميع طلبات التركيب';
+            title = 'جميع طلبات التركي��';
             url = '{% url "installations:orders_modal" %}?type=total';
             break;
         case 'ready':
@@ -569,7 +552,7 @@ function showOrdersModal(type) {
             url = '{% url "installations:orders_modal" %}?type=ready';
             break;
         case 'manufacturing':
-            title = 'الطلبات تحت التصنيع';
+            title = 'الطلبات تحت ا��تصنيع';
             url = '{% url "installations:orders_modal" %}?type=manufacturing';
             break;
         case 'completed':
@@ -591,6 +574,10 @@ function showOrdersModal(type) {
         case 'modifications':
             title = 'التعديلات';
             url = '{% url "installations:orders_modal" %}?type=modifications';
+            break;
+        case 'in_installation':
+            title = 'التركيبات قيد التركيب';
+            url = '{% url "installations:orders_modal" %}?type=in_installation';
             break;
     }
     

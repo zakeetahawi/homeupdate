@@ -34,6 +34,7 @@ urlpatterns = [
     # URLs الموجودة مسبقاً
     path('installation/<int:installation_id>/schedule/', views.schedule_installation, name='schedule_installation'),
     path('quick-schedule/<int:order_id>/', views.quick_schedule_installation, name='quick_schedule_installation'),
+    path('installation/<int:installation_id>/schedule-from-needs/', views.schedule_from_needs_scheduling, name='schedule_from_needs_scheduling'),
     path('installation/<int:installation_id>/', views.installation_detail, name='installation_detail'),
     path('daily-schedule/', views.daily_schedule, name='daily_schedule'),
     path('print-daily-schedule/', views.print_daily_schedule, name='print_daily_schedule'),

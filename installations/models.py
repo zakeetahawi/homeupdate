@@ -119,9 +119,9 @@ class InstallationSchedule(models.Model):
 
     order = models.ForeignKey('orders.Order', on_delete=models.CASCADE, verbose_name=_('الطلب'))
     team = models.ForeignKey(InstallationTeam, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_('الفريق'))
-    scheduled_date = models.DateField(_('تاريخ التركيب'))
-    scheduled_time = models.TimeField(_('موعد التركيب'))
-    status = models.CharField(_('الحالة'), max_length=30, choices=STATUS_CHOICES, default='pending')
+    scheduled_date = models.DateField(_('تاريخ التركيب'), null=True, blank=True)
+    scheduled_time = models.TimeField(_('موعد التركيب'), null=True, blank=True)
+    status = models.CharField(_('الحالة'), max_length=30, choices=STATUS_CHOICES, default='needs_scheduling')
     notes = models.TextField(_('ملاحظات'), blank=True)
     completion_date = models.DateTimeField(_('تاريخ الإكمال'), null=True, blank=True)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
@@ -415,14 +415,23 @@ class ModificationErrorType(models.Model):
 
 class ModificationErrorAnalysis(models.Model):
     """نموذج تحليل أخطاء التعديلات"""
+    SEVERITY_CHOICES = [
+        ('low', _('منخفض')),
+        ('medium', _('متوسط')),
+        ('high', _('عالي')),
+        ('critical', _('حرج')),
+    ]
+
     modification_request = models.ForeignKey(ModificationRequest, on_delete=models.CASCADE, verbose_name=_('طلب التعديل'))
     error_type = models.ForeignKey(ModificationErrorType, on_delete=models.CASCADE, verbose_name=_('نوع السبب'))
+    severity = models.CharField(_('الشدة'), max_length=20, choices=SEVERITY_CHOICES, default='medium')
     error_description = models.TextField(_('وصف الخطأ'))
     root_cause = models.TextField(_('السبب الجذري'))
     solution_applied = models.TextField(_('الحل المطبق'))
     prevention_measures = models.TextField(_('إجراءات الوقاية'), blank=True)
     cost_impact = models.DecimalField(_('التأثير المالي'), max_digits=10, decimal_places=2, default=0)
     time_impact_hours = models.IntegerField(_('التأثير الزمني (ساعات)'), default=0)
+    analyzed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name=_('تم التحليل بواسطة'))
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
 

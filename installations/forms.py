@@ -247,12 +247,14 @@ class InstallationScheduleForm(forms.ModelForm):
     scheduled_date = forms.DateField(
         label=_('تاريخ التركيب'),
         widget=forms.DateInput(attrs={'type': 'date'}),
-        help_text=_('اختر تاريخ التركيب')
+        help_text=_('اختر تاريخ التركيب'),
+        required=False
     )
     scheduled_time = forms.TimeField(
         label=_('موعد التركيب'),
         widget=forms.TimeInput(attrs={'type': 'time'}),
-        help_text=_('اختر موعد التركيب')
+        help_text=_('اختر موعد التركيب'),
+        required=False
     )
 
     class Meta:
@@ -266,6 +268,13 @@ class InstallationScheduleForm(forms.ModelForm):
         cleaned_data = super().clean()
         scheduled_date = cleaned_data.get('scheduled_date')
         scheduled_time = cleaned_data.get('scheduled_time')
+
+        # التحقق من أن التاريخ والوقت مطلوبان عند الجدولة
+        if self.instance and self.instance.status in ['scheduled', 'in_installation']:
+            if not scheduled_date:
+                raise ValidationError(_('تاريخ التركيب مطلوب للحالة المجدولة'))
+            if not scheduled_time:
+                raise ValidationError(_('موعد التركيب مطلوب للحالة المجدولة'))
 
         if scheduled_date and scheduled_date < timezone.now().date():
             raise ValidationError(_('لا يمكن جدولة تركيب في تاريخ ماضي'))
@@ -536,10 +545,11 @@ class ModificationErrorAnalysisForm(forms.ModelForm):
     """نموذج تحليل خطأ التعديل"""
     class Meta:
         model = ModificationErrorAnalysis
-        fields = ['error_type', 'error_description', 'root_cause', 'solution_applied', 
+        fields = ['error_type', 'severity', 'error_description', 'root_cause', 'solution_applied', 
                  'prevention_measures', 'cost_impact', 'time_impact_hours']
         widgets = {
             'error_type': forms.Select(attrs={'class': 'form-control'}),
+            'severity': forms.Select(attrs={'class': 'form-control'}),
             'error_description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
             'root_cause': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'solution_applied': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),

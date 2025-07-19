@@ -113,7 +113,7 @@
                                            class="btn btn-sm btn-outline-info" title="عرض تفاصيل الطلب">
                                             <i class="fas fa-shopping-cart"></i>
                                         </a>
-                                        {% if installation.status == 'pending' %}
+                                        {% if installation.status == 'pending' or installation.status == 'needs_scheduling' %}
                                             <a href="{% url 'installations:schedule_installation' installation.id %}" 
                                                class="btn btn-sm btn-success" title="جدولة">
                                                 <i class="fas fa-calendar-plus"></i>
@@ -122,11 +122,11 @@
                                         {% if installation.status == 'scheduled' %}
                                             <button type="button" class="btn btn-sm btn-primary update-status" 
                                                     data-installation-id="{{ installation.id }}" 
-                                                    data-status="in_progress" title="بدء التركيب">
+                                                    data-status="in_installation" title="بدء التركيب">
                                                 <i class="fas fa-play"></i>
                                             </button>
                                         {% endif %}
-                                        {% if installation.status == 'in_progress' %}
+                                        {% if installation.status == 'in_installation' %}
                                             <button type="button" class="btn btn-sm btn-success update-status" 
                                                     data-installation-id="{{ installation.id }}" 
                                                     data-status="completed" title="إكمال التركيب">
@@ -261,4 +261,4 @@ document.querySelectorAll('.update-status').forEach(button => {
     padding: 0.5em 0.8em;
 }
 </style>
-{% endblock %} 
+{% endblock %}

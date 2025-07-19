@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تحليل التركيبات الشهري{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ title }}</h3>
+                    <div class="card-tools">
+                        <a href="{% url 'installations:dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- فلترة الشهر والسنة -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <form method="get" class="form-inline">
+                                <div class="form-group mr-3">
+                                    <label for="year" class="mr-2">السنة:</label>
+                                    <select name="year" id="year" class="form-control">
+                                        {% for y in "2020,2021,2022,2023,2024,2025"|split:"," %}
+                                            <option value="{{ y }}" {% if y|add:0 == year %}selected{% endif %}>{{ y }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group mr-3">
+                                    <label for="month" class="mr-2">الشهر:</label>
+                                    <select name="month" id="month" class="form-control">
+                                        {% for m in "1,2,3,4,5,6,7,8,9,10,11,12"|split:"," %}
+                                            <option value="{{ m }}" {% if m|add:0 == month %}selected{% endif %}>{{ m }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">عر��</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- إحصائيات عامة -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-info"><i class="fas fa-tools"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">إجمالي التركيبات</span>
+                                    <span class="info-box-number">{{ total_installations }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-success"><i class="fas fa-check"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">التركيبات المكتملة</span>
+                                    <span class="info-box-number">{{ completed_installations }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-warning"><i class="fas fa-edit"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">التعديلات</span>
+                                    <span class="info-box-number">{{ modification_stats|length }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-primary"><i class="fas fa-percentage"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">نسبة الإكمال</span>
+                                    <span class="info-box-number">
+                                        {% if total_installations > 0 %}
+                                            {{ completed_installations|floatformat:0 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- إحصائيات حسب الحالة -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>إحصائيات حسب الحالة</h4>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="statusChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>إحصائيات حسب الفريق</h4>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="teamChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- إحصائيات يومية -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>الإحصائيات اليومية لشهر {{ month_name }}</h4>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="dailyChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// إحصائيات حسب الحالة
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+const statusChart = new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for stat in status_stats %}'{{ stat.status }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for stat in status_stats %}{{ stat.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6c757d']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// إحصائيات حسب الفريق
+const teamCtx = document.getElementById('teamChart').getContext('2d');
+const teamChart = new Chart(teamCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for stat in team_stats %}'{{ stat.team__name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'عدد التركيبات',
+            data: [{% for stat in team_stats %}{{ stat.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: '#007bff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// الإحصائيات اليومية
+const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+const dailyChart = new Chart(dailyCtx, {
+    type: 'line',
+    data: {
+        labels: [{% for stat in daily_stats %}'{{ stat.date|date:"d" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'التركيبات اليومية',
+            data: [{% for stat in daily_stats %}{{ stat.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

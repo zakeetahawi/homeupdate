@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}سجل أحداث التركيبات{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ title }}</h3>
+                    <div class="card-tools">
+                        <a href="{% url 'installations:dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- فلاتر البحث -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <form method="get" class="form-inline">
+                                <div class="form-group mr-3">
+                                    <label for="event_type" class="mr-2">نوع الحدث:</label>
+                                    <select name="event_type" id="event_type" class="form-control">
+                                        <option value="">جميع الأحداث</option>
+                                        {% for event_type in event_types %}
+                                            <option value="{{ event_type }}" {% if request.GET.event_type == event_type %}selected{% endif %}>
+                                                {{ event_type }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group mr-3">
+                                    <label for="date_from" class="mr-2">من تاريخ:</label>
+                                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                                </div>
+                                <div class="form-group mr-3">
+                                    <label for="date_to" class="mr-2">إلى تاريخ:</label>
+                                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                                </div>
+                                <button type="submit" class="btn btn-primary">بحث</button>
+                                <a href="{% url 'installations:installation_event_logs' %}" class="btn btn-outline-secondary ml-2">مسح الفلاتر</a>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- جدول سجل الأحداث -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>التاريخ والوقت</th>
+                                    <th>نوع الحدث</th>
+                                    <th>رقم الطلب</th>
+                                    <th>وصف الحدث</th>
+                                    <th>المستخدم</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in event_logs %}
+                                    <tr>
+                                        <td>{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <span class="badge badge-{% if log.event_type == 'completion' %}success{% elif log.event_type == 'cancellation' %}danger{% elif log.event_type == 'modification_request' %}warning{% else %}info{% endif %}">
+                                                {{ log.get_event_type_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'installations:installation_detail' log.installation.id %}">
+                                                {{ log.installation.order.order_number }}
+                                            </a>
+                                        </td>
+                                        <td>{{ log.description }}</td>
+                                        <td>{{ log.user.get_full_name|default:log.user.username }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center">لا توجد أحداث</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ترقيم الصفحات -->
+                    {% if page_obj.has_other_pages %}
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.event_type %}&event_type={{ request.GET.event_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">السابق</a>
+                                    </li>
+                                {% endif %}
+
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ num }}{% if request.GET.event_type %}&event_type={{ request.GET.event_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.event_type %}&event_type={{ request.GET.event_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">التالي</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
