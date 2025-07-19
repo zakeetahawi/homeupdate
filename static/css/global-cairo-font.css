@@ -1,18 +1,7 @@
 /* تطبيق خط Cairo على كامل المشروع */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
 
-/* تطبيق الخط العربي على جميع العناصر الأساسية */
-* {
-    font-family: 'Cairo', sans-serif !important;
-}
-
-/* تطبيق الخط على العناصر الأساسية */
-html, body {
-    font-family: 'Cairo', sans-serif !important;
-    font-weight: 400;
-}
-
-/* تطبيق الخط على جميع النصوص */
+/* تطبيق الخط العربي على العناصر الأساسية - استثناء الأيقونات */
 body, 
 div, 
 span, 
@@ -31,6 +20,12 @@ ul,
 ol, 
 li {
     font-family: 'Cairo', sans-serif !important;
+}
+
+/* تطبيق الخط على العناصر الأساسية */
+html, body {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 400;
 }
 
 /* تطبيق الخط على البطاقات */
@@ -144,13 +139,13 @@ a {
     font-family: 'Cairo', sans-serif !important;
 }
 
-/* تطبيق الخط على الأيقونات مع النصوص */
+/* الحفاظ على خط Font Awesome للأيقونات */
 .fas, .far, .fab, .fa {
-    font-family: 'Font Awesome 5 Free', 'Cairo', sans-serif !important;
+    font-family: 'Font Awesome 5 Free' !important;
 }
 
 /* تطبيق الخط على النصوص العربية */
-[dir="rtl"] * {
+[dir="rtl"] *:not(.fas):not(.far):not(.fab):not(.fa) {
     font-family: 'Cairo', sans-serif !important;
 }
 
@@ -162,15 +157,15 @@ a {
     font-family: 'Cairo', sans-serif !important;
 }
 
-/* تطبيق الخط على جميع الأقسام */
-.customers *,
-.orders *,
-.inventory *,
-.inspections *,
-.installations *,
-.manufacturing *,
-.reports *,
-.database * {
+/* تطبيق الخط على جميع الأقسام - استثناء الأيقونات */
+.customers *:not(.fas):not(.far):not(.fab):not(.fa),
+.orders *:not(.fas):not(.far):not(.fab):not(.fa),
+.inventory *:not(.fas):not(.far):not(.fab):not(.fa),
+.inspections *:not(.fas):not(.far):not(.fab):not(.fa),
+.installations *:not(.fas):not(.far):not(.fab):not(.fa),
+.manufacturing *:not(.fas):not(.far):not(.fab):not(.fa),
+.reports *:not(.fas):not(.far):not(.fab):not(.fa),
+.database *:not(.fas):not(.far):not(.fab):not(.fa) {
     font-family: 'Cairo', sans-serif !important;
 }
 
@@ -189,7 +184,7 @@ a {
     margin-right: 5px;
 }
 
-/* تطبيق الخط على جميع العناصر المتبقية */
+/* تطبيق الخط على جميع العناصر المتبقية - استثناء الأيقونات */
 *:not(.fas):not(.far):not(.fab):not(.fa) {
     font-family: 'Cairo', sans-serif !important;
 } 

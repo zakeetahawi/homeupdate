@@ -1,0 +1,125 @@
+/* إصلاح مشكلة Font Awesome مع خط Cairo */
+
+/* الحفاظ على خط Font Awesome للأيقونات */
+.fas, .far, .fab, .fa {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* إصلاح الأيقونات في الأزرار */
+.btn .fas,
+.btn .far,
+.btn .fab,
+.btn .fa {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* إصلاح الأيقونات في شريط التنقل */
+.navbar .fas,
+.navbar .far,
+.navbar .fab,
+.navbar .fa {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* إصلاح الأيقونات في البطاقات */
+.card .fas,
+.card .far,
+.card .fab,
+.card .fa {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* إصلاح الأيقونات في الجداول */
+.table .fas,
+.table .far,
+.table .fab,
+.table .fa {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* إصلاح الأيقونات في القوائم المنسدلة */
+.dropdown-menu .fas,
+.dropdown-menu .far,
+.dropdown-menu .fab,
+.dropdown-menu .fa {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* إصلاح الأيقونات في النوافذ المنبثقة */
+.modal .fas,
+.modal .far,
+.modal .fab,
+.modal .fa {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* إصلاح الأيقونات في التنبيهات */
+.alert .fas,
+.alert .far,
+.alert .fab,
+.alert .fa {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* إصلاح الأيقونات في البادجات */
+.badge .fas,
+.badge .far,
+.badge .fab,
+.badge .fa {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* إصلاح جميع الأيقونات في أي مكان */
+[class*="fas"],
+[class*="far"],
+[class*="fab"],
+[class*="fa"] {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+}
+
+/* إصلاح الأيقونات في جميع الأقسام */
+.customers [class*="fas"],
+.customers [class*="far"],
+.customers [class*="fab"],
+.customers [class*="fa"],
+.orders [class*="fas"],
+.orders [class*="far"],
+.orders [class*="fab"],
+.orders [class*="fa"],
+.inventory [class*="fas"],
+.inventory [class*="far"],
+.inventory [class*="fab"],
+.inventory [class*="fa"],
+.inspections [class*="fas"],
+.inspections [class*="far"],
+.inspections [class*="fab"],
+.inspections [class*="fa"],
+.installations [class*="fas"],
+.installations [class*="far"],
+.installations [class*="fab"],
+.installations [class*="fa"],
+.manufacturing [class*="fas"],
+.manufacturing [class*="far"],
+.manufacturing [class*="fab"],
+.manufacturing [class*="fa"],
+.reports [class*="fas"],
+.reports [class*="far"],
+.reports [class*="fab"],
+.reports [class*="fa"],
+.database [class*="fas"],
+.database [class*="far"],
+.database [class*="fab"],
+.database [class*="fa"] {
+    font-family: 'Font Awesome 5 Free' !important;
+    font-weight: 900 !important;
+} 
