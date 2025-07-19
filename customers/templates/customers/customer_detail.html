@@ -160,6 +160,16 @@
                             </td>
                         </tr>
                         {% endif %}
+                        {% if customer.birth_date %}
+                        <tr>
+                            <th>{% trans 'تاريخ الميلاد' %}:</th>
+                            <td>
+                                <i class="fas fa-birthday-cake text-warning"></i> 
+                                {{ customer.birth_date|date:"d/m" }}
+                                <small class="text-muted">({{ customer.birth_date|date:"d" }} {{ customer.birth_date|date:"F" }})</small>
+                            </td>
+                        </tr>
+                        {% endif %}
                         <tr>
                             <th>{% trans 'العنوان' %}:</th>
                             <td>

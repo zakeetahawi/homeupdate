@@ -153,6 +153,12 @@ class Customer(models.Model):
         help_text=_('رقم هاتف إضافي اختياري')
     )
     email = models.EmailField(_('البريد الإلكتروني'), blank=True, null=True)
+    birth_date = models.DateField(
+        _('تاريخ الميلاد'),
+        blank=True,
+        null=True,
+        help_text=_('أدخل الشهر واليوم فقط (مثال: 15-03)')
+    )
     address = models.TextField(_('العنوان'))
     location_type = models.CharField(
         max_length=20,

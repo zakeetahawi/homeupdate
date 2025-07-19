@@ -417,6 +417,16 @@
                                 <small class="text-muted">اختياري</small>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.birth_date.id_for_label }}" class="form-label">{{ form.birth_date.label }}</label>
+                                {{ form.birth_date }}
+                                {% if form.birth_date.errors %}
+                                <span class="error-text">{{ form.birth_date.errors.0 }}</span>
+                                {% endif %}
+                                <small class="text-muted">اختياري - أدخل الشهر واليوم فقط</small>
+                            </div>
+                        </div>
                         <div class="col-md-12">
                             <div class="form-group">
                                 <label for="{{ form.address.id_for_label }}" class="form-label required-field">{{ form.address.label }}</label>

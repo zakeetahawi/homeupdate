@@ -82,17 +82,17 @@ class CustomerAdmin(admin.ModelAdmin):
     
     list_display = [
         'code', 'customer_image', 'name', 'customer_type_display',
-        'branch', 'phone', 'phone2', 'status', 'category'
+        'branch', 'phone', 'phone2', 'birth_date_display', 'status', 'category'
     ]
     
     list_filter = [
         'status', 'customer_type', 'category',
-        'branch', 'created_at'
+        'branch', 'birth_date', 'created_at'
     ]
     
     search_fields = [
         'code', 'name', 'phone', 'phone2', 'email',
-        'notes', 'category__name'
+        'birth_date', 'notes', 'category__name'
     ]
     
     readonly_fields = ['created_by', 'created_at', 'updated_at']
@@ -105,7 +105,7 @@ class CustomerAdmin(admin.ModelAdmin):
             )
         }),
         (_('معلومات الاتصال'), {
-            'fields': ('phone', 'phone2', 'email', 'address')
+            'fields': ('phone', 'phone2', 'email', 'birth_date', 'address')
         }),
         (_('معلومات إضافية'), {
             'fields': ('branch', 'interests', 'notes')
@@ -137,6 +137,15 @@ class CustomerAdmin(admin.ModelAdmin):
             )
         return '-'
     customer_image.short_description = _('الصورة')
+
+    def birth_date_display(self, obj):
+        """عرض تاريخ الميلاد بالشكل المطلوب"""
+        if obj.birth_date:
+            return obj.birth_date.strftime('%d/%m')
+        return '-'
+    
+    birth_date_display.short_description = _('تاريخ الميلاد')
+    birth_date_display.admin_order_field = 'birth_date'
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

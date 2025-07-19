@@ -18,7 +18,7 @@ class CustomerForm(forms.ModelForm):
     class Meta:
         model = Customer
         fields = [
-            'name', 'phone', 'phone2', 'email', 'address',
+            'name', 'phone', 'phone2', 'email', 'birth_date', 'address',
             'customer_type', 'category', 'status', 'interests',
             'notes', 'image'
         ]
@@ -26,6 +26,12 @@ class CustomerForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
+            'birth_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'placeholder': 'اختر تاريخ الميلاد',
+                'title': 'أدخل الشهر واليوم فقط'
+            }),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'customer_type': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
