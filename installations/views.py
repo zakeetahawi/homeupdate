@@ -103,17 +103,30 @@ def dashboard(request):
     ).select_related('order', 'order__customer', 'team')[:5]
 
     # الطلبات الجديدة (آخر 7 أيام) - فقط طلبات التركيب
+    # الطلبات الجديدة (آخر 7 أيام) - فقط طلبات التركيب مع الحالة الحقيقية
     recent_orders = Order.objects.filter(
         selected_types__icontains='installation',
         created_at__gte=timezone.now() - timezone.timedelta(days=7)
-    ).select_related('customer').order_by('-created_at')[:10]
+    ).select_related('customer', 'manufacturing_order').order_by('-created_at')[:10]
 
-    # الطلبات التي تحتاج جدولة - فقط طلبات التركيب
+    # الطلبات التي تحتاج جدولة - فقط الطلبات الجاهزة للتركيب فعلياً
     orders_needing_scheduling = Order.objects.filter(
         selected_types__icontains='installation',
         order_status__in=['ready_install', 'completed'],
         installationschedule__isnull=True
-    ).select_related('customer')[:10]
+    ).select_related('customer', 'manufacturing_order')[:10]
+    
+    # إضافة أوامر التصنيع الجاهزة للتركيب
+    from manufacturing.models import ManufacturingOrder as MfgOrder
+    manufacturing_orders_ready = MfgOrder.objects.filter(
+        status='ready_install',
+        order__selected_types__icontains='installation',
+        order__installationschedule__isnull=True
+    ).select_related('order', 'order__customer')[:10]
+    
+    # دمج الطلبات مع أوامر التصنيع
+    additional_orders = [mfg.order for mfg in manufacturing_orders_ready]
+    orders_needing_scheduling = list(orders_needing_scheduling) + additional_orders
 
     # إحصائيات الفرق
     teams_stats = InstallationTeam.objects.annotate(
@@ -800,6 +813,7 @@ def manufacturing_orders_list(request):
 
 
 @login_required
+@login_required
 def quick_schedule_installation(request, order_id):
     """جدولة سريعة للتركيب من الطلب"""
 
@@ -809,6 +823,26 @@ def quick_schedule_installation(request, order_id):
     # التحقق من عدم وجود جدولة سابقة
     if InstallationSchedule.objects.filter(order=order).exists():
         messages.warning(request, _('يوجد جدولة تركيب سابقة لهذا الطلب'))
+        return redirect('installations:dashboard')
+
+    # التحقق من أن الطلب جاهز للتركيب
+    is_ready_for_installation = False
+    
+    # التحقق من حالة الطلب العادية
+    if order.order_status in ['ready_install', 'completed']:
+        is_ready_for_installation = True
+    
+    # التحقق من أمر التصنيع إذا كان موجوداً
+    try:
+        from manufacturing.models import ManufacturingOrder
+        manufacturing_order = ManufacturingOrder.objects.filter(order=order).first()
+        if manufacturing_order and manufacturing_order.status == 'ready_install':
+            is_ready_for_installation = True
+    except:
+        pass
+    
+    if not is_ready_for_installation:
+        messages.error(request, 'لا يمكن جدولة التركيب. الطلب ليس جاهزاً للتركيب بعد. يجب أن يكون الطلب في حالة "جاهز للتركيب" في المصنع.')
         return redirect('installations:dashboard')
 
     if request.method == 'POST':

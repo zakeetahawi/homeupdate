@@ -203,8 +203,31 @@
                                         {% endif %}
                                     </td>
                                 </tr>
+                                <!-- إضافة تاريخ التركيب المتوقع للطلبات التي تحتوي على تركيب -->
+                                {% if 'installation' in order.get_selected_types_list %}
+                                <tr>
+                                    <th>{{ order.get_installation_date_label }}</th>
+                                    <td>
+                                        {% if order.get_expected_installation_date %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-tools me-1"></i>
+                                                {{ order.get_expected_installation_date|date:"Y-m-d" }}
+                                            </span>
+                                            <br><small class="text-muted">
+                                                {% if order.get_installation_date %}
+                                                    تاريخ مجدول للتركيب
+                                                {% else %}
+                                                    تاريخ متوقع للتركيب
+                                                {% endif %}
+                                            </small>
+                                        {% else %}
+                                            <span class="text-muted">لم يتم تحديد موعد التركيب</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
                             {% endif %}
-                            {% endwith %}
+                        {% endwith %}
                         {% else %}
                             <!-- For other orders, show smart delivery date -->
                             {% if order.get_smart_delivery_date %}
@@ -392,8 +415,19 @@
                                 </span>
                                 {% endif %}
                                 
-                                <!-- إضافة رابط لتفاصيل التركيب إذا كان موجوداً -->
+                                <!-- إضافة تاريخ التركيب إذا كان مجدولاً -->
                                 {% with installation=order.installationschedule_set.first %}
+                                    {% if installation and installation.get_installation_date %}
+                                    <br><div class="mt-2 p-2 bg-light rounded">
+                                        <strong><i class="fas fa-calendar me-1"></i>{{ installation.get_installation_date_label }}:</strong>
+                                        <span class="text-primary">{{ installation.get_installation_date|date:"d/m/Y" }}</span>
+                                        {% if installation.scheduled_time %}
+                                            <span class="text-muted">في الساعة {{ installation.scheduled_time|time:"H:i" }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- إضافة رابط لتفاصيل التركيب إذا كان موجوداً -->
                                     {% if installation %}
                                     <br><a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-sm btn-outline-primary mt-2">
                                         <i class="fas fa-eye me-1"></i> عرض تفاصيل التركيب

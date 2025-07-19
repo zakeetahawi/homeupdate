@@ -340,9 +340,21 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <span class="badge badge-success">
-                                                مكتمل في التصنيع
-                                            </span>
+                                            {% with display_info=order.get_display_status %}
+                                                <span class="badge {{ order.get_display_status_badge_class }}">
+                                                    <i class="{{ order.get_display_status_icon }} me-1"></i>
+                                                    {{ order.get_display_status_text }}
+                                                </span>
+                                                {% if display_info.source != 'order' %}
+                                                    <br><small class="text-muted">
+                                                        {% if display_info.source == 'installation' %}
+                                                            <i class="fas fa-tools me-1"></i>تركيب
+                                                        {% elif display_info.source == 'manufacturing' %}
+                                                            <i class="fas fa-industry me-1"></i>مصنع
+                                                        {% endif %}
+                                                    </small>
+                                                {% endif %}
+                                            {% endwith %}
                                         </td>
                                         <td>
                                             <a href="{% url 'orders:order_detail' order.id %}" 
@@ -350,11 +362,17 @@
                                                 <i class="fas fa-eye"></i> عرض الطلب
                                             </a>
                                             {% if not order.installationschedule_set.exists %}
-                                                <a href="#" 
-                                                   class="btn btn-sm btn-success"
-                                                   onclick="scheduleInstallation({{ order.id }})">
-                                                    <i class="fas fa-calendar-plus"></i> جدولة تركيب
-                                                </a>
+                                                {% with display_info=order.get_display_status %}
+                                                    {% if display_info.status == 'ready_install' or display_info.status == 'completed' or display_info.manufacturing_status == 'ready_install' %}
+                                                        <a href="#"
+                                                           class="btn btn-sm btn-success"
+                                                           onclick="scheduleInstallation({{ order.id }})">
+                                                            <i class="fas fa-calendar-plus"></i> جدولة تركيب
+                                                        </a>
+                                                    {% else %}
+                                                        <span class="badge badge-warning">ليس جاهز للترك��ب</span>
+                                                    {% endif %}
+                                                {% endwith %}
                                             {% else %}
                                                 <span class="badge badge-info">مجدول</span>
                                             {% endif %}
@@ -374,7 +392,6 @@
             </div>
         </div>
     </div>
-
     <!-- الطلبات التي تحتاج جدولة -->
     <div class="row mb-4">
         <div class="col-12">
@@ -384,7 +401,7 @@
                         <i class="fas fa-exclamation-triangle"></i>
                         طلبات التركيب الجاهزة (تحتاج جدولة)
                     </h6>
-                    <span class="badge badge-danger">{{ orders_needing_scheduling.count }}</span>
+                    <span class="badge badge-danger">{{ orders_needing_scheduling|length }}</span>
                 </div>
                 <div class="card-body">
                     {% if orders_needing_scheduling %}
@@ -392,7 +409,7 @@
                             <table class="table table-bordered" width="100%" cellspacing="0">
                                 <thead>
                                     <tr>
-                                        <th>رقم الطلب</th>
+                                        <th>رقم ال��لب</th>
                                         <th>العميل</th>
                                         <th>تاريخ الطلب</th>
                                         <th>حالة الطلب</th>
@@ -410,20 +427,38 @@
                                         <td><strong>{{ order.customer.name }}</strong></td>
                                         <td>{{ order.created_at|date:"d/m/Y" }}</td>
                                         <td>
-                                            <span class="badge badge-success">
-                                                مكتمل في التصنيع
-                                            </span>
+                                            {% with display_info=order.get_display_status %}
+                                                <span class="badge {{ order.get_display_status_badge_class }}">
+                                                    <i class="{{ order.get_display_status_icon }} me-1"></i>
+                                                    {{ order.get_display_status_text }}
+                                                </span>
+                                                {% if display_info.source != 'order' %}
+                                                    <br><small class="text-muted">
+                                                        {% if display_info.source == 'installation' %}
+                                                            <i class="fas fa-tools me-1"></i>تركيب
+                                                        {% elif display_info.source == 'manufacturing' %}
+                                                            <i class="fas fa-industry me-1"></i>مصنع
+                                                        {% endif %}
+                                                    </small>
+                                                {% endif %}
+                                            {% endwith %}
                                         </td>
                                         <td>
-                                            <a href="{% url 'orders:order_detail' order.id %}" 
+                                            <a href="{% url 'orders:order_detail' order.id %}"
                                                class="btn btn-sm btn-info">
                                                 <i class="fas fa-eye"></i> عرض الطلب
                                             </a>
-                                            <a href="#" 
-                                               class="btn btn-sm btn-success"
-                                               onclick="scheduleInstallation({{ order.id }})">
-                                                <i class="fas fa-calendar-plus"></i> جدولة ترك��ب
-                                            </a>
+                                            {% with display_info=order.get_display_status %}
+                                                {% if display_info.status == 'ready_install' or display_info.status == 'completed' or display_info.manufacturing_status == 'ready_install' %}
+                                                    <a href="#"
+                                                       class="btn btn-sm btn-success"
+                                                       onclick="scheduleInstallation({{ order.id }})">
+                                                        <i class="fas fa-calendar-plus"></i> جدولة تركيب
+                                                    </a>
+                                                {% else %}
+                                                    <span class="badge badge-warning">ليس جاهز للتركيب</span>
+                                                {% endif %}
+                                            {% endwith %}
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -438,6 +473,8 @@
                     {% endif %}
                 </div>
             </div>
+        </div>
+    </div>
         </div>
     </div>
 

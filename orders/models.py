@@ -662,6 +662,42 @@ class Order(models.Model):
         
         # في جميع الحالات الأخرى، إرجاع التاريخ المتوقع
         return self.expected_delivery_date
+
+    def get_installation_date(self):
+        """إرجاع تاريخ التركيب المناسب"""
+        # البحث عن جدولة التركيب المرتبطة بالطلب
+        try:
+            from installations.models import InstallationSchedule
+            installation = InstallationSchedule.objects.filter(order=self).first()
+            if installation:
+                return installation.get_installation_date()
+        except:
+            pass
+        return None
+
+    def get_installation_date_label(self):
+        """إرجاع تسمية تاريخ التركيب المناسبة"""
+        try:
+            from installations.models import InstallationSchedule
+            installation = InstallationSchedule.objects.filter(order=self).first()
+            if installation:
+                return installation.get_installation_date_label()
+        except:
+            pass
+        return "تاريخ التركيب المتوقع"
+
+    def get_expected_installation_date(self):
+        """إرجاع تاريخ التركيب المتوقع"""
+        # البحث عن جدولة التركيب المرتبطة بالطلب
+        try:
+            from installations.models import InstallationSchedule
+            installation = InstallationSchedule.objects.filter(order=self).first()
+            if installation:
+                return installation.get_expected_installation_date()
+        except:
+            pass
+        # إذا لم توجد جدولة، إرجاع تاريخ التسليم المتوقع
+        return self.expected_delivery_date
     
     def update_installation_status(self):
         """تحديث حالة التركيب بناءً على قسم التركيبات"""

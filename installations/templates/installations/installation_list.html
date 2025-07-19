@@ -98,7 +98,13 @@
                                 <td>{{ installation.order.customer.phone }}</td>
                                 <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
                                 <td>{{ installation.team.name|default:"غير محدد" }}</td>
-                                <td>{{ installation.scheduled_date|date:"d/m/Y"|default:"غير محدد" }}</td>
+                                <td>
+                                    {% if installation.get_installation_date %}
+                                        {{ installation.get_installation_date|date:"d/m/Y" }}
+                                    {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ installation.scheduled_time|time:"H:i"|default:"غير محدد" }}</td>
                                 <td>
                                     {% get_status_badge installation.status "installation" %}

@@ -201,6 +201,43 @@ class InstallationSchedule(models.Model):
         
         return status_flow.get(self.status, [])
 
+    def get_installation_date(self):
+        """إرجاع تاريخ التركيب المناسب حسب الحالة"""
+        # إذا كان التركيب مجدول أو له جدولة، إرجاع تاريخ الجدولة
+        if self.scheduled_date and self.status in ['scheduled', 'in_installation', 'completed', 'modification_required', 'modification_in_progress', 'modification_completed']:
+            return self.scheduled_date
+        # إذا كان مكتمل وله تاريخ إكمال، إرجاع تاريخ الإكمال
+        elif self.completion_date and self.status == 'completed':
+            return self.completion_date.date()
+        # في الحالات الأخرى، إرجاع تاريخ الجدولة إذا كان متوفراً
+        elif self.scheduled_date:
+            return self.scheduled_date
+        # إذا لم يكن هناك تاريخ محدد، إرجاع None
+        else:
+            return None
+
+    def get_installation_date_label(self):
+        """إرجاع تسمية تاريخ التركيب المناسبة حسب الحالة"""
+        if self.status == 'completed' and self.completion_date:
+            return "تاريخ إكمال التركيب"
+        elif self.status in ['scheduled', 'in_installation'] and self.scheduled_date:
+            return "تاريخ التركيب المجدول"
+        elif self.scheduled_date:
+            return "تاريخ التركيب"
+        else:
+            return "تاريخ التركيب المتوقع"
+
+    def get_expected_installation_date(self):
+        """إرجاع تاريخ التركيب المتوقع"""
+        # إذا كان هناك تاريخ جدولة، إرجاعه كتاريخ متوقع
+        if self.scheduled_date:
+            return self.scheduled_date
+        # إذا لم يكن هناك جدولة، إرجاع تاريخ ا��تسليم المتوقع من الطلب
+        elif self.order.expected_delivery_date:
+            return self.order.expected_delivery_date
+        else:
+            return None
+
     def requires_scheduling_settings(self):
         """التحقق من الحاجة لإعدادات الجدولة"""
         return self.status in ['needs_scheduling', 'scheduled']

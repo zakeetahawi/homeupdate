@@ -119,9 +119,14 @@
                                     <td>{{ installation.team.name|default:"غير محدد" }}</td>
                                 </tr>
                                 <tr>
-                                    <th>تاريخ التركيب:</th>
-                                    <td>{{ installation.scheduled_date|date:"d/m/Y"|default:"غير محدد" }}</td>
-                                </tr>
+                                    <th>{{ installation.get_installation_date_label }}:</th>
+                                    <td>
+                                        {% if installation.get_installation_date %}
+                                            {{ installation.get_installation_date|date:"d/m/Y" }}
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
                                 <tr>
                                     <th>موعد التركيب:</th>
                                     <td>{{ installation.scheduled_time|time:"H:i"|default:"غير محدد" }}</td>
