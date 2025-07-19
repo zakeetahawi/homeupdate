@@ -8,7 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from .models import (
     User, CompanyInfo, Branch, Notification, Department, Salesperson,
-    Role, UserRole, SystemSettings, BranchMessage
+    Role, UserRole, SystemSettings, BranchMessage, DashboardYearSettings
 )
 from .forms import THEME_CHOICES
 from manufacturing.models import ManufacturingOrder
@@ -551,3 +551,58 @@ class BranchMessageAdmin(admin.ModelAdmin):
             'fields': ('start_date', 'end_date', 'is_active')
         })
     )
+
+@admin.register(DashboardYearSettings)
+class DashboardYearSettingsAdmin(admin.ModelAdmin):
+    """إدارة إعدادات السنوات في الداش بورد"""
+    list_display = ('year', 'is_active', 'is_default', 'description', 'created_at')
+    list_filter = ('is_active', 'is_default', 'created_at')
+    search_fields = ('year', 'description')
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('-year',)
+    
+    fieldsets = (
+        (_('معلومات السنة'), {
+            'fields': ('year', 'description')
+        }),
+        (_('حالة السنة'), {
+            'fields': ('is_active', 'is_default'),
+            'description': _('يمكن تعيين سنة واحدة فقط كافتراضية')
+        }),
+        (_('معلومات النظام'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['activate_years', 'deactivate_years', 'set_as_default']
+    
+    def activate_years(self, request, queryset):
+        """تفعيل السنوات المحددة"""
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'تم تفعيل {updated} سنة بنجاح')
+    activate_years.short_description = 'تفعيل السنوات المحددة'
+    
+    def deactivate_years(self, request, queryset):
+        """إلغاء تفعيل السنوات المحددة"""
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'تم إلغاء تفعيل {updated} سنة بنجاح')
+    deactivate_years.short_description = 'إلغاء تفعيل السنوات المحددة'
+    
+    def set_as_default(self, request, queryset):
+        """تعيين السنة المحددة كافتراضية"""
+        if queryset.count() != 1:
+            self.message_user(request, 'يرجى تحديد سنة واحدة فقط', level='ERROR')
+            return
+        
+        year = queryset.first()
+        year.is_default = True
+        year.save()
+        self.message_user(request, f'تم تعيين سنة {year.year} كافتراضية بنجاح')
+    set_as_default.short_description = 'تعيين كافتراضية'
+    
+    def has_delete_permission(self, request, obj=None):
+        """منع حذف السنة الافتراضية"""
+        if obj and obj.is_default:
+            return False
+        return super().has_delete_permission(request, obj)

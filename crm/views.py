@@ -142,9 +142,20 @@ def admin_dashboard(request):
         (9, 'سبتمبر'), (10, 'أكتوبر'), (11, 'نوفمبر'), (12, 'ديسمبر')
     ]
     
-    # قائمة السنوات للفلتر
-    current_year = timezone.now().year
-    years = list(range(current_year - 2, current_year + 2))
+    # قائمة السنوات للفلتر - من قاعدة البيانات
+    try:
+        from accounts.models import DashboardYearSettings
+        available_years = DashboardYearSettings.get_available_years()
+        if available_years:
+            years = list(available_years)
+        else:
+            # إذا لم تكن هناك سنوات محددة، استخدم النطاق الافتراضي
+            current_year = timezone.now().year
+            years = list(range(current_year - 2, current_year + 2))
+    except ImportError:
+        # في حالة عدم وجود النموذج، استخدم النطاق الافتراضي
+        current_year = timezone.now().year
+        years = list(range(current_year - 2, current_year + 2))
     
     context = {
         'customers_stats': customers_stats,
