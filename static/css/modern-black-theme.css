@@ -10,7 +10,7 @@
 [data-theme="modern-black"] {
     background: var(--background) !important;
     color: var(--text-primary) !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Cairo', sans-serif !important;
+    font-family: 'Cairo', sans-serif !important;
 }
 
 [data-theme="modern-black"] body {

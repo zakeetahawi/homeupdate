@@ -663,7 +663,7 @@
 
 /* RTL specific adjustments */
 body {
-    font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Cairo', sans-serif !important;
     color: var(--dark-text);
     background-color: var(--light-bg);
 }
