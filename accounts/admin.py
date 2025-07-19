@@ -8,7 +8,8 @@ from django.contrib.contenttypes.models import ContentType
 
 from .models import (
     User, CompanyInfo, Branch, Notification, Department, Salesperson,
-    Role, UserRole, SystemSettings, BranchMessage, DashboardYearSettings
+    Role, UserRole, SystemSettings, BranchMessage, DashboardYearSettings,
+    ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings
 )
 from .forms import THEME_CHOICES
 from manufacturing.models import ManufacturingOrder
@@ -606,3 +607,7 @@ class DashboardYearSettingsAdmin(admin.ModelAdmin):
         if obj and obj.is_default:
             return False
         return super().has_delete_permission(request, obj)
+
+
+# تم إزالة النماذج التي لا توجد حقولها في النماذج الفعلية
+# سيتم إضافتها لاحقاً عند إنشاء النماذج المناسبة
