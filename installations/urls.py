@@ -70,4 +70,5 @@ urlpatterns = [
     # إعدادات الجدولة
     path('installation/<int:installation_id>/scheduling-details/', views.view_scheduling_details, name='view_scheduling_details'),
     path('installation/<int:installation_id>/edit-scheduling-settings/', views.edit_scheduling_settings, name='edit_scheduling_settings'),
+    path('installation/<int:installation_id>/update-date-from-scheduled/', views.update_installation_date_from_scheduled, name='update_installation_date_from_scheduled'),
 ]

@@ -356,20 +356,11 @@ def installation_detail(request, installation_id):
     )
     receipt_memo = ReceiptMemo.objects.filter(installation=installation).first()
 
-    # الحصول على معلومات المعاينة المرتبطة بالطلب
-    related_inspection = None
-    inspection_type = None
-    if installation.order.related_inspection:
-        related_inspection = installation.order.related_inspection
-        inspection_type = installation.order.related_inspection_type
-
     context = {
         'installation': installation,
         'payments': payments,
         'modification_reports': modification_reports,
         'receipt_memo': receipt_memo,
-        'related_inspection': related_inspection,
-        'inspection_type': inspection_type,
     }
 
     return render(request, 'installations/installation_detail.html', context)
@@ -1935,3 +1926,53 @@ def get_installation_date_info(installation):
         'scheduled_date': installation.scheduled_date,
         'completion_date': installation.completion_date
     }
+
+
+@login_required
+def update_installation_date_from_scheduled(request, installation_id):
+    """تحديث تاريخ التركيب بناء على التاريخ المجدول"""
+    installation = get_object_or_404(InstallationSchedule, id=installation_id)
+    
+    if request.method == 'POST':
+        try:
+            # تحديث التاريخ بناء على التاريخ المجدول
+            if installation.scheduled_date:
+                installation.installation_date = installation.scheduled_date
+                installation.save(update_fields=['installation_date'])
+                
+                # إنشاء سجل حدث
+                from .models import InstallationEventLog
+                InstallationEventLog.objects.create(
+                    installation=installation,
+                    event_type='date_update',
+                    description=f'تم تحديث تاريخ التركيب إلى {installation.scheduled_date} بناء على التاريخ المجدول',
+                    user=request.user,
+                    metadata={
+                        'old_date': None,
+                        'new_date': str(installation.scheduled_date),
+                        'updated_from_scheduled': True
+                    }
+                )
+                
+                messages.success(request, f'تم تحديث تاريخ التركيب بنجاح إلى {installation.scheduled_date}')
+                return JsonResponse({
+                    'success': True,
+                    'message': f'تم تحديث التاريخ بنجاح إلى {installation.scheduled_date}',
+                    'new_date': str(installation.scheduled_date)
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'لا يوجد تاريخ مجدول للتركيب'
+                })
+                
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'حدث خطأ أثناء تحديث التاريخ: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'طريقة الطلب غير صحيحة'
+    })
