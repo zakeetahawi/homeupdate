@@ -165,6 +165,23 @@
                                             {{ installation.get_status_display }}
                                         </span>
                                     {% endif %}
+                                    
+                                    <!-- عرض حالة الطلب الأصلي -->
+                                    {% if installation.order.is_manufacturing_order %}
+                                        {% if installation.order.is_delivered_manufacturing_order %}
+                                            <br><small class="text-info">
+                                                <i class="fas fa-truck"></i> تم التسليم (أمر تصنيع)
+                                            </small>
+                                        {% else %}
+                                            <br><small class="text-warning">
+                                                <i class="fas fa-industry"></i> جاهز للتركيب (أمر تصنيع)
+                                            </small>
+                                        {% endif %}
+                                    {% elif installation.order.order_status == 'ready_install' or installation.order.order_status == 'completed' %}
+                                        <br><small class="text-success">
+                                            <i class="fas fa-check-circle"></i> جاهز للتركيب
+                                        </small>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
@@ -172,9 +189,9 @@
                                            class="btn btn-sm btn-info" title="عرض تفاصيل التركيب">
                                             <i class="fas fa-tools"></i>
                                         </a>
-                                        <a href="{% url 'orders:order_detail' installation.order.id %}" 
-                                           class="btn btn-sm btn-outline-info" title="عرض تفاصيل الطلب">
-                                            <i class="fas fa-shopping-cart"></i>
+                                        <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                           class="btn btn-sm btn-outline-info" title="عرض تفاصيل التركيب">
+                                            <i class="fas fa-tools"></i>
                                         </a>
                                         {% if installation.status == 'needs_scheduling' %}
                                             <a href="{% url 'installations:schedule_installation' installation.id %}" 

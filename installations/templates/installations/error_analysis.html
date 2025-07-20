@@ -59,7 +59,7 @@
     <!-- إحصائيات الأخطاء -->
     <div class="error-stats">
         <div class="error-stat-card">
-            <h4>{{ total_cost_impact|floatformat:2 }}</h4>
+                                    <h4>{{ total_cost_impact|currency_format }}</h4>
             <p>إجمالي التأثير المالي (جنيه)</p>
         </div>
         <div class="error-stat-card">
@@ -158,7 +158,7 @@
                                     {{ analysis.solution_applied|truncatechars:50 }}
                                 </span>
                             </td>
-                            <td>{{ analysis.cost_impact|floatformat:2 }} جنيه</td>
+                            <td>{{ analysis.cost_impact|currency_format }}</td>
                             <td>{{ analysis.time_impact_hours }} ساعة</td>
                             <td>{{ analysis.created_at|date:"Y-m-d" }}</td>
                             <td>

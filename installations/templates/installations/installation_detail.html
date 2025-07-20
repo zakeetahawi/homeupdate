@@ -287,7 +287,7 @@
                                 </tr>
                                 <tr>
                                     <th>متبقي الحساب:</th>
-                                    <td>{{ installation.order.remaining_amount|default:"0" }} جنيه</td>
+                                    <td>{{ installation.order.remaining_amount|default:"0"|currency_format }}</td>
                                 </tr>
                                 <tr>
                                     <th>تاريخ الطلب:</th>
@@ -578,7 +578,7 @@
                                 <tr>
                                     <td>{{ payment.created_at|date:"d/m/Y" }}</td>
                                     <td>{{ payment.get_payment_type_display }}</td>
-                                    <td>{{ payment.amount }} جنيه</td>
+                                    <td>{{ payment.amount|currency_format }}</td>
                                     <td>{{ payment.payment_method|default:"غير محدد" }}</td>
                                     <td>{{ payment.receipt_number|default:"غير محدد" }}</td>
                                     <td>{{ payment.notes|default:"-" }}</td>
@@ -644,7 +644,7 @@
                             <table class="table table-borderless">
                                 <tr>
                                     <th>المبلغ المستلم:</th>
-                                    <td>{{ receipt_memo.amount_received }} جنيه</td>
+                                    <td>{{ receipt_memo.amount_received|currency_format }}</td>
                                 </tr>
                                 <tr>
                                     <th>توقيع العميل:</th>

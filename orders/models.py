@@ -1065,6 +1065,18 @@ class Order(models.Model):
                 'manufacturing_deleted': 'أمر تصنيع محذوف',
             }
             return order_texts.get(status, status)
+    
+    @property
+    def is_manufacturing_order(self):
+        """التحقق من وجود أمر تصنيع مرتبط بالطلب"""
+        return hasattr(self, 'manufacturing_order') and self.manufacturing_order is not None
+    
+    @property
+    def is_delivered_manufacturing_order(self):
+        """التحقق من أن أمر التصنيع تم تسليمه"""
+        if self.is_manufacturing_order:
+            return self.manufacturing_order.status == 'delivered'
+        return False
 
     def get_display_inspection_status(self):
         """

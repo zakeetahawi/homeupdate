@@ -12,6 +12,7 @@ from django.db import models
 import json
 from datetime import timedelta
 from orders.models import Order
+from accounts.models import SystemSettings
 from .models import (
     InstallationSchedule, InstallationTeam, Technician, Driver,
     ModificationRequest, ModificationImage, ManufacturingOrder,
@@ -25,6 +26,17 @@ from .forms import (
     InstallationStatusForm, ModificationErrorAnalysisForm, InstallationFilterForm,
     QuickScheduleForm, DailyScheduleForm, CustomerDebtForm
 )
+
+
+def currency_format(amount):
+    """تنسيق المبلغ مع عملة النظام"""
+    try:
+        settings = SystemSettings.get_settings()
+        symbol = settings.currency_symbol
+        formatted_amount = f"{amount:,.2f}"
+        return f"{formatted_amount} {symbol}"
+    except Exception:
+        return f"{amount:,.2f} ر.س"
 
 
 @login_required
@@ -62,7 +74,7 @@ def dashboard(request):
     from manufacturing.models import ManufacturingOrder
     # البحث عن أوامر التصنيع الجاهزة للتركيب بناءً على الطلب الأصلي
     manufacturing_orders_ready = ManufacturingOrder.objects.filter(
-        status='ready_install',
+        status__in=['ready_install', 'delivered'],  # إضافة حالة "تم التسليم"
         order__selected_types__icontains='installation',
         order__installationschedule__isnull=True  # التأكد من عدم وجود جدولة تركيب
     ).count()
@@ -78,7 +90,7 @@ def dashboard(request):
     
     # جلب أوامر التصنيع الجاهزة للتركيب
     ready_manufacturing_orders = ManufacturingOrder.objects.filter(
-        status='ready_install',
+        status__in=['ready_install', 'delivered'],  # إضافة حالة "تم التسليم"
         order__selected_types__icontains='installation',
         order__installationschedule__isnull=True
     )
@@ -143,7 +155,7 @@ def dashboard(request):
     # إضافة أوامر التصنيع الجاهزة للتركيب (بدون تكرار)
     from manufacturing.models import ManufacturingOrder as MfgOrder
     manufacturing_orders_ready = MfgOrder.objects.filter(
-        status='ready_install',
+        status__in=['ready_install', 'delivered'],  # إضافة حالة "تم التسليم"
         order__selected_types__icontains='installation',
         order__installationschedule__isnull=True
     ).select_related('order', 'order__customer')[:10]
@@ -154,6 +166,13 @@ def dashboard(request):
     existing_order_ids = set(orders_needing_scheduling.values_list('id', flat=True))
     unique_additional_orders = [order for order in additional_orders if order.id not in existing_order_ids]
     orders_needing_scheduling = list(orders_needing_scheduling) + unique_additional_orders
+
+    # إحصائيات أوامر التصنيع التي تم تسليمها
+    delivered_manufacturing_orders = ManufacturingOrder.objects.filter(
+        status='delivered',
+        order__selected_types__icontains='installation',
+        order__installationschedule__isnull=True
+    ).count()
 
     # إحصائيات الفرق
     teams_stats = InstallationTeam.objects.annotate(
@@ -185,6 +204,9 @@ def dashboard(request):
         'pending_modifications': pending_modifications,
         'in_progress_modifications': in_progress_modifications,
         'completed_modifications': completed_modifications,
+        # إحصائيات أوامر التصنيع التي تم تسليمها
+        'delivered_manufacturing_orders': delivered_manufacturing_orders,
+        'currency_format': currency_format,  # إضافة دالة تنسيق العملة للقوالب
     }
 
     return render(request, 'installations/dashboard.html', context)
@@ -298,12 +320,20 @@ def change_installation_status(request, installation_id):
 
 @login_required
 def installation_list(request):
-    """قائمة التركيبات"""
+    """قائمة التركيبات - تعرض جميع التركيبات بما في ذلك غير المجدولة"""
+    # جلب جميع التركيبات بدون فلترة مسبقة
     installations = InstallationSchedule.objects.select_related(
         'order', 'order__customer', 'team'
     ).order_by('-created_at')
+    
+    # إضافة معلومات أوامر التصنيع للطلبات
+    for installation in installations:
+        if hasattr(installation.order, 'manufacturing_order'):
+            # لا نحتاج لتعيين الخصائص لأنها محسوبة تلقائياً
+            # فقط نتأكد من وجود أمر التصنيع
+            pass
 
-    # تطبيق الفلاتر
+    # تطبيق الفلاتر (اختيارية)
     filter_form = InstallationFilterForm(request.GET)
     if filter_form.is_valid():
         status = filter_form.cleaned_data.get('status')
@@ -312,15 +342,16 @@ def installation_list(request):
         date_to = filter_form.cleaned_data.get('date_to')
         search = filter_form.cleaned_data.get('search')
 
-        if status:
+        # تطبيق الفلاتر فقط إذا تم تحديدها
+        if status and status != '':
             installations = installations.filter(status=status)
-        if team:
+        if team and team != '':
             installations = installations.filter(team=team)
         if date_from:
             installations = installations.filter(scheduled_date__gte=date_from)
         if date_to:
             installations = installations.filter(scheduled_date__lte=date_to)
-        if search:
+        if search and search.strip() != '':
             installations = installations.filter(
                 Q(order__order_number__icontains=search) |
                 Q(order__customer__name__icontains=search)
@@ -584,7 +615,7 @@ def orders_modal(request):
         # جلب أوامر التصنيع الجاهزة للتركيب (فقط من نوع تركيب)
         from manufacturing.models import ManufacturingOrder
         manufacturing_orders = ManufacturingOrder.objects.filter(
-            status='ready_install',
+            status__in=['ready_install', 'delivered'],  # إضافة حالة "تم التسليم"
             order__selected_types__icontains='installation',
             order__installationschedule__isnull=True  # التأكد من عدم وجود جدولة
         ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
@@ -594,9 +625,9 @@ def orders_modal(request):
         existing_order_ids = set(order.id for order in orders)
         
         for mfg_order in manufacturing_orders:
-            # إضافة علامة خاصة لأمر التصنيع فقط إذا لم يكن موجوداً بالفعل
+            # إضافة أمر التصنيع فقط إذا لم يكن موجوداً بالفعل
             if mfg_order.order.id not in existing_order_ids:
-                mfg_order.order.is_manufacturing_order = True
+                # إضافة أمر التصنيع للطلب (سيتم التعامل معه في القالب)
                 mfg_order.order.manufacturing_order = mfg_order
                 orders.append(mfg_order.order)
                 existing_order_ids.add(mfg_order.order.id)
@@ -607,11 +638,11 @@ def orders_modal(request):
             order_status__in=['pending', 'in_progress']
         ).select_related('customer', 'branch', 'salesperson')
     elif order_type == 'completed':
-        # الطلبات المكتملة - فقط طلبات التركيب
-        orders = Order.objects.filter(
-            selected_types__icontains='installation',
-            order_status__in=['ready_install', 'completed', 'delivered']
-        ).select_related('customer', 'branch', 'salesperson')
+        # التركيبات المكتملة من قسم التركيبات فقط
+        schedules = InstallationSchedule.objects.filter(
+            status='completed'
+        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
+        orders = [schedule.order for schedule in schedules]
     elif order_type == 'debt':
         # الطلبات مع المديونية - فقط طلبات التركيب
         orders = Order.objects.filter(
@@ -648,6 +679,20 @@ def orders_modal(request):
             status='needs_scheduling'
         ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
         orders = [schedule.order for schedule in schedules]
+    elif order_type == 'delivered_manufacturing':
+        # أوامر التصنيع التي تم تسليمها - فقط طلبات التركيب
+        from manufacturing.models import ManufacturingOrder
+        manufacturing_orders = ManufacturingOrder.objects.filter(
+            status='delivered',
+            order__selected_types__icontains='installation',
+            order__installationschedule__isnull=True  # التأكد من عدم وجود جدولة
+        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
+        
+        orders = []
+        for mfg_order in manufacturing_orders:
+            # إضافة أمر التصنيع للطلب (سيتم التعامل معه في القالب)
+            mfg_order.order.manufacturing_order = mfg_order
+            orders.append(mfg_order.order)
     else:
         orders = Order.objects.none()
 
@@ -939,20 +984,20 @@ def quick_schedule_installation(request, order_id):
     is_ready_for_installation = False
     
     # التحقق من حالة الطلب العادية
-    if order.order_status in ['ready_install', 'completed']:
+    if order.order_status in ['ready_install', 'completed', 'delivered']:
         is_ready_for_installation = True
     
     # التحقق من أمر التصنيع إذا كان موجوداً
     try:
         from manufacturing.models import ManufacturingOrder
         manufacturing_order = ManufacturingOrder.objects.filter(order=order).first()
-        if manufacturing_order and manufacturing_order.status == 'ready_install':
+        if manufacturing_order and manufacturing_order.status in ['ready_install', 'delivered']:
             is_ready_for_installation = True
     except:
         pass
     
     if not is_ready_for_installation:
-        messages.error(request, 'لا يمكن جدولة التركيب. الطلب ليس جاهزاً للتركيب بعد. يجب أن يكون الطلب في حالة "جاهز للتركيب" في المصنع.')
+        messages.error(request, 'لا يمكن جدولة التركيب. الطلب ليس جاهزاً للتركيب بعد. يجب أن يكون الطلب في حالة "جاهز للتركيب" أو "تم التسليم" في المصنع.')
         return redirect('installations:dashboard')
 
     if request.method == 'POST':

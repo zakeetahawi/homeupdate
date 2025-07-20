@@ -27,7 +27,7 @@
                             <div class="col-md-6">
                                 <strong>العنوان:</strong> {{ installation.order.customer.address|default:"غير محدد" }}<br>
                                 <strong>نوع المكان:</strong> {{ installation.order.location_type|default:"غير محدد" }}<br>
-                                <strong>متبقي الحساب:</strong> {{ installation.order.remaining_amount|default:"0" }} جنيه
+                                <strong>متبقي الحساب:</strong> {{ installation.order.remaining_amount|default:"0"|currency_format }}
                             </div>
                         </div>
                     </div>

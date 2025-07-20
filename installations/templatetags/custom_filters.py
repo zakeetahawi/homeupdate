@@ -1,4 +1,5 @@
 from django import template
+from accounts.models import SystemSettings
 
 register = template.Library()
 
@@ -29,4 +30,19 @@ def get_month_name(month_number):
         11: 'نوفمبر',
         12: 'ديسمبر'
     }
-    return months.get(int(month_number), str(month_number)) 
+    return months.get(int(month_number), str(month_number))
+
+
+@register.filter
+def currency_format(amount):
+    """
+    تنسيق المبلغ مع عملة النظام
+    Usage: {{ amount|currency_format }}
+    """
+    try:
+        settings = SystemSettings.get_settings()
+        symbol = settings.currency_symbol
+        formatted_amount = f"{float(amount):,.2f}"
+        return f"{formatted_amount} {symbol}"
+    except Exception:
+        return f"{float(amount):,.2f} ر.س" 

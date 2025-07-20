@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy as _
+from accounts.models import SystemSettings
 from .models import (
     InstallationSchedule, InstallationTeam, Technician, Driver,
     ModificationRequest, ModificationImage, ManufacturingOrder,
@@ -10,13 +12,28 @@ from .models import (
 )
 
 
+def currency_format(amount):
+    """تنسيق المبلغ مع عملة النظام"""
+    try:
+        settings = SystemSettings.get_settings()
+        symbol = settings.currency_symbol
+        formatted_amount = f"{amount:,.2f}"
+        return f"{formatted_amount} {symbol}"
+    except Exception:
+        return f"{amount:,.2f} ر.س"
+
+
 @admin.register(CustomerDebt)
 class CustomerDebtAdmin(admin.ModelAdmin):
-    list_display = ['customer', 'order', 'debt_amount', 'is_paid', 'payment_date', 'created_at']
+    list_display = ['customer', 'order', 'debt_amount_formatted', 'is_paid', 'payment_date', 'created_at']
     list_filter = ['is_paid', 'created_at', 'payment_date']
     search_fields = ['customer__name', 'order__order_number']
     list_editable = ['is_paid']
     ordering = ['-created_at']
+
+    def debt_amount_formatted(self, obj):
+        return currency_format(obj.debt_amount)
+    debt_amount_formatted.short_description = 'مبلغ المديونية'
 
 
 @admin.register(Technician)
@@ -92,11 +109,15 @@ class InstallationScheduleAdmin(admin.ModelAdmin):
 
 @admin.register(ModificationRequest)
 class ModificationRequestAdmin(admin.ModelAdmin):
-    list_display = ['installation', 'customer', 'modification_type', 'priority', 'customer_approval', 'created_at']
+    list_display = ['installation', 'customer', 'modification_type', 'priority', 'estimated_cost_formatted', 'customer_approval', 'created_at']
     list_filter = ['priority', 'customer_approval', 'created_at']
     search_fields = ['installation__order__order_number', 'customer__name', 'modification_type']
     list_editable = ['priority', 'customer_approval']
     ordering = ['-created_at']
+
+    def estimated_cost_formatted(self, obj):
+        return currency_format(obj.estimated_cost)
+    estimated_cost_formatted.short_description = 'التكلفة المتوقعة'
 
 
 @admin.register(ModificationImage)
@@ -135,7 +156,7 @@ class ModificationReportAdmin(admin.ModelAdmin):
 
 @admin.register(ReceiptMemo)
 class ReceiptMemoAdmin(admin.ModelAdmin):
-    list_display = ['installation', 'receipt_image_preview', 'customer_signature', 'amount_received', 'created_at']
+    list_display = ['installation', 'receipt_image_preview', 'customer_signature', 'amount_received_formatted', 'created_at']
     list_filter = ['customer_signature', 'created_at']
     search_fields = ['installation__order__order_number']
     ordering = ['-created_at']
@@ -149,13 +170,21 @@ class ReceiptMemoAdmin(admin.ModelAdmin):
         return '-'
     receipt_image_preview.short_description = 'صورة المذكرة'
 
+    def amount_received_formatted(self, obj):
+        return currency_format(obj.amount_received)
+    amount_received_formatted.short_description = 'المبلغ المستلم'
+
 
 @admin.register(InstallationPayment)
 class InstallationPaymentAdmin(admin.ModelAdmin):
-    list_display = ['installation', 'payment_type', 'amount', 'payment_method', 'created_at']
+    list_display = ['installation', 'payment_type', 'amount_formatted', 'payment_method', 'created_at']
     list_filter = ['payment_type', 'payment_method', 'created_at']
     search_fields = ['installation__order__order_number', 'receipt_number']
     ordering = ['-created_at']
+
+    def amount_formatted(self, obj):
+        return currency_format(obj.amount)
+    amount_formatted.short_description = 'المبلغ'
 
 
 @admin.register(InstallationArchive)
@@ -182,10 +211,14 @@ class InstallationAnalyticsAdmin(admin.ModelAdmin):
 
 @admin.register(ModificationErrorAnalysis)
 class ModificationErrorAnalysisAdmin(admin.ModelAdmin):
-    list_display = ['modification_request', 'error_type', 'cost_impact', 'time_impact_hours', 'created_at']
+    list_display = ['modification_request', 'error_type', 'cost_impact_formatted', 'time_impact_hours', 'created_at']
     list_filter = ['error_type', 'created_at']
     search_fields = ['modification_request__installation__order__order_number', 'error_description']
     readonly_fields = ['created_at', 'updated_at']
+
+    def cost_impact_formatted(self, obj):
+        return currency_format(obj.cost_impact)
+    cost_impact_formatted.short_description = 'التأثير المالي'
 
 
 @admin.register(ModificationErrorType)
@@ -198,6 +231,6 @@ class ModificationErrorTypeAdmin(admin.ModelAdmin):
 
 
 # تخصيص عنوان لوحة الإدارة
-admin.site.site_header = "إدارة قسم التركيبات"
-admin.site.site_title = "قسم التركيبات"
-admin.site.index_title = "مرحباً بك في إدارة قسم التركيبات"
+admin.site.site_header = "إدارة التركيبات - نظام الخواجه"
+admin.site.site_title = "إدارة التركيبات"
+admin.site.index_title = "مرحباً بك في إدارة التركيبات"

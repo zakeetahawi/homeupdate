@@ -35,9 +35,9 @@
                             <p><strong>تاريخ الطلب:</strong> {{ order.created_at|date:"d/m/Y" }}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>المبلغ الإجمالي:</strong> {{ order.total_amount }} ريال</p>
-                            <p><strong>المبلغ المدفوع:</strong> {{ order.paid_amount }} ريال</p>
-                            <p><strong>المتبقي:</strong> {{ order.total_amount|add:"-"|add:order.paid_amount }} ريال</p>
+                                            <p><strong>المبلغ الإجمالي:</strong> {{ order.total_amount|currency_format }}</p>
+                <p><strong>المبلغ المدفوع:</strong> {{ order.paid_amount|currency_format }}</p>
+                <p><strong>المتبقي:</strong> {{ order.total_amount|add:"-"|add:order.paid_amount|currency_format }}</p>
                         </div>
                     </div>
                 </div>
@@ -58,7 +58,7 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>مبلغ المديونية:</strong> {{ debt.debt_amount }} ريال</p>
+                            <p><strong>مبلغ المديونية:</strong> {{ debt.debt_amount|currency_format }}</p>
                             <p><strong>الحالة:</strong> 
                                 {% if debt.is_paid %}
                                     <span class="badge badge-success">تم الدفع</span>

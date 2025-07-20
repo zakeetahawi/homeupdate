@@ -1,3 +1,4 @@
+{% load custom_filters %}
 {% if orders or manufacturing_orders %}
     <!-- أزرار الفلترة -->
     <div class="mb-3">
@@ -83,20 +84,26 @@
                             <span class="text-muted">غير محدد</span>
                         {% endif %}
                     </td>
-                    <td class="text-dark font-weight-bold">{{ order.total_amount|floatformat:2 }} {{ currency_symbol }}</td>
-                    <td class="text-dark">{{ order.paid_amount|floatformat:2 }} {{ currency_symbol }}</td>
+                    <td class="text-dark font-weight-bold">{{ order.total_amount|currency_format }}</td>
+                    <td class="text-dark">{{ order.paid_amount|currency_format }}</td>
                     <td>
                         {% if order.remaining_amount > 0 %}
-                            <span class="badge badge-danger font-weight-bold">{{ order.remaining_amount|floatformat:2 }} {{ currency_symbol }}</span>
+                            <span class="badge badge-danger font-weight-bold">{{ order.remaining_amount|currency_format }}</span>
                         {% else %}
-                            <span class="badge badge-success">0.00 {{ currency_symbol }}</span>
+                            <span class="badge badge-success">{{ 0|currency_format }}</span>
                         {% endif %}
                     </td>
                     <td>
                         {% if order.is_manufacturing_order %}
-                            <span class="badge badge-warning font-weight-bold">
-                                <i class="fas fa-industry"></i> جاهز للتركيب (أمر تصنيع)
-                            </span>
+                            {% if order.is_delivered_manufacturing_order %}
+                                <span class="badge badge-info font-weight-bold">
+                                    <i class="fas fa-truck"></i> تم التسليم (أمر تصنيع)
+                                </span>
+                            {% else %}
+                                <span class="badge badge-warning font-weight-bold">
+                                    <i class="fas fa-industry"></i> جاهز للتركيب (أمر تصنيع)
+                                </span>
+                            {% endif %}
                         {% elif order.order_status == 'completed' %}
                             <span class="badge badge-success font-weight-bold">
                                 <i class="fas fa-check-circle"></i> مكتمل
@@ -171,6 +178,12 @@
                                    class="btn btn-sm btn-success"
                                    onclick="scheduleManufacturingOrder({{ order.manufacturing_order.id }}, this)">
                                     <i class="fas fa-calendar-plus"></i> جدولة أمر التصنيع
+                                </a>
+                            {% elif order_type == 'delivered_manufacturing' and order.is_manufacturing_order %}
+                                <a href="#"
+                                   class="btn btn-sm btn-info"
+                                   onclick="scheduleManufacturingOrder({{ order.manufacturing_order.id }}, this)">
+                                    <i class="fas fa-truck"></i> جدولة تركيب (تم التسليم)
                                 </a>
                             {% elif order_type == 'ready' and not order.installationschedule_set.exists %}
                                 <a href="#"

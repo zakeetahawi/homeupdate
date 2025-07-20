@@ -85,11 +85,11 @@
                         <div class="btn-group" role="group">
                             <a href="{% url 'installations:installation_detail' installation.id %}" 
                                class="btn btn-sm btn-info">
-                                <i class="fas fa-eye"></i> عرض التركيب
+                                <i class="fas fa-tools"></i> تفاصيل التركيب
                             </a>
-                            <a href="{% url 'orders:order_detail' installation.order.id %}" 
+                            <a href="{% url 'installations:installation_detail' installation.id %}" 
                                class="btn btn-sm btn-secondary">
-                                <i class="fas fa-file-alt"></i> عرض الطلب
+                                <i class="fas fa-tools"></i> تفاصيل التركيب
                             </a>
                         </div>
                     </td>

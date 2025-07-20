@@ -22,4 +22,4 @@ def fix_url(value):
     view_name = view_name.replace('_', '-')
     
     # إرجاع الرابط بالشكل الصحيح
-    return f"/{app_name}/{view_name}/"
+    return f"/{app_name}/{view_name}/" 
