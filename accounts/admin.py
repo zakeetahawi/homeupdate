@@ -5,6 +5,7 @@ from django.contrib.auth.models import Permission
 from django import forms
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
 
 from .models import (
     User, CompanyInfo, Branch, Notification, Department, Salesperson,
@@ -221,9 +222,15 @@ class CompanyInfoAdmin(admin.ModelAdmin):
     fieldsets = (
         (_('معلومات أساسية'), {
             'fields': (
-                'name', 'logo', 'address', 'phone', 'email', 'website',
+                'name', 'address', 'phone', 'email', 'website',
                 'working_hours'
             )
+        }),
+        (_('لوغوهات النظام'), {
+            'fields': (
+                'logo', 'header_logo'
+            ),
+            'description': 'لوغو النظام: يستخدم في جميع أنحاء النظام | لوغو الهيدر: يستخدم في الهيدر فقط'
         }),
         (_('عن النظام'), {
             'fields': ('description',)
@@ -253,6 +260,16 @@ class CompanyInfoAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = ('developer', 'version', 'release_date')
+    
+    def get_model_perms(self, request):
+        """
+        إظهار النموذج في قائمة لوحة التحكم مع إضافة رابط سريع
+        """
+        perms = super().get_model_perms(request)
+        if request.user.is_superuser:
+            perms['view'] = True
+            perms['change'] = True
+        return perms
 
     def has_add_permission(self, request):
         # السماح للموظفين بإضافة معلومات الشركة
@@ -264,6 +281,22 @@ class CompanyInfoAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # السماح للموظفين بحذف معلومات الشركة
         return request.user.is_staff
+
+    def changelist_view(self, request, extra_context=None):
+        """
+        إضافة رابط سريع لإعدادات الشركة في قائمة لوحة التحكم
+        """
+        extra_context = extra_context or {}
+        extra_context['company_settings_url'] = reverse('accounts:company_info')
+        return super().changelist_view(request, extra_context)
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        """
+        إضافة رابط سريع لإعدادات الشركة في صفحة التعديل
+        """
+        extra_context = extra_context or {}
+        extra_context['company_settings_url'] = reverse('accounts:company_info')
+        return super().change_view(request, object_id, form_url, extra_context)
 
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):

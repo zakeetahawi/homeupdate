@@ -217,23 +217,122 @@ function setupFilters() {
             select.addEventListener('change', function() {
                 // إضافة تأثير بصري عند التغيير
                 this.style.borderColor = '#667eea';
+                this.style.boxShadow = '0 0 0 0.2rem rgba(102, 126, 234, 0.25)';
+                
                 setTimeout(() => {
                     this.style.borderColor = '#e9ecef';
+                    this.style.boxShadow = 'none';
                 }, 1000);
+                
+                // تطبيق الفلاتر تلقائياً إذا كان الخيار "السنة الكاملة"
+                if (this.name === 'month' && this.value === 'year') {
+                    console.log('تم اختيار السنة الكاملة - تطبيق الفلاتر تلقائياً');
+                    filterForm.submit();
+                }
+                
+                // تطبيق الفلاتر تلقائياً عند تغيير الفرع
+                if (this.name === 'branch') {
+                    console.log('تم تغيير الفرع - تطبيق الفلاتر تلقائياً');
+                    filterForm.submit();
+                }
+                
+                // تطبيق الفلاتر تلقائياً عند تغيير السنة
+                if (this.name === 'year') {
+                    console.log('تم تغيير السنة - تطبيق الفلاتر تلقائياً');
+                    filterForm.submit();
+                }
             });
         });
         
         // إضافة تأثير للزر
         const submitBtn = filterForm.querySelector('button[type="submit"]');
         if (submitBtn) {
-            submitBtn.addEventListener('click', function() {
+            submitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // إظهار حالة التحميل
+                const originalText = this.innerHTML;
                 this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التطبيق...';
                 this.disabled = true;
+                this.style.opacity = '0.7';
                 
+                // إرسال النموذج
                 setTimeout(() => {
-                    this.innerHTML = '<i class="fas fa-search me-2"></i>تطبيق الفلاتر';
-                    this.disabled = false;
-                }, 2000);
+                    filterForm.submit();
+                }, 500);
+            });
+        }
+        
+        // إضافة وظيفة لإخفاء/إظهار فلاتر المقارنة حسب النوع
+        const comparisonTypeSelect = document.getElementById('comparison-type-select');
+        const comparisonMonthGroup = document.getElementById('comparison-month-group');
+        
+        if (comparisonTypeSelect && comparisonMonthGroup) {
+            comparisonTypeSelect.addEventListener('change', function() {
+                if (this.value === 'year') {
+                    comparisonMonthGroup.style.display = 'none';
+                } else {
+                    comparisonMonthGroup.style.display = 'block';
+                }
+            });
+            
+            // تطبيق الإعداد الأولي
+            if (comparisonTypeSelect.value === 'year') {
+                comparisonMonthGroup.style.display = 'none';
+            }
+        }
+        
+        // إضافة وظيفة لتطبيق الفلاتر عند تغيير الفرع
+        const branchSelect = filterForm.querySelector('select[name="branch"]');
+        if (branchSelect) {
+            branchSelect.addEventListener('change', function() {
+                console.log('تم تغيير الفرع إلى:', this.value);
+                // يمكن إضافة منطق إضافي هنا إذا لزم الأمر
+            });
+        }
+        
+        // إضافة وظيفة لتطبيق الفلاتر عند تغيير السنة
+        const yearSelect = filterForm.querySelector('select[name="year"]');
+        if (yearSelect) {
+            yearSelect.addEventListener('change', function() {
+                console.log('تم تغيير السنة إلى:', this.value);
+                // يمكن إضافة منطق إضافي هنا إذا لزم الأمر
+            });
+        }
+        
+        // Auto-submit when period changes to "year"
+        const periodSelect = document.getElementById('period-select');
+        if (periodSelect) {
+            periodSelect.addEventListener('change', function() {
+                if (this.value === 'year') {
+                    console.log('Auto-submitting filters for year selection');
+                    filterForm.submit();
+                }
+            });
+            
+            // تأكد من أن القيمة الافتراضية هي "السنة الكاملة"
+            if (!periodSelect.value || periodSelect.value === '') {
+                periodSelect.value = 'year';
+            }
+        }
+        
+        // إضافة وظيفة لإظهار رسالة تأكيد عند تطبيق الفلاتر
+        const form = document.getElementById('dashboard-filters');
+        if (form) {
+            form.addEventListener('submit', function() {
+                // إظهار رسالة تأكيد
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'جاري تطبيق الفلاتر...',
+                        text: 'يرجى الانتظار',
+                        icon: 'info',
+                        timer: 1500,
+                        timerProgressBar: true,
+                        showConfirmButton: false,
+                        position: 'top-end',
+                        toast: true
+                    });
+                }
             });
         }
     }

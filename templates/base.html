@@ -141,10 +141,12 @@
         <div class="container">
             <a class="navbar-brand" href="{% url 'home' %}">
                 <div class="d-flex align-items-center">
-                    {% if company_info.logo %}
-                        <img src="{{ company_info.logo.url }}" alt="{{ company_info.name|default:'شعار النظام' }}" class="logo-img">
+                    {% if company_info.header_logo %}
+                        <img src="{{ company_info.header_logo.url }}?v={{ company_info.header_logo.url|length }}" alt="{{ company_info.name|default:'شعار النظام' }}" class="logo-img" id="header-logo">
+                    {% elif company_info.logo %}
+                        <img src="{{ company_info.logo.url }}?v={{ company_info.logo.url|length }}" alt="{{ company_info.name|default:'شعار النظام' }}" class="logo-img" id="header-logo">
                     {% else %}
-                        <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="logo-img">
+                        <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="logo-img" id="header-logo">
                     {% endif %}
                 </div>
             </a>
@@ -816,6 +818,98 @@
             margin-left: 10px !important;
         }
     </style>
+
+    <!-- JavaScript لتحديث اللوغو مباشرة عند رفعه -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // التحقق من أننا في صفحة إعدادات الشركة
+            if (window.location.pathname.includes('/admin/accounts/companyinfo/')) {
+                // البحث عن حقول رفع اللوغوهات
+                const logoInput = document.querySelector('input[type="file"][name="logo"]');
+                const headerLogoInput = document.querySelector('input[type="file"][name="header_logo"]');
+                const headerLogo = document.getElementById('header-logo');
+                const homeLogo = document.getElementById('home-logo');
+                const aboutLogo = document.getElementById('about-logo');
+                
+                // معالجة لوغو النظام العام
+                if (logoInput) {
+                    logoInput.addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const tempUrl = URL.createObjectURL(file);
+                            
+                            // تحديث اللوغوهات في الصفحات الأخرى (غير الهيدر)
+                            const otherLogos = [homeLogo, aboutLogo];
+                            otherLogos.forEach(logo => {
+                                if (logo) {
+                                    logo.src = tempUrl + '?v=' + Date.now();
+                                    logo.style.opacity = '0.7';
+                                    setTimeout(() => {
+                                        logo.style.opacity = '1';
+                                    }, 200);
+                                }
+                            });
+                            
+                            // عرض رسالة تأكيد
+                            Swal.fire({
+                                title: 'تم رفع لوغو النظام بنجاح! 🎉',
+                                text: 'سيتم تحديث اللوغو في جميع صفحات النظام',
+                                icon: 'success',
+                                timer: 2000,
+                                timerProgressBar: true,
+                                showConfirmButton: false,
+                                position: 'top-end',
+                                toast: true
+                            });
+                        }
+                    });
+                }
+                
+                // معالجة لوغو الهيدر
+                if (headerLogoInput) {
+                    headerLogoInput.addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const tempUrl = URL.createObjectURL(file);
+                            
+                            // تحديث لوغو الهيدر فقط
+                            if (headerLogo) {
+                                headerLogo.src = tempUrl + '?v=' + Date.now();
+                                headerLogo.style.opacity = '0.7';
+                                setTimeout(() => {
+                                    headerLogo.style.opacity = '1';
+                                }, 200);
+                            }
+                            
+                            // عرض رسالة تأكيد
+                            Swal.fire({
+                                title: 'تم رفع لوغو الهيدر بنجاح! 🎉',
+                                text: 'سيتم تحديث لوغو الهيدر في جميع صفحات النظام',
+                                icon: 'success',
+                                timer: 2000,
+                                timerProgressBar: true,
+                                showConfirmButton: false,
+                                position: 'top-end',
+                                toast: true
+                            });
+                        }
+                    });
+                }
+            }
+            
+            // تحديث جميع اللوغوهات عند تحميل الصفحة لتجنب التخزين المؤقت
+            const allLogos = ['header-logo', 'home-logo', 'about-logo'];
+            allLogos.forEach(logoId => {
+                const logo = document.getElementById(logoId);
+                if (logo && logo.src) {
+                    // إضافة timestamp للصورة لتجنب التخزين المؤقت
+                    if (!logo.src.includes('?v=')) {
+                        logo.src = logo.src + '?v=' + Date.now();
+                    }
+                }
+            });
+        });
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

@@ -170,8 +170,7 @@ def dashboard(request):
     # إحصائيات أوامر التصنيع التي تم تسليمها
     delivered_manufacturing_orders = ManufacturingOrder.objects.filter(
         status='delivered',
-        order__selected_types__icontains='installation',
-        order__installationschedule__isnull=True
+        order__selected_types__icontains='installation'
     ).count()
 
     # إحصائيات الفرق
@@ -684,8 +683,7 @@ def orders_modal(request):
         from manufacturing.models import ManufacturingOrder
         manufacturing_orders = ManufacturingOrder.objects.filter(
             status='delivered',
-            order__selected_types__icontains='installation',
-            order__installationschedule__isnull=True  # التأكد من عدم وجود جدولة
+            order__selected_types__icontains='installation'
         ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
         
         orders = []
@@ -700,7 +698,12 @@ def orders_modal(request):
         'orders': orders,
         'manufacturing_orders': [],  # سيتم إضافة أوامر التصنيع إذا لزم الأمر
         'currency_symbol': 'ج.م',
-        'order_type': order_type  # إضافة نوع الطلب للسياق
+        'order_type': order_type,  # إضافة نوع الطلب للسياق
+        'debug_info': {
+            'order_type': order_type,
+            'orders_count': len(orders),
+            'manufacturing_orders_count': 0
+        }
     }
 
     return render(request, 'installations/orders_modal.html', context)

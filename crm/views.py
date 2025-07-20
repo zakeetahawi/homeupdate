@@ -40,7 +40,7 @@ def admin_dashboard(request):
     """
     # الحصول على المعاملات من الطلب
     selected_branch = request.GET.get('branch', 'all')
-    selected_month = request.GET.get('month', timezone.now().month)
+    selected_month = request.GET.get('month', 'year')  # الافتراضي هو السنة الكاملة
     selected_year = request.GET.get('year', timezone.now().year)
     comparison_month = request.GET.get('comparison_month', '')
     comparison_year = request.GET.get('comparison_year', '')
@@ -48,14 +48,15 @@ def admin_dashboard(request):
     
     # تحويل المعاملات إلى أرقام
     try:
-        selected_month = int(selected_month)
+        if selected_month != 'year':
+            selected_month = int(selected_month)
         selected_year = int(selected_year)
         if comparison_month:
             comparison_month = int(comparison_month)
         if comparison_year:
             comparison_year = int(comparison_year)
     except (ValueError, TypeError):
-        selected_month = timezone.now().month
+        selected_month = 'year'  # الافتراضي هو السنة الكاملة
         selected_year = timezone.now().year
         comparison_month = ''
         comparison_year = ''
@@ -76,7 +77,7 @@ def admin_dashboard(request):
     if selected_branch != 'all':
         branch_filter = {'branch_id': selected_branch}
     
-    # إحصائيات العملاء
+    # إحصائيات العملاء - تطبيق الفلتر الزمني
     customers_stats = get_customers_statistics(selected_branch, start_date, end_date)
     
     # إحصائيات الطلبات
@@ -157,6 +158,10 @@ def admin_dashboard(request):
         current_year = timezone.now().year
         years = list(range(current_year - 2, current_year + 2))
     
+    # تحويل selected_branch إلى string للتأكد من المقارنة الصحيحة
+    if selected_branch != 'all':
+        selected_branch = str(selected_branch)
+    
     context = {
         'customers_stats': customers_stats,
         'orders_stats': orders_stats,
@@ -183,17 +188,29 @@ def admin_dashboard(request):
     
     return render(request, 'admin_dashboard.html', context)
 
-def get_customers_statistics(branch_filter, start_date, end_date):
+def get_customers_statistics(branch_filter, start_date=None, end_date=None):
     """إحصائيات العملاء"""
-    customers = Customer.objects.filter(created_at__range=(start_date, end_date))
+    customers = Customer.objects.all()
+    
+    # فلترة حسب التاريخ إذا تم تحديده
+    if start_date and end_date:
+        customers = customers.filter(created_at__range=(start_date, end_date))
+    
+    # فلترة حسب الفرع
     if branch_filter != 'all':
         customers = customers.filter(branch_id=branch_filter)
+    
+    # حساب العملاء الجدد هذا الشهر (بغض النظر عن الفلتر الزمني)
+    current_month_customers = Customer.objects.all()
+    if branch_filter != 'all':
+        current_month_customers = current_month_customers.filter(branch_id=branch_filter)
+    new_this_month = current_month_customers.filter(created_at__month=timezone.now().month).count()
     
     return {
         'total': customers.count(),
         'active': customers.filter(status='active').count(),
         'inactive': customers.filter(status='inactive').count(),
-        'new_this_month': customers.filter(created_at__month=start_date.month).count(),
+        'new_this_month': new_this_month,
         'by_branch': customers.values('branch__name').annotate(count=Count('id')),
         'by_category': customers.values('category__name').annotate(count=Count('id')),
     }

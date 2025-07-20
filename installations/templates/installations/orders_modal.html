@@ -1,4 +1,14 @@
 {% load custom_filters %}
+<!-- معلومات التصحيح -->
+{% if debug_info %}
+<div class="alert alert-info">
+    <strong>معلومات التصحيح:</strong><br>
+    نوع الطلب: {{ debug_info.order_type }}<br>
+    عدد الطلبات: {{ debug_info.orders_count }}<br>
+    عدد أوامر التصنيع: {{ debug_info.manufacturing_orders_count }}
+</div>
+{% endif %}
+
 {% if orders or manufacturing_orders %}
     <!-- أزرار الفلترة -->
     <div class="mb-3">
@@ -37,6 +47,10 @@
                     <th style="color: white !important;">المتبقي</th>
                     <th style="color: white !important;">حالة الطلب</th>
                     <th style="color: white !important;">حالة التركيب</th>
+                    {% if order_type == 'delivered_manufacturing' %}
+                        <th style="color: white !important;">المستلم</th>
+                        <th style="color: white !important;">رقم الإذن</th>
+                    {% endif %}
                     <th style="color: white !important;">الإجراءات</th>
                 </tr>
             </thead>
@@ -159,6 +173,26 @@
                             <span class="badge badge-light" style="background-color: #f8f9fa; color: #6c757d; font-family: 'Cairo', sans-serif;">غير مجدول</span>
                         {% endif %}
                     </td>
+                    {% if order_type == 'delivered_manufacturing' %}
+                        <td class="text-dark">
+                            {% if order.is_manufacturing_order and order.manufacturing_order.delivery_recipient_name %}
+                                <span class="badge badge-success">
+                                    <i class="fas fa-user"></i> {{ order.manufacturing_order.delivery_recipient_name }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">غير محدد</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-dark">
+                            {% if order.is_manufacturing_order and order.manufacturing_order.delivery_permit_number %}
+                                <span class="badge badge-info">
+                                    <i class="fas fa-file-alt"></i> {{ order.manufacturing_order.delivery_permit_number }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">غير محدد</span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
                     <td>
                         <div class="btn-group" role="group">
                             {% if order.installationschedule_set.exists %}

@@ -13,9 +13,9 @@
             <div class="card-body">
                 <div class="text-center mb-4">
                     {% if company_info and company_info.logo %}
-                        <img src="{{ company_info.logo.url }}" alt="شعار الشركة" class="img-fluid" style="max-width: 150px;">
+                        <img src="{{ company_info.logo.url }}?v={{ company_info.logo.url|length }}" alt="شعار الشركة" class="img-fluid" style="max-width: 150px;" id="about-logo">
                     {% else %}
-                        <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="img-fluid" style="max-width: 150px;">
+                        <img src="{% static 'img/logo.png' %}" alt="شعار الشركة" class="img-fluid" style="max-width: 150px;" id="about-logo">
                     {% endif %}
                 </div>
                 

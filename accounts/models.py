@@ -172,7 +172,9 @@ class CompanyInfo(models.Model):
         blank=True
     )
     # باقي الحقول
-    logo = models.ImageField(upload_to='company_logos/', null=True, blank=True)
+    logo = models.ImageField(upload_to='company_logos/', null=True, blank=True, verbose_name='لوغو النظام')
+    header_logo = models.ImageField(upload_to='company_logos/header/', null=True, blank=True, verbose_name='لوغو الهيدر', 
+                                   help_text='لوغو خاص بالهيدر يمكن أن يكون مختلفاً عن لوغو النظام العام')
     address = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)

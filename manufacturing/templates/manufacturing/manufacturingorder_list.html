@@ -602,12 +602,16 @@
                                 {% if order.status == 'pending_approval' %}
                                     {% get_status_badge order.status "manufacturing" %}
                                 {% else %}
-                                    <button class="status-btn status-{{ order.status }} unified-badge status-{{ order.status }}" 
-                                            data-order-id="{{ order.id }}" 
-                                            data-current-status="{{ order.status }}"
-                                            onclick="showStatusModal({{ order.id }}, '{{ order.status }}', '{{ order.get_status_display }}', '{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}')">
-                                        {{ order.get_status_display }}
-                                    </button>
+                                    {% if order.status == 'delivered' %}
+                                        <span class="badge badge-success">تم التسليم</span>
+                                    {% else %}
+                                        <button class="status-btn status-{{ order.status }} unified-badge status-{{ order.status }}" 
+                                                data-order-id="{{ order.id }}" 
+                                                data-current-status="{{ order.status }}"
+                                                onclick="showStatusModal({{ order.id }}, '{{ order.status }}', '{{ order.get_status_display }}', '{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}')">
+                                            {{ order.get_status_display }}
+                                        </button>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td class="approval-column">
@@ -983,7 +987,8 @@ window.showStatusModal = function(orderId, currentStatus, currentStatusDisplay, 
         // After 'completed', only show 'delivered'
         availableStatuses = ['delivered'];
     } else if (currentStatus === 'delivered') {
-        availableStatuses = isAdmin ? ['pending', 'in_progress', 'completed', 'ready_install'] : [];
+        // منع تغيير الحالة بعد الوصول لحالة "تم التسليم"
+        availableStatuses = [];
     } else if (currentStatus === 'rejected' || currentStatus === 'cancelled') {
         availableStatuses = isAdmin ? ['pending', 'in_progress', 'completed', 'ready_install', 'delivered'] : [];
     }

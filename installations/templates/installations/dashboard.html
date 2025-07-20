@@ -759,6 +759,10 @@ function showOrdersModal(type) {
             title = 'التركيبات قيد التركيب';
             url = '{% url "installations:orders_modal" %}?type=in_installation';
             break;
+        case 'delivered_manufacturing':
+            title = 'أوامر التصنيع المسلمة';
+            url = '{% url "installations:orders_modal" %}?type=delivered_manufacturing';
+            break;
     }
     
     // فتح modal مع البيانات
