@@ -1,8 +1,17 @@
 {% extends "admin/base.html" %}
-{% load i18n %}
+{% load i18n static %}
 
 {% block branding %}
-<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+<div class="d-flex align-items-center">
+    {% if company_info.header_logo %}
+        <img src="{{ company_info.header_logo.url }}?v={{ company_info.header_logo.url|length }}" alt="{{ company_info.name|default:'شعار النظام' }}" style="height: 40px; margin-right: 10px;">
+    {% elif company_info.logo %}
+        <img src="{{ company_info.logo.url }}?v={{ company_info.logo.url|length }}" alt="{{ company_info.name|default:'شعار النظام' }}" style="height: 40px; margin-right: 10px;">
+    {% else %}
+        <img src="{% static 'img/logo.png' %}" alt="شعار النظام" style="height: 40px; margin-right: 10px;">
+    {% endif %}
+    <h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+</div>
 {% endblock %}
 
 {% block usertools %}

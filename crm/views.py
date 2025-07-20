@@ -61,16 +61,16 @@ def admin_dashboard(request):
         comparison_month = ''
         comparison_year = ''
     
-    # تحديد الفترة الزمنية
+    # تحديد الفترة الزمنية مع timezone awareness
     if selected_month == 'year':  # إذا تم اختيار سنة كاملة
-        start_date = datetime(selected_year, 1, 1)
-        end_date = datetime(selected_year, 12, 31)
+        start_date = timezone.make_aware(datetime(selected_year, 1, 1))
+        end_date = timezone.make_aware(datetime(selected_year, 12, 31, 23, 59, 59))
     else:  # إذا تم اختيار شهر محدد
-        start_date = datetime(selected_year, selected_month, 1)
+        start_date = timezone.make_aware(datetime(selected_year, selected_month, 1))
         if selected_month == 12:
-            end_date = datetime(selected_year + 1, 1, 1) - timedelta(days=1)
+            end_date = timezone.make_aware(datetime(selected_year + 1, 1, 1)) - timedelta(seconds=1)
         else:
-            end_date = datetime(selected_year, selected_month + 1, 1) - timedelta(days=1)
+            end_date = timezone.make_aware(datetime(selected_year, selected_month + 1, 1)) - timedelta(seconds=1)
     
     # فلترة البيانات حسب الفرع
     branch_filter = {}
@@ -99,14 +99,14 @@ def admin_dashboard(request):
     comparison_data = {}
     if comparison_year:
         if comparison_type == 'year':  # مقارنة سنة كاملة
-            comp_start_date = datetime(comparison_year, 1, 1)
-            comp_end_date = datetime(comparison_year, 12, 31)
+            comp_start_date = timezone.make_aware(datetime(comparison_year, 1, 1))
+            comp_end_date = timezone.make_aware(datetime(comparison_year, 12, 31, 23, 59, 59))
         elif comparison_month and comparison_month != 'year':  # مقارنة شهر محدد
-            comp_start_date = datetime(comparison_year, comparison_month, 1)
+            comp_start_date = timezone.make_aware(datetime(comparison_year, comparison_month, 1))
             if comparison_month == 12:
-                comp_end_date = datetime(comparison_year + 1, 1, 1) - timedelta(days=1)
+                comp_end_date = timezone.make_aware(datetime(comparison_year + 1, 1, 1)) - timedelta(seconds=1)
             else:
-                comp_end_date = datetime(comparison_year, comparison_month + 1, 1) - timedelta(days=1)
+                comp_end_date = timezone.make_aware(datetime(comparison_year, comparison_month + 1, 1)) - timedelta(seconds=1)
         else:
             comp_start_date = None
             comp_end_date = None
