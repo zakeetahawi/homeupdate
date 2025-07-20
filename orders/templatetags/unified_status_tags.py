@@ -84,7 +84,7 @@ def get_status_badge(status, status_type="default"):
     text = status_texts.get(status, status)
     
     html = f'''
-    <span class="unified-badge {css_class} status-badge" title="{text}">
+    <span class="unified-badge {css_class} status-badge" title="{text}" style="font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         <i class="{icon} me-1"></i>{text}
     </span>
     '''

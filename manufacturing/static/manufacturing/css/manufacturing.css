@@ -130,34 +130,36 @@
     background-color: #f8f9fa;
 }
 
-/* Status Badges */
+/* Status Badges - أغمق وأوضح للعين */
 .badge {
     display: inline-block;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.75em;
-    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: 700;
     text-align: center;
     white-space: nowrap;
     vertical-align: baseline;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .badge.installation {
-    background-color: #e3f2fd;
-    color: #1565c0;
+    background-color: #1565c0;
+    color: white;
 }
 
 .badge.detail {
-    background-color: #e8f5e9;
-    color: #2e7d32;
+    background-color: #2e7d32;
+    color: white;
 }
 
 .badge.accessory {
-    background-color: #f3e5f5;
-    color: #7b1fa2;
+    background-color: #7b1fa2;
+    color: white;
 }
 
-/* Status Dropdown */
+/* Status Dropdown - ألوان أغمق وأوضح */
 .status-dropdown {
     position: relative;
     display: inline-block;
@@ -165,38 +167,48 @@
 
 .status-badge {
     display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.8em;
-    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.85em;
+    font-weight: 700;
     cursor: pointer;
-    min-width: 100px;
+    min-width: 120px;
     text-align: center;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.status-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
 }
 
 .status-badge.pending {
-    background-color: #fff3cd;
-    color: #856404;
+    background-color: #e6a700;
+    color: #1a1a1a;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.3);
 }
 
 .status-badge.in_progress {
-    background-color: #cce5ff;
-    color: #004085;
+    background-color: #138496;
+    color: white;
 }
 
 .status-badge.ready_for_installation {
-    background-color: #fff3cd;
-    color: #856404;
+    background-color: #e6a700;
+    color: #1a1a1a;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.3);
 }
 
 .status-badge.completed {
-    background-color: #d4edda;
-    color: #155724;
+    background-color: #1e7e34;
+    color: white;
 }
 
 .status-badge.cancelled {
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: #c82333;
+    color: white;
 }
 
 .status-select {
