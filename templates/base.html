@@ -45,6 +45,12 @@
     <!-- Unified Status Colors CSS -->
     <link rel="stylesheet" href="{% static 'css/unified-status-colors.css' %}">
 
+    <!-- Responsive Footer CSS -->
+    <link rel="stylesheet" href="{% static 'css/responsive-footer.css' %}">
+
+    <!-- Anti-Flicker CSS -->
+    <link rel="stylesheet" href="{% static 'css/anti-flicker.css' %}">
+
     <!-- Google Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
 
@@ -138,7 +144,7 @@
 <body id="main-body" data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
+        <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'home' %}">
                 <div class="d-flex align-items-center">
                     {% if company_info.header_logo %}
@@ -450,7 +456,7 @@
     {% endif %}
 
     <!-- Main Content -->
-    <main class="container mt-4 flex-grow">
+    <main class="container-fluid mt-4 flex-grow" id="main-content">
         {% if messages %}
         <div class="messages">
             {% for message in messages %}
@@ -463,9 +469,11 @@
         {% endif %}
 
         {% block content %}{% endblock %}
-    </main><!-- Footer المُحسَّن - تصميم أفقي -->
-    <footer class="footer-area text-white mt-5 py-2" style="background-color: var(--accent);">
-        <div class="container">
+    </main>
+    
+    <!-- Footer المُحسَّن - تصميم أفقي -->
+    <footer class="footer-area text-white py-2" style="background-color: var(--accent);" id="main-footer">
+        <div class="container-fluid">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                 <!-- معلومات الشركة والتواصل الاجتماعي -->
                 <div class="d-flex align-items-center">
@@ -553,31 +561,9 @@
         </div>
     </footer>
 
-    <style>
-    /* تنسيق الجسم والمحتوى الرئيسي للصفحة */
-    html, body {
-        height: 100%;
-        margin: 0;
-    }
 
-    body {
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-    }
-
-    main.container {
-        flex: 1 0 auto;
-    }
-
-    /* أنماط التذييل المُحسَّن - تصميم أفقي */
-    .footer-area {
-        flex-shrink: 0;
-        background: linear-gradient(to right, var(--accent), var(--dark));
-        padding: 10px 0 5px 0 !important;
-        width: 100%;
-    }
-
+            <style>
+    /* أنماط الفوتر الأساسية */
     .footer-title {
         font-size: 0.9rem;
         font-weight: 600;
@@ -588,66 +574,6 @@
     }
 
     .social-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        color: white;
-        background-color: rgba(255,255,255,0.1);
-        transition: all 0.3s ease;
-        text-decoration: none;
-        font-size: 0.75rem;
-    }
-
-    .social-icon:hover {
-        background-color: rgba(255,255,255,0.3);
-        color: white;
-        transform: translateY(-2px);
-    }
-
-    .footer-link {
-        color: rgba(255,255,255,0.9);
-        text-decoration: none;
-        transition: all 0.3s ease;
-        font-size: 0.85rem;
-    }
-
-    .footer-link:hover {
-        color: white;
-        transform: scale(1.1);
-    }
-
-    .footer-contact-item {
-        color: rgba(255,255,255,0.9);
-        text-decoration: none;
-        transition: all 0.2s ease;
-        font-size: 0.85rem;
-    }
-
-    .footer-contact-item:hover {
-        color: white;
-    }
-
-    .copyright-text {
-        font-size: 0.75rem;
-        opacity: 0.9;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        padding-top: 5px;
-    }
-
-    /* استجابة للشاشات الصغيرة */
-    @media (max-width: 768px) {
-        .footer-area {
-            padding: 8px 0 4px 0 !important;
-        }
-        
-        .footer-title {
-            font-size: 0.8rem;
-        }
-        
-        .social-icon {
             width: 22px;
             height: 22px;
             font-size: 0.7rem;
@@ -674,6 +600,9 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>    <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/smooth-navigation.js' %}"></script>
+    
+
     <script src="{% static 'js/custom-theme-animations.js' %}"></script>
 
     <!-- Database Connection Test JS -->

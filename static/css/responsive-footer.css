@@ -1,0 +1,253 @@
+/* تحسينات التصميم المتجاوب للفوتر والانتقال السلس - منع الوميض */
+
+/* تنسيق أساسي للصفحة */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* منع التمرير الأفقي */
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative;
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* المحتوى الرئيسي - يأخذ المساحة المتبقية */
+main.container-fluid {
+    flex: 1 0 auto;
+    min-height: calc(100vh - 200px);
+    padding-bottom: 20px;
+    transition: all 0.3s ease;
+    opacity: 1 !important;
+}
+
+/* أنماط التذييل المُحسَّن - ثابت في الأسفل */
+.footer-area {
+    flex-shrink: 0;
+    background: linear-gradient(to right, var(--accent), var(--dark));
+    padding: 10px 0 5px 0 !important;
+    width: 100%;
+    position: relative;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    opacity: 1 !important;
+}
+
+/* تحسين الانتقال السلس - منع الوميض */
+#main-content {
+    transition: opacity 0.3s ease, transform 0.3s ease !important;
+    opacity: 1 !important;
+}
+
+#main-content.loading {
+    opacity: 0.9 !important;
+    transform: translateY(5px);
+}
+
+/* منع الوميض في العناصر المهمة */
+header, nav, footer, main {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+}
+
+/* تحسين الانتقال للعناصر */
+.container-fluid, .card, .table, .row, .col {
+    transition: opacity 0.3s ease, transform 0.3s ease !important;
+    opacity: 1 !important;
+}
+
+/* تحسينات للهواتف المحمولة */
+@media (max-width: 768px) {
+    main.container-fluid {
+        min-height: calc(100vh - 150px);
+        padding-bottom: 15px;
+    }
+    
+    .footer-area {
+        padding: 8px 0 4px 0 !important;
+        position: relative;
+        bottom: 0;
+    }
+    
+    .footer-title {
+        font-size: 0.8rem;
+    }
+    
+    /* تحسين عرض الروابط في الفوتر للهواتف */
+    .footer-area .d-flex {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .footer-area .social-icons {
+        justify-content: center;
+    }
+    
+    .footer-area .footer-contact-item {
+        font-size: 0.75rem;
+    }
+}
+
+/* تحسينات للشاشات المتوسطة */
+@media (min-width: 769px) and (max-width: 1024px) {
+    main.container-fluid {
+        min-height: calc(100vh - 180px);
+    }
+    
+    .footer-area {
+        padding: 10px 0 5px 0 !important;
+    }
+}
+
+/* تحسينات للشاشات الكبيرة */
+@media (min-width: 1025px) {
+    main.container-fluid {
+        min-height: calc(100vh - 200px);
+    }
+    
+    .footer-area {
+        padding: 12px 0 6px 0 !important;
+    }
+}
+
+/* تحسينات للشاشات الكبيرة جداً */
+@media (min-width: 1400px) {
+    main.container-fluid {
+        min-height: calc(100vh - 220px);
+    }
+}
+
+/* تحسين الانتقال السلس للروابط */
+.navbar-nav .nav-link {
+    transition: all 0.3s ease !important;
+}
+
+.navbar-nav .nav-link:hover {
+    transform: translateY(-2px);
+}
+
+/* تحسين تحميل الصفحة */
+.page-transition {
+    opacity: 1 !important;
+    transform: translateY(0);
+    transition: all 0.4s ease !important;
+}
+
+.page-transition.loaded {
+    opacity: 1 !important;
+    transform: translateY(0);
+}
+
+/* تحسين للثيمات المختلفة */
+[data-theme="modern-black"] .footer-area {
+    background: linear-gradient(to right, var(--accent), var(--surface));
+    border-top: 1px solid var(--border);
+}
+
+[data-theme="custom-theme"] .footer-area {
+    background: linear-gradient(to right, var(--accent), var(--secondary));
+}
+
+/* تحسين للأجهزة اللوحية */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    .footer-area {
+        padding: 8px 0 4px 0 !important;
+    }
+    
+    .footer-area .d-flex {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+}
+
+/* تحسين للأجهزة اللوحية في الوضع العمودي */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    main.container-fluid {
+        min-height: calc(100vh - 160px);
+    }
+}
+
+/* تحسين للشاشات الصغيرة جداً */
+@media (max-width: 480px) {
+    main.container-fluid {
+        min-height: calc(100vh - 140px);
+        padding-bottom: 10px;
+    }
+    
+    .footer-area {
+        padding: 6px 0 3px 0 !important;
+    }
+    
+    .footer-title {
+        font-size: 0.75rem;
+    }
+    
+    .footer-area .d-flex {
+        gap: 8px;
+    }
+}
+
+/* تحسين الأداء */
+* {
+    box-sizing: border-box;
+}
+
+/* تحسين التمرير السلس */
+html {
+    scroll-behavior: smooth;
+}
+
+/* تحسين للشاشات عالية الدقة */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .footer-area {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* منع الوميض في العناصر المحددة */
+.navbar, .navbar-nav, .navbar-brand {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+}
+
+/* تحسين للعناصر الديناميكية */
+.dynamic-content {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+}
+
+/* تحسين للجداول */
+.table-responsive {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+}
+
+/* تحسين للبطاقات */
+.card {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease, transform 0.3s ease !important;
+}
+
+/* تحسين للصفوف */
+.row {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+}
+
+/* تحسين للأعمدة */
+.col, .col-md, .col-lg, .col-xl {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+} 

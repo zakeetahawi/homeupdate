@@ -1,0 +1,175 @@
+/* منع الوميض عند الانتقال بين الأقسام */
+/* Anti-Flicker CSS */
+
+/* منع الوميض في جميع العناصر */
+* {
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
+}
+
+/* منع الوميض في الجسم */
+html, body {
+    opacity: 1 !important;
+    transition: none !important;
+}
+
+body {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في العناصر المهمة */
+header, nav, footer, main, .navbar, .navbar-nav, .navbar-brand {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في المحتوى الرئيسي */
+.container-fluid, .container {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في البطاقات والجداول */
+.card, .table, .table-responsive {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في الصفوف والأعمدة */
+.row, .col, .col-md, .col-lg, .col-xl, .col-sm, .col-xs {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في الروابط */
+.nav-link, .nav-item {
+    opacity: 1 !important;
+    transition: all 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في الأزرار */
+.btn, .btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-warning, .btn-info {
+    opacity: 1 !important;
+    transition: all 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في النماذج */
+.form-control, .form-select, .input-group {
+    opacity: 1 !important;
+    transition: all 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في التنبيهات */
+.alert, .alert-success, .alert-danger, .alert-warning, .alert-info {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في القوائم */
+.list-group, .list-group-item {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في الشريط الجانبي */
+.sidebar, .sidebar-nav, .sidebar-item {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في المحتوى الديناميكي */
+.dynamic-content, .ajax-content, .lazy-load {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* تحسين الأداء للشاشات عالية الدقة */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    * {
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+    }
+}
+
+/* منع الوميض في العناصر المحددة */
+#main-content, #main-footer, #main-header {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* تحسين للعناصر المهمة */
+.footer-area, .navbar-area, .content-area {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في الصور */
+img {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في الأيقونات */
+.fas, .far, .fab, .fa {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* تحسين للعناصر المخصصة */
+.custom-element, .widget, .component {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* منع الوميض في العناصر المخفية */
+.hidden, .invisible {
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+}
+
+/* تحسين للعناصر المرئية */
+.visible, .show {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+} 
