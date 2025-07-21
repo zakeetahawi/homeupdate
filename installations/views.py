@@ -117,9 +117,9 @@ def dashboard(request):
     ).count()
 
     # الطلبات تحت التصنيع - فقط طلبات التركيب
-    orders_in_manufacturing = Order.objects.filter(
-        selected_types__icontains='installation',
-        order_status__in=['pending', 'in_progress']
+    orders_in_manufacturing = ManufacturingOrder.objects.filter(
+        status__in=['pending', 'in_progress'],
+        order__selected_types__icontains='installation'
     ).count()
 
     # الطلبات المكتملة في المصنع - فقط طلبات التركيب
@@ -558,39 +558,11 @@ def update_status(request, installation_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def receive_completed_order(request):
-    """استقبال الطلبات المكتملة من قسم التصنيع"""
-    try:
-        data = json.loads(request.body)
-        order_id = data.get('order_id')
-
-        # التحقق من وجود الطلب
-        order = get_object_or_404(Order, id=order_id)
-
-        # التحقق من عدم وجود جدولة سابقة
-        if InstallationSchedule.objects.filter(order=order).exists():
-            return JsonResponse({
-                'success': False,
-                'error': 'يوجد جدولة تركيب سابقة لهذا الطلب'
-            }, status=400)
-
-        # إنشاء جدولة تركيب جديدة بحالة "بحاجة جدولة" (بدون تاريخ محدد)
-        installation = InstallationSchedule.objects.create(
-            order=order,
-            status='needs_scheduling',  # تغيير الحالة إلى "بحاجة جدولة"
-            notes='تم استلام الطلب من قسم التصنيع - بحاجة جدولة'
-        )
-
-        return JsonResponse({
-            'success': True,
-            'installation_id': installation.id,
-            'message': 'تم استقبال الطلب بنجاح - بحاجة جدولة'
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=400)
+    # تعطيل الجدولة التلقائية نهائياً
+    return JsonResponse({
+        'success': False,
+        'error': 'يرجى جدولة التركيب يدوياً من شاشة الجدولة فقط. لا يسمح بالجدولة التلقائية.'
+    }, status=400)
 
 
 # API Views للطلبات
@@ -632,11 +604,16 @@ def orders_modal(request):
                 orders.append(mfg_order.order)
                 existing_order_ids.add(mfg_order.order.id)
     elif order_type == 'manufacturing':
-        # الطلبات تحت التصنيع - فقط طلبات التركيب
-        orders = Order.objects.filter(
-            selected_types__icontains='installation',
-            order_status__in=['pending', 'in_progress']
-        ).select_related('customer', 'branch', 'salesperson')
+        # عرض جميع أوامر التصنيع قيد التنفيذ أو قيد الانتظار (وليس فقط الأحدث لكل طلب)
+        from manufacturing.models import ManufacturingOrder
+        manufacturing_orders = ManufacturingOrder.objects.filter(
+            order__selected_types__icontains='installation',
+            status__in=['pending', 'in_progress']
+        ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson').order_by('-created_at')
+        orders = []
+        for mfg in manufacturing_orders:
+            mfg.order.manufacturing_order = mfg  # ربط أمر التصنيع بالطلب لسهولة العرض في القالب
+            orders.append(mfg.order)
     elif order_type == 'completed':
         # التركيبات المكتملة من قسم التركيبات فقط
         schedules = InstallationSchedule.objects.filter(

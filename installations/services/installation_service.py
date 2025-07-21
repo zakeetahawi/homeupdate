@@ -137,32 +137,7 @@ class InstallationService:
     
     @staticmethod
     def auto_schedule_installations():
-        """الجدولة التلقائية للتركيبات"""
-        # خوارزمية بسيطة للجدولة التلقائية
-        pending_installations = InstallationSchedule.objects.filter(
-            status='pending'
-        ).select_related('order', 'order__customer')
-        
-        available_teams = InstallationTeam.objects.filter(is_active=True)
-        
-        if not available_teams.exists():
-            return False, "لا توجد فرق متاحة"
-        
-        today = timezone.now().date()
-        current_time = timezone.now().time()
-        
-        for installation in pending_installations:
-            # تخصيص فريق عشوائي (يمكن تحسين هذه الخوارزمية)
-            team = available_teams.first()
-            
-            # جدولة في اليوم التالي في الساعة 9 صباحاً
-            tomorrow = today + timedelta(days=1)
-            scheduled_time = datetime.strptime('09:00', '%H:%M').time()
-            
-            installation.team = team
-            installation.scheduled_date = tomorrow
-            installation.scheduled_time = scheduled_time
-            installation.status = 'scheduled'
-            installation.save()
-        
-        return True, f"تم جدولة {pending_installations.count()} تركيب تلقائياً" 
+        """
+        تم تعطيل هذه الدالة بناءً على طلب الإدارة: لا يُسمح بالجدولة التلقائية بعد الآن.
+        """
+        return False, "تم تعطيل الجدولة التلقائية - يجب أن تكون كل الجدولة يدوية فقط." 
