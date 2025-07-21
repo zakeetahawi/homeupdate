@@ -1087,14 +1087,23 @@ def daily_schedule(request):
         if branch:
             installations = installations.filter(order__branch=branch)
 
-        # البحث
+        # بحث شامل متعدد الحقول
         if search:
             installations = installations.filter(
-                models.Q(order__order_number__icontains=search) |
-                models.Q(order__customer__name__icontains=search) |
-                models.Q(order__customer__phone__icontains=search)
+                Q(order__order_number__icontains=search) |
+                Q(order__customer__name__icontains=search) |
+                Q(order__customer__phone__icontains=search) |
+                Q(order__contract_number__icontains=search) |
+                Q(order__customer__phone2__icontains=search) |
+                Q(order__customer__email__icontains=search) |
+                Q(order__salesperson__name__icontains=search) |
+                Q(team__name__icontains=search) |
+                Q(order__branch__name__icontains=search) |
+                Q(notes__icontains=search) |
+                Q(status__icontains=search) |
+                Q(scheduled_date__icontains=search) |
+                Q(completion_date__icontains=search)
             )
-
         installations = installations.order_by('scheduled_time')
 
     context = {

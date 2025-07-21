@@ -27,12 +27,12 @@
             </h6>
         </div>
         <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-2">
                     {{ filter_form.status.label_tag }}
                     {{ filter_form.status }}
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     {{ filter_form.team.label_tag }}
                     {{ filter_form.team }}
                 </div>
@@ -48,13 +48,19 @@
                     {{ filter_form.search.label_tag }}
                     {{ filter_form.search }}
                 </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">
+                <div class="col-md-1">
+                    <label for="page_size" class="form-label">عدد الصفوف:</label>
+                    <select name="page_size" id="page_size" class="form-select">
+                        <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
+                        <option value="25" {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>25</option>
+                        <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
+                        <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-search"></i> بحث
                     </button>
-                    <a href="{% url 'installations:installation_list' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> مسح الفلاتر
-                    </a>
                 </div>
             </form>
         </div>
@@ -429,5 +435,21 @@ document.querySelectorAll('.schedule-btn').forEach(link => {
     color: #383d41 !important;
     background: linear-gradient(90deg, #e2e3e5 60%, #d6d8db 100%);
 }
+    .filter-card .form-label {
+        font-weight: 600;
+        color: #3c2415;
+        margin-bottom: 0.25rem;
+    }
+    .filter-card .form-select, .filter-card .form-control {
+        font-size: 1rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.375rem;
+        min-width: 100px;
+    }
+    .filter-card .btn, .filter-card .btn-group .btn {
+        font-size: 1rem;
+        padding: 0.375rem 1rem;
+        border-radius: 0.375rem;
+    }
 </style>
 {% endblock %}

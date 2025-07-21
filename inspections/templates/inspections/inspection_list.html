@@ -99,44 +99,42 @@
     <!-- Search and Filter Form -->
     <div class="card mb-4">
         <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
-                    <input type="text" name="q" class="form-control" placeholder="{% trans 'بحث بكود العميل أو اسم العميل أو رقم الطلب...' %}"
-                           value="{{ request.GET.q }}">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <input type="text" name="q" class="form-control" placeholder="بحث بكود العميل أو اسم العميل أو رقم الطلب..." value="{{ request.GET.q }}">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <select name="branch" class="form-select">
-                        <option value="">{% trans 'كل الفروع' %}</option>
+                        <option value="">كل الفروع</option>
                         {% for branch in branches %}
-                        <option value="{{ branch.id }}" {% if branch.id|stringformat:'s' == request.GET.branch|stringformat:'s' %}selected{% endif %}>
-                            {{ branch.name }}
-                        </option>
+                        <option value="{{ branch.id }}" {% if branch.id|stringformat:'s' == request.GET.branch|stringformat:'s' %}selected{% endif %}>{{ branch.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <select name="status" class="form-select">
-                        <option value="">{% trans 'كل الحالات' %}</option>
-                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>
-                            {% trans 'قيد الانتظار' %}
-                        </option>
-                        <option value="scheduled" {% if request.GET.status == 'scheduled' %}selected{% endif %}>
-                            {% trans 'مجدول' %}
-                        </option>
-                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>
-                            {% trans 'مكتملة' %}
-                        </option>
-                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>
-                            {% trans 'ملغية' %}
-                        </option>
+                        <option value="">كل الحالات</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
+                        <option value="scheduled" {% if request.GET.status == 'scheduled' %}selected{% endif %}>مجدول</option>
+                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-secondary">
-                        <i class="fas fa-search"></i> {% trans 'بحث' %}
+                <div class="col-md-2">
+                    <label for="page_size" class="form-label">عدد الصفوف:</label>
+                    <select name="page_size" id="page_size" class="form-select">
+                        <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
+                        <option value="25" {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>25</option>
+                        <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
+                        <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-secondary w-100">
+                        <i class="fas fa-search"></i> بحث
                     </button>
-                    <a href="{% url 'inspections:inspection_list' %}" class="btn btn-light">
-                        <i class="fas fa-times"></i> {% trans 'إعادة تعيين' %}
+                    <a href="{% url 'inspections:inspection_list' %}" class="btn btn-light ms-2">
+                        <i class="fas fa-times"></i> إعادة تعيين
                     </a>
                 </div>
                 {% if request.GET.is_duplicated == '1' %}
@@ -152,6 +150,24 @@
             </form>
         </div>
     </div>
+    <style>
+    .card-body .form-label {
+        font-weight: 600;
+        color: #3c2415;
+        margin-bottom: 0.25rem;
+    }
+    .card-body .form-select, .card-body .form-control {
+        font-size: 1rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.375rem;
+        min-width: 100px;
+    }
+    .card-body .btn, .card-body .btn-group .btn {
+        font-size: 1rem;
+        padding: 0.375rem 1rem;
+        border-radius: 0.375rem;
+    }
+</style>
 
     <!-- Inspections Table -->
     {% if inspections %}

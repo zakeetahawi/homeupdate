@@ -506,12 +506,14 @@ class InstallationFilterForm(forms.Form):
     """نموذج فلترة التركيبات"""
     STATUS_CHOICES = [
         ('', _('جميع الحالات')),
-        ('pending', _('في الانتظار')),
+        ('needs_scheduling', _('بحاجة جدولة')),
         ('scheduled', _('مجدول')),
-        ('in_progress', _('قيد التنفيذ')),
+        ('in_installation', _('قيد التركيب')),
         ('completed', _('مكتمل')),
         ('cancelled', _('ملغي')),
-        ('rescheduled', _('إعادة جدولة')),
+        ('modification_required', _('يحتاج تعديل')),
+        ('modification_in_progress', _('التعديل قيد التنفيذ')),
+        ('modification_completed', _('التعديل مكتمل')),
     ]
 
     status = forms.ChoiceField(

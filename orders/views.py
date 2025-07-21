@@ -49,6 +49,15 @@ def order_list(request):
     """
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
+    page_size = request.GET.get('page_size', '25')
+    try:
+        page_size = int(page_size)
+        if page_size > 100:
+            page_size = 100
+        elif page_size < 1:
+            page_size = 25
+    except Exception:
+        page_size = 25
 
     # Filter orders based on search query and status
     orders = Order.objects.all().select_related('customer', 'salesperson')
@@ -56,7 +65,17 @@ def order_list(request):
     if search_query:
         orders = orders.filter(
             Q(order_number__icontains=search_query) |
-            Q(customer__name__icontains=search_query)
+            Q(customer__name__icontains=search_query) |
+            Q(customer__phone__icontains=search_query) |
+            Q(contract_number__icontains=search_query) |
+            Q(invoice_number__icontains=search_query) |
+            Q(salesperson__name__icontains=search_query) |
+            Q(branch__name__icontains=search_query) |
+            Q(notes__icontains=search_query) |
+            Q(selected_types__icontains=search_query) |
+            Q(status__icontains=search_query) |
+            Q(order_date__icontains=search_query) |
+            Q(expected_delivery_date__icontains=search_query)
         )
 
     if status_filter:
@@ -66,7 +85,7 @@ def order_list(request):
     orders = orders.order_by('-created_at')
 
     # Pagination
-    paginator = Paginator(orders, 10)  # Show 10 orders per page
+    paginator = Paginator(orders, page_size)  # Show page_size orders per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -80,6 +99,7 @@ def order_list(request):
         'status_filter': status_filter,
         'total_orders': orders.count(),
         'currency_symbol': currency_symbol,  # Add currency symbol to context
+        'page_size': page_size,
     }
 
     return render(request, 'orders/order_list.html', context)

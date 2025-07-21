@@ -99,7 +99,18 @@ class InspectionListView(LoginRequiredMixin, ListView):
     model = Inspection
     template_name = 'inspections/inspection_list.html'
     context_object_name = 'inspections'
-    paginate_by = 10
+    paginate_by = 25  # الافتراضي
+
+    def get_paginate_by(self, queryset):
+        try:
+            page_size = int(self.request.GET.get('page_size', 25))
+            if page_size > 100:
+                page_size = 100
+            elif page_size < 1:
+                page_size = 25
+            return page_size
+        except Exception:
+            return 25
 
     def get_queryset(self):
         from .forms import InspectionSearchForm
@@ -121,22 +132,29 @@ class InspectionListView(LoginRequiredMixin, ListView):
                 queryset = queryset.filter(status=status)
             if is_duplicated == '1':
                 queryset = queryset.filter(notes__contains='تكرار من المعاينة رقم:')
-            # بحث ذكي متعدد الحقول
+            # بحث شامل متعدد الحقول
             if q:
                 queryset = queryset.filter(
-                    Q(order__customer__code__icontains=q) |
+                    Q(order__order_number__icontains=q) |
                     Q(order__customer__name__icontains=q) |
+                    Q(order__customer__phone__icontains=q) |
                     Q(order__contract_number__icontains=q) |
                     Q(order__id__icontains=q) |
-                    Q(order__customer__phone__icontains=q) |
                     Q(order__customer__phone2__icontains=q) |
                     Q(order__customer__email__icontains=q) |
-                    Q(notes__icontains=q)
+                    Q(notes__icontains=q) |
+                    Q(inspector__username__icontains=q) |
+                    Q(branch__name__icontains=q) |
+                    Q(status__icontains=q) |
+                    Q(request_date__icontains=q) |
+                    Q(scheduled_date__icontains=q) |
+                    Q(expected_delivery_date__icontains=q)
                 )
         return queryset.select_related('customer', 'inspector', 'branch', 'order__customer__branch')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['page_size'] = self.get_paginate_by(self.get_queryset())
         from accounts.models import Branch
         from django.db.models import Q
         branch_id = self.request.GET.get('branch')

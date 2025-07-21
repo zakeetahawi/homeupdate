@@ -396,6 +396,22 @@
         padding: 0.25rem 0.375rem;
     }
 }
+    .filter-card .form-label {
+        font-weight: 600;
+        color: #3c2415;
+        margin-bottom: 0.25rem;
+    }
+    .filter-card .form-select, .filter-card .form-control {
+        font-size: 1rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.375rem;
+        min-width: 100px;
+    }
+    .filter-card .btn, .filter-card .btn-group .btn {
+        font-size: 1rem;
+        padding: 0.375rem 1rem;
+        border-radius: 0.375rem;
+    }
 </style>
 {% endblock %}
 
@@ -482,7 +498,7 @@
     <div class="card filter-card">
         <div class="card-body">
             <form id="filterForm" method="get">
-                <div class="row g-3">
+                <div class="row g-3 align-items-end">
                     <div class="col-md-2">
                         <label for="status" class="form-label">حالة الطلب:</label>
                         <select name="status" id="status" class="form-select">
@@ -490,7 +506,9 @@
                             <option value="pending_approval" {% if request.GET.status == 'pending_approval' %}selected{% endif %}>قيد الموافقة</option>
                             <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
                             <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
+                            <option value="ready_install" {% if request.GET.status == 'ready_install' %}selected{% endif %}>جاهز للتركيب</option>
                             <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                            <option value="delivered" {% if request.GET.status == 'delivered' %}selected{% endif %}>تم التسليم</option>
                             <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>مرفوض</option>
                             <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
                         </select>
@@ -518,7 +536,16 @@
                         <label for="search" class="form-label">بحث:</label>
                         <input type="text" name="search" id="search" class="form-control" placeholder="ابحث..." value="{{ request.GET.search }}">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
+                    <div class="col-md-1">
+                        <label for="page_size" class="form-label">عدد الصفوف:</label>
+                        <select name="page_size" id="page_size" class="form-select">
+                            <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
+                            <option value="25" {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>25</option>
+                            <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
+                            <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
                         <div class="btn-group w-100">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-filter"></i> تصفية
@@ -581,9 +608,10 @@
                                 {% with selected_types=order.order.get_selected_types_list %}
                                     {% if selected_types %}
                                         {% for type in selected_types %}
-                                            {% get_order_type_badge type order.order %}
                                             {% if type == 'tailoring' %}
-                                                <span class="badge bg-success">تسليم</span>
+                                                <span class="badge bg-success"><i class="fas fa-cut me-1"></i> تسليم</span>
+                                            {% else %}
+                                                {% get_order_type_badge type order.order %}
                                             {% endif %}
                                             {% if not forloop.last %}<br>{% endif %}
                                         {% endfor %}
@@ -808,9 +836,10 @@
 console.log('Manufacturing JavaScript loaded');
 $(document).ready(function() {
     // تهيئة DataTables مع إعدادات محسنة
+    var pageSize = parseInt($('#page_size').val() || 25);
     var table = $('#manufacturingTable').DataTable({
         "responsive": true,
-        "pageLength": 25,
+        "pageLength": pageSize,
         "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "الكل"]],
         "order": [[8, "desc"]], // ترتيب حسب تاريخ الطلب
         "columnDefs": [
@@ -857,6 +886,10 @@ $(document).ready(function() {
     // ربط فلاتر مخصصة مع DataTables
     $('#status, #branch, #date_from, #date_to').on('change', function() {
         table.draw();
+    });
+
+    $('#page_size').on('change', function() {
+        table.page.len(parseInt($(this).val())).draw();
     });
     
     // فلتر مخصص للحالة

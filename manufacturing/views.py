@@ -45,15 +45,22 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
             queryset = queryset.filter(status=status)
             
         if search:
-            # Search in relevant fields including order and customer fields
+            # بحث شامل في كل الأعمدة المهمة
             queryset = queryset.filter(
                 Q(order__id__icontains=search) |
+                Q(order__order_number__icontains=search) |
                 Q(contract_number__icontains=search) |
                 Q(invoice_number__icontains=search) |
                 Q(exit_permit_number__icontains=search) |
                 Q(order__customer__name__icontains=search) |
                 Q(order__customer__phone__icontains=search) |
-                Q(notes__icontains=search)
+                Q(order__salesperson__name__icontains=search) |
+                Q(order__branch__name__icontains=search) |
+                Q(notes__icontains=search) |
+                Q(order_type__icontains=search) |
+                Q(status__icontains=search) |
+                Q(order_date__icontains=search) |
+                Q(expected_delivery_date__icontains=search)
             )
             
         if date_from:
