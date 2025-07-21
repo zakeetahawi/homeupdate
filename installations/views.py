@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -26,6 +26,7 @@ from .forms import (
     InstallationStatusForm, ModificationErrorAnalysisForm, InstallationFilterForm,
     QuickScheduleForm, DailyScheduleForm, CustomerDebtForm
 )
+from django.urls import reverse
 
 
 def currency_format(amount):
@@ -1525,6 +1526,7 @@ def schedule_manufacturing_order(request, manufacturing_order_id):
 
 
 @login_required
+@permission_required('installations.change_installationschedule', raise_exception=True)
 def edit_schedule(request, installation_id):
     """تعديل جدولة التركيب"""
     installation = get_object_or_404(InstallationSchedule, id=installation_id)
@@ -2032,4 +2034,17 @@ def update_installation_date_from_scheduled(request, installation_id):
     return JsonResponse({
         'success': False,
         'error': 'طريقة الطلب غير صحيحة'
+    })
+
+
+@login_required
+@permission_required('installations.delete_installationschedule', raise_exception=True)
+def delete_installation(request, installation_id):
+    installation = get_object_or_404(InstallationSchedule, id=installation_id)
+    if request.method == 'POST':
+        installation.delete()
+        messages.success(request, 'تم حذف التركيب بنجاح.')
+        return redirect(reverse('installations:installation_list'))
+    return render(request, 'installations/installation_confirm_delete.html', {
+        'installation': installation
     })

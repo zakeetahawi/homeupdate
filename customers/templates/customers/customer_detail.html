@@ -73,12 +73,16 @@
                                 <a href="{% url 'orders:order_create' %}?customer={{ customer.pk }}" class="btn btn-success btn-sm">
                                     <i class="fas fa-plus"></i> {% trans 'إنشاء طلب' %}
                                 </a>
-                                <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-edit"></i> {% trans 'تعديل' %}
-                                </a>
-                                <a href="{% url 'customers:customer_delete' customer.pk %}" class="btn btn-outline-danger btn-sm">
-                                    <i class="fas fa-trash"></i> {% trans 'حذف' %}
-                                </a>
+                                {% if perms.customers.change_customer %}
+                                    <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-edit"></i> {% trans 'تعديل' %}
+                                    </a>
+                                {% endif %}
+                                {% if perms.customers.delete_customer %}
+                                    <a href="{% url 'customers:customer_delete' customer.pk %}" class="btn btn-outline-danger btn-sm">
+                                        <i class="fas fa-trash"></i> {% trans 'حذف' %}
+                                    </a>
+                                {% endif %}
                                 <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary btn-sm">
                                     <i class="fas fa-arrow-left"></i> {% trans 'العودة' %}
                                 </a>
@@ -294,36 +298,36 @@
     <div class="row mt-4">
         <!-- Recent Orders -->
         <div class="col-md-6">
-            <div class="card">
+            <div class="card" style="font-size: 0.93em; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">{% trans 'آخر الطلبات' %}</h5>
                     <a href="{% url 'orders:order_list' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-primary">
                         {% trans 'عرض الكل' %}
                     </a>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="padding: 0.7rem 0.7rem 0.5rem 0.7rem;">
                     {% if orders %}
                     <div class="table-responsive">
-                        <table class="table table-sm">
+                        <table class="table table-sm" id="orders-table-customer-detail">
                             <thead>
                                 <tr>
-                                    <th>{% trans 'رقم الطلب' %}</th>
-                                    <th>{% trans 'التاريخ' %}</th>
-                                    <th>{% trans 'نوع الطلب' %}</th>
-                                    <th>{% trans 'الحالة' %}</th>
-                                    <th>{% trans 'القيمة' %}</th>
+                                    <th style="width: 60px; min-width: 60px; text-align: center;">رقم الطلب</th>
+                                    <th style="min-width: 100px; text-align: center;">التاريخ</th>
+                                    <th style="min-width: 120px; text-align: center;">النوع</th>
+                                    <th style="min-width: 120px; text-align: center;">الحالة</th>
+                                    <th style="min-width: 90px; text-align: center;">القيمة</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for order in orders %}
                                 <tr>
-                                    <td>
-                                        <a href="{% url 'orders:order_detail' order.pk %}">
+                                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; text-align: center; font-weight: bold; font-size: 1em;">
+                                        <a href="{% url 'orders:order_detail' order.pk %}" tabindex="0" class="order-popover" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="<b>رقم العقد:</b> {{ order.contract_number|default:'-' }}<br/><b>البائع:</b> {{ order.salesperson.name|default:'-' }}<br/><b>تاريخ الطلب:</b> {{ order.created_at|date:'Y/m/d H:i' }}<br/><b>حالة التصنيع:</b> {% if order.manufacturing_order %}{{ order.manufacturing_order.get_status_display }}{% else %}-{% endif %}">
                                             {{ order.order_number }}
                                         </a>
                                     </td>
-                                    <td>{{ order.created_at|date:"Y/m/d" }}</td>
-                                    <td>
+                                    <td style="white-space: nowrap; max-width: 100px; text-align: center;">{{ order.created_at|date:"Y/m/d" }}</td>
+                                    <td style="white-space: nowrap; max-width: 140px; text-align: center;">
                                         {% if order.order_type == 'product' %}
                                             <span class="badge bg-primary">منتج</span>
                                         {% elif order.order_type == 'service' %}
@@ -358,13 +362,13 @@
                                             {% endfor %}
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        <span class="badge {{ order.get_display_status_badge_class }}">
+                                    <td style="white-space: nowrap; max-width: 140px; text-align: center;">
+                                        <span class="badge {{ order.get_display_status_badge_class }}" style="font-size: 0.95em; padding: 0.35em 0.7em;">
                                             <i class="{{ order.get_display_status_icon }} me-1"></i>
                                             {{ order.get_display_status_text }}
                                         </span>
                                     </td>
-                                    <td>{{ order.total_amount }} {{ currency_symbol }}</td>
+                                    <td style="white-space: nowrap; max-width: 90px; text-align: center; font-weight: 600;">{{ order.total|default:'-' }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -505,3 +509,34 @@
     }
 </style>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('.order-popover'));
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl, {
+                container: 'body',
+                placement: 'auto',
+                trigger: 'hover focus',
+                html: true
+            });
+        });
+    });
+</script>
+{% endblock %}
+
+<style>
+#orders-table td, #orders-table th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+    align-items: center;
+}
+</style>

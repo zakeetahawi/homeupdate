@@ -42,19 +42,11 @@
                     <td>{{ report.created_at|date:"Y-m-d H:i" }}</td>
                     <td>{{ report.updated_at|date:"Y-m-d H:i" }}</td>
                     <td>
-                        <div class="btn-group" role="group">
-                            <a href="{% url 'reports:report_detail' report.pk %}" class="btn btn-info btn-sm" title="{% trans 'عرض التقرير' %}">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="{% url 'reports:report_update' report.pk %}" class="btn btn-warning btn-sm" title="{% trans 'تعديل التقرير' %}">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <a href="{% url 'reports:report_delete' report.pk %}" class="btn btn-danger btn-sm" title="{% trans 'حذف التقرير' %}">
-                                <i class="fas fa-trash"></i>
-                            </a>
-                            <a href="{% url 'reports:schedule_create' report.pk %}" class="btn btn-success btn-sm" title="{% trans 'جدولة التقرير' %}">
-                                <i class="fas fa-clock"></i>
-                            </a>
+                        <div class="btn-group btn-group-sm action-buttons">
+                            <a href="{% url 'reports:report_detail' report.pk %}" class="btn btn-info" title="عرض التقرير" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-eye" style="font-size: 0.7em;"></i></a>
+                            <a href="{% url 'reports:report_update' report.pk %}" class="btn btn-warning" title="تعديل التقرير" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-edit" style="font-size: 0.7em;"></i></a>
+                            <a href="{% url 'reports:report_delete' report.pk %}" class="btn btn-danger" title="حذف التقرير" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-trash" style="font-size: 0.7em;"></i></a>
+                            <a href="{% url 'reports:schedule_create' report.pk %}" class="btn btn-success" title="جدولة التقرير" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-clock" style="font-size: 0.7em;"></i></a>
                         </div>
                     </td>
                 </tr>
@@ -81,3 +73,12 @@
     });
 </script>
 {% endblock %}
+
+<style>
+.action-buttons {
+    display: flex;
+    gap: 0.1rem;
+    justify-content: center;
+    align-items: center;
+}
+</style>

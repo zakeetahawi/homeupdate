@@ -40,8 +40,8 @@
 }
 
 .odoo-list-view th {
-    background-color: var(--primary);
-    color: white;
+    background-color: #1b3a4b !important;
+    color: #fff !important;
     font-weight: 500;
     border: none;
 }
@@ -289,4 +289,11 @@
         left: auto;
         right: 0;
     }
+}
+
+.table th {
+    background-color: #1b3a4b !important;
+    color: #fff !important;
+    font-weight: 500;
+    border: none;
 }

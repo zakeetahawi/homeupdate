@@ -40,9 +40,15 @@ def currency_format(amount):
     Usage: {{ amount|currency_format }}
     """
     try:
+        if not amount or str(amount).strip() == '':
+            amount = 0
         settings = SystemSettings.get_settings()
         symbol = settings.currency_symbol
         formatted_amount = f"{float(amount):,.2f}"
         return f"{formatted_amount} {symbol}"
     except Exception:
-        return f"{float(amount):,.2f} ر.س" 
+        try:
+            formatted_amount = f"{float(amount):,.2f}"
+        except Exception:
+            formatted_amount = "0.00"
+        return f"{formatted_amount} ر.س" 

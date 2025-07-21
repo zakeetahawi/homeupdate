@@ -54,6 +54,7 @@ urlpatterns = [
     path('installation/<int:installation_id>/complete/', views.complete_installation, name='complete_installation'),
     path('installation/<int:installation_id>/edit-schedule/', views.edit_schedule, name='edit_schedule'),
     path('installation/<int:installation_id>/edit-schedule/', views.edit_schedule, name='edit_schedule'),
+    path('installation/<int:installation_id>/delete/', views.delete_installation, name='installation_delete'),
 
     # تحليل الأخطاء
     path('error-analysis/', views.modification_error_analysis, name='modification_error_analysis'),

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}تفاصيل التركيب - {{ installation.order.order_number }}{% endblock %}
 
@@ -111,6 +112,16 @@
             <a href="{% url 'installations:dashboard' %}" class="btn btn-outline-primary">
                 <i class="fas fa-tachometer-alt"></i> لوحة التحكم
             </a>
+            {% if perms.installations.change_installationschedule %}
+                <a href="{% url 'installations:edit_schedule' installation.pk %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> تعديل
+                </a>
+            {% endif %}
+            {% if perms.installations.delete_installationschedule %}
+                <a href="{% url 'installations:installation_delete' installation.pk %}" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> حذف
+                </a>
+            {% endif %}
         </div>
     </div>
 

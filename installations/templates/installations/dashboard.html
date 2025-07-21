@@ -433,13 +433,17 @@
                                             
                                             <!-- عرض حالة جاهز للتركيب -->
                                             {% if order.is_manufacturing_order %}
-                                                {% if order.is_delivered_manufacturing_order %}
+                                                {% if order.manufacturing_order.status == 'delivered' %}
                                                     <span class="badge badge-info">
                                                         <i class="fas fa-truck"></i> تم التسليم (جاهز للتركيب)
                                                     </span>
-                                                {% else %}
+                                                {% elif order.manufacturing_order.status == 'ready_install' %}
                                                     <span class="badge badge-warning">
                                                         <i class="fas fa-industry"></i> جاهز للتركيب (أمر تصنيع)
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge badge-secondary">
+                                                        <i class="fas fa-cogs"></i> غير جاهز للتركيب
                                                     </span>
                                                 {% endif %}
                                             {% elif order.order_status == 'ready_install' or order.order_status == 'completed' %}
@@ -454,7 +458,15 @@
                                             
                                             <!-- زر الجدولة -->
                                             {% if not order.installationschedule_set.exists %}
-                                                {% if order.is_manufacturing_order or order.order_status == 'ready_install' or order.order_status == 'completed' %}
+                                                {% if order.is_manufacturing_order %}
+                                                    {% if order.is_delivered_manufacturing_order %}
+                                                        <a href="#"
+                                                           class="btn btn-sm btn-success"
+                                                           onclick="scheduleInstallation({{ order.id }})">
+                                                            <i class="fas fa-calendar-plus"></i> جدولة تركيب
+                                                        </a>
+                                                    {% endif %}
+                                                {% elif order.order_status == 'ready_install' or order.order_status == 'completed' %}
                                                     <a href="#"
                                                        class="btn btn-sm btn-success"
                                                        onclick="scheduleInstallation({{ order.id }})">

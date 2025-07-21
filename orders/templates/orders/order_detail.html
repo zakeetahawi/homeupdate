@@ -54,53 +54,109 @@
                             <th>تاريخ الطلب</th>
                             <td>{{ order.order_date|date:"Y-m-d H:i" }}</td>
                         </tr>
-                        <tr>
-                            <th>رقم العقد</th>
-                            <td>{{ order.contract_number|default:'-' }}</td>
-                        </tr>
-                        <tr>
-                            <th>ملف العقد</th>
-                            <td>
-                                {% if order.contract_file %}
-                                    <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-success">
-                                        <i class="fas fa-file-pdf"></i> عرض ملف العقد
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted">لم يتم رفع ملف العقد</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>المعاينة المرتبطة</th>
-                            <td>
-                                {% if order.related_inspection_type == 'customer_side' %}
-                                    <span class="badge bg-info">
-                                        <i class="fas fa-user me-1"></i>طرف العميل
-                                    </span>
-                                    <br><small class="text-muted">
-                                        تم تحديد المعاينة كطرف العميل
-                                    </small>
-                                {% elif order.related_inspection %}
-                                    <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}" class="btn btn-sm btn-info">
-                                        <i class="fas fa-eye me-1"></i>عرض تفاصيل المعاينة
-                                    </a>
-                                    <br>
-                                    <span class="badge {% if order.related_inspection.status == 'completed' %}bg-success{% elif order.related_inspection.status == 'scheduled' %}bg-warning text-dark{% elif order.related_inspection.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
-                                        <i class="fas fa-clipboard-check me-1"></i>
-                                        {{ order.related_inspection.get_status_display }}
-                                    </span>
-                                    <br><small class="text-muted">
-                                        {% if order.related_inspection.contract_number %}
-                                            {{ order.related_inspection.contract_number }}
+                        {% with types_list=order.get_selected_types_list %}
+                        {% if types_list and types_list|length == 1 %}
+                            {% if types_list.0 == 'inspection' %}
+                                {# لا تعرض رقم العقد وملف العقد والمعاينة المرتبطة #}
+                            {% else %}
+                                <tr>
+                                    <th>رقم العقد</th>
+                                    <td>{{ order.contract_number|default:'-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>ملف العقد</th>
+                                    <td>
+                                        {% if order.contract_file %}
+                                            <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-success">
+                                                <i class="fas fa-file-pdf"></i> عرض ملف العقد
+                                            </a>
                                         {% else %}
-                                            معاينة {{ order.related_inspection.id }}
-                                        {% endif %} - {{ order.related_inspection.created_at|date:"Y-m-d" }}
-                                    </small>
-                                {% else %}
-                                    <span class="text-muted">لا توجد معاينة مرتبطة</span>
-                                {% endif %}
-                            </td>
-                        </tr>
+                                            <span class="text-muted">لم يتم رفع ملف العقد</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>المعاينة المرتبطة</th>
+                                    <td>
+                                        {% if order.related_inspection_type == 'customer_side' %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-user me-1"></i>طرف العميل
+                                            </span>
+                                            <br><small class="text-muted">
+                                                تم تحديد المعاينة كطرف العميل
+                                            </small>
+                                        {% elif order.related_inspection %}
+                                            <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye me-1"></i>عرض تفاصيل المعاينة
+                                            </a>
+                                            <br>
+                                            <span class="badge {% if order.related_inspection.status == 'completed' %}bg-success{% elif order.related_inspection.status == 'scheduled' %}bg-warning text-dark{% elif order.related_inspection.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                <i class="fas fa-clipboard-check me-1"></i>
+                                                {{ order.related_inspection.get_status_display }}
+                                            </span>
+                                            <br><small class="text-muted">
+                                                {% if order.related_inspection.contract_number %}
+                                                    {{ order.related_inspection.contract_number }}
+                                                {% else %}
+                                                    معاينة {{ order.related_inspection.id }}
+                                                {% endif %} - {{ order.related_inspection.created_at|date:"Y-m-d" }}
+                                            </small>
+                                        {% else %}
+                                            <span class="text-muted">لا توجد معاينة مرتبطة</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% else %}
+                            <tr>
+                                <th>رقم العقد</th>
+                                <td>{{ order.contract_number|default:'-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>ملف العقد</th>
+                                <td>
+                                    {% if order.contract_file %}
+                                        <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-success">
+                                            <i class="fas fa-file-pdf"></i> عرض ملف العقد
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">لم يتم رفع ملف العقد</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>المعاينة المرتبطة</th>
+                                <td>
+                                    {% if order.related_inspection_type == 'customer_side' %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-user me-1"></i>طرف العميل
+                                        </span>
+                                        <br><small class="text-muted">
+                                            تم تحديد المعاينة كطرف العميل
+                                        </small>
+                                    {% elif order.related_inspection %}
+                                        <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye me-1"></i>عرض تفاصيل المعاينة
+                                        </a>
+                                        <br>
+                                        <span class="badge {% if order.related_inspection.status == 'completed' %}bg-success{% elif order.related_inspection.status == 'scheduled' %}bg-warning text-dark{% elif order.related_inspection.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            <i class="fas fa-clipboard-check me-1"></i>
+                                            {{ order.related_inspection.get_status_display }}
+                                        </span>
+                                        <br><small class="text-muted">
+                                            {% if order.related_inspection.contract_number %}
+                                                {{ order.related_inspection.contract_number }}
+                                            {% else %}
+                                                معاينة {{ order.related_inspection.id }}
+                                            {% endif %} - {{ order.related_inspection.created_at|date:"Y-m-d" }}
+                                        </small>
+                                    {% else %}
+                                        <span class="text-muted">لا توجد معاينة مرتبطة</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                        {% endwith %}
                         <!-- Show different date info for inspection vs other orders -->
                         {% with types_list=order.get_selected_types_list %}
                         {% if 'inspection' in types_list or 'inspection' in order.selected_types %}

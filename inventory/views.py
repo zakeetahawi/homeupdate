@@ -163,7 +163,16 @@ def product_list(request):
         products = products.order_by('-created_at')
 
     # الصفحات
-    paginator = Paginator(products, 20)
+    page_size = request.GET.get('page_size', '20')
+    try:
+        page_size = int(page_size)
+        if page_size > 100:
+            page_size = 100
+        elif page_size < 1:
+            page_size = 20
+    except Exception:
+        page_size = 20
+    paginator = Paginator(products, page_size)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -190,7 +199,10 @@ def product_list(request):
         'active_menu': 'products',
         'alerts_count': alerts_count,
         'recent_alerts': recent_alerts,
-        'current_year': current_year
+        'current_year': current_year,
+        'page_size': page_size,
+        'paginator': paginator,
+        'page_number': page_number,
     }
 
     return render(request, 'inventory/product_list_new_icons.html', context)

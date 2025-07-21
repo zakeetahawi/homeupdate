@@ -75,10 +75,19 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="{% url 'installations:quick_schedule_installation' order.id %}" 
-                                               class="btn btn-primary btn-sm">
-                                                <i class="fas fa-calendar-plus"></i> جدولة
-                                            </a>
+                                            {% if order.is_manufacturing_order %}
+                                                {% if order.is_delivered_manufacturing_order %}
+                                                    <a href="{% url 'installations:quick_schedule_installation' order.id %}" 
+                                                       class="btn btn-primary btn-sm">
+                                                        <i class="fas fa-calendar-plus"></i> جدولة
+                                                    </a>
+                                                {% endif %}
+                                            {% elif order.order_status == 'ready_install' or order.order_status == 'completed' %}
+                                                <a href="{% url 'installations:quick_schedule_installation' order.id %}" 
+                                                   class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-calendar-plus"></i> جدولة
+                                                </a>
+                                            {% endif %}
                                             {% if order.paid_amount < order.total_amount %}
                                                 <a href="{% url 'installations:manage_customer_debt' order.id %}" 
                                                    class="btn btn-warning btn-sm">

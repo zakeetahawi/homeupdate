@@ -52,13 +52,22 @@
         <div class="card-body">
             <form method="get" action="{% url 'inventory:inventory_list' %}">
                 <div class="row">
-                    <div class="col-md-4 mb-2">
+                    <div class="col-md-3 mb-2">
                         <div class="input-group">
                             <input type="text" name="search" class="form-control" placeholder="البحث عن منتج..." value="{{ search_query }}">
                             <button type="submit" class="btn" style="background-color: var(--primary); color: white;">
                                 <i class="fas fa-search"></i>
                             </button>
                         </div>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label for="page_size" class="form-label">عدد الصفوف:</label>
+                        <select name="page_size" id="page_size" class="form-select">
+                            <option value="10" {% if page_size|stringformat:'s' == '10' %}selected{% endif %}>10</option>
+                            <option value="20" {% if page_size|stringformat:'s' == '20' or not page_size %}selected{% endif %}>20</option>
+                            <option value="50" {% if page_size|stringformat:'s' == '50' %}selected{% endif %}>50</option>
+                            <option value="100" {% if page_size|stringformat:'s' == '100' %}selected{% endif %}>100</option>
+                        </select>
                     </div>
                     <div class="col-md-3 mb-2">
                         <select name="category" class="form-select">
@@ -78,7 +87,7 @@
                             <option value="out_of_stock" {% if status_filter == 'out_of_stock' %}selected{% endif %}>غير متوفر</option>
                         </select>
                     </div>
-                    <div class="col-md-2 mb-2">
+                    <div class="col-md-1 mb-2">
                         <button type="submit" class="btn w-100" style="background-color: var(--primary); color: white;">
                             <i class="fas fa-filter"></i> تصفية
                         </button>
@@ -127,16 +136,10 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <div class="btn-group">
-                                    <a href="{% url 'inventory:product_detail' product.pk %}" class="btn btn-sm" style="background-color: var(--primary); color: white;" title="عرض التفاصيل">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{% url 'inventory:product_update' product.pk %}" class="btn btn-sm" style="background-color: var(--light-accent); color: var(--dark-text);" title="تعديل">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'inventory:product_delete' product.pk %}" class="btn btn-sm" style="background-color: var(--alert); color: white;" title="حذف">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
+                                <div class="btn-group btn-group-sm action-buttons">
+                                    <a href="{% url 'inventory:product_detail' product.pk %}" class="btn btn-info" title="عرض" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-eye" style="font-size: 0.7em;"></i></a>
+                                    <a href="{% url 'inventory:product_update' product.pk %}" class="btn btn-primary" title="تعديل" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-edit" style="font-size: 0.7em;"></i></a>
+                                    <a href="{% url 'inventory:product_delete' product.pk %}" class="btn btn-danger" title="حذف" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-trash" style="font-size: 0.7em;"></i></a>
                                 </div>
                             </td>
                         </tr>
@@ -151,34 +154,49 @@
             
             <!-- Pagination -->
             {% if page_obj.has_other_pages %}
-            <nav aria-label="Page navigation" class="mt-4">
+            <nav aria-label="تصفح الصفحات" class="mt-4">
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" aria-label="Previous">
+                        <a class="page-link" href="?page=1&page_size={{ page_size }}&search={{ search_query }}&category={{ category_filter }}&status={{ status_filter }}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&page_size={{ page_size }}&search={{ search_query }}&category={{ category_filter }}&status={{ status_filter }}" aria-label="Previous">
                             <span aria-hidden="true">&laquo;</span>
                         </a>
                     </li>
                     {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
                     <li class="page-item disabled">
                         <a class="page-link" href="#" aria-label="Previous">
                             <span aria-hidden="true">&laquo;</span>
                         </a>
                     </li>
                     {% endif %}
-                    
-                    {% for i in page_obj.paginator.page_range %}
-                        {% if page_obj.number == i %}
-                            <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
-                        {% else %}
-                            <li class="page-item"><a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ i }}</a></li>
-                        {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}&page_size={{ page_size }}&search={{ search_query }}&category={{ category_filter }}&status={{ status_filter }}">{{ num }}</a></li>
+                    {% endif %}
                     {% endfor %}
-                    
+
                     {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" aria-label="Next">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&page_size={{ page_size }}&search={{ search_query }}&category={{ category_filter }}&status={{ status_filter }}" aria-label="Next">
                             <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&page_size={{ page_size }}&search={{ search_query }}&category={{ category_filter }}&status={{ status_filter }}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
                         </a>
                     </li>
                     {% else %}
@@ -187,11 +205,37 @@
                             <span aria-hidden="true">&raquo;</span>
                         </a>
                     </li>
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
                     {% endif %}
                 </ul>
+                <form method="get" class="d-flex justify-content-center align-items-center mt-2">
+                    <label for="page_select" class="me-2">انتقل إلى صفحة:</label>
+                    <select id="page_select" name="page" class="form-select w-auto me-2" onchange="this.form.submit()">
+                        {% for num in page_obj.paginator.page_range %}
+                            <option value="{{ num }}" {% if page_obj.number == num %}selected{% endif %}>{{ num }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="page_size" value="{{ page_size }}">
+                    <input type="hidden" name="search" value="{{ search_query }}">
+                    <input type="hidden" name="category" value="{{ category_filter }}">
+                    <input type="hidden" name="status" value="{{ status_filter }}">
+                </form>
             </nav>
             {% endif %}
         </div>
     </div>
 </div>
 {% endblock %}
+
+<style>
+.action-buttons {
+    display: flex;
+    gap: 0.1rem;
+    justify-content: center;
+    align-items: center;
+}
+</style>
