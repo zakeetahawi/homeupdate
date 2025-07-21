@@ -33,7 +33,7 @@ class Order(models.Model):
         ('accessory', 'إكسسوار'),
         ('installation', 'تركيب'),
         ('inspection', 'معاينة'),
-        ('tailoring', 'تفصيل'),
+        ('tailoring', 'تسليم'),
     ]
     TRACKING_STATUS_CHOICES = [
         ('pending', 'قيد الانتظار'),
@@ -372,7 +372,7 @@ class Order(models.Model):
             
             # Contract number validation
             if 'tailoring' in selected_types and not self.contract_number:
-                raise ValidationError('رقم العقد مطلوب لخدمة التفصيل')
+                raise ValidationError('رقم العقد مطلوب لخدمة التسليم')
             
             # Invoice number validation - required for all types except inspection alone
             if not (len(selected_types) == 1 and selected_types[0] == 'inspection'):
@@ -652,7 +652,7 @@ class Order(models.Model):
             'inspection': 'معاينة',
             'installation': 'تركيب',
             'accessory': 'إكسسوار',
-            'tailoring': 'تفصيل'
+            'tailoring': 'تسليم'
         }
 
         return type_map.get(types_list[0], types_list[0])

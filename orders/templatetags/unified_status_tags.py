@@ -116,7 +116,7 @@ def get_order_type_badge(order_type, order=None):
     
     type_texts = {
         'installation': 'تركيب',
-        'tailoring': 'خياطة',
+        'tailoring': 'تسليم',
         'accessory': 'إكسسوارات',
         'inspection': 'معاينة',
     }
@@ -153,7 +153,7 @@ def get_order_type_text(order_type, is_vip=False):
     """
     type_texts = {
         'installation': 'تركيب',
-        'tailoring': 'خياطة',
+        'tailoring': 'تسليم',
         'accessory': 'إكسسوارات',
         'inspection': 'معاينة',
     }

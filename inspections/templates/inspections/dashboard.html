@@ -104,6 +104,7 @@
                             <thead>
                                 <tr>
                                     <th>رقم المعاينة</th>
+                                    <th>رقم الطلب</th>
                                     <th>العميل</th>
                                     <th>تاريخ المعاينة</th>
                                     <th>الحالة</th>
@@ -116,6 +117,17 @@
                                 {% for inspection in recent_inspections %}
                                 <tr>
                                     <td>#{{ inspection.id }}</td>
+                                    <td>
+                                        {% if inspection.order %}
+                                            {% if inspection.order.order_number %}
+                                                {{ inspection.order.order_number }}
+                                            {% else %}
+                                                {{ inspection.order.pk }}
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
                                     <td><strong>{{ inspection.customer.name|default:"عميل جديد" }}</strong></td>
                                     <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
                                     <td>
@@ -149,7 +161,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="7" class="text-center">لا توجد معاينات حديثة</td>
+                                    <td colspan="8" class="text-center">لا توجد معاينات حديثة</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

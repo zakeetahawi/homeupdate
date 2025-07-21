@@ -582,6 +582,9 @@
                                     {% if selected_types %}
                                         {% for type in selected_types %}
                                             {% get_order_type_badge type order.order %}
+                                            {% if type == 'tailoring' %}
+                                                <span class="badge bg-success">تسليم</span>
+                                            {% endif %}
                                             {% if not forloop.last %}<br>{% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -681,12 +684,14 @@
                                     <a href="{% url 'manufacturing:order_detail' order.id %}" class="btn btn-sm action-btn btn-view" title="عرض التفاصيل">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{% url 'manufacturing:order_update' order.id %}" class="btn btn-sm action-btn btn-edit" title="تعديل">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <button class="btn btn-sm action-btn btn-delete" onclick="confirmDelete({{ order.id }})" title="حذف">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    {% if order.status != 'delivered' or request.user.is_superuser %}
+                                        <a href="{% url 'manufacturing:order_update' order.id %}" class="btn btn-sm action-btn btn-edit" title="تعديل">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-sm action-btn btn-delete" onclick="confirmDelete({{ order.id }})" title="حذف">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -744,7 +749,7 @@
     </div>
 </div>
 
-<!-- Modal for Rejection Reason -->
+<!-- Modal for Rejection -->
 <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">

@@ -88,9 +88,11 @@
 }
 
 [data-theme="modern-black"] .dropdown {
-    transform: translate3d(0, 0, 0);
-    -webkit-transform: translate3d(0, 0, 0);
-    will-change: transform; /* تحسين الأداء */
+    transform: none !important;
+    -webkit-transform: none !important;
+    will-change: auto !important;
+    transform-style: flat !important;
+    backface-visibility: visible !important;
 }
 
 [data-theme="modern-black"] .dropdown-menu {
@@ -370,4 +372,16 @@
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.5);
+}
+
+/* إصلاح نهائي لتداخل القوائم المنسدلة مع البطاقات في الثيم الأسود */
+[data-theme="modern-black"] .dropdown-menu,
+[data-theme="modern-black"] .navbar .dropdown-menu {
+    z-index: 2147483647 !important;
+    position: absolute !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    will-change: auto !important;
+    transform-style: flat !important;
+    backface-visibility: visible !important;
 }

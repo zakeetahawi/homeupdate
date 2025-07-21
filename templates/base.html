@@ -160,7 +160,8 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">                    <li class="nav-item">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'home' %}"><i class="fas fa-home"></i><span class="nav-text">الرئيسية</span></a>
                     </li>
                     {% if user.is_authenticated and user.is_staff %}
@@ -231,9 +232,7 @@
                 </ul>
                 <div class="d-flex align-items-center ms-auto">
                     {% if user.is_authenticated %}
-                    <!-- Notifications Dropdown -->
-                    <div class="dropdown me-3">
-                        <button class="btn btn-outline-light position-relative" type="button" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-outline-light position-relative me-3" id="customNotificationsBtn" type="button">
                             <i class="fas fa-bell"></i>
                             {% if notifications_count > 0 %}
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -242,88 +241,11 @@
                             </span>
                             {% endif %}
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end notification-dropdown" aria-labelledby="notificationsDropdown" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
-                            <li>
-                                <h6 class="dropdown-header">الإشعارات</h6>
-                            </li>
-                            {% if recent_notifications %}
-                                {% for notification in recent_notifications %}
-                                <li>
-                                    <a class="dropdown-item{% if not notification.is_read %} bg-light{% endif %} py-3" href="{% url 'accounts:notification_detail' notification.id %}" style="border-bottom: 1px solid #eee;">
-                                        <div class="d-flex align-items-start">
-                                            <div class="flex-shrink-0 me-3">
-                                                {% if notification.priority == 'urgent' %}
-                                                    <i class="fas fa-exclamation-triangle text-danger fa-lg"></i>
-                                                {% elif notification.priority == 'high' %}
-                                                    <i class="fas fa-exclamation-circle text-warning fa-lg"></i>
-                                                {% else %}
-                                                    <i class="fas fa-bell text-info fa-lg"></i>
-                                                {% endif %}
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="d-flex justify-content-between align-items-start mb-1">
-                                                    <div class="fw-bold text-truncate" style="max-width: 200px;">{{ notification.title }}</div>
-                                                    {% if not notification.is_read %}
-                                                        <span class="badge bg-primary rounded-pill ms-2">جديد</span>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="small text-muted mb-1">
-                                                    <i class="fas fa-clock me-1"></i>
-                                                    {{ notification.created_at|date:"Y-m-d H:i" }}
-                                                </div>
-                                                <div class="small text-muted">
-                                                    <i class="fas fa-hashtag me-1"></i>
-                                                    #{{ notification.id }}
-                                                    <span class="ms-2">
-                                                        {% if notification.priority == 'urgent' %}
-                                                            <span class="badge bg-danger rounded-pill">عاجل</span>
-                                                        {% elif notification.priority == 'high' %}
-                                                            <span class="badge bg-warning text-dark rounded-pill">مهم</span>
-                                                        {% else %}
-                                                            <span class="badge bg-info rounded-pill">عادي</span>
-                                                        {% endif %}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </a>
-                                </li>
-                                {% endfor %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-center" href="{% url 'accounts:notifications' %}">عرض كل الإشعارات</a></li>
-                            {% else %}
-                                <li><div class="dropdown-item text-center">لا توجد إشعارات</div></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-center" href="{% url 'accounts:notifications' %}">عرض كل الإشعارات</a></li>
-                            {% endif %}
-                        </ul>
-                    </div>
-
-                    <!-- User Dropdown -->                    <div class="dropdown">
-                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-outline-light dropdown-toggle" id="customUserBtn" type="button">
                             <i class="fas fa-user"></i> {{ user.get_full_name|default:user.username }}
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li>
-                                <div class="px-3 py-2">                                    <label for="themeSelector" class="form-label" style="font-weight: bold;">اختر الثيم المناسب</label>
-                                    <select id="themeSelector" class="form-select">
-                                        <option value="default">الثيم الإفتراضي</option>
-                                        <option value="custom-theme">نسخة الثيم الإفتراضي القابلة للتعديل</option>
-                                        <option value="modern-black">الثيم الأسود العصري</option>
-                                    </select>
-                                </div>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fas fa-id-card"></i> الملف الشخصي</a></li>
-                            {% if user.is_staff %}
-                            <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="fas fa-cog"></i> لوحة الإدارة</a></li>
-                            {% endif %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
-                        </ul>
-                    </div>
                     {% else %}
-                    <a href="{% url 'accounts:login' %}" class="btn btn-outline-light"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
+                        <a href="{% url 'accounts:login' %}" class="btn btn-outline-light"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
                     {% endif %}
                 </div>
             </div>
@@ -454,6 +376,114 @@
         }
     </style>
     {% endif %}
+
+    <!-- قائمة الإشعارات المنبثقة خارج تدفق الهيدر -->
+    {% if user.is_authenticated %}
+    <div id="customNotificationsDropdown" class="custom-dropdown-menu notification-dropdown" style="display:none; position:fixed; top:70px; left:30px; z-index:2147483647; min-width:350px; max-width:95vw; max-height:400px; overflow-y:auto; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18); border:1px solid #eee;">
+        <div class="dropdown-header fw-bold py-2 px-3 border-bottom">الإشعارات</div>
+        <div>
+            {% if recent_notifications %}
+                {% for notification in recent_notifications %}
+                <a class="dropdown-item d-flex align-items-start py-3 border-bottom {% if not notification.is_read %}bg-light{% endif %}" href="{% url 'accounts:notification_detail' notification.id %}">
+                    <div class="flex-shrink-0 me-3">
+                        {% if notification.priority == 'urgent' %}
+                            <i class="fas fa-exclamation-triangle text-danger fa-lg"></i>
+                        {% elif notification.priority == 'high' %}
+                            <i class="fas fa-exclamation-circle text-warning fa-lg"></i>
+                        {% else %}
+                            <i class="fas fa-bell text-info fa-lg"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div class="fw-bold text-truncate" style="max-width:200px;">{{ notification.title }}</div>
+                            {% if not notification.is_read %}
+                                <span class="badge bg-primary rounded-pill ms-2">جديد</span>
+                            {% endif %}
+                        </div>
+                        <div class="small text-muted mb-1">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ notification.created_at|date:"Y-m-d H:i" }}
+                        </div>
+                        <div class="small text-muted">
+                            <i class="fas fa-hashtag me-1"></i>#{{ notification.id }}
+                            <span class="ms-2">
+                                {% if notification.priority == 'urgent' %}
+                                    <span class="badge bg-danger rounded-pill">عاجل</span>
+                                {% elif notification.priority == 'high' %}
+                                    <span class="badge bg-warning text-dark rounded-pill">مهم</span>
+                                {% else %}
+                                    <span class="badge bg-info rounded-pill">عادي</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+                <a class="dropdown-item text-center py-2" href="{% url 'accounts:notifications' %}">عرض كل الإشعارات</a>
+            {% else %}
+                <div class="dropdown-item text-center py-3">لا توجد إشعارات</div>
+                <a class="dropdown-item text-center py-2" href="{% url 'accounts:notifications' %}">عرض كل الإشعارات</a>
+            {% endif %}
+        </div>
+    </div>
+    <!-- قائمة المستخدم المنبثقة خارج تدفق الهيدر -->
+    <div id="customUserDropdown" class="custom-dropdown-menu" style="display:none; position:fixed; top:70px; left:90px; z-index:2147483647; min-width:260px; max-width:95vw; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18); border:1px solid #eee;">
+        <div class="dropdown-header fw-bold py-2 px-3 border-bottom">القائمة الشخصية</div>
+        <div class="px-3 py-2">
+            <label for="themeSelector" class="form-label" style="font-weight: bold;">اختر الثيم المناسب</label>
+            <select id="themeSelector" class="form-select">
+                <option value="default">الثيم الإفتراضي</option>
+                <option value="custom-theme">نسخة الثيم الإفتراضي القابلة للتعديل</option>
+                <option value="modern-black">الثيم الأسود العصري</option>
+            </select>
+        </div>
+        <hr class="my-1">
+        <a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fas fa-id-card"></i> الملف الشخصي</a>
+        {% if user.is_staff %}
+        <a class="dropdown-item" href="{% url 'admin:index' %}"><i class="fas fa-cog"></i> لوحة الإدارة</a>
+        {% endif %}
+        <hr class="my-1">
+        <a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+    </div>
+    {% endif %}
+
+    <script>
+    // منطق إظهار/إخفاء القوائم المنبثقة بشكل يدوي
+    document.addEventListener('DOMContentLoaded', function() {
+        var notifBtn = document.getElementById('customNotificationsBtn');
+        var notifDropdown = document.getElementById('customNotificationsDropdown');
+        var userBtn = document.getElementById('customUserBtn');
+        var userDropdown = document.getElementById('customUserDropdown');
+        function closeAllDropdowns(e) {
+            if (notifDropdown) notifDropdown.style.display = 'none';
+            if (userDropdown) userDropdown.style.display = 'none';
+        }
+        if (notifBtn && notifDropdown) {
+            notifBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
+                notifDropdown.focus();
+                if (userDropdown) userDropdown.style.display = 'none';
+            });
+        }
+        if (userBtn && userDropdown) {
+            userBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+                userDropdown.focus();
+                if (notifDropdown) notifDropdown.style.display = 'none';
+            });
+        }
+        document.addEventListener('click', function(e) {
+            // إغلاق القوائم إذا تم الضغط خارجها
+            if (notifDropdown) notifDropdown.style.display = 'none';
+            if (userDropdown) userDropdown.style.display = 'none';
+        });
+        if (notifDropdown) notifDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+        if (userDropdown) userDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+    });
+    </script>
 
     <!-- Main Content -->
     <main class="container-fluid mt-4 flex-grow" id="main-content">

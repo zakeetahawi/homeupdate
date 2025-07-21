@@ -809,3 +809,15 @@ body,
     color: var(--manufacturing-deleted) !important;
     font-weight: 500 !important;
 }
+
+/* ضمان ظهور الهيدر والقوائم المنسدلة فوق كل شيء */
+.navbar {
+    z-index: 999999999 !important;
+    position: relative;
+}
+
+.dropdown-menu,
+.navbar .dropdown-menu {
+    z-index: 999999999 !important;
+    position: absolute !important;
+}

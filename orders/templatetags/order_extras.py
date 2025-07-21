@@ -35,7 +35,7 @@ def get_type_display(type_value):
         'inspection': 'معاينة',
         'installation': 'تركيب', 
         'accessory': 'إكسسوار',
-        'tailoring': 'تفصيل'
+        'tailoring': 'تسليم'
     }
     return type_map.get(type_value, type_value)
 

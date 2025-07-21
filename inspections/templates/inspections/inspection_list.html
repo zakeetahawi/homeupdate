@@ -178,13 +178,25 @@
                 {% for inspection in inspections %}
                 <tr>
                     <td>
-                        {% if inspection.order and inspection.order.order_number %}
-                            {{ inspection.order.order_number }}
-                        {% else %}
-                            {{ inspection.contract_number }}
+                        {% if inspection.order %}
+                            <a href="{% url 'orders:order_detail' inspection.order.pk %}" style="font-weight: bold; color: var(--primary); text-decoration: none;">
+                                {% if inspection.order.order_number %}
+                                    {{ inspection.order.order_number }}
+                                {% else %}
+                                    {{ inspection.order.pk }}
+                                {% endif %}
+                            </a>
                         {% endif %}
                     </td>
-                    <td>{{ inspection.customer|default:"عميل جديد" }}</td>
+                    <td>
+                        {% if inspection.customer %}
+                            <a href="{% url 'customers:customer_detail' inspection.customer.pk %}" style="font-weight: bold; color: var(--primary); text-decoration: none;">
+                                <strong>{{ inspection.customer.name }}</strong>
+                            </a>
+                        {% else %}
+                            <span>عميل جديد</span>
+                        {% endif %}
+                    </td>
                     <td>{{ inspection.request_date }}</td>
                     <td>{{ inspection.scheduled_date }}</td>
                     <td>{{ inspection.expected_delivery_date }}</td>
