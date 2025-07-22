@@ -87,5 +87,6 @@ urlpatterns = [
     # API Endpoints
     path('api/product/<int:pk>/', views.product_api_detail, name='product_api_detail'),
     path('api/products/', views.product_api_list, name='product_api_list'),
+    path('api/product-autocomplete/', views.product_api_autocomplete, name='product_api_autocomplete'),
 ]
 

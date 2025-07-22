@@ -554,6 +554,29 @@ def product_api_list(request):
 
     return JsonResponse(data, safe=False)
 
+def product_api_autocomplete(request):
+    """
+    API للبحث السريع عن المنتجات (autocomplete)
+    يقبل باراميتر ?query= ويعيد قائمة مختصرة (id, name, code, price, current_stock)
+    """
+    query = request.GET.get('query', '').strip()
+    results = []
+    if query:
+        products = Product.objects.filter(
+            Q(name__icontains=query) | Q(code__icontains=query)
+        )[:10]
+    else:
+        products = Product.objects.all()[:10]
+    for p in products:
+        results.append({
+            'id': p.id,
+            'name': p.name,
+            'code': p.code,
+            'price': float(p.price),
+            'current_stock': p.current_stock,
+        })
+    return JsonResponse(results, safe=False)
+
 # New API View
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated

@@ -513,7 +513,7 @@ class Order(models.Model):
         days_to_add = DeliveryTimeSettings.get_delivery_days(order_type)
 
         # حساب التاريخ المتوقع
-        expected_date = self.order_date.date() + timedelta(days=days_to_add)
+        expected_date = self.order_date + timedelta(days=days_to_add)
         return expected_date
 
     def generate_unique_order_number(self):
@@ -728,6 +728,9 @@ class Order(models.Model):
     
     def update_installation_status(self):
         """تحديث حالة التركيب بناءً على قسم التركيبات"""
+        if getattr(self, '_updating_installation_status', False):
+            return
+        setattr(self, '_updating_installation_status', True)
         try:
             from installations.models import InstallationSchedule
             installation = InstallationSchedule.objects.filter(order=self).first()
@@ -749,6 +752,7 @@ class Order(models.Model):
             # تسجيل الخطأ بدون إيقاف العملية
             print(f"خطأ في تحديث حالة التركيب للطلب {self.order_number}: {e}")
             pass
+        setattr(self, '_updating_installation_status', False)
     
     def update_inspection_status(self):
         """تحديث حالة المعاينة بناءً على قسم المعاينات"""

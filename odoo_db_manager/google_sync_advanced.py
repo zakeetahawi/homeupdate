@@ -23,26 +23,35 @@ class GoogleSheetMapping(models.Model):
     """
 
     FIELD_TYPES = [
+        # بيانات العميل
         ('customer_code', 'رقم العميل (كود النظام)'),
-        ('customer_name', 'اسم العميل'),
-        ('customer_phone', 'رقم هاتف العميل'),
+        ('customer_name', 'اسم العميل (مطلوب)'),
+        ('customer_phone', 'رقم هاتف العميل (مطلوب)'),
         ('customer_phone2', 'رقم الهاتف الثاني'),
         ('customer_email', 'بريد العميل الإلكتروني'),
         ('customer_address', 'عنوان العميل'),
+
+        # بيانات الطلب
         ('order_number', 'رقم الطلب'),
         ('invoice_number', 'رقم الفاتورة'),
         ('contract_number', 'رقم العقد'),
-        ('order_date', 'تاريخ الطلب'),
-        ('order_type', 'نوع الطلب'),
+        ('order_date', 'تاريخ الطلب (يُعتمد كتاريخ الإنشاء)'),
+        ('order_type', 'نوع الطلب (معاينة/تركيب/تسليم/اكسسوار)'),
         ('order_status', 'حالة الطلب'),
         ('tracking_status', 'حالة التتبع'),
         ('total_amount', 'المبلغ الإجمالي'),
         ('paid_amount', 'المبلغ المدفوع'),
         ('delivery_type', 'نوع التسليم'),
         ('delivery_address', 'عنوان التسليم'),
-        ('installation_status', 'حالة التركيب'),
-        ('inspection_date', 'تاريخ المعاينة'),
-        ('inspection_result', 'نتيجة المعاينة'),
+
+        # بيانات المعاينة
+        ('inspection_date', 'تاريخ المعاينة (ينشئ طلب ومعاينة)'),
+        ('inspection_result', 'نتيجة المعاينة (تُعتبر مكتملة وناجحة دائماً)'),
+
+        # بيانات التصنيع
+        ('manufacturing_type', 'نوع أمر التصنيع (تركيب/تسليم/اكسسوار)'),
+
+        # أخرى
         ('notes', 'ملاحظات'),
         ('branch', 'الفرع'),
         ('salesperson', 'البائع'),
@@ -197,18 +206,36 @@ class GoogleSheetMapping(models.Model):
         }
 
     def get_order_related_fields(self):
-        """إرجاع الحقول المتعلقة بالطلبات"""
+        """إرجاع الحقول المتعلقة بالطلبات (بما فيها الأنواع الجديدة)"""
         mappings = self.get_mapped_columns()
         order_fields = [
             'order_number', 'invoice_number', 'contract_number', 'order_date',
             'order_type', 'order_status', 'tracking_status', 'total_amount',
-            'paid_amount', 'delivery_type', 'delivery_address', 'installation_status',
-            'notes', 'branch', 'salesperson', 'windows_count'
+            'paid_amount', 'delivery_type', 'delivery_address',
+            'notes', 'branch', 'salesperson', 'windows_count',
+            'manufacturing_type'
         ]
         return {
             col: field_type 
             for col, field_type in mappings.items() 
             if field_type in order_fields
+        }
+    def get_manufacturing_related_fields(self):
+        """إرجاع الحقول المتعلقة بأوامر التصنيع"""
+        mappings = self.get_mapped_columns()
+        manufacturing_fields = [
+            'manufacturing_type',
+            'order_type',
+            'order_number',
+            'contract_number',
+            'order_date',
+            'notes',
+            'branch',
+        ]
+        return {
+            col: field_type
+            for col, field_type in mappings.items()
+            if field_type in manufacturing_fields
         }
 
     def should_create_customers(self):

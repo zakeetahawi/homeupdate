@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 import logging
+from django.db import models
 
 logger = logging.getLogger(__name__)
 

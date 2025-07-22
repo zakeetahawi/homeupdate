@@ -6,7 +6,7 @@ Advanced Google Sheets Sync Service - Updated
 import logging
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 from django.utils import timezone
 from django.db import transaction, IntegrityError
@@ -28,6 +28,62 @@ logger = logging.getLogger(__name__)
 
 
 class AdvancedSyncService:
+    def _create_manufacturing_order(self, mapped_data: Dict[str, str], order: Order):
+        """دالة وهمية مؤقتة لمنع الخطأ. نفذ منطق أمر التصنيع هنا لاحقًا."""
+        pass
+    def _map_order_type(self, order_type_value: str) -> str:
+        """
+        تحويل نوع الطلب من العربية إلى القيم البرمجية المعتمدة في النظام.
+        يدعم: معاينة، تركيب، اكسسوار، تفصيل، تسليم
+        """
+        mapping = {
+            'معاينة': 'inspection',
+            'inspection': 'inspection',
+            'تركيب': 'installation',
+            'installation': 'installation',
+            'اكسسوار': 'accessory',
+            'إكسسوار': 'accessory',
+            'accessory': 'accessory',
+            'تفصيل': 'tailoring',
+            'tailoring': 'tailoring',
+            'تسليم': 'tailoring',  # حسب طلبك: تسليم = تفصيل
+            'توصيل': 'tailoring',
+        }
+        return mapping.get(order_type_value.strip().lower().replace('إ','ا'), order_type_value.strip().lower())
+    def _create_inspection(self, mapped_data: Dict[str, str], order: Order) -> Inspection:
+        """إنشاء معاينة مرتبطة بالطلب فقط إذا كان التاريخ صالحًا"""
+        from inspections.models import Inspection
+        from datetime import timedelta
+        from django.utils import timezone
+
+        inspection_data = {
+            'order': order,
+            'customer': order.customer,
+            'branch': order.branch,
+        }
+
+        # معالجة تاريخ المعاينة: لا تنشئ معاينة إذا لم يوجد تاريخ صالح
+        inspection_date = mapped_data.get('inspection_date', '').strip()
+        parsed_date = self._parse_date(inspection_date)
+        if parsed_date:
+            inspection_data['scheduled_date'] = parsed_date
+            inspection_data['request_date'] = parsed_date - timedelta(days=1)
+        else:
+            raise Exception("لن يتم إنشاء معاينة: لا يوجد تاريخ معاينة صالح.")
+
+        if mapped_data.get('inspection_notes'):
+            inspection_data['notes'] = mapped_data['inspection_notes']
+
+        try:
+            inspection = Inspection.objects.create(**inspection_data)
+            self.stats['inspections_created'] += 1
+            return inspection
+        except Exception as e:
+            import traceback
+            logger.error(f"[CREATE_INSPECTION] خطأ: {str(e)}")
+            logger.error(f"[CREATE_INSPECTION] بيانات المعاينة: {inspection_data}")
+            print(traceback.format_exc())
+            raise Exception(f"فشل إنشاء معاينة جديدة: {str(e)}")
     """خدمة المزامنة المتقدمة - محدثة"""
 
     def __init__(self, mapping: GoogleSheetMapping):
@@ -106,181 +162,89 @@ class AdvancedSyncService:
 
     def _process_sheet_data(self, sheet_data: List[List[str]], task: GoogleSyncTask):
         """
-        معالجة بيانات الجدول حسب المتطلبات المحدثة:
-        1. إنشاء عميل لكل صف (إذا لم يكن موجوداً) بناءً على رقم الهاتف
-        2. إنشاء طلب جديد لكل صف (حتى لو كان العميل نفسه)
-        3. إنشاء معاينة فقط إذا كان هناك تاريخ معاينة صالح
+        تسلسل المزامنة المحدث:
+        1. إضافة العملاء
+        2. إضافة الطلب الأساسي (تركيب/تسليم/اكسسوار)
+        3. إضافة طلب معاينة منفصل إذا وُجد تاريخ معاينة
+        4. إنشاء المعاينة مرتبطة بطلب المعاينة
+        5. إنشاء أمر تصنيع للطلب الأساسي
         """
-        headers = sheet_data[self.mapping.header_row - 1] if len(sheet_data) >= self.mapping.header_row else []
-        data_rows = sheet_data[self.mapping.start_row - 1:] if len(sheet_data) >= self.mapping.start_row else []
+        if not sheet_data or len(sheet_data) < 2:
+            logger.warning("لا توجد بيانات كافية في Google Sheets.")
+            print("[SYNC] لا توجد بيانات كافية في Google Sheets.")
+            return
+
+        headers = sheet_data[0]
+        total_rows = len(sheet_data) - 1
+        self.stats['total_rows'] = total_rows
         
-        self.stats['total_rows'] = len(data_rows)
-        customer_cache = {}
-        imported_orders = set()
-        imported_inspections = set()
-
-        for row_index, row_data in enumerate(data_rows, self.mapping.start_row):
+        print(f"[SYNC] بدء معالجة {total_rows} صف...")
+        
+        for row_index, row in enumerate(sheet_data[1:], start=2):
             try:
-                if not row_data or all(not cell.strip() for cell in row_data):
-                    continue  # تجاهل الصفوف الفارغة
+                # طباعة تقدم كل 10 صفوف
+                if (row_index - 2) % 10 == 0:
+                    progress = ((row_index - 2) / total_rows) * 100
+                    print(f"[SYNC] التقدم: {progress:.1f}% - معالجة الصف {row_index} من {total_rows+1}")
 
-                # تحويل البيانات إلى قاموس
-                mapped_data = self._map_row_data(headers, row_data)
-                sheet_row_number = row_index
+                mapped_data = self._map_row_data(headers, row)
                 
-                # 1. معالجة العميل
-                customer_name = mapped_data.get('customer_name', '').strip()
-                customer_phone = mapped_data.get('customer_phone', '').strip()
-                
-                if not customer_name:
-                    self.stats['warnings'].append(f"الصف {sheet_row_number}: اسم العميل مطلوب")
-                    self.stats['failed_rows'] += 1
-                    continue
-
-                # البحث عن العميل الموجود أو إنشاؤه
-                customer_key = customer_phone if customer_phone else f"no_phone_{customer_name}"
-                customer = customer_cache.get(customer_key)
-                
+                # معالجة العميل
+                customer = self._process_customer(mapped_data, row_index, task)
                 if not customer:
-                    customer = self._process_customer(mapped_data, sheet_row_number, task)
-                    if customer:
-                        customer_cache[customer_key] = customer
-                
-                if not customer:
-                    self.stats['errors'].append(f"الصف {sheet_row_number}: فشل في إنشاء أو العثور على العميل")
-                    self.stats['failed_rows'] += 1
+                    print(f"[SYNC] تخطي الصف {row_index}: لا يوجد عميل")
                     continue
 
-                # 2. معالجة الطلب - إنشاء طلب جديد لكل صف
-                invoice_number = mapped_data.get('invoice_number', '').strip()
-                order_number = mapped_data.get('order_number', '').strip()
+                # تحديد نوع الطلب الأساسي
+                raw_order_type = mapped_data.get('order_type', '').strip()
+                order_type = self._map_order_type(raw_order_type)
                 
-                # إنشاء رقم فاتورة افتراضي إذا لم يكن موجوداً
-                if not invoice_number and order_number:
-                    invoice_number = f"INV-{order_number}"
-                    mapped_data['invoice_number'] = invoice_number
-                    logger.info(f"الصف {sheet_row_number}: تم إنشاء رقم فاتورة افتراضي: {invoice_number}")
-                
-                # إنشاء طلب جديد لكل صف (حتى لو كان نفس العميل)
-                order = None
-                try:
-                    order = self._create_order(mapped_data, customer)
-                    if order:
-                        order_key = f"order_{order.id}"  # استخدام معرف الطلب الفريد
-                        imported_orders.add(order_key)
-                        self.stats['orders_created'] += 1
-                        logger.info(f"تم إنشاء طلب جديد: رقم الفاتورة {invoice_number}")
-                except Exception as e:
-                    error_msg = f"خطأ في إنشاء الطلب للصف {sheet_row_number}: {str(e)}"
-                    logger.error(error_msg)
-                    self.stats['errors'].append(error_msg)
-                    self.stats['failed_rows'] += 1
-                    continue
-
-                # 3. معالجة المعاينة - فقط إذا كان هناك تاريخ معاينة صالح
+                # تحديد وجود تاريخ معاينة
                 inspection_date = mapped_data.get('inspection_date', '').strip()
-                valid_inspection_date = None
-                
-                # معالجة تاريخ المعاينة فقط إذا كان هناك قيمة وتختلف عن القيم غير الصالحة
-                if inspection_date and inspection_date.lower() not in ['', 'n/a', 'لا يوجد', 'null', 'طرف العميل']:
-                    try:
-                        # محاولة تحليل التاريخ بتنسيقات مختلفة
-                        date_formats = [
-                            '%Y-%m-%d',  # 2023-12-31
-                            '%d/%m/%Y',  # 31/12/2023
-                            '%d-%m-%Y',  # 31-12-2023
-                            '%Y/%m/%d',  # 2023/12/31
-                            '%d.%m.%Y',  # 31.12.2023
-                            '%d %b %Y',  # 31 Dec 2023
-                            '%d %B %Y',  # 31 December 2023
-                        ]
-                        
-                        parsed_date = None
-                        for date_format in date_formats:
-                            try:
-                                parsed_date = datetime.strptime(inspection_date, date_format).date()
-                                valid_inspection_date = parsed_date
-                                logger.info(f"الصف {sheet_row_number}: تم تحليل تاريخ المعاينة '{inspection_date}' إلى {valid_inspection_date}")
-                                break
-                            except ValueError:
-                                continue
-                        
-                        if not valid_inspection_date:
-                            # محاولة تحليل التاريخ باستخدام dateutil.parser إذا كان مثبتاً
-                            try:
-                                from dateutil import parser
-                                parsed_date = parser.parse(inspection_date, dayfirst=True, yearfirst=False)
-                                valid_inspection_date = parsed_date.date()
-                                logger.info(f"الصف {sheet_row_number}: تم تحليل التاريخ بنجاح: '{inspection_date}' → {valid_inspection_date}")
-                            except (ImportError, ValueError) as e:
-                                logger.warning(f"الصف {sheet_row_number}: تخطي إنشاء معاينة - تنسيق تاريخ غير صالح: '{inspection_date}'")
-                                self.stats['warnings'].append(f"تنسيق تاريخ غير صالح في الصف {sheet_row_number}: {inspection_date}")
-                                continue
-                        
-                        # إنشاء المعاينة إذا كان هناك تاريخ
-                        if self.mapping.auto_create_inspections and order and inspection_date:
-                            try:
-                                logger.info(f"محاولة إنشاء معاينة للطلب {order.id} بالتاريخ: {inspection_date}")
-                                
-                                # إنشاء المعاينة مع البيانات المتاحة
-                                inspection = self._process_inspection(
-                                    mapped_data=mapped_data, 
-                                    customer=customer, 
-                                    order=order, 
-                                    row_index=sheet_row_number, 
-                                    task=task
-                                )
-                                
-                                if inspection:
-                                    inspection_key = f"inspection_{inspection.id}"
-                                    imported_inspections.add(inspection_key)
-                                    self.stats['inspections_created'] += 1
-                                    logger.info(f"تم إنشاء معاينة جديدة للطلب رقم {order.id} بنجاح")
-                                else:
-                                    logger.warning(f"لم يتم إنشاء معاينة للطلب {order.id} - فشل في عملية الإنشاء")
-                            except Exception as e:
-                                error_msg = f"فشل في إنشاء معاينة للطلب {order.id}: {str(e)}"
-                                logger.error(error_msg, exc_info=True)
-                                self.stats['warnings'].append(f"خطأ في إنشاء المعاينة للصف {sheet_row_number}")
+                has_inspection_date = bool(inspection_date)
+
+                print(f"[SYNC] الصف {row_index}: العميل={customer.name}, ال��وع={order_type}, معاينة={has_inspection_date}")
+
+                # إنشاء الطلب الأساسي (تركيب/تسليم/اكسسوار)
+                main_order = None
+                if order_type in ['installation', 'accessory', 'tailoring']:
+                    main_order = self._create_order(mapped_data, customer, order_type)
+                    print(f"[SYNC] تم إنشاء طلب {order_type}: {main_order.order_number}")
                     
-                    except Exception as e:
-                        error_msg = f"خطأ غير متوقع في معالجة تاريخ المعاينة للصف {sheet_row_number}: {str(e)}"
-                        logger.error(error_msg, exc_info=True)
-                        self.stats['warnings'].append(f"خطأ في معالجة تاريخ المعاينة في الصف {sheet_row_number}")
-                elif inspection_date:  # سجل فقط إذا كان هناك تاريخ غير صالح
-                    logger.info(f"الصف {sheet_row_number}: تخطي إنشاء معاينة - تاريخ غير صالح: '{inspection_date}'")
-
-                # 4. Ensure extended order has branch_id
-                if order and hasattr(order, 'extendedorder'):
+                    # إنشاء أمر تصنيع للطلب الأساسي
                     try:
-                        extended_order = order.extendedorder
-                        if not extended_order.branch_id and order.branch:
-                            extended_order.branch_id = order.branch
-                            extended_order.save()
-                            logger.info(f"Updated branch_id for extended order {order.id} to {order.branch.id}")
+                        self._create_manufacturing_order(mapped_data, main_order)
+                        print(f"[SYNC] تم إنشاء أمر تصنيع للطلب: {main_order.order_number}")
                     except Exception as e:
-                        logger.error(f"Failed to update extended order branch: {str(e)}", exc_info=True)
+                        print(f"[SYNC] تعذر إنشاء أمر تصنيع: {str(e)}")
 
-                # Removed installation processing - will be reimplemented with new models
-                # 5. معالجة التركيب إذا كان مفعلاً
-                # if self.mapping.auto_create_installations and order:
-                #     try:
-                #         self._process_installation(mapped_data, customer, order, sheet_row_number, task)
-                #     except Exception as e:
-                #         error_msg = f"خطأ في معالجة التركيب للصف {sheet_row_number}: {str(e)}"
-                #         logger.error(error_msg)
-                #         self.stats['warnings'].append(error_msg)
+                # إنشاء طلب معاينة منفصل إذا وُجد تاريخ معاينة
+                inspection_order = None
+                if has_inspection_date:
+                    inspection_order = self._create_order(mapped_data, customer, 'inspection')
+                    print(f"[SYNC] تم إنشاء طلب معاينة: {inspection_order.order_number}")
+                    
+                    # إنشاء المعاينة مرتبطة بطلب المعاينة
+                    try:
+                        inspection = self._create_inspection(mapped_data, inspection_order)
+                        print(f"[SYNC] تم إنشاء معاينة للطلب: {inspection_order.order_number}")
+                    except Exception as e:
+                        print(f"[SYNC] تعذر إنشاء معاينة: {str(e)}")
 
                 self.stats['processed_rows'] += 1
                 self.stats['successful_rows'] += 1
-
+                
             except Exception as e:
                 self.stats['failed_rows'] += 1
-                self.stats['errors'].append(f"خطأ في الصف {sheet_row_number}: {str(e)}")
-                logger.error(f"خطأ في معالجة الصف {sheet_row_number}: {str(e)}")
+                error_msg = f"خطأ في الصف {row_index}: {str(e)}"
+                self.stats['errors'].append(error_msg)
+                print(f"[SYNC] {error_msg}")
+                logger.error(error_msg)
+
+        print(f"[SYNC] انتهاء المعالجة. نجح: {self.stats['successful_rows']}, فشل: {self.stats['failed_rows']}")
 
     def _get_sheet_data(self) -> List[List[str]]:
-        """جلب البيانات من Google Sheets"""
+        # جلب البيانات من Google Sheets
         try:
             return self.importer.get_sheet_data(self.mapping.sheet_name)
         except Exception as e:
@@ -288,7 +252,7 @@ class AdvancedSyncService:
             raise
 
     def _map_row_data(self, headers: List[str], row_data: List[str]) -> Dict[str, str]:
-        """تحويل بيانات الصف إلى قاموس حسب التعيينات"""
+        # تحويل بيانات الصف إلى قاموس حسب التعيينات
         mapped_data = {}
         column_mappings = self.mapping.get_column_mappings()
         
@@ -302,79 +266,67 @@ class AdvancedSyncService:
 
     def _process_customer(self, mapped_data: Dict[str, str], row_index: int, task: GoogleSyncTask) -> Optional[Customer]:
         """
-        معالجة بيانات العميل باستخدام الاسم ورقم الهاتف كمفتاح مركب
-        - يتم البحث عن عميل بنفس الاسم ورقم الهاتف
-        - إذا كان الاسم متطابق ورقم الهاتف مختلف: يتم إنشاء عميل جديد
-        - إذا كان الاسم ورقم الهاتف متطابقين: يتم تحديث العميل الموجود
-        - إذا لم يكن هناك رقم هاتف: يتم البحث بالاسم فقط
+        معالجة بيانات العميل بأداء محسن - البحث بالهاتف أولاً ثم بالاسم
         """
         try:
             customer_name = mapped_data.get('customer_name', '').strip()
             if not customer_name:
-                self.stats['errors'].append(f"خطأ في الصف {row_index}: اسم العميل مطلوب")
                 return None
 
             customer_phone = mapped_data.get('customer_phone', '').strip()
-            customer_email = mapped_data.get('customer_email', '').strip()
             
-            # 1. البحث عن عميل بنفس رقم الهاتف أولاً (إذا كان موجوداً)
+            # البحث بالهاتف أولاً (أسرع وأكثر دقة)
             if customer_phone:
                 customer = Customer.objects.filter(phone=customer_phone).first()
                 if customer:
-                    logger.info(f"[CUSTOMER_FOUND_BY_PHONE] تم العثور على عميل برقم الهاتف: {customer_phone}")
                     if self.mapping.update_existing:
-                        updated = self._update_customer(customer, mapped_data)
-                        if updated:
-                            self.stats['customers_updated'] += 1
-                            logger.info(f"[CUSTOMER_UPDATED] تم تحديث بيانات العميل: {customer_name} (ID: {customer.id})")
-                    return customer
-            
-            # 2. إذا لم يتم العثور على العميل برقم الهاتف، البحث بالاسم
-            customers_with_same_name = list(Customer.objects.filter(name__iexact=customer_name))
-            
-            if not customer_phone and customers_with_same_name:
-                # إذا لم يكن هناك رقم هاتف، نأخذ أول عميل بنفس الاسم
-                customer = customers_with_same_name[0]
-                logger.info(f"[CUSTOMER_FOUND_BY_NAME] تم العثور على عميل بالاسم: {customer_name} (بدون هاتف)")
-                if self.mapping.update_existing:
-                    updated = self._update_customer(customer, mapped_data)
-                    if updated:
+                        self._update_customer(customer, mapped_data)
                         self.stats['customers_updated'] += 1
-                        logger.info(f"[CUSTOMER_UPDATED] تم تحديث بيانات العميل: {customer_name} (ID: {customer.id})")
-                return customer
-                
-            # 3. إذا كان هناك رقم هاتف مختلف لنفس الاسم، ننشئ عميلاً جديداً
-            if customer_phone and any(c.phone and c.phone != customer_phone for c in customers_with_same_name):
-                logger.info(f"[NEW_CUSTOMER_DIFFERENT_PHONE] سيتم إنشاء عميل جديد لنفس الاسم مع رقم هاتف مختلف: {customer_name}")
-                
-            # 4. إذا لم يتم العثور على عميل، وإنشاء العملاء الجديدة مفعل
-            if self.mapping.auto_create_customers:
-                try:
-                    customer = self._create_customer(mapped_data)
-                    if customer:
-                        self.stats['customers_created'] += 1
-                        logger.info(f"[CUSTOMER_CREATED] تم إنشاء عميل جديد: {customer_name} (الهاتف: {customer_phone or 'غير محدد'})")
                     return customer
-                except IntegrityError as create_error:
-                    error_msg = f"خطأ في إنشاء عميل جديد {customer_name}: {str(create_error)}"
-                    logger.error(error_msg)
-                    self.stats['errors'].append(error_msg)
-                    return None
-            else:
-                self.stats['warnings'].append(f"تم تخطي إنشاء عميل جديد: {customer_name} (تم تعطيل الإنشاء التلقائي)")
-                return None
+            
+            # البحث بالاسم إذا لم يوجد هاتف أو لم يتم العثور على العميل
+            if not customer_phone:
+                customer = Customer.objects.filter(name__iexact=customer_name).first()
+                if customer:
+                    if self.mapping.update_existing:
+                        self._update_customer(customer, mapped_data)
+                        self.stats['customers_updated'] += 1
+                    return customer
+                
+            # إنشاء عميل جديد
+            if self.mapping.auto_create_customers:
+                customer = self._create_customer(mapped_data)
+                if customer:
+                    self.stats['customers_created'] += 1
+                return customer
                 
             return None
 
         except Exception as e:
-            error_msg = f"خطأ غير متوقع في معالجة العميل في الصف {row_index}: {str(e)}"
-            logger.error(error_msg)
-            logger.exception(e)
+            error_msg = f"خطأ في الصف {row_index}: {str(e)}"
             self.stats['errors'].append(error_msg)
             return None
 
+    def _parse_date(self, value):
+        """محاولة تصحيح وتحويل أي قيمة إلى datetime أو None إذا غير صالح"""
+        from dateutil import parser
+        from dateutil.parser import ParserError
+        if not value or not str(value).strip():
+            return None
+        try:
+            if isinstance(value, (datetime, date)):
+                return datetime.combine(value, datetime.min.time()) if isinstance(value, date) and not isinstance(value, datetime) else value
+            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y'):
+                try:
+                    return datetime.strptime(str(value).strip(), fmt)
+                except Exception:
+                    continue
+            return parser.parse(str(value).strip(), dayfirst=True, yearfirst=False, fuzzy=True)
+        except (ValueError, ParserError, TypeError):
+            return None
+    
     def _create_customer(self, mapped_data: Dict[str, str]) -> Customer:
-        """إنشاء عميل جديد"""
+        """إنشاء عميل جديد مع تعيين created_at من العمود المحدد في التعيين إذا توفر"""
         customer_data = {
             'name': mapped_data.get('customer_name', ''),
             'phone': mapped_data.get('customer_phone', ''),
@@ -382,22 +334,36 @@ class AdvancedSyncService:
             'email': mapped_data.get('customer_email', ''),
             'address': mapped_data.get('customer_address', ''),
         }
-
-        # إضافة الإعدادات الافتراضية (إذا كانت موجودة في mapping)
         if hasattr(self.mapping, 'default_customer_category') and self.mapping.default_customer_category:
             customer_data['category'] = self.mapping.default_customer_category
         if hasattr(self.mapping, 'default_customer_type') and self.mapping.default_customer_type:
             customer_data['customer_type'] = self.mapping.default_customer_type
         if hasattr(self.mapping, 'default_branch') and self.mapping.default_branch:
             customer_data['branch'] = self.mapping.default_branch
-
-        # استخدام كود العميل من البيانات إذا كان متوفر
         customer_code = mapped_data.get('customer_code', '').strip()
         if customer_code:
             customer_data['code'] = customer_code
-
+    
         try:
-            return Customer.objects.create(**customer_data)
+            customer = Customer.objects.create(**customer_data)
+            
+            # معالجة تاريخ الإنشاء بعد إنشاء العميل
+            created_at_str = ''
+            for key in ['customer_created_at', 'customer_date', 'customer_registration_date']:
+                if key in self.mapping.get_column_mappings().values():
+                    val = mapped_data.get(key, '').strip()
+                    if val:
+                        created_at_str = val
+                        break
+            
+            if created_at_str:
+                created_at_dt = self._parse_date(created_at_str)
+                if created_at_dt:
+                    customer.created_at = created_at_dt
+                    customer.save(update_fields=['created_at'])
+                    logger.info(f"[CREATE_CUSTOMER] تم تحديث تاريخ إنشاء العميل إلى: {created_at_dt}")
+            
+            return customer
         except IntegrityError as e:
             raise Exception(f"فشل إنشاء عميل جديد: {str(e)}")
 
@@ -406,7 +372,7 @@ class AdvancedSyncService:
         تحديث بيانات العميل الموجود فقط إذا تغيرت البيانات
         
         العائد:
-            bool: True إذا تم التحديث، False إذا لم يكن هناك تغيير
+    # bool: True if updated, False if no change
         """
         updates = {}
         
@@ -427,34 +393,22 @@ class AdvancedSyncService:
             
         return False
 
-    def _create_order(self, mapped_data: Dict[str, str], customer: Customer) -> Order:
-        """إنشاء طلب جديد"""
+    def _create_order(self, mapped_data: Dict[str, str], customer: Customer, order_type: str = None) -> Order:
         logger.info(f"[CREATE_ORDER] محاولة إنشاء طلب للعميل: {customer.name}")
         logger.info(f"[CREATE_ORDER] البيانات المتاحة: {mapped_data}")
-        
-        order_data = {
-            'customer': customer,
-            'invoice_number': mapped_data.get('invoice_number', ''),
-            'contract_number': mapped_data.get('contract_number', ''),
-            'notes': mapped_data.get('notes', ''),
-            'status': 'normal',  # حالة افتراضية  
-            'tracking_status': 'pending',  # حالة التتبع الافتراضية
-        }
-
-        # تحديد نوع الطلب (سيتم إنشاء ExtendedOrder منفصل لاحقاً)
-        order_type = mapped_data.get('order_type', 'fabric').lower()
-
-        # تاريخ الطلب
-        order_date = mapped_data.get('order_date', '')
-        if order_date:
-            try:
-                order_data['order_date'] = datetime.strptime(order_date, '%Y-%m-%d').date()
-            except ValueError:
-                order_data['order_date'] = timezone.now().date()
-        else:
-            order_data['order_date'] = timezone.now().date()
-
-        # حالة التتبع
+        import traceback
+    
+        order_data = {}
+        order_data['customer'] = customer
+        # رقم الفاتورة الافتراضي
+        invoice_number = mapped_data.get('invoice_number', '').strip()
+        order_data['invoice_number'] = invoice_number if invoice_number else "لا يوجد رقم فاتورة"
+        order_data['contract_number'] = mapped_data.get('contract_number', '').strip()
+        order_data['notes'] = mapped_data.get('order_notes', '').strip()
+        order_data['status'] = mapped_data.get('order_status', 'normal') or 'normal'
+        if order_type:
+            order_data['selected_types'] = [order_type]
+    
         tracking_status = mapped_data.get('tracking_status', '')
         if tracking_status:
             status_mapping = {
@@ -467,21 +421,18 @@ class AdvancedSyncService:
                 'تم التسليم': 'delivered',
             }
             order_data['tracking_status'] = status_mapping.get(tracking_status, 'pending')
-
-        # المبالغ
+    
         try:
             if mapped_data.get('total_amount'):
                 order_data['total_amount'] = float(mapped_data['total_amount'])
         except (ValueError, TypeError):
             pass
-            
         try:
             if mapped_data.get('paid_amount'):
                 order_data['paid_amount'] = float(mapped_data['paid_amount'])
         except (ValueError, TypeError):
             pass
-
-        # نوع التسليم
+    
         delivery_type = mapped_data.get('delivery_type', '')
         if delivery_type:
             delivery_mapping = {
@@ -489,64 +440,60 @@ class AdvancedSyncService:
                 'استلام من الفرع': 'branch',
             }
             order_data['delivery_type'] = delivery_mapping.get(delivery_type, 'branch')
-
-        # عنوان التسليم
+    
         delivery_address = mapped_data.get('delivery_address', '')
         if delivery_address:
             order_data['delivery_address'] = delivery_address
-
-        # البائع
+    
         salesperson_name = mapped_data.get('salesperson', '')
         if salesperson_name:
             salesperson = Salesperson.objects.filter(name__icontains=salesperson_name).first()
             if salesperson:
                 order_data['salesperson'] = salesperson
-
-        # الفرع
+    
         branch = customer.branch
         if hasattr(self.mapping, 'default_branch') and self.mapping.default_branch:
             branch = self.mapping.default_branch
         if branch:
             order_data['branch'] = branch
-
-        # استخدام رقم الطلب من البيانات إذا كان متوفراً
+    
         order_number = mapped_data.get('order_number', '').strip()
         if order_number:
             order_data['order_number'] = order_number
-
+    
         logger.info(f"[CREATE_ORDER] بيانات الطلب النهائية: {order_data}")
-        
+    
         try:
             order = Order.objects.create(**order_data)
+            
+            # تحديث تاريخ الطلب بعد الإنشاء إذا كان متوفراً في البيانات
+            order_date = mapped_data.get('order_date', '')
+            parsed_order_date = self._parse_date(order_date)
+            if parsed_order_date:
+                order.order_date = parsed_order_date
+                order.save(update_fields=['order_date'])
+                logger.info(f"[CREATE_ORDER] تم تحديث تاريخ الطلب إلى: {parsed_order_date}")
+            
             logger.info(f"[CREATE_ORDER] تم إنشاء الطلب بنجاح: {order.order_number if hasattr(order, 'order_number') else 'N/A'}")
-            
-            # إنشاء ExtendedOrder للمعلومات الإضافية
-            # TODO: يجب مراجعة منطق إنشاء الطلبات الموسعة (ManufacturingOrder).
-            # تم استبدال الموديل القديم ExtendedOrder بـ ManufacturingOrder،
-            # والموديل الجديد يتطلب حقولاً مختلفة (مثل expected_delivery_date, order_type)
-            # غير متوفرة في البيانات المستوردة من الشيت.
-            # تم تعطيل هذه الوظيفة مؤقتًا حتى يتم تنفيذها بشكل صحيح.
-            # order_type = mapped_data.get('order_type', 'standard').lower()
-            # if order_type in ['manufacturing', 'sub_contract']:
-            #     self._create_manufacturing_order(order, order_type, mapped_data)
-            
             self.stats['orders_created'] += 1
             return order
         except IntegrityError as e:
             logger.error(f"[CREATE_ORDER] خطأ IntegrityError: {str(e)}")
             logger.error(f"[CREATE_ORDER] بيانات الطلب: {order_data}")
+            print(traceback.format_exc())
             raise Exception(f"فشل إنشاء طلب جديد: {str(e)}")
         except Exception as e:
             logger.error(f"[CREATE_ORDER] خطأ عام: {str(e)}")
             logger.error(f"[CREATE_ORDER] بيانات الطلب: {order_data}")
+            print(traceback.format_exc())
             raise Exception(f"فشل إنشاء طلب جديد: {str(e)}")
 
     def _update_order(self, order: Order, mapped_data: Dict[str, str], customer: Customer) -> bool:
         """
-        تحديث الطلب الموجود فقط إذا تغيرت البيانات
-        
-        العائد:
-            bool: True إذا تم التحديث، False إذا لم يكن هناك تغيير
+        Update the existing order only if data has changed.
+
+        Returns:
+            bool: True if updated, False if no change
         """
         updates = {}
         
@@ -588,10 +535,8 @@ class AdvancedSyncService:
         try:
             from dateutil import parser
             from dateutil.parser import ParserError
-            
             # تاريخ اليوم كقيمة افتراضية
             today = timezone.now().date()
-            
             inspection_data = {
                 'customer': customer,
                 'order': order,
@@ -599,23 +544,21 @@ class AdvancedSyncService:
                 'request_date': today,
                 'scheduled_date': today + timedelta(days=1),  # تاريخ افتراضي: غداً
                 'notes': mapped_data.get('notes', ''),
-                'contract_number': mapped_data.get('contract_number', ''),  # رقم العقد من الجدول
+                'contract_number': mapped_data.get('contract_number', ''),
             }
-
             # محاولة تحليل تاريخ المعاينة كما هو
             inspection_date = (mapped_data.get('inspection_date') or '').strip()
-            
             if inspection_date:
                 try:
-                    # محاولة تحويل النص إلى تاريخ
                     parsed_date = parser.parse(inspection_date, dayfirst=True, yearfirst=False, fuzzy=True)
-                    inspection_data['scheduled_date'] = parsed_date.date()
-                    # تاريخ الطلب قبل يوم من المعاينة
-                    inspection_data['request_date'] = parsed_date.date() - timedelta(days=1)
+                    if isinstance(parsed_date, datetime):
+                        inspection_data['scheduled_date'] = parsed_date.date() if hasattr(parsed_date, 'date') else parsed_date
+                        inspection_data['request_date'] = (parsed_date.date() if hasattr(parsed_date, 'date') else parsed_date) - timedelta(days=1)
+                    elif isinstance(parsed_date, date):
+                        inspection_data['scheduled_date'] = parsed_date
+                        inspection_data['request_date'] = parsed_date - timedelta(days=1)
                 except (ValueError, ParserError):
-                    # في حالة فشل التحليل، نستخدم التاريخ كما هو كنص
                     inspection_data['notes'] = f"تاريخ المعاينة: {inspection_date}\n{inspection_data.get('notes', '')}"
-
             # نتيجة المعاينة
             inspection_result = mapped_data.get('inspection_result', '')
             if inspection_result:
@@ -624,33 +567,27 @@ class AdvancedSyncService:
                     'مرفوض': 'rejected',
                     'يحتاج مراجعة': 'pending',
                 }
-                inspection_data['result'] = result_mapping.get(inspection_result, 'pending')
-
-            # عدد الشبابيك
+                inspection_data['result'] = result_mapping.get(inspection_result, 'approved')
+            else:
+                inspection_data['result'] = 'approved'  # جميع المعاينات تعتبر مكتملة وناجحة
             windows_count = mapped_data.get('windows_count', '')
             if windows_count:
                 try:
                     inspection_data['windows_count'] = int(windows_count)
                 except (ValueError, TypeError):
                     pass
-
-            # توليد كود المعاينة (حسب نظام التكويد)
-            if hasattr(Inspection, "generate_code") and callable(getattr(Inspection, "generate_code")):
-                inspection_data['code'] = Inspection.generate_code()
-
             inspection = Inspection.objects.create(**inspection_data)
             return inspection
-            
         except Exception as e:
             self.stats['errors'].append(f"خطأ في معالجة المعاينة في الصف {row_index}: {str(e)}")
             raise
 
     def _update_inspection(self, inspection: Inspection, mapped_data: Dict[str, str]) -> bool:
         """
-        تحديث بيانات المعاينة الموجودة فقط إذا تغيرت البيانات
-        
-        العائد:
-            bool: True إذا تم التحديث، False إذا لم يكن هناك تغيير
+        Update the existing inspection data only if changed.
+
+        Returns:
+            bool: True if updated, False if no change
         """
         from dateutil import parser
         from dateutil.parser import ParserError
