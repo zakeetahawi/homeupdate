@@ -83,6 +83,10 @@ def order_list(request):
     if status_filter:
         orders = orders.filter(status=status_filter)
 
+    order_type_filter = request.GET.get('order_type', '')
+    if order_type_filter:
+        orders = orders.filter(selected_types__icontains=order_type_filter)
+
     # Order by created_at
     orders = orders.order_by('-created_at')
 
@@ -99,6 +103,7 @@ def order_list(request):
         'page_obj': page_obj,
         'search_query': search_query,
         'status_filter': status_filter,
+        'order_type_filter': order_type_filter,
         'total_orders': orders.count(),
         'currency_symbol': currency_symbol,  # Add currency symbol to context
         'page_size': page_size,

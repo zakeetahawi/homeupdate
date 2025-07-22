@@ -148,6 +148,15 @@
                     </div>
                 </div>
                 <div class="col-md-3">
+                    <select name="order_type" class="form-select">
+                        <option value="">-- جميع الأنواع --</option>
+                        <option value="installation" {% if order_type_filter == 'installation' %}selected{% endif %}>تركيب</option>
+                        <option value="accessory" {% if order_type_filter == 'accessory' %}selected{% endif %}>إكسسوار</option>
+                        <option value="tailoring" {% if order_type_filter == 'tailoring' %}selected{% endif %}>تسليم</option>
+                        <option value="inspection" {% if order_type_filter == 'inspection' %}selected{% endif %}>معاينة</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <select name="status" class="form-select">
                         <option value="">-- جميع الحالات --</option>
                         <option value="pending_approval" {% if status_filter == 'pending_approval' %}selected{% endif %}>قيد الموافقة</option>

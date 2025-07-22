@@ -914,6 +914,12 @@
     <!-- Order Items - Hidden for inspection orders -->
     {% with types_list=order.get_selected_types_list %}
     {% if 'inspection' not in types_list and 'inspection' not in order.selected_types %}
+    {% if order_items|length == 0 %}
+    <div class="alert alert-danger text-center fw-bold my-4" style="font-size:1.3rem;">
+        طلب بدون عناصر - تم إنشاء هذا الطلب بمسؤولية المستخدم:
+        <span class="text-primary">{{ order.created_by.get_full_name|default:order.created_by.username }}</span>
+    </div>
+    {% else %}
     <div class="card mb-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h5 class="mb-0">عناصر الطلب</h5>
@@ -958,6 +964,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
     {% endif %}
     {% endwith %}
 
