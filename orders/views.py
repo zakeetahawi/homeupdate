@@ -16,6 +16,8 @@ from customers.models import Customer
 from inventory.models import Product
 from inspections.models import Inspection
 from datetime import datetime, timedelta
+from django.db import models
+import traceback
 
 class OrdersDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'orders/dashboard.html'
@@ -178,6 +180,7 @@ def order_create(request):
     View for creating a new order
     """
     if request.method == 'POST':
+        print("POST DATA:", request.POST)
         # الحصول على معرف العميل من POST أو GET
         customer_id = request.POST.get('customer')
         customer = None
@@ -228,19 +231,55 @@ def order_create(request):
 
                 # 5. معالجة المنتجات المحددة إن وجدت
                 selected_products_json = request.POST.get('selected_products', '')
+                print("selected_products_json:", selected_products_json)
+                total = 0
                 if selected_products_json:
                     try:
                         selected_products = json.loads(selected_products_json)
+                        print("selected_products:", selected_products)
                         for product_data in selected_products:
-                            OrderItem.objects.create(
+                            item = OrderItem.objects.create(
                                 order=order,
                                 product_id=product_data['product_id'],
                                 quantity=product_data['quantity'],
                                 unit_price=product_data['unit_price'],
-                                item_type=product_data.get('item_type', 'product')
+                                item_type=product_data.get('item_type', 'product'),
+                                notes=product_data.get('notes', '')
                             )
-                    except (json.JSONDecodeError, KeyError) as e:
-                        print(f"Error processing selected products: {e}")
+                            print("تم إنشاء عنصر:", item)
+                            total += item.quantity * item.unit_price
+                            print("total حتى الآن:", total)
+                    except Exception as e:
+                        print(f"Error creating order items: {e}")
+                order.final_price = total
+                order.save(update_fields=['final_price'])
+                print("order.final_price بعد الحفظ:", order.final_price)
+                # تحديث المبلغ الإجمالي ليعكس السعر النهائي
+                order.total_amount = order.final_price
+                order.save(update_fields=['total_amount'])
+
+                # --- معالجة الدفعة (بعد تحديث final_price) ---
+                paid_amount = request.POST.get('paid_amount')
+                payment_verified = request.POST.get('payment_verified')
+                payment_notes = request.POST.get('payment_notes', '')
+                payment_reference = request.POST.get('payment_reference', '')
+                try:
+                    paid_amount = float(paid_amount or 0)
+                except Exception:
+                    paid_amount = 0
+                if paid_amount > 0:
+                    from .models import Payment
+                    Payment.objects.create(
+                        order=order,
+                        amount=paid_amount,
+                        payment_method='cash',
+                        created_by=request.user,
+                        notes=payment_notes,
+                        reference_number=payment_reference
+                    )
+                if payment_verified == '1':
+                    order.payment_verified = True
+                    order.save(update_fields=['payment_verified'])
 
                 # 6. معالجة عناصر الطلب من النموذج
                 formset = OrderItemFormSet(request.POST, prefix='items', instance=order)
@@ -253,8 +292,9 @@ def order_create(request):
                 return redirect('orders:order_detail', pk=order.pk)
 
             except Exception as e:
-                print(f"Error saving order: {e}")
-                messages.error(request, f'حدث خطأ أثناء حفظ الطلب: {str(e)}')
+                print("حدث خطأ أثناء حفظ الطلب:", e)
+                print(traceback.format_exc())
+                messages.error(request, f'حدث خطأ أثناء حفظ الطلب: {e}')
         else:
             print("--- FORM IS INVALID ---")
             print("Validation Errors:", form.errors)

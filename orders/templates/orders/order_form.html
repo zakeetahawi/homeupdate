@@ -62,6 +62,10 @@
         <!-- Hidden fields for form submission -->
         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
         <input type="hidden" name="selected_products" id="selected_products" value="">
+        <input type="hidden" name="paid_amount" id="paid_amount" value="0">
+        <input type="hidden" name="payment_verified" id="payment_verified" value="0">
+        <input type="hidden" name="payment_notes" id="payment_notes" value="">
+        <input type="hidden" name="payment_reference" id="payment_reference" value="">
         <input type="hidden" name="tracking_status" value="pending">
         
         <div class="row">
@@ -339,6 +343,16 @@
             </div>
         </div>
         
+        <!-- جدول العناصر المختارة ديناميكيًا -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i> العناصر المختارة (قبل الحفظ)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div id="live-order-items-table" class="table-responsive"></div>
+            </div>
+        </div>
+        
         <!-- Product Selection Section -->
         <div class="card mb-4 product-selection-section" id="product-selection-section" style="display: none;">
             <div class="card-header bg-light">
@@ -375,6 +389,11 @@
             </div>
         </div>
         
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
+            <button type="button" class="btn btn-success btn-lg" id="add-order-item-btn-custom">
+                <i class="fas fa-plus me-2"></i> إضافة عنصر
+            </button>
+        </div>
         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
             <button type="submit" class="btn btn-primary btn-lg">
                 <i class="fas fa-save me-2"></i> حفظ الطلب
@@ -385,6 +404,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // --- Elements ---
@@ -576,6 +596,343 @@
             if (customerSelect.value) {
                 customerSelect.dispatchEvent(new Event('change'));
             }
+        }
+    });
+
+    // تعريف orderItems كمصفوفة عامة على مستوى document
+    if (typeof document.orderItems === 'undefined') {
+        document.orderItems = [];
+    }
+
+    function renderOrderItemsList() {
+        if (!document.orderItems) document.orderItems = [];
+        const listBox = document.getElementById('swal-order-items-list');
+        if (!listBox) return;
+        if (document.orderItems.length === 0) {
+            listBox.innerHTML = `<p class='text-muted'>لم يتم اختيار أي عناصر بعد</p>`;
+            updateTotalAmount();
+            return;
+        }
+        let html = `<table class='table table-sm'><thead><tr><th>#</th><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th></th></tr></thead><tbody>`;
+        document.orderItems.forEach((item, idx) => {
+            html += `<tr><td>${idx+1}</td><td>${item.name}</td><td>${item.quantity}</td><td>${item.unit_price}</td><td>${item.total.toFixed(2)}</td><td><button type='button' class='btn btn-danger btn-sm' onclick='document.removeOrderItemSwal(${idx})'>حذف</button></td></tr>`;
+        });
+        html += `</tbody></table>`;
+        listBox.innerHTML = html;
+        updateTotalAmount();
+    }
+
+    document.updateLiveOrderItemsTable = function() {
+        console.log('تشغيل updateLiveOrderItemsTable', document.orderItems);
+        const tableDiv = document.getElementById('live-order-items-table');
+        console.log('هل div موجود؟', !!tableDiv);
+        if (!tableDiv) return;
+        if (!document.orderItems) document.orderItems = [];
+        if (document.orderItems.length === 0) {
+            tableDiv.innerHTML = `<p class='text-muted text-center my-3'>لم يتم اختيار أي عناصر بعد</p>`;
+            return;
+        }
+        let html = `<table class='table table-sm mb-0'><thead><tr><th>#</th><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>`;
+        document.orderItems.forEach((item, idx) => {
+            html += `<tr><td>${idx+1}</td><td>${item.name}</td><td>${item.quantity}</td><td>${item.unit_price}</td><td>${item.total.toFixed(2)}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+        tableDiv.innerHTML = html;
+    }
+
+    function updateTotalAmount() {
+        if (!document.orderItems) document.orderItems = [];
+        const total = document.orderItems.reduce((sum, item) => sum + item.total, 0);
+        const totalBox = document.getElementById('swal-total-amount');
+        if (totalBox) totalBox.textContent = total.toFixed(2);
+    }
+
+    document.removeOrderItemSwal = function(idx) {
+        document.orderItems.splice(idx, 1);
+        renderOrderItemsList();
+        updateTotalAmount();
+        document.updateLiveOrderItemsTable();
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const addItemBtn = document.getElementById('add-order-item-btn-custom');
+        const selectedProductsInput = document.getElementById('selected_products');
+        const paidAmountInput = document.getElementById('paid_amount');
+        const paymentVerifiedInput = document.getElementById('payment_verified');
+
+        if (addItemBtn) {
+            addItemBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                showOrderItemsModal();
+            });
+        }
+
+        function showOrderItemsModal() {
+            Swal.fire({
+                title: 'إضافة عناصر الطلب',
+                html: getOrderItemsModalHtml(),
+                showCancelButton: true,
+                confirmButtonText: 'اعتماد العناصر',
+                cancelButtonText: 'إغلاق',
+                width: '60em',
+                didOpen: () => {
+                    setupModalEvents();
+                    renderOrderItemsList();
+                },
+                preConfirm: () => {
+                    if (!document.orderItems) document.orderItems = [];
+                    if (document.orderItems.length === 0) {
+                        Swal.showValidationMessage('يجب إضافة عنصر واحد على الأقل!');
+                        return false;
+                    }
+                    document.getElementById('selected_products').value = JSON.stringify(document.orderItems);
+                    const paidAmount = document.getElementById('swal-paid-amount').value || '0';
+                    document.getElementById('paid_amount').value = paidAmount;
+                    const paymentVerified = document.getElementById('swal-payment-verified').checked ? '1' : '0';
+                    document.getElementById('payment_verified').value = paymentVerified;
+                    // حفظ ملاحظات الدفعة ورقم المرجع
+                    document.getElementById('payment_notes').value = document.getElementById('swal-payment-notes').value || '';
+                    document.getElementById('payment_reference').value = document.getElementById('swal-payment-reference').value || '';
+                    return true;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.updateLiveOrderItemsTable();
+                }
+            });
+        }
+
+        function getOrderItemsModalHtml() {
+            return `
+            <div class='mb-3'>
+                <input type='text' id='swal-product-search' class='swal2-input' placeholder='ابحث عن منتج...'>
+                <div id='swal-suggestions' class='list-group' style='max-height:200px;overflow:auto;'></div>
+            </div>
+            <div id='swal-product-details' style='display:none;' class='mb-3'></div>
+            <div class='mb-3'>
+                <h6>العناصر المختارة:</h6>
+                <div id='swal-order-items-list'></div>
+            </div>
+            <div class='mb-3'>
+                <label>المبلغ المدفوع:</label>
+                <input type='number' id='swal-paid-amount' class='swal2-input' min='0' value='0'>
+                <div class='form-check mt-2'>
+                    <input class='form-check-input' type='checkbox' id='swal-payment-verified'>
+                    <label class='form-check-label' for='swal-payment-verified'>تم التحقق من الدفع</label>
+                </div>
+                <div class='mb-2'>
+                    <label>ملاحظات الدفعة:</label>
+                    <textarea id='swal-payment-notes' class='form-control' rows='2' placeholder='ملاحظات الدفعة...'></textarea>
+                </div>
+                <div class='mb-2'>
+                    <label>رقم المرجع (رقم الفاتورة):</label>
+                    <input type='text' id='swal-payment-reference' class='form-control' placeholder='رقم الفاتورة أو المرجع...'>
+                </div>
+            </div>
+            <div class='mb-2 text-end'><strong>الإجمالي: <span id='swal-total-amount'>0</span> ج.م</strong></div>
+            <div id='swal-no-items-warning' class='alert alert-warning mt-3' style='display:none;'>
+                <div class='form-check'>
+                    <input class='form-check-input' type='checkbox' id='swal-no-items-confirm'>
+                    <label class='form-check-label' for='swal-no-items-confirm'>
+                        أتحمل المسؤولية الكاملة عن إنشاء طلب بدون عناصر
+                    </label>
+                </div>
+                <div class='text-danger small mt-2'>لن يتم حفظ الطلب إلا بعد الموافقة على هذا التحذير.</div>
+            </div>
+            `;
+        }
+
+        function setupModalEvents() {
+            const searchInput = document.getElementById('swal-product-search');
+            const suggestionsBox = document.getElementById('swal-suggestions');
+            const detailsBox = document.getElementById('swal-product-details');
+            if (!searchInput) return;
+            let selectedProduct = null;
+
+            searchInput.addEventListener('input', function() {
+                const query = this.value.trim();
+                suggestionsBox.innerHTML = '';
+                detailsBox.style.display = 'none';
+                selectedProduct = null;
+                if (query.length < 1) return;
+                fetch(`/inventory/api/product-autocomplete/?query=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            data.forEach(item => {
+                                const el = document.createElement('button');
+                                el.type = 'button';
+                                el.className = 'list-group-item list-group-item-action';
+                                el.innerHTML = `<strong>${item.name}</strong> <span class='text-muted'>[${item.code || ''}]</span> <span class='badge bg-info ms-2'>${item.price} ج.م</span> <span class='badge bg-secondary ms-2'>مخزون: ${item.current_stock}</span>`;
+                                el.onclick = function() {
+                                    selectedProduct = item;
+                                    showProductDetails(item);
+                                    suggestionsBox.innerHTML = '';
+                                };
+                                suggestionsBox.appendChild(el);
+                            });
+                        }
+                    });
+            });
+
+            function showProductDetails(item) {
+                detailsBox.innerHTML = `
+                    <div class='row align-items-end'>
+                        <div class='col-md-5 mb-2'>
+                            <label>سعر الوحدة:</label>
+                            <input type='text' class='form-control' id='swal-unit-price' value='${item.price}' readonly>
+                        </div>
+                        <div class='col-md-4 mb-2'>
+                            <label>الكمية:</label>
+                            <input type='number' class='form-control' id='swal-quantity' min='1' max='${item.current_stock}' value='1'>
+                            <div class='form-text text-danger' id='swal-stock-warning' style='display:none;'></div>
+                        </div>
+                        <div class='col-md-3 mb-2'>
+                            <label>الإجمالي:</label>
+                            <input type='text' class='form-control' id='swal-total' value='${item.price}' readonly>
+                        </div>
+                    </div>
+                    <div class='mb-2 mt-2'>
+                        <label>ملاحظات العنصر:</label>
+                        <textarea id='swal-item-notes' class='form-control' rows='2' placeholder='ملاحظات العنصر...'></textarea>
+                    </div>
+                    <div class='mt-2'>
+                        <button type='button' class='btn btn-success' id='swal-add-item-btn'>إضافة إلى القائمة</button>
+                    </div>
+                `;
+                detailsBox.style.display = 'block';
+                const qtyInput = document.getElementById('swal-quantity');
+                const totalInput = document.getElementById('swal-total');
+                const warning = document.getElementById('swal-stock-warning');
+                qtyInput.addEventListener('input', function() {
+                    let qty = parseInt(this.value) || 1;
+                    if (qty > item.current_stock) {
+                        warning.textContent = `الكمية المطلوبة أكبر من المخزون المتوفر (${item.current_stock})!`;
+                        warning.style.display = 'block';
+                        this.value = item.current_stock;
+                        qty = item.current_stock;
+                    } else {
+                        warning.style.display = 'none';
+                    }
+                    totalInput.value = (item.price * qty).toFixed(2);
+                });
+                document.getElementById('swal-add-item-btn').onclick = function() {
+                    const qty = parseInt(qtyInput.value) || 1;
+                    const notes = document.getElementById('swal-item-notes').value || '';
+                    if (qty < 1) return;
+                    // تحقق من عدم تكرار المنتج في القائمة العامة
+                    const exists = document.orderItems.find(x => x.product_id === item.id);
+                    if (exists) {
+                        Swal.showValidationMessage('تمت إضافة هذا المنتج بالفعل!');
+                        return;
+                    }
+                    document.orderItems.push({
+                        product_id: item.id,
+                        name: item.name,
+                        code: item.code,
+                        unit_price: item.price,
+                        quantity: qty,
+                        total: (item.price * qty),
+                        notes: notes
+                    });
+                    console.log('بعد إضافة عنصر:', document.orderItems);
+                    detailsBox.style.display = 'none';
+                    searchInput.value = '';
+                    renderOrderItemsList();
+                    updateTotalAmount();
+                };
+            }
+        }
+
+        // عند تحميل الصفحة، حدث الجدول مباشرة إذا كان هناك عناصر
+        console.log('عند تحميل الصفحة، document.orderItems:', document.orderItems);
+        document.updateLiveOrderItemsTable();
+    });
+
+    // تحديث الحقول المخفية دائمًا عند حفظ الطلب
+    const orderForm = document.getElementById('orderForm');
+    if (orderForm) {
+        orderForm.addEventListener('submit', function(e) {
+            // تأكد من تحديث الحقول المخفية دائمًا قبل الإرسال
+            if (typeof document.orderItems !== 'undefined' && document.orderItems.length > 0) {
+                document.getElementById('selected_products').value = JSON.stringify(document.orderItems);
+            }
+            // تحديث الدفع والتحقق إذا كانت الحقول موجودة في الصفحة
+            var paidAmountInput = document.getElementById('paid_amount');
+            var paymentVerifiedInput = document.getElementById('payment_verified');
+            var paymentNotesInput = document.getElementById('payment_notes');
+            var paymentReferenceInput = document.getElementById('payment_reference');
+
+            if (paidAmountInput && document.getElementById('swal-paid-amount')) {
+                paidAmountInput.value = document.getElementById('swal-paid-amount').value || '0';
+            }
+            if (paymentVerifiedInput && document.getElementById('swal-payment-verified')) {
+                paymentVerifiedInput.value = document.getElementById('swal-payment-verified').checked ? '1' : '0';
+            }
+            if (paymentNotesInput && document.getElementById('swal-payment-notes')) {
+                paymentNotesInput.value = document.getElementById('swal-payment-notes').value;
+            }
+            if (paymentReferenceInput && document.getElementById('swal-payment-reference')) {
+                paymentReferenceInput.value = document.getElementById('swal-payment-reference').value;
+            }
+        });
+    }
+
+    // إضافة كود جافاسكريبت في event submit للـ form: إذا لم توجد عناصر في document.orderItems، أوقف الإرسال وأظهر نافذة SweetAlert2 فيها تحذير ومربع اختيار "أتحمل المسؤولية"، ولا يتم الحفظ إلا بعد الموافقة.
+    document.addEventListener('DOMContentLoaded', function() {
+        const orderForm = document.getElementById('orderForm');
+        if (orderForm) {
+            orderForm.addEventListener('submit', function(e) {
+                // تحقق من وجود عناصر قبل الحفظ
+                if (!document.orderItems || document.orderItems.length === 0) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'تحذير: لا توجد عناصر للطلب',
+                        html: `<div class='alert alert-warning'>
+                                <div class='form-check'>
+                                    <input class='form-check-input' type='checkbox' id='swal-no-items-confirm-main'>
+                                    <label class='form-check-label' for='swal-no-items-confirm-main'>
+                                        أتحمل المسؤولية الكاملة عن إنشاء طلب بدون عناصر
+                                    </label>
+                                </div>
+                                <div class='text-danger small mt-2'>لن يتم حفظ الطلب إلا بعد الموافقة على هذا التحذير.</div>
+                            </div>`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'موافق، أتحمل المسؤولية',
+                        cancelButtonText: 'إلغاء',
+                        preConfirm: () => {
+                            const confirm = document.getElementById('swal-no-items-confirm-main');
+                            if (!confirm || !confirm.checked) {
+                                Swal.showValidationMessage('يجب الموافقة على تحمل المسؤولية أولاً!');
+                                return false;
+                            }
+                            return true;
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // أعد إرسال النموذج برمجيًا بعد الموافقة
+                            orderForm.submit();
+                        }
+                    });
+                    return false;
+                }
+                // Run sync one last time to be sure
+                updateFormFields();
+
+                const selectedRealRadio = document.querySelector('input[name="selected_types"]:checked');
+                
+                console.log("--- FORM SUBMISSION DIAGNOSTICS ---");
+                if (selectedRealRadio) {
+                    console.log("SUCCESS: A 'real' radio button is checked.");
+                    console.log("Value being submitted:", selectedRealRadio.value);
+                } else {
+                    console.error("FAILURE: No 'real' radio button was checked before form submission.");
+                    console.log("This is why the form validation is failing.");
+                    // e.preventDefault(); // Uncomment this line to stop submission for further debugging
+                }
+                console.log("------------------------------------");
+            });
         }
     });
 </script>
