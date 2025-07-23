@@ -591,7 +591,7 @@
         <div class="card-body">
             {% if manufacturing_orders %}
             <div class="table-responsive">
-                <table class="table table-striped table-hover" id="manufacturingTable">
+                <table class="table table-striped table-hover manufacturing-table">
                     <thead>
                         <tr>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 40px; word-break: break-word; white-space: normal;">#</th>
@@ -744,7 +744,55 @@
                 </table>
             </div>
             
-            <!-- التنقل بين الصفحات سيتم إدارته بواسطة DataTables -->
+            <!-- Django Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="d-flex justify-content-center mt-4">
+                <nav>
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+            
             {% else %}
             <div class="text-center py-5">
                 <i class="fas fa-industry fa-4x mb-3" style="color: var(--neutral);"></i>
@@ -851,118 +899,6 @@
 // التأكد من تحميل الجافاسكريبت
 console.log('Manufacturing JavaScript loaded');
 $(document).ready(function() {
-    // تهيئة DataTables مع إعدادات محسنة
-    var pageSize = parseInt($('#page_size').val() || 25);
-    var table = $('#manufacturingTable').DataTable({
-        "responsive": true,
-        "pageLength": pageSize,
-        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "الكل"]],
-        "order": [[8, "desc"]], // ترتيب حسب تاريخ الطلب
-        "columnDefs": [
-            { "orderable": false, "targets": [2, 10, 11, 12] }, // عدم ترتيب أعمدة الإجراءات
-            { "searchable": true, "targets": [1, 3, 4, 5, 6, 7] }, // البحث في الأعمدة المهمة
-            { "width": "5%", "targets": 0 },
-            { "width": "10%", "targets": [1, 3, 4, 5] },
-            { "width": "8%", "targets": [2, 6, 7, 8, 9, 10, 11] },
-            { "width": "11%", "targets": 12 }
-        ],
-        "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
-               '<"row"<"col-sm-12"tr>>' +
-               '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-        "language": {
-            "processing": "جاري المعالجة...",
-            "search": "البحث في الجدول:",
-            "lengthMenu": "أظهر _MENU_ مدخل",
-            "info": "إظهار _START_ إلى _END_ من أصل _TOTAL_ مدخل",
-            "infoEmpty": "يعرض 0 إلى 0 من أصل 0 مدخل",
-            "infoFiltered": "(منتقاة من مجموع _MAX_ مُدخل)",
-            "infoPostFix": "",
-            "loadingRecords": "جاري التحميل...",
-            "zeroRecords": "لم يعثر على أية سجلات",
-            "emptyTable": "لا توجد بيانات متاحة في الجدول",
-            "paginate": {
-                "first": "الأول",
-                "previous": "السابق", 
-                "next": "التالي",
-                "last": "الأخير"
-            },
-            "aria": {
-                "sortAscending": ": تفعيل لترتيب العمود تصاعدياً",
-                "sortDescending": ": تفعيل لترتيب العمود تنازلياً"
-            }
-        },
-        "stateSave": true, // حفظ حالة الجدول
-        "stateDuration": 60 * 60 * 24, // حفظ لمدة 24 ساعة
-        "drawCallback": function(settings) {
-            // إعادة تهيئة الأحداث بعد إعادة رسم الجدول
-            initializeEventHandlers();
-        }
-    });
-    
-    // ربط فلاتر مخصصة مع DataTables
-    $('#status, #branch, #date_from, #date_to').on('change', function() {
-        table.draw();
-    });
-
-    $('#page_size').on('change', function() {
-        table.page.len(parseInt($(this).val())).draw();
-    });
-    
-    // فلتر مخصص للحالة
-    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-        var statusFilter = $('#status').val();
-        var branchFilter = $('#branch').val();
-        var dateFromFilter = $('#date_from').val();
-        var dateToFilter = $('#date_to').val();
-        
-        // فلتر الحالة
-        if (statusFilter) {
-            var rowStatus = $(table.row(dataIndex).node()).find('.status-btn').data('current-status') || 
-                           $(table.row(dataIndex).node()).find('.badge').text().trim();
-            if (statusFilter === 'pending_approval' && !rowStatus.includes('قيد الموافقة')) return false;
-            if (statusFilter === 'pending' && !rowStatus.includes('قيد الانتظار')) return false;
-            if (statusFilter === 'in_progress' && !rowStatus.includes('قيد التنفيذ')) return false;
-            if (statusFilter === 'completed' && !rowStatus.includes('مكتمل')) return false;
-            if (statusFilter === 'rejected' && !rowStatus.includes('مرفوض')) return false;
-            if (statusFilter === 'cancelled' && !rowStatus.includes('ملغي')) return false;
-        }
-        
-        // فلتر الفرع
-        if (branchFilter) {
-            var rowBranchId = $(table.row(dataIndex).node()).find('[data-branch-id]').data('branch-id');
-            if (rowBranchId != branchFilter) return false;
-        }
-        
-        // فلتر التاريخ
-        if (dateFromFilter || dateToFilter) {
-            var rowDate = data[8]; // عمود تاريخ الطلب
-            if (dateFromFilter && rowDate < dateFromFilter) return false;
-            if (dateToFilter && rowDate > dateToFilter) return false;
-        }
-        
-        return true;
-    });
-    
-    // دالة لإعادة تهيئة معالجات الأحداث
-    function initializeEventHandlers() {
-        // معالجة الموافقة
-        $('.approve-btn').off('click').on('click', function() {
-            const orderId = $(this).data('order-id');
-            handleApproval(orderId, 'approve');
-        });
-
-        // معالجة الرفض
-        $('.reject-btn').off('click').on('click', function() {
-            const orderId = $(this).data('order-id');
-            $('#rejectOrderId').val(orderId);
-            $('#rejection_reason').val('');
-            $('#rejectModal').modal('show');
-        });
-    }
-    
-    // تهيئة أولية للأحداث
-    initializeEventHandlers();
-
     // معالجة الموافقة
     $('.approve-btn').on('click', function() {
         const orderId = $(this).data('order-id');
@@ -978,7 +914,7 @@ $(document).ready(function() {
         $('#rejectModal').modal('show');
     });
 
-    // إرسال الرفض
+    // إرسال الر��ض
     $('#submitRejectBtn').on('click', function() {
         const orderId = $('#rejectOrderId').val();
         const reason = $('#rejection_reason').val();

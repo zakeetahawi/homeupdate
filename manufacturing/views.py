@@ -25,8 +25,19 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
     model = ManufacturingOrder
     template_name = 'manufacturing/manufacturingorder_list.html'
     context_object_name = 'manufacturing_orders'
-    # paginate_by = 25  # تم تعطيل Django pagination لاستخدام DataTables pagination
+    paginate_by = 25  # تفعيل Django pagination
     permission_required = 'manufacturing.view_manufacturingorder'
+    
+    def get_paginate_by(self, queryset):
+        try:
+            page_size = int(self.request.GET.get('page_size', 25))
+            if page_size > 100:
+                page_size = 100
+            elif page_size < 1:
+                page_size = 25
+            return page_size
+        except Exception:
+            return 25
     
     def get_queryset(self):
         # Optimize the query by selecting related fields that exist
@@ -119,6 +130,9 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         
         # Add function to get available statuses for each order
         context['get_available_statuses'] = lambda current_status, order_type=None: self._get_available_statuses(self.request.user, current_status, order_type)
+        
+        # Add page_size to context
+        context['page_size'] = self.get_paginate_by(self.get_queryset())
         
         return context
     
