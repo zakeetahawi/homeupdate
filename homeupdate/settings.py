@@ -22,9 +22,12 @@ INSTALLED_APPS = [
     'factory',  # المصنع
 ]
 
+import os
+import dj_database_url
+
+# إعدادات قاعدة البيانات
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgres://postgres:5525@localhost:5432/crm_system')
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(DATABASE_URL)
 } 

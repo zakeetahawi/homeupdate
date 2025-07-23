@@ -44,7 +44,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # إحصائيات الداشبورد بناءً على الفلترة
         context['dashboard'] = {
             'total_inspections': dashboard_qs.count(),
-            'new_inspections': dashboard_qs.filter(status='pending', scheduled_date__gt=today).count(),
+            'new_inspections': dashboard_qs.filter(status='pending').count(),
             'scheduled_inspections': dashboard_qs.filter(status='scheduled').count(),
             'successful_inspections': dashboard_qs.filter(status='completed').count(),
             'cancelled_inspections': dashboard_qs.filter(status='cancelled').count(),
@@ -179,7 +179,7 @@ class InspectionListView(LoginRequiredMixin, ListView):
         # إحصائيات الداشبورد بناءً على الفلترة
         context['dashboard'] = {
             'total_inspections': dashboard_qs.count(),
-            'new_inspections': dashboard_qs.filter(status='pending', scheduled_date__gt=today).count(),
+            'new_inspections': dashboard_qs.filter(status='pending').count(),
             'scheduled_inspections': dashboard_qs.filter(status='scheduled').count(),
             'successful_inspections': dashboard_qs.filter(status='completed').count(),
             'cancelled_inspections': dashboard_qs.filter(status='cancelled').count(),
@@ -547,7 +547,7 @@ def iterate_inspection(request, pk):
             is_from_orders=original_inspection.is_from_orders,
             windows_count=original_inspection.windows_count,
             request_date=timezone.now().date(),
-            scheduled_date=timezone.now().date() + timezone.timedelta(days=1),  # Schedule for tomorrow
+            scheduled_date=timezone.now().date() + timezone.timedelta(days=2),  # Schedule for 2 days later
             status='pending',
             notes=_('تكرار من المعاينة رقم: {0}\nملاحظات المعاينة السابقة:\n{1}').format(
                 original_inspection.contract_number,
