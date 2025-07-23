@@ -32,7 +32,7 @@
                         <div class="col-md-6">
                             <p><strong>رقم الطلب:</strong> {{ order.order_number }}</p>
                             <p><strong>العميل:</strong> {{ order.customer.name }}</p>
-                            <p><strong>تاريخ الطلب:</strong> {{ order.created_at|date:"d/m/Y" }}</p>
+                            <p><strong>تاريخ الطلب:</strong> {{ order.created_at|date:"Y-m-d" }}</p>
                         </div>
                         <div class="col-md-6">
                                             <p><strong>المبلغ الإجمالي:</strong> {{ order.total_amount|currency_format }}</p>
@@ -71,7 +71,7 @@
                             {% if debt.is_paid %}
                                 <p><strong>رقم إذن الاستلام:</strong> {{ debt.payment_receipt_number }}</p>
                                 <p><strong>اسم المستلم:</strong> {{ debt.payment_receiver_name }}</p>
-                                <p><strong>تاريخ الدفع:</strong> {{ debt.payment_date|date:"d/m/Y H:i" }}</p>
+                                <p><strong>تاريخ الدفع:</strong> {{ debt.payment_date|date:"Y-m-d H:i" }}</p>
                             {% endif %}
                         </div>
                     </div>

@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class AdvancedSyncService:
     def _create_manufacturing_order(self, mapped_data: Dict[str, str], order: Order):
-        """إنشاء أمر تصنيع للطلب الأساسي"""
+        """إنشاء أمر تصنيع للطلب الأساسي مع تعيين التاريخ من الطلب"""
         try:
             from manufacturing.models import ManufacturingOrder
             from datetime import timedelta
@@ -88,7 +88,7 @@ class AdvancedSyncService:
         }
         return mapping.get(order_type_value.strip().lower().replace('إ','ا'), None)
     def _create_inspection(self, mapped_data: Dict[str, str], order: Order) -> Inspection:
-        """إنشاء معاينة مرتبطة بالطلب فقط إذا كان التاريخ صالحًا - مع ضمان عدم التكرار"""
+        """إنشاء معاينة مرتبطة بالطلب مع تعيين التاريخ من الجدول أو من الطلب إذا لم يوجد"""
         from inspections.models import Inspection
         from datetime import timedelta
         from django.utils import timezone
@@ -105,8 +105,12 @@ class AdvancedSyncService:
             'branch': order.branch,
         }
 
-        # معالجة تاريخ المعاينة: لا تنشئ معاينة إذا لم يوجد تاريخ صالح
+        # معالجة تاريخ المعاينة: من الجدول أو من الطلب
         inspection_date = mapped_data.get('inspection_date', '').strip()
+        if not inspection_date:
+            # إذا لم يوجد تاريخ معاينة، استخدم تاريخ الطلب
+            if hasattr(order, 'order_date') and order.order_date:
+                inspection_date = str(order.order_date)
         parsed_date = self._parse_date(inspection_date)
         if parsed_date:
             inspection_data['scheduled_date'] = parsed_date
@@ -237,7 +241,7 @@ class AdvancedSyncService:
         
         print(f"[SYNC] بدء معالجة {total_rows} صف...")
         
-        # معالجة البي��نات بالدفعات لتحسين الأداء
+        # معالجة البيانات بالدفعات لتحسين الأداء
         batch_size = 50
         
         for batch_start in range(0, total_rows, batch_size):
@@ -599,7 +603,7 @@ class AdvancedSyncService:
             return False
     
     def _create_customer(self, mapped_data: Dict[str, str]) -> Customer:
-        """إنشاء عميل جديد مع تعيين created_at من العمود المحدد في التعيين إذا توفر"""
+        """إنشاء عميل جديد مع تعيين created_at حسب إعدادات المزامنة المتقدمة"""
         customer_data = {
             'name': mapped_data.get('customer_name', ''),
             'phone': mapped_data.get('customer_phone', ''),
@@ -616,25 +620,22 @@ class AdvancedSyncService:
         customer_code = mapped_data.get('customer_code', '').strip()
         if customer_code:
             customer_data['code'] = customer_code
-    
-        try:
-            customer = Customer.objects.create(**customer_data)
-            
-            # معالجة تاريخ الإنشاء بعد إنشاء العميل
-            created_at_str = ''
-            for key in ['customer_created_at', 'customer_date', 'customer_registration_date']:
-                if key in self.mapping.get_column_mappings().values():
-                    val = mapped_data.get(key, '').strip()
-                    if val:
-                        created_at_str = val
-                        break
-            
+        
+        # تعيين created_at حسب إعدادات المزامنة المتقدمة
+        # إذا كان الخيار "استخدام التاريخ الحالي كتاريخ الإضافة" مفعل، استخدم التاريخ الحالي
+        # وإلا استخدم تاريخ الطلب كتاريخ إضافة العميل
+        if not getattr(self.mapping, 'use_current_date_as_created', False):
+            # استخدام تاريخ الطلب كتاريخ إضافة العميل (الخيار المطلوب)
+            created_at_str = mapped_data.get('order_date', '').strip()
             if created_at_str:
                 created_at_dt = self._parse_date(created_at_str)
                 if created_at_dt:
-                    customer.created_at = created_at_dt
-                    customer.save(update_fields=['created_at'])
-            
+                    customer_data['created_at'] = created_at_dt
+                    logger.info(f"تم تعيين تاريخ إضافة العميل من تاريخ الطلب: {created_at_dt}")
+        # إذا كان الخيار مفعل، سيتم استخدام التاريخ الحالي تلقائياً (default=timezone.now)
+        
+        try:
+            customer = Customer.objects.create(**customer_data)
             return customer
         except IntegrityError as e:
             raise Exception(f"فشل إنشاء عميل جديد: {str(e)}")
@@ -666,7 +667,7 @@ class AdvancedSyncService:
         return False
 
     def _create_order(self, mapped_data: Dict[str, str], customer: Customer, order_type: str = None) -> Order:
-        """إنشاء طلب محسن بعملية حفظ واحدة"""
+        """إنشاء طلب محسن بعملية حفظ واحدة مع تعيين تاريخ الطلب من الجدول"""
         
         order_data = {
             'customer': customer,

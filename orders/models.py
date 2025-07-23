@@ -119,10 +119,7 @@ class Order(models.Model):
         unique=True,
         verbose_name='رقم الطلب'
     )
-    order_date = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='تاريخ الطلب'
-    )
+    order_date = models.DateTimeField(default=timezone.now, editable=True, verbose_name='تاريخ الطلب')
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -255,7 +252,7 @@ class Order(models.Model):
         verbose_name='الفرع',
         null=True
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    created_at = models.DateTimeField(default=timezone.now, editable=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
     final_price = models.DecimalField(
         max_digits=10,

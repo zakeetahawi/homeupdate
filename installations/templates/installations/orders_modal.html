@@ -92,10 +92,10 @@
                             <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <td class="text-dark">{{ order.created_at|date:"d/m/Y" }}</td>
+                    <td class="text-dark">{{ order.created_at|date:"Y-m-d" }}</td>
                     <td class="text-dark">
                         {% if order.expected_delivery_date %}
-                            <span class="badge badge-info">{{ order.expected_delivery_date|date:"d/m/Y" }}</span>
+                            <span class="badge badge-info">{{ order.expected_delivery_date|date:"Y-m-d" }}</span>
                         {% else %}
                             <span class="text-muted">غير محدد</span>
                         {% endif %}

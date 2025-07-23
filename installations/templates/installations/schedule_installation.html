@@ -20,6 +20,7 @@
                         <h6><i class="fas fa-info-circle"></i> معلومات الطلب:</h6>
                         <div class="row">
                             <div class="col-md-6">
+                                <p><strong>تاريخ الطلب:</strong> {{ installation.order.created_at|date:"Y-m-d" }}</p>
                                 <strong>رقم الطلب:</strong> {{ installation.order.order_number }}<br>
                                 <strong>العميل:</strong> {{ installation.order.customer.name }}<br>
                                 <strong>الهاتف:</strong> {{ installation.order.customer.phone }}

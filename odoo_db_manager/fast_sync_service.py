@@ -206,19 +206,25 @@ class FastSyncService:
                 
                 customer = Customer.objects.create(**customer_data)
                 
-                # معالجة تاريخ الإنشاء بعد إنشاء العميل
-                created_at_str = ''
-                for key in ['customer_created_at', 'customer_date', 'customer_registration_date']:
-                    val = mapped_data.get(key, '').strip()
-                    if val:
-                        created_at_str = val
-                        break
-                
-                if created_at_str:
-                    created_at_dt = self._parse_date_fast(created_at_str)
-                    if created_at_dt:
-                        customer.created_at = created_at_dt
-                        customer.save(update_fields=['created_at'])
+                # معالجة تاريخ الإنشاء حسب إعدادات المزامنة المتقدمة
+                # إذا كان الخيار "استخدام التاريخ الحالي كتاريخ الإضافة" غير مفعل، استخدم تاريخ الطلب
+                if not getattr(self.mapping, 'use_current_date_as_created', False):
+                    # البحث عن تاريخ الطلب أولاً، ثم تواريخ العميل الأخرى
+                    created_at_str = mapped_data.get('order_date', '').strip()
+                    if not created_at_str:
+                        # البحث في حقول تاريخ العميل الأخرى كبديل
+                        for key in ['customer_created_at', 'customer_date', 'customer_registration_date']:
+                            val = mapped_data.get(key, '').strip()
+                            if val:
+                                created_at_str = val
+                                break
+                    
+                    if created_at_str:
+                        created_at_dt = self._parse_date_fast(created_at_str)
+                        if created_at_dt:
+                            customer.created_at = created_at_dt
+                            customer.save(update_fields=['created_at'])
+                            logger.info(f"[FAST_SYNC] تم تعيين تاريخ إضافة العميل من تاريخ الطلب: {created_at_dt}")
                 
                 logger.info(f"[FAST_SYNC] تم إنشاء عميل جديد: {customer.name} (تصنيف: {customer.category}, نوع: {customer.customer_type})")
                 

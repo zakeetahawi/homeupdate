@@ -27,7 +27,7 @@
                             <div class="col-md-6">
                                 <strong>العنوان:</strong> {{ installation.order.customer.address|default:"غير محدد" }}<br>
                                 <strong>الفريق:</strong> {{ installation.team.name|default:"غير محدد" }}<br>
-                                <strong>تاريخ التركيب:</strong> {{ installation.scheduled_date|date:"d/m/Y" }}
+                                <strong>تاريخ التركيب:</strong> {{ installation.scheduled_date|date:"Y-m-d" }}
                             </div>
                         </div>
                     </div>

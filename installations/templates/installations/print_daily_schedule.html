@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جدول التركيبات اليومي - {{ form.date.value|date:"d/m/Y" }}</title>
+    <title>جدول التركيبات اليومي - {{ form.date.value|date:"Y-m-d" }}</title>
     <style>
         @page {
             size: landscape;
@@ -154,7 +154,7 @@
 <body>
     <div class="header">
         <h1>جدول التركيبات اليومي</h1>
-        <h2>{{ form.date.value|date:"d/m/Y" }}</h2>
+        <h2>{{ form.date.value|date:"Y-m-d" }}</h2>
         <p>تاريخ الطباعة: {% now "d/m/Y H:i" %}</p>
     </div>
 

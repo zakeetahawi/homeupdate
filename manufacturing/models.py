@@ -143,10 +143,7 @@ class ManufacturingOrder(models.Model):
         verbose_name='تم الإنشاء بواسطة'
     )
     
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='تاريخ الإنشاء'
-    )
+    created_at = models.DateTimeField(default=timezone.now, editable=True, verbose_name='تاريخ الإنشاء')
     
     updated_at = models.DateTimeField(
         auto_now=True,

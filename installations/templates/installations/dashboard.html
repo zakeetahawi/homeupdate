@@ -324,7 +324,7 @@
                                 <div>
                                     <h6 class="mb-1"><strong>{{ installation.order.customer.name }}</strong></h6>
                                     <small class="text-muted">
-                                        {{ installation.scheduled_date|date:"d/m/Y" }} - 
+                                        {{ installation.scheduled_date|date:"Y-m-d" }} - 
                                         {{ installation.scheduled_time|time:"H:i" }}
                                     </small>
                                 </div>
@@ -386,7 +386,7 @@
                                                 {% if installation and installation.get_installation_date %}
                                                     <span class="badge bg-info">
                                                         <i class="fas fa-calendar me-1"></i>
-                                                        {{ installation.get_installation_date|date:"d/m/Y" }}
+                                                        {{ installation.get_installation_date|date:"Y-m-d" }}
                                                     </span>
                                                     {% if installation.scheduled_time %}
                                                         <br><small class="text-muted">{{ installation.scheduled_time|time:"H:i" }}</small>
@@ -394,7 +394,7 @@
                                                 {% elif order.expected_delivery_date %}
                                                     <span class="badge bg-warning">
                                                         <i class="fas fa-calendar me-1"></i>
-                                                        {{ order.expected_delivery_date|date:"d/m/Y" }}
+                                                        {{ order.expected_delivery_date|date:"Y-m-d" }}
                                                     </span>
                                                 {% else %}
                                                     <span class="text-muted">غير محدد</span>

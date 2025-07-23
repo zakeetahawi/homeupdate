@@ -196,8 +196,8 @@ class Inspection(models.Model):
     google_drive_file_url = models.URLField(_('رابط ملف Google Drive'), blank=True, null=True)
     google_drive_file_name = models.CharField(_('اسم الملف في Google Drive'), max_length=500, blank=True, null=True)
     is_uploaded_to_drive = models.BooleanField(_('تم الرفع إلى Google Drive'), default=False)
-    request_date = models.DateField(_('تاريخ طلب المعاينة'))
-    scheduled_date = models.DateField(_('تاريخ تنفيذ المعاينة'))
+    request_date = models.DateField(_('تاريخ طلب المعاينة'), default=timezone.now, editable=True)
+    scheduled_date = models.DateField(_('تاريخ تنفيذ المعاينة'), default=timezone.now, editable=True)
     status = models.CharField(
         _('الحالة'),
         max_length=10,
@@ -228,7 +228,7 @@ class Inspection(models.Model):
         related_name='inspections',
         verbose_name=_('الطلب المرتبط')
     )
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), default=timezone.now, editable=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
     completed_at = models.DateTimeField(_('تاريخ الإكتمال'), null=True, blank=True)
     expected_delivery_date = models.DateField(

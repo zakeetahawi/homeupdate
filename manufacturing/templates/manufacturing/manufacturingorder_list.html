@@ -427,6 +427,14 @@
 .manufacturing-table {
     border-spacing: 0 1px;
 }
+/* تحسين مظهر الروابط */
+.table a {
+    transition: all 0.2s ease;
+}
+.table a:hover {
+    text-decoration: underline !important;
+    opacity: 0.8;
+}
 </style>
 {% endblock %}
 
@@ -630,7 +638,7 @@
                             <td>{{ order.invoice_number|default:'-' }}</td>
                             <td>
                                 {% if order.order.customer %}
-                                    <a href="{% url 'customers:customer_detail' order.order.customer.id %}" style="color: var(--primary); text-decoration: none;">
+                                    <a href="{% url 'customers:customer_detail' order.order.customer.id %}" style="color: var(--primary); text-decoration: none; font-weight: bold;">
                                         <strong>{{ order.order.customer.name|default:'-' }}</strong>
                                     </a>
                                 {% else %}
@@ -714,18 +722,18 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'manufacturing:order_detail' order.id %}" class="btn btn-info" title="عرض">
-                                        <i class="fas fa-eye"></i>
+                                <div class="btn-group btn-group-sm action-buttons">
+                                    <a href="{% url 'manufacturing:order_detail' order.id %}" class="btn btn-info" title="عرض" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
+                                        <i class="fas fa-eye" style="font-size: 0.7em;"></i>
                                     </a>
                                     {% if perms.manufacturing.change_manufacturingorder %}
-                                        <a href="{% url 'manufacturing:order_update' order.id %}" class="btn btn-primary" title="تعديل">
-                                            <i class="fas fa-edit"></i>
+                                        <a href="{% url 'manufacturing:order_update' order.id %}" class="btn btn-primary" title="تعديل" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
+                                            <i class="fas fa-edit" style="font-size: 0.7em;"></i>
                                         </a>
                                     {% endif %}
                                     {% if perms.manufacturing.delete_manufacturingorder %}
-                                        <a href="{% url 'manufacturing:order_delete' order.id %}" class="btn btn-danger" title="حذف">
-                                            <i class="fas fa-trash"></i>
+                                        <a href="{% url 'manufacturing:order_delete' order.id %}" class="btn btn-danger" title="حذف" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
+                                            <i class="fas fa-trash" style="font-size: 0.7em;"></i>
                                         </a>
                                     {% endif %}
                                 </div>

@@ -93,47 +93,34 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
     إنشاء معاينة تلقائية عند إنشاء طلب من نوع معاينة
     """
     if created:
-        # print(f"--- INSPECTION SIGNAL TRIGGERED for Order PK: {instance.pk} ---")
-        
-        # استخدام الدالة الموجودة لتحليل أنواع الطلب
         order_types = instance.get_selected_types_list()
-        # print(f"Successfully parsed types for inspection: {order_types}")
-
-        # إذا كان الطلب يحتوي على نوع معاينة
         if 'inspection' in order_types:
-            # print(f"INSPECTION MATCH FOUND: Creating inspection for order {instance.pk}")
-            
             try:
                 from django.db import transaction
                 with transaction.atomic():
-                    # استيراد نموذج المعاينة
                     from inspections.models import Inspection
-                    
-                    # إنشاء معاينة جديدة
-                    inspection = Inspection.objects.create(
+                    # استخدم تاريخ الطلب كـ request_date
+                    request_date = instance.order_date.date() if instance.order_date else timezone.now().date()
+                    # حاول استخراج تاريخ تنفيذ محدد من notes أو من بيانات الطلب إذا كان ذلك ممكناً (يمكنك تطوير هذا لاحقاً)
+                    scheduled_date = request_date + timedelta(days=1)
+                    Inspection.objects.create(
                         customer=instance.customer,
                         branch=instance.branch,
                         responsible_employee=instance.salesperson,
                         order=instance,
                         is_from_orders=True,
-                        request_date=timezone.now().date(),
-                        scheduled_date=timezone.now().date() + timedelta(days=1),
+                        request_date=request_date,
+                        scheduled_date=scheduled_date,
                         status='pending',
                         notes=f'معاينة تلقائية للطلب رقم {instance.order_number}',
                         order_notes=instance.notes,
                         created_by=instance.created_by
                     )
-                    
-                    # تحديث حالة الطلب لتعكس حالة المعاينة
                     Order.objects.filter(pk=instance.pk).update(
                         tracking_status='processing',
                         order_status='pending'
                     )
-                    
-                    # print(f"SUCCESS: Created Inspection PK: {inspection.pk} for Order PK: {instance.pk}")
-                    
             except Exception as e:
-                # print(f"ERROR: Failed to create inspection for order {instance.pk}: {str(e)}")
                 import traceback
                 traceback.print_exc()
         else:

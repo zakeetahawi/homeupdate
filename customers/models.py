@@ -3,6 +3,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -191,7 +192,8 @@ class Customer(models.Model):
         related_name='customers_created',
         verbose_name=_('تم الإنشاء بواسطة')
     )
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    # ملاحظة: هذا الحقل يجب أن يكون قابل للتعيين من الكود (وليس auto_now_add) حتى يمكن استيراد التاريخ من مصادر خارجية مثل Google Sheets
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), default=timezone.now, editable=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
 
     class Meta:

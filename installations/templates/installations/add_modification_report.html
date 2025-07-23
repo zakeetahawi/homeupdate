@@ -26,7 +26,7 @@
                             </div>
                             <div class="col-md-6">
                                 <strong>الفريق:</strong> {{ installation.team.name|default:"غير محدد" }}<br>
-                                <strong>تاريخ التركيب:</strong> {{ installation.scheduled_date|date:"d/m/Y" }}<br>
+                                <strong>تاريخ التركيب:</strong> {{ installation.scheduled_date|date:"Y-m-d" }}<br>
                                 <strong>حالة التركيب:</strong> 
                                 <span class="badge badge-{{ installation.status|yesno:'success,warning' }}">
                                     {{ installation.get_status_display }}

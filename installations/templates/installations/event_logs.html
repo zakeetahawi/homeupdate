@@ -162,7 +162,7 @@
                             <tr>
                                 <!-- التاريخ والوقت -->
                                 <td class="text-center">
-                                    <div class="font-weight-bold">{{ log.created_at|date:"d/m/Y" }}</div>
+                                    <div class="font-weight-bold">{{ log.created_at|date:"Y-m-d" }}</div>
                                     <small class="text-muted">{{ log.created_at|time:"H:i" }}</small>
                                 </td>
                                 
@@ -264,7 +264,7 @@
                                 <td class="text-center">
                                     {% if log.installation.scheduled_date %}
                                         <div class="badge badge-info">
-                                            <i class="fas fa-calendar"></i> {{ log.installation.scheduled_date|date:"d/m/Y" }}
+                                            <i class="fas fa-calendar"></i> {{ log.installation.scheduled_date|date:"Y-m-d" }}
                                         </div>
                                         {% if log.installation.scheduled_time %}
                                             <br><small class="text-muted font-weight-bold">{{ log.installation.scheduled_time|time:"H:i" }}</small>

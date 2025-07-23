@@ -218,7 +218,7 @@ const dailyCtx = document.getElementById('dailyChart').getContext('2d');
 const dailyChart = new Chart(dailyCtx, {
     type: 'line',
     data: {
-        labels: [{% for stat in daily_stats %}'{{ stat.date|date:"d" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        labels: [{% for stat in daily_stats %}'{{ stat.date|date:"Y-m-d" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
         datasets: [{
             label: 'التركيبات اليومية',
             data: [{% for stat in daily_stats %}{{ stat.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
