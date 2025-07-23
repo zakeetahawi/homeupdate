@@ -1,10 +1,11 @@
 from django.urls import path
 from . import views
+from .dashboard_view import ImprovedDashboardView
 
 app_name = 'manufacturing'
 
 urlpatterns = [
-    path('', views.DashboardView.as_view(), name='dashboard'),
+    path('', ImprovedDashboardView.as_view(), name='dashboard'),
     path(
         'orders/',
         views.ManufacturingOrderListView.as_view(),

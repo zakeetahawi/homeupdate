@@ -1,244 +1,538 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load i18n %}
+{% load humanize %}
 
-{% block title %}لوحة تحكم التصنيع{% endblock %}
+{% block title %}لوحة تحكم المصنع{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'manufacturing/css/dashboard.css' %}">
+<style>
+/* تحسينات لوحة التحكم */
+.dashboard-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card {
+    background: linear-gradient(135deg, var(--primary) 0%, #8b735a 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: rotate(45deg);
+}
+
+.stat-card .icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card .number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+}
+
+.stat-card .label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.recent-orders-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.order-item {
+    border-bottom: 1px solid #eee;
+    padding: 1rem 0;
+    transition: background-color 0.3s ease;
+}
+
+.order-item:hover {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0 -1rem;
+}
+
+.order-item:last-child {
+    border-bottom: none;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+}
+
+.metric-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.change-indicator {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.change-positive {
+    color: #28a745;
+}
+
+.change-negative {
+    color: #dc3545;
+}
+
+.alert-card {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.info-card {
+    background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* تحسينات responsive */
+@media (max-width: 768px) {
+    .stat-card {
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .chart-container {
+        padding: 1rem;
+    }
+    
+    .recent-orders-card {
+        padding: 1rem;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Page Title -->
+    <!-- Page Header -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">لوحة تحكم التصنيع</h1>
-        <a href="{% url 'manufacturing:order_list' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-            <i class="fas fa-list fa-sm text-white-50 me-2"></i> عرض كل الطلبات
-        </a>
-    </div>
-
-    <!-- Date Range Info -->
-    <div class="row">
-        <div class="col-12">
-            <div class="alert alert-info">
-                {% blocktrans with start_date=start_date|date:"Y-m-d" end_date=end_date|date:"Y-m-d" %}
-                عرض البيانات من <strong>{{ start_date }}</strong> إلى <strong>{{ end_date }}</strong>.
-                {% endblocktrans %}
-            </div>
+        <h1 class="h3 mb-0" style="color: var(--primary); font-weight: bold;">
+            <i class="fas fa-industry me-2"></i>لوحة تحكم المصنع
+        </h1>
+        <div class="btn-group">
+            <a href="{% url 'manufacturing:order_list' %}" class="btn btn-primary">
+                <i class="fas fa-list me-2"></i>عرض كل الطلبات
+            </a>
+            <a href="{% url 'manufacturing:order_create' %}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>طلب جديد
+            </a>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">إجمالي الطلبات</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_orders }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-box fa-2x text-gray-300"></i>
-                        </div>
+    <!-- Alert Cards -->
+    <div class="row mb-4">
+        {% if pending_approval_count > 0 %}
+        <div class="col-md-6">
+            <div class="alert-card">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                    <div>
+                        <h5 class="mb-1">{{ pending_approval_count }} طلب يحتاج موافقة</h5>
+                        <small>يرجى مراجعة الطلبات المعلقة</small>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">الطلبات المكتملة</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ completed_orders }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                        </div>
+        {% endif %}
+        
+        {% if overdue_orders > 0 %}
+        <div class="col-md-6">
+            <div class="alert-card">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-clock fa-2x me-3"></i>
+                    <div>
+                        <h5 class="mb-1">{{ overdue_orders }} طلب متأخر</h5>
+                        <small>تجاوز موعد التسليم المتوقع</small>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">الطلبات المعلقة</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_orders }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Main Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="icon">
+                            <i class="fas fa-clipboard-list"></i>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
-                        </div>
+                        <div class="number">{{ total_orders|intcomma }}</div>
+                        <div class="label">إجمالي الطلبات</div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">الطلبات الملغاة</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cancelled_orders }}</div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="icon">
+                            <i class="fas fa-check-circle"></i>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                        <div class="number">{{ delivered_orders|intcomma }}</div>
+                        <div class="label">تم التسليم</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card" style="background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="icon">
+                            <i class="fas fa-cog fa-spin"></i>
                         </div>
+                        <div class="number">{{ in_progress_orders|intcomma }}</div>
+                        <div class="label">قيد التنفيذ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="icon">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                        <div class="number">{{ pending_orders|intcomma }}</div>
+                        <div class="label">قيد الانتظار</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Charts -->
-    <div class="row">
-        <!-- Pie Chart -->
+    <!-- Additional Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-number">{{ this_month_orders }}</div>
+                <div class="metric-label">طلبات هذا الشهر</div>
+                <div class="change-indicator {% if month_change_percent >= 0 %}change-positive{% else %}change-negative{% endif %}">
+                    <i class="fas fa-arrow-{% if month_change_percent >= 0 %}up{% else %}down{% endif %}"></i>
+                    {{ month_change_percent|floatformat:1 }}% عن الشهر الماضي
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-number">{{ completed_orders }}</div>
+                <div class="metric-label">طلبات مكتملة</div>
+                <div class="change-indicator" style="color: #28a745;">
+                    <i class="fas fa-check"></i>
+                    جاهزة للتسليم
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-number">{{ ready_install_orders }}</div>
+                <div class="metric-label">جاهز للتركيب</div>
+                <div class="change-indicator" style="color: #6f42c1;">
+                    <i class="fas fa-tools"></i>
+                    يحتاج تركيب
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-number">{{ avg_completion_days }}</div>
+                <div class="metric-label">متوسط أيام الإنجاز</div>
+                <div class="change-indicator" style="color: #17a2b8;">
+                    <i class="fas fa-calendar-alt"></i>
+                    يوم
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Status Distribution Chart -->
         <div class="col-xl-4 col-lg-5">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">الطلبات حسب الحالة</h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-pie pt-4 pb-2"><canvas id="statusPieChart"></canvas></div>
+            <div class="chart-container">
+                <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
+                    <i class="fas fa-chart-pie me-2"></i>توزيع الطلبات حسب الحالة
+                </h5>
+                <div class="chart-pie">
+                    <canvas id="statusPieChart" style="max-height: 300px;"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Area Chart -->
+        <!-- Monthly Trend Chart -->
         <div class="col-xl-8 col-lg-7">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">نظرة عامة على الطلبات الشهرية</h6>
+            <div class="chart-container">
+                <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
+                    <i class="fas fa-chart-line me-2"></i>اتجاه الطلبات الشهرية ({{ chart_period }})
+                </h5>
+                <div class="chart-area">
+                    <canvas id="monthlyOrdersChart" style="max-height: 300px;"></canvas>
                 </div>
-                <div class="card-body">
-                    <div class="chart-area"><canvas id="monthlyOrdersChart"></canvas></div>
-                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders and Order Types -->
+    <div class="row">
+        <!-- Recent Orders -->
+        <div class="col-lg-8">
+            <div class="recent-orders-card">
+                <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
+                    <i class="fas fa-history me-2"></i>أحدث الطلبات
+                </h5>
+                {% if recent_orders %}
+                    {% for order in recent_orders %}
+                    <div class="order-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <strong>طلب #{{ order.id }}</strong>
+                                <br>
+                                <small class="text-muted">{{ order.created_at|date:"Y-m-d H:i" }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                {% if order.order.customer %}
+                                    {{ order.order.customer.name }}
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <span class="status-badge status-{{ order.status }}">
+                                    {{ order.get_status_display }}
+                                </span>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <a href="{% url 'manufacturing:order_detail' order.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> عرض
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">لا توجد طلبات حديثة</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Order Types Summary -->
+        <div class="col-lg-4">
+            <div class="recent-orders-card">
+                <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
+                    <i class="fas fa-tags me-2"></i>أنواع الطلبات
+                </h5>
+                {% if orders_by_type %}
+                    {% for type_data in orders_by_type %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <strong>
+                                {% if type_data.order_type == 'installation' %}
+                                    <i class="fas fa-tools me-2"></i>تركيب
+                                {% elif type_data.order_type == 'custom' %}
+                                    <i class="fas fa-cut me-2"></i>تفصيل
+                                {% elif type_data.order_type == 'accessory' %}
+                                    <i class="fas fa-puzzle-piece me-2"></i>اكسسوار
+                                {% else %}
+                                    <i class="fas fa-cog me-2"></i>{{ type_data.order_type }}
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <span class="badge bg-primary">{{ type_data.count }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">لا توجد بيانات</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block extrajs %}
-<!-- Page level plugins -->
-<script src="{% static 'vendor/chart.js/Chart.min.js' %}"></script>
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- Page level custom scripts -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // Pie Chart for Status
-    const statusData = JSON.parse('{{ status_data|safe }}');
+    // Status Pie Chart
+    const statusData = {{ status_data|safe }};
     if (statusData && statusData.labels.length > 0) {
-        var ctxPie = document.getElementById("statusPieChart");
-        var myPieChart = new Chart(ctxPie, {
+        const ctxPie = document.getElementById("statusPieChart");
+        new Chart(ctxPie, {
             type: 'doughnut',
             data: {
                 labels: statusData.labels,
                 datasets: [{
                     data: statusData.data,
                     backgroundColor: statusData.colors,
-                    hoverBackgroundColor: statusData.colors,
-                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                    borderWidth: 2,
+                    borderColor: '#fff'
                 }],
             },
             options: {
+                responsive: true,
                 maintainAspectRatio: false,
-                tooltips: {
-                    backgroundColor: "rgb(255,255,255)",
-                    bodyFontColor: "#858796",
-                    borderColor: '#dddfeb',
-                    borderWidth: 1,
-                    xPadding: 15,
-                    yPadding: 15,
-                    displayColors: false,
-                    caretPadding: 10,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
                 },
-                legend: {
-                    display: true,
-                    position: 'bottom'
-                },
-                cutoutPercentage: 80,
-            },
+                cutout: '60%'
+            }
         });
     }
 
-    // Area Chart for Monthly Orders
-    const monthlyData = JSON.parse('{{ monthly_data|safe }}');
+    // Monthly Orders Line Chart
+    const monthlyData = {{ monthly_data|safe }};
     if (monthlyData && monthlyData.labels.length > 0) {
-        var ctxArea = document.getElementById("monthlyOrdersChart");
-        var myLineChart = new Chart(ctxArea, {
+        const ctxLine = document.getElementById("monthlyOrdersChart");
+        new Chart(ctxLine, {
             type: 'line',
             data: {
                 labels: monthlyData.labels,
                 datasets: [{
-                    label: "الطلبات",
-                    lineTension: 0.3,
-                    backgroundColor: "rgba(78, 115, 223, 0.05)",
-                    borderColor: "rgba(78, 115, 223, 1)",
-                    pointRadius: 3,
-                    pointBackgroundColor: "rgba(78, 115, 223, 1)",
-                    pointBorderColor: "rgba(78, 115, 223, 1)",
-                    pointHoverRadius: 3,
-                    pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
-                    pointHoverBorderColor: "rgba(78, 115, 223, 1)",
-                    pointHitRadius: 10,
-                    pointBorderWidth: 2,
+                    label: "عدد الطلبات",
                     data: monthlyData.data,
-                }],
+                    borderColor: 'rgba(139, 115, 90, 1)',
+                    backgroundColor: 'rgba(139, 115, 90, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(139, 115, 90, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
             },
             options: {
+                responsive: true,
                 maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        left: 10,
-                        right: 25,
-                        top: 25,
-                        bottom: 0
+                plugins: {
+                    legend: {
+                        display: false
                     }
                 },
                 scales: {
-                    xAxes: [{
-                        time: {
-                            unit: 'date'
-                        },
-                        gridLines: {
-                            display: false,
-                            drawBorder: false
-                        },
+                    y: {
+                        beginAtZero: true,
                         ticks: {
-                            maxTicksLimit: 7
-                        }
-                    }],
-                    yAxes: [{
-                        ticks: {
-                            maxTicksLimit: 5,
-                            padding: 10,
+                            stepSize: 1
                         },
-                        gridLines: {
-                            color: "rgb(234, 236, 244)",
-                            zeroLineColor: "rgb(234, 236, 244)",
-                            drawBorder: false,
-                            borderDash: [2],
-                            zeroLineBorderDash: [2]
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
                         }
-                    }],
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
                 },
-                legend: {
-                    display: false
-                },
-                tooltips: {
-                    backgroundColor: "rgb(255,255,255)",
-                    bodyFontColor: "#858796",
-                    titleMarginBottom: 10,
-                    titleFontColor: '#6e707e',
-                    titleFontSize: 14,
-                    borderColor: '#dddfeb',
-                    borderWidth: 1,
-                    xPadding: 15,
-                    yPadding: 15,
-                    displayColors: false,
+                interaction: {
                     intersect: false,
-                    mode: 'index',
-                    caretPadding: 10,
+                    mode: 'index'
                 }
             }
         });

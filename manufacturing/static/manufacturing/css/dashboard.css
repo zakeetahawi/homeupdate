@@ -1,0 +1,79 @@
+/* Status Badge Colors */
+.status-badge.status-pending_approval {
+    background-color: #007bff;
+    color: white;
+}
+
+.status-badge.status-pending {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.status-badge.status-in_progress {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.status-badge.status-ready_install {
+    background-color: #6f42c1;
+    color: white;
+}
+
+.status-badge.status-completed {
+    background-color: #28a745;
+    color: white;
+}
+
+.status-badge.status-delivered {
+    background-color: #20c997;
+    color: white;
+}
+
+.status-badge.status-rejected {
+    background-color: #dc3545;
+    color: white;
+}
+
+.status-badge.status-cancelled {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* Dashboard specific styles */
+.dashboard-container {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.stat-card-hover:hover {
+    transform: scale(1.05);
+    transition: all 0.3s ease;
+}
+
+.chart-container canvas {
+    max-height: 400px !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+    
+    .chart-container {
+        margin-bottom: 1rem;
+    }
+    
+    .order-item {
+        padding: 0.5rem 0;
+    }
+    
+    .order-item .row {
+        text-align: center;
+    }
+    
+    .order-item .col-md-3 {
+        margin-bottom: 0.5rem;
+    }
+}
