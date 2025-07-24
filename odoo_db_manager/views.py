@@ -893,7 +893,14 @@ def backup_delete(request, pk):
 @login_required
 @user_passes_test(is_staff_or_superuser)
 def backup_download(request, pk):
-    """تحميل ملف النسخة الاحتياطية"""
+    """تحميل ملف النسخة الاحتياطية مع ضغط تلقائي لملفات JSON"""
+    import mimetypes
+    import gzip
+    import tempfile
+    from django.http import HttpResponse, StreamingHttpResponse
+    from wsgiref.util import FileWrapper
+    import urllib.parse
+
     # الحصول على النسخة الاحتياطية
     backup = get_object_or_404(Backup, pk=pk)
 
@@ -902,11 +909,81 @@ def backup_download(request, pk):
         messages.error(request, _('ملف النسخة الاحتياطية غير موجود.'))
         return redirect('odoo_db_manager:backup_detail', pk=backup.pk)
 
-    # إنشاء استجابة الملف
-    response = FileResponse(open(backup.file_path, 'rb'))
-    response['Content-Disposition'] = f'attachment; filename="{os.path.basename(backup.file_path)}"'
+    # الحصول على اسم الملف وحجمه
+    filename = os.path.basename(backup.file_path)
+    file_size = os.path.getsize(backup.file_path)
 
-    return response
+    # إنشاء اسم ملف آمن للتحميل مع تاريخ
+    from datetime import datetime
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    try:
+        # قراءة الملف الأصلي
+        with open(backup.file_path, 'rb') as f:
+            original_data = f.read()
+
+        # تحديد إذا كان الملف يحتاج ضغط
+        if filename.endswith('.json'):
+            # ضغط ملف JSON إلى GZ
+            print(f"🗜️ ضغط ملف JSON: {filename}")
+
+            compressed_data = gzip.compress(original_data)
+            file_data = compressed_data
+
+            # تحديد اسم الملف المضغوط
+            base_name = filename.replace('.json', '')
+            safe_filename = f"{base_name}_{timestamp}.gz"
+
+            print(f"📊 حجم الملف الأصلي: {len(original_data)} bytes")
+            print(f"📊 حجم الملف المضغوط: {len(compressed_data)} bytes")
+            print(f"📊 نسبة الضغط: {((len(original_data) - len(compressed_data)) / len(original_data) * 100):.1f}%")
+
+        elif filename.endswith('.gz'):
+            # ملف مضغوط أصلاً
+            file_data = original_data
+            base_name = filename.replace('.gz', '')
+            safe_filename = f"{base_name}_{timestamp}.gz"
+            print(f"📦 ملف مضغوط أصلاً: {filename}")
+
+        else:
+            # ملفات أخرى - ضغطها أيضاً
+            compressed_data = gzip.compress(original_data)
+            file_data = compressed_data
+            safe_filename = f"backup_{timestamp}.gz"
+            print(f"🗜️ ضغط ملف آخر: {filename}")
+
+        # إزالة المسافات والأحرف الخاصة
+        safe_filename = safe_filename.replace(' ', '_').replace(',', '_').replace('(', '').replace(')', '')
+
+        # إنشاء الاستجابة مع headers محسنة للملفات المضغوطة
+        response = HttpResponse(file_data, content_type='application/octet-stream')
+
+        # إعداد headers لإجبار التحميل كملف مضغوط
+        encoded_filename = urllib.parse.quote(safe_filename.encode('utf-8'))
+        response['Content-Disposition'] = f'attachment; filename="{safe_filename}"; filename*=UTF-8\'\'{encoded_filename}'
+        response['Content-Length'] = len(file_data)
+        response['Content-Type'] = 'application/octet-stream'
+
+        # headers إضافية لمنع فتح الملف في المتصفح
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['Content-Transfer-Encoding'] = 'binary'
+        response['X-Download-Options'] = 'noopen'
+
+        # headers خاصة للملفات المضغوطة
+        response['Content-Encoding'] = 'identity'  # منع فك الضغط التلقائي
+        response['X-Content-Compressed'] = 'gzip'
+        response['X-Original-Filename'] = filename
+
+        print(f"📥 تحميل ملف مضغوط: {safe_filename} ({len(file_data)} bytes)")
+        return response
+
+    except Exception as e:
+        print(f"❌ خطأ في تحميل الملف: {str(e)}")
+        messages.error(request, _(f'حدث خطأ أثناء تحميل الملف: {str(e)}'))
+        return redirect('odoo_db_manager:backup_detail', pk=backup.pk)
 
 @login_required
 @user_passes_test(is_staff_or_superuser)
