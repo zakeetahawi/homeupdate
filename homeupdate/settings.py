@@ -19,7 +19,7 @@ INSTALLED_APPS = [
     'odoo_db_manager',  # إدارة قواعد البيانات
     'inventory',  # إدارة المخزون
     'reports',  # التقارير
-    'factory',  # المصنع
+
 ]
 
 import os
@@ -30,4 +30,4 @@ DATABASE_URL = os.environ.get('DATABASE_URL', 'postgres://postgres:5525@localhos
 
 DATABASES = {
     'default': dj_database_url.parse(DATABASE_URL)
-} 
+}

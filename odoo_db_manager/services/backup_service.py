@@ -170,7 +170,7 @@ class BackupService:
                 'inspections',
                 'inventory',
                 'installations',
-                'factory',
+                'manufacturing',
                 'reports',
                 'odoo_db_manager'
             ]

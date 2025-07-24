@@ -39,7 +39,7 @@ def dashboard(request):
     # تحديث حالة الاتصال لجميع قواعد البيانات
     database_service = DatabaseService()
     databases = Database.objects.all().order_by('-is_active', '-created_at')
-    
+
     # تحديث حالة الاتصال لكل قاعدة بيانات
     for db in databases:
         try:
@@ -86,7 +86,7 @@ def dashboard(request):
     show_activation_success = request.session.pop('show_db_activation_success', False)
     activated_db_name = request.session.pop('activated_db_name', '')
     created_default_user = request.session.pop('created_default_user', False)
-    
+
     # الحصول على معلومات قاعدة البيانات الحالية من إعدادات Django
     from django.conf import settings
     current_db_name = settings.DATABASES['default']['NAME']
@@ -94,14 +94,14 @@ def dashboard(request):
     current_db_host = settings.DATABASES['default']['HOST']
     current_db_port = settings.DATABASES['default']['PORT']
     current_db_password = settings.DATABASES['default']['PASSWORD']
-    
+
     # البحث عن قاعدة البيانات الحالية في قائمة قواعد البيانات
     current_database = None
     for db in databases:
         if db.connection_info.get('NAME') == current_db_name:
             current_database = db
             break
-    
+
     # إذا لم يتم العثور على قاعدة البيانات الحالية، نقوم بإنشائها
     if not current_database:
         try:
@@ -122,10 +122,10 @@ def dashboard(request):
             print(f"تم إنشاء قاعدة البيانات الحالية: {current_db_name}")
         except Exception as e:
             print(f"حدث خطأ أثناء إنشاء قاعدة البيانات الحالية: {str(e)}")
-    
+
     # الحصول على قاعدة البيانات النشطة
     active_database = databases.filter(is_active=True).first()
-    
+
     # إذا كانت قاعدة البيانات الحالية موجودة ولكنها غير نشطة، نقوم بتنشيطها
     if current_database and not current_database.is_active:
         # تعطيل جميع قواعد البيانات الأخرى
@@ -135,7 +135,7 @@ def dashboard(request):
         current_database.save()
         active_database = current_database
         print(f"تم تنشيط قاعدة البيانات الحالية: {current_db_name}")
-    
+
     # التحقق من حالة الاتصال بقاعدة البيانات الحالية
     current_db_status = False
     try:
@@ -280,7 +280,7 @@ def database_create(request):
         if form.is_valid():
             try:                # حفظ قاعدة البيانات من النموذج (بدون إنشاء قاعدة البيانات الفعلية)
                 database = form.save(commit=False)
-                
+
                 # إنشاء قاعدة البيانات الفعلية إذا أراد المستخدم ذلك
                 force_create = request.POST.get('force_create') == 'on'
                 ignore_db_errors = request.POST.get('ignore_db_errors') == 'on'
@@ -288,7 +288,7 @@ def database_create(request):
                 database.save()
                   # إنشاء خدمة قاعدة البيانات مرة واحدة
                 database_service = DatabaseService()
-                
+
                 if create_actual_db and not ignore_db_errors:
                     # استخدام خدمة إنشاء قواعد البيانات لإنشاء قاعدة البيانات الفعلية
                     try:
@@ -297,16 +297,16 @@ def database_create(request):
                             connection_info=database.connection_info,
                             force_create=force_create
                         )
-                        
+
                         if db_created:
                             # اختبار الاتصال بعد الإنشاء
                             success, test_message = database_service.test_connection(database.connection_info)
-                            
+
                             if success:
                                 database.status = True
                                 database.error_message = ''
                                 database.save()
-                                
+
                                 # تطبيق migrations في قاعدة البيانات الجديدة
                                 migrations_applied = False
                                 try:
@@ -319,7 +319,7 @@ def database_create(request):
                                     # انتظار قصير لضمان اكتمال migrations
                                     import time
                                     time.sleep(2)
-                                    
+
                                     try:
                                         default_user_created = _create_default_user(database)
                                     except Exception as user_error:
@@ -330,20 +330,20 @@ def database_create(request):
                                             default_user_created = _create_default_user(database)
                                         except Exception as user_error2:
                                             print(f"فشل في المحاولة الثانية لإنشاء المستخدم الافتراضي: {user_error2}")
-                                
+
                                 # حفظ معلومات نجاح الإنشاء في الجلسة لعرضها في SweetAlert
                                 request.session['database_created_success'] = True
                                 request.session['created_database_name'] = database.name
                                 request.session['created_database_id'] = database.id
                                 request.session['default_user_created'] = default_user_created
                                 request.session['migrations_applied'] = migrations_applied
-                                
+
                                 success_msg = f'تم إنشاء قاعدة البيانات في PostgreSQL وتم اختبار الاتصال بنجاح. {create_message}'
                                 if migrations_applied:
                                     success_msg += " تم تطبيق migrations."
                                 if default_user_created:
                                     success_msg += " تم إنشاء مستخدم افتراضي."
-                                
+
                                 messages.success(request, success_msg)
                             else:
                                 database.status = False
@@ -355,17 +355,17 @@ def database_create(request):
                             database.error_message = create_message
                             database.save()
                             messages.error(request, f'فشل في إنشاء قاعدة البيانات: {create_message}')
-                    
+
                     except Exception as e:
                         database.status = False
                         database.error_message = str(e)
                         database.save()
                         messages.error(request, f'حدث خطأ أثناء إنشاء قاعدة البيانات: {str(e)}')
-                
+
                 elif not create_actual_db and not ignore_db_errors:
                     # فقط اختبار الاتصال بدون إنشاء قاعدة البيانات
                     success, message = database_service.test_connection(database.connection_info)
-                    
+
                     if success:
                         database.status = True
                         database.error_message = ''
@@ -379,9 +379,9 @@ def database_create(request):
                 else:
                     # تجاهل اختبار الاتصال
                     messages.warning(request, 'تم إنشاء سجل قاعدة البيانات دون اختبار الاتصال أو إنشاء قاعدة البيانات.')
-                
+
                 return redirect('odoo_db_manager:database_detail', pk=database.pk)
-                
+
             except Exception as e:
                 messages.error(request, _(f'حدث خطأ أثناء إنشاء قاعدة البيانات: {str(e)}'))
         else:
@@ -408,27 +408,27 @@ def database_activate(request, pk):
         # إذا كان GET request، إعادة توجيه إلى dashboard مع رسالة
         messages.warning(request, 'يرجى استخدام زر التفعيل من لوحة التحكم.')
         return redirect('odoo_db_manager:dashboard')
-    
+
     if request.method != 'POST':
         return JsonResponse({
             'success': False,
             'message': 'طريقة الطلب غير صحيحة. يجب استخدام POST.'
         })
-    
+
     try:
         # الحصول على قاعدة البيانات
         print(f"محاولة تنشيط قاعدة البيانات بمعرف: {pk}")
         database = get_object_or_404(Database, pk=pk)
         print(f"تم العثور على قاعدة البيانات: {database.name}")
-        
+
         # تنشيط قاعدة البيانات باستخدام الطريقة الجديدة
         print("بدء عملية تنشيط قاعدة البيانات...")
         activation_result = database.activate()
         print(f"نتيجة التنشيط: {activation_result}")
-        
+
         if activation_result.get('success', False):
             print("تم تنشيط قاعدة البيانات بنجاح، محاولة إنشاء مستخدم افتراضي...")
-            
+
             # محاولة إنشاء مستخدم افتراضي إذا لم يكن هناك مستخدمين
             try:
                 created_default_user = database.create_default_user()
@@ -439,41 +439,41 @@ def database_activate(request, pk):
               # استخدام رسالة نجاح مع معلومات إضافية
             success_message = f'تم تنشيط قاعدة البيانات {database.name} بنجاح.'
             messages.success(request, success_message)
-            
+
             # لا نحفظ في session لتجنب مشاكل تغيير قاعدة البيانات
             # request.session['show_db_activation_success'] = True
             # request.session['activated_db_name'] = database.name
             # request.session['created_default_user'] = created_default_user
-            
+
             # إعادة توجيه مع رسالة تطلب إعادة التشغيل
             response_data = {
-                'success': True, 
+                'success': True,
                 'message': 'تم تنشيط قاعدة البيانات وتطبيق التغييرات بنجاح',
                 'database_name': activation_result.get('database_name', database.name),
                 'created_default_user': created_default_user,
                 'requires_restart': activation_result.get('requires_restart', False)
             }
             print(f"إعادة الاستجابة: {response_data}")
-            
+
             response = JsonResponse(response_data)
             response['Content-Type'] = 'application/json; charset=utf-8'
             return response
         else:
             error_message = activation_result.get('message', f'حدث خطأ أثناء تنشيط قاعدة البيانات {database.name}.')
             print(f"فشل التنشيط: {error_message}")
-            
+
             response = JsonResponse({
                 'success': False,
                 'message': error_message
             })
             response['Content-Type'] = 'application/json; charset=utf-8'
             return response
-    
+
     except Exception as e:
         print(f"خطأ عام في database_activate: {str(e)}")
         import traceback
         print(f"تفاصيل الخطأ: {traceback.format_exc()}")
-        
+
         return JsonResponse({
             'success': False,
             'message': f'حدث خطأ أثناء تنشيط قاعدة البيانات: {str(e)}'
@@ -512,7 +512,7 @@ def backup_create(request, database_id=None):
     import os
     import shutil
     import datetime
-    
+
     # الحصول على قاعدة البيانات
     database = None
     if database_id:
@@ -607,25 +607,25 @@ def backup_create(request, database_id=None):
                     elif backup_type == 'settings':
                         apps_to_backup = ['odoo_db_manager']
                     else:  # full
-                        apps_to_backup = ['customers', 'orders', 'inspections', 'inventory', 'installations', 'factory', 'accounts', 'odoo_db_manager']                    # تنفيذ dumpdata مع معالجة مشاكل الترميز
+                        apps_to_backup = ['customers', 'orders', 'inspections', 'inventory', 'installations', 'manufacturing', 'accounts', 'odoo_db_manager']                    # تنفيذ dumpdata مع معالجة مشاكل الترميز
                     import os
                     import tempfile
-                    
+
                     # إنشاء ملف مؤقت
                     with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False, suffix='.json') as temp_file:
                         temp_path = temp_file.name
-                    
+
                     try:
                         # تنفيذ dumpdata إلى ملف مؤقت مباشرة
                         with open(temp_path, 'w', encoding='utf-8') as temp_output:
-                            call_command('dumpdata', *apps_to_backup, stdout=temp_output, 
+                            call_command('dumpdata', *apps_to_backup, stdout=temp_output,
                                        format='json', indent=2, verbosity=0)
-                        
+
                         # نسخ من الملف المؤقت إلى الملف النهائي
                         with open(temp_path, 'r', encoding='utf-8') as temp_input:
                             with open(backup_file, 'w', encoding='utf-8') as final_output:
                                 final_output.write(temp_input.read())
-                    
+
                     finally:
                         # حذف الملف المؤقت
                         if os.path.exists(temp_path):
@@ -818,22 +818,22 @@ def backup_restore(request, pk):
                             # print(f"🗑️ تم حذف الملف المؤقت: {temp_path}")  # تعطيل الطباعة
                 else:
                     raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON أو JSON.GZ.")
-                
+
                 # إنشاء رسالة تفصيلية
                 if result:
                     success_count = result.get('success_count', 0)
                     error_count = result.get('error_count', 0)
                     total_count = result.get('total_count', 0)
-                    
+
                     if error_count == 0:
                         success_message = f"🎉 تم استعادة جميع البيانات بنجاح!\n\n📊 الإحصائيات:\n• إجمالي العناصر: {total_count}\n• تم الاستعادة: {success_count}\n• نسبة النجاح: 100%"
                     else:
                         success_rate = (success_count / total_count * 100) if total_count > 0 else 0
                         success_message = f"✅ تمت الاستعادة بنجاح!\n\n📊 الإحصائيات:\n• إجمالي العناصر: {total_count}\n• تم الاستعادة: {success_count}\n• فشل: {error_count}\n• نسبة النجاح: {success_rate:.1f}%"
-                        
+
                         if error_count > 0:
                             success_message += f"\n\n⚠️ تحذير: {error_count} عنصر لم يتم استعادته (عادة بسبب بيانات غير متوافقة مع النسخة الحالية)."
-                    
+
                     messages.success(request, success_message)
                 else:
                     messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
@@ -912,58 +912,58 @@ def backup_download(request, pk):
 @user_passes_test(is_staff_or_superuser)
 def backup_upload(request, database_id=None):
     """رفع واستعادة نسخة احتياطية"""
-    
+
     # الحصول على قاعدة البيانات
     database = None
     if database_id:
         database = get_object_or_404(Database, pk=database_id)
-    
+
     # قائمة قواعد البيانات
     databases = Database.objects.filter(is_active=True)
-    
+
     if request.method == 'POST':
         print(f"🔍 [DEBUG] POST request received for backup upload")
         print(f"🔍 [DEBUG] User: {request.user}")
         print(f"🔍 [DEBUG] Files: {request.FILES}")
         print(f"🔍 [DEBUG] POST data: {request.POST}")
-        
+
         # تمديد الجلسة لمدة 3 ساعات للعمليات الطويلة
         request.session.set_expiry(10800)  # 3 ساعات
         print(f"✅ [DEBUG] Session extended to 3 hours for long operation")
-        
+
         try:
             # الحصول على البيانات
             uploaded_file = request.FILES.get('backup_file')
             database_id = request.POST.get('database_id', database_id)
             clear_data = request.POST.get('clear_existing') == '1'  # تصحيح اسم الحقل
             session_id = request.POST.get('session_id')
-            
+
             print(f"🔍 [DEBUG] Session ID: {session_id}")
             print(f"🔍 [DEBUG] Clear data: {clear_data}")
             print(f"🔍 [DEBUG] Database ID: {database_id}")
-            
+
             if not uploaded_file:
                 return JsonResponse({'success': False, 'message': 'يرجى اختيار ملف النسخة الاحتياطية'})
-            
+
             if not database_id:
                 return JsonResponse({'success': False, 'message': 'يرجى اختيار قاعدة البيانات'})
-            
+
             # الحصول على قاعدة البيانات
             database = get_object_or_404(Database, pk=database_id)
-            
+
             # إنشاء session_id إذا لم يكن موجوداً
             if not session_id:
                 session_id = f'restore_{int(time.time() * 1000)}_{secrets.token_urlsafe(8)}'
                 print(f"🔍 [DEBUG] Generated new session ID: {session_id}")
-            
+
             # إنشاء رمز مؤقت للتتبع
             temp_token = secrets.token_urlsafe(32)
             cache.set(f'temp_token_{temp_token}', request.user.id, 10800)  # 3 ساعات
             cache.set(f'session_token_{session_id}', temp_token, 10800)  # ربط الجلسة بالرمز
-            
+
             print(f"✅ [DEBUG] Created temp token: {temp_token[:10]}...")
             print(f"✅ [DEBUG] Linked session {session_id} to token")
-            
+
             # إنشاء سجل التقدم
             progress = RestoreProgress.objects.create(
                 session_id=session_id,
@@ -978,17 +978,17 @@ def backup_upload(request, database_id=None):
                 success_count=0,
                 error_count=0
             )
-            
+
             print(f"✅ [DEBUG] Created progress record: {progress.id}")
-            
+
             # دالة لتحديث التقدم
-            def update_progress(status=None, progress_percentage=None, current_step=None, 
-                              total_items=None, processed_items=None, success_count=None, 
+            def update_progress(status=None, progress_percentage=None, current_step=None,
+                              total_items=None, processed_items=None, success_count=None,
                               error_count=None, error_message=None, result_data=None):
                 """تحديث تقدم عملية الاستعادة"""
                 try:
                     progress = RestoreProgress.objects.get(session_id=session_id)
-                    
+
                     if status is not None:
                         progress.status = status
                     if progress_percentage is not None:
@@ -1007,9 +1007,9 @@ def backup_upload(request, database_id=None):
                         progress.error_message = error_message
                     if result_data is not None:
                         progress.result_data = result_data
-                    
+
                     progress.save()
-                    
+
                     # حفظ نسخة احتياطية في الـ cache
                     cache_key = f"restore_progress_backup_{session_id}"
                     cache_data = {
@@ -1025,11 +1025,11 @@ def backup_upload(request, database_id=None):
                         'updated_at': timezone.now().isoformat()
                     }
                     cache.set(cache_key, cache_data, timeout=10800)  # 3 hours
-                    
+
                     print(f"✅ [DEBUG] Progress updated: {progress.status} - {progress.progress_percentage}%")
                 except RestoreProgress.DoesNotExist:
                     print(f"⚠️ [DEBUG] Progress record not found for session {session_id} - may have been deleted during cleanup")
-                    
+
                     # محاولة إعادة إنشاء السجل من الـ cache
                     cache_key = f"restore_progress_backup_{session_id}"
                     cache_data = cache.get(cache_key)
@@ -1077,55 +1077,55 @@ def backup_upload(request, database_id=None):
                             print(f"❌ [DEBUG] Failed to create new progress record: {str(create_error)}")
                 except Exception as e:
                     print(f"❌ [DEBUG] Error updating progress: {str(e)}")
-            
+
             # بدء العملية
             print(f"\033[92m✅ بدء عملية الاستعادة - الملف: {uploaded_file.name}\033[0m")
             print(f"\033[94m🚀 بدء استعادة الملف: {uploaded_file.name}\033[0m")
-            
+
             # حفظ الملف
             file_path = os.path.join(settings.MEDIA_ROOT, 'backups', uploaded_file.name)
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            
+
             with open(file_path, 'wb+') as destination:
                 for chunk in uploaded_file.chunks():
                     destination.write(chunk)
-            
+
             print(f"\033[92m📁 تم حفظ الملف بنجاح\033[0m")
-            
+
             if clear_data:
                 print(f"\033[92m✅ تم تفعيل خيار حذف البيانات القديمة\033[0m")
             else:
                 print(f"\033[93m⚠️ لم يتم تفعيل خيار حذف البيانات القديمة\033[0m")
-            
+
             update_progress(status='processing', current_step='معالجة الملف...')
-            
+
             # تشغيل عملية الاستعادة في thread منفصل
             import threading
-            
+
             def run_restore():
                 try:
                     # استعادة النسخة الاحتياطية
                     result = None
                     if uploaded_file.name.lower().endswith('.json'):
-                        result = _restore_json_simple_with_progress(file_path, clear_existing=clear_data, 
+                        result = _restore_json_simple_with_progress(file_path, clear_existing=clear_data,
                                                     progress_callback=update_progress, session_id=session_id)
                     elif uploaded_file.name.lower().endswith('.gz'):
                         # التعامل مع الملفات المضغوطة
                         import gzip
                         import tempfile
-                        
+
                         update_progress(current_step='فك ضغط الملف...')
-                        
+
                         with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as temp_file:
                             temp_path = temp_file.name
-                        
+
                         try:
                             with gzip.open(file_path, 'rt', encoding='utf-8') as gz_file:
                                 content = gz_file.read()
-                            
+
                             with open(temp_path, 'w', encoding='utf-8') as json_file:
                                 json_file.write(content)
-                            
+
                             update_progress(current_step='استعادة البيانات من الملف المفكوك...')
                             result = _restore_json_simple_with_progress(temp_path, clear_existing=clear_data,
                                                         progress_callback=update_progress, session_id=session_id)
@@ -1134,15 +1134,15 @@ def backup_upload(request, database_id=None):
                                 os.unlink(temp_path)
                     else:
                         raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON أو JSON.GZ.")
-                    
+
                     # تحديث حالة قاعدة البيانات
                     database.status = True  # تغيير من 'connected' إلى True
                     database.error_message = None
                     database.save()
-                    
+
                     print(f"\033[92mتم تحديث قاعدة البيانات: {database.name}\033[0m")
                     print(f"\033[92mتم تنشيط قاعدة البيانات: {database.name}\033[0m")
-                    
+
                     # تحديث التقدم النهائي
                     if result:
                         update_progress(
@@ -1151,7 +1151,7 @@ def backup_upload(request, database_id=None):
                             current_step='اكتملت العملية بنجاح',
                             result_data=result
                         )
-                        
+
                         print(f"\033[92m🎉 تمت الاستعادة بنجاح!\033[0m")
                         print("=" * 50)
                         print(f"\033[92m✨ عملية الاستعادة اكتملت بنجاح! ✨\033[0m")
@@ -1162,7 +1162,7 @@ def backup_upload(request, database_id=None):
                             current_step='فشلت العملية',
                             error_message='لم يتم إرجاع نتيجة من عملية الاستعادة'
                         )
-                
+
                 except Exception as e:
                     error_msg = str(e)
                     print(f"\033[91m❌ خطأ في الاستعادة: {error_msg}\033[0m")
@@ -1178,7 +1178,7 @@ def backup_upload(request, database_id=None):
                             os.unlink(file_path)
                         except:
                             pass
-                    
+
                     # تأخير تنظيف الكاش لمدة 30 ثانية للسماح للواجهة بالحصول على النتيجة النهائية
                     def delayed_cleanup():
                         import time
@@ -1189,34 +1189,34 @@ def backup_upload(request, database_id=None):
                             print(f"✅ [DEBUG] Cleaned up cache for session {session_id} after 30 seconds")
                         except:
                             pass
-                    
+
                     # تشغيل التنظيف في thread منفصل
                     cleanup_thread = threading.Thread(target=delayed_cleanup, daemon=True)
                     cleanup_thread.start()
-            
+
             # بدء Thread
             restore_thread = threading.Thread(target=run_restore, daemon=True)
             restore_thread.start()
-            
+
             return JsonResponse({
                 'success': True,
                 'session_id': session_id,
                 'temp_token': temp_token
             })
-            
+
         except Exception as e:
             print(f"❌ [DEBUG] Main upload view error: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': f'حدث خطأ: {str(e)}'
             })
-    
+
     context = {
         'databases': databases,
         'database': database,
         'title': 'رفع نسخة احتياطية',
     }
-    
+
     return render(request, 'odoo_db_manager/backup_upload.html', context)
 
 @login_required
@@ -1695,11 +1695,11 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
         # تحديث إجمالي العناصر
         if progress_callback:
             progress_callback(total_items=total_items)
-        
+
         success_count = 0
         error_count = 0
         failed_items = []
-        
+
         # إنشاء ContentTypes المطلوبة
         update_progress(current_step='🔧 إعداد أنواع المحتوى المطلوبة...')
         required_content_types = [
@@ -1721,7 +1721,7 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
             ('accounts', 'branch'),
             ('accounts', 'salesperson'),
         ]
-        
+
         for app_label, model_name in required_content_types:
             try:
                 ContentType.objects.get_or_create(
@@ -1730,10 +1730,10 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                 )
             except Exception as e:
                 print(f"⚠️ تحذير: لم يتم إنشاء ContentType لـ {app_label}.{model_name}: {str(e)}")
-        
+
         # ترتيب البيانات حسب الأولوية لحل مشاكل المفاتيح الخارجية
         update_progress(current_step='🔄 ترتيب البيانات حسب الأولوية لحل المفاتيح الخارجية...')
-        
+
         # ترتيب محسن لحل مشاكل المفاتيح الخارجية
         priority_order = [
             # أولاً: النماذج الأساسية للنظام
@@ -1741,7 +1741,7 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
             'auth.user',
             'auth.group',
             'auth.permission',
-            
+
             # ثانياً: النماذج المرجعية (التي لا تعتمد على غيرها)
             'accounts.department',
             'accounts.branch',
@@ -1751,48 +1751,48 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
             'inventory.category',
             'inventory.brand',
             'inventory.warehouse',
-            
+
             # ثالثاً: النماذج التي تعتمد على المرجعية
             'customers.customer',          # بعد تصنيفات وأنواع العملاء
             'inventory.product',           # بعد الفئات والعلامات التجارية
-            
+
             # رابعاً: النماذج التي تعتمد على العملاء والمنتجات
             'orders.order',                # بعد العملاء
             'orders.orderitem',            # بعد الطلبات والمنتجات
             'inspections.inspection',      # بعد العملاء
             'installations.installationschedule',  # بعد العملاء
-            
+
             # خامساً: النماذج التكميلية
             'customers.customernote',      # بعد العملاء
             'inventory.stocktransaction',  # بعد المنتجات
             'reports.report',
-            
+
             # أخيراً: نماذج النظام
             'odoo_db_manager.database',
             'odoo_db_manager.backup',
             'odoo_db_manager.backupschedule',
             'odoo_db_manager.importlog',
         ]
-        
+
         # ترتيب البيانات
         sorted_data = []
         remaining_data = []
-        
+
         for model_name in priority_order:
             for item in data:
                 if item.get('model') == model_name:
                     sorted_data.append(item)
-        
+
         for item in data:
             if item not in sorted_data:
                 remaining_data.append(item)
-        
+
         final_data = sorted_data + remaining_data
-        
+
         # تنظيف البيانات القديمة إذا طُلب ذلك
         if clear_existing:
             update_progress(current_step='🗑️ حذف البيانات القديمة بترتيب آمن...')
-            
+
             # حفظ معلومات سجل التقدم الحالي قبل الحذف
             current_progress_data = None
             try:
@@ -1814,7 +1814,7 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                 }
             except RestoreProgress.DoesNotExist:
                 pass
-            
+
             # قائمة النماذج المحظورة من الحذف
             protected_models = {
                 'odoo_db_manager.restoreprogress',
@@ -1827,19 +1827,19 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                 'django_apscheduler.djangojob',
                 'django_apscheduler.djangojobexecution'
             }
-            
+
             # جمع النماذج المطلوب حذفها
             models_to_clear = set()
             for item in final_data:
                 model_name = item.get('model')
                 if model_name and model_name.lower() not in protected_models:
                     models_to_clear.add(model_name)
-            
+
             # حذف البيانات بترتيب عكسي لتجنب مشاكل المفاتيح الخارجية
             deletion_order = list(reversed(priority_order))
             deleted_models_count = 0
             total_models = len(models_to_clear)
-            
+
             for model_name in deletion_order:
                 if model_name in models_to_clear:
                     try:
@@ -1847,18 +1847,18 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                         model = apps.get_model(app_label, model_class)
                         deleted_count = model.objects.all().delete()[0]
                         deleted_models_count += 1
-                        
+
                         update_progress(
                             current_step=f'🗑️ حذف البيانات القديمة... ({deleted_models_count}/{total_models}) - {model_name}',
                             processed_items=0,
                             success_count=0,
                             error_count=0
                         )
-                        
+
                         print(f"✅ تم حذف {deleted_count} عنصر من {model_name}")
                     except Exception as e:
                         print(f"⚠️ خطأ في حذف بيانات {model_name}: {str(e)}")
-            
+
             # حذف النماذج المتبقية
             for model_name in models_to_clear:
                 if model_name not in deletion_order:
@@ -1867,18 +1867,18 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                         model = apps.get_model(app_label, model_class)
                         deleted_count = model.objects.all().delete()[0]
                         deleted_models_count += 1
-                        
+
                         update_progress(
                             current_step=f'🗑️ حذف البيانات المتبقية... ({deleted_models_count}/{total_models}) - {model_name}',
                             processed_items=0,
                             success_count=0,
                             error_count=0
                         )
-                        
+
                         print(f"✅ تم حذف {deleted_count} عنصر من {model_name}")
                     except Exception as e:
                         print(f"⚠️ خطأ في حذف بيانات {model_name}: {str(e)}")
-            
+
             # إعادة إنشاء سجل التقدم إذا تم حذفه
             if current_progress_data:
                 try:
@@ -1888,7 +1888,7 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                         from accounts.models import User
                         user = User.objects.get(id=current_progress_data['user_id'])
                         database = Database.objects.get(id=current_progress_data['database_id'])
-                        
+
                         RestoreProgress.objects.create(
                             session_id=current_progress_data['session_id'],
                             user=user,
@@ -1906,10 +1906,10 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                         )
                     except Exception as recreate_error:
                         print(f"❌ فشل في إعادة إنشاء سجل التقدم: {str(recreate_error)}")
-        
+
         # تعطيل فحص المفاتيح الخارجية مؤقتاً (PostgreSQL)
         update_progress(current_step='🔧 تحضير قاعدة البيانات للاستعادة الشاملة...')
-        
+
         foreign_key_checks_disabled = False
         try:
             with connection.cursor() as cursor:
@@ -1919,12 +1919,12 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                 print("✅ تم تعطيل فحص المفاتيح الخارجية مؤقتاً")
         except Exception as e:
             print(f"⚠️ لم يتم تعطيل فحص المفاتيح الخارجية: {str(e)}")
-        
+
         # بدء عملية الاستعادة
         update_progress(current_step='🔄 بدء استعادة البيانات الشاملة...', processed_items=0, success_count=0, error_count=0)
-        
+
         print(f"🚀 بدء عملية الاستعادة الشاملة لـ {total_items} عنصر")
-        
+
         # استعادة البيانات مع معالجة محسنة للأخطاء
         for idx, item in enumerate(final_data):
             try:
@@ -1936,26 +1936,26 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                         success_count=success_count,
                         error_count=error_count
                     )
-                
+
                 # تنظيف البيانات المشكوك فيها
                 model_name = item.get('model', '')
                 fields = item.get('fields', {})
-                
+
                 # إصلاح مشاكل البيانات الشائعة
                 if model_name == 'accounts.systemsettings':
                     # إصلاح إعدادات النظام
                     if 'default_currency' in fields:
                         default_curr = fields.pop('default_currency', 'SAR')
                         fields['currency'] = default_curr
-                    
+
                     # إزالة الحقول القديمة
                     old_fields = ['timezone', 'date_format', 'time_format']
                     for field in old_fields:
                         if field in fields:
                             fields.pop(field, None)
-                    
+
                     item['fields'] = fields
-                
+
                 # إصلاح مشاكل البيانات المنطقية
                 for field_name, field_value in fields.items():
                     if isinstance(field_value, str):
@@ -1965,7 +1965,7 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                             fields[field_name] = True
                         elif field_value == 'disconnected':
                             fields[field_name] = False
-                
+
                 # معالجة خاصة للمفاتيح الخارجية المفقودة
                 if model_name == 'customers.customer':
                     # إنشاء تصنيف افتراضي إذا كان مفقود
@@ -1982,16 +1982,16 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                                 description="تصنيف تم إنشاؤه تلقائياً أثناء الاستعادة"
                             )
                             print(f"✅ تم إنشاء تصنيف افتراضي: {default_category.name}")
-                
+
                 # محاولة استعادة العنصر
                 try:
                     with transaction.atomic():
                         item_json = json.dumps([item])
                         for deserialized_obj in serializers.deserialize('json', item_json):
                             deserialized_obj.save()
-                    
+
                     success_count += 1
-                    
+
                 except Exception as item_error:
                     error_count += 1
                     error_msg = str(item_error)
@@ -2001,11 +2001,11 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                         'error': error_msg[:200] + ('...' if len(error_msg) > 200 else ''),
                         'pk': item.get('pk', 'غير محدد')
                     })
-                    
+
                     # طباعة تفاصيل الأخطاء الأولى فقط
                     if error_count <= 10:
                         print(f"❌ خطأ في العنصر {idx + 1} ({model_name}): {error_msg[:100]}...")
-                    
+
             except Exception as e:
                 error_count += 1
                 failed_items.append({
@@ -2014,7 +2014,7 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                     'error': str(e)[:200],
                     'pk': 'غير محدد'
                 })
-        
+
         # إعادة تفعيل فحص المفاتيح الخارجية
         if foreign_key_checks_disabled:
             try:
@@ -2023,7 +2023,7 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                 print("✅ تم إعادة تفعيل فحص المفاتيح الخارجية")
             except Exception as e:
                 print(f"⚠️ خطأ في إعادة تفعيل فحص المفاتيح الخارجية: {str(e)}")
-        
+
         # تحديث نهائي
         success_rate = (success_count / total_items * 100) if total_items > 0 else 0
         update_progress(
@@ -2032,7 +2032,7 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
             success_count=success_count,
             error_count=error_count
         )
-        
+
         # طباعة ملخص مفصل
         print(f"\n{'='*60}")
         print(f"📊 ملخص عملية الاستعادة الشاملة:")
@@ -2042,15 +2042,15 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
         print(f"✅ تمت الاستعادة بنجاح: {success_count}")
         print(f"❌ فشلت: {error_count}")
         print(f"📊 نسبة النجاح: {success_rate:.1f}%")
-        
+
         if failed_items:
             print(f"\n❌ تفاصيل الأخطاء (أول 10 أخطاء):")
             for i, error in enumerate(failed_items[:10], 1):
                 print(f"  {i}. العنصر {error['index']} ({error['model']} - PK: {error['pk']})")
                 print(f"     الخطأ: {error['error']}")
-        
+
         print(f"{'='*60}")
-        
+
         # إنشاء تقرير مفصل
         detailed_report = {
             'total_items': total_items,
@@ -2063,21 +2063,21 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
             'is_comprehensive': True,
             'foreign_keys_handled': True
         }
-        
+
         return detailed_report
-        
+
     except Exception as e:
         error_msg = f'❌ خطأ في عملية الاستعادة الشاملة: {str(e)}'
         update_progress(current_step=error_msg)
         print(f"\n{error_msg}")
-        
+
         # إعادة تفعيل فحص المفاتيح الخارجية في حالة الخطأ
         try:
             with connection.cursor() as cursor:
                 cursor.execute("SET session_replication_role = DEFAULT;")
         except:
             pass
-            
+
         raise e
 
 
@@ -2242,18 +2242,18 @@ def database_register(request):
             import json
             data = json.loads(request.body)
             db_name = data.get('name')
-            
+
             if not db_name:
                 return JsonResponse({'success': False, 'message': 'اسم قاعدة البيانات مطلوب'})
-            
+
             # التحقق من عدم وجود قاعدة البيانات مسبقاً
             if Database.objects.filter(name=db_name).exists():
                 return JsonResponse({'success': False, 'message': 'قاعدة البيانات مسجلة بالفعل'})
-            
+
             # الحصول على معلومات الاتصال الافتراضية من Django settings
             from django.conf import settings
             default_db = settings.DATABASES['default']
-            
+
             # إنشاء معلومات الاتصال
             connection_info = {
                 'ENGINE': 'django.db.backends.postgresql',
@@ -2263,7 +2263,7 @@ def database_register(request):
                 'PASSWORD': default_db.get('PASSWORD', ''),
                 'NAME': db_name,
             }
-            
+
             # إنشاء سجل قاعدة البيانات
             database = Database.objects.create(
                 name=db_name,
@@ -2271,16 +2271,16 @@ def database_register(request):
                 connection_info=connection_info,
                 status=True,  # نفترض أنها متاحة لأنها مكتشفة
             )
-            
+
             return JsonResponse({
-                'success': True, 
+                'success': True,
                 'message': f'تم تسجيل قاعدة البيانات "{db_name}" بنجاح',
                 'database_id': database.id
             })
-            
+
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'حدث خطأ: {str(e)}'})
-    
+
     return JsonResponse({'success': False, 'message': 'طريقة غير مسموحة'})
 
 @login_required
@@ -2292,7 +2292,7 @@ def database_refresh_status(request):
             database_service = DatabaseService()
             databases = Database.objects.all()
             updated_count = 0
-            
+
             for db in databases:
                 try:
                     success, message = database_service.test_connection(db.connection_info)
@@ -2307,19 +2307,19 @@ def database_refresh_status(request):
                         db.error_message = str(e)
                         db.save()
                         updated_count += 1
-            
+
             return JsonResponse({
                 'success': True,
                 'message': f'تم تحديث حالة {updated_count} قاعدة بيانات',
                 'updated_count': updated_count
             })
-            
+
         except Exception as e:
             return JsonResponse({
                 'success': False,
                 'message': f'حدث خطأ: {str(e)}'
             })
-    
+
     return JsonResponse({'success': False, 'message': 'طريقة غير مسموحة'})
 
 
@@ -2328,7 +2328,7 @@ def _create_default_user(database):
     try:
         import psycopg2
         from django.contrib.auth.hashers import make_password
-        
+
         # الاتصال بقاعدة البيانات الجديدة
         conn = psycopg2.connect(
             dbname=database.connection_info.get('NAME'),
@@ -2342,44 +2342,44 @@ def _create_default_user(database):
           # التحقق من وجود جدول المستخدمين
         cursor.execute("""
             SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
+                SELECT FROM information_schema.tables
+                WHERE table_schema = 'public'
                 AND table_name = 'accounts_user'
             );
         """)
-        
+
         table_exists = cursor.fetchone()
         if not table_exists or not table_exists[0]:
             print("جدول المستخدمين غير موجود في قاعدة البيانات الجديدة")
             cursor.close()
             conn.close()
             return False
-        
+
         # التحقق من عدد الأعمدة في الجدول للتأكد من اكتمال الـ migrations
         cursor.execute("""
-            SELECT COUNT(*) FROM information_schema.columns 
-            WHERE table_schema = 'public' 
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema = 'public'
             AND table_name = 'accounts_user'
         """)
-        
+
         column_count = cursor.fetchone()
         if not column_count or column_count[0] < 10:  # نتوقع على الأقل 10 أعمدة
             print("جدول المستخدمين غير مكتمل، migrations لم تطبق بالكامل")
             cursor.close()
             conn.close()
             return False
-        
+
         # التحقق من عدم وجود مستخدم admin مسبقاً
         cursor.execute("SELECT COUNT(*) FROM accounts_user WHERE username = %s", ('admin',))
         admin_result = cursor.fetchone()
         admin_exists = admin_result and admin_result[0] > 0
-        
+
         if admin_exists:
             print("المستخدم admin موجود بالفعل")
             cursor.close()
             conn.close()
             return False
-        
+
         # إنشاء كلمة مرور مُشفرة
         hashed_password = make_password('admin123')
           # إدراج المستخدم الجديد
@@ -2388,15 +2388,15 @@ def _create_default_user(database):
                 username, password, email, first_name, last_name,
                 is_staff, is_active, is_superuser, date_joined
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, ('admin', hashed_password, 'admin@example.com', 'مدير', 'النظام', 
-              True, True, True, timezone.now()))        
+        """, ('admin', hashed_password, 'admin@example.com', 'مدير', 'النظام',
+              True, True, True, timezone.now()))
         conn.commit()
         cursor.close()
         conn.close()
-        
+
         print("تم إنشاء المستخدم admin بنجاح")
         return True
-        
+
     except Exception as e:
         print(f"خطأ في إنشاء المستخدم admin: {str(e)}")
         return False
@@ -2407,11 +2407,11 @@ def _apply_migrations_to_database(database):
         import subprocess
         import os
         from django.conf import settings
-        
+
         # إنشاء DATABASE_URL للقاعة الجديدة
         conn_info = database.connection_info
         database_url = f"postgres://{conn_info.get('USER')}:{conn_info.get('PASSWORD')}@{conn_info.get('HOST', 'localhost')}:{conn_info.get('PORT', '5432')}/{conn_info.get('NAME')}"
-        
+
         # تطبيق migrations في قاعدة البيانات الجديدة
         env = os.environ.copy()
         env['DATABASE_URL'] = database_url
@@ -2419,7 +2419,7 @@ def _apply_migrations_to_database(database):
         migrate_cmd = [
             'python', 'manage.py', 'migrate', '--fake-initial'
         ]
-        
+
         result = subprocess.run(
             migrate_cmd,
             env=env,
@@ -2428,7 +2428,7 @@ def _apply_migrations_to_database(database):
             encoding='utf-8',
             errors='ignore',
             cwd=settings.BASE_DIR        )
-        
+
         if result.returncode == 0:
             print(f"تم تطبيق migrations في قاعدة البيانات {database.name} بنجاح")
             return True
@@ -2440,7 +2440,7 @@ def _apply_migrations_to_database(database):
                 print("خطأ django_apscheduler - سيتم تجاهله")
                 return True  # نعتبر العملية ناجحة رغم خطأ django_apscheduler
             return False
-            
+
     except Exception as e:
         print(f"خطأ في تطبيق migrations: {str(e)}")
         return False
@@ -2449,25 +2449,25 @@ def _apply_migrations_to_database(database):
 @user_passes_test(is_staff_or_superuser)
 def restore_progress_stream(request, session_id):
     """Server-Sent Events endpoint لإرسال تحديثات التقدم"""
-    
+
     def event_stream():
         """دالة لإرسال تحديثات التقدم"""
         last_update = None
-        
+
         while True:
             try:
                 # الحصول على تحديث التقدم
                 progress = RestoreProgress.objects.filter(session_id=session_id).first()
-                
+
                 if not progress:
                     # إرسال رسالة خطأ وإنهاء الاتصال
                     yield f"data: {json.dumps({'error': 'الجلسة غير موجودة'})}\n\n"
                     break
-                
+
                 # التحقق من وجود تحديث جديد
                 if last_update is None or progress.updated_at > last_update:
                     last_update = progress.updated_at
-                    
+
                     # إعداد البيانات للإرسال
                     data = {
                         'status': progress.status,
@@ -2481,20 +2481,20 @@ def restore_progress_stream(request, session_id):
                         'result_data': progress.result_data,
                         'updated_at': progress.updated_at.isoformat()
                     }
-                    
+
                     yield f"data: {json.dumps(data)}\n\n"
-                    
+
                     # إنهاء الاتصال إذا انتهت العملية
                     if progress.status in ['completed', 'failed']:
                         break
-                
+
                 # انتظار قبل التحقق مرة أخرى
                 time.sleep(1)
-                
+
             except Exception as e:
                 yield f"data: {json.dumps({'error': str(e)})}\n\n"
                 break
-    
+
     response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
@@ -2508,18 +2508,18 @@ def restore_progress_status(request, session_id):
     الحصول على حالة تقدم الاستعادة عبر AJAX
     """
     print(f"🔍 [DEBUG] restore_progress_status called for session: {session_id}")
-    
+
     try:
         # البحث عن جلسة الاستعادة أولاً
         progress = RestoreProgress.objects.filter(session_id=session_id).first()
-        
+
         if not progress:
             print(f"❌ [DEBUG] Progress not found for session: {session_id}")
             return JsonResponse({'error': 'الجلسة غير موجودة'}, status=404)
-        
+
         print(f"✅ [DEBUG] Progress found for session: {session_id}")
         print(f"✅ [DEBUG] Progress status: {progress.status} - {progress.progress_percentage}%")
-        
+
         # إعداد البيانات للإرسال
         data = {
             'status': progress.status,
@@ -2534,9 +2534,9 @@ def restore_progress_status(request, session_id):
             'updated_at': progress.updated_at.isoformat(),
             'session_valid': True
         }
-        
+
         return JsonResponse(data)
-        
+
     except Exception as e:
         print(f"❌ [DEBUG] Error in restore_progress_status: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -2552,18 +2552,18 @@ def generate_temp_token(request):
         print(f"🔍 [DEBUG] User: {request.user}")
         print(f"🔍 [DEBUG] User is_staff: {getattr(request.user, 'is_staff', False)}")
         print(f"🔍 [DEBUG] User is_superuser: {getattr(request.user, 'is_superuser', False)}")
-        
+
         # التحقق من تسجيل الدخول
         if not request.user.is_authenticated:
             print("❌ [DEBUG] User not authenticated")
             return JsonResponse({'error': 'يجب تسجيل الدخول أولاً'}, status=401)
-        
+
         if not (request.user.is_staff or request.user.is_superuser):
             print("❌ [DEBUG] User not staff or superuser")
             return JsonResponse({
                 'error': 'ليس لديك صلاحية للقيام بهذا الإجراء'
             }, status=403)
-        
+
         # إنشاء رمز مميز
         temp_token = secrets.token_urlsafe(32)
         cache.set(f'temp_token_{temp_token}', request.user.id, 10800)  # 3 ساعات
@@ -2586,14 +2586,14 @@ def refresh_session(request):
         print(f"🔍 [DEBUG] Request method: {request.method}")
         print(f"🔍 [DEBUG] Request path: {request.path}")
         print(f"🔍 [DEBUG] Request body: {request.body}")
-        
+
         data = json.loads(request.body)
         temp_token = data.get('temp_token')
         print(f"🔍 [DEBUG] temp_token received: {temp_token[:10] if temp_token else 'None'}...")
 
         if not temp_token:
             return JsonResponse({
-                'success': False, 
+                'success': False,
                 'message': 'الرمز المؤقت مفقود'
             }, status=400)
 
@@ -2603,7 +2603,7 @@ def refresh_session(request):
         if not user_id:
             print(f"❌ [DEBUG] temp_token not found in cache")
             return JsonResponse({
-                'success': False, 
+                'success': False,
                 'message': 'الرمز المؤقت غير صالح أو منتهي الصلاحية'
             }, status=403)
 
@@ -2613,10 +2613,10 @@ def refresh_session(request):
             # المستخدم قد يكون محذوف أثناء عملية الاستعادة
             # في هذه الحالة، نسمح بالمتابعة بدون مستخدم فعلي
             user = None
-        
+
         # لا تقم بتسجيل الدخول هنا، لتجنب التعارض مع عملية الاستعادة
         # login(request, user)
-        
+
         # إنشاء رمز API جديد للاستخدام المتعدد
         api_token = secrets.token_urlsafe(32)
         # استخدام user_id بدلاً من user.id لتجنب خطأ NoneType
