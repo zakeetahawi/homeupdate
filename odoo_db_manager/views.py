@@ -508,10 +508,12 @@ def database_delete(request, pk):
 @login_required
 @user_passes_test(is_staff_or_superuser)
 def backup_create(request, database_id=None):
-    """إنشاء نسخة احتياطية"""
+    """إنشاء نسخة احتياطية مضغوطة"""
     import os
     import shutil
     import datetime
+    import gzip
+    import json
 
     # الحصول على قاعدة البيانات
     database = None
@@ -560,13 +562,22 @@ def backup_create(request, database_id=None):
                 backup_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
                 os.makedirs(backup_dir, exist_ok=True)
 
-                # إنشاء مسار ملف النسخة الاحتياطية
-                backup_file = os.path.join(backup_dir, f"{name}.sqlite3")
-                print(f"مسار ملف النسخة الاحتياطية: {backup_file}")
+                # إنشاء مسار ملف النسخة الاحتياطية المضغوط
+                backup_file = os.path.join(backup_dir, f"{name}.sqlite3.gz")
+                print(f"مسار ملف النسخة الاحتياطية المضغوط: {backup_file}")
 
-                # نسخ ملف قاعدة البيانات
-                shutil.copy2(db_file, backup_file)
-                print(f"تم نسخ ملف قاعدة البيانات بنجاح إلى: {backup_file}")
+                # ضغط ملف قاعدة البيانات إلى .gz
+                original_size = os.path.getsize(db_file)
+                with open(db_file, 'rb') as f_in:
+                    with gzip.open(backup_file, 'wb', compresslevel=9) as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+
+                compressed_size = os.path.getsize(backup_file)
+                compression_ratio = ((original_size - compressed_size) / original_size * 100) if original_size > 0 else 0
+                print(f"تم ضغط ملف قاعدة البيانات بنجاح:")
+                print(f"  الحجم الأصلي: {original_size:,} بايت")
+                print(f"  الحجم المضغوط: {compressed_size:,} بايت")
+                print(f"  نسبة الضغط: {compression_ratio:.1f}%")
 
                 # إنشاء سجل النسخة الاحتياطية في قاعدة البيانات
                 backup = Backup.objects.create(
@@ -574,6 +585,7 @@ def backup_create(request, database_id=None):
                     database=db,
                     backup_type=backup_type,
                     file_path=backup_file,
+                    size=compressed_size,
                     created_by=request.user
                 )
                 print(f"تم إنشاء سجل النسخة الاحتياطية بنجاح: {backup.id}")
@@ -587,17 +599,14 @@ def backup_create(request, database_id=None):
                 backup_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
                 os.makedirs(backup_dir, exist_ok=True)
 
-                # إنشاء ملف JSON باستخدام Django dumpdata
-                backup_file = os.path.join(backup_dir, f"{name}.json")
-                print(f"🔄 إنشاء نسخة احتياطية JSON: {backup_file}")
+                # إنشاء ملف JSON مضغوط باستخدام Django dumpdata
+                backup_file = os.path.join(backup_dir, f"{name}.json.gz")
+                print(f"🔄 إنشاء نسخة احتياطية JSON مضغوطة: {backup_file}")
 
                 try:
                     # استخدام Django dumpdata لإنشاء النسخة الاحتياطية
                     from django.core.management import call_command
                     from io import StringIO
-
-                    # إنشاء buffer لحفظ البيانات
-                    output = StringIO()
 
                     # تحديد التطبيقات المراد نسخها حسب نوع النسخة الاحتياطية
                     if backup_type == 'customers':
@@ -607,11 +616,12 @@ def backup_create(request, database_id=None):
                     elif backup_type == 'settings':
                         apps_to_backup = ['odoo_db_manager']
                     else:  # full
-                        apps_to_backup = ['customers', 'orders', 'inspections', 'inventory', 'installations', 'manufacturing', 'accounts', 'odoo_db_manager']                    # تنفيذ dumpdata مع معالجة مشاكل الترميز
-                    import os
+                        apps_to_backup = ['customers', 'orders', 'inspections', 'inventory', 'installations', 'manufacturing', 'accounts', 'odoo_db_manager']
+
+                    # تنفيذ dumpdata مع معالجة مشاكل الترميز والضغط المباشر
                     import tempfile
 
-                    # إنشاء ملف مؤقت
+                    # إنشاء ملف مؤقت غير مضغوط
                     with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False, suffix='.json') as temp_file:
                         temp_path = temp_file.name
 
@@ -621,18 +631,25 @@ def backup_create(request, database_id=None):
                             call_command('dumpdata', *apps_to_backup, stdout=temp_output,
                                        format='json', indent=2, verbosity=0)
 
-                        # نسخ من الملف المؤقت إلى الملف النهائي
-                        with open(temp_path, 'r', encoding='utf-8') as temp_input:
-                            with open(backup_file, 'w', encoding='utf-8') as final_output:
-                                final_output.write(temp_input.read())
+                        # قراءة الملف المؤقت وضغطه مباشرة
+                        original_size = os.path.getsize(temp_path)
+                        with open(temp_path, 'rb') as temp_input:
+                            with gzip.open(backup_file, 'wb', compresslevel=9) as compressed_output:
+                                shutil.copyfileobj(temp_input, compressed_output)
 
                     finally:
                         # حذف الملف المؤقت
                         if os.path.exists(temp_path):
                             os.unlink(temp_path)
 
-                    print(f"تم إنشاء ملف النسخة الاحتياطية: {backup_file}")
-                    print(f"حجم الملف: {os.path.getsize(backup_file)} بايت")
+                    compressed_size = os.path.getsize(backup_file)
+                    compression_ratio = ((original_size - compressed_size) / original_size * 100) if original_size > 0 else 0
+
+                    print(f"تم إنشاء ملف النسخة الاحتياطية المضغوط: {backup_file}")
+                    print(f"الحجم الأصلي: {original_size:,} بايت")
+                    print(f"الحجم المضغوط: {compressed_size:,} بايت")
+                    print(f"نسبة الضغط: {compression_ratio:.1f}%")
+                    print(f"المساحة الموفرة: {original_size - compressed_size:,} بايت")
 
                     # إنشاء سجل النسخة الاحتياطية في قاعدة البيانات
                     backup = Backup.objects.create(
@@ -640,7 +657,7 @@ def backup_create(request, database_id=None):
                         database=db,
                         backup_type=backup_type,
                         file_path=backup_file,
-                        size=os.path.getsize(backup_file),
+                        size=compressed_size,
                         created_by=request.user
                     )
                     print(f"تم إنشاء سجل النسخة الاحتياطية بنجاح: {backup.id}")
@@ -893,7 +910,7 @@ def backup_delete(request, pk):
 @login_required
 @user_passes_test(is_staff_or_superuser)
 def backup_download(request, pk):
-    """تحميل ملف النسخة الاحتياطية مع ضغط تلقائي لملفات JSON"""
+    """تحميل ملف النسخة الاحتياطية المضغوط"""
     import mimetypes
     import gzip
     import tempfile
@@ -918,51 +935,50 @@ def backup_download(request, pk):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     try:
-        # قراءة الملف الأصلي
+        # قراءة الملف مباشرة (يجب أن يكون مضغوطاً مسبقاً)
         with open(backup.file_path, 'rb') as f:
-            original_data = f.read()
+            file_data = f.read()
 
-        # تحديد إذا كان الملف يحتاج ضغط
-        if filename.endswith('.json'):
-            # ضغط ملف JSON إلى GZ
+        # تحديد اسم الملف للتحميل
+        if filename.endswith('.gz'):
+            # ملف مضغوط أصلاً - استخدمه كما هو
+            safe_filename = f"{filename.replace('.gz', '')}_{timestamp}.gz"
+            print(f"📦 تحميل ملف مضغوط مسبقاً: {filename}")
+            print(f"📊 حجم الملف المضغوط: {file_size:,} بايت")
+        elif filename.endswith('.json'):
+            # ملف JSON غير مضغوط - اضغطه الآن
             print(f"🗜️ ضغط ملف JSON: {filename}")
-
-            compressed_data = gzip.compress(original_data)
+            original_size = len(file_data)
+            compressed_data = gzip.compress(file_data, compresslevel=9)
             file_data = compressed_data
+            safe_filename = f"{filename.replace('.json', '')}_{timestamp}.gz"
 
-            # تحديد اسم الملف المضغوط
-            base_name = filename.replace('.json', '')
-            safe_filename = f"{base_name}_{timestamp}.gz"
-
-            print(f"📊 حجم الملف الأصلي: {len(original_data)} bytes")
-            print(f"📊 حجم الملف المضغوط: {len(compressed_data)} bytes")
-            print(f"📊 نسبة الضغط: {((len(original_data) - len(compressed_data)) / len(original_data) * 100):.1f}%")
-
-        elif filename.endswith('.gz'):
-            # ملف مضغوط أصلاً
-            file_data = original_data
-            base_name = filename.replace('.gz', '')
-            safe_filename = f"{base_name}_{timestamp}.gz"
-            print(f"📦 ملف مضغوط أصلاً: {filename}")
-
+            compression_ratio = ((original_size - len(compressed_data)) / original_size * 100) if original_size > 0 else 0
+            print(f"📊 حجم الملف الأصلي: {original_size:,} بايت")
+            print(f"📊 حجم الملف المضغوط: {len(compressed_data):,} بايت")
+            print(f"📊 نسبة الضغط: {compression_ratio:.1f}%")
         else:
-            # ملفات أخرى - ضغطها أيضاً
-            compressed_data = gzip.compress(original_data)
+            # ملفات أخرى - اضغطها
+            print(f"🗜️ ضغط ملف: {filename}")
+            original_size = len(file_data)
+            compressed_data = gzip.compress(file_data, compresslevel=9)
             file_data = compressed_data
             safe_filename = f"backup_{timestamp}.gz"
-            print(f"🗜️ ضغط ملف آخر: {filename}")
+
+            compression_ratio = ((original_size - len(compressed_data)) / original_size * 100) if original_size > 0 else 0
+            print(f"📊 نسبة الضغط: {compression_ratio:.1f}%")
 
         # إزالة المسافات والأحرف الخاصة
         safe_filename = safe_filename.replace(' ', '_').replace(',', '_').replace('(', '').replace(')', '')
 
         # إنشاء الاستجابة مع headers محسنة للملفات المضغوطة
-        response = HttpResponse(file_data, content_type='application/octet-stream')
+        response = HttpResponse(file_data, content_type='application/gzip')
 
         # إعداد headers لإجبار التحميل كملف مضغوط
         encoded_filename = urllib.parse.quote(safe_filename.encode('utf-8'))
         response['Content-Disposition'] = f'attachment; filename="{safe_filename}"; filename*=UTF-8\'\'{encoded_filename}'
         response['Content-Length'] = len(file_data)
-        response['Content-Type'] = 'application/octet-stream'
+        response['Content-Type'] = 'application/gzip'
 
         # headers إضافية لمنع فتح الملف في المتصفح
         response['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
@@ -1562,8 +1578,10 @@ def scheduler_status(request):
 
 
 def _restore_json_simple(file_path, clear_existing=False):
-    """استعادة ملف JSON بطريقة محسنة"""
+    """استعادة ملف JSON بطريقة محسنة مع دعم الملفات المضغوطة"""
     import json
+    import gzip
+    import os
     from django.core import serializers
     from django.apps import apps
     from django.db import transaction
@@ -1576,11 +1594,17 @@ def _restore_json_simple(file_path, clear_existing=False):
     }
 
     try:
-        if file_path.lower().endswith('.gz'):
-            raise ValueError("هذا ملف مضغوط (.gz). يجب فك ضغطه أولاً قبل استدعاء هذه الدالة.")
+        # دعم الملفات المضغوطة والعادية
+        print(f"🔄 قراءة ملف الاستعادة: {file_path}")
 
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        if file_path.lower().endswith('.gz'):
+            print("📦 فك ضغط ملف .gz...")
+            with gzip.open(file_path, 'rt', encoding='utf-8') as f:
+                data = json.load(f)
+            print("✅ تم فك ضغط الملف بنجاح")
+        else:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
         if not isinstance(data, list):
             if isinstance(data, dict):
                 if 'private_key' in data and 'client_email' in data and 'project_id' in data:
@@ -1719,8 +1743,11 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
     """
     استعادة البيانات من ملف JSON مع دعم شريط التقدم المحسن
     وحل مشاكل المفاتيح الخارجية للحصول على استعادة شاملة 100%
+    مع دعم الملفات المضغوطة .gz
     """
     import json
+    import gzip
+    import os
     from django.core import serializers
     from django.db import transaction, connection
     from django.apps import apps
@@ -1752,9 +1779,17 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
 
         update_progress(current_step='📖 قراءة وتحليل الملف...')
 
-        # قراءة الملف
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # قراءة الملف مع دعم الملفات المضغوطة
+        print(f"🔄 قراءة ملف الاستعادة: {file_path}")
+
+        if file_path.lower().endswith('.gz'):
+            print("📦 فك ضغط ملف .gz...")
+            with gzip.open(file_path, 'rt', encoding='utf-8') as f:
+                data = json.load(f)
+            print("✅ تم فك ضغط الملف بنجاح")
+        else:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
 
         # التحقق من صحة البيانات
         if not isinstance(data, list):

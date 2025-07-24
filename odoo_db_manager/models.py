@@ -425,6 +425,36 @@ class Backup(models.Model):
                 return f"{size:.1f} {unit}"
             size /= 1024.0
         return f"{size:.1f} TB"
+
+    @property
+    def is_compressed(self):
+        """تحديد ما إذا كان الملف مضغوط"""
+        return self.file_path.lower().endswith('.gz')
+
+    @property
+    def file_type_display(self):
+        """عرض نوع الملف"""
+        if self.is_compressed:
+            if '.json.gz' in self.file_path.lower():
+                return 'JSON مضغوط (GZ)'
+            elif '.sqlite3.gz' in self.file_path.lower():
+                return 'SQLite مضغوط (GZ)'
+            else:
+                return 'ملف مضغوط (GZ)'
+        elif self.file_path.lower().endswith('.json'):
+            return 'JSON'
+        elif self.file_path.lower().endswith('.sqlite3'):
+            return 'SQLite'
+        else:
+            return 'غير محدد'
+
+    @property
+    def compression_info(self):
+        """معلومات الضغط"""
+        if self.is_compressed:
+            return "✅ مضغوط - يوفر مساحة أكبر"
+        else:
+            return "⚠️ غير مضغوط"
 class BackupSchedule(models.Model):
     """نموذج جدولة النسخ الاحتياطية"""
     FREQUENCY_CHOICES = [
@@ -621,7 +651,7 @@ class GoogleDriveConfig(models.Model):
 
 class RestoreProgress(models.Model):
     """نموذج لتتبع تقدم عملية الاستعادة"""
-    
+
     STATUS_CHOICES = [
         ('starting', 'بدء العملية'),
         ('reading_file', 'قراءة الملف'),
@@ -630,13 +660,13 @@ class RestoreProgress(models.Model):
         ('completed', 'مكتملة'),
         ('failed', 'فشلت'),
     ]
-    
+
     session_id = models.CharField(
         max_length=100,
         unique=True,
         verbose_name='معرف الجلسة'
     )
-    
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -644,7 +674,7 @@ class RestoreProgress(models.Model):
         blank=True,
         verbose_name='المستخدم'
     )
-    
+
     database = models.ForeignKey(
         Database,
         on_delete=models.SET_NULL,
@@ -652,81 +682,81 @@ class RestoreProgress(models.Model):
         blank=True,
         verbose_name='قاعدة البيانات'
     )
-    
+
     filename = models.CharField(
         max_length=255,
         verbose_name='اسم الملف'
     )
-    
+
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='starting',
         verbose_name='الحالة'
     )
-    
+
     total_items = models.IntegerField(
         default=0,
         verbose_name='إجمالي العناصر'
     )
-    
+
     processed_items = models.IntegerField(
         default=0,
         verbose_name='العناصر المعالجة'
     )
-    
+
     success_count = models.IntegerField(
         default=0,
         verbose_name='عدد النجاح'
     )
-    
+
     error_count = models.IntegerField(
         default=0,
         verbose_name='عدد الأخطاء'
     )
-    
+
     current_step = models.CharField(
         max_length=255,
         blank=True,
         verbose_name='الخطوة الحالية'
     )
-    
+
     progress_percentage = models.FloatField(
         default=0.0,
         verbose_name='نسبة التقدم'
     )
-    
+
     error_message = models.TextField(
         blank=True,
         null=True,
         verbose_name='رسالة الخطأ'
     )
-    
+
     result_data = models.JSONField(
         blank=True,
         null=True,
         verbose_name='بيانات النتيجة'
     )
-    
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='تاريخ الإنشاء'
     )
-    
+
     updated_at = models.DateTimeField(
         auto_now=True,
         verbose_name='تاريخ التحديث'
     )
-    
+
     class Meta:
         verbose_name = 'تقدم الاستعادة'
         verbose_name_plural = 'تقدم الاستعادة'
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f'استعادة {self.filename} - {self.get_status_display()}'
-    
-    def update_progress(self, status=None, processed_items=None, current_step=None, 
+
+    def update_progress(self, status=None, processed_items=None, current_step=None,
                        success_count=None, error_count=None, error_message=None):
         """تحديث تقدم العملية"""
         try:
@@ -742,19 +772,19 @@ class RestoreProgress(models.Model):
                 self.error_count = error_count
             if error_message:
                 self.error_message = error_message
-            
+
             # حساب نسبة التقدم
             if self.total_items > 0 and self.processed_items is not None:
                 self.progress_percentage = (self.processed_items / self.total_items) * 100
             else:
                 self.progress_percentage = 0.0
-            
+
             # التأكد من أن النسبة لا تتجاوز 100%
             if self.progress_percentage > 100:
                 self.progress_percentage = 100.0
-            
+
             self.save()
-            
+
         except Exception as e:
             # في حالة فشل التحديث، نطبع الخطأ ونستمر
             print(f"خطأ في تحديث التقدم: {str(e)}")
@@ -767,7 +797,7 @@ class RestoreProgress(models.Model):
                 self.save(update_fields=['status', 'current_step', 'updated_at'])
             except:
                 pass  # إذا فشل حتى هذا، نتجاهل الخطأ
-    
+
     def set_completed(self, result_data=None):
         """تعيين العملية كمكتملة"""
         self.status = 'completed'
@@ -776,7 +806,7 @@ class RestoreProgress(models.Model):
         if result_data:
             self.result_data = result_data
         self.save()
-    
+
     def set_failed(self, error_message):
         """تعيين العملية كفاشلة"""
         self.status = 'failed'

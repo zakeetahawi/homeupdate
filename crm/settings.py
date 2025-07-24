@@ -254,7 +254,7 @@ STATICFILES_FINDERS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# إعدادات النسخ الاحتياطي
+# إعدادات النسخ الاحتياطي المحسنة مع الضغط
 BACKUP_ROOT = os.path.join(BASE_DIR, 'backups')
 os.makedirs(BACKUP_ROOT, exist_ok=True)
 
@@ -262,7 +262,22 @@ os.makedirs(BACKUP_ROOT, exist_ok=True)
 DBBACKUP_TMP_DIR = BACKUP_ROOT
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE_OPTIONS = {'location': BACKUP_ROOT}
-DBBACKUP_CLEANUP_KEEP = 5  # الاحتفاظ بآخر 5 نسخ احتياطية فقط
+DBBACKUP_CLEANUP_KEEP = 10  # الاحتفاظ بآخر 10 نسخ احتياطية
+
+# إعدادات الضغط للنسخ الاحتياطية
+BACKUP_COMPRESSION = {
+    'ENABLED': True,
+    'COMPRESSION_LEVEL': 9,  # أقصى مستوى ضغط (0-9)
+    'FILE_EXTENSION': '.gz',
+    'AUTO_COMPRESS_ON_CREATE': True,
+    'AUTO_COMPRESS_ON_DOWNLOAD': True,
+    'CHUNK_SIZE': 1024 * 1024,  # 1MB chunks للنسخ
+}
+
+# أنواع الملفات المدعومة للضغط
+BACKUP_SUPPORTED_FORMATS = [
+    'json', 'sqlite3', 'sql', 'csv', 'txt'
+]
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

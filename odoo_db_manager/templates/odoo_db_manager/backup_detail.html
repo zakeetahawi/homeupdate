@@ -56,7 +56,14 @@
                             </tr>
                             <tr>
                                 <th>الحجم</th>
-                                <td>{{ backup.size_display }}</td>
+                                <td>
+                                    {{ backup.size_display }}
+                                    {% if backup.is_compressed %}
+                                        <span class="badge badge-success ml-2">
+                                            <i class="fas fa-compress-alt"></i> مضغوط
+                                        </span>
+                                    {% endif %}
+                                </td>
                             </tr>
                             <tr>
                                 <th>تاريخ الإنشاء</th>
@@ -98,13 +105,34 @@
                                 </td>
                             </tr>
                             <tr>
+                                <th>نوع الملف</th>
+                                <td>
+                                    <span class="badge {% if backup.is_compressed %}badge-success{% else %}badge-warning{% endif %}">
+                                        <i class="fas {% if backup.is_compressed %}fa-file-archive{% else %}fa-file{% endif %}"></i>
+                                        {{ backup.file_type_display }}
+                                    </span>
+                                    <small class="text-muted d-block">
+                                        {{ backup.compression_info }}
+                                    </small>
+                                </td>
+                            </tr>
+                            <tr>
                                 <th>تنسيق التحميل</th>
                                 <td>
                                     <span class="badge badge-info">
-                                        <i class="fas fa-file-archive"></i> ملف مضغوط (.gz)
+                                        <i class="fas fa-download"></i>
+                                        {% if backup.is_compressed %}
+                                            تحميل مباشر (ملف مضغوط)
+                                        {% else %}
+                                            سيتم ضغطه عند التحميل (.gz)
+                                        {% endif %}
                                     </span>
                                     <small class="text-muted d-block">
-                                        سيتم ضغط الملف تلقائياً عند التحميل لتوفير مساحة التخزين
+                                        {% if backup.is_compressed %}
+                                            الملف مضغوط مسبقاً ويوفر مساحة التخزين
+                                        {% else %}
+                                            سيتم ضغط الملف تلقائياً عند التحميل لتوفير مساحة التخزين
+                                        {% endif %}
                                     </small>
                                 </td>
                             </tr>
