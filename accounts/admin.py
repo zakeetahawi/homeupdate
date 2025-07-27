@@ -163,7 +163,7 @@ class CustomUserAdmin(UserAdmin):
         (None, {
             'classes': ('wide',),
             'fields': (
-                'username', 'password', 'password2', 'first_name',
+                'username', 'password1', 'password2', 'first_name',
                 'last_name', 'email', 'phone', 'image', 'branch',
                 'departments', 'default_theme'
             ),

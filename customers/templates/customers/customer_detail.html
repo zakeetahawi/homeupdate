@@ -322,11 +322,11 @@
                                 {% for order in orders %}
                                 <tr>
                                     <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; text-align: center; font-weight: bold; font-size: 1em;">
-                                        <a href="{% url 'orders:order_detail' order.pk %}" tabindex="0" class="order-popover" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="<b>رقم العقد:</b> {{ order.contract_number|default:'-' }}<br/><b>البائع:</b> {{ order.salesperson.name|default:'-' }}<br/><b>تاريخ الطلب:</b> {{ order.created_at|date:'Y-m-d H:i' }}<br/><b>حالة التصنيع:</b> {% if order.manufacturing_order %}{{ order.manufacturing_order.get_status_display }}{% else %}-{% endif %}">
+                                        <a href="{% url 'orders:order_detail' order.pk %}" tabindex="0" class="order-popover" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="<b>رقم العقد:</b> {{ order.contract_number|default:'-' }}<br/><b>البائع:</b> {{ order.salesperson.name|default:'-' }}<br/><b>تاريخ الطلب:</b> {{ order.order_date|date:'Y-m-d H:i' }}<br/><b>حالة التصنيع:</b> {% if order.manufacturing_order %}{{ order.manufacturing_order.get_status_display }}{% else %}-{% endif %}">
                                             {{ order.order_number }}
                                         </a>
                                     </td>
-                                    <td style="white-space: nowrap; max-width: 100px; text-align: center;">{{ order.created_at|date:"Y-m-d" }}</td>
+                                    <td style="white-space: nowrap; max-width: 100px; text-align: center;">{{ order.order_date|date:"Y-m-d" }}</td>
                                     <td style="white-space: nowrap; max-width: 140px; text-align: center;">
                                         {% if order.order_type == 'product' %}
                                             <span class="badge bg-primary">منتج</span>

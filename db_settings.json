@@ -1,7 +1,7 @@
 {
-    "active_db": 3,
+    "active_db": 2,
     "databases": {
-        "3": {
+        "2": {
             "ENGINE": "django.db.backends.postgresql",
             "HOST": "localhost",
             "NAME": "crm_system",

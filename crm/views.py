@@ -89,8 +89,8 @@ def admin_dashboard(request):
     # إحصائيات المعاينات
     inspections_stats = get_inspections_statistics(selected_branch, start_date, end_date)
     
-    # إحصائيات التركيبات
-    installations_stats = get_installations_statistics(selected_branch, start_date, end_date)
+    # إحصائيات طلبات التركيب (جميع الطلبات من نوع تركيب بناءً على تاريخ الطلب)
+    installation_orders_stats = get_installation_orders_statistics(selected_branch, start_date, end_date)
     
     # إحصائيات المخزون
     inventory_stats = get_inventory_statistics(selected_branch)
@@ -117,7 +117,7 @@ def admin_dashboard(request):
                 'orders': get_orders_statistics(selected_branch, comp_start_date, comp_end_date),
                 'manufacturing': get_manufacturing_statistics(selected_branch, comp_start_date, comp_end_date),
                 'inspections': get_inspections_statistics(selected_branch, comp_start_date, comp_end_date),
-                'installations': get_installations_statistics(selected_branch, comp_start_date, comp_end_date),
+                'installations': get_installation_orders_statistics(selected_branch, comp_start_date, comp_end_date),
             }
     
     # البيانات للرسوم البيانية
@@ -167,7 +167,7 @@ def admin_dashboard(request):
         'orders_stats': orders_stats,
         'manufacturing_stats': manufacturing_stats,
         'inspections_stats': inspections_stats,
-        'installations_stats': installations_stats,
+        'installation_orders_stats': installation_orders_stats,
         'inventory_stats': inventory_stats,
         'comparison_data': comparison_data,
         'chart_data': chart_data,
@@ -217,7 +217,7 @@ def get_customers_statistics(branch_filter, start_date=None, end_date=None):
 
 def get_orders_statistics(branch_filter, start_date, end_date):
     """إحصائيات الطلبات"""
-    orders = Order.objects.filter(created_at__range=(start_date, end_date))
+    orders = Order.objects.filter(order_date__range=(start_date, end_date))
     if branch_filter != 'all':
         orders = orders.filter(branch_id=branch_filter)
     
@@ -234,10 +234,10 @@ def get_orders_statistics(branch_filter, start_date, end_date):
 
 def get_manufacturing_statistics(branch_filter, start_date, end_date):
     """إحصائيات التصنيع"""
-    manufacturing_orders = ManufacturingOrder.objects.filter(order_date__range=(start_date, end_date))
+    # نفس منطق الطلبات لكن على ManufacturingOrder
+    manufacturing_orders = ManufacturingOrder.objects.filter(order__order_date__range=(start_date, end_date))
     if branch_filter != 'all':
         manufacturing_orders = manufacturing_orders.filter(order__branch_id=branch_filter)
-    
     return {
         'total': manufacturing_orders.count(),
         'pending': manufacturing_orders.filter(status='pending').count(),
@@ -245,12 +245,13 @@ def get_manufacturing_statistics(branch_filter, start_date, end_date):
         'completed': manufacturing_orders.filter(status='completed').count(),
         'delivered': manufacturing_orders.filter(status='delivered').count(),
         'cancelled': manufacturing_orders.filter(status='cancelled').count(),
+        'total_amount': manufacturing_orders.aggregate(total=Sum('order__total_amount'))['total'] or 0,
         'by_type': manufacturing_orders.values('order_type').annotate(count=Count('id')),
     }
 
 def get_inspections_statistics(branch_filter, start_date, end_date):
     """إحصائيات المعاينات"""
-    inspections = Inspection.objects.filter(created_at__range=(start_date, end_date))
+    inspections = Inspection.objects.filter(request_date__range=(start_date, end_date))
     if branch_filter != 'all':
         inspections = inspections.filter(branch_id=branch_filter)
     
@@ -264,19 +265,26 @@ def get_inspections_statistics(branch_filter, start_date, end_date):
         'failed': inspections.filter(result='failed').count(),
     }
 
-def get_installations_statistics(branch_filter, start_date, end_date):
-    """إحصائيات التركيبات"""
-    installations = InstallationSchedule.objects.filter(created_at__range=(start_date, end_date))
+def get_installation_orders_statistics(branch_filter, start_date, end_date):
+    """إحصائيات طلبات التركيب - جميع الطلبات من نوع تركيب بناءً على تاريخ الطلب (order_date)"""
+    # دعم البحث سواء كان service_types قائمة أو نص
+    orders = Order.objects.filter(
+        order_type='service',
+        order_date__range=(start_date, end_date)
+    ).filter(
+        Q(service_types__contains=['installation']) | Q(service_types__icontains='installation')
+    )
     if branch_filter != 'all':
-        installations = installations.filter(order__branch_id=branch_filter)
-    
+        orders = orders.filter(branch_id=branch_filter)
     return {
-        'total': installations.count(),
-        'pending': installations.filter(status='pending').count(),
-        'scheduled': installations.filter(status='scheduled').count(),
-        'in_installation': installations.filter(status='in_installation').count(),
-        'completed': installations.filter(status='completed').count(),
-        'cancelled': installations.filter(status='cancelled').count(),
+        'total': orders.count(),
+        'pending': orders.filter(order_status='pending').count(),
+        'in_progress': orders.filter(order_status='in_progress').count(),
+        'completed': orders.filter(order_status='completed').count(),
+        'delivered': orders.filter(order_status='delivered').count(),
+        'cancelled': orders.filter(order_status='cancelled').count(),
+        'total_amount': orders.aggregate(total=Sum('total_amount'))['total'] or 0,
+        'by_type': orders.values('order_type').annotate(count=Count('id')),
     }
 
 def get_inventory_statistics(branch_filter):

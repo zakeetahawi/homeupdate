@@ -917,7 +917,13 @@
     {% if order_items|length == 0 %}
     <div class="alert alert-danger text-center fw-bold my-4" style="font-size:1.3rem;">
         طلب بدون عناصر - تم إنشاء هذا الطلب بمسؤولية المستخدم:
-        <span class="text-primary">{{ order.created_by.get_full_name|default:order.created_by.username }}</span>
+        <span class="text-primary">
+          {% if order.created_by %}
+            {{ order.created_by.get_full_name|default:order.created_by.username }}
+          {% else %}
+            <span class="text-danger">مستخدم غير معروف</span>
+          {% endif %}
+        </span>
     </div>
     {% else %}
     <div class="card mb-4">
