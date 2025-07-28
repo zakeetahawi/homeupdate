@@ -26,7 +26,7 @@
 {% block backup_content %}
 <div class="row">
     <div class="col-md-8">
-        <!-- معلومات ال��سخة الاحتياطية -->
+        <!-- معلومات النسخة الاحتياطية -->
         <div class="backup-card mb-4">
             <div class="backup-card-header">
                 <h5 class="mb-0">
@@ -365,8 +365,8 @@ function updateBackupStatus() {
 // تحديث كل 5 ثوان
 setInterval(updateBackupStatus, 5000);
 
-// تحديث فور�� عند تحميل الصفحة
+// تحديث فوراً عند تحميل الصفحة
 updateBackupStatus();
 {% endif %}
 </script>
-{% endblock %>
+{% endblock %}

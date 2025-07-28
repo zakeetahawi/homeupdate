@@ -123,6 +123,7 @@ class BackupService:
             'manufacturing',
             'inventory',
             'reports',
+            'odoo_db_manager',  # إضافة تطبيق إدارة قاعدة البيانات ومزامنة Google
         ]
     
     def _get_app_data(self, app_name: str) -> List[Dict]:
@@ -335,6 +336,7 @@ class RestoreService:
             'accounts.branch',
             'auth.user',
             'accounts.user',
+            'customers.customercategory',  # إضافة تصنيفات العملاء قبل العملاء
             'customers.customer',
             'inventory.category',
             'inventory.brand',
@@ -346,6 +348,15 @@ class RestoreService:
             'installations.installationschedule',
             'manufacturing.manufacturingorder',
             'reports.report',
+            # إضافة نماذج Google Sync المتقدمة
+            'odoo_db_manager.googlesheetsconfig',
+            'odoo_db_manager.googledriveconfig',
+            'odoo_db_manager.googlesheetmapping',
+            'odoo_db_manager.googlesynctask',
+            'odoo_db_manager.googlesyncconflict',
+            'odoo_db_manager.googlesyncschedule',
+            'odoo_db_manager.database',
+            'odoo_db_manager.backupschedule',
         ]
         
         sorted_data = []
