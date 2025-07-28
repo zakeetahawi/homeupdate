@@ -139,7 +139,7 @@ class Customer(models.Model):
     name = models.CharField(_('اسم العميل'), max_length=200, db_index=True)
     branch = models.ForeignKey(
         'accounts.Branch',
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='customers',
         verbose_name=_('الفرع'),
         null=True,

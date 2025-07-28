@@ -159,7 +159,7 @@ class Inspection(models.Model):
     contract_number = models.CharField(_('رقم العقد'), max_length=50, unique=True, blank=True, null=True)
     customer = models.ForeignKey(
         'customers.Customer',
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='inspections',
         verbose_name=_('العميل'),
         null=True,
@@ -167,7 +167,7 @@ class Inspection(models.Model):
     )
     branch = models.ForeignKey(
         'accounts.Branch',
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='inspections',
         verbose_name=_('الفرع'),
         null=True,

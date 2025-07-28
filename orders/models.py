@@ -73,7 +73,7 @@ class Order(models.Model):
     )
     salesperson = models.ForeignKey(
         'accounts.Salesperson',
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='orders',
         verbose_name='البائع',
         null=True,
@@ -1207,7 +1207,7 @@ class OrderItem(models.Model):
     )
     product = models.ForeignKey(
         'inventory.Product',
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='order_items',
         verbose_name='المنتج'
     )
@@ -1347,11 +1347,15 @@ class OrderStatusLog(models.Model):
 
 class ManufacturingDeletionLog(models.Model):
     """سجل حذف أوامر التصنيع"""
-    order = models.ForeignKey(
-        Order,
-        on_delete=models.CASCADE,
-        related_name='manufacturing_deletion_logs',
-        verbose_name='الطلب'
+    order_id = models.PositiveIntegerField(
+        verbose_name=_('معرف الطلب المحذوف'),
+        default=0
+    )
+    order_number = models.CharField(
+        max_length=50,
+        verbose_name='رقم الطلب المحذوف',
+        blank=True,
+        null=True
     )
     manufacturing_order_id = models.PositiveIntegerField(
         verbose_name='معرف أمر التصنيع المحذوف'
@@ -1381,7 +1385,7 @@ class ManufacturingDeletionLog(models.Model):
         ordering = ['-deleted_at']
 
     def __str__(self):
-        return f'حذف أمر تصنيع #{self.manufacturing_order_id} - {self.order.order_number}'
+        return f'حذف أمر تصنيع #{self.manufacturing_order_id} - {self.order_number}'
 
 
 class DeliveryTimeSettings(models.Model):
