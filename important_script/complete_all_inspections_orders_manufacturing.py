@@ -28,6 +28,14 @@ def main():
     with transaction.atomic():
         # 1. تحديث جميع المعاينات إلى 'مكتملة' و 'ناجحة'
         print("🔄 بدء تحديث المعاينات إلى 'مكتملة' و 'ناجحة'...")
+        
+        # أولاً: إصلاح القيم الخاطئة الموجودة (success -> passed)
+        wrong_results = Inspection.objects.filter(result='success')
+        if wrong_results.exists():
+            print(f"🔧 إصلاح {wrong_results.count()} معاينة تحتوي على قيمة 'success' خاطئة...")
+            wrong_results.update(result='passed')
+        
+        # ثانياً: تحديث المعاينات غير المكتملة
         inspections_to_update = Inspection.objects.exclude(status='completed')
         count = 0
         for inspection in inspections_to_update:
@@ -36,7 +44,15 @@ def main():
             # سيقوم التابع save بمعالجة تعيين completed_at
             inspection.save()
             count += 1
-        print(f"✅ تم تحديث {count} معاينة.")
+        print(f"✅ تم تحديث {count} معاينة جديدة.")
+        
+        # ثالثاً: التأكد من أن جميع المعاينات المكتملة لها نتيجة صحيحة
+        completed_without_result = Inspection.objects.filter(status='completed', result__isnull=True)
+        if completed_without_result.exists():
+            print(f"🔧 إضافة نتيجة لـ {completed_without_result.count()} معاينة مكتملة بدون نتيجة...")
+            completed_without_result.update(result='passed')
+        
+        print(f"✅ تم الانتهاء من تحديث جميع المعاينات.")
 
         # 2. تحديث جميع أوامر التصنيع إلى 'تم التسليم'
         print("🔄 بدء تحديث أوامر التصنيع إلى 'تم التسليم'...")
