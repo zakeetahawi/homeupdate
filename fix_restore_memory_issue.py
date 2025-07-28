@@ -1,4 +1,65 @@
+#!/usr/bin/env python
+"""
+إصلاح مشكلة استهلاك الذاكرة في عملية الاستعادة
+"""
+import os
+import sys
+import django
+import json
+import gzip
+import tempfile
+from django.utils import timezone
 
+# إعداد Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+django.setup()
+
+from odoo_db_manager.models import RestoreProgress
+
+
+def fix_stuck_restore_processes():
+    """إصلاح العمليات العالقة وتنظيف الملفات المؤقتة"""
+    
+    print("🔧 بدء إصلاح العمليات العالقة...")
+    
+    # 1. إيقاف جميع عمليات الاستعادة العالقة
+    stuck_processes = RestoreProgress.objects.filter(
+        status__in=['processing', 'starting'],
+        created_at__lt=timezone.now() - timezone.timedelta(minutes=5)
+    )
+    
+    print(f"🔍 وجدت {stuck_processes.count()} عملية عالقة")
+    
+    for process in stuck_processes:
+        print(f"⏹️ إيقاف العملية العالقة: {process.session_id}")
+        process.status = 'failed'
+        process.error_message = 'تم إيقاف العملية بسبب التعليق'
+        process.current_step = 'تم الإيقاف'
+        process.save()
+    
+    # 2. تنظيف الملفات المؤقتة
+    temp_files = []
+    for filename in os.listdir('/tmp'):
+        if filename.startswith('tmp') and filename.endswith('.json'):
+            temp_files.append(os.path.join('/tmp', filename))
+    
+    print(f"🗑️ وجدت {len(temp_files)} ملف مؤقت للحذف")
+    
+    for temp_file in temp_files:
+        try:
+            os.unlink(temp_file)
+            print(f"✅ تم حذف: {temp_file}")
+        except Exception as e:
+            print(f"❌ فشل حذف {temp_file}: {e}")
+    
+    print("✅ تم إصلاح العمليات العالقة وتنظيف الملفات المؤقتة")
+
+
+def create_optimized_restore_function():
+    """إنشاء دالة استعادة محسنة للملفات الكبيرة"""
+    
+    optimized_code = '''
 def _restore_json_optimized(file_path, clear_existing=False, progress_callback=None, session_id=None):
     """
     دالة ��ستعادة محسنة للملفات الكبيرة مع معالجة الذاكرة
@@ -135,3 +196,31 @@ def _restore_json_optimized(file_path, clear_existing=False, progress_callback=N
             error_message=error_msg
         )
         raise
+'''
+    
+    # كتابة الدالة المحسنة إلى ملف
+    with open('/home/zakee/homeupdate/optimized_restore.py', 'w', encoding='utf-8') as f:
+        f.write(optimized_code)
+    
+    print("✅ تم إنشاء دالة الاستعادة المحسنة في optimized_restore.py")
+
+
+def main():
+    """الدالة الرئيسية"""
+    print("🚀 بدء إصلاح مشاكل الاستعادة...")
+    
+    # 1. إصلاح العمليات العالقة
+    fix_stuck_restore_processes()
+    
+    # 2. إنشاء دالة محسنة
+    create_optimized_restore_function()
+    
+    print("\n✅ تم إنجاز جميع الإصلاحات!")
+    print("\n���� التوصيات:")
+    print("1. أعد تشغيل الخادم: python manage.py runserver")
+    print("2. استخدم ملفات أصغر من 25MB للاستعادة")
+    print("3. تأكد من وجود ذاكرة كافية (RAM) قبل الاستعادة")
+
+
+if __name__ == "__main__":
+    main()

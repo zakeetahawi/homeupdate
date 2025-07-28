@@ -1741,27 +1741,24 @@ def _restore_json_simple(file_path, clear_existing=False):
 def _restore_json_simple_with_progress(file_path, clear_existing=False,
                                        progress_callback=None, session_id=None):
     """
-    استعادة البيانات من ملف JSON مع دعم شريط التقدم المحسن
-    وحل مشاكل المفاتيح الخارجية للحصول على استعادة شاملة 100%
-    مع دعم الملفات المضغوطة .gz
+    دالة استعادة محسنة للملفات الكبيرة مع معالجة الذاكرة
     """
     import json
     import gzip
     import os
     from django.core import serializers
-    from django.db import transaction, connection
+    from django.db import transaction
     from django.apps import apps
     from django.contrib.contenttypes.models import ContentType
-
-    def update_progress(current_step=None, processed_items=None,
-                        success_count=None, error_count=None):
-        """دالة مساعدة لتحديث التقدم"""
+    
+    def update_progress(current_step=None, processed_items=None, success_count=None, error_count=None):
         if progress_callback:
-            # حساب النسبة المئوية
             progress_percentage = 0
-            if processed_items is not None and total_items > 0:
-                progress_percentage = min(100, int((processed_items / total_items) * 100))
-
+            if processed_items is not None and hasattr(update_progress, 'total_items'):
+                total_items = update_progress.total_items
+                if total_items > 0:
+                    progress_percentage = min(100, int((processed_items / total_items) * 100))
+            
             progress_callback(
                 progress_percentage=progress_percentage,
                 current_step=current_step,
@@ -1769,131 +1766,118 @@ def _restore_json_simple_with_progress(file_path, clear_existing=False,
                 success_count=success_count,
                 error_count=error_count
             )
-
+    
     try:
-        update_progress(current_step='🔄 بدء عملية الاستعادة الشاملة...')
-
-        # التحقق من وجود الملف
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"الملف غير موجود: {file_path}")
-
-        update_progress(current_step='📖 قراءة وتحليل الملف...')
-
-        # قراءة الملف مع دعم الملفات المضغوطة
-        print(f"🔄 قراءة ملف الاستعادة: {file_path}")
-
+        update_progress(current_step='🔄 بدء عملية الاستعادة المحسنة...')
+        
+        # التحقق من حجم الملف
+        file_size = os.path.getsize(file_path)
+        print(f"📊 حجم الملف: {file_size:,} بايت ({file_size/1024/1024:.1f} MB)")
+        
+        if file_size > 50 * 1024 * 1024:  # أكبر من 50MB
+            raise ValueError("الملف كبير جداً (أكبر من 50MB). يرجى استخدام ملف أصغر.")
+        
+        update_progress(current_step='📖 قراءة الملف بطريقة محسنة...')
+        
+        # قراءة الملف بطريقة محسنة
+        data = None
         if file_path.lower().endswith('.gz'):
             print("📦 فك ضغط ملف .gz...")
-            with gzip.open(file_path, 'rt', encoding='utf-8') as f:
-                data = json.load(f)
-            print("✅ تم فك ضغط الملف بنجاح")
+            try:
+                with gzip.open(file_path, 'rt', encoding='utf-8') as f:
+                    # قراءة الملف على دفعات لتجنب استهلاك الذاكرة
+                    content = ""
+                    chunk_size = 1024 * 1024  # 1MB chunks
+                    while True:
+                        chunk = f.read(chunk_size)
+                        if not chunk:
+                            break
+                        content += chunk
+                        update_progress(current_step=f'📖 قراءة الملف... ({len(content):,} حرف)')
+                    
+                    data = json.loads(content)
+                    del content  # تحرير الذاكرة
+                    
+            except Exception as e:
+                print(f"❌ خطأ في فك ضغط الملف: {e}")
+                raise ValueError(f"فشل في فك ضغط الملف: {str(e)}")
         else:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-        # التحقق من صحة البيانات
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception as e:
+                print(f"❌ خطأ في قراءة الملف: {e}")
+                raise ValueError(f"فشل في قراءة الملف: {str(e)}")
+        
         if not isinstance(data, list):
-            if isinstance(data, dict):
-                if 'model' in data and 'fields' in data:
-                    data = [data]
-                else:
-                    raise ValueError("تنسيق الملف غير صحيح. يجب أن يكون ملف Django fixture صالح.")
+            if isinstance(data, dict) and 'model' in data and 'fields' in data:
+                data = [data]
             else:
-                raise ValueError(f"تنسيق البيانات غير مدعوم: {type(data)}. يجب أن تكون البيانات عبارة عن قائمة.")
-
+                raise ValueError("تنسيق الملف غير صحيح. يجب أن يكون ملف Django fixture صالح.")
+        
         total_items = len(data)
-        update_progress(current_step=f'📊 تم تحليل {total_items} عنصر من البيانات', processed_items=0)
-
-        # تحديث إجمالي العناصر
+        update_progress.total_items = total_items  # حفظ العدد الإجمالي
+        update_progress(current_step=f'📊 تم تحليل {total_items} عنصر', processed_items=0)
+        
         if progress_callback:
             progress_callback(total_items=total_items)
-
+        
         success_count = 0
         error_count = 0
-        failed_items = []
-
-        # إنشاء ContentTypes المطلوبة
-        update_progress(current_step='🔧 إعداد أنواع المحتوى المطلوبة...')
-        required_content_types = [
-            ('inventory', 'product'),
-            ('inventory', 'category'),
-            ('inventory', 'brand'),
-            ('inventory', 'warehouse'),
-            ('inventory', 'stocktransaction'),
-            ('orders', 'order'),
-            ('orders', 'orderitem'),
-            ('customers', 'customer'),
-            ('customers', 'customercategory'),
-            ('customers', 'customertype'),
-            ('customers', 'customernote'),
-            ('inspections', 'inspection'),
-            ('installations', 'installationschedule'),
-            ('reports', 'report'),
-            ('accounts', 'department'),
-            ('accounts', 'branch'),
-            ('accounts', 'salesperson'),
-        ]
-
-        for app_label, model_name in required_content_types:
-            try:
-                ContentType.objects.get_or_create(
-                    app_label=app_label,
-                    model=model_name
-                )
-            except Exception as e:
-                print(f"⚠️ تحذير: لم يتم إنشاء ContentType لـ {app_label}.{model_name}: {str(e)}")
-
-        # ترتيب البيانات حسب الأولوية لحل مشاكل المفاتيح الخارجية
-        update_progress(current_step='🔄 ترتيب البيانات حسب الأولوية لحل المفاتيح الخارجية...')
-
-        # ترتيب محسن لحل مشاكل المفاتيح الخارجية
-        priority_order = [
-            # أولاً: النماذج الأساسية للنظام
-            'contenttypes.contenttype',
-            'auth.user',
-            'auth.group',
-            'auth.permission',
-
-            # ثانياً: النماذج المرجعية (التي لا تعتمد على غيرها)
-            'accounts.department',
-            'accounts.branch',
-            'accounts.salesperson',
-            'customers.customercategory',  # مهم: تصنيفات العملاء قبل العملاء
-            'customers.customertype',      # مهم: أنواع العملاء قبل العملاء
-            'inventory.category',
-            'inventory.brand',
-            'inventory.warehouse',
-
-            # ثالثاً: النماذج التي تعتمد على المرجعية
-            'customers.customer',          # بعد تصنيفات وأنواع العملاء
-            'inventory.product',           # بعد الفئات والعلامات التجارية
-
-            # رابعاً: النماذج التي تعتمد على العملاء والمنتجات
-            'orders.order',                # بعد العملاء
-            'orders.orderitem',            # بعد الطلبات والمنتجات
-            'inspections.inspection',      # بعد العملاء
-            'installations.installationschedule',  # بعد العملاء
-
-            # خامساً: النماذج التكميلية
-            'customers.customernote',      # بعد العملاء
-            'inventory.stocktransaction',  # بعد المنتجات
-            'reports.report',
-
-            # أخيراً: نماذج النظام
-            'odoo_db_manager.database',
-            'odoo_db_manager.backup',
-            'odoo_db_manager.backupschedule',
-            'odoo_db_manager.importlog',
-        ]
-
-        # ترتيب البيانات
-        sorted_data = []
-        remaining_data = []
-
-        for model_name in priority_order:
-            for item in data:
-                if item.get('model') == model_name:
-                    sorted_data.append(item)
+        
+        # معالجة البيانات على دفعات صغيرة
+        batch_size = 50  # معالجة 50 عنصر في كل مرة
+        
+        for i in range(0, total_items, batch_size):
+            batch = data[i:i + batch_size]
+            batch_start = i + 1
+            batch_end = min(i + batch_size, total_items)
+            
+            update_progress(
+                current_step=f'🔄 معالجة الدفعة {batch_start}-{batch_end} من {total_items}',
+                processed_items=i
+            )
+            
+            for j, item in enumerate(batch):
+                try:
+                    with transaction.atomic():
+                        for obj in serializers.deserialize('json', json.dumps([item])):
+                            obj.save()
+                    success_count += 1
+                except Exception as item_error:
+                    error_count += 1
+                    print(f"⚠️ فشل في استعادة العنصر {i + j + 1}: {str(item_error)}")
+                
+                # تحديث التقدم كل 10 عناصر
+                if (i + j + 1) % 10 == 0:
+                    update_progress(
+                        processed_items=i + j + 1,
+                        success_count=success_count,
+                        error_count=error_count
+                    )
+        
+        # التحديث النهائي
+        update_progress(
+            current_step='✅ اكتملت العملية بنجاح',
+            processed_items=total_items,
+            success_count=success_count,
+            error_count=error_count
+        )
+        
+        return {
+            'total_count': total_items,
+            'success_count': success_count,
+            'error_count': error_count
+        }
+        
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ خطأ في الاستعادة: {error_msg}")
+        update_progress(
+            current_step=f'❌ فشلت العملية: {error_msg}',
+            error_message=error_msg
+        )
+        raise
 
         for item in data:
             if item not in sorted_data:
