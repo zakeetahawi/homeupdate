@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     'odoo_db_manager',  # إدارة قواعد البيانات
     'inventory',  # إدارة المخزون
     'reports',  # التقارير
+    'backup_system',  # نظام النسخ الاحتياطي والاستعادة الجديد
 
 ]
 

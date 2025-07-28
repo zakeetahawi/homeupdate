@@ -1,0 +1,156 @@
+{% extends 'backup_system/base.html' %}
+
+{% block backup_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="backup-card">
+            <div class="backup-card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-trash me-2"></i>
+                    حذف النسخة الاحتياطية
+                </h5>
+            </div>
+            <div class="backup-card-body">
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-triangle me-2"></i>تحذير مهم!</h6>
+                    <p class="mb-0">
+                        أنت على وشك حذف النسخة الاحتياطية "<strong>{{ backup.name }}</strong>" نهائياً.
+                        هذا الإجراء لا يمكن التراجع عنه وسيتم حذف الملف من الخادم.
+                    </p>
+                </div>
+                
+                <!-- معلومات النسخة الاحتياطية -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <strong>الاسم:</strong>
+                        <p>{{ backup.name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>النوع:</strong>
+                        <p>
+                            <span class="badge bg-info">{{ backup.get_backup_type_display }}</span>
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <strong>تاريخ الإنشاء:</strong>
+                        <p>{{ backup.created_at|date:"Y-m-d H:i:s" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>الحالة:</strong>
+                        <p>
+                            {% if backup.status == 'completed' %}
+                                <span class="badge bg-success">مكتمل</span>
+                            {% elif backup.status == 'running' %}
+                                <span class="badge bg-warning">قيد التنف��ذ</span>
+                            {% elif backup.status == 'failed' %}
+                                <span class="badge bg-danger">فاشل</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ backup.get_status_display }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                {% if backup.status == 'completed' %}
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <strong>حجم الملف:</strong>
+                        <p class="file-size">{{ backup.compressed_size_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>عدد السجلات:</strong>
+                        <p>{{ backup.total_records|default:"-" }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if backup.description %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <strong>الوصف:</strong>
+                        <p>{{ backup.description }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- تأكيد الحذف -->
+                <form method="post" id="deleteForm">
+                    {% csrf_token %}
+                    
+                    <div class="alert alert-warning">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                            <label class="form-check-label" for="confirmDelete">
+                                أؤكد أنني أريد حذف هذه النسخة الاحتياطية نهائياً
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'backup_system:backup_detail' backup.id %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-1"></i>
+                            إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-danger" id="deleteBtn" disabled>
+                            <i class="fas fa-trash me-1"></i>
+                            حذف النسخة الاحتياطية
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// تفعيل/تعطيل زر الحذف حسب حالة checkbox
+document.getElementById('confirmDelete').addEventListener('change', function() {
+    const deleteBtn = document.getElementById('deleteBtn');
+    deleteBtn.disabled = !this.checked;
+});
+
+// معالجة إرسال النموذج
+document.getElementById('deleteForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    
+    if (!confirmCheckbox.checked) {
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'يرجى تأكيد رغبتك في حذف النسخة الاحتياطية'
+        });
+        return;
+    }
+    
+    // تأكيد نهائي
+    Swal.fire({
+        title: 'تأكيد الحذف النهائي',
+        text: 'هل أنت متأكد من حذف النسخة الاحتياطية "{{ backup.name }}" نهائياً؟',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، احذف نهائياً',
+        cancelButtonText: 'إلغاء',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // تعطيل الزر ومنع الإرسال المتكرر
+            const deleteBtn = document.getElementById('deleteBtn');
+            deleteBtn.disabled = true;
+            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري الحذف...';
+            
+            // إرسال النموذج
+            this.submit();
+        }
+    });
+});
+</script>
+{% endblock %}

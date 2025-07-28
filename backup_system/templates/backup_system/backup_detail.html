@@ -1,0 +1,372 @@
+{% extends 'backup_system/base.html' %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'backup_system:backup_list' %}" class="btn btn-secondary">
+        <i class="fas fa-list me-1"></i>
+        قائمة النسخ الاحتياطية
+    </a>
+    {% if backup.status == 'completed' %}
+        <a href="{% url 'backup_system:backup_download' backup.id %}" class="btn btn-success">
+            <i class="fas fa-download me-1"></i>
+            تحميل
+        </a>
+        <a href="{% url 'backup_system:restore_from_backup' backup.id %}" class="btn btn-info">
+            <i class="fas fa-undo me-1"></i>
+            استعادة
+        </a>
+    {% endif %}
+    <a href="{% url 'backup_system:backup_delete' backup.id %}" class="btn btn-danger">
+        <i class="fas fa-trash me-1"></i>
+        حذف
+    </a>
+</div>
+{% endblock %}
+
+{% block backup_content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- معلومات ال��سخة الاحتياطية -->
+        <div class="backup-card mb-4">
+            <div class="backup-card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-save me-2"></i>
+                    معلومات النسخة الاحتياطية
+                </h5>
+            </div>
+            <div class="backup-card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>الاسم:</strong>
+                        <p>{{ backup.name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>النوع:</strong>
+                        <p>
+                            <span class="badge bg-info">{{ backup.get_backup_type_display }}</span>
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>الحالة:</strong>
+                        <p>
+                            {% if backup.status == 'completed' %}
+                                <span class="badge bg-success">مكتمل</span>
+                            {% elif backup.status == 'running' %}
+                                <span class="badge bg-warning">قيد التنفيذ</span>
+                            {% elif backup.status == 'failed' %}
+                                <span class="badge bg-danger">فاشل</span>
+                            {% elif backup.status == 'pending' %}
+                                <span class="badge bg-secondary">في الانتظار</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ backup.get_status_display }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>المنشئ:</strong>
+                        <p>{{ backup.created_by.get_full_name|default:backup.created_by.username }}</p>
+                    </div>
+                </div>
+                
+                {% if backup.description %}
+                <div class="row">
+                    <div class="col-12">
+                        <strong>الوصف:</strong>
+                        <p>{{ backup.description }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>تاريخ الإنشاء:</strong>
+                        <p>{{ backup.created_at|date:"Y-m-d H:i:s" }}</p>
+                    </div>
+                    {% if backup.started_at %}
+                    <div class="col-md-6">
+                        <strong>تاريخ البدء:</strong>
+                        <p>{{ backup.started_at|date:"Y-m-d H:i:s" }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if backup.completed_at %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>تاريخ الانتهاء:</strong>
+                        <p>{{ backup.completed_at|date:"Y-m-d H:i:s" }}</p>
+                    </div>
+                    {% if backup.duration %}
+                    <div class="col-md-6">
+                        <strong>المدة:</strong>
+                        <p>{{ backup.duration }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- تقدم العملية -->
+        {% if backup.status == 'running' or backup.status == 'completed' %}
+        <div class="backup-card mb-4">
+            <div class="backup-card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    تقدم العملية
+                </h5>
+            </div>
+            <div class="backup-card-body">
+                <div class="progress mb-3" style="height: 25px;">
+                    <div class="progress-bar {% if backup.status == 'completed' %}bg-success{% elif backup.status == 'failed' %}bg-danger{% else %}bg-primary{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ backup.progress_percentage }}%"
+                         id="progressBar">
+                    </div>
+                    <div class="progress-text">
+                        {{ backup.progress_percentage|floatformat:1 }}%
+                    </div>
+                </div>
+                
+                {% if backup.current_step %}
+                <p class="mb-2">
+                    <strong>الخطوة الحالية:</strong> 
+                    <span id="currentStep">{{ backup.current_step }}</span>
+                </p>
+                {% endif %}
+                
+                <div class="row text-center">
+                    <div class="col-md-6">
+                        <div class="border rounded p-2">
+                            <h6 class="text-muted mb-1">إجمالي السجلات</h6>
+                            <h4 class="mb-0" id="totalRecords">{{ backup.total_records|default:"-" }}</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-2">
+                            <h6 class="text-muted mb-1">تم المعالجة</h6>
+                            <h4 class="mb-0" id="processedRecords">{{ backup.processed_records|default:"-" }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- معلومات الملف -->
+        {% if backup.status == 'completed' %}
+        <div class="backup-card mb-4">
+            <div class="backup-card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-file me-2"></i>
+                    معلومات الملف
+                </h5>
+            </div>
+            <div class="backup-card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>الحجم الأصلي:</strong>
+                        <p class="file-size">{{ backup.file_size_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>الحجم المضغوط:</strong>
+                        <p class="file-size">{{ backup.compressed_size_display }}</p>
+                    </div>
+                </div>
+                
+                {% if backup.compression_ratio > 0 %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>نسبة الضغط:</strong>
+                        <p>{{ backup.compression_ratio|floatformat:1 }}%</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>توفير المساحة:</strong>
+                        <p class="file-size">{{ backup.space_saved_display }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if backup.file_path %}
+                <div class="row">
+                    <div class="col-12">
+                        <strong>مسار الملف:</strong>
+                        <p><small class="text-muted">{{ backup.file_path }}</small></p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- رسالة الخطأ -->
+        {% if backup.error_message %}
+        <div class="backup-card mb-4">
+            <div class="backup-card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    رسالة الخطأ
+                </h5>
+            </div>
+            <div class="backup-card-body">
+                <pre class="text-danger">{{ backup.error_message }}</pre>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <!-- إجراءات سريعة -->
+        <div class="backup-card mb-4">
+            <div class="backup-card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>
+                    إجراءات سريعة
+                </h5>
+            </div>
+            <div class="backup-card-body">
+                <div class="d-grid gap-2">
+                    {% if backup.status == 'completed' %}
+                        <a href="{% url 'backup_system:backup_download' backup.id %}" class="btn btn-success">
+                            <i class="fas fa-download me-1"></i>
+                            تحميل النسخة الاحتياطية
+                        </a>
+                        
+                        <a href="{% url 'backup_system:restore_from_backup' backup.id %}" class="btn btn-info">
+                            <i class="fas fa-undo me-1"></i>
+                            استعادة من هذه النسخة
+                        </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'backup_system:backup_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-1"></i>
+                        قائمة جميع النسخ الاحتياطية
+                    </a>
+                    
+                    <a href="{% url 'backup_system:backup_create' %}" class="btn btn-outline-success">
+                        <i class="fas fa-plus me-1"></i>
+                        إنشاء نسخة احتياطية جديدة
+                    </a>
+                    
+                    <a href="{% url 'backup_system:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-tachometer-alt me-1"></i>
+                        لوحة التحكم
+                    </a>
+                    
+                    <hr>
+                    
+                    <a href="{% url 'backup_system:backup_delete' backup.id %}" class="btn btn-outline-danger">
+                        <i class="fas fa-trash me-1"></i>
+                        حذف هذه النسخة
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- إحصائيات إضافية -->
+        {% if backup.status == 'completed' %}
+        <div class="backup-card">
+            <div class="backup-card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    إحصائيات إضافية
+                </h5>
+            </div>
+            <div class="backup-card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border rounded p-2 mb-2">
+                            <h6 class="text-muted mb-1">السجلات</h6>
+                            <h5 class="mb-0">{{ backup.total_records|default:0 }}</h5>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-2 mb-2">
+                            <h6 class="text-muted mb-1">التطبيقات</h6>
+                            <h5 class="mb-0">{{ backup.apps_count|default:"-" }}</h5>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if backup.compression_ratio > 0 %}
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between">
+                        <span>كفاءة الضغط:</span>
+                        <span class="fw-bold">{{ backup.compression_ratio|floatformat:1 }}%</span>
+                    </div>
+                    <div class="progress mt-1" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {{ backup.compression_ratio }}%"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// تحديث حالة النسخ الاحتياطي كل 5 ثوان إذا كانت قيد التنفيذ
+{% if backup.status == 'running' %}
+function updateBackupStatus() {
+    fetch('{% url "backup_system:backup_status_api" backup.id %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('خطأ في الحصول على حالة النسخ الاحتياطي:', data.error);
+                return;
+            }
+            
+            // تحديث شريط التقدم
+            const progressBar = document.getElementById('progressBar');
+            const progressText = progressBar.querySelector('.progress-text');
+            
+            if (progressBar) {
+                progressBar.style.width = data.progress + '%';
+                if (progressText) {
+                    progressText.textContent = data.progress.toFixed(1) + '%';
+                }
+            }
+            
+            // تحديث الخطوة الحالية
+            const currentStep = document.getElementById('currentStep');
+            if (currentStep && data.current_step) {
+                currentStep.textContent = data.current_step;
+            }
+            
+            // تحديث الإحصائيات
+            const totalRecords = document.getElementById('totalRecords');
+            const processedRecords = document.getElementById('processedRecords');
+            
+            if (totalRecords && data.total_records) {
+                totalRecords.textContent = data.total_records.toLocaleString();
+            }
+            if (processedRecords && data.processed_records) {
+                processedRecords.textContent = data.processed_records.toLocaleString();
+            }
+            
+            // إعادة تحميل الصفحة إذا اكتملت العملية أو فشلت
+            if (data.status === 'completed' || data.status === 'failed') {
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            console.error('خطأ في تحديث حالة النسخ الاحتياطي:', error);
+        });
+}
+
+// تحديث كل 5 ثوان
+setInterval(updateBackupStatus, 5000);
+
+// تحديث فور�� عند تحميل الصفحة
+updateBackupStatus();
+{% endif %}
+</script>
+{% endblock %>

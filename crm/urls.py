@@ -82,6 +82,8 @@ urlpatterns = [
     path('odoo-db-manager/', include('odoo_db_manager.urls', namespace='odoo_db_manager')),
     # تضمين مسارات التركيبات
     path('installations/', include(('installations.urls', 'installations'), namespace='installations')),
+    # نظام النسخ الاحتياطي والاستعادة الجديد
+    path('backup-system/', include('backup_system.urls', namespace='backup_system')),
 ]
 
 # إضافة مسارات الملفات الثابتة ووسائط التحميل في وضع التطوير

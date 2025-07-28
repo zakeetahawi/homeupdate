@@ -1,0 +1,157 @@
+{% extends 'backup_system/base.html' %}
+
+{% block backup_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="backup-card">
+            <div class="backup-card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>
+                    إنشاء نسخة احتياطية جديدة
+                </h5>
+            </div>
+            <div class="backup-card-body">
+                <form method="post" id="backupForm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            {{ form.name.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.name.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.description.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.backup_type.id_for_label }}" class="form-label">
+                            {{ form.backup_type.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.backup_type }}
+                        {% if form.backup_type.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.backup_type.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            <strong>نسخة كاملة:</strong> تشمل جميع البيانات في النظام<br>
+                            <strong>نسخة جزئية:</strong> تشمل بيانات محددة فقط
+                        </div>
+                    </div>
+                    
+                    <!-- معلومات إضافية -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>معلومات مهمة:</h6>
+                        <ul class="mb-0">
+                            <li>سيتم ضغط النسخة الاحتياطية تلقائياً لتوفير المساحة</li>
+                            <li>يمكن استخدام النسخة الاحتياطية على أي جهاز آخر</li>
+                            <li>العملية قد تستغرق عدة دقائق حسب حجم البيانات</li>
+                            <li>سيتم إشعارك عند اكتمال العملية</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'backup_system:dashboard' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-1"></i>
+                            إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-save me-1"></i>
+                            إنشاء النسخة الاحتياطية
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('backupForm').addEventListener('submit', function(e) {
+    const submitBtn = document.getElementById('submitBtn');
+    const nameField = document.getElementById('{{ form.name.id_for_label }}');
+    
+    // التحقق من صحة البيانات
+    if (!nameField.value.trim()) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'يرجى إدخال اسم النسخة الاحتياطية'
+        });
+        return;
+    }
+    
+    // تأكيد الإنشاء
+    e.preventDefault();
+    
+    Swal.fire({
+        title: 'تأكيد إنشاء النسخة الاحتياطية',
+        text: 'هل أنت متأكد من إنشاء نسخة احتياطية جديدة؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#007bff',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، أنشئ النسخة',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // تعطيل الزر ومنع الإرسال المتكرر
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري الإنشاء...';
+            
+            // إرسال النموذج
+            this.submit();
+            
+            // إظهار رسالة التقدم
+            Swal.fire({
+                title: 'جاري إنشاء النسخة الاحتياطية',
+                text: 'يرجى الانتظار... سيتم تحويلك لصفحة التفاصيل',
+                icon: 'info',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        }
+    });
+});
+
+// تحديث اسم النسخة الاحتياطية تلقائياً
+document.getElementById('{{ form.name.id_for_label }}').addEventListener('blur', function() {
+    if (!this.value.trim()) {
+        const now = new Date();
+        const timestamp = now.getFullYear() + '-' + 
+                         String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                         String(now.getDate()).padStart(2, '0') + '_' + 
+                         String(now.getHours()).padStart(2, '0') + '-' + 
+                         String(now.getMinutes()).padStart(2, '0');
+        
+        const backupType = document.getElementById('{{ form.backup_type.id_for_label }}').value;
+        const typeName = backupType === 'full' ? 'كاملة' : 'جزئية';
+        
+        this.value = `نسخة احتياطية ${typeName} ${timestamp}`;
+    }
+});
+</script>
+{% endblock %}

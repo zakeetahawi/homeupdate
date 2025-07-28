@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     'reports',
     'installations',
     'odoo_db_manager.apps.OdooDbManagerConfig',
+    'backup_system.apps.BackupSystemConfig',  # نظام النسخ الاحتياطي والاستعادة الجديد
     'corsheaders',
     'django_apscheduler',
     'dbbackup',
@@ -740,8 +741,8 @@ CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com")
 CSP_IMG_SRC = ("'self'", "data:", "https:")
 
 # File Upload Security
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 10MB
 FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'temp')
 
 # Database Security

@@ -1,0 +1,230 @@
+{% extends 'backup_system/base.html' %}
+
+{% block page_actions %}
+<a href="{% url 'backup_system:restore_upload' %}" class="btn btn-success">
+    <i class="fas fa-upload me-1"></i>
+    رفع ملف للاستعادة
+</a>
+{% endblock %}
+
+{% block backup_content %}
+<!-- فلاتر البحث -->
+<div class="backup-card mb-4">
+    <div class="backup-card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">فلترة حسب الحالة</label>
+                <select name="status" class="form-select">
+                    <option value="">جميع الحالات</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>في الانتظار</option>
+                    <option value="running" {% if status_filter == 'running' %}selected{% endif %}>قيد التنفيذ</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>مكتمل</option>
+                    <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>فاشل</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-filter me-1"></i>
+                    تطبيق الفلتر
+                </button>
+                <a href="{% url 'backup_system:restore_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>
+                    إزالة الفلتر
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- قائمة عمليات الاستعادة -->
+<div class="backup-card">
+    <div class="backup-card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-undo me-2"></i>
+            عمليات الاستعادة
+            {% if page_obj.paginator.count %}
+                <span class="badge bg-primary">{{ page_obj.paginator.count }}</span>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="backup-card-body">
+        {% if page_obj %}
+            <div class="backup-table">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>الحالة</th>
+                            <th>التقدم</th>
+                            <th>النجاح/الفشل</th>
+                            <th>حجم الملف</th>
+                            <th>تاريخ الإنشاء</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for restore in page_obj %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'backup_system:restore_detail' restore.id %}" class="text-decoration-none">
+                                        <strong>{{ restore.name }}</strong>
+                                    </a>
+                                    {% if restore.description %}
+                                        <br><small class="text-muted">{{ restore.description|truncatechars:50 }}</small>
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    {% if restore.status == 'completed' %}
+                                        <span class="badge bg-success">مكتمل</span>
+                                    {% elif restore.status == 'running' %}
+                                        <span class="badge bg-warning">قيد التنفيذ</span>
+                                    {% elif restore.status == 'failed' %}
+                                        <span class="badge bg-danger">فاشل</span>
+                                    {% elif restore.status == 'pending' %}
+                                        <span class="badge bg-secondary">في الانتظار</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ restore.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    {% if restore.status == 'running' %}
+                                        <div class="progress position-relative" style="width: 100px; height: 20px;">
+                                            <div class="progress-bar" role="progressbar" 
+                                                 style="width: {{ restore.progress_percentage }}%">
+                                            </div>
+                                            <div class="progress-text">
+                                                {{ restore.progress_percentage|floatformat:0 }}%
+                                            </div>
+                                        </div>
+                                    {% elif restore.status == 'completed' %}
+                                        <span class="text-success">100%</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    {% if restore.status == 'completed' %}
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-success">{{ restore.success_records|default:0 }}</span>
+                                            <span class="text-danger">{{ restore.failed_records|default:0 }}</span>
+                                        </div>
+                                        {% if restore.success_rate %}
+                                            <small class="text-muted">{{ restore.success_rate|floatformat:1 }}%</small>
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                
+                                <td class="file-size">
+                                    {% if restore.file_size %}
+                                        {{ restore.file_size_display }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    <span data-time="{{ restore.created_at|date:'c' }}">
+                                        {{ restore.created_at|date:"Y-m-d H:i" }}
+                                    </span>
+                                    <br><small class="text-muted">{{ restore.created_by.get_full_name|default:restore.created_by.username }}</small>
+                                </td>
+                                
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'backup_system:restore_detail' restore.id %}" 
+                                           class="btn btn-outline-primary" title="التفاصيل">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        
+                                        {% if restore.status == 'failed' %}
+                                            <button class="btn btn-outline-warning" 
+                                                    onclick="retryRestore('{{ restore.id }}')" 
+                                                    title="إعادة المحاولة">
+                                                <i class="fas fa-redo"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+                <nav aria-label="تنقل الصفحات">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}">الأولى</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">السابقة</a>
+                            </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">
+                                صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                            </span>
+                        </li>
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">التالية</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}">الأخيرة</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+            
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-undo fa-4x mb-3"></i>
+                <h4>لا توجد عمليات استعادة</h4>
+                <p>لم يتم تنفيذ أي عمليات استعادة بعد</p>
+                <a href="{% url 'backup_system:restore_upload' %}" class="btn btn-success">
+                    <i class="fas fa-upload me-1"></i>
+                    بدء أول عملية استعادة
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// تحديث الصفحة كل 30 ثانية للعمليات قيد التنفيذ
+{% if page_obj %}
+    {% for restore in page_obj %}
+        {% if restore.status == 'running' %}
+            setTimeout(() => {
+                location.reload();
+            }, 30000);
+            break;
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+// دالة إعادة المحاولة (يمكن تطويرها لاحقاً)
+function retryRestore(restoreId) {
+    Swal.fire({
+        title: 'إعادة المحاولة',
+        text: 'هذه الميزة قيد التطوير',
+        icon: 'info',
+        confirmButtonText: 'تم'
+    });
+}
+</script>
+{% endblock %}

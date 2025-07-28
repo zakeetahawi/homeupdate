@@ -47,186 +47,192 @@
         list-style: none;
         padding-right: 20px;
     }
+
+    /* أنماط النظام الجديد */
+    .new-system-alert {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        margin-bottom: 2rem;
+    }
+
+    .new-system-alert .btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+
+    .new-system-alert .btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .new-system-features {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .feature-badge {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        backdrop-filter: blur(5px);
+    }
+
+    @media (max-width: 768px) {
+        .new-system-features {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="odoo-dashboard">
-    <!-- شريط الأدوات العلوي -->
-    <div class="odoo-toolbar">
-        <div class="odoo-toolbar-left">
-            <h1>{{ title }}</h1>
-        </div>
-        <div class="odoo-toolbar-right">
-            <a href="{% url 'odoo_db_manager:database_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> إنشاء قاعدة بيانات
-            </a>
-            <a href="{% url 'odoo_db_manager:backup_create' %}" class="btn btn-success">
-                <i class="fas fa-save"></i> نسخة احتياطية
-            </a>
-            <a href="{% url 'odoo_db_manager:schedule_list' %}" class="btn btn-warning">
-                <i class="fas fa-clock"></i> جدولة النسخ الاحتياطية
-            </a>
-            <a href="{% url 'odoo_db_manager:backup_upload' %}" class="btn btn-info">
-                <i class="fas fa-upload"></i> استعادة من ملف
-            </a>
-            <button onclick="refreshConnectionStatus()" class="btn btn-secondary">
-                <i class="fas fa-sync-alt"></i> تحديث حالة الاتصال
-            </button>
-            <a href="{% url 'odoo_db_manager:google_drive_settings' %}" class="btn btn-outline-primary">
-                <i class="fab fa-google-drive"></i> إعدادات Google Drive
-            </a>            <a href="{% url 'odoo_db_manager:google_sync' %}" class="btn btn-outline-success">
-                <i class="fas fa-sync-alt"></i> مزامنة غوغل
-            </a>
-            <a href="{% url 'odoo_db_manager:advanced_sync_dashboard' %}" class="btn btn-outline-warning">
-                <i class="fas fa-sync-alt"></i> المزامنة المتقدمة
-            </a>
-        </div>
-    </div>
-
-    <!-- قائمة قواعد البيانات -->
-    <div class="odoo-list-view">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>اسم قاعدة البيانات</th>
-                    <th>النوع</th>
-                    <th>الحالة</th>
-                    <th>تاريخ الإنشاء</th>
-                    <th>الإجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for db in databases %}
-                <tr>
-                    <td>
-                        <strong>{{ db.name }}</strong>
-                        {% if db.connection_info.NAME %}
-                            <small class="text-muted d-block">{{ db.connection_info.NAME }}</small>
-                        {% endif %}
-                    </td>
-                    <td>{{ db.get_db_type_display }}</td>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            {% if db.is_active %}
-                            <span class="badge bg-primary me-1">نشطة</span>
-                            {% endif %}
-
-                            {% if db.status %}
-                            <span class="badge bg-success" title="متصلة">
-                                <i class="fas fa-plug"></i>
-                            </span>
-                            {% else %}
-                            <span class="badge bg-danger" title="غير متصلة">
-                                <i class="fas fa-times-circle"></i>
-                            </span>
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td>{{ db.created_at|date:"Y-m-d H:i" }}</td>
-                    <td>
-                        <div class="d-flex justify-content-center gap-1">
-                            <a href="{% url 'odoo_db_manager:database_detail' db.id %}" class="btn btn-link text-info p-1" title="عرض التفاصيل">
-                                <i class="fas fa-eye fa-lg"></i>
-                            </a>
-                            <a href="{% url 'odoo_db_manager:backup_create_for_database' db.id %}" class="btn btn-link text-success p-1" title="إنشاء نسخة احتياطية">
-                                <i class="fas fa-download fa-lg"></i>
-                            </a>
-                            <a href="{% url 'odoo_db_manager:schedule_create_for_database' db.id %}" class="btn btn-link text-warning p-1" title="جدولة النسخ الاحتياطية">
-                                <i class="fas fa-clock fa-lg"></i>
-                            </a>
-                            {% if not db.is_active %}
-                            <button type="button" onclick="confirmActivateDatabase('{% url 'odoo_db_manager:activate_database' db.id %}', '{{ db.name }}'); return false;" class="btn btn-link text-primary p-1" title="تنشيط قاعدة البيانات">
-                                <i class="fas fa-power-off fa-lg"></i>
-                            </button>
-                            {% endif %}
-                            <a href="{% url 'odoo_db_manager:delete_database' db.id %}" class="btn btn-link text-danger p-1" title="حذف قاعدة البيانات">
-                                <i class="fas fa-trash fa-lg"></i>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center">لا توجد قواعد بيانات</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- إحصائيات سريعة -->
-    <div class="odoo-stats">
-        <div class="row">
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">قواعد البيانات</h5>
-                        <p class="card-text display-4">{{ databases.count }}</p>
+        
+        <!-- إعلان النظام الجديد -->
+        <div class="alert new-system-alert">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h4 class="mb-2">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        النظام الجديد للنسخ الاحتياطي والاستعادة
+                    </h4>
+                    <p class="mb-2">
+                        نظام محسن وآمن مع واجهة عصرية وميزات متقدمة لإدارة النسخ الاحتياطي بكفاءة عالية
+                    </p>
+                    <div class="new-system-features">
+                        <span class="feature-badge">
+                            <i class="fas fa-compress-alt me-1"></i>
+                            ضغط تلقائي
+                        </span>
+                        <span class="feature-badge">
+                            <i class="fas fa-chart-line me-1"></i>
+                            تتبع التقدم
+                        </span>
+                        <span class="feature-badge">
+                            <i class="fas fa-mobile-alt me-1"></i>
+                            واجهة متجاوبة
+                        </span>
+                        <span class="feature-badge">
+                            <i class="fas fa-lock me-1"></i>
+                            أمان محسن
+                        </span>
                     </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">النسخ الاحتياطية</h5>
-                        <p class="card-text display-4">{{ backups.count }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">المساحة المستخدمة</h5>
-                        <p class="card-text display-4">{{ total_size_display }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">آخر نسخة احتياطية</h5>
-                        <p class="card-text">{{ last_backup.created_at|date:"Y-m-d H:i"|default:"لا يوجد" }}</p>
-                    </div>
+                <div class="ms-3">
+                    <a href="{% url 'backup_system:dashboard' %}" class="btn btn-lg">
+                        <i class="fas fa-rocket me-2"></i>
+                        جرب النظام الجديد
+                    </a>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- النسخ الاحتياطية الأخيرة -->
-    <div class="mt-4">
-        <h3>النسخ الاحتياطية الأخيرة</h3>
+        <!-- شريط الأدوات العلوي -->
+        <div class="odoo-toolbar">
+            <div class="odoo-toolbar-left">
+                <h1>{{ title }}</h1>
+            </div>
+            <div class="odoo-toolbar-right">
+                <a href="{% url 'odoo_db_manager:database_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> إنشاء قاعدة بيانات
+                </a>
+                <a href="{% url 'odoo_db_manager:backup_create' %}" class="btn btn-success">
+                    <i class="fas fa-save"></i> نسخة احتياطية
+                </a>
+                <a href="{% url 'odoo_db_manager:schedule_list' %}" class="btn btn-warning">
+                    <i class="fas fa-clock"></i> جدولة النسخ الاحتياطية
+                </a>
+                <a href="{% url 'odoo_db_manager:backup_upload' %}" class="btn btn-info">
+                    <i class="fas fa-upload"></i> استعادة من ملف
+                </a>
+                <a href="{% url 'backup_system:dashboard' %}" class="btn btn-outline-dark">
+                    <i class="fas fa-shield-alt"></i> النظام الجديد
+                </a>
+                <button onclick="refreshConnectionStatus()" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt"></i> تحديث حالة الاتصال
+                </button>
+                <a href="{% url 'odoo_db_manager:google_drive_settings' %}" class="btn btn-outline-primary">
+                    <i class="fab fa-google-drive"></i> إعدادات Google Drive
+                </a>
+                <a href="{% url 'odoo_db_manager:google_sync' %}" class="btn btn-outline-success">
+                    <i class="fas fa-sync-alt"></i> مزامنة غوغل
+                </a>
+                <a href="{% url 'odoo_db_manager:advanced_sync_dashboard' %}" class="btn btn-outline-warning">
+                    <i class="fas fa-sync-alt"></i> المزامنة المتقدمة
+                </a>
+            </div>
+        </div>
+
+        <!-- قائمة قواعد البيانات -->
         <div class="odoo-list-view">
             <table class="table">
                 <thead>
                     <tr>
-                        <th>الاسم</th>
-                        <th>قاعدة البيانات</th>
-                        <th>الحجم</th>
+                        <th>اسم قاعدة البيانات</th>
+                        <th>النوع</th>
+                        <th>الحالة</th>
                         <th>تاريخ الإنشاء</th>
                         <th>الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for backup in backups %}
+                    {% for db in databases %}
                     <tr>
-                        <td>{{ backup.name }}</td>
-                        <td>{{ backup.database.name }}</td>
-                        <td>{{ backup.size_display }}</td>
-                        <td>{{ backup.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <strong>{{ db.name }}</strong>
+                            {% if db.connection_info.NAME %}
+                                <small class="text-muted d-block">{{ db.connection_info.NAME }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ db.get_db_type_display }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if db.is_active %}
+                                <span class="badge bg-primary me-1">نشطة</span>
+                                {% endif %}
+
+                                {% if db.status %}
+                                <span class="badge bg-success" title="متصلة">
+                                    <i class="fas fa-plug"></i>
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger" title="غير متصلة">
+                                    <i class="fas fa-times-circle"></i>
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>{{ db.created_at|date:"Y-m-d H:i" }}</td>
                         <td>
                             <div class="d-flex justify-content-center gap-1">
-                                <a href="{% url 'odoo_db_manager:backup_detail' backup.id %}" class="btn btn-link text-info p-1" title="عرض التفاصيل">
+                                <a href="{% url 'odoo_db_manager:database_detail' db.id %}" class="btn btn-link text-info p-1" title="عرض التفاصيل">
                                     <i class="fas fa-eye fa-lg"></i>
                                 </a>
-                                <a href="{% url 'odoo_db_manager:backup_download' backup.id %}" class="btn btn-link text-success p-1" title="تنزيل">
+                                <a href="{% url 'odoo_db_manager:backup_create_for_database' db.id %}" class="btn btn-link text-success p-1" title="إنشاء نسخة احتياطية">
                                     <i class="fas fa-download fa-lg"></i>
                                 </a>
-                                <a href="{% url 'odoo_db_manager:backup_restore' backup.id %}" class="btn btn-link text-warning p-1" title="استعادة">
-                                    <i class="fas fa-undo fa-lg"></i>
+                                <a href="{% url 'odoo_db_manager:schedule_create_for_database' db.id %}" class="btn btn-link text-warning p-1" title="جدولة النسخ الاحتياطية">
+                                    <i class="fas fa-clock fa-lg"></i>
                                 </a>
-                                <a href="{% url 'odoo_db_manager:backup_delete' backup.id %}" class="btn btn-link text-danger p-1" title="حذف">
+                                {% if not db.is_active %}
+                                <button type="button" onclick="confirmActivateDatabase('{% url 'odoo_db_manager:activate_database' db.id %}', '{{ db.name }}'); return false;" class="btn btn-link text-primary p-1" title="تنشيط قاعدة البيانات">
+                                    <i class="fas fa-power-off fa-lg"></i>
+                                </button>
+                                {% endif %}
+                                <a href="{% url 'odoo_db_manager:delete_database' db.id %}" class="btn btn-link text-danger p-1" title="حذف قاعدة البيانات">
                                     <i class="fas fa-trash fa-lg"></i>
                                 </a>
                             </div>
@@ -234,58 +240,144 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center">لا توجد نسخ احتياطية</td>
+                        <td colspan="5" class="text-center">لا توجد قواعد بيانات</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
 
-    <!-- قواعد البيانات المكتشفة في PostgreSQL -->
-    {% if discovered_databases %}
-    <div class="odoo-section mt-4">
-        <h3>قواعد البيانات الموجودة في PostgreSQL</h3>
-        <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>اسم قاعدة البيانات</th>
-                        <th>المالك</th>
-                        <th>الترميز</th>
-                        <th>الحجم</th>
-                        <th>مسجلة في النظام</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for db_info in discovered_databases %}
-                    <tr>
-                        <td><strong>{{ db_info.name }}</strong></td>
-                        <td>{{ db_info.owner|default:"غير محدد" }}</td>
-                        <td>{{ db_info.encoding|default:"UTF8" }}</td>
-                        <td>{{ db_info.size|default:"غير محدد" }}</td>
-                        <td>
-                            {% if db_info.registered %}
-                                <span class="badge bg-success">مسجلة</span>
-                            {% else %}
-                                <span class="badge bg-warning">غير مسجلة</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if not db_info.registered %}
-                                <button class="btn btn-sm btn-primary" onclick="registerDatabase('{{ db_info.name }}')">
-                                    <i class="fas fa-plus"></i> تسجيل
-                                </button>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- إحصائيات سريعة -->
+        <div class="odoo-stats">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">قواعد البيانات</h5>
+                            <p class="card-text display-4">{{ databases.count }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">النسخ الاحتياطية</h5>
+                            <p class="card-text display-4">{{ backups.count }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">المساحة المستخدمة</h5>
+                            <p class="card-text display-4">{{ total_size_display }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">آخر نسخة احتياطية</h5>
+                            <p class="card-text">{{ last_backup.created_at|date:"Y-m-d H:i"|default:"لا يوجد" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <!-- النسخ الاحتياطية الأخيرة -->
+        <div class="mt-4">
+            <h3>النسخ الاحتياطية الأخيرة</h3>
+            <div class="odoo-list-view">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>قاعدة البيانات</th>
+                            <th>الحجم</th>
+                            <th>تاريخ الإنشاء</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for backup in backups %}
+                        <tr>
+                            <td>{{ backup.name }}</td>
+                            <td>{{ backup.database.name }}</td>
+                            <td>{{ backup.size_display }}</td>
+                            <td>{{ backup.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <div class="d-flex justify-content-center gap-1">
+                                    <a href="{% url 'odoo_db_manager:backup_detail' backup.id %}" class="btn btn-link text-info p-1" title="عرض التفاصيل">
+                                        <i class="fas fa-eye fa-lg"></i>
+                                    </a>
+                                    <a href="{% url 'odoo_db_manager:backup_download' backup.id %}" class="btn btn-link text-success p-1" title="تنزيل">
+                                        <i class="fas fa-download fa-lg"></i>
+                                    </a>
+                                    <a href="{% url 'odoo_db_manager:backup_restore' backup.id %}" class="btn btn-link text-warning p-1" title="استعادة">
+                                        <i class="fas fa-undo fa-lg"></i>
+                                    </a>
+                                    <a href="{% url 'odoo_db_manager:backup_delete' backup.id %}" class="btn btn-link text-danger p-1" title="حذف">
+                                        <i class="fas fa-trash fa-lg"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">لا توجد نسخ احتياطية</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- قواعد البيانات المكتشفة في PostgreSQL -->
+        {% if discovered_databases %}
+        <div class="odoo-section mt-4">
+            <h3>قواعد البيانات الموجودة في PostgreSQL</h3>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>اسم قاعدة البيانات</th>
+                            <th>المالك</th>
+                            <th>الترميز</th>
+                            <th>الحجم</th>
+                            <th>مسجلة في النظام</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for db_info in discovered_databases %}
+                        <tr>
+                            <td><strong>{{ db_info.name }}</strong></td>
+                            <td>{{ db_info.owner|default:"غير محدد" }}</td>
+                            <td>{{ db_info.encoding|default:"UTF8" }}</td>
+                            <td>{{ db_info.size|default:"غير محدد" }}</td>
+                            <td>
+                                {% if db_info.registered %}
+                                    <span class="badge bg-success">مسجلة</span>
+                                {% else %}
+                                    <span class="badge bg-warning">غير مسجلة</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not db_info.registered %}
+                                    <button class="btn btn-sm btn-primary" onclick="registerDatabase('{{ db_info.name }}')">
+                                        <i class="fas fa-plus"></i> تسجيل
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 {% endblock %}
 
@@ -323,15 +415,15 @@
                 popup: 'rtl-popup',
                 title: 'rtl-title',
                 content: 'rtl-content'
-            }        });
+            }
+        });
     });
     {% endif %}
 
     // دالة تأكيد تنشيط قاعدة البيانات باستخدام SweetAlert
     function confirmActivateDatabase(url, dbName) {
-        console.log('confirmActivateDatabase called with:', url, dbName); // للتشخيص
+        console.log('confirmActivateDatabase called with:', url, dbName);
 
-        // التحقق من وجود SweetAlert
         if (typeof Swal === 'undefined') {
             console.error('SweetAlert2 is not loaded!');
             alert('خطأ: SweetAlert2 غير محمل');
@@ -345,7 +437,7 @@
             html: `هل أنت متأكد من تنشيط قاعدة البيانات <strong>${dbName}</strong>؟<br><br>
                   <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle"></i>
-                    ملاحظة: سيتم إعادة تشغيل السيرفر لتطبيق التغييرات.
+                    ملاحظة: سيتم إعادة تشغيل السيرف�� لتطبيق التغييرات.
                   </div>`,
             icon: 'question',
             showCancelButton: true,
@@ -360,25 +452,24 @@
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                console.log('User confirmed activation, sending request to:', url); // للتتبع
+                console.log('User confirmed activation, sending request to:', url);
 
-                // عرض مؤشر التحميل
                 Swal.fire({
                     title: 'جاري تنشيط قاعدة البيانات...',
                     html: 'يرجى الانتظار...',
                     allowOutsideClick: false,
                     didOpen: () => {
                         Swal.showLoading();
-                    }                });
+                    }
+                });
 
-                // إرسال طلب AJAX للتنشيط
                 fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'X-CSRFToken': '{{ csrf_token }}'
                     },
-                    body: 'action=activate'  // إضافة body للطلب
+                    body: 'action=activate'
                 })
                 .then(response => {
                     console.log('Response status:', response.status);
@@ -388,24 +479,20 @@
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
 
-                    // التحقق من Content-Type
                     const contentType = response.headers.get('content-type');
                     if (contentType && contentType.includes('application/json')) {
                         return response.json();
                     } else {
-                        // إذا لم يكن JSON، قراءة كـ text
                         return response.text().then(text => {
                             throw new Error(`Expected JSON but got: ${text.substring(0, 100)}...`);
                         });
                     }
                 })
                 .then(data => {
-                    console.log('Response data:', data); // للتتبع
-
-                    // إخفاء مؤشر التحميل
+                    console.log('Response data:', data);
                     Swal.close();
-                      if (data.success) {
-                        // بناء محتوى الرسالة
+                    
+                    if (data.success) {
                         let htmlContent = `
                             <div class="text-center">
                                 <div class="alert alert-success">
@@ -422,7 +509,8 @@
                                     اسم المستخدم: <code>admin</code><br>
                                     كلمة المرور: <code>admin123</code>
                                 </div>
-                            `;                        }
+                            `;
+                        }
 
                         if (data.requires_restart) {
                             htmlContent += `
@@ -437,11 +525,11 @@
                                     <i class="fas fa-info-circle"></i>
                                     تم تطبيق التغييرات مباشرة. يمكنك الآن استخدام قاعدة البيانات الجديدة.
                                 </div>
-                            `;                        }
+                            `;
+                        }
 
                         htmlContent += '</div>';
 
-                        // عرض SweetAlert مع المحتوى المنسق
                         Swal.fire({
                             title: 'تم التنشيط بنجاح!',
                             html: htmlContent,
@@ -455,7 +543,6 @@
                                 content: 'rtl-content'
                             }
                         }).then(() => {
-                            // إعادة تحميل الصفحة لتحديث البيانات
                             window.location.reload();
                         });
                     } else {
@@ -477,7 +564,8 @@
                     Swal.fire({
                         title: 'خطأ',
                         text: 'حدث خطأ أثناء تنشيط قاعدة البيانات. يرجى المحاولة مرة أخرى.',
-                        icon: 'error',                        confirmButtonText: 'تم',
+                        icon: 'error',
+                        confirmButtonText: 'تم',
                         customClass: {
                             popup: 'rtl-popup',
                             title: 'rtl-title',
@@ -488,7 +576,7 @@
             }
         });
 
-        return false; // منع السلوك الافتراضي للرابط
+        return false;
     }
 
     // دالة تسجيل قاعدة بيانات جديدة
@@ -509,7 +597,6 @@
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                // عرض مؤشر التحميل
                 Swal.fire({
                     title: 'جاري تسجيل قاعدة البيانات...',
                     html: 'يرجى الانتظار...',
@@ -518,7 +605,7 @@
                         Swal.showLoading();
                     }
                 });
-                  // إرسال طلب تسجيل قاعدة البيانات إلى الخادم
+
                 fetch('{% url "odoo_db_manager:database_register" %}', {
                     method: 'POST',
                     headers: {
@@ -529,14 +616,11 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // إخفاء مؤشر التحميل
                     Swal.close();
 
                     if (data.success) {
-                        // إعادة تحميل الصفحة لعرض قاعدة البيانات المسجلة حديثًا
                         location.reload();
                     } else {
-                        // عرض رسالة خطأ
                         Swal.fire({
                             title: 'خطأ',
                             text: data.error,
@@ -570,7 +654,6 @@
 
     // دالة لتحديث حالة الاتصال لجميع قواعد البيانات
     function refreshConnectionStatus() {
-        // عرض مؤشر التحميل
         Swal.fire({
             title: 'جاري تحديث حالة الاتصال...',
             html: 'يرجى الانتظار...',
@@ -580,7 +663,6 @@
             }
         });
 
-        // إرسال طلب لتحديث حالة الاتصال إلى الخادم
         fetch('{% url "odoo_db_manager:database_refresh_status" %}', {
             method: 'POST',
             headers: {
@@ -590,14 +672,11 @@
         })
         .then(response => response.json())
         .then(data => {
-            // إخفاء مؤشر التحميل
             Swal.close();
 
             if (data.success) {
-                // إعادة تحميل الصفحة لتحديث حالة الاتصال
                 location.reload();
             } else {
-                // عرض رسالة خطأ
                 Swal.fire({
                     title: 'خطأ',
                     text: data.error,
@@ -627,6 +706,4 @@
         });
     }
 </script>
-    </div>
-</div>
 {% endblock %}
