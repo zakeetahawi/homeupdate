@@ -791,22 +791,32 @@ class Order(models.Model):
             self.save(update_fields=['is_fully_completed'])
             
             # إرسال إشعار عند اكتمال الطلب
-            if is_completed:
+            if is_completed and self.created_by:
                 try:
                     send_notification(
-                        user=self.created_by,
                         title="تم إكمال الطلب",
                         message=f"تم إكمال الطلب {self.order_number} بنجاح",
-                        notification_type='order_completed'
+                        sender=self.created_by,
+                        sender_department_code='orders',
+                        target_department_code='customers',
+                        target_branch=self.branch,
+                        priority='high',
+                        related_object=self
                     )
                 except Exception as e:
                     print(f"خطأ في إرسال إشعار إكمال الطلب: {e}")
     
     def update_all_statuses(self):
         """تحديث جميع الحالات"""
-        self.update_installation_status()
-        self.update_inspection_status()
-        self.update_completion_status()
+        # تعيين علامة لتجنب الحلقة اللانهائية
+        setattr(self, '_updating_statuses', True)
+        try:
+            self.update_installation_status()
+            self.update_inspection_status()
+            self.update_completion_status()
+        finally:
+            # إزالة العلامة بعد الانتهاء
+            setattr(self, '_updating_statuses', False)
 
     def get_delivery_date_label(self):
         """إرجاع تسمية التاريخ المناسبة حسب حالة الطلب"""
@@ -1165,7 +1175,8 @@ class Order(models.Model):
 @receiver(post_save, sender=Order)
 def order_post_save(sender, instance, created, **kwargs):
     """تحديث الحالات المرتبطة عند حفظ الطلب"""
-    if not created:
+    # تجنب الحلقة اللانهائية عن طريق التحقق من وجود علامة التحديث
+    if not created and not getattr(instance, '_updating_statuses', False):
         # تحديث جميع الحالات المرتبطة
         instance.update_all_statuses()
 

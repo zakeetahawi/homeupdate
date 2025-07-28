@@ -2,11 +2,9 @@
 """
 توحيد أرقام هواتف جميع العملاء حسب قواعد التنسيق المطلوبة.
 """
-
 import os
 import sys
 import django
-import re
 
 # إعداد Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
