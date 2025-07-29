@@ -13,14 +13,20 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from .models import Customer, CustomerCategory, CustomerNote
 from orders.models import Order
+
 from .forms import CustomerForm, CustomerSearchForm, CustomerNoteForm
+from .permissions import (
+    get_user_customers_queryset,
+    can_user_view_customer,
+    can_user_edit_customer,
+    can_user_delete_customer,
+    can_user_create_customer,
+    get_user_customer_permissions
+)
 
 def get_queryset_for_user(request):
     """دالة مساعدة للحصول على العملاء المسموح للمستخدم برؤيتهم"""
-    if request.user.is_superuser:
-        return Customer.objects.all()
-    if request.user.branch:
-        return Customer.objects.filter(branch=request.user.branch)
+    return get_user_customers_queryset(request.user)
     return Customer.objects.none()
 
 @login_required
@@ -105,12 +111,18 @@ def customer_detail(request, pk):
     View for displaying customer details, orders, and notes
     تحسين الأداء باستخدام select_related و prefetch_related
     """
+
     customer = get_object_or_404(
         get_queryset_for_user(request).select_related(
             'category', 'branch', 'created_by'
         ),
         pk=pk
     )
+
+    # التحقق من صلاحية المستخدم لعرض هذا العميل
+    if not can_user_view_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
+        return redirect("customers:customer_list")
 
     # تحسين استعلام الطلبات باستخدام prefetch_related
     customer_orders = customer.customer_orders.select_related('customer', 'salesperson', 'branch').prefetch_related('items').order_by('-created_at')[:5]
@@ -149,6 +161,11 @@ def customer_detail(request, pk):
 @login_required
 @permission_required('customers.add_customer', raise_exception=True)
 def customer_create(request):
+
+    # التحقق من صلاحية المستخدم لإنشاء عميل
+    if not can_user_create_customer(request.user):
+        messages.error(request, "ليس لديك صلاحية لإنشاء عملاء.")
+        return redirect("customers:customer_list")
     """
     View for creating a new customer with image upload
     """
@@ -205,11 +222,17 @@ def customer_update(request, pk):
     """
     View for updating customer details including image
     """
+
     try:
         customer = Customer.objects.select_related('branch').get(pk=pk)
     except Customer.DoesNotExist:
         messages.error(request, 'العميل غير موجود في قاعدة البيانات.')
         return redirect('customers:customer_list')
+
+    # التحقق من صلاحية المستخدم لتعديل هذا العميل
+    if not can_user_edit_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لتعديل هذا العميل.")
+        return redirect("customers:customer_detail", pk=pk)
 
     # Check if user has access to this customer's branch
     if not request.user.is_superuser and customer.branch != request.user.branch:
@@ -241,6 +264,16 @@ def customer_update(request, pk):
 def customer_delete(request, pk):
     """View for deleting a customer with proper error handling."""
     customer = get_object_or_404(Customer, pk=pk)
+
+    # التحقق من صلاحية المستخدم لحذف هذا العميل
+    if not can_user_delete_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لحذف هذا العميل.")
+        return redirect("customers:customer_detail", pk=pk)
+
+    # التحقق من صلاحية المستخدم لعرض هذا العميل
+    if not can_user_view_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
+        return redirect("customers:customer_list")
 
     # Check related records before attempting deletion
     has_related_records = False
@@ -315,6 +348,16 @@ def add_customer_note(request, pk):
     View for adding a note to a customer
     """
     customer = get_object_or_404(Customer, pk=pk)
+
+    # التحقق من صلاحية المستخدم لحذف هذا العميل
+    if not can_user_delete_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لحذف هذا العميل.")
+        return redirect("customers:customer_detail", pk=pk)
+
+    # التحقق من صلاحية المستخدم لعرض هذا العميل
+    if not can_user_view_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
+        return redirect("customers:customer_list")
     form = CustomerNoteForm(request.POST)
 
     if form.is_valid():
@@ -399,6 +442,16 @@ def delete_customer_category(request, category_id):
 def get_customer_notes(request, pk):
     """API endpoint to get customer notes"""
     customer = get_object_or_404(Customer, pk=pk)
+
+    # التحقق من صلاحية المستخدم لحذف هذا العميل
+    if not can_user_delete_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لحذف هذا العميل.")
+        return redirect("customers:customer_detail", pk=pk)
+
+    # التحقق من صلاحية المستخدم لعرض هذا العميل
+    if not can_user_view_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
+        return redirect("customers:customer_list")
     notes = customer.notes_history.all().order_by('-created_at')
     notes_data = [{
         'note': note.note,
@@ -412,6 +465,16 @@ def get_customer_notes(request, pk):
 def get_customer_details(request, pk):
     """API endpoint to get customer details"""
     customer = get_object_or_404(Customer, pk=pk)
+
+    # التحقق من صلاحية المستخدم لحذف هذا العميل
+    if not can_user_delete_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لحذف هذا العميل.")
+        return redirect("customers:customer_detail", pk=pk)
+
+    # التحقق من صلاحية المستخدم لعرض هذا العميل
+    if not can_user_view_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
+        return redirect("customers:customer_list")
 
     customer_data = {
         'id': customer.id,
@@ -437,11 +500,8 @@ class CustomerDashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
 
-        # استخدام select_related لتحميل البيانات المرتبطة مسبقًا
-        if user.is_superuser:
-            customers = Customer.objects.select_related('category', 'branch', 'created_by')
-        else:
-            customers = Customer.objects.select_related('category', 'branch', 'created_by').filter(branch=user.branch) if hasattr(user, 'branch') else Customer.objects.none()
+        # تطبيق نظام الصلاحيات - الحصول على العملاء حسب دور المستخدم
+        customers = get_user_customers_queryset(user).select_related("category", "branch", "created_by")
 
         # استخدام استعلامات أكثر كفاءة
         from django.db.models import Count, Case, When, IntegerField
@@ -519,36 +579,6 @@ def update_customer_address(request, pk):
     """تحديث عنوان العميل ونوع المكان"""
     try:
         customer = get_object_or_404(Customer, pk=pk)
-        
-        # التحقق من الصلاحيات
-        if not request.user.is_superuser and request.user.branch != customer.branch:
-            return JsonResponse({
-                'success': False,
-                'error': 'ليس لديك صلاحية لتحديث هذا العميل'
-            })
-        
-        address = request.POST.get('address', '').strip()
-        location_type = request.POST.get('location_type', '').strip()
-        
-        if not address:
-            return JsonResponse({
-                'success': False,
-                'error': 'العنوان مطلوب'
-            })
-        
-        # تحديث عنوان العميل ونوع المكان
-        customer.address = address
-        if location_type:
-            customer.location_type = location_type
-        customer.save()
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'تم تحديث عنوان العميل بنجاح',
-            'address': customer.address,
-            'location_type': customer.location_type
-        })
-        
     except Customer.DoesNotExist:
         return JsonResponse({
             'success': False,
@@ -559,3 +589,42 @@ def update_customer_address(request, pk):
             'success': False,
             'error': f'حدث خطأ أثناء تحديث عنوان العميل: {str(e)}'
         })
+
+    # التحقق من صلاحية المستخدم لحذف هذا العميل
+    if not can_user_delete_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لحذف هذا العميل.")
+        return redirect("customers:customer_detail", pk=pk)
+
+    # التحقق من صلاحية المستخدم لعرض هذا العميل
+    if not can_user_view_customer(request.user, customer):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
+        return redirect("customers:customer_list")
+
+    # التحقق من الصلاحيات
+    if not request.user.is_superuser and request.user.branch != customer.branch:
+        return JsonResponse({
+            'success': False,
+            'error': 'ليس لديك صلاحية لتحديث هذا العميل'
+        })
+
+    address = request.POST.get('address', '').strip()
+    location_type = request.POST.get('location_type', '').strip()
+
+    if not address:
+        return JsonResponse({
+            'success': False,
+            'error': 'العنوان مطلوب'
+        })
+
+    # تحديث عنوان العميل ونوع المكان
+    customer.address = address
+    if location_type:
+        customer.location_type = location_type
+    customer.save()
+
+    return JsonResponse({
+        'success': True,
+        'message': 'تم تحديث عنوان العميل بنجاح',
+        'address': customer.address,
+        'location_type': customer.location_type
+    })

@@ -1,4 +1,5 @@
 from django import template
+from django.utils.safestring import mark_safe
 import json
 
 register = template.Library()
@@ -60,3 +61,154 @@ def get_type_icon(type_value):
         'tailoring': 'fas fa-cut'
     }
     return type_map.get(type_value, 'fas fa-question')
+
+@register.simple_tag
+def get_order_type_badge(order_type, order=None):
+    """
+    إنشاء badge موحد لنوع الطلب مع ألوان متناسقة مع هوية المشروع
+    
+    Args:
+        order_type: نوع الطلب (installation, tailoring, accessory, inspection)
+        order: كائن الطلب (اختياري) للتحقق من حالة VIP
+    """
+    type_colors = {
+        'installation': '#CD853F',
+        'tailoring': '#D2691E',
+        'accessory': '#A0522D', 
+        'inspection': '#8B4513',
+    }
+    
+    type_icons = {
+        'installation': 'fas fa-tools',
+        'tailoring': 'fas fa-shipping-fast',
+        'accessory': 'fas fa-gem',
+        'inspection': 'fas fa-search',
+    }
+    
+    type_texts = {
+        'installation': 'تركيب',
+        'tailoring': 'تسليم',
+        'accessory': 'إكسسوار',
+        'inspection': 'معاينة',
+    }
+    
+    color = type_colors.get(order_type, '#6c757d')
+    icon = type_icons.get(order_type, 'fas fa-tag')
+    text = type_texts.get(order_type, order_type)
+    
+    # التحقق من حالة VIP إذا تم تمرير كائن الطلب
+    is_vip = False
+    if order and hasattr(order, 'status'):
+        is_vip = order.status == 'vip'
+    
+    if is_vip:
+        color = '#FFD700'  # ذهبي للـ VIP
+        text = f"VIP - {text}"
+        icon = 'fas fa-crown'
+    
+    html = f'''
+    <span class="badge text-white" style="font-size: 0.75rem; background-color: {color};">
+        <i class="{icon} me-1"></i>{text}
+    </span>
+    '''
+    
+    return mark_safe(html)
+
+@register.simple_tag
+def get_vip_badge():
+    """
+    إنشاء badge للطلبات VIP
+    """
+    html = '''
+    <span class="badge text-dark" style="font-size: 0.75rem; background-color: #FFD700;">
+        <i class="fas fa-crown me-1"></i>VIP
+    </span>
+    '''
+    return mark_safe(html)
+
+@register.simple_tag  
+def get_status_badge(status, status_type="default"):
+    """
+    إنشاء badge موحد للحالة مع ألوان متناسقة مع هوية المشروع
+    
+    Args:
+        status: حالة العنصر (pending, completed, etc.)
+        status_type: نوع الحالة (default, manufacturing, installation, inspection)
+    """
+    status_colors = {
+        # الحالات المكتملة - أخضر داكن
+        'completed': '#228B22',
+        'ready_install': '#32CD32',
+        'delivered': '#006400',
+        'modification_completed': '#228B22',
+        
+        # حالات قيد الانتظار - برتقالي/بني فاتح
+        'pending': '#D2691E',
+        'pending_approval': '#CD853F',
+        'modification_required': '#DEB887',
+        'needs_scheduling': '#F4A460',
+        
+        # حالات غير مجدول - رمادي
+        'not_scheduled': '#696969',
+        
+        # حالات مجدولة - بني متوسط
+        'scheduled': '#A0522D',
+        'modification_in_progress': '#8B4513',
+        'processing': '#8B4513',
+        'in_progress': '#8B4513',
+        'in_installation': '#A0522D',
+        
+        # حالات ملغية - أحمر داكن
+        'cancelled': '#8B0000',
+        'rejected': '#DC143C',
+    }
+    
+    status_icons = {
+        'pending': 'fas fa-clock',
+        'pending_approval': 'fas fa-hourglass-half',
+        'processing': 'fas fa-cogs',
+        'in_progress': 'fas fa-tools',
+        'in_installation': 'fas fa-tools',
+        'ready_install': 'fas fa-check-circle',
+        'completed': 'fas fa-check',
+        'delivered': 'fas fa-truck',
+        'rejected': 'fas fa-times',
+        'cancelled': 'fas fa-ban',
+        'scheduled': 'fas fa-calendar-check',
+        'not_scheduled': 'fas fa-calendar-times',
+        'needs_scheduling': 'fas fa-calendar-plus',
+        'modification_required': 'fas fa-exclamation-triangle',
+        'modification_in_progress': 'fas fa-wrench',
+        'modification_completed': 'fas fa-check-double',
+    }
+    
+    status_texts = {
+        'pending': 'قيد الانتظار',
+        'pending_approval': 'قيد الموافقة',
+        'processing': 'قيد التنفيذ',
+        'in_progress': 'قيد التصنيع',
+        'in_installation': 'قيد التركيب',
+        'ready_install': 'جاهز للتركيب',
+        'completed': 'مكتمل',
+        'delivered': 'تم التسليم',
+        'rejected': 'مرفوض',
+        'cancelled': 'ملغي',
+        'scheduled': 'مجدول',
+        'not_scheduled': 'غير مجدول',
+        'needs_scheduling': 'بحاجة جدولة',
+        'modification_required': 'يحتاج تعديل',
+        'modification_in_progress': 'التعديل قيد التنفيذ',
+        'modification_completed': 'التعديل مكتمل',
+    }
+    
+    color = status_colors.get(status, '#6c757d')
+    icon = status_icons.get(status, 'fas fa-circle')
+    text = status_texts.get(status, status)
+    
+    html = f'''
+    <span class="badge text-white" style="font-size: 0.75rem; background-color: {color};">
+        <i class="{icon} me-1"></i>{text}
+    </span>
+    '''
+    
+    return mark_safe(html)

@@ -1,12 +1,22 @@
 from django.urls import path
 from . import views
+from . import dashboard_views
 from .views import OrdersDashboardView
 
 app_name = 'orders'
 
 urlpatterns = [
-    # Order list as main page
-    path('', views.order_list, name='order_list'),
+    # الداشبورد الجديد كصفحة رئيسية
+    path('', dashboard_views.orders_dashboard, name='orders_dashboard'),
+    
+    # الجدول الشامل للطلبات
+    path('all/', views.order_list, name='order_list'),
+
+    # صفحات الطلبات المنفصلة حسب النوع
+    path('inspection/', dashboard_views.inspection_orders, name='inspection_orders'),
+    path('installation/', dashboard_views.installation_orders, name='installation_orders'),
+    path('accessory/', dashboard_views.accessory_orders, name='accessory_orders'),
+    path('tailoring/', dashboard_views.tailoring_orders, name='tailoring_orders'),
 
     # Old dashboard (deactivated)
     path('dashboard/', OrdersDashboardView.as_view(), name='dashboard'),

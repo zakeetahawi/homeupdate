@@ -4,13 +4,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from .models import Order, OrderItem, Payment
 from .forms import OrderForm, OrderItemFormSet, PaymentForm
+from .permissions import get_user_orders_queryset, can_user_view_order, can_user_edit_order, can_user_delete_order
 from accounts.models import Branch, Salesperson, Department, Notification, SystemSettings
 from customers.models import Customer
 from inventory.models import Product
@@ -26,11 +27,8 @@ class OrdersDashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         today = timezone.now().date()
 
-        # Get orders
-        if self.request.user.is_superuser:
-            orders = Order.objects.all()
-        else:
-            orders = Order.objects.filter(Q(created_by=self.request.user) | Q(salesperson=self.request.user))
+        # تطبيق نظام الصلاحيات - الحصول على الطلبات حسب دور المستخدم
+        orders = get_user_orders_queryset(self.request.user)
 
         # Basic statistics
         context['total_orders'] = orders.count()
@@ -62,7 +60,7 @@ def order_list(request):
         page_size = 25
 
     # Filter orders based on search query and status
-    orders = Order.objects.all().select_related('customer', 'salesperson')
+    orders = get_user_orders_queryset(request.user).select_related('customer', 'salesperson')
 
     if search_query:
         orders = orders.filter(
@@ -145,6 +143,21 @@ def order_detail(request, pk):
     View for displaying order details
     """
     order = get_object_or_404(Order, pk=pk)
+
+    # التحقق من صلاحية المستخدم لتعديل هذا الطلب
+
+    # التحقق من صلاحية المستخدم لحذف هذا الطلب
+    if not can_user_delete_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لحذف هذا الطلب.")
+        return redirect("orders:order_detail", pk=pk)
+    if not can_user_edit_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
+        return redirect("orders:order_detail", pk=pk)
+
+    # التحقق من صلاحية المستخدم لعرض هذا الطلب
+    if not can_user_view_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
+        return redirect("orders:order_list")
     payments = order.payments.all().order_by('-payment_date')
 
     # Now all information is in the Order model
@@ -335,6 +348,21 @@ def order_update(request, pk):
     View for updating an existing order
     """
     order = get_object_or_404(Order, pk=pk)
+
+    # التحقق من صلاحية المستخدم لتعديل هذا الطلب
+
+    # التحقق من صلاحية المستخدم لحذف هذا الطلب
+    if not can_user_delete_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لحذف هذا الطلب.")
+        return redirect("orders:order_detail", pk=pk)
+    if not can_user_edit_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
+        return redirect("orders:order_detail", pk=pk)
+
+    # التحقق من صلاحية المستخدم لعرض هذا الطلب
+    if not can_user_view_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
+        return redirect("orders:order_list")
     
     if request.method == 'POST':
         # الحصول على معرف العميل من POST
@@ -420,6 +448,21 @@ def order_delete(request, pk):
     View for deleting an order
     """
     order = get_object_or_404(Order, pk=pk)
+
+    # التحقق من صلاحية المستخدم لتعديل هذا الطلب
+
+    # التحقق من صلاحية المستخدم لحذف هذا الطلب
+    if not can_user_delete_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لحذف هذا الطلب.")
+        return redirect("orders:order_detail", pk=pk)
+    if not can_user_edit_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
+        return redirect("orders:order_detail", pk=pk)
+
+    # التحقق من صلاحية المستخدم لعرض هذا الطلب
+    if not can_user_view_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
+        return redirect("orders:order_list")
 
     if request.method == 'POST':
         try:
@@ -679,3 +722,6 @@ def get_customer_inspections(request):
             'success': False,
             'message': f'خطأ في جلب المعاينات: {str(e)}'
         })
+
+
+#

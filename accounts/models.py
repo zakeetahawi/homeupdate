@@ -13,6 +13,11 @@ class User(AbstractUser):
     branch = models.ForeignKey('Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='users', verbose_name=_('الفرع'))
     departments = models.ManyToManyField('Department', blank=True, related_name='users', verbose_name=_('الأقسام'))
     is_inspection_technician = models.BooleanField(default=False, verbose_name=_('فني معاينة'))
+    is_salesperson = models.BooleanField(default=False, verbose_name=_("بائع"))
+    is_branch_manager = models.BooleanField(default=False, verbose_name=_("مدير فرع"))
+    is_region_manager = models.BooleanField(default=False, verbose_name=_("مدير منطقة"))
+    is_general_manager = models.BooleanField(default=False, verbose_name=_("مدير عام"))
+    managed_branches = models.ManyToManyField("Branch", blank=True, related_name="region_managers", verbose_name=_("الفروع المُدارة"))
     default_theme = models.CharField(max_length=50, default='default', verbose_name=_('الثيم الافتراضي'))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_('تاريخ التحديث'))
     class Meta:
@@ -25,6 +30,53 @@ class User(AbstractUser):
         جلب الثيم الافتراضي للمستخدم
         """
         return self.default_theme or 'default'
+
+    def clean(self):
+        """التحقق من صحة البيانات"""
+        super().clean()
+        
+        # التحقق من أن المستخدم لديه دور واحد فقط
+        roles = [
+            self.is_salesperson,
+            self.is_branch_manager,
+            self.is_region_manager,
+            self.is_general_manager
+        ]
+        
+        active_roles = sum(roles)
+        if active_roles > 1:
+            raise ValidationError(_("لا يمكن اختيار أكثر من دور واحد للمستخدم"))
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+    
+    def get_user_role(self):
+        """الحصول على دور المستخدم"""
+        if self.is_general_manager:
+            return "general_manager"
+        elif self.is_region_manager:
+            return "region_manager"
+        elif self.is_branch_manager:
+            return "branch_manager"
+        elif self.is_salesperson:
+            return "salesperson"
+        elif self.is_inspection_technician:
+            return "inspection_technician"
+        else:
+            return "user"
+    
+    def get_user_role_display(self):
+        """الحصول على اسم الدور للعرض"""
+        role_names = {
+            "general_manager": "مدير عام",
+            "region_manager": "مدير منطقة",
+            "branch_manager": "مدير فرع",
+            "salesperson": "بائع",
+            "inspection_technician": "فني معاينة",
+            "user": "مستخدم عادي"
+        }
+        return role_names.get(self.get_user_role(), "غير محدد")
 class Branch(models.Model):
     code = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
