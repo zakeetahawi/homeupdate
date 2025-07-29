@@ -7,8 +7,11 @@ import sys
 import django
 
 # إعداد Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'homeupdate.settings')
+# إضافة مجلد المشروع الرئيسي إلى sys.path ليعمل السكريبت من أي موقع
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 django.setup()
 
 from customers.models import Customer
