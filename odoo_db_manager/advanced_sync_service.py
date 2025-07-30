@@ -736,6 +736,8 @@ class AdvancedSyncService:
             salesperson = Salesperson.objects.filter(name__icontains=salesperson_name).first()
             if salesperson:
                 order_data['salesperson'] = salesperson
+            else:
+                order_data['salesperson_name_raw'] = salesperson_name
         
         # الفرع
         branch = customer.branch

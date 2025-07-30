@@ -5,15 +5,16 @@
 
 from odoo_db_manager.google_sync_advanced import GoogleSheetMapping
 
+
 try:
-    original = GoogleSheetMapping.objects.get(name="المول 2024")
+    original = GoogleSheetMapping.objects.get(name="النحاس 2025")
 except GoogleSheetMapping.DoesNotExist:
-    print("[ERROR] لا يوجد تعيين باسم 'المول 2024'")
+    print("[ERROR] لا يوجد تعيين باسم 'النحاس 2025'")
     exit()
 
-for i in range(1, 12):
+for i in range(1, 15):
     new_mapping = GoogleSheetMapping.objects.create(
-        name=f"المول 2024 {i}",
+        name=f"النحاس 2025 {i}",
         spreadsheet_id=original.spreadsheet_id,
         sheet_name=original.sheet_name,
         is_active=original.is_active,

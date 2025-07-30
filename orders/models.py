@@ -79,6 +79,13 @@ class Order(models.Model):
         null=True,
         blank=True
     )
+    salesperson_name_raw = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='اسم البائع من الجدول (إذا لم يوجد في النظام)',
+        help_text='اسم البائع كما هو في الجدول إذا لم يوجد في النظام'
+    )
     delivery_type = models.CharField(
         max_length=10,
         choices=DELIVERY_TYPE_CHOICES,
