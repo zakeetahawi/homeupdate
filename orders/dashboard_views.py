@@ -8,13 +8,41 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import datetime
 from accounts.models import SystemSettings
-from accounts.utils import apply_default_year_filter, get_dashboard_year_context
 from .permissions import get_user_orders_queryset, get_user_role_permissions
 
 
 def apply_year_filter(orders, request):
-    """تطبيق فلتر السنة على الطلبات مع دعم السنة الافتراضية من الإعدادات"""
-    return apply_default_year_filter(orders, request, 'order_date')
+    """تطبيق فلتر السنة على الطلبات مع دعم السنة الافتراضية والسنوات المتعددة"""
+    # الحصول على السنوات المحددة
+    selected_years = request.GET.getlist('years')
+    year_filter = request.GET.get('year', '')
+    
+    # إذا تم تحديد سنوات متعددة
+    if selected_years:
+        try:
+            year_filters = Q()
+            for year_str in selected_years:
+                if year_str != 'all':
+                    year = int(year_str)
+                    year_filters |= Q(order_date__year=year)
+            
+            if year_filters:
+                orders = orders.filter(year_filters)
+        except (ValueError, TypeError):
+            pass
+    # إذا تم تحديد سنة واحدة فقط
+    elif year_filter and year_filter != 'all':
+        try:
+            year = int(year_filter)
+            orders = orders.filter(order_date__year=year)
+        except (ValueError, TypeError):
+            pass
+    # إذا لم يتم تحديد أي سنة، استخدم السنة الحالية كافتراضي
+    else:
+        current_year = timezone.now().year
+        orders = orders.filter(order_date__year=current_year)
+    
+    return orders
 
 
 def get_available_years():
@@ -67,8 +95,6 @@ def orders_dashboard(request):
     # معلومات فلتر السنة
     available_years = get_available_years()
     selected_year = request.GET.get('year', '')
-    selected_years = request.GET.getlist('years')
-    current_year = timezone.now().year
     
     context = {
         'inspection_count': inspection_count,
@@ -85,8 +111,6 @@ def orders_dashboard(request):
         'currency_symbol': currency_symbol,
         'available_years': available_years,
         'selected_year': selected_year,
-        'selected_years': selected_years,
-        'current_year': current_year,
     }
     
     return render(request, 'orders/orders_dashboard.html', context)
