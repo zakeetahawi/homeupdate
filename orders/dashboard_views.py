@@ -5,8 +5,23 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Sum
 from django.core.paginator import Paginator
+from django.utils import timezone
+from datetime import datetime
 from accounts.models import SystemSettings
+from accounts.utils import apply_default_year_filter, get_dashboard_year_context
 from .permissions import get_user_orders_queryset, get_user_role_permissions
+
+
+def apply_year_filter(orders, request):
+    """تطبيق فلتر السنة على الطلبات مع دعم السنة الافتراضية من الإعدادات"""
+    return apply_default_year_filter(orders, request, 'order_date')
+
+
+def get_available_years():
+    """الحصول على قائمة السنوات المتاحة"""
+    from .models import Order
+    years = Order.objects.dates('order_date', 'year', order='DESC')
+    return [year.year for year in years]
 
 
 @login_required
@@ -20,6 +35,9 @@ def orders_dashboard(request):
 
     # الحصول على الطلبات حسب صلاحيات المستخدم
     orders = get_user_orders_queryset(request.user)
+    
+    # تطبيق فلتر السنة
+    orders = apply_year_filter(orders, request)
     
     # إحصائيات البطاقات الأربع
     inspection_count = orders.filter(selected_types__icontains='inspection').count()
@@ -46,6 +64,12 @@ def orders_dashboard(request):
     system_settings = SystemSettings.get_settings()
     currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
     
+    # معلومات فلتر السنة
+    available_years = get_available_years()
+    selected_year = request.GET.get('year', '')
+    selected_years = request.GET.getlist('years')
+    current_year = timezone.now().year
+    
     context = {
         'inspection_count': inspection_count,
         'installation_count': installation_count,
@@ -59,6 +83,10 @@ def orders_dashboard(request):
         'total_revenue': total_revenue,
         'recent_orders': recent_orders,
         'currency_symbol': currency_symbol,
+        'available_years': available_years,
+        'selected_year': selected_year,
+        'selected_years': selected_years,
+        'current_year': current_year,
     }
     
     return render(request, 'orders/orders_dashboard.html', context)
@@ -72,6 +100,9 @@ def inspection_orders(request):
     
     # تصفية طلبات المعاينة فقط
     orders = orders.filter(selected_types__icontains='inspection')
+    
+    # تطبيق فلتر السنة
+    orders = apply_year_filter(orders, request)
     
     # معالجة البحث والتصفية
     search_query = request.GET.get('search', '')
@@ -137,6 +168,9 @@ def installation_orders(request):
     # تصفية طلبات التركيب فقط
     orders = orders.filter(selected_types__icontains='installation')
     
+    # تطبيق فلتر السنة
+    orders = apply_year_filter(orders, request)
+    
     # معالجة البحث والتصفية
     search_query = request.GET.get('search', '')
     installation_status_filter = request.GET.get('installation_status', '')
@@ -201,6 +235,9 @@ def accessory_orders(request):
     # تصفية طلبات الإكسسوار فقط
     orders = orders.filter(selected_types__icontains='accessory')
     
+    # تطبيق فلتر السنة
+    orders = apply_year_filter(orders, request)
+    
     # معالجة البحث والتصفية
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
@@ -264,6 +301,9 @@ def tailoring_orders(request):
     
     # تصفية طلبات التسليم فقط
     orders = orders.filter(selected_types__icontains='tailoring')
+    
+    # تطبيق فلتر السنة
+    orders = apply_year_filter(orders, request)
     
     # معالجة البحث والتصفية
     search_query = request.GET.get('search', '')
