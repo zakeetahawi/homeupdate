@@ -62,6 +62,36 @@ def order_list(request):
     # Filter orders based on search query and status
     orders = get_user_orders_queryset(request.user).select_related('customer', 'salesperson')
 
+    # تطبيق فلتر السنة مع دعم السنوات المتعددة والسنة الافتراضية
+    selected_years = request.GET.getlist('years')
+    year_filter = request.GET.get('year', '')
+    
+    # إذا تم تحديد سنوات متعددة
+    if selected_years:
+        try:
+            year_filters = Q()
+            for year_str in selected_years:
+                if year_str != 'all':
+                    year = int(year_str)
+                    year_filters |= Q(order_date__year=year)
+            
+            if year_filters:
+                orders = orders.filter(year_filters)
+        except (ValueError, TypeError):
+            pass
+    # إذا تم تحديد سنة واحدة فقط
+    elif year_filter and year_filter != 'all':
+        try:
+            year = int(year_filter)
+            orders = orders.filter(order_date__year=year)
+        except (ValueError, TypeError):
+            pass
+    # إذا لم يتم تحديد أي سنة، استخدم السنة الافتراضية من الإعدادات
+    else:
+        from accounts.models import DashboardYearSettings
+        default_year = DashboardYearSettings.get_default_year()
+        orders = orders.filter(order_date__year=default_year)
+
     if search_query:
         orders = orders.filter(
             Q(order_number__icontains=search_query) |
@@ -97,11 +127,19 @@ def order_list(request):
     system_settings = SystemSettings.get_settings()
     currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
 
+    # معلومات فلتر السنة
+    available_years = Order.objects.dates('order_date', 'year', order='DESC')
+    available_years = [year.year for year in available_years]
+
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
         'status_filter': status_filter,
         'order_type_filter': order_type_filter,
+        'year_filter': year_filter,
+        'selected_years': selected_years,
+        'available_years': available_years,
+        'current_year': timezone.now().year,
         'total_orders': orders.count(),
         'currency_symbol': currency_symbol,  # Add currency symbol to context
         'page_size': page_size,

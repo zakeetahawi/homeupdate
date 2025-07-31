@@ -1,12 +1,44 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
-# from django.utils import timezone
+from django.db.models import Q
+from django.utils import timezone
+from datetime import datetime
 from .models import (
     Order, OrderItem, Payment, OrderStatusLog, 
     ManufacturingDeletionLog, DeliveryTimeSettings
 )
 # from .extended_models import ExtendedOrder, AccessoryItem, FabricOrder # Deletion
+
+
+class YearFilter(admin.SimpleListFilter):
+    """فلتر السنة للطلبات"""
+    title = _('السنة')
+    parameter_name = 'year'
+
+    def lookups(self, request, model_admin):
+        """إرجاع قائمة السنوات المتاحة"""
+        years = Order.objects.dates('order_date', 'year', order='DESC')
+        year_choices = [('all', _('جميع السنوات'))]
+        
+        for year in years:
+            year_choices.append((str(year.year), str(year.year)))
+        
+        return year_choices
+
+    def queryset(self, request, queryset):
+        """تطبيق الفلتر على الاستعلام"""
+        if self.value() == 'all':
+            return queryset
+        elif self.value():
+            try:
+                year = int(self.value())
+                return queryset.filter(order_date__year=year)
+            except (ValueError, TypeError):
+                return queryset
+        return queryset
+
+
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -36,13 +68,16 @@ class PaymentInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('order_number', 'customer', 'order_status_display', 'tracking_status', 'final_price', 'payment_status', 'created_at')
+    list_display = ('order_number', 'customer', 'order_status_display', 'tracking_status', 'final_price', 'payment_status', 'order_year', 'created_at')
     list_filter = (
+        YearFilter,
         'tracking_status',
+        'order_status',
         'payment_verified',
         'delivery_type',
+        'status',
     )
-    search_fields = ('order_number', 'customer__name', 'invoice_number')
+    search_fields = ('order_number', 'customer__name', 'invoice_number', 'contract_number')
     inlines = [OrderItemInline, PaymentInline]
     readonly_fields = (
         'created_at',
@@ -50,6 +85,7 @@ class OrderAdmin(admin.ModelAdmin):
         'order_date',
         'modified_at',
     )
+    date_hierarchy = 'order_date'
 
     fieldsets = (
         (_('معلومات أساسية'), {
@@ -102,7 +138,13 @@ class OrderAdmin(admin.ModelAdmin):
         elif obj.paid_amount > 0:
             return format_html('<span style="color: orange;">مدفوع جزئياً</span>')
         return format_html('<span style="color: red;">غير مدفوع</span>')
-    payment_status.short_description = 'حالة الدفع'
+    payment_status.short_description = 'حالة ��لدفع'
+
+    def order_year(self, obj):
+        """عرض سنة الطلب"""
+        return obj.order_date.year if obj.order_date else '-'
+    order_year.short_description = 'السنة'
+    order_year.admin_order_field = 'order_date'
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

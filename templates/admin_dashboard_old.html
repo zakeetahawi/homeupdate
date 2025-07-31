@@ -2,13 +2,15 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}داش بورد الإدارة المحسن - نظام الخواجه{% endblock %}
+{% block title %}داش بورد الإدارة - نظام الخواجه{% endblock %}
 
 {% block extra_css %}
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- Custom Dashboard CSS -->
 <link rel="stylesheet" href="{% static 'css/admin-dashboard.css' %}">
+<!-- Custom Dashboard JavaScript -->
+<script src="{% static 'js/admin-dashboard.js' %}"></script>
 <style>
     .dashboard-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -206,54 +208,6 @@
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
     }
     
-    .year-mode-toggle {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 10px 20px;
-        font-weight: bold;
-        transition: all 0.3s ease;
-        margin-left: 10px;
-    }
-    
-    .year-mode-toggle:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(67, 233, 123, 0.4);
-    }
-    
-    .performance-metrics {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    
-    .performance-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-    }
-    
-    .performance-item {
-        text-align: center;
-        padding: 15px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-    }
-    
-    .performance-value {
-        font-size: 2rem;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    
-    .performance-label {
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-    
     @media (max-width: 768px) {
         .dashboard-title {
             font-size: 2rem;
@@ -280,45 +234,17 @@
     <div class="dashboard-header">
         <h1 class="dashboard-title">
             <i class="fas fa-chart-line me-3"></i>
-            داش بورد الإدارة المحسن
+            داش بورد الإدارة
         </h1>
         <p class="dashboard-subtitle">
             تحليلات شاملة لجميع أقسام النظام - 
-            {% if show_all_years %}
-                جميع السنوات المتاحة
-            {% elif selected_year == 'all' %}
-                جميع السنوات
-            {% elif selected_month == 'year' %}
+            {% if selected_month == 'year' %}
                 سنة {{ selected_year|default:timezone.now.year }}
             {% else %}
                 {{ selected_month|default:timezone.now.month }}/{{ selected_year|default:timezone.now.year }}
             {% endif %}
         </p>
     </div>
-
-    <!-- Performance Metrics -->
-    {% if performance_metrics %}
-    <div class="performance-metrics">
-        <h4 class="mb-3">
-            <i class="fas fa-tachometer-alt me-2"></i>
-            مؤشرات الأداء الرئيسية
-        </h4>
-        <div class="performance-grid">
-            <div class="performance-item">
-                <div class="performance-value">{{ performance_metrics.completion_rate }}%</div>
-                <div class="performance-label">معدل إتمام الطلبات</div>
-            </div>
-            <div class="performance-item">
-                <div class="performance-value">{{ performance_metrics.inspection_success_rate }}%</div>
-                <div class="performance-label">معدل نجاح المعاينات</div>
-            </div>
-            <div class="performance-item">
-                <div class="performance-value">{{ performance_metrics.low_stock_rate }}%</div>
-                <div class="performance-label">معدل المخزون المنخفض</div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Filters Section -->
     <div class="filter-section">
@@ -328,7 +254,7 @@
         </h4>
         <form method="GET" class="filter-form" id="dashboard-filters">
             <div class="filter-group">
-                <label class="filter-label">الف��ع:</label>
+                <label class="filter-label">الفرع:</label>
                 <select name="branch" class="filter-select" id="branch-filter">
                     <option value="all" {% if selected_branch == 'all' %}selected{% endif %}>جميع الفروع</option>
                     {% for branch in branches %}
@@ -354,22 +280,11 @@
             <div class="filter-group">
                 <label class="filter-label">السنة:</label>
                 <select name="year" class="filter-select" id="year-filter">
-                    {% if show_all_years %}
-                        <option value="all" {% if selected_year == 'all' %}selected{% endif %}>
-                            جميع السنوات
+                    {% for year in years %}
+                        <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>
+                            {{ year }}
                         </option>
-                        {% for year in all_years %}
-                            <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>
-                                {{ year }}
-                            </option>
-                        {% endfor %}
-                    {% else %}
-                        {% for year in years %}
-                            <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>
-                                {{ year }}
-                            </option>
-                        {% endfor %}
-                    {% endif %}
+                    {% endfor %}
                 </select>
             </div>
             
@@ -397,36 +312,17 @@
                 <label class="filter-label">سنة المقارنة:</label>
                 <select name="comparison_year" class="filter-select" id="comparison-year-filter">
                     <option value="">بدون مقارنة</option>
-                    {% if show_all_years %}
-                        {% for year in all_years %}
-                            <option value="{{ year }}" {% if comparison_year == year %}selected{% endif %}>
-                                {{ year }}
-                            </option>
-                        {% endfor %}
-                    {% else %}
-                        {% for year in years %}
-                            <option value="{{ year }}" {% if comparison_year == year %}selected{% endif %}>
-                                {{ year }}
-                            </option>
-                        {% endfor %}
-                    {% endif %}
+                    {% for year in years %}
+                        <option value="{{ year }}" {% if comparison_year == year %}selected{% endif %}>
+                            {{ year }}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
-            
-            <input type="hidden" name="show_all_years" value="{{ show_all_years|yesno:'true,false' }}" id="show-all-years-input">
             
             <button type="submit" class="apply-filters-btn" id="apply-filters-btn">
                 <i class="fas fa-search me-2"></i>
                 تطبيق الفلاتر
-            </button>
-            
-            <button type="button" class="year-mode-toggle" id="year-mode-toggle">
-                <i class="fas fa-calendar-alt me-2"></i>
-                {% if show_all_years %}
-                    السنوات المحددة فقط
-                {% else %}
-                    عرض جميع السنوات
-                {% endif %}
             </button>
         </form>
         
@@ -447,11 +343,7 @@
                 {% endif %}
                 | 
                 <strong>الفترة:</strong> 
-                {% if show_all_years %}
-                    جميع السنوات المتاحة
-                {% elif selected_year == 'all' %}
-                    جميع السنوات
-                {% elif selected_month == 'year' %}
+                {% if selected_month == 'year' %}
                     السنة الكاملة {{ selected_year }}
                 {% else %}
                     {% for month_num, month_name in months %}
@@ -539,38 +431,6 @@
         </div>
     </div>
 
-    <!-- Dashboard Summary -->
-    {% if dashboard_summary %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="chart-container">
-                <h5 class="mb-3">
-                    <i class="fas fa-chart-pie me-2"></i>
-                    ملخص الداشبورد
-                </h5>
-                <div class="metric-grid">
-                    <div class="metric-item">
-                        <div class="metric-value text-success">{{ dashboard_summary.total_revenue|floatformat:0|intcomma }}</div>
-                        <div class="metric-label">إجمالي الإيرادات (ج.م)</div>
-                    </div>
-                    <div class="metric-item">
-                        <div class="metric-value text-primary">{{ dashboard_summary.total_orders }}</div>
-                        <div class="metric-label">إجمالي الطلبات</div>
-                    </div>
-                    <div class="metric-item">
-                        <div class="metric-value text-info">{{ dashboard_summary.total_customers }}</div>
-                        <div class="metric-label">إجمالي العملاء</div>
-                    </div>
-                    <div class="metric-item">
-                        <div class="metric-value text-warning">{{ dashboard_summary.avg_order_value|floatformat:0|intcomma }}</div>
-                        <div class="metric-label">متوسط قيمة الطلب (ج.م)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
     <!-- Detailed Statistics -->
     <div class="row">
         <!-- Customers Statistics -->
@@ -593,14 +453,6 @@
                         <div class="metric-value text-info">{{ customers_stats.new_this_month|default:0 }}</div>
                         <div class="metric-label">عملاء جدد هذا الشهر</div>
                     </div>
-                    {% if customers_stats.growth_rate %}
-                    <div class="metric-item">
-                        <div class="metric-value {% if customers_stats.growth_rate > 0 %}text-success{% else %}text-danger{% endif %}">
-                            {{ customers_stats.growth_rate }}%
-                        </div>
-                        <div class="metric-label">معدل النمو الشهري</div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -629,18 +481,6 @@
                         <div class="metric-value text-primary">{{ orders_stats.total_amount|floatformat:0|intcomma }}</div>
                         <div class="metric-label">إجمالي المبيعات (ج.م)</div>
                     </div>
-                    {% if orders_stats.completion_rate %}
-                    <div class="metric-item">
-                        <div class="metric-value text-success">{{ orders_stats.completion_rate }}%</div>
-                        <div class="metric-label">معدل الإتمام</div>
-                    </div>
-                    {% endif %}
-                    {% if orders_stats.avg_amount %}
-                    <div class="metric-item">
-                        <div class="metric-value text-info">{{ orders_stats.avg_amount|floatformat:0|intcomma }}</div>
-                        <div class="metric-label">متوسط قيمة الطلب (ج.م)</div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -697,12 +537,6 @@
                         <div class="metric-value text-success">{{ inspections_stats.successful|default:0 }}</div>
                         <div class="metric-label">ناجحة</div>
                     </div>
-                    {% if inspections_stats.success_rate %}
-                    <div class="metric-item">
-                        <div class="metric-value text-success">{{ inspections_stats.success_rate }}%</div>
-                        <div class="metric-label">معدل النجاح</div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -759,18 +593,6 @@
                         <div class="metric-value text-success">{{ inventory_stats.total_value|floatformat:0|intcomma }}</div>
                         <div class="metric-label">قيمة المخزون (ج.م)</div>
                     </div>
-                    {% if inventory_stats.low_stock_percentage %}
-                    <div class="metric-item">
-                        <div class="metric-value text-warning">{{ inventory_stats.low_stock_percentage }}%</div>
-                        <div class="metric-label">نسبة المخزون المنخفض</div>
-                    </div>
-                    {% endif %}
-                    {% if inventory_stats.out_of_stock_percentage %}
-                    <div class="metric-item">
-                        <div class="metric-value text-danger">{{ inventory_stats.out_of_stock_percentage }}%</div>
-                        <div class="metric-label">نسبة المنتجات النافذة</div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -850,11 +672,7 @@
             <div class="chart-container">
                 <h5 class="mb-3">
                     <i class="fas fa-chart-line me-2"></i>
-                    {% if chart_data.type == 'yearly' %}
-                        الطلبات السنوية
-                    {% else %}
-                        الطلبات الشهرية - {{ selected_year }}
-                    {% endif %}
+                    الطلبات الشهرية - {{ selected_year }}
                 </h5>
                 <canvas id="ordersChart" width="400" height="200"></canvas>
             </div>
@@ -864,11 +682,7 @@
             <div class="chart-container">
                 <h5 class="mb-3">
                     <i class="fas fa-chart-line me-2"></i>
-                    {% if chart_data.type == 'yearly' %}
-                        العملاء السنويون
-                    {% else %}
-                        العملاء الشهريون - {{ selected_year }}
-                    {% endif %}
+                    العملاء الشهريون - {{ selected_year }}
                 </h5>
                 <canvas id="customersChart" width="400" height="200"></canvas>
             </div>
@@ -878,27 +692,18 @@
 
 <script>
 // Chart.js configuration
-{% if chart_data.type == 'yearly' %}
-    const labels = [{% for item in chart_data.orders_by_year %}'{{ item.year }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
-    const ordersData = [{% for item in chart_data.orders_by_year %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-    const customersData = [{% for item in chart_data.customers_by_year %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-{% else %}
-    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 
-                   'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-    const labels = months;
-    const ordersData = [{% for item in chart_data.orders_by_month %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-    const customersData = [{% for item in chart_data.customers_by_month %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-{% endif %}
+const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 
+               'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
 // Orders Chart
 const ordersCtx = document.getElementById('ordersChart').getContext('2d');
 const ordersChart = new Chart(ordersCtx, {
     type: 'line',
     data: {
-        labels: labels,
+        labels: months,
         datasets: [{
             label: 'الطلبات',
-            data: ordersData,
+            data: [{% for item in chart_data.orders_by_month %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
             borderColor: '#667eea',
             backgroundColor: 'rgba(102, 126, 234, 0.1)',
             tension: 0.4,
@@ -925,10 +730,10 @@ const customersCtx = document.getElementById('customersChart').getContext('2d');
 const customersChart = new Chart(customersCtx, {
     type: 'line',
     data: {
-        labels: labels,
+        labels: months,
         datasets: [{
             label: 'العملاء',
-            data: customersData,
+            data: [{% for item in chart_data.customers_by_month %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
             borderColor: '#f093fb',
             backgroundColor: 'rgba(240, 147, 251, 0.1)',
             tension: 0.4,
@@ -950,16 +755,11 @@ const customersChart = new Chart(customersCtx, {
     }
 });
 
-// Enhanced Dashboard Functionality
+// Comparison Type Control
 document.addEventListener('DOMContentLoaded', function() {
     const comparisonTypeSelect = document.getElementById('comparison-type-select');
     const comparisonMonthGroup = document.getElementById('comparison-month-group');
-    const yearModeToggle = document.getElementById('year-mode-toggle');
-    const showAllYearsInput = document.getElementById('show-all-years-input');
-    const filterForm = document.getElementById('dashboard-filters');
-    const applyBtn = document.getElementById('apply-filters-btn');
     
-    // Comparison Type Control
     function toggleComparisonMonth() {
         if (comparisonTypeSelect.value === 'year') {
             comparisonMonthGroup.style.display = 'none';
@@ -974,14 +774,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen for changes
     comparisonTypeSelect.addEventListener('change', toggleComparisonMonth);
     
-    // Year Mode Toggle
-    yearModeToggle.addEventListener('click', function() {
-        const currentValue = showAllYearsInput.value === 'true';
-        showAllYearsInput.value = currentValue ? 'false' : 'true';
-        filterForm.submit();
-    });
-    
     // Enhanced Filter Functionality
+    const filterForm = document.getElementById('dashboard-filters');
+    const applyBtn = document.getElementById('apply-filters-btn');
+    
     if (filterForm && applyBtn) {
         // Add loading state to submit button
         applyBtn.addEventListener('click', function(e) {
@@ -1029,14 +825,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Debug logging
-    console.log('Enhanced Dashboard initialized');
+    console.log('Dashboard filters initialized');
     console.log('Current filters:', {
         branch: document.getElementById('branch-filter')?.value,
         month: document.getElementById('period-select')?.value,
         year: document.getElementById('year-filter')?.value,
-        show_all_years: showAllYearsInput?.value,
         comparison_type: document.getElementById('comparison-type-select')?.value
     });
 });
 </script>
-{% endblock %}
+{% endblock %} 

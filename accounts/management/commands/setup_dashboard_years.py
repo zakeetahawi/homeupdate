@@ -1,5 +1,5 @@
 """
-أمر لإعداد السنوات الافتراضية للداش بورد
+أمر إدارة لإعداد السنوات الافتراضية في الداشبورد
 """
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -7,98 +7,100 @@ from accounts.models import DashboardYearSettings
 
 
 class Command(BaseCommand):
-    help = 'إعداد السنوات الافتراضية للداش بورد'
+    help = 'إعداد السنوات الافتراضية في الداشبورد'
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--years',
-            type=str,
-            help='السنوات المراد إضافتها (مفصولة بفواصل)',
-            default='2023,2024,2025,2026'
+            type=int,
+            nargs='+',
+            help='قائمة السنوات المراد إضافتها (مثال: 2023 2024 2025)'
         )
         parser.add_argument(
             '--default-year',
             type=int,
-            help='السنة الافتراضية',
-            default=None
+            help='السنة الافتراضية'
+        )
+        parser.add_argument(
+            '--auto',
+            action='store_true',
+            help='إعداد تلقائي للسنوات (السنة الحالية والسنتين السابقتين)'
         )
 
     def handle(self, *args, **options):
-        years_str = options['years']
-        default_year = options['default_year']
+        current_year = timezone.now().year
         
-        # تحويل السلسلة إلى قائمة سنوات
-        years_list = [int(year.strip()) for year in years_str.split(',')]
-        
+        if options['auto']:
+            # إعداد تلقائي: السنة الحالية والسنتين السابقتين
+            years_to_add = [current_year - 2, current_year - 1, current_year]
+            default_year = current_year
+        else:
+            years_to_add = options.get('years', [current_year])
+            default_year = options.get('default_year', current_year)
+
         self.stdout.write(
-            self.style.SUCCESS(f'بدء إعداد السنوات: {years_list}')
+            self.style.SUCCESS(f'بدء إعداد السنوات: {years_to_add}')
         )
-        
-        created_count = 0
-        updated_count = 0
-        
-        for year in years_list:
-            year_obj, created = DashboardYearSettings.objects.get_or_create(
+
+        # إضافة السنوات
+        for year in years_to_add:
+            year_setting, created = DashboardYearSettings.objects.get_or_create(
                 year=year,
                 defaults={
                     'is_active': True,
-                    'is_default': False,
+                    'is_default': (year == default_year),
                     'description': f'سنة {year}'
                 }
             )
             
             if created:
-                created_count += 1
                 self.stdout.write(
-                    self.style.SUCCESS(f'تم إنشاء سنة {year}')
+                    self.style.SUCCESS(f'تم إنشاء إعدادات السنة {year}')
                 )
             else:
-                updated_count += 1
                 self.stdout.write(
-                    self.style.WARNING(f'سنة {year} موجودة بالفعل')
+                    self.style.WARNING(f'السنة {year} موجودة بالفعل')
                 )
-        
+
         # تعيين السنة الافتراضية
         if default_year:
+            # إلغاء الافتراضية من جميع السنوات
+            DashboardYearSettings.objects.update(is_default=False)
+            
+            # تعيين السنة الافتراضية
             try:
-                default_obj = DashboardYearSettings.objects.get(year=default_year)
-                default_obj.is_default = True
-                default_obj.save()
+                year_setting = DashboardYearSettings.objects.get(year=default_year)
+                year_setting.is_default = True
+                year_setting.is_active = True
+                year_setting.save()
+                
                 self.stdout.write(
-                    self.style.SUCCESS(f'تم تعيين سنة {default_year} كافتراضية')
+                    self.style.SUCCESS(f'تم تعيين السنة {default_year} كافتراضية')
                 )
             except DashboardYearSettings.DoesNotExist:
                 self.stdout.write(
-                    self.style.ERROR(f'سنة {default_year} غير موجودة')
+                    self.style.ERROR(f'السنة {default_year} غير موجودة')
                 )
-        else:
-            # تعيين السنة الحالية كافتراضية إذا لم يتم تحديد سنة
-            current_year = timezone.now().year
-            try:
-                current_obj = DashboardYearSettings.objects.get(year=current_year)
-                current_obj.is_default = True
-                current_obj.save()
-                self.stdout.write(
-                    self.style.SUCCESS(f'تم تعيين سنة {current_year} كافتراضية')
-                )
-            except DashboardYearSettings.DoesNotExist:
-                self.stdout.write(
-                    self.style.WARNING(f'سنة {current_year} غير موجودة في القائمة')
-                )
+
+        # عرض ملخص الإعدادات
+        self.stdout.write('\n' + '='*50)
+        self.stdout.write(self.style.SUCCESS('ملخص إعدادات السنوات:'))
+        self.stdout.write('='*50)
         
-        # عرض الإحصائيات النهائية
-        total_years = DashboardYearSettings.objects.count()
-        active_years = DashboardYearSettings.objects.filter(is_active=True).count()
-        default_year_obj = DashboardYearSettings.objects.filter(is_default=True).first()
-        
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'\n✅ تم إكمال الإعداد بنجاح!\n'
-                f'📊 إحصائيات السنوات:\n'
-                f'   - إجمالي السنوات: {total_years}\n'
-                f'   - السنوات النشطة: {active_years}\n'
-                f'   - السنة الافتراضية: {default_year_obj.year if default_year_obj else "غير محدد"}\n'
-                f'   - السنوات الجديدة: {created_count}\n'
-                f'   - السنوات المحدثة: {updated_count}'
+        for year_setting in DashboardYearSettings.objects.all().order_by('-year'):
+            status = []
+            if year_setting.is_active:
+                status.append('نشط')
+            if year_setting.is_default:
+                status.append('افتراضي')
+            
+            status_text = ', '.join(status) if status else 'غير نشط'
+            
+            self.stdout.write(
+                f'السنة {year_setting.year}: {status_text}'
             )
-        ) 
+
+        self.stdout.write('='*50)
+        self.stdout.write(
+            self.style.SUCCESS('تم الانتهاء من إعداد السنوات بنجاح!')
+        )

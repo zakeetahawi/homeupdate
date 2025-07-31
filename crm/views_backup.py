@@ -1,5 +1,5 @@
 """
-العرض الرئيسي المحسن للنظام
+العرض الرئيسي للنظام
 """
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -31,6 +31,162 @@ from django.utils.encoding import smart_str
 def is_admin_user(user):
     """التحقق من أن المستخدم مدير للنظام"""
     return user.is_staff or user.is_superuser
+
+@login_required
+@user_passes_test(is_admin_user)
+def admin_dashboard(request):
+    """
+    داش بورد احترافي للمدراء يعرض تحليلات شاملة لجميع الأقسام
+    """
+    # الحصول على المعاملات من الطلب
+    selected_branch = request.GET.get('branch', 'all')
+    selected_month = request.GET.get('month', 'year')  # الافتراضي هو السنة الكاملة
+    selected_year = request.GET.get('year', timezone.now().year)
+    comparison_month = request.GET.get('comparison_month', '')
+    comparison_year = request.GET.get('comparison_year', '')
+    comparison_type = request.GET.get('comparison_type', 'month')  # 'month' or 'year'
+    
+    # تحويل المعاملات إلى أرقام
+    try:
+        if selected_month != 'year':
+            selected_month = int(selected_month)
+        selected_year = int(selected_year)
+        if comparison_month:
+            comparison_month = int(comparison_month)
+        if comparison_year:
+            comparison_year = int(comparison_year)
+    except (ValueError, TypeError):
+        selected_month = 'year'  # الافتراضي هو السنة الكاملة
+        selected_year = timezone.now().year
+        comparison_month = ''
+        comparison_year = ''
+    
+    # تحديد الفترة الزمنية مع timezone awareness
+    if selected_month == 'year':  # إذا تم اختيار سنة كاملة
+        start_date = timezone.make_aware(datetime(selected_year, 1, 1))
+        end_date = timezone.make_aware(datetime(selected_year, 12, 31, 23, 59, 59))
+    else:  # إذا تم اختيار شهر محدد
+        start_date = timezone.make_aware(datetime(selected_year, selected_month, 1))
+        if selected_month == 12:
+            end_date = timezone.make_aware(datetime(selected_year + 1, 1, 1)) - timedelta(seconds=1)
+        else:
+            end_date = timezone.make_aware(datetime(selected_year, selected_month + 1, 1)) - timedelta(seconds=1)
+    
+    # فلترة البيانات حسب الفرع
+    branch_filter = {}
+    if selected_branch != 'all':
+        branch_filter = {'branch_id': selected_branch}
+    
+    # إحصائيات العملاء - تطبيق الفلتر الزمني
+    customers_stats = get_customers_statistics(selected_branch, start_date, end_date)
+    
+    # إحصائيات الطلبات
+    orders_stats = get_orders_statistics(selected_branch, start_date, end_date)
+    
+    # إحصائيات التصنيع
+    manufacturing_stats = get_manufacturing_statistics(selected_branch, start_date, end_date)
+    
+    # إحصائيات المعاينات
+    inspections_stats = get_inspections_statistics(selected_branch, start_date, end_date)
+    
+    # إحصائيات طلبات التركيب (جميع الطلبات من نوع تركيب بناءً على تاريخ الطلب)
+    installation_orders_stats = get_installation_orders_statistics(selected_branch, start_date, end_date)
+    
+    # إحصائيات المخزون
+    inventory_stats = get_inventory_statistics(selected_branch)
+    
+    # مقارنة مع الفترة المحددة إذا تم تحديدها
+    comparison_data = {}
+    if comparison_year:
+        if comparison_type == 'year':  # مقارنة سنة كاملة
+            comp_start_date = timezone.make_aware(datetime(comparison_year, 1, 1))
+            comp_end_date = timezone.make_aware(datetime(comparison_year, 12, 31, 23, 59, 59))
+        elif comparison_month and comparison_month != 'year':  # مقارنة شهر محدد
+            comp_start_date = timezone.make_aware(datetime(comparison_year, comparison_month, 1))
+            if comparison_month == 12:
+                comp_end_date = timezone.make_aware(datetime(comparison_year + 1, 1, 1)) - timedelta(seconds=1)
+            else:
+                comp_end_date = timezone.make_aware(datetime(comparison_year, comparison_month + 1, 1)) - timedelta(seconds=1)
+        else:
+            comp_start_date = None
+            comp_end_date = None
+        
+        if comp_start_date and comp_end_date:
+            comparison_data = {
+                'customers': get_customers_statistics(selected_branch, comp_start_date, comp_end_date),
+                'orders': get_orders_statistics(selected_branch, comp_start_date, comp_end_date),
+                'manufacturing': get_manufacturing_statistics(selected_branch, comp_start_date, comp_end_date),
+                'inspections': get_inspections_statistics(selected_branch, comp_start_date, comp_end_date),
+                'installations': get_installation_orders_statistics(selected_branch, comp_start_date, comp_end_date),
+            }
+    
+    # البيانات للرسوم البيانية
+    chart_data = get_chart_data(selected_branch, selected_year)
+    
+    # معلومات الشركة
+    company_info = CompanyInfo.objects.first()
+    if not company_info:
+        company_info = CompanyInfo.objects.create(
+            name='LATARA',
+            version='1.0.0',
+            release_date='2025-04-30',
+            developer='zakee tahawi'
+        )
+    
+    # قائمة الفروع للفلتر
+    branches = Branch.objects.all()
+    
+    # قائمة الأشهر للفلتر
+    months = [
+        (1, 'يناير'), (2, 'فبراير'), (3, 'مارس'), (4, 'أبريل'),
+        (5, 'مايو'), (6, 'يونيو'), (7, 'يوليو'), (8, 'أغسطس'),
+        (9, 'سبتمبر'), (10, 'أكتوبر'), (11, 'نوفمبر'), (12, 'ديسمبر')
+    ]
+    
+    # قائمة السنوات للفلتر - من قاعدة البيانات
+    try:
+        from accounts.models import DashboardYearSettings
+        available_years = DashboardYearSettings.get_available_years()
+        if available_years:
+            years = list(available_years)
+        else:
+            # إذا لم تكن هناك سنوات محددة، استخدم النطاق الافتراضي
+            current_year = timezone.now().year
+            years = list(range(current_year - 2, current_year + 2))
+    except ImportError:
+        # في حالة عدم وجود النموذج، استخدم النطاق الافتراضي
+        current_year = timezone.now().year
+        years = list(range(current_year - 2, current_year + 2))
+    
+    # تحويل selected_branch إلى string للتأكد من المقارنة الصحيحة
+    if selected_branch != 'all':
+        selected_branch = str(selected_branch)
+    
+    context = {
+        'customers_stats': customers_stats,
+        'orders_stats': orders_stats,
+        'manufacturing_stats': manufacturing_stats,
+        'inspections_stats': inspections_stats,
+        'installation_orders_stats': installation_orders_stats,
+        'inventory_stats': inventory_stats,
+        'comparison_data': comparison_data,
+        'chart_data': chart_data,
+        'company_info': company_info,
+        'branches': branches,
+        'months': months,
+        'years': years,
+        'selected_branch': selected_branch,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'comparison_month': comparison_month,
+        'comparison_year': comparison_year,
+        'comparison_type': comparison_type,
+        'start_date': start_date,
+        'end_date': end_date,
+        'timezone': timezone,
+    }
+    
+    return render(request, 'admin_dashboard.html', context)
 
 @login_required
 @user_passes_test(is_admin_user)
@@ -284,7 +440,6 @@ def get_performance_metrics(stats):
             'low_stock_rate': 0,
         }
 
-
 def home(request):
     """
     View for the home page
@@ -307,9 +462,7 @@ def home(request):
         'order'
     ).exclude(
         status__in=['completed', 'cancelled']
-    ).order_by('expected_delivery_date')[:5]
-    
-    # Get low stock products
+    ).order_by('expected_delivery_date')[:5]    # Get low stock products
     low_stock_products = [
         product for product in Product.objects.all()
         if product.current_stock > 0 and product.current_stock <= product.minimum_stock
@@ -319,7 +472,7 @@ def home(request):
     company_info = CompanyInfo.objects.first()
     if not company_info:
         company_info = CompanyInfo.objects.create(
-            name='الخواجة للستائر والمفروشات',
+            name='LATARA',
             version='1.0.0',
             release_date='2025-04-30',
             developer='zakee tahawi'
@@ -360,10 +513,9 @@ def about(request):
         'system_release_date': about_settings.system_release_date,
         'system_developer': about_settings.system_developer,
         'current_year': timezone.now().year,
-        'company_info': company_info,
+        'company_info': company_info,  # إضافة معلومات الشركة للسياق
     }
     return render(request, 'about.html', context)
-
 
 def contact(request):
     """
@@ -396,7 +548,6 @@ def contact(request):
         'current_year': timezone.now().year,
     }
     return render(request, 'contact.html', context)
-
 
 def serve_media_file(request, path):
     """
@@ -435,13 +586,11 @@ def serve_media_file(request, path):
             file.close()
         raise Http404(f"Error processing file: {str(e)}")
 
-
 def data_management_redirect(request):
     """
     إعادة توجيه من المسارات القديمة إلى المسار الجديد لإدارة قواعد البيانات
     """
     return redirect('odoo_db_manager:dashboard')
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
