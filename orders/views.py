@@ -154,15 +154,10 @@ def order_success(request, pk):
     try:
         order = Order.objects.get(pk=pk)
 
-        # التأكد من أن المستخدم له صلاحية عرض هذا الطلب
-        if not request.user.is_superuser:
-            if hasattr(request.user, 'salesperson'):
-                if order.salesperson != request.user.salesperson:
-                    messages.error(request, 'ليس لديك صلاحية لعرض هذا الطلب.')
-                    return redirect('orders:order_list')
-            else:
-                messages.error(request, 'ليس لديك صلاحية لعرض هذا الطلب.')
-                return redirect('orders:order_list')
+        # السماح فقط لمن يملك صلاحية إضافة طلب
+        if not request.user.has_perm('orders.add_order'):
+            messages.error(request, 'ليس لديك صلاحية لعرض هذه الصفحة.')
+            return redirect('orders:order_list')
 
         context = {
             'order': order,
@@ -182,20 +177,14 @@ def order_detail(request, pk):
     """
     order = get_object_or_404(Order, pk=pk)
 
-    # التحقق من صلاحية المستخدم لتعديل هذا الطلب
-
-    # التحقق من صلاحية المستخدم لحذف هذا الطلب
-    if not can_user_delete_order(request.user, order):
-        messages.error(request, "ليس لديك صلاحية لحذف هذا الطلب.")
-        return redirect("orders:order_detail", pk=pk)
-    if not can_user_edit_order(request.user, order):
-        messages.error(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
-        return redirect("orders:order_detail", pk=pk)
-
-    # التحقق من صلاحية المستخدم لعرض هذا الطلب
+    # التحقق من صلاحية المستخدم لحذف أو تعديل أو عرض هذا الطلب
     if not can_user_view_order(request.user, order):
         messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
         return redirect("orders:order_list")
+    if not can_user_edit_order(request.user, order):
+        messages.warning(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
+    if not can_user_delete_order(request.user, order):
+        messages.warning(request, "ليس لديك صلاحية لحذف هذا الطلب.")
     payments = order.payments.all().order_by('-payment_date')
 
     # Now all information is in the Order model
@@ -345,7 +334,7 @@ def order_create(request):
                     print("Formset errors:", formset.errors)
 
                 messages.success(request, 'تم إنشاء الطلب بنجاح!')
-                return redirect('orders:order_detail', pk=order.pk)
+                return redirect('orders:order_success', pk=order.pk)
 
             except Exception as e:
                 print("حدث خطأ أثناء حفظ الطلب:", e)
