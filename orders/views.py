@@ -59,8 +59,19 @@ def order_list(request):
     except Exception:
         page_size = 25
 
-    # Filter orders based on search query and status
-    orders = get_user_orders_queryset(request.user).select_related('customer', 'salesperson')
+
+    # Branch filter for main branch users
+    show_branch_filter = False
+    branch_filter = request.GET.get('branch', '')
+    user_branch = getattr(request.user, 'branch', None)
+    if user_branch and getattr(user_branch, 'is_main_branch', False):
+        show_branch_filter = True
+
+    # إذا كان المستخدم من الفرع الرئيسي واختار فرعًا من الفلتر، اعرض فقط طلبات هذا الفرع
+    if show_branch_filter and branch_filter:
+        orders = Order.objects.select_related('customer', 'salesperson').filter(branch__id=branch_filter)
+    else:
+        orders = get_user_orders_queryset(request.user).select_related('customer', 'salesperson')
 
     # تطبيق فلتر السنة مع دعم السنوات المتعددة والسنة الافتراضية
     selected_years = request.GET.getlist('years')
@@ -131,6 +142,11 @@ def order_list(request):
     available_years = Order.objects.dates('order_date', 'year', order='DESC')
     available_years = [year.year for year in available_years]
 
+    # Branches for filter dropdown
+    branches = []
+    if show_branch_filter:
+        branches = Branch.objects.filter(is_active=True)
+
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
@@ -143,6 +159,9 @@ def order_list(request):
         'total_orders': orders.count(),
         'currency_symbol': currency_symbol,  # Add currency symbol to context
         'page_size': page_size,
+        'show_branch_filter': show_branch_filter,
+        'branches': branches,
+        'branch_filter': branch_filter,
     }
 
     return render(request, 'orders/order_list.html', context)

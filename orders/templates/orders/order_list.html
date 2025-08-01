@@ -190,6 +190,17 @@
     <div class="card mb-4">
         <div class="card-body">
             <form method="get" class="row g-3 align-items-end">
+                {% if show_branch_filter %}
+                <div class="col-md-3">
+                    <label for="branch" class="form-label">فرع:</label>
+                    <select name="branch" id="branch" class="form-select">
+                        <option value="">-- جميع الفروع --</option>
+                        {% for branch in branches %}
+                            <option value="{{ branch.id }}" {% if branch_filter == branch.id|stringformat:'s' %}selected{% endif %}>{{ branch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
                 <div class="col-md-4">
                     <div class="input-group">
                         <input type="text" name="search" class="form-control" placeholder="بحث برقم الطلب أو اسم العميل" value="{{ search_query }}">
