@@ -172,6 +172,20 @@ class OrderForm(forms.ModelForm):
                 # المستخدمون الآخرون لا يرون أي عملاء
                 customer_queryset = Customer.objects.none()
             
+            # إذا تم تمرير عميل محدد (من بطاقة العميل)، إضافته للقائمة حتى لو كان من فرع آخر
+            if customer and customer.pk:
+                # التحقق من صلاحية المستخدم لإنشاء طلب لهذا العميل
+                from customers.permissions import can_user_create_order_for_customer
+                if can_user_create_order_for_customer(user, customer):
+                    # إضافة العميل المحدد للقائمة إذا لم يكن موجوداً
+                    if not customer_queryset.filter(pk=customer.pk).exists():
+                        from django.db.models import Q
+                        # استخدام OR condition بدلاً من union لتجنب مشاكل QuerySet
+                        customer_queryset = Customer.objects.filter(
+                            Q(pk__in=customer_queryset.values_list('pk', flat=True)) | 
+                            Q(pk=customer.pk)
+                        ).filter(status='active')
+            
             self.fields['customer'].queryset = customer_queryset.order_by('name')
         
         # تعيين خيارات المعاينة المرتبطة للخدمات الأخرى
