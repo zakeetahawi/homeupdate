@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             hideSearchIndicator();
                             console.error('خطأ في البحث:', error);
                         });
-                }, 500); // انتظار 500ms بعد التوقف عن الكتابة
+                }, 1000); // زيادة الوقت إلى ثانية واحدة لتقليل الطلبات
             } else {
                 hideSearchResults();
             }
@@ -422,3 +422,24 @@ document.addEventListener('DOMContentLoaded', function() {
     text-decoration: underline !important;
 }
 </style>
+
+/* تحسين مظهر نتائج البحث لتقليل الوميض */
+#search-results {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform: translateY(0);
+}
+
+#search-results.hiding {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+#search-results.showing {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* تحسين مؤشر البحث */
+#search-indicator {
+    transition: opacity 0.3s ease;
+}

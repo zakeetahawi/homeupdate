@@ -145,6 +145,35 @@ class OrderForm(forms.ModelForm):
                 branch=user.branch
             )
         
+        # تقييد العملاء حسب دور المستخدم والفرع
+        if user:
+            from customers.models import Customer
+            
+            if user.is_superuser:
+                # المدير العام يرى جميع العملاء
+                customer_queryset = Customer.objects.filter(status='active')
+            elif user.is_region_manager:
+                # مدير المنطقة يرى عملاء الفروع التي يديرها
+                managed_branches = user.managed_branches.all()
+                customer_queryset = Customer.objects.filter(
+                    status='active',
+                    branch__in=managed_branches
+                )
+            elif user.is_branch_manager or user.is_salesperson:
+                # مدير الفرع والبائع يرون عملاء فرعهم فقط
+                if user.branch:
+                    customer_queryset = Customer.objects.filter(
+                        status='active',
+                        branch=user.branch
+                    )
+                else:
+                    customer_queryset = Customer.objects.none()
+            else:
+                # المستخدمون الآخرون لا يرون أي عملاء
+                customer_queryset = Customer.objects.none()
+            
+            self.fields['customer'].queryset = customer_queryset.order_by('name')
+        
         # تعيين خيارات المعاينة المرتبطة للخدمات الأخرى
         if customer:
             # إضافة خيار "طرف العميل" في بداية القائمة
