@@ -81,11 +81,18 @@
                     </thead>
                     <tbody>
                         {% for customer in page_obj %}
-                        <tr>                            <td>{{ forloop.counter }}</td>
-                            <td>{{ customer.code|default:"-" }}</td>                            <td>
+                        <tr {% if customer.pk in cross_branch_customers %}class="cross-branch-customer"{% endif %}>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ customer.code|default:"-" }}</td>
+                            <td>
                                 <a href="{% url 'customers:customer_detail' customer.pk %}" style="color: var(--primary); text-decoration: none; font-weight: bold;">
                                     <strong>{{ customer.name }}</strong>
                                 </a>
+                                {% if customer.pk in cross_branch_customers %}
+                                    <span class="badge bg-warning text-dark ms-1" title="عميل من فرع آخر">
+                                        <i class="fas fa-exchange-alt"></i> فرع آخر
+                                    </span>
+                                {% endif %}
                             </td>
                             <td>
                                 <span class="badge bg-info">{{ customer.get_customer_type_display }}</span>
@@ -100,6 +107,11 @@
                             <td>
                                 {% if customer.branch %}
                                     {{ customer.branch.name }}
+                                    {% if customer.pk in cross_branch_customers %}
+                                        <small class="text-muted d-block">
+                                            <i class="fas fa-info-circle"></i> فرع العميل
+                                        </small>
+                                    {% endif %}
                                 {% else %}
                                     -
                                 {% endif %}
@@ -109,8 +121,20 @@
                             <td>
                                 <div class="btn-group btn-group-sm action-buttons">
                                     <a href="{% url 'customers:customer_detail' customer.pk %}" class="btn btn-info" title="عرض" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-eye" style="font-size: 0.7em;"></i></a>
-                                    <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-primary" title="تعديل" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-edit" style="font-size: 0.7em;"></i></a>
-                                    <a href="{% url 'customers:customer_delete' customer.pk %}" class="btn btn-danger" title="حذف" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-trash" style="font-size: 0.7em;"></i></a>
+                                    
+                                    {% if customer.pk in cross_branch_customers %}
+                                        <!-- أزرار خاصة للعملاء من فروع أخرى -->
+                                        <a href="{% url 'orders:order_create' %}?customer_id={{ customer.pk }}" class="btn btn-success" title="إنشاء طلب" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
+                                            <i class="fas fa-plus" style="font-size: 0.7em;"></i>
+                                        </a>
+                                        <span class="btn btn-secondary disabled" title="لا يمكن التعديل - عميل من فرع آخر" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
+                                            <i class="fas fa-lock" style="font-size: 0.7em;"></i>
+                                        </span>
+                                    {% else %}
+                                        <!-- أزرار عادية للعملاء من نفس الفرع -->
+                                        <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-primary" title="تعديل" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-edit" style="font-size: 0.7em;"></i></a>
+                                        <a href="{% url 'customers:customer_delete' customer.pk %}" class="btn btn-danger" title="حذف" style="font-size: 0.7em; padding: 0.15rem 0.3rem;"><i class="fas fa-trash" style="font-size: 0.7em;"></i></a>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -198,11 +222,203 @@
 </div>
 {% endblock %}
 
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.querySelector('input[name="search"]');
+    const searchForm = document.querySelector('form[method="get"]');
+    let searchTimeout;
+
+    // إضافة مؤشر البحث
+    function showSearchIndicator() {
+        const indicator = document.createElement('div');
+        indicator.id = 'search-indicator';
+        indicator.className = 'alert alert-info mt-2';
+        indicator.innerHTML = '<i class="fas fa-search fa-spin me-2"></i>جاري البحث...';
+        
+        const existingIndicator = document.getElementById('search-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+        
+        searchForm.appendChild(indicator);
+    }
+
+    // إزالة مؤشر البحث
+    function hideSearchIndicator() {
+        const indicator = document.getElementById('search-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    // البحث التلقائي عند كتابة رقم الهاتف
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const searchValue = this.value.trim();
+            
+            // التحقق من أن المدخل يشبه رقم هاتف
+            const isPhoneNumber = /^[\d\+\-\s]+$/.test(searchValue) && searchValue.length >= 3;
+            
+            if (isPhoneNumber && searchValue.length >= 7) {
+                searchTimeout = setTimeout(() => {
+                    showSearchIndicator();
+                    
+                    // إرسال طلب AJAX للبحث
+                    fetch(`/customers/api/find-by-phone/?phone=${encodeURIComponent(searchValue)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            hideSearchIndicator();
+                            
+                            if (data.found && data.customers.length > 0) {
+                                showSearchResults(data.customers);
+                            } else {
+                                hideSearchResults();
+                            }
+                        })
+                        .catch(error => {
+                            hideSearchIndicator();
+                            console.error('خطأ في البحث:', error);
+                        });
+                }, 500); // انتظار 500ms بعد التوقف عن الكتابة
+            } else {
+                hideSearchResults();
+            }
+        });
+    }
+
+    // عرض نتائج البحث
+    function showSearchResults(customers) {
+        let resultsHtml = '<div id="search-results" class="alert alert-success mt-2">';
+        resultsHtml += '<h6><i class="fas fa-users me-2"></i>نتائج البحث السريع:</h6>';
+        
+        customers.forEach(customer => {
+            const crossBranchBadge = customer.is_cross_branch ? 
+                '<span class="badge bg-warning text-dark ms-1"><i class="fas fa-exchange-alt"></i> فرع آخر</span>' : '';
+            
+            resultsHtml += `
+                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div>
+                        <strong>${customer.name}</strong> ${crossBranchBadge}
+                        <br>
+                        <small class="text-muted">
+                            <i class="fas fa-phone"></i> ${customer.phone}
+                            <i class="fas fa-building ms-2"></i> ${customer.branch}
+                        </small>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <a href="${customer.url}" class="btn btn-info btn-sm">
+                            <i class="fas fa-eye"></i> عرض
+                        </a>
+                        <a href="/orders/create/?customer_id=${customer.id}" class="btn btn-success btn-sm">
+                            <i class="fas fa-plus"></i> طلب
+                        </a>
+                    </div>
+                </div>
+            `;
+        });
+        
+        resultsHtml += '</div>';
+        
+        // إزالة النتائج السابقة وإضافة الجديدة
+        hideSearchResults();
+        searchForm.insertAdjacentHTML('afterend', resultsHtml);
+    }
+
+    // إخفاء نتائج البحث
+    function hideSearchResults() {
+        const results = document.getElementById('search-results');
+        if (results) {
+            results.remove();
+        }
+    }
+
+    // إخفاء النتائج عند النقر خارجها
+    document.addEventListener('click', function(e) {
+        if (!searchForm.contains(e.target)) {
+            hideSearchResults();
+        }
+    });
+});
+</script>
+{% endblock %}
+
 <style>
 .action-buttons {
     display: flex;
     gap: 0.1rem;
     justify-content: center;
     align-items: center;
+}
+
+.cross-branch-customer {
+    background-color: #fff3cd !important;
+    border-left: 4px solid #ffc107;
+}
+
+.cross-branch-customer:hover {
+    background-color: #ffeaa7 !important;
+}
+
+.cross-branch-customer td {
+    position: relative;
+}
+
+.cross-branch-customer::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: #ffc107;
+}
+
+/* تحسين مظهر البادج */
+.badge {
+    font-size: 0.75em;
+}
+
+/* تحسين مظهر الأزرار */
+.btn-group-sm .btn {
+    border-radius: 0.25rem;
+    margin: 0 1px;
+}
+
+/* إضافة تأثير hover للصفوف */
+.customers-table tbody tr:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+/* تحسين مظهر الجدول */
+.customers-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.customers-table th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    text-align: center;
+}
+
+.customers-table td {
+    text-align: center;
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* تحسين مظهر الروابط */
+.customers-table a {
+    transition: color 0.2s ease;
+}
+
+.customers-table a:hover {
+    text-decoration: underline !important;
 }
 </style>

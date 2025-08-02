@@ -21,8 +21,7 @@ from .permissions import (
     can_user_edit_customer,
     can_user_delete_customer,
     can_user_create_customer,
-    get_user_customer_permissions,
-    is_customer_cross_branch
+    get_user_customer_permissions
 )
 
 def get_queryset_for_user(request, search_term=None):
@@ -102,7 +101,7 @@ def customer_list(request):
         for customer in page_obj:
             # للمستخدم admin أو المستخدمين بدون فرع، اعتبر جميع العملاء من نفس الفرع
             if hasattr(request.user, 'branch') and request.user.branch:
-                if is_customer_cross_branch(request.user, customer):
+                if customer.branch != request.user.branch:
                     cross_branch_customers.append(customer.pk)
             # إذا كان المستخدم admin أو بدون فرع، لا نعتبر أي عميل من فرع آخر
 
@@ -139,7 +138,7 @@ def customer_detail(request, pk):
             customer = Customer.objects.select_related(
                 'category', 'branch', 'created_by'
             ).get(pk=pk)
-            is_cross_branch = is_customer_cross_branch(request.user, customer)
+            is_cross_branch = customer.branch != request.user.branch
         except Customer.DoesNotExist:
             messages.error(request, "العميل غير موجود.")
             return redirect("customers:customer_list")
@@ -395,7 +394,7 @@ def add_customer_note(request, pk):
         return redirect("customers:customer_list")
 
     # التحقق من صلاحية المستخدم لعرض هذا العميل (مع السماح بالوصول عبر الفروع)
-    is_cross_branch = is_customer_cross_branch(request.user, customer)
+    is_cross_branch = customer.branch != request.user.branch
     if not can_user_view_customer(request.user, customer, allow_cross_branch=is_cross_branch):
         messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
         return redirect("customers:customer_list")
@@ -596,7 +595,7 @@ def find_customer_by_phone(request):
     if customers.exists():
         customer_data = []
         for customer in customers:
-            is_cross_branch = is_customer_cross_branch(request.user, customer)
+            is_cross_branch = customer.branch != request.user.branch
             customer_data.append({
                 'id': customer.pk,
                 'name': customer.name,

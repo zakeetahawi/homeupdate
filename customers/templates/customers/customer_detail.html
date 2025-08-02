@@ -9,7 +9,19 @@
     <!-- Customer Header with Enhanced Design -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm {% if is_cross_branch %}cross-branch-customer-detail{% endif %}">
+                {% if is_cross_branch %}
+                <div class="alert alert-warning mb-0 border-0 rounded-top" style="border-radius: 0.375rem 0.375rem 0 0 !important;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تنبيه:</strong> هذا العميل من فرع آخر ({{ customer.branch.name }})
+                        <span class="ms-auto">
+                            <i class="fas fa-info-circle me-1"></i>
+                            يمكنك عرض البيانات وإ��شاء طلبات مرتبطة بفرعك ({{ user_branch.name }})
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col-md-2 text-center">
@@ -28,6 +40,11 @@
                             <h2 class="mb-1">
                                 <i class="fas fa-user-tie text-primary"></i> {{ customer.name }}
                                 <small class="text-muted fs-6">#{{ customer.code }}</small>
+                                {% if is_cross_branch %}
+                                    <span class="badge bg-warning text-dark ms-2">
+                                        <i class="fas fa-exchange-alt"></i> فرع آخر
+                                    </span>
+                                {% endif %}
                             </h2>
                             <div class="mb-3">
                                 <span class="badge {% if customer.status == 'active' %}bg-success
@@ -44,8 +61,11 @@
                                 </span>
                                 {% endif %}
                                 {% if customer.branch %}
-                                <span class="badge bg-dark">
+                                <span class="badge {% if is_cross_branch %}bg-warning text-dark{% else %}bg-dark{% endif %}">
                                     <i class="fas fa-building me-1"></i>{{ customer.branch.name }}
+                                    {% if is_cross_branch %}
+                                        <small class="d-block">فرع العميل</small>
+                                    {% endif %}
                                 </span>
                                 {% endif %}
                             </div>
@@ -72,13 +92,22 @@
                             <div class="btn-group-vertical d-grid gap-2">
                                 <a href="{% url 'orders:order_create' %}?customer={{ customer.pk }}" class="btn btn-success btn-sm">
                                     <i class="fas fa-plus"></i> {% trans 'إنشاء طلب' %}
+                                    {% if is_cross_branch %}
+                                        <small class="d-block">مرتبط بفرعك</small>
+                                    {% endif %}
                                 </a>
-                                {% if perms.customers.change_customer %}
+                                {% if can_edit %}
                                     <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-primary btn-sm">
                                         <i class="fas fa-edit"></i> {% trans 'تعديل' %}
                                     </a>
+                                {% else %}
+                                    {% if is_cross_branch %}
+                                        <button class="btn btn-secondary btn-sm disabled" title="لا يمكن التعديل - عميل من فرع آخر">
+                                            <i class="fas fa-lock"></i> {% trans 'محظور التعديل' %}
+                                        </button>
+                                    {% endif %}
                                 {% endif %}
-                                {% if perms.customers.delete_customer %}
+                                {% if perms.customers.delete_customer and not is_cross_branch %}
                                     <a href="{% url 'customers:customer_delete' customer.pk %}" class="btn btn-outline-danger btn-sm">
                                         <i class="fas fa-trash"></i> {% trans 'حذف' %}
                                     </a>
@@ -506,6 +535,16 @@
 
     .text-muted {
         font-style: italic;
+    }
+
+    .cross-branch-customer-detail {
+        border-left: 4px solid #ffc107 !important;
+    }
+
+    .cross-branch-customer-detail .alert-warning {
+        background-color: #fff3cd;
+        border-color: #ffc107;
+        color: #856404;
     }
 </style>
 {% endblock %}

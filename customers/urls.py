@@ -24,6 +24,7 @@ urlpatterns = [
     path('categories/add/', views.add_customer_category, name='add_category'),
     path('api/customer/<int:pk>/', views.get_customer_details, name='get_customer_details'),
     path('api/check-phone/', views.check_customer_phone, name='check_customer_phone'),
+    path('api/find-by-phone/', views.find_customer_by_phone, name='find_customer_by_phone'),
     
     # Customer Address Update
     path('customer/<int:pk>/update-address/', views.update_customer_address, name='update_customer_address'),

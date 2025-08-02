@@ -21,8 +21,7 @@ from .permissions import (
     can_user_edit_customer,
     can_user_delete_customer,
     can_user_create_customer,
-    get_user_customer_permissions,
-    is_customer_cross_branch
+    get_user_customer_permissions
 )
 
 def get_queryset_for_user(request, search_term=None):
@@ -100,11 +99,8 @@ def customer_list(request):
     cross_branch_customers = []
     if search_term:
         for customer in page_obj:
-            # للمستخدم admin أو المستخدمين بدون فرع، اعتبر جميع العملاء من نفس الفرع
-            if hasattr(request.user, 'branch') and request.user.branch:
-                if is_customer_cross_branch(request.user, customer):
-                    cross_branch_customers.append(customer.pk)
-            # إذا كان المستخدم admin أو بدون فرع، لا نعتبر أي عميل من فرع آخر
+            if customer.branch != request.user.branch:
+                cross_branch_customers.append(customer.pk)
 
     context = {
         'page_obj': page_obj,
@@ -139,7 +135,7 @@ def customer_detail(request, pk):
             customer = Customer.objects.select_related(
                 'category', 'branch', 'created_by'
             ).get(pk=pk)
-            is_cross_branch = is_customer_cross_branch(request.user, customer)
+            is_cross_branch = customer.branch != request.user.branch
         except Customer.DoesNotExist:
             messages.error(request, "العميل غير موجود.")
             return redirect("customers:customer_list")
@@ -395,7 +391,7 @@ def add_customer_note(request, pk):
         return redirect("customers:customer_list")
 
     # التحقق من صلاحية المستخدم لعرض هذا العميل (مع السماح بالوصول عبر الفروع)
-    is_cross_branch = is_customer_cross_branch(request.user, customer)
+    is_cross_branch = customer.branch != request.user.branch
     if not can_user_view_customer(request.user, customer, allow_cross_branch=is_cross_branch):
         messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
         return redirect("customers:customer_list")
@@ -581,43 +577,20 @@ def find_customer_by_phone(request):
     phone = request.GET.get('phone')
     if not phone:
         return JsonResponse({'found': False, 'error': 'رقم الهاتف مطلوب'}, status=400)
-    
-    # البحث المحسن برقم الهاتف
-    phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '')
-    customers = Customer.objects.filter(
-        models.Q(phone__icontains=phone) | 
-        models.Q(phone2__icontains=phone) |
-        models.Q(phone__icontains=phone_clean) | 
-        models.Q(phone2__icontains=phone_clean) |
-        models.Q(phone=phone) | 
-        models.Q(phone2=phone)
-    ).select_related('branch')
-    
-    if customers.exists():
-        customer_data = []
-        for customer in customers:
-            is_cross_branch = is_customer_cross_branch(request.user, customer)
-            customer_data.append({
-                'id': customer.pk,
-                'name': customer.name,
-                'code': customer.code,
-                'branch': customer.branch.name if customer.branch else 'غير محدد',
-                'phone': customer.phone,
-                'phone2': customer.phone2,
-                'email': customer.email,
-                'address': customer.address,
-                'url': f"/customers/{customer.pk}/",
-                'is_cross_branch': is_cross_branch,
-                'can_create_order': True,  # يمكن إنشاء طلبات لجميع العملاء
-                'can_edit': not is_cross_branch,  # يمكن التعديل فقط لعملاء نفس الفرع
-            })
-        
+    customer = Customer.objects.filter(phone=phone).first()
+    if customer:
         return JsonResponse({
             'found': True,
-            'customers': customer_data,
-            'count': len(customer_data)
+            'customer': {
+                'id': customer.pk,
+                'name': customer.name,
+                'branch': customer.branch.name if customer.branch else 'غير محدد',
+                'phone': customer.phone,
+                'email': customer.email,
+                'address': customer.address,
+                'url': f"/customers/{customer.pk}/"
+            }
         })
-    
     return JsonResponse({'found': False})
 
 @login_required

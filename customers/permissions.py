@@ -5,7 +5,7 @@ from django.db import models
 """
 
 
-def get_user_customers_queryset(user):
+def get_user_customers_queryset(user, search_term=None):
     """الحصول على queryset العملاء حسب صلاحيات المستخدم"""
     from .models import Customer
     
@@ -25,6 +25,51 @@ def get_user_customers_queryset(user):
             # إذا لم يكن له فروع مُدارة، لا يرى أي عملاء
             return Customer.objects.none()
     
+    # إذا كان هناك بحث بكود العميل أو رقم الهاتف، السماح بالوصول لجميع العملاء
+    if search_term and search_term.strip():
+        search_term = search_term.strip()
+        
+        # التحقق من أن البحث هو كود عميل أو رقم هاتف
+        is_customer_code = '-' in search_term and len(search_term.split('-')) == 2
+        # تحسين التحقق من رقم الهاتف ليشمل أرقام مصرية وعربية
+        is_phone_number = (
+            search_term.isdigit() or 
+            '+' in search_term or 
+            search_term.replace('+', '').replace(' ', '').replace('-', '').isdigit()
+        )
+        
+        if is_customer_code or is_phone_number:
+            # البحث في جميع العملاء إذا كان البحث بكود أو رقم هاتف
+            if is_customer_code:
+                cross_branch_customers = Customer.objects.filter(code=search_term)
+            else:
+                # البحث المحسن برقم الهاتف
+                phone_clean = search_term.replace('+', '').replace(' ', '').replace('-', '')
+                cross_branch_customers = Customer.objects.filter(
+                    models.Q(phone__icontains=search_term) | 
+                    models.Q(phone2__icontains=search_term) |
+                    models.Q(phone__icontains=phone_clean) | 
+                    models.Q(phone2__icontains=phone_clean) |
+                    models.Q(phone=search_term) | 
+                    models.Q(phone2=search_term)
+                )
+            
+            if cross_branch_customers.exists():
+                # إذا وُجد عملاء، إرجاع queryset يحتوي على العملاء المطلوبين + عملاء الفرع العادية
+                base_queryset = get_user_base_customers_queryset(user)
+                return Customer.objects.filter(
+                    models.Q(pk__in=cross_branch_customers.values_list('pk', flat=True)) | 
+                    models.Q(pk__in=base_queryset.values_list('pk', flat=True))
+                ).distinct()
+    
+    # الصلاحيات العادية
+    return get_user_base_customers_queryset(user)
+
+
+def get_user_base_customers_queryset(user):
+    """الحصول على queryset العملاء الأساسي حسب صلاحيات المستخدم (بدون البحث المتقدم)"""
+    from .models import Customer
+    
     # مدير الفرع يرى عملاء فرعه فقط
     if hasattr(user, 'is_branch_manager') and user.is_branch_manager:
         if hasattr(user, 'branch') and user.branch:
@@ -41,7 +86,7 @@ def get_user_customers_queryset(user):
                 models.Q(branch=user.branch) | models.Q(created_by=user)
             )
         else:
-            # إذا لم يكن له فرع، يرى العملاء الذين أنشأهم فقط
+            # إذا لم يكن له ف��ع، يرى العملاء الذين أنشأهم فقط
             return Customer.objects.filter(created_by=user)
     
     # فني المعاينة يرى عملاء فرعه فقط (للقراءة)
@@ -60,7 +105,7 @@ def get_user_customers_queryset(user):
         return Customer.objects.filter(created_by=user)
 
 
-def can_user_view_customer(user, customer):
+def can_user_view_customer(user, customer, allow_cross_branch=False):
     """التحقق من إمكانية المستخدم لعرض عميل معين"""
     if user.is_superuser:
         return True
@@ -74,6 +119,10 @@ def can_user_view_customer(user, customer):
         managed_branches = user.managed_branches.all()
         return customer.branch in managed_branches
     
+    # إذا كان مسموح بالوصول عبر الفروع (من خلال البحث بكود أو رقم هاتف)
+    if allow_cross_branch:
+        return True
+    
     # مدير الفرع يرى عملاء فرعه فقط
     if hasattr(user, 'is_branch_manager') and user.is_branch_manager:
         return hasattr(user, 'branch') and user.branch and customer.branch == user.branch
@@ -83,7 +132,7 @@ def can_user_view_customer(user, customer):
         return (customer.created_by == user or 
                 (hasattr(user, 'branch') and user.branch and customer.branch == user.branch))
     
-    # فني المعاينة يرى ��ملاء فرعه فقط
+    # فني المعاينة يرى عملاء فرعه فقط
     if hasattr(user, 'is_inspection_technician') and user.is_inspection_technician:
         return hasattr(user, 'branch') and user.branch and customer.branch == user.branch
     
@@ -171,6 +220,56 @@ def can_user_create_customer(user):
         return False
     
     # المستخدم العادي يمكنه إنشاء عملاء
+    return True
+
+
+def can_user_create_order_for_customer(user, customer):
+    """التحقق من إمكانية المستخدم لإنشاء طلب لعميل معين (حتى من فرع آخر)"""
+    if user.is_superuser:
+        return True
+    
+    # المدير العام يمكنه إنشاء طلبات لجميع العملاء
+    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+        return True
+    
+    # مدير المنطقة يمكنه إنشاء طلبات لعملاء الفروع المُدارة
+    if hasattr(user, 'is_region_manager') and user.is_region_manager:
+        managed_branches = user.managed_branches.all()
+        return customer.branch in managed_branches
+    
+    # مدير الفرع يمكنه إنشاء طلبات لعملاء فرعه
+    if hasattr(user, 'is_branch_manager') and user.is_branch_manager:
+        return hasattr(user, 'branch') and user.branch and customer.branch == user.branch
+    
+    # البائع يمكنه إنشاء طلبات لجميع العملاء (حتى من فروع أخرى)
+    # ولكن الطلب سيكون مرتبط بفرع البائع
+    if hasattr(user, 'is_salesperson') and user.is_salesperson:
+        return True
+    
+    # فني المعاينة لا يمكنه إنشاء طلبات
+    if hasattr(user, 'is_inspection_technician') and user.is_inspection_technician:
+        return False
+    
+    # المستخدم العادي يمكنه إنشاء طلبات لجميع العملاء
+    return True
+
+
+def can_user_access_cross_branch_customer(user, customer):
+    """التحقق من إمكانية المستخدم للوصول لعميل من فرع آخر عبر البحث"""
+    if user.is_superuser:
+        return True
+    
+    # المدير العام يمكنه الوصول لجميع العملاء
+    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+        return True
+    
+    # مدير المنطقة يمكنه الوصول لعملاء الفروع المُدارة
+    if hasattr(user, 'is_region_manager') and user.is_region_manager:
+        managed_branches = user.managed_branches.all()
+        return customer.branch in managed_branches
+    
+    # جميع المستخدمين الآخرين يمكنهم الوصول للعملاء من فروع أخرى عبر البحث
+    # ولكن مع قيود على التعديل
     return True
 
 
@@ -290,3 +389,17 @@ def get_user_customer_permissions(user):
         })
     
     return permissions
+
+
+def is_customer_cross_branch(user, customer):
+    """التحقق من أن العميل من فرع آخر"""
+    # إذا كان المستخدم admin أو بدون فرع، لا نعتبر أي عميل من فرع آخر
+    if user.is_superuser:
+        return False
+    
+    # إذا لم يكن للمستخدم فرع، لا نعتبر أي عميل من فرع آخر
+    if not hasattr(user, "branch") or not user.branch:
+        return False
+    
+    # التحقق من أن العميل من فرع مختلف
+    return customer.branch != user.branch
