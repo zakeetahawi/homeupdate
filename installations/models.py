@@ -169,14 +169,29 @@ class InstallationSchedule(models.Model):
             except InstallationSchedule.DoesNotExist:
                 pass
         
-        # تحديث حالة الطلب عند إكمال التركيب
+        # تحديث حالة الطلب عند إكمال التركي��
         if self.status == 'completed' and not self.completion_date:
-            self.completion_date = timezone.now()
+            # استخدام التاريخ المحلي للمنطقة الزمنية المحددة
+            from django.utils import timezone as django_timezone
+            import pytz
+            from datetime import datetime, time
+            
+            # الحصول على المنطقة الزمنية من الإعدادات
+            local_tz = pytz.timezone('Africa/Cairo')
+            current_time = django_timezone.now()
+            local_time = current_time.astimezone(local_tz)
+            
+            # إنشاء datetime بالتوقيت المحلي ثم تحويله إلى UTC للحفظ
+            local_date = local_time.date()
+            local_datetime = datetime.combine(local_date, local_time.time())
+            local_datetime = local_tz.localize(local_datetime)
+            
+            self.completion_date = local_datetime
             
             # تحديث تاريخ الجدولة إلى تاريخ الإكمال إذا كان مختلفاً
-            if self.scheduled_date and self.scheduled_date != self.completion_date.date():
+            if self.scheduled_date and self.scheduled_date != local_date:
                 old_date = self.scheduled_date
-                self.scheduled_date = self.completion_date.date()
+                self.scheduled_date = local_date
                 
                 # إضافة ملاحظة عن تغيير التاريخ
                 date_note = f"\n--- ملاحظة تغيير التاريخ ---\n"
@@ -189,10 +204,24 @@ class InstallationSchedule(models.Model):
                     self.notes += date_note
                 else:
                     self.notes = date_note
+                
+                # تحديث تاريخ التسليم المتوقع للطلب إلى تاريخ الإكمال الفعلي
+                if self.order:
+                    self.order.expected_delivery_date = local_date
+                    self.order.save(update_fields=['expected_delivery_date'])
         
         # تحديث تاريخ الجدولة عند بدء التركيب في يوم مختلف
         elif self.status == 'in_installation' and old_status == 'scheduled':
-            current_date = timezone.now().date()
+            # استخدام التاريخ المحلي للمنطقة الزمنية المحددة
+            from django.utils import timezone as django_timezone
+            import pytz
+            
+            # الحصول على المنطقة الزمنية من الإعدادات
+            local_tz = pytz.timezone('Africa/Cairo')
+            current_time = django_timezone.now()
+            local_time = current_time.astimezone(local_tz)
+            current_date = local_time.date()
+            
             if self.scheduled_date and self.scheduled_date != current_date:
                 old_date = self.scheduled_date
                 self.scheduled_date = current_date
@@ -208,6 +237,18 @@ class InstallationSchedule(models.Model):
                     self.notes += date_note
                 else:
                     self.notes = date_note
+                
+                # تحديث تاريخ التسليم المتوقع للطلب إلى تاريخ البدء الفعلي
+                if self.order:
+                    self.order.expected_delivery_date = current_date
+                    self.order.save(update_fields=['expected_delivery_date'])
+        
+        # تحديث تاريخ التسليم المتوقع عند الجدولة لأول مرة أو تغيير الجدولة
+        elif self.status == 'scheduled' and self.scheduled_date:
+            # إذا كان هذا تغيير في تاريخ الجدولة أو جدولة جديدة
+            if old_scheduled_date != self.scheduled_date and self.order:
+                self.order.expected_delivery_date = self.scheduled_date
+                self.order.save(update_fields=['expected_delivery_date'])
         
         super().save(*args, **kwargs)
 
@@ -265,12 +306,16 @@ class InstallationSchedule(models.Model):
 
     def get_installation_date(self):
         """إرجاع تاريخ التركيب المناسب حسب الحالة"""
-        # إذا كان التركيب مجدول أو له جدولة، إرجاع تاريخ الجدولة
-        if self.scheduled_date and self.status in ['scheduled', 'in_installation', 'completed', 'modification_required', 'modification_in_progress', 'modification_completed']:
+        # إذا كان مكتمل وله تاريخ إكمال، إرجاع تاريخ الإكمال الفعلي (أولوية عالية)
+        if self.status == 'completed' and self.completion_date:
+            # تحويل تاريخ الإكمال إلى المنطقة الزمنية المحلية للعرض
+            import pytz
+            local_tz = pytz.timezone('Africa/Cairo')
+            local_completion_date = self.completion_date.astimezone(local_tz)
+            return local_completion_date.date()
+        # إذا كان التركيب مجدول أو قيد التنفيذ، إرجاع تاريخ الجدولة
+        elif self.scheduled_date and self.status in ['scheduled', 'in_installation', 'modification_required', 'modification_in_progress', 'modification_completed']:
             return self.scheduled_date
-        # إذا كان مكتمل وله تاريخ إكمال، إرجاع تاريخ الإكمال
-        elif self.completion_date and self.status == 'completed':
-            return self.completion_date.date()
         # في الحالات الأخرى، إرجاع تاريخ الجدولة إذا كان متوفراً
         elif self.scheduled_date:
             return self.scheduled_date

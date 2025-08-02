@@ -130,6 +130,18 @@ class InspectionForm(forms.ModelForm):
         required=False,
         widget=forms.Select(attrs={'class': 'form-control select2'})
     )
+    
+    # إضافة حقل تحديث عنوان العميل
+    update_customer_address = forms.CharField(
+        label=_('تحديث عنوان العميل'),
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': _('اتركه فارغاً إذا لم تريد تحديث عنوان العميل')
+        }),
+        help_text=_('إذا تم ملء هذا الحقل، سيتم تحديث العنوان الرئيسي للعميل')
+    )
 
     class Meta:
         model = Inspection
@@ -137,7 +149,7 @@ class InspectionForm(forms.ModelForm):
             'customer', 'contract_number', 'inspector', 'request_date',
             'scheduled_date', 'windows_count', 'notes', 'inspection_file',
             'branch', 'responsible_employee', 'status', 'result',
-            'expected_delivery_date'
+            'expected_delivery_date', 'update_customer_address'
         ]
         widgets = {
             'request_date': forms.DateInput(attrs={'type': 'date'}),

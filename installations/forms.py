@@ -329,6 +329,18 @@ class QuickScheduleForm(forms.ModelForm):
         help_text=_('عنوان التركيب (سيتم جلبه من معلومات العميل)')
     )
     
+    # إضافة حقل تحديث عنوان العميل
+    update_customer_address = forms.CharField(
+        label=_('تحديث عنوان العميل الرئيسي'),
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': _('اتركه فارغاً إذا لم تريد تحديث عنوان العميل الرئيسي')
+        }),
+        help_text=_('إذا تم ملء هذا الحقل، سيتم تحديث العنوان الرئيسي للعميل في جميع أنحاء النظام')
+    )
+    
     def __init__(self, *args, **kwargs):
         order = kwargs.pop('order', None)
         super().__init__(*args, **kwargs)

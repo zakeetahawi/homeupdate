@@ -990,16 +990,63 @@ def quick_schedule_installation(request, order_id):
             installation.save()
             
             # تحديث معلومات العميل إذا تم تعديل العنوان
-            if form.cleaned_data.get('location_address'):
+            update_customer_address = form.cleaned_data.get('update_customer_address')
+            if update_customer_address and order.customer:
+                try:
+                    old_address = order.customer.address
+                    order.customer.address = update_customer_address
+                    order.customer.save(update_fields=['address'])
+                    
+                    # إضافة ملاحظة في التركيب عن تحديث العنوان
+                    address_note = f"\n--- تحديث العنوان ---\n"
+                    address_note += f"العنوان السابق: {old_address or 'غير محدد'}\n"
+                    address_note += f"العنوان الجديد: {update_customer_address}\n"
+                    address_note += f"تم التحديث بواسطة: {request.user.username}\n"
+                    address_note += f"تاريخ التحديث: {timezone.now().strftime('%Y-%m-%d %H:%M')}\n"
+                    address_note += f"--- نهاية تحديث العنوان ---\n"
+                    
+                    if installation.notes:
+                        installation.notes += address_note
+                    else:
+                        installation.notes = address_note
+                    
+                    # تحديث عنوان التركيب أيضاً
+                    if form.cleaned_data.get('location_address'):
+                        installation.location_address = form.cleaned_data['location_address']
+                    else:
+                        installation.location_address = update_customer_address
+                    
+                    # تحديث عنوان المعاينات المرتبطة بنفس العميل
+                    try:
+                        from inspections.models import Inspection
+                        inspections = Inspection.objects.filter(customer=order.customer)
+                        for inspection in inspections:
+                            inspection_note = f"\n--- تحديث العنوان من قسم التركيبات ---\n"
+                            inspection_note += f"العنوان الجديد: {update_customer_address}\n"
+                            inspection_note += f"تم التحديث بواسطة: {request.user.username}\n"
+                            inspection_note += f"تاريخ التحديث: {timezone.now().strftime('%Y-%m-%d %H:%M')}\n"
+                            inspection_note += f"--- نهاية تحديث العنوان ---\n"
+                            
+                            if inspection.notes:
+                                inspection.notes += inspection_note
+                            else:
+                                inspection.notes = inspection_note
+                            inspection.save(update_fields=['notes'])
+                    except Exception as inspection_error:
+                        print(f"خطأ في تحديث عنوان المعاينات: {inspection_error}")
+                    
+                    messages.success(request, 'تم تحديث عنوان العميل بنجاح في التركيبات والمعاينات')
+                except Exception as e:
+                    messages.warning(request, f'تعذر تحديث عنوان العميل: {str(e)}')
+            elif form.cleaned_data.get('location_address'):
                 # استخراج نوع المكان من العنوان إذا كان موجوداً
                 address_text = form.cleaned_data['location_address']
                 location_type = form.cleaned_data.get('location_type')
                 
-                # تحديث عنوان العميل
-                order.customer.address = address_text.split('\nنوع المكان:')[0].strip()
+                # تحديث عنوان التركيب فقط
+                installation.location_address = address_text.split('\nنوع المكان:')[0].strip()
                 if location_type:
-                    order.customer.location_type = location_type
-                order.customer.save()
+                    installation.location_type = location_type
             
             messages.success(request, _('تم جدولة التركيب بنجاح'))
             return redirect('installations:dashboard')

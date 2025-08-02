@@ -322,6 +322,44 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
         # Safely get the new status, falling back to the instance's status if not in form
         new_status = form.cleaned_data.get('status', inspection.status)
+        
+        # معالجة تحديث عنوان العميل
+        update_customer_address = form.cleaned_data.get('update_customer_address')
+        if update_customer_address and inspection.customer:
+            try:
+                old_address = inspection.customer.address
+                inspection.customer.address = update_customer_address
+                inspection.customer.save(update_fields=['address'])
+                
+                # إضافة ملاحظة في المعاينة عن تحديث العنوان
+                address_note = f"\n--- تحديث العنوان ---\n"
+                address_note += f"العنوان السابق: {old_address or 'غير محدد'}\n"
+                address_note += f"العنوان الجديد: {update_customer_address}\n"
+                address_note += f"تم التحديث بواسطة: {self.request.user.username}\n"
+                address_note += f"تاريخ التحديث: {timezone.now().strftime('%Y-%m-%d %H:%M')}\n"
+                address_note += f"--- نهاية تحديث العنوان ---\n"
+                
+                if inspection.notes:
+                    inspection.notes += address_note
+                else:
+                    inspection.notes = address_note
+                
+                # تحديث عنوان التركيب في جدولة التركيب إذا كانت موجودة
+                try:
+                    from installations.models import InstallationSchedule
+                    installation_schedules = InstallationSchedule.objects.filter(
+                        order__customer=inspection.customer
+                    )
+                    for installation in installation_schedules:
+                        if installation.location_address != update_customer_address:
+                            installation.location_address = update_customer_address
+                            installation.save(update_fields=['location_address'])
+                except Exception as install_error:
+                    print(f"خطأ في تحديث عنوان التركيب: {install_error}")
+                
+                messages.success(self.request, 'تم تحديث عنوان العميل بنجاح في المعاينات والتركيبات')
+            except Exception as e:
+                messages.warning(self.request, f'تعذر تحديث عنوان العميل: {str(e)}')
 
         # Save inspection first to ensure it exists
         response = super().form_valid(form)

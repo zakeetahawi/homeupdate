@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                 ('is_active', models.BooleanField(default=True, verbose_name='نشط')),
                 ('last_run', models.DateTimeField(blank=True, null=True, verbose_name='آخر تشغيل')),
                 ('next_run', models.DateTimeField(blank=True, null=True, verbose_name='التشغيل القادم')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='��اريخ الإنشاء')),
+                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')),
                 ('updated_at', models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')),
                 ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL, verbose_name='أنشئ بواسطة')),
             ],

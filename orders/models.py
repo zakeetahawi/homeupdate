@@ -672,13 +672,32 @@ class Order(models.Model):
 
     def get_smart_delivery_date(self):
         """إرجاع التاريخ المناسب حسب حالة الطلب"""
-        # إذا كان الطلب يحتوي على تركيب وتمت الجدولة، اعرض تاريخ الجدولة
+        # إذا كان الطلب يحتوي على معاينة، اعرض تاريخ المعاينة
+        if 'inspection' in self.get_selected_types_list():
+            try:
+                from inspections.models import Inspection
+                inspection = self.inspections.first()
+                if inspection:
+                    # إذا كانت المعاينة مجدولة أو مكتملة، اعرض التاريخ المناسب
+                    if inspection.status == 'scheduled' and inspection.scheduled_date:
+                        return inspection.scheduled_date
+                    elif inspection.status == 'completed' and inspection.completed_at:
+                        return inspection.completed_at.date()
+                    elif inspection.scheduled_date:
+                        return inspection.scheduled_date
+            except:
+                pass
+        
+        # إذا كان الطلب يحتوي على تركيب، اعرض التاريخ المحدث م�� التركيب
         if 'installation' in self.get_selected_types_list():
             try:
                 from installations.models import InstallationSchedule
                 installation = InstallationSchedule.objects.filter(order=self).first()
-                if installation and installation.scheduled_date:
-                    return installation.scheduled_date
+                if installation:
+                    # استخدام دالة get_installation_date التي تعطي الأولوية لتاريخ الإكمال الفعلي
+                    installation_date = installation.get_installation_date()
+                    if installation_date:
+                        return installation_date
             except:
                 pass
         
@@ -691,7 +710,7 @@ class Order(models.Model):
             elif self.order_status == 'delivered' and hasattr(self, 'manufacturing_order') and self.manufacturing_order.delivery_date:
                 return self.manufacturing_order.delivery_date.date()
         
-        # في جميع الحالات الأخرى، إرجاع التاريخ المتوقع
+        # في جميع الحالات الأخرى، إرجاع التاريخ المتوقع المحدث
         return self.expected_delivery_date
 
     def get_installation_date(self):
@@ -826,14 +845,30 @@ class Order(models.Model):
             setattr(self, '_updating_statuses', False)
 
     def get_delivery_date_label(self):
-        """إرجاع تسمية التاريخ المناسبة حسب حالة الطلب"""
-        # إذا كان الطلب يحتوي على تركيب وتمت الجدولة
+        """إرجاع تسمية التاريخ المناسبة حسب حا��ة الطلب"""
+        # إذا كان الطلب يحتوي على معاينة، اعرض تسمية المعاينة
+        if 'inspection' in self.get_selected_types_list():
+            try:
+                from inspections.models import Inspection
+                inspection = self.inspections.first()
+                if inspection:
+                    if inspection.status == 'scheduled':
+                        return "تاريخ جدولة المعاينة"
+                    elif inspection.status == 'completed':
+                        return "تاريخ إتمام المعاينة"
+                    else:
+                        return "تاريخ المعاينة المتوقع"
+            except:
+                pass
+            return "تاريخ المعاينة المتوقع"
+        
+        # إذا كان الطلب يحتوي على تركيب، اعرض التسمية المناسبة
         if 'installation' in self.get_selected_types_list():
             try:
                 from installations.models import InstallationSchedule
                 installation = InstallationSchedule.objects.filter(order=self).first()
-                if installation and installation.scheduled_date:
-                    return "تاريخ الجدولة"
+                if installation:
+                    return installation.get_installation_date_label()
             except:
                 pass
         
