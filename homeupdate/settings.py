@@ -26,6 +26,10 @@ INSTALLED_APPS = [
 import os
 import dj_database_url
 
+# وضع التطوير
+DEBUG = True
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
 # إعدادات قاعدة البيانات
 DATABASE_URL = os.environ.get('DATABASE_URL', 'postgres://postgres:5525@localhost:5432/crm_system')
 

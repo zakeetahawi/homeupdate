@@ -20,7 +20,7 @@ if not SECRET_KEY:
     raise ImproperlyConfigured("يجب تعيين المفتاح السري (SECRET_KEY) في متغيرات البيئة.")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False').lower() in ['true', 't', '1']
+DEBUG = True
 
 # قراءة ALLOWED_HOSTS من متغيرات البيئة. يجب أن تكون سلسلة نصية مفصولة بفاصلة.
 # مثال: ALLOWED_HOSTS="localhost,127.0.0.1,mydomain.com"
