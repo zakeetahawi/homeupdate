@@ -897,8 +897,7 @@ def update_approval_status(request, pk):
         with transaction.atomic():
             if action == 'approve':
                 order.status = 'pending'  # The manufacturing process itself is now 'pending'
-                # لا نحذف rejection_reason للاحتفاظ بسجل التحليل المستقبلي
-                # order.rejection_reason = None  # تم تعطيل هذا السطر
+                order.rejection_reason = None
                 order.save()
                 
                 # Create a notification for the user who created the original order
@@ -1194,7 +1193,6 @@ def re_approve_after_reply(request, pk):
         
         with transaction.atomic():
             # Reset rejection status and approve
-            # نحتفظ بـ rejection_reason و rejection_reply لأغراض التحليل المستقبلي
             order.status = 'pending'
             order.save(update_fields=['status'])
             
@@ -1245,48 +1243,3 @@ def re_approve_after_reply(request, pk):
             'success': False,
             'error': f'حدث خطأ غير متوقع: {str(e)}'
         }, status=500)
-
-
-def rejection_analysis_view(request):
-    """
-    View for analyzing rejection reasons and replies for management insights
-    """
-    if not request.user.has_perm('manufacturing.view_manufacturingorder'):
-        return JsonResponse({'error': 'Permission denied'}, status=403)
-    
-    # Get all orders that have been rejected at some point
-    rejected_orders = ManufacturingOrder.objects.filter(
-        rejection_reason__isnull=False
-    ).select_related('order', 'order__customer', 'order__created_by')
-    
-    # Analyze rejection reasons
-    rejection_stats = {
-        'total_rejections': rejected_orders.count(),
-        'rejections_with_replies': rejected_orders.filter(has_rejection_reply=True).count(),
-        'rejections_without_replies': rejected_orders.filter(has_rejection_reply=False).count(),
-        'approved_after_reply': rejected_orders.filter(
-            has_rejection_reply=True,
-            status__in=['pending', 'in_progress', 'completed', 'delivered']
-        ).count(),
-        'still_rejected': rejected_orders.filter(status='rejected').count(),
-    }
-    
-    # Get common rejection reasons (simplified analysis)
-    rejection_reasons = []
-    for order in rejected_orders.order_by('-updated_at')[:20]:  # Most recent rejections
-        rejection_reasons.append({
-            'order_id': order.id,
-            'customer_name': order.order.customer.name if order.order else 'غير محدد',
-            'rejection_reason': order.rejection_reason,
-            'rejection_reply': order.rejection_reply,
-            'has_reply': order.has_rejection_reply,
-            'current_status': order.get_status_display(),
-            'rejection_date': order.updated_at if order.status == 'rejected' else None,
-        })
-    
-    return JsonResponse({
-        'success': True,
-        'stats': rejection_stats,
-        'recent_rejections': rejection_reasons,
-        'analysis_date': timezone.now().isoformat(),
-    })

@@ -139,27 +139,19 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     delivery_info.short_description = 'معلومات التسليم'
 
     def rejection_reply_status(self, obj):
-        if obj.rejection_reason:  # إذا كان هناك سبب رفض (حتى لو تمت الموافقة لاحقاً)
+        if obj.status == 'rejected':
             if obj.has_rejection_reply:
-                status_text = 'تم الرد'
-                if obj.status != 'rejected':
-                    status_text += ' + تمت الموافقة'
                 return format_html(
-                    '<span style="color: #007bff;"><i class="fa fa-comments"></i> '
-                    '{}</span>', status_text
+                    '<span style="color: #007bff;"><i class="fa fa-reply"></i> '
+                    'تم الرد</span>'
                 )
-            elif obj.status == 'rejected':
+            else:
                 return format_html(
                     '<span style="color: #dc3545;"><i class="fa fa-times"></i> '
                     'لم يتم الرد</span>'
                 )
-            else:
-                return format_html(
-                    '<span style="color: #28a745;"><i class="fa fa-check"></i> '
-                    'تمت الموافقة</span>'
-                )
         return "-"
-    rejection_reply_status.short_description = 'سجل المحادثة'
+    rejection_reply_status.short_description = 'حالة الرد'
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(

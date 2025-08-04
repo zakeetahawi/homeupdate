@@ -172,14 +172,27 @@ def branch_messages(request):
     Context processor to add branch messages to templates.
     Only loads messages for the home page.
     """
-    if (request.user.is_authenticated and
-            hasattr(request.user, 'branch') and
-            request.path == '/'):
-        messages = BranchMessage.objects.filter(
-            branch=request.user.branch,
+    if request.user.is_authenticated and request.path == '/':
+        from django.db.models import Q
+        
+        messages_query = Q(
             is_active=True,
             start_date__lte=timezone.now(),
             end_date__gte=timezone.now()
-        ).order_by('-created_at')
+        )
+        
+        # إضافة الرسائل العامة
+        messages_query &= Q(is_for_all_branches=True)
+        
+        # إضافة رسائل الفرع المحدد إذا كان للمستخدم فرع
+        if hasattr(request.user, 'branch') and request.user.branch:
+            messages_query |= Q(
+                branch=request.user.branch,
+                is_active=True,
+                start_date__lte=timezone.now(),
+                end_date__gte=timezone.now()
+            )
+        
+        messages = BranchMessage.objects.filter(messages_query).order_by('-created_at')
         return {'branch_messages': messages}
     return {'branch_messages': []}

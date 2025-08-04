@@ -537,90 +537,44 @@
                         {% endif %}
                         
                         <!-- إضافة تفاصيل الرفض إذا كان الطلب مرفوضاً -->
-                        <!-- عرض سجل المحادثة والرفض إذا كان هناك سبب رفض (حتى لو تمت الموافقة لاحقاً) -->
+                        {% if order.order_status == 'rejected' %}
                         {% with manufacturing_order=order.manufacturing_order %}
                             {% if manufacturing_order and manufacturing_order.rejection_reason %}
                             <tr>
-                                <th>سجل المحادثة</th>
+                                <th>سبب الرفض</th>
                                 <td>
-                                    <div class="rejection-history">
-                                        <!-- رسالة توضيحية -->
-                                        <div class="alert alert-light border mb-3">
-                                            <div class="d-flex align-items-start">
-                                                <i class="fas fa-info-circle me-2 mt-1 text-info"></i>
-                                                <div class="flex-grow-1">
-                                                    <small class="text-muted">
-                                                        <strong>سجل المحادثة:</strong> يحتوي هذا القسم على سجل كامل للمراسلات 
-                                                        بينك وبين المصنع، ويبقى محفوظاً لأغراض المتابعة والمراجعة.
-                                                    </small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- سبب الرفض الأصلي -->
-                                        <div class="alert alert-danger mb-2">
-                                            <div class="d-flex align-items-start">
-                                                <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
-                                                <div class="flex-grow-1">
-                                                    <strong>سبب الرفض:</strong>
-                                                    <div class="mt-1">{{ manufacturing_order.rejection_reason }}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- عرض الرد إذا كان موجوداً -->
-                                        {% if manufacturing_order.rejection_reply %}
-                                            <div class="alert alert-info mb-2">
-                                                <div class="d-flex align-items-start">
-                                                    <i class="fas fa-reply me-2 mt-1"></i>
-                                                    <div class="flex-grow-1">
-                                                        <strong>ردك على الرفض:</strong>
-                                                        <div class="mt-1">{{ manufacturing_order.rejection_reply }}</div>
-                                                        <small class="text-muted d-block mt-1">
-                                                            <i class="fas fa-clock me-1"></i>
-                                                            {{ manufacturing_order.rejection_reply_date|date:"Y-m-d H:i" }}
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        {% endif %}
-                                        
-                                        <!-- إظهار الحالة الحالية إذا تمت الموافقة بعد الرد -->
-                                        {% if manufacturing_order.rejection_reply and manufacturing_order.status != 'rejected' %}
-                                            <div class="alert alert-success mb-2">
-                                                <div class="d-flex align-items-start">
-                                                    <i class="fas fa-check-circle me-2 mt-1"></i>
-                                                    <div class="flex-grow-1">
-                                                        <strong>تم قبول الطلب بعد المراجعة</strong>
-                                                        <div class="mt-1">الحالة الحالية: {{ manufacturing_order.get_status_display }}</div>
-                                                        {% if manufacturing_order.updated_at %}
-                                                        <small class="text-muted d-block mt-1">
-                                                            <i class="fas fa-clock me-1"></i>
-                                                            {{ manufacturing_order.updated_at|date:"Y-m-d H:i" }}
-                                                        </small>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        {% endif %}
-                                        
-                                        <!-- زر الرد على الرفض إذا لم يتم الرد بعد ولا تزال الحالة مرفوضة -->
-                                        {% if not manufacturing_order.rejection_reply and manufacturing_order.status == 'rejected' %}
-                                            {% if order.created_by == user %}
-                                                <div class="mt-2">
-                                                    <button class="btn btn-outline-primary btn-sm" 
-                                                            onclick="showReplyToRejectionModal({{ manufacturing_order.id }})">
-                                                        <i class="fas fa-reply me-1"></i>
-                                                        الرد على الرفض
-                                                    </button>
-                                                </div>
-                                            {% endif %}
-                                        {% endif %}
+                                    <div class="alert alert-danger mb-2">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        {{ manufacturing_order.rejection_reason }}
                                     </div>
+                                    
+                                    <!-- عرض الرد إذا كان موجوداً -->
+                                    {% if manufacturing_order.rejection_reply %}
+                                        <div class="alert alert-info mb-2">
+                                            <strong><i class="fas fa-reply me-2"></i>ردك على الرفض:</strong>
+                                            <div class="mt-2">{{ manufacturing_order.rejection_reply }}</div>
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ manufacturing_order.rejection_reply_date|date:"Y-m-d H:i" }}
+                                            </small>
+                                        </div>
+                                    {% else %}
+                                        <!-- زر الرد على الرفض إذا لم يتم الرد بعد -->
+                                        {% if order.created_by == user %}
+                                            <div class="mt-2">
+                                                <button class="btn btn-outline-primary btn-sm" 
+                                                        onclick="showReplyToRejectionModal({{ manufacturing_order.id }})">
+                                                    <i class="fas fa-reply me-1"></i>
+                                                    الرد على الرفض
+                                                </button>
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endif %}
                         {% endwith %}
+                        {% endif %}
                         <tr>
                             <th>المبلغ الإجمالي</th>
                             <td>{{ order.total_amount }} {{ currency_symbol }}</td>
@@ -1429,44 +1383,6 @@ body:not(.modal-open) .modal-backdrop {
 .swal2-shown {
     overflow: auto !important;
     padding-right: 0 !important;
-}
-
-/* تحسين شكل سجل المحادثة */
-.rejection-history {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.rejection-history .alert {
-    border: none;
-    border-left: 4px solid;
-    margin-bottom: 0.75rem;
-}
-
-.rejection-history .alert-danger {
-    border-left-color: #dc3545;
-    background-color: #f8d7da;
-}
-
-.rejection-history .alert-info {
-    border-left-color: #0dcaf0;
-    background-color: #d1ecf1;
-}
-
-.rejection-history .alert-success {
-    border-left-color: #198754;
-    background-color: #d1e7dd;
-}
-
-.rejection-history .alert-light {
-    border-left-color: #6c757d;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-}
-
-.rejection-history .fas {
-    color: inherit;
-    opacity: 0.8;
 }
 
 /* Timeline styling */

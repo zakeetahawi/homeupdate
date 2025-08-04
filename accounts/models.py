@@ -525,17 +525,42 @@ class SystemSettings(models.Model):
 class BranchMessage(models.Model):
     MESSAGE_TYPES = [
         ('welcome', 'رسالة ترحيبية'),
-        ('goal', 'هدف'),
+        ('goal', 'هدف'),  
         ('announcement', 'إعلان'),
         ('holiday', 'إجازة'),
+        ('info', 'معلومات'),
     ]
 
-    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, verbose_name="الفرع", related_name='messages')
+    DISPLAY_STYLES = [
+        ('sweetalert2', 'SweetAlert2 - حديث وأنيق'),
+        ('toastr', 'Toastr - إشعارات جانبية'),
+        ('notyf', 'Notyf - بسيط وسريع'),
+        ('alertify', 'Alertify - كلاسيكي'),
+    ]
+
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, verbose_name="الفرع", related_name='messages', blank=True, null=True)
+    is_for_all_branches = models.BooleanField(default=False, verbose_name="لجميع الفروع")
     title = models.CharField(max_length=200, verbose_name="العنوان")
     message = models.TextField(verbose_name="نص الرسالة")
     message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES, default='announcement', verbose_name="نوع الرسالة")
     color = models.CharField(max_length=50, default='primary', verbose_name="لون الرسالة")
     icon = models.CharField(max_length=50, default='fas fa-bell', verbose_name="الأيقونة")
+    
+    # إعدادات التوقيت والعرض الجديدة
+    display_duration = models.IntegerField(default=20, verbose_name="مدة العرض (ثانية)", 
+                                         help_text="المدة بالثواني (10-50 ثانية)")
+    display_style = models.CharField(max_length=20, choices=DISPLAY_STYLES, default='sweetalert2', 
+                                   verbose_name="نمط العرض")
+    icon_size = models.CharField(max_length=10, default='medium', verbose_name="حجم الأيقونة",
+                               choices=[
+                                   ('small', 'صغير'),
+                                   ('medium', 'متوسط'),
+                                   ('large', 'كبير'),
+                               ])
+    auto_close = models.BooleanField(default=True, verbose_name="إغلاق تلقائي")
+    show_close_button = models.BooleanField(default=True, verbose_name="إظهار زر الإغلاق")
+    allow_outside_click = models.BooleanField(default=True, verbose_name="السماح بالإغلاق عند النقر خارج الرسالة")
+    
     start_date = models.DateTimeField(verbose_name="تاريخ البداية")
     end_date = models.DateTimeField(verbose_name="تاريخ النهاية")
     is_active = models.BooleanField(default=True, verbose_name="نشط")
@@ -547,13 +572,45 @@ class BranchMessage(models.Model):
         verbose_name_plural = "رسائل الفروع"
         ordering = ['-created_at']
 
+    def clean(self):
+        """التحقق من صحة البيانات"""
+        super().clean()
+        
+        if not self.is_for_all_branches and not self.branch:
+            raise ValidationError("يجب تحديد الفرع أو اختيار 'لجميع الفروع'")
+        
+        if self.is_for_all_branches and self.branch:
+            raise ValidationError("لا يمكن تحديد فرع معين مع اختيار 'لجميع الفروع'")
+        
+        # التحقق من مدة العرض
+        if self.display_duration < 10 or self.display_duration > 50:
+            raise ValidationError("مدة العرض يجب أن تكون بين 10 و 50 ثانية")
+
     def __str__(self):
-        return f"{self.branch.name} - {self.title}"
+        if self.is_for_all_branches:
+            return f"جميع الفروع - {self.title}"
+        elif self.branch:
+            return f"{self.branch.name} - {self.title}"
+        else:
+            return self.title
 
     @property
     def is_valid(self):
         now = timezone.now()
         return self.is_active and self.start_date <= now <= self.end_date
+
+    def get_icon_size_class(self):
+        """الحصول على كلاس CSS لحجم الأيقونة"""
+        size_map = {
+            'small': 'fa-sm',
+            'medium': 'fa-lg', 
+            'large': 'fa-2x'
+        }
+        return size_map.get(self.icon_size, 'fa-lg')
+
+    def get_display_duration_ms(self):
+        """الحصول على مدة العرض بالميلي ثانية"""
+        return self.display_duration * 1000
 
 class DashboardYearSettings(models.Model):
     """

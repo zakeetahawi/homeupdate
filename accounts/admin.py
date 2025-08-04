@@ -6,6 +6,7 @@ from django import forms
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 
 from .models import (
     User, CompanyInfo, Branch, Notification, Department, Salesperson,
@@ -13,6 +14,7 @@ from .models import (
     ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings
 )
 from .forms import THEME_CHOICES
+from .widgets import ColorPickerWidget, IconPickerWidget, DurationRangeWidget
 from manufacturing.models import ManufacturingOrder
 
 
@@ -575,21 +577,108 @@ class SystemSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(BranchMessage)
 class BranchMessageAdmin(admin.ModelAdmin):
-    list_display = ('title', 'branch', 'message_type', 'is_active', 'start_date', 'end_date')
-    list_filter = ('branch', 'message_type', 'is_active')
+    list_display = ('title', 'branch', 'is_for_all_branches', 'message_type', 'display_style', 'display_duration', 'is_active', 'start_date', 'end_date', 'color_preview', 'icon_preview')
+    list_filter = ('branch', 'is_for_all_branches', 'message_type', 'display_style', 'is_active', 'display_duration')
     search_fields = ('title', 'message')
     readonly_fields = ('created_at', 'updated_at')
+    
     fieldsets = (
         ('معلومات الرسالة', {
-            'fields': ('branch', 'title', 'message', 'message_type')
+            'fields': ('title', 'message', 'message_type')
         }),
-        ('المظهر', {
-            'fields': ('color', 'icon')
+        ('الاستهداف', {
+            'fields': ('is_for_all_branches', 'branch'),
+            'description': 'حدد إما فرع معين أو اختر "لجميع الفروع"'
+        }),
+        ('المظهر والعرض', {
+            'fields': ('color', 'icon', 'icon_size', 'display_style'),
+            'description': 'تحكم في مظهر ونمط عرض الرسالة'
+        }),
+        ('إعدادات العرض', {
+            'fields': ('display_duration', 'auto_close', 'show_close_button', 'allow_outside_click'),
+            'description': 'تحكم في سلوك عرض الرسالة'
         }),
         ('التوقيت', {
             'fields': ('start_date', 'end_date', 'is_active')
+        }),
+        ('معلومات النظام', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
         })
     )
+    
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        
+        # استخدام ColorPickerWidget للحقل color
+        if 'color' in form.base_fields:
+            form.base_fields['color'].widget = ColorPickerWidget()
+            
+        # استخدام IconPickerWidget للحقل icon
+        if 'icon' in form.base_fields:
+            form.base_fields['icon'].widget = IconPickerWidget()
+            
+        # استخدام DurationRangeWidget للحقل display_duration
+        if 'display_duration' in form.base_fields:
+            form.base_fields['display_duration'].widget = DurationRangeWidget()
+            
+        return form
+    
+    def color_preview(self, obj):
+        """عرض معاينة اللون في قائمة الإدارة"""
+        if obj.color:
+            color_map = {
+                'primary': '#007bff',
+                'secondary': '#6c757d', 
+                'success': '#28a745',
+                'danger': '#dc3545',
+                'warning': '#ffc107',
+                'info': '#17a2b8',
+                'light': '#f8f9fa',
+                'dark': '#343a40'
+            }
+            
+            color_value = color_map.get(obj.color, obj.color)
+            text_color = '#333' if obj.color == 'light' else 'white'
+            
+            return mark_safe(f'''
+                <div style="
+                    background-color: {color_value}; 
+                    color: {text_color}; 
+                    padding: 4px 8px; 
+                    border-radius: 4px; 
+                    font-size: 12px;
+                    text-align: center;
+                    min-width: 60px;
+                ">
+                    {obj.color}
+                </div>
+            ''')
+        return '-'
+    
+    color_preview.short_description = 'معاينة اللون'
+    
+    def icon_preview(self, obj):
+        """عرض معاينة الأيقونة في قائمة الإدارة"""
+        if obj.icon:
+            size_class = obj.get_icon_size_class() if hasattr(obj, 'get_icon_size_class') else 'fa-lg'
+            return mark_safe(f'''
+                <div style="text-align: center;">
+                    <i class="{obj.icon} {size_class}" style="color: #333;"></i>
+                    <br>
+                    <small style="color: #666; font-size: 10px;">{obj.icon}</small>
+                    <br>
+                    <small style="color: #999; font-size: 9px;">({obj.icon_size if hasattr(obj, 'icon_size') else 'متوسط'})</small>
+                </div>
+            ''')
+        return '-'
+    
+    icon_preview.short_description = 'معاينة الأيقونة'
+    
+    class Media:
+        css = {
+            'all': ('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',)
+        }
 
 @admin.register(DashboardYearSettings)
 class DashboardYearSettingsAdmin(admin.ModelAdmin):

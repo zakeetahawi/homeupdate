@@ -164,7 +164,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'home' %}"><i class="fas fa-home"></i><span class="nav-text">الرئيسية</span></a>
                     </li>
-                    {% if user.is_authenticated and user.is_staff %}
+                    {% if user.is_authenticated and user.is_superuser %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'admin_dashboard' %}"><i class="fas fa-chart-line"></i><span class="nav-text">داش بورد الإدارة</span></a>
                     </li>
@@ -262,7 +262,13 @@
                         message: "{{ message.message|escapejs }}",
                         type: "{{ message.message_type|escapejs }}",
                         color: "{{ message.color|escapejs }}",
-                        icon: "{{ message.icon|escapejs }}"
+                        icon: "{{ message.icon|escapejs }}",
+                        iconSize: "{{ message.icon_size|default:'medium'|escapejs }}",
+                        displayStyle: "{{ message.display_style|default:'sweetalert2'|escapejs }}",
+                        displayDuration: {{ message.display_duration|default:20 }},
+                        autoClose: {{ message.auto_close|yesno:"true,false" }},
+                        showCloseButton: {{ message.show_close_button|yesno:"true,false" }},
+                        allowOutsideClick: {{ message.allow_outside_click|yesno:"true,false" }}
                     }{% if not forloop.last %},{% endif %}
                 {% endfor %}
             ];
@@ -278,36 +284,46 @@
                     title: message.title,
                     html: message.message,
                     icon: getMessageIcon(message.type),
-                    timer: 8000,
+                    timer: message.displayDuration ? message.displayDuration * 1000 : 20000,
                     timerProgressBar: true,
                     showClass: {
-                        popup: 'animate__animated animate__fadeInDown'
+                        popup: 'animate__animated animate__zoomIn animate__faster'
                     },
                     hideClass: {
-                        popup: 'animate__animated animate__fadeOutUp'
+                        popup: 'animate__animated animate__zoomOut animate__faster'
                     },
                     customClass: {
-                        popup: 'rtl-popup',
-                        title: 'rtl-title',
-                        content: 'rtl-content',
+                        popup: 'rtl-popup branch-message-popup',
+                        title: 'rtl-title branch-message-title',
+                        content: 'rtl-content branch-message-content',
                         container: 'branch-message-container'
                     },
                     showCloseButton: true,
-                    position: 'top-start',
+                    position: 'center',
                     showConfirmButton: false,
                     allowOutsideClick: true,
+                    width: '500px',
+                    padding: '2rem',
                     background: getMessageBackground(message.color),
+                    backdrop: `
+                        rgba(0,0,0,0.6)
+                        center
+                        no-repeat
+                    `,
                     didOpen: (toast) => {
                         const icon = document.createElement('i');
-                        icon.className = message.icon;
+                        const iconSizeClass = getIconSizeClass(message.iconSize);
+                        icon.className = `${message.icon} ${iconSizeClass}`;
                         const title = toast.querySelector('.swal2-title');
                         if (title) {
                             title.insertBefore(icon, title.firstChild);
                             icon.style.marginLeft = '10px';
                         }
                         
-                        toast.addEventListener('mouseenter', Swal.stopTimer);
-                        toast.addEventListener('mouseleave', Swal.resumeTimer);
+                        if (message.autoClose) {
+                            toast.addEventListener('mouseenter', Swal.stopTimer);
+                            toast.addEventListener('mouseleave', Swal.resumeTimer);
+                        }
                     },
                     didClose: () => {
                         setTimeout(() => {
@@ -334,6 +350,15 @@
                 }
             }
 
+            function getIconSizeClass(size) {
+                switch(size) {
+                    case 'small': return 'fa-sm';
+                    case 'medium': return 'fa-lg';
+                    case 'large': return 'fa-2x';
+                    default: return 'fa-lg';
+                }
+            }
+
             function getMessageBackground(color) {
                 switch(color) {
                     case 'danger':
@@ -355,23 +380,91 @@
     </script>
 
     <style>
+        /* تحسين مظهر رسائل الفروع */
+        .branch-message-popup {
+            border-radius: 15px !important;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+            border: none !important;
+            backdrop-filter: blur(10px);
+        }
+
+        .branch-message-title {
+            font-family: 'Cairo', sans-serif !important;
+            font-weight: 600 !important;
+            font-size: 1.4rem !important;
+            color: #2c3e50 !important;
+            text-align: center !important;
+            margin-bottom: 15px !important;
+        }
+
+        .branch-message-content {
+            font-family: 'Cairo', sans-serif !important;
+            font-size: 1.1rem !important;
+            line-height: 1.6 !important;
+            color: #34495e !important;
+            text-align: center !important;
+        }
+
         .branch-message-container {
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px !important;
+            margin-bottom: 15px !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08) !important;
+            backdrop-filter: blur(10px) !important;
         }
 
         .branch-message-container i {
-            margin-left: 10px;
-            font-size: 1.2em;
-            vertical-align: middle;
+            margin-left: 10px !important;
+            font-size: 1.4em !important;
+            vertical-align: middle !important;
+        }
+
+        /* تحسين مظهر الخلفية المظللة */
+        .swal2-container.swal2-backdrop-show {
+            backdrop-filter: blur(8px) !important;
+        }
+
+        /* تحسين مظهر الأيقونات */
+        .swal2-icon {
+            margin: 20px auto !important;
+            font-size: 3rem !important;
+        }
+
+        /* تحسين شريط التقدم */
+        .swal2-timer-progress-bar {
+            background: rgba(0,0,0,0.2) !important;
+            height: 3px !important;
+        }
+
+        /* تحسين زر الإغلاق */
+        .swal2-close {
+            font-size: 1.8rem !important;
+            color: rgba(0,0,0,0.5) !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .swal2-close:hover {
+            color: rgba(0,0,0,0.8) !important;
+            transform: scale(1.1) !important;
         }
 
         @media (max-width: 768px) {
+            .branch-message-popup {
+                width: 90% !important;
+                margin: 10px auto !important;
+            }
+            
             .branch-message-container {
-                margin: 5px;
-                padding: 10px;
+                margin: 5px !important;
+                padding: 15px !important;
+            }
+
+            .branch-message-title {
+                font-size: 1.2rem !important;
+            }
+
+            .branch-message-content {
+                font-size: 1rem !important;
             }
         }
     </style>

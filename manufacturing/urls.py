@@ -66,9 +66,4 @@ urlpatterns = [
         views.re_approve_after_reply,
         name='re_approve_after_reply'
     ),
-    path(
-        'rejection-analysis/',
-        views.rejection_analysis_view,
-        name='rejection_analysis'
-    ),
 ]

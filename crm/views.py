@@ -289,9 +289,8 @@ def home(request):
     """
     View for the home page
     """
-    # إذا كان المستخدم مدير، توجيهه إلى داش بورد الإدارة
-    if request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser):
-        return redirect('admin_dashboard')
+    # إزالة التوجيه التلقائي للمديرين - الآن الجميع يرى الشاشة الرئيسية
+    # يمكن للمديرين الوصول للداشبورد من أيقونة الهيدر
     
     # Get counts for dashboard
     customers_count = Customer.objects.count()
