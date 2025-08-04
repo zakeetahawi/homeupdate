@@ -1632,12 +1632,18 @@ def modification_error_analysis(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    # تحضير بيانات أنواع الأخطاء للرسم البياني
+    error_types_for_chart = [
+        (error_type.name, error_type.name)
+        for error_type in ModificationErrorType.objects.all()
+    ]
+
     context = {
         'page_obj': page_obj,
         'error_analyses': page_obj,
         'error_stats': error_stats,
         'common_error_types': common_error_types,
-        'error_types': ModificationErrorType.objects.all(),
+        'error_types': error_types_for_chart,
         'title': 'تحليل أخطاء التعديلات'
     }
 
