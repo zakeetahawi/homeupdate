@@ -154,7 +154,7 @@ def get_comprehensive_statistics(branch_filter, start_date, end_date, show_all_y
     from .dashboard_utils import (
         get_customers_statistics, get_orders_statistics, get_manufacturing_statistics,
         get_inspections_statistics, get_installation_orders_statistics, 
-        get_installations_statistics, get_inventory_statistics
+        get_installations_statistics, get_inventory_statistics, get_complaints_statistics
     )
     
     return {
@@ -165,6 +165,7 @@ def get_comprehensive_statistics(branch_filter, start_date, end_date, show_all_y
         'installation_orders_stats': get_installation_orders_statistics(branch_filter, start_date, end_date, show_all_years),
         'installations_stats': get_installations_statistics(branch_filter, start_date, end_date, show_all_years),
         'inventory_stats': get_inventory_statistics(branch_filter),
+        'complaints_stats': get_complaints_statistics(branch_filter, start_date, end_date, show_all_years),
     }
 
 

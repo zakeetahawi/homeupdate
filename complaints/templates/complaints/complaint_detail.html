@@ -1,0 +1,729 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load inventory_math_filters %}
+
+{% block title %}شكوى {{ complaint.complaint_number }} - نظام الخواجه{% endblock %}
+
+{% block extra_css %}
+<style>
+    .complaint-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 1rem;
+        top: 0;
+        height: 100%;
+        width: 2px;
+        background: #dee2e6;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        border-left: 4px solid #007bff;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -1.75rem;
+        top: 1rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #007bff;
+        border: 3px solid white;
+        box-shadow: 0 0 0 3px #dee2e6;
+    }
+    
+    .timeline-item.status_change::before { background: #ffc107; }
+    .timeline-item.assignment::before { background: #17a2b8; }
+    .timeline-item.escalation::before { background: #dc3545; }
+    .timeline-item.resolution::before { background: #28a745; }
+    .timeline-item.customer_response::before { background: #6f42c1; }
+    
+    .priority-indicator {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-left: 10px;
+    }
+    
+    .priority-urgent { background-color: #dc3545; }
+    .priority-high { background-color: #fd7e14; }
+    .priority-medium { background-color: #ffc107; }
+    .priority-low { background-color: #20c997; }
+    
+    .attachment-item {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 3px solid #007bff;
+    }
+    
+    .related-info {
+        background: #e3f2fd;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .action-buttons .btn {
+        margin-bottom: 0.5rem;
+    }
+    
+    .modal-content {
+        border-radius: 15px;
+    }
+    
+    .rating-stars {
+        color: #ffc107;
+        font-size: 1.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'complaints:dashboard' %}">لوحة التحكم</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'complaints:complaint_list' %}">قائمة الشكاوى</a></li>
+            <li class="breadcrumb-item active">{{ complaint.complaint_number }}</li>
+        </ol>
+    </nav>
+
+    <!-- معلومات الشكوى الأساسية -->
+    <div class="complaint-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-ticket-alt me-2"></i>
+                    شكوى {{ complaint.complaint_number }}
+                </h1>
+                <h4 class="mb-3">{{ complaint.title }}</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <i class="fas fa-user me-2"></i>
+                            <strong>العميل:</strong> {{ complaint.customer.name }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-phone me-2"></i>
+                            {{ complaint.customer.phone }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <i class="fas fa-calendar me-2"></i>
+                            <strong>تاريخ التقديم:</strong> {{ complaint.created_at|date:"Y-m-d H:i" }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-clock me-2"></i>
+                            <strong>الموعد النهائي:</strong> {{ complaint.deadline|date:"Y-m-d H:i" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="mb-3">
+                    <span class="badge bg-{{ complaint.get_status_badge_class|slice:'3:' }} fs-6 mb-2">
+                        {{ complaint.get_status_display }}
+                    </span>
+                    <br>
+                    <span class="priority-indicator priority-{{ complaint.priority }}" 
+                          title="{{ complaint.get_priority_display }}"></span>
+                    <span class="text-white">{{ complaint.get_priority_display }}</span>
+                </div>
+                {% if complaint.is_overdue %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    الشكوى متأخرة!
+                </div>
+                {% endif %}
+                {% if complaint.time_remaining %}
+                <div class="alert alert-info">
+                    <i class="fas fa-hourglass-half me-2"></i>
+                    الوقت المتبقي: {{ complaint.time_remaining.days }} يوم
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- العمود الأيسر - معلومات الشكوى -->
+        <div class="col-md-8">
+            <!-- وصف الشكوى -->
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-align-left me-2"></i>
+                    وصف الشكوى
+                </h5>
+                <div class="border-start border-primary border-3 ps-3">
+                    {{ complaint.description|linebreaks }}
+                </div>
+            </div>
+
+            <!-- معلومات مرتبطة -->
+            {% if complaint.related_order %}
+            <div class="related-info">
+                <h6><i class="fas fa-link me-2"></i>الطلب المرتبط</h6>
+                <p class="mb-0">
+                    <a href="{% url 'orders:order_detail' complaint.related_order.pk %}" class="text-decoration-none">
+                        طلب #{{ complaint.related_order.order_number }}
+                    </a>
+                    - {{ complaint.related_order.customer.name }}
+                </p>
+            </div>
+            {% endif %}
+
+            <!-- سجل التحديثات -->
+            <div class="info-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        سجل التحديثات والإجراءات
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addUpdateModal">
+                        <i class="fas fa-plus me-1"></i>
+                        إضافة تحديث
+                    </button>
+                </div>
+
+                <div class="timeline">
+                    {% for update in updates %}
+                    <div class="timeline-item {{ update.update_type }}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">{{ update.title }}</h6>
+                            <small class="text-muted">{{ update.created_at|date:"Y-m-d H:i" }}</small>
+                        </div>
+                        <p class="mb-2">{{ update.description|linebreaks }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>
+                                {{ update.created_by.get_full_name|default:update.created_by.username }}
+                            </small>
+                            {% if update.is_visible_to_customer %}
+                            <span class="badge bg-success">مرئي للعميل</span>
+                            {% else %}
+                            <span class="badge bg-secondary">داخلي</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        لا توجد تحديثات بعد
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- المرفقات -->
+            <div class="info-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-paperclip me-2"></i>
+                        المرفقات
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addAttachmentModal">
+                        <i class="fas fa-upload me-1"></i>
+                        إضافة مرفق
+                    </button>
+                </div>
+
+                {% for attachment in attachments %}
+                <div class="attachment-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">
+                                <i class="fas fa-file me-1"></i>
+                                <a href="{{ attachment.file.url }}" target="_blank" class="text-decoration-none">
+                                    {{ attachment.filename }}
+                                </a>
+                            </h6>
+                            {% if attachment.description %}
+                            <p class="mb-1 text-muted">{{ attachment.description }}</p>
+                            {% endif %}
+                            <small class="text-muted">
+                                رفع بواسطة: {{ attachment.uploaded_by.get_full_name }}
+                                في {{ attachment.uploaded_at|date:"Y-m-d H:i" }}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            {% if attachment.file_size %}
+                            <small class="text-muted d-block">
+                                {% if attachment.file_size < 1024 %}
+                                    {{ attachment.file_size }} بايت
+                                {% elif attachment.file_size < 1048576 %}
+                                    {{ attachment.file_size|divide:1024|floatformat:1 }} ك.ب
+                                {% else %}
+                                    {{ attachment.file_size|divide:1048576|floatformat:1 }} م.ب
+                                {% endif %}
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-folder-open me-2"></i>
+                    لا توجد مرفقات
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- تقييم العميل -->
+            {% if complaint.customer_rating %}
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-star me-2"></i>
+                    تقييم العميل
+                </h5>
+                <div class="rating-stars mb-2">
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= complaint.customer_rating %}
+                            <i class="fas fa-star"></i>
+                        {% else %}
+                            <i class="far fa-star"></i>
+                        {% endif %}
+                    {% endfor %}
+                    <span class="ms-2">{{ complaint.get_customer_rating_display }}</span>
+                </div>
+                {% if complaint.customer_feedback %}
+                <div class="border-start border-warning border-3 ps-3">
+                    {{ complaint.customer_feedback|linebreaks }}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- العمود الأيمن - الإجراءات والمعلومات الجانبية -->
+        <div class="col-md-4">
+            <!-- إجراءات سريعة -->
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-bolt me-2"></i>
+                    إجراءات سريعة
+                </h5>
+                <div class="action-buttons">
+                    {% if complaint.status != 'resolved' and complaint.status != 'closed' %}
+                    <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#resolveModal">
+                        <i class="fas fa-check me-1"></i>
+                        حل الشكوى
+                    </button>
+                    
+                    <button type="button" class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#statusModal">
+                        <i class="fas fa-edit me-1"></i>
+                        تحديث الحالة
+                    </button>
+                    
+                    <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#assignModal">
+                        <i class="fas fa-user-plus me-1"></i>
+                        تعيين مسؤول
+                    </button>
+                    
+                    <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#escalateModal">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        تصعيد الشكوى
+                    </button>
+                    {% endif %}
+                    
+                    {% if complaint.status == 'resolved' and not complaint.customer_rating %}
+                    <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#ratingModal">
+                        <i class="fas fa-star me-1"></i>
+                        تقييم الخدمة
+                    </button>
+                    {% endif %}
+                    
+                    <a href="{% url 'complaints:complaint_edit' complaint.pk %}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-edit me-1"></i>
+                        تعديل الشكوى
+                    </a>
+                </div>
+            </div>
+
+            <!-- معلومات إضافية -->
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    معلومات إضافية
+                </h5>
+                <table class="table table-borderless table-sm">
+                    <tr>
+                        <td><strong>نوع الشكوى:</strong></td>
+                        <td>{{ complaint.complaint_type.name }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>المسؤول:</strong></td>
+                        <td>
+                            {% if complaint.assigned_to %}
+                                {{ complaint.assigned_to.get_full_name }}
+                            {% else %}
+                                <span class="text-danger">غير مُعين</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>القسم:</strong></td>
+                        <td>
+                            {% if complaint.assigned_department %}
+                                {{ complaint.assigned_department.name }}
+                            {% else %}
+                                <span class="text-muted">غير محدد</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>الفرع:</strong></td>
+                        <td>
+                            {% if complaint.branch %}
+                                {{ complaint.branch.name }}
+                            {% else %}
+                                <span class="text-muted">غير محدد</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>تم الإنشاء بواسطة:</strong></td>
+                        <td>
+                            {% if complaint.created_by %}
+                                {{ complaint.created_by.get_full_name }}
+                            {% else %}
+                                <span class="text-muted">غير محدد</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if complaint.resolved_at %}
+                    <tr>
+                        <td><strong>تاريخ الحل:</strong></td>
+                        <td>{{ complaint.resolved_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if complaint.resolution_time %}
+                    <tr>
+                        <td><strong>وقت الحل:</strong></td>
+                        <td>{{ complaint.resolution_time.days }} يوم</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+
+            <!-- الإشعارات -->
+            {% if notifications %}
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-bell me-2"></i>
+                    الإشعارات
+                </h5>
+                {% for notification in notifications|slice:":5" %}
+                <div class="mb-2 pb-2 border-bottom">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ notification.title }}</h6>
+                            <small class="text-muted">{{ notification.created_at|date:"Y-m-d H:i" }}</small>
+                        </div>
+                        {% if not notification.is_read %}
+                        <span class="badge bg-primary">جديد</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% if notifications.count > 5 %}
+                <div class="text-center">
+                    <a href="{% url 'complaints:notifications_list' %}" class="btn btn-sm btn-outline-primary">
+                        عرض جميع الإشعارات
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- التصعيدات -->
+            {% if escalations %}
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-arrow-up me-2"></i>
+                    سجل التصعيدات
+                </h5>
+                {% for escalation in escalations %}
+                <div class="mb-2 pb-2 border-bottom">
+                    <h6 class="mb-1">{{ escalation.get_reason_display }}</h6>
+                    <p class="mb-1 text-muted small">{{ escalation.description|truncatechars:100 }}</p>
+                    <small class="text-muted">
+                        من: {{ escalation.escalated_from.get_full_name|default:"غير محدد" }}
+                        إلى: {{ escalation.escalated_to.get_full_name|default:"غير محدد" }}
+                        <br>
+                        {{ escalation.escalated_at|date:"Y-m-d H:i" }}
+                    </small>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- إضافة تحديث -->
+<div class="modal fade" id="addUpdateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إضافة تحديث</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'complaints:complaint_add_update' complaint.pk %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ update_form.update_type.label_tag }}
+                        {{ update_form.update_type }}
+                    </div>
+                    <div class="mb-3">
+                        {{ update_form.title.label_tag }}
+                        {{ update_form.title }}
+                    </div>
+                    <div class="mb-3">
+                        {{ update_form.description.label_tag }}
+                        {{ update_form.description }}
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ update_form.is_visible_to_customer }}
+                            {{ update_form.is_visible_to_customer.label_tag }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">إضافة التحديث</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- تحديث الحالة -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تحديث حالة الشكوى</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'complaints:complaint_status_update' complaint.pk %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ status_form.status.label_tag }}
+                        {{ status_form.status }}
+                    </div>
+                    <div class="mb-3">
+                        {{ status_form.assigned_to.label_tag }}
+                        {{ status_form.assigned_to }}
+                    </div>
+                    <div class="mb-3">
+                        {{ status_form.assigned_department.label_tag }}
+                        {{ status_form.assigned_department }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات التحديث</label>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="ملاحظات إضافية حول تغيير الحالة"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">تحديث الحالة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- تعيين مسؤول -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تعيين مسؤول</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'complaints:complaint_assignment' complaint.pk %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ assignment_form.assigned_to.label_tag }}
+                        {{ assignment_form.assigned_to }}
+                    </div>
+                    <div class="mb-3">
+                        {{ assignment_form.assigned_department.label_tag }}
+                        {{ assignment_form.assigned_department }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات التعيين</label>
+                        <textarea name="assignment_notes" class="form-control" rows="3" placeholder="ملاحظات للمسؤول الجديد"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">تعيين المسؤول</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- تصعيد الشكوى -->
+<div class="modal fade" id="escalateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تصعيد الشكوى</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'complaints:complaint_escalate' complaint.pk %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ escalation_form.reason.label_tag }}
+                        {{ escalation_form.reason }}
+                    </div>
+                    <div class="mb-3">
+                        {{ escalation_form.escalated_to.label_tag }}
+                        {{ escalation_form.escalated_to }}
+                    </div>
+                    <div class="mb-3">
+                        {{ escalation_form.description.label_tag }}
+                        {{ escalation_form.description }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger">تصعيد الشكوى</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- حل الشكوى -->
+<div class="modal fade" id="resolveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">حل الشكوى</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'complaints:complaint_resolve' complaint.pk %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ resolution_form.resolution_description.label_tag }}
+                        {{ resolution_form.resolution_description }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">تأكيد الحل</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- إضافة مرفق -->
+<div class="modal fade" id="addAttachmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إضافة مرفق</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'complaints:complaint_add_attachment' complaint.pk %}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ attachment_form.file.label_tag }}
+                        {{ attachment_form.file }}
+                    </div>
+                    <div class="mb-3">
+                        {{ attachment_form.description.label_tag }}
+                        {{ attachment_form.description }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">رفع المرفق</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- تقييم العميل -->
+<div class="modal fade" id="ratingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تقييم الخدمة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'complaints:customer_rating' complaint.pk %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ rating_form.customer_rating.label_tag }}
+                        {{ rating_form.customer_rating }}
+                    </div>
+                    <div class="mb-3">
+                        {{ rating_form.customer_feedback.label_tag }}
+                        {{ rating_form.customer_feedback }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ التقييم</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تحديث الإشعارات تلقائياً
+    setInterval(function() {
+        // يمكن إضافة AJAX call لتحديث الإشعارات
+    }, 30000); // كل 30 ثانية
+</script>
+{% endblock %}

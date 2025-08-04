@@ -77,6 +77,7 @@ urlpatterns = [
     path('reports/', include('reports.urls', namespace='reports')),
     path('inspections/', include('inspections.urls', namespace='inspections')),
     path('manufacturing/', include(('manufacturing.urls', 'manufacturing'), namespace='manufacturing')),
+    path('complaints/', include('complaints.urls', namespace='complaints')),  # نظام إدارة الشكاوى
     # إعادة توجيه من factory إلى manufacturing
     path('factory/', RedirectView.as_view(url='/manufacturing/', permanent=True)),
     # إعادة توجيه من المسار القديم إلى المسار الجديد

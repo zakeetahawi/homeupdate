@@ -92,6 +92,7 @@ INSTALLED_APPS = [
     'manufacturing',
     'reports',
     'installations',
+    'complaints',  # نظام إدارة الشكاوى
     'odoo_db_manager.apps.OdooDbManagerConfig',
     'backup_system.apps.BackupSystemConfig',  # نظام النسخ الاحتياطي والاستعادة الجديد
     'corsheaders',

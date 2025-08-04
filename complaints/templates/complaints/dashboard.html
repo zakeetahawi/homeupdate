@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}لوحة تحكم الشكاوى - نظام الخواجه{% endblock %}
+
+{% block extra_css %}
+<style>
+    .complaints-dashboard {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-label {
+        font-size: 1rem;
+        opacity: 0.8;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .complaint-item {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+    
+    .complaint-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .complaint-item.new { border-left-color: #007bff; }
+    .complaint-item.in_progress { border-left-color: #ffc107; }
+    .complaint-item.resolved { border-left-color: #28a745; }
+    .complaint-item.overdue { border-left-color: #dc3545; }
+    
+    .priority-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 50px;
+    }
+    
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .metric-item {
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="complaints-dashboard text-center">
+        <h1><i class="fas fa-headset me-3"></i>لوحة تحكم الشكاوى</h1>
+        <p class="mb-0">نظرة شاملة على جميع الشكاوى وحالة الخدمة</p>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <div class="stats-number text-primary">{{ total_complaints }}</div>
+                <div class="stats-label">إجمالي الشكاوى</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <div class="stats-number text-info">{{ new_complaints }}</div>
+                <div class="stats-label">شكاوى جديدة</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <div class="stats-number text-warning">{{ in_progress_complaints }}</div>
+                <div class="stats-label">قيد الحل</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <div class="stats-number text-success">{{ resolved_complaints }}</div>
+                <div class="stats-label">محلولة</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <div class="stats-number text-danger">{{ overdue_complaints }}</div>
+                <div class="stats-label">متأخرة</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <div class="stats-number text-success">{{ avg_rating }}</div>
+                <div class="stats-label">متوسط الرضا</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات تفصيلية -->
+    <div class="row">
+        <!-- الشكاوى حسب النوع -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    الشكاوى حسب النوع
+                </h5>
+                <div class="metric-grid">
+                    {% for item in complaints_by_type %}
+                    <div class="metric-item">
+                        <div class="metric-value text-primary">{{ item.count }}</div>
+                        <div class="metric-label">{{ item.complaint_type__name }}</div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted">لا توجد بيانات</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- الشكاوى حسب الأولوية -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    الشكاوى حسب الأولوية
+                </h5>
+                <div class="metric-grid">
+                    {% for item in complaints_by_priority %}
+                    <div class="metric-item">
+                        <div class="metric-value 
+                            {% if item.priority == 'urgent' %}text-danger
+                            {% elif item.priority == 'high' %}text-warning
+                            {% elif item.priority == 'medium' %}text-info
+                            {% else %}text-secondary{% endif %}">
+                            {{ item.count }}
+                        </div>
+                        <div class="metric-label">{{ item.priority|capfirst }}</div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted">لا توجد بيانات</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- المسؤولين الأكثر نشاطاً -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-users me-2"></i>
+                    المسؤولين الأكثر نشاطاً
+                </h5>
+                {% for item in complaints_by_assignee %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>{{ item.assigned_to__first_name }} {{ item.assigned_to__last_name }}</span>
+                    <span class="badge bg-primary">{{ item.count }}</span>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted">لا توجد بيانات</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- إحصائيات الأداء -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-line me-2"></i>
+                    أداء آخر 30 يوم
+                </h5>
+                <div class="metric-grid">
+                    <div class="metric-item">
+                        <div class="metric-value text-info">{{ performance_stats.new_complaints_30d }}</div>
+                        <div class="metric-label">شكاوى جديدة</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value text-success">{{ performance_stats.resolved_complaints_30d }}</div>
+                        <div class="metric-label">شكاوى محلولة</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value text-warning">{{ performance_stats.avg_resolution_time }}</div>
+                        <div class="metric-label">متوسط وقت الحل (ساعة)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الشكاوى الحديثة والمتأخرة -->
+    <div class="row">
+        <!-- الشكاوى الحديثة -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        الشكاوى الحديثة
+                    </h5>
+                    <a href="{% url 'complaints:complaint_list' %}" class="btn btn-sm btn-outline-primary">
+                        عرض الكل
+                    </a>
+                </div>
+                {% for complaint in recent_complaints %}
+                <div class="complaint-item {{ complaint.status }}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <a href="{% url 'complaints:complaint_detail' complaint.pk %}" class="text-decoration-none">
+                                    {{ complaint.complaint_number }}
+                                </a>
+                            </h6>
+                            <p class="mb-1 text-muted">{{ complaint.customer.name }}</p>
+                            <p class="mb-1">{{ complaint.title|truncatechars:50 }}</p>
+                            <small class="text-muted">{{ complaint.created_at|date:"Y-m-d H:i" }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="priority-badge badge bg-{{ complaint.get_priority_badge_class|slice:'3:' }}">
+                                {{ complaint.get_priority_display }}
+                            </span>
+                            <br>
+                            <span class="badge bg-{{ complaint.get_status_badge_class|slice:'3:' }} mt-1">
+                                {{ complaint.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>لا توجد شكاوى حديثة</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- الشكاوى المتأخرة -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2 text-danger"></i>
+                        الشكاوى المتأخرة
+                    </h5>
+                    <a href="{% url 'complaints:complaint_list' %}?status=overdue" class="btn btn-sm btn-outline-danger">
+                        عرض الكل
+                    </a>
+                </div>
+                {% for complaint in overdue_complaints_list %}
+                <div class="complaint-item overdue">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <a href="{% url 'complaints:complaint_detail' complaint.pk %}" class="text-decoration-none">
+                                    {{ complaint.complaint_number }}
+                                </a>
+                            </h6>
+                            <p class="mb-1 text-muted">{{ complaint.customer.name }}</p>
+                            <p class="mb-1">{{ complaint.title|truncatechars:50 }}</p>
+                            <small class="text-danger">
+                                <i class="fas fa-clock me-1"></i>
+                                تجاوز الموعد النهائي: {{ complaint.deadline|date:"Y-m-d H:i" }}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            {% if complaint.assigned_to %}
+                            <small class="text-muted">{{ complaint.assigned_to.get_full_name }}</small>
+                            {% else %}
+                            <small class="text-danger">غير مُعين</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                    <p>لا توجد شكاوى متأخرة</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- إجراءات سريعة -->
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-bolt me-2"></i>
+                    إجراءات سريعة
+                </h5>
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'complaints:complaint_create' %}" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-plus me-2"></i>
+                            إنشاء شكوى جديدة
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'complaints:complaint_list' %}" class="btn btn-info btn-lg w-100">
+                            <i class="fas fa-list me-2"></i>
+                            عرض جميع الشكاوى
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'complaints:statistics' %}" class="btn btn-success btn-lg w-100">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            تقارير وإحصائيات
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'complaints:notifications_list' %}" class="btn btn-warning btn-lg w-100">
+                            <i class="fas fa-bell me-2"></i>
+                            الإشعارات
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تحديث الإحصائيات كل 5 دقائق
+    setInterval(function() {
+        fetch('{% url "complaints:ajax_stats" %}')
+            .then(response => response.json())
+            .then(data => {
+                // تحديث الأرقام
+                document.querySelector('.stats-number.text-primary').textContent = data.total;
+                document.querySelector('.stats-number.text-info').textContent = data.new;
+                document.querySelector('.stats-number.text-warning').textContent = data.in_progress;
+                document.querySelector('.stats-number.text-success').textContent = data.resolved;
+                document.querySelector('.stats-number.text-danger').textContent = data.overdue;
+            })
+            .catch(error => console.error('Error updating stats:', error));
+    }, 300000); // 5 دقائق
+</script>
+{% endblock %}

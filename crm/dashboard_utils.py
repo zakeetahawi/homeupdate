@@ -11,6 +11,7 @@ from inspections.models import Inspection
 from manufacturing.models import ManufacturingOrder
 from installations.models import InstallationSchedule
 from accounts.models import Branch, DashboardYearSettings
+from complaints.models import Complaint, ComplaintType
 
 
 def get_customers_statistics(branch_filter, start_date=None, end_date=None, show_all_years=False):
@@ -405,3 +406,84 @@ def get_dashboard_summary(stats):
             'total_customers': 0,
             'avg_order_value': 0,
         }
+
+
+def get_complaints_statistics(branch_filter, start_date=None, end_date=None, show_all_years=False):
+    """إحصائيات الشكاوى"""
+    complaints = Complaint.objects.all()
+    
+    # تطبيق فلتر التاريخ
+    if not show_all_years and start_date and end_date:
+        complaints = complaints.filter(created_at__range=(start_date, end_date))
+    
+    # فلترة حسب الفرع
+    if branch_filter != 'all':
+        complaints = complaints.filter(branch_id=branch_filter)
+    
+    # إحصائيات متقدمة
+    stats = complaints.aggregate(
+        total=Count('id'),
+        pending=Count('id', filter=Q(status='pending')),
+        in_progress=Count('id', filter=Q(status='in_progress')),
+        resolved=Count('id', filter=Q(status='resolved')),
+        closed=Count('id', filter=Q(status='closed')),
+        urgent=Count('id', filter=Q(priority='urgent')),
+        high=Count('id', filter=Q(priority='high')),
+        medium=Count('id', filter=Q(priority='medium')),
+        low=Count('id', filter=Q(priority='low')),
+    )
+    
+    # الشكاوى الجديدة هذا الشهر
+    current_month_start = timezone.now().replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+    new_this_month = complaints.filter(created_at__gte=current_month_start).count()
+    
+    # الشكاوى المتأخرة
+    overdue = complaints.filter(
+        deadline__lt=timezone.now(),
+        status__in=['pending', 'in_progress']
+    ).count()
+    
+    # توزيع الشكاوى حسب النوع
+    by_type = complaints.values('complaint_type__name').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # الشكاوى حسب الأسبوع (آخر 4 أسابيع)
+    weekly_stats = []
+    for i in range(4):
+        week_start = timezone.now() - timedelta(weeks=i+1)
+        week_end = timezone.now() - timedelta(weeks=i)
+        week_count = complaints.filter(
+            created_at__range=(week_start, week_end)
+        ).count()
+        weekly_stats.append({
+            'week': f'الأسبوع {i+1}',
+            'count': week_count
+        })
+    
+    return {
+        **stats,
+        'new_this_month': new_this_month,
+        'overdue': overdue,
+        'by_type': list(by_type),
+        'weekly_stats': weekly_stats,
+        'resolution_rate': calculate_resolution_rate(complaints),
+        'growth_rate': calculate_growth_rate(complaints, 'created_at'),
+    }
+
+
+def calculate_resolution_rate(complaints):
+    """حساب معدل حل الشكاوى"""
+    try:
+        total = complaints.count()
+        resolved = complaints.filter(
+            status__in=['resolved', 'closed']
+        ).count()
+        
+        if total > 0:
+            return round((resolved / total) * 100, 1)
+        return 0
+    except Exception:
+        return 0
