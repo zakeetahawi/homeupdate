@@ -17,6 +17,9 @@ class User(AbstractUser):
     is_branch_manager = models.BooleanField(default=False, verbose_name=_("مدير فرع"))
     is_region_manager = models.BooleanField(default=False, verbose_name=_("مدير منطقة"))
     is_general_manager = models.BooleanField(default=False, verbose_name=_("مدير عام"))
+    is_factory_manager = models.BooleanField(default=False, verbose_name=_("مسؤول مصنع"))
+    is_inspection_manager = models.BooleanField(default=False, verbose_name=_("مسؤول معاينات"))
+    is_installation_manager = models.BooleanField(default=False, verbose_name=_("مسؤول تركيبات"))
     managed_branches = models.ManyToManyField("Branch", blank=True, related_name="region_managers", verbose_name=_("الفروع المُدارة"))
     default_theme = models.CharField(max_length=50, default='default', verbose_name=_('الثيم الافتراضي'))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_('تاريخ التحديث'))
@@ -40,7 +43,10 @@ class User(AbstractUser):
             self.is_salesperson,
             self.is_branch_manager,
             self.is_region_manager,
-            self.is_general_manager
+            self.is_general_manager,
+            self.is_factory_manager,
+            self.is_inspection_manager,
+            self.is_installation_manager
         ]
         
         active_roles = sum(roles)
@@ -59,6 +65,12 @@ class User(AbstractUser):
             return "region_manager"
         elif self.is_branch_manager:
             return "branch_manager"
+        elif self.is_factory_manager:
+            return "factory_manager"
+        elif self.is_inspection_manager:
+            return "inspection_manager"
+        elif self.is_installation_manager:
+            return "installation_manager"
         elif self.is_salesperson:
             return "salesperson"
         elif self.is_inspection_technician:
@@ -72,6 +84,9 @@ class User(AbstractUser):
             "general_manager": "مدير عام",
             "region_manager": "مدير منطقة",
             "branch_manager": "مدير فرع",
+            "factory_manager": "مسؤول مصنع",
+            "inspection_manager": "مسؤول معاينات",
+            "installation_manager": "مسؤول تركيبات",
             "salesperson": "بائع",
             "inspection_technician": "فني معاينة",
             "user": "مستخدم عادي"

@@ -56,4 +56,19 @@ urlpatterns = [
         views.send_reply,
         name='send_reply'
     ),
+    path(
+        'order/<int:pk>/details/',
+        views.get_order_details,
+        name='get_order_details'
+    ),
+    path(
+        're_approve/<int:pk>/',
+        views.re_approve_after_reply,
+        name='re_approve_after_reply'
+    ),
+    path(
+        'rejection-analysis/',
+        views.rejection_analysis_view,
+        name='rejection_analysis'
+    ),
 ]

@@ -16,6 +16,18 @@ def get_user_orders_queryset(user):
     if hasattr(user, 'is_general_manager') and user.is_general_manager:
         return Order.objects.all()
     
+    # مسؤول المصنع يرى جميع الطلبات
+    if hasattr(user, 'is_factory_manager') and user.is_factory_manager:
+        return Order.objects.all()
+    
+    # مسؤول المعاينات يرى جميع الطلبات التي تحتوي على معاينة
+    if hasattr(user, 'is_inspection_manager') and user.is_inspection_manager:
+        return Order.objects.filter(selected_types__icontains='inspection')
+    
+    # مسؤول التركيبات يرى جميع الطلبات التي تحتوي على تركيب
+    if hasattr(user, 'is_installation_manager') and user.is_installation_manager:
+        return Order.objects.filter(selected_types__icontains='installation')
+    
     # مدير المنطقة يرى طلبات الفروع المُدارة
     if hasattr(user, 'is_region_manager') and user.is_region_manager:
         managed_branches = user.managed_branches.all()
@@ -54,6 +66,18 @@ def can_user_view_order(user, order):
     if hasattr(user, 'is_general_manager') and user.is_general_manager:
         return True
     
+    # مسؤول المصنع يرى جميع الطلبات
+    if hasattr(user, 'is_factory_manager') and user.is_factory_manager:
+        return True
+    
+    # مسؤول المعاينات يرى جميع الطلبات التي تحتوي على معاينة
+    if hasattr(user, 'is_inspection_manager') and user.is_inspection_manager:
+        return 'inspection' in order.get_selected_types_list()
+    
+    # مسؤول التركيبات يرى جميع الطلبات التي تحتوي على تركيب
+    if hasattr(user, 'is_installation_manager') and user.is_installation_manager:
+        return 'installation' in order.get_selected_types_list()
+    
     # مدير المنطقة يرى طلبات الفروع المُدارة
     if hasattr(user, 'is_region_manager') and user.is_region_manager:
         managed_branches = user.managed_branches.all()
@@ -83,6 +107,18 @@ def can_user_edit_order(user, order):
     if hasattr(user, 'is_general_manager') and user.is_general_manager:
         return True
     
+    # مسؤول المصنع يمكنه تعديل جميع الطلبات
+    if hasattr(user, 'is_factory_manager') and user.is_factory_manager:
+        return True
+    
+    # مسؤول المعاينات يمكنه تعديل الطلبات التي تحتوي على معاينة
+    if hasattr(user, 'is_inspection_manager') and user.is_inspection_manager:
+        return 'inspection' in order.get_selected_types_list()
+    
+    # مسؤول التركيبات يمكنه تعديل الطلبات التي تحتوي على تركيب
+    if hasattr(user, 'is_installation_manager') and user.is_installation_manager:
+        return 'installation' in order.get_selected_types_list()
+    
     # مدير المنطقة يمكنه تعديل طلبات الفروع المُدارة
     if hasattr(user, 'is_region_manager') and user.is_region_manager:
         managed_branches = user.managed_branches.all()
@@ -109,6 +145,18 @@ def can_user_delete_order(user, order):
     if hasattr(user, 'is_general_manager') and user.is_general_manager:
         return True
     
+    # مسؤول المصنع يمكنه حذف جميع الطلبات
+    if hasattr(user, 'is_factory_manager') and user.is_factory_manager:
+        return True
+    
+    # مسؤول المعاينات يمكنه حذف الطلبات التي تحتوي على معاينة
+    if hasattr(user, 'is_inspection_manager') and user.is_inspection_manager:
+        return 'inspection' in order.get_selected_types_list()
+    
+    # مسؤول التركيبات يمكنه حذف الطلبات التي تحتوي على تركيب
+    if hasattr(user, 'is_installation_manager') and user.is_installation_manager:
+        return 'installation' in order.get_selected_types_list()
+    
     # مدير المنطقة يمكنه حذف طلبات الفروع المُدارة
     if hasattr(user, 'is_region_manager') and user.is_region_manager:
         managed_branches = user.managed_branches.all()
@@ -130,6 +178,18 @@ def can_user_create_order_type(user, order_type):
     # المدير العام يمكنه إنشاء جميع أنواع الطلبات
     if hasattr(user, 'is_general_manager') and user.is_general_manager:
         return True
+    
+    # مسؤول المصنع يمكنه إنشاء جميع أنواع الطلبات
+    if hasattr(user, 'is_factory_manager') and user.is_factory_manager:
+        return True
+    
+    # مسؤول المعاينات يمكنه إنشاء طلبات المعاينة
+    if hasattr(user, 'is_inspection_manager') and user.is_inspection_manager:
+        return order_type == 'inspection'
+    
+    # مسؤول التركيبات يمكنه إنشاء طلبات التركيب
+    if hasattr(user, 'is_installation_manager') and user.is_installation_manager:
+        return order_type == 'installation'
     
     # مدير المنطقة يمكنه إنشاء جميع أنواع الطلبات
     if hasattr(user, 'is_region_manager') and user.is_region_manager:
@@ -205,6 +265,34 @@ def get_user_role_permissions(user):
     if hasattr(user, 'is_general_manager') and user.is_general_manager:
         # المدير العام له جميع الصلاحيات
         return {key: True for key in permissions.keys()}
+    
+    if hasattr(user, 'is_factory_manager') and user.is_factory_manager:
+        # مسؤول المصنع له جميع الصلاحيات
+        return {key: True for key in permissions.keys()}
+    
+    if hasattr(user, 'is_inspection_manager') and user.is_inspection_manager:
+        # مسؤول المعاينات له صلاحيات واسعة على طلبات المعاينة
+        permissions.update({
+            'can_view_all_orders': True,  # يرى جميع طلبات المعاينة
+            'can_view_branch_orders': True,
+            'can_create_orders': True,
+            'can_edit_orders': True,
+            'can_delete_orders': True,
+            'can_manage_dashboard': True,
+        })
+        return permissions
+    
+    if hasattr(user, 'is_installation_manager') and user.is_installation_manager:
+        # مسؤول التركيبات له صلاحيات واسعة على طلبات التركيب
+        permissions.update({
+            'can_view_all_orders': True,  # يرى جميع طلبات التركيب
+            'can_view_branch_orders': True,
+            'can_create_orders': True,
+            'can_edit_orders': True,
+            'can_delete_orders': True,
+            'can_manage_dashboard': True,
+        })
+        return permissions
     
     if hasattr(user, 'is_region_manager') and user.is_region_manager:
         # مدير المنطقة له صلاحيات واسعة

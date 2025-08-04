@@ -248,6 +248,71 @@
     color: white;
 }
 
+/* إصلاح مشكلة تداخل المودال مع SweetAlert */
+.swal2-container {
+    z-index: 10000 !important;
+}
+
+.modal-backdrop {
+    z-index: 1040;
+}
+
+.modal {
+    z-index: 1050;
+}
+
+/* منع ظهور الشاشة السوداء بعد إغلاق المودال - حل قوي */
+body.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+/* إزالة backdrop فوراً */
+.modal-backdrop.fade {
+    opacity: 0 !important;
+    transition: none !important;
+}
+
+.modal-backdrop {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+/* حل إضافي لمنع الشاشة السوداء */
+body:not(.modal-open) .modal-backdrop {
+    display: none !important;
+}
+
+/* التأكد من عدم تعارض SweetAlert مع المودال */
+.swal2-shown {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+.swal2-height-auto {
+    height: auto !important;
+}
+
+/* تحسين مظهر شارة الرد على الرفض */
+.reply-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.reply-badge i {
+    font-size: 0.8em;
+}
+
+.reply-badge.bg-info {
+    background-color: #17a2b8 !important;
+    color: white !important;
+}
+
 .page-item.active .page-link {
     background-color: var(--primary);
     border-color: var(--primary);
@@ -368,6 +433,44 @@
     gap: 0.25rem;
 }
 
+/* تحسين مظهر شارة الرد على الرفض */
+.reply-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.re-approve-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* تحسينات responsive */
 @media (max-width: 768px) {
     .action-buttons {
@@ -434,6 +537,64 @@
 .table a:hover {
     text-decoration: underline !important;
     opacity: 0.8;
+}
+
+/* تحسين شكل المحادثة في مودال الرفض */
+.rejection-conversation {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.rejection-conversation .alert {
+    border: none;
+    border-left: 4px solid;
+    margin-bottom: 1rem;
+}
+
+.rejection-conversation .alert-danger {
+    border-left-color: #dc3545;
+    background-color: #f8d7da;
+}
+
+.rejection-conversation .alert-info {
+    border-left-color: #0dcaf0;
+    background-color: #d1ecf1;
+}
+
+.rejection-conversation .fas {
+    color: inherit;
+    opacity: 0.8;
+}
+
+/* تحسين أزرار المودال */
+#hasReplyButtons .btn {
+    margin: 0 0.25rem;
+}
+
+#hasReplyButtons .btn i {
+    margin-right: 0.5rem;
+}
+
+/* تحسين شكل badge الرد */
+.reply-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+}
+
+.reply-badge i {
+    margin-right: 0.25rem;
+}
+
+/* تحسين زر الموافقة مرة أخرى */
+.re-approve-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+}
+
+.re-approve-btn i {
+    margin-right: 0.25rem;
 }
 </style>
 {% endblock %}
@@ -708,9 +869,22 @@
                                         {% if order.rejection_reason %}
                                             <button class="btn btn-sm btn-outline-danger" 
                                                     onclick="showRejectionDetails('{{ order.rejection_reason|escapejs }}', {{ order.id }})"
-                                                    title="عرض تفاصيل الرفض">
-                                                <i class="fas fa-info-circle"></i>
+                                                    title="عرض تفاصيل الرفض{% if order.has_rejection_reply %} والرد{% endif %}">
+                                                <i class="fas fa-{% if order.has_rejection_reply %}comments{% else %}info-circle{% endif %}"></i>
+                                                {% if order.has_rejection_reply %}محادثة{% else %}تفاصيل{% endif %}
                                             </button>
+                                        {% endif %}
+                                        {% if order.has_rejection_reply %}
+                                            <span class="badge reply-badge bg-info ms-1" title="تم الرد على الرفض">
+                                                <i class="fas fa-reply"></i> تم الرد
+                                            </span>
+                                            {% if user.is_superuser or perms.manufacturing.can_approve_orders %}
+                                                <button class="btn btn-sm btn-success ms-1 re-approve-btn" 
+                                                        data-order-id="{{ order.id }}" 
+                                                        title="الموافقة بعد المراجعة">
+                                                    <i class="fas fa-check-double"></i> موافقة
+                                                </button>
+                                            {% endif %}
                                         {% endif %}
                                     </div>
                                 {% elif order.status in 'pending,in_progress,ready_install,completed,delivered' %}
@@ -871,22 +1045,71 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="rejectionDetailsModalLabel">تفاصيل الرفض</h5>
+                <h5 class="modal-title" id="rejectionDetailsModalLabel">
+                    <span id="modalTitleText">تفاصيل الرفض</span>
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-danger">
-                    <strong>سبب الرفض:</strong>
-                    <div id="rejectionReasonText"></div>
+                <div class="rejection-conversation">
+                    <!-- سبب الرفض الأصلي -->
+                    <div class="alert alert-danger">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-times-circle me-2 mt-1"></i>
+                            <div>
+                                <strong>سبب الرفض:</strong>
+                                <div id="rejectionReasonText" class="mt-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- الرد على الرفض (إن وجد) -->
+                    <div id="replySection" class="alert alert-info" style="display: none;">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-reply me-2 mt-1"></i>
+                            <div>
+                                <strong>رد العميل:</strong>
+                                <div id="customerReplyText" class="mt-1"></div>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <span id="replyDate"></span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="mt-3">
+                
+                <!-- إرسال رد جديد (للطلبات المرفوضة بدون رد) -->
+                <div id="newReplySection" class="mt-3">
                     <label for="reply_message" class="form-label">رد على الرفض:</label>
                     <textarea class="form-control" id="reply_message" name="reply_message" rows="3" placeholder="اكتب ردك هنا..."></textarea>
+                </div>
+                
+                <!-- أزرار الموافقة مرة أخرى (للطلبات التي تم الرد عليها) -->
+                <div id="reApprovalSection" class="mt-3" style="display: none;">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>تم استلام رد العميل. يمكنك الآن الموافقة على الطلب مرة أخرى أو رفضه نهائياً.</strong>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                <button type="button" class="btn btn-primary" id="submitReplyBtn">إرسال الرد</button>
+                
+                <!-- أزرار للطلبات بدون رد -->
+                <div id="noReplyButtons">
+                    <button type="button" class="btn btn-primary" id="submitReplyBtn">إرسال الرد</button>
+                </div>
+                
+                <!-- أزرار للطلبات التي تم الرد عليها -->
+                <div id="hasReplyButtons" style="display: none;">
+                    <button type="button" class="btn btn-success" id="reApproveBtn">
+                        <i class="fas fa-check"></i> الموافقة مرة أخرى
+                    </button>
+                    <button type="button" class="btn btn-danger" id="finalRejectBtn">
+                        <i class="fas fa-times"></i> رفض نهائي
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -898,6 +1121,26 @@
 <script>
 // التأكد من تحميل الجافاسكريبت
 console.log('Manufacturing JavaScript loaded');
+
+// دالة مساعدة لتنظيف المودال والخلفية السوداء
+function forceCleanModal() {
+    // إزالة جميع المودالات والخلفيات
+    $('.modal').modal('hide');
+    $('.modal-backdrop').remove();
+    $('.modal-backdrop.show').remove();
+    $('.modal-backdrop.fade').remove();
+    $('.modal-backdrop.in').remove();
+    
+    // تنظيف الـ body
+    $('body').removeClass('modal-open');
+    $('html').removeClass('modal-open');
+    $('body').css({
+        'overflow': 'auto',
+        'padding-right': '0',
+        'margin-right': '0'
+    });
+}
+
 $(document).ready(function() {
     // معالجة الموافقة
     $('.approve-btn').on('click', function() {
@@ -905,10 +1148,21 @@ $(document).ready(function() {
         handleApproval(orderId, 'approve');
     });
 
+    // معالجة الموافقة مرة أخرى بعد الرد
+    $('.re-approve-btn').on('click', function() {
+        const orderId = $(this).data('order-id');
+        handleReApproval(orderId);
+    });
+
     // معالجة الرفض
     $('.reject-btn').on('click', function() {
         const orderId = $(this).data('order-id');
         console.log('Reject button clicked for order:', orderId);
+        
+        // إزالة أي backdrop موجود قبل فتح المودال
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open');
+        
         $('#rejectOrderId').val(orderId);
         $('#rejection_reason').val(''); // Clear previous reason
         $('#rejectModal').modal('show');
@@ -926,6 +1180,9 @@ $(document).ready(function() {
             return;
         }
         
+        // إخفاء المودال فوراً قبل إرسال الطلب
+        forceCleanModal();
+        
         handleApproval(orderId, 'reject', reason);
     });
 
@@ -933,6 +1190,63 @@ $(document).ready(function() {
     $('#filterForm').on('submit', function(e) {
         e.preventDefault();
         window.location.href = '?' + $(this).serialize();
+    });
+
+    // إزالة backdrop عند إغلاق المودال - حل قوي
+    $('#rejectModal').on('hidden.bs.modal', function () {
+        // إزالة جميع آثار المودال
+        $('.modal-backdrop').remove();
+        $('.modal-backdrop.show').remove();
+        $('.modal-backdrop.fade').remove();
+        $('body').removeClass('modal-open');
+        $('html').removeClass('modal-open');
+        $('body').css({
+            'overflow': 'auto',
+            'padding-right': '0'
+        });
+        
+        // تنظيف النموذج
+        $('#rejection_reason').val('');
+        $('#rejectOrderId').val('');
+    });
+    
+    // معالجة إضافية عند النقر على الخلفية أو الإغلاق
+    $('#rejectModal').on('hide.bs.modal', function () {
+        setTimeout(() => {
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open');
+            $('body').css('overflow', 'auto');
+        }, 100);
+    });
+    
+    // معالجة النقر على زر X أو خارج المودال
+    $('#rejectModal .btn-close, #rejectModal [data-bs-dismiss="modal"]').on('click', function() {
+        forceCleanModal();
+    });
+    
+    // معالجة النقر على الخلفية (backdrop)
+    $('#rejectModal').on('click', function(e) {
+        if (e.target === this) {
+            forceCleanModal();
+        }
+    });
+    
+    // تنظيف مودال تفاصيل الرفض عند إغلاقه
+    $('#rejectionDetailsModal').on('hidden.bs.modal', function () {
+        forceCleanModal();
+        $('#reply_message').val('');
+    });
+    
+    // معالجة النقر على زر X أو خارج مودال تفاصيل الرفض
+    $('#rejectionDetailsModal .btn-close, #rejectionDetailsModal [data-bs-dismiss="modal"]').on('click', function() {
+        forceCleanModal();
+    });
+    
+    // معالجة النقر على الخلفية (backdrop) لمودال تفاصيل الرفض
+    $('#rejectionDetailsModal').on('click', function(e) {
+        if (e.target === this) {
+            forceCleanModal();
+        }
     });
 });
 
@@ -1316,6 +1630,11 @@ function handleApproval(orderId, action, reason = '') {
         }
     });
 
+    // إخفاء المودال فوراً إذا كان الإجراء رفض
+    if (action === 'reject') {
+        forceCleanModal();
+    }
+
     // الحصول على CSRF token
     const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
     
@@ -1353,7 +1672,6 @@ function handleApproval(orderId, action, reason = '') {
                         timer: 2000,
                         showConfirmButton: false
                     });
-                    $('#rejectModal').modal('hide');
                 }
                 setTimeout(() => location.reload(), 2000);
             } else {
@@ -1373,6 +1691,9 @@ function handleApproval(orderId, action, reason = '') {
                 errorMessage = 'بيانات غير صالحة';
             }
             
+            // إزالة قوية للمودال والـ backdrop في حالة الخطأ
+            forceCleanModal();
+            
             Swal.fire('خطأ!', errorMessage, 'error');
         }
     });
@@ -1381,10 +1702,113 @@ function handleApproval(orderId, action, reason = '') {
 // عرض تفاصيل الرفض
 function showRejectionDetails(rejectionReason, orderId) {
     $('#rejectionReasonText').text(rejectionReason);
-    $('#rejectionDetailsModal').modal('show');
     
     // حفظ معرف الطلب للاستخدام في الرد
     $('#rejectionDetailsModal').data('order-id', orderId);
+    
+    // جلب معلومات الطلب لعرض الرد إن وجد
+    $.ajax({
+        url: `/manufacturing/order/${orderId}/details/`,
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const order = response.order;
+                
+                // إذا كان هناك رد على الرفض
+                if (order.has_rejection_reply && order.rejection_reply) {
+                    $('#modalTitleText').text('محادثة الرفض والرد');
+                    $('#customerReplyText').text(order.rejection_reply);
+                    
+                    // تنسيق التاريخ
+                    if (order.rejection_reply_date) {
+                        const replyDate = new Date(order.rejection_reply_date);
+                        $('#replyDate').text(replyDate.toLocaleDateString('ar-SA') + ' ' + replyDate.toLocaleTimeString('ar-SA', {hour: '2-digit', minute: '2-digit'}));
+                    }
+                    
+                    $('#replySection').show();
+                    $('#reApprovalSection').show();
+                    $('#newReplySection').hide();
+                    $('#noReplyButtons').hide();
+                    $('#hasReplyButtons').show();
+                } else {
+                    // لا يوجد رد بعد
+                    $('#modalTitleText').text('تفاصيل الرفض');
+                    $('#replySection').hide();
+                    $('#reApprovalSection').hide();
+                    $('#newReplySection').show();
+                    $('#noReplyButtons').show();
+                    $('#hasReplyButtons').hide();
+                }
+            }
+        },
+        error: function() {
+            // في حالة فشل جلب التفاصيل، اعرض النموذج العادي
+            $('#modalTitleText').text('تفاصيل الرفض');
+            $('#replySection').hide();
+            $('#reApprovalSection').hide();
+            $('#newReplySection').show();
+            $('#noReplyButtons').show();
+            $('#hasReplyButtons').hide();
+        }
+    });
+    
+    $('#rejectionDetailsModal').modal('show');
+}
+
+// معالجة الموافقة مرة أخرى بعد الرد على الرفض
+function handleReApproval(orderId) {
+    Swal.fire({
+        title: 'تأكيد الموافقة',
+        text: 'هل أنت متأكد من الموافقة على هذا الطلب بعد مراجعة الرد؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، وافق',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // إظهار loading
+            Swal.fire({
+                title: 'جاري الموافقة...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+            
+            $.ajax({
+                url: `/manufacturing/re_approve/${orderId}/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'تم بنجاح!',
+                            text: response.message || 'تمت الموافقة على الطلب بعد المراجعة',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء الموافقة', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    let errorMessage = 'حدث خطأ غير متوقع';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage = xhr.responseJSON.error;
+                    }
+                    Swal.fire('خطأ!', errorMessage, 'error');
+                }
+            });
+        }
+    });
 }
 
 // معالجة الرد على الرفض
@@ -1396,6 +1820,13 @@ $('#submitReplyBtn').on('click', function() {
         Swal.fire('خطأ', 'يرجى كتابة رد قبل الإرسال.', 'error');
         return;
     }
+    
+    // إخفاء المودال فوراً قبل إرسال الطلب
+    $('#rejectionDetailsModal').modal('hide');
+    // تنظيف قوي للمودال وإزالة backdrop
+    setTimeout(() => {
+        forceCleanModal();
+    }, 100);
     
     // إظهار loading
     Swal.fire({
@@ -1427,8 +1858,9 @@ $('#submitReplyBtn').on('click', function() {
                     timer: 2000,
                     showConfirmButton: false
                 });
-                $('#rejectionDetailsModal').modal('hide');
                 $('#reply_message').val('');
+                // إعادة تحميل الصفحة لإظهار التحديثات
+                setTimeout(() => location.reload(), 2000);
             } else {
                 Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء إرسال الرد', 'error');
             }
@@ -1439,6 +1871,96 @@ $('#submitReplyBtn').on('click', function() {
                 errorMessage = xhr.responseJSON.error;
             }
             Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+});
+
+// معالجة الموافقة مرة أخرى من المودال
+$('#reApproveBtn').on('click', function() {
+    const orderId = $('#rejectionDetailsModal').data('order-id');
+    
+    // إخفاء المودال
+    $('#rejectionDetailsModal').modal('hide');
+    setTimeout(() => {
+        forceCleanModal();
+    }, 100);
+    
+    // استدعاء دالة الموافقة مرة أخرى
+    handleReApproval(orderId);
+});
+
+// معالجة الرفض النهائي من المودال
+$('#finalRejectBtn').on('click', function() {
+    const orderId = $('#rejectionDetailsModal').data('order-id');
+    
+    // إخفاء المودال
+    $('#rejectionDetailsModal').modal('hide');
+    setTimeout(() => {
+        forceCleanModal();
+    }, 100);
+    
+    // طلب سبب الرفض النهائي
+    Swal.fire({
+        title: 'رفض نهائي',
+        text: 'يرجى إدخال سبب الرفض النهائي:',
+        input: 'textarea',
+        inputPlaceholder: 'اكتب سبب الرفض النهائي...',
+        showCancelButton: true,
+        confirmButtonText: 'رفض نهائي',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        inputValidator: (value) => {
+            if (!value.trim()) {
+                return 'يرجى إدخال سبب الرفض';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // إظهار loading
+            Swal.fire({
+                title: 'جاري الرفض...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+            
+            $.ajax({
+                url: `/manufacturing/approval/${orderId}/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    action: 'reject',
+                    reason: result.value
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'تم الرفض',
+                            text: response.message,
+                            confirmButtonText: 'موافق'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('خطأ', response.error, 'error');
+                    }
+                },
+                error: function(xhr) {
+                    let errorMessage = 'حدث خطأ غير متوقع';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage = xhr.responseJSON.error;
+                    }
+                    Swal.fire('خطأ', errorMessage, 'error');
+                }
+            });
         }
     });
 });

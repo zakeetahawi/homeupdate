@@ -21,6 +21,7 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
         'contract_number',
         'order_type_display',
         'status_display',
+        'rejection_reply_status',
         'order_date',
         'expected_delivery_date',
         'exit_permit_number',
@@ -34,6 +35,7 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
         'order_date',
         'expected_delivery_date',
         'delivery_date',
+        'has_rejection_reply',
     )
 
     search_fields = (
@@ -47,7 +49,8 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = (
-        'created_at', 'updated_at', 'completion_date', 'delivery_date'
+        'created_at', 'updated_at', 'completion_date', 'delivery_date',
+        'rejection_reply_date', 'has_rejection_reply'
     )
     inlines = [ManufacturingOrderItemInline]
     date_hierarchy = 'created_at'
@@ -65,6 +68,9 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
                 'exit_permit_number',
                 'notes',
                 'rejection_reason',
+                'rejection_reply',
+                'rejection_reply_date',
+                'has_rejection_reply',
             )
         }),
         ('معلومات التسليم', {
@@ -131,6 +137,29 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
             )
         return "-"
     delivery_info.short_description = 'معلومات التسليم'
+
+    def rejection_reply_status(self, obj):
+        if obj.rejection_reason:  # إذا كان هناك سبب رفض (حتى لو تمت الموافقة لاحقاً)
+            if obj.has_rejection_reply:
+                status_text = 'تم الرد'
+                if obj.status != 'rejected':
+                    status_text += ' + تمت الموافقة'
+                return format_html(
+                    '<span style="color: #007bff;"><i class="fa fa-comments"></i> '
+                    '{}</span>', status_text
+                )
+            elif obj.status == 'rejected':
+                return format_html(
+                    '<span style="color: #dc3545;"><i class="fa fa-times"></i> '
+                    'لم يتم الرد</span>'
+                )
+            else:
+                return format_html(
+                    '<span style="color: #28a745;"><i class="fa fa-check"></i> '
+                    'تمت الموافقة</span>'
+                )
+        return "-"
+    rejection_reply_status.short_description = 'سجل المحادثة'
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(

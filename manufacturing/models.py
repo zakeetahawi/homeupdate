@@ -127,6 +127,23 @@ class ManufacturingOrder(models.Model):
         null=True,
         verbose_name='سبب الرفض'
     )
+    
+    rejection_reply = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='رد على الرفض'
+    )
+    
+    rejection_reply_date = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='تاريخ الرد على الرفض'
+    )
+    
+    has_rejection_reply = models.BooleanField(
+        default=False,
+        verbose_name='يوجد رد على الرفض'
+    )
 
     completion_date = models.DateTimeField(
         blank=True,
@@ -143,7 +160,11 @@ class ManufacturingOrder(models.Model):
         verbose_name='تم الإنشاء بواسطة'
     )
     
-    created_at = models.DateTimeField(default=timezone.now, editable=True, verbose_name='تاريخ الإنشاء')
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        editable=True,
+        verbose_name='تاريخ الإنشاء'
+    )
     
     updated_at = models.DateTimeField(
         auto_now=True,

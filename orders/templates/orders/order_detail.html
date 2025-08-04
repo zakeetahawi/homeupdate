@@ -537,21 +537,90 @@
                         {% endif %}
                         
                         <!-- إضافة تفاصيل الرفض إذا كان الطلب مرفوضاً -->
-                        {% if order.order_status == 'rejected' %}
+                        <!-- عرض سجل المحادثة والرفض إذا كان هناك سبب رفض (حتى لو تمت الموافقة لاحقاً) -->
                         {% with manufacturing_order=order.manufacturing_order %}
                             {% if manufacturing_order and manufacturing_order.rejection_reason %}
                             <tr>
-                                <th>سبب الرفض</th>
+                                <th>سجل المحادثة</th>
                                 <td>
-                                    <div class="alert alert-danger mb-2">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>
-                                        {{ manufacturing_order.rejection_reason }}
+                                    <div class="rejection-history">
+                                        <!-- رسالة توضيحية -->
+                                        <div class="alert alert-light border mb-3">
+                                            <div class="d-flex align-items-start">
+                                                <i class="fas fa-info-circle me-2 mt-1 text-info"></i>
+                                                <div class="flex-grow-1">
+                                                    <small class="text-muted">
+                                                        <strong>سجل المحادثة:</strong> يحتوي هذا القسم على سجل كامل للمراسلات 
+                                                        بينك وبين المصنع، ويبقى محفوظاً لأغراض المتابعة والمراجعة.
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- سبب الرفض الأصلي -->
+                                        <div class="alert alert-danger mb-2">
+                                            <div class="d-flex align-items-start">
+                                                <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                                                <div class="flex-grow-1">
+                                                    <strong>سبب الرفض:</strong>
+                                                    <div class="mt-1">{{ manufacturing_order.rejection_reason }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- عرض الرد إذا كان موجوداً -->
+                                        {% if manufacturing_order.rejection_reply %}
+                                            <div class="alert alert-info mb-2">
+                                                <div class="d-flex align-items-start">
+                                                    <i class="fas fa-reply me-2 mt-1"></i>
+                                                    <div class="flex-grow-1">
+                                                        <strong>ردك على الرفض:</strong>
+                                                        <div class="mt-1">{{ manufacturing_order.rejection_reply }}</div>
+                                                        <small class="text-muted d-block mt-1">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            {{ manufacturing_order.rejection_reply_date|date:"Y-m-d H:i" }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- إظهار الحالة الحالية إذا تمت الموافقة بعد الرد -->
+                                        {% if manufacturing_order.rejection_reply and manufacturing_order.status != 'rejected' %}
+                                            <div class="alert alert-success mb-2">
+                                                <div class="d-flex align-items-start">
+                                                    <i class="fas fa-check-circle me-2 mt-1"></i>
+                                                    <div class="flex-grow-1">
+                                                        <strong>تم قبول الطلب بعد المراجعة</strong>
+                                                        <div class="mt-1">الحالة الحالية: {{ manufacturing_order.get_status_display }}</div>
+                                                        {% if manufacturing_order.updated_at %}
+                                                        <small class="text-muted d-block mt-1">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            {{ manufacturing_order.updated_at|date:"Y-m-d H:i" }}
+                                                        </small>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- زر الرد على الرفض إذا لم يتم الرد بعد ولا تزال الحالة مرفوضة -->
+                                        {% if not manufacturing_order.rejection_reply and manufacturing_order.status == 'rejected' %}
+                                            {% if order.created_by == user %}
+                                                <div class="mt-2">
+                                                    <button class="btn btn-outline-primary btn-sm" 
+                                                            onclick="showReplyToRejectionModal({{ manufacturing_order.id }})">
+                                                        <i class="fas fa-reply me-1"></i>
+                                                        الرد على الرفض
+                                                    </button>
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
                             {% endif %}
                         {% endwith %}
-                        {% endif %}
                         <tr>
                             <th>المبلغ الإجمالي</th>
                             <td>{{ order.total_amount }} {{ currency_symbol }}</td>
@@ -1292,10 +1361,114 @@
     {% endwith %}
 </div>
 
+<!-- Modal for Reply to Rejection -->
+<div class="modal fade" id="replyToRejectionModal" tabindex="-1" aria-labelledby="replyToRejectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="replyToRejectionModalLabel">
+                    <i class="fas fa-reply me-2"></i>الرد على رفض الطلب
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    يمكنك الرد على سبب الرفض وتقديم التوضيحات المطلوبة. سيتم إرسال ردك للإدارة للمراجعة.
+                </div>
+                <form id="replyToRejectionForm">
+                    <input type="hidden" id="manufacturingOrderId" name="manufacturing_order_id">
+                    <div class="mb-3">
+                        <label for="reply_to_rejection_message" class="form-label">
+                            <i class="fas fa-comment me-1"></i>ردك على الرفض:
+                        </label>
+                        <textarea class="form-control" 
+                                  id="reply_to_rejection_message" 
+                                  name="reply_to_rejection_message" 
+                                  rows="4" 
+                                  placeholder="اكتب ردك على سبب الرفض هنا..."
+                                  required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>إلغاء
+                </button>
+                <button type="button" class="btn btn-primary" id="submitReplyToRejectionBtn">
+                    <i class="fas fa-paper-plane me-1"></i>إرسال الرد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_css %}
 <style>
+/* Modal fixes to prevent black screen */
+.modal-backdrop {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+body.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+body:not(.modal-open) .modal-backdrop {
+    display: none !important;
+}
+
+.swal2-container {
+    z-index: 10000 !important;
+}
+
+.swal2-shown {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+/* تحسين شكل سجل المحادثة */
+.rejection-history {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.rejection-history .alert {
+    border: none;
+    border-left: 4px solid;
+    margin-bottom: 0.75rem;
+}
+
+.rejection-history .alert-danger {
+    border-left-color: #dc3545;
+    background-color: #f8d7da;
+}
+
+.rejection-history .alert-info {
+    border-left-color: #0dcaf0;
+    background-color: #d1ecf1;
+}
+
+.rejection-history .alert-success {
+    border-left-color: #198754;
+    background-color: #d1e7dd;
+}
+
+.rejection-history .alert-light {
+    border-left-color: #6c757d;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
+
+.rejection-history .fas {
+    color: inherit;
+    opacity: 0.8;
+}
+
 /* Timeline styling */
 .timeline {
     position: relative;
@@ -1336,4 +1509,115 @@
     border-radius: 4px;
 }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// عرض مودال الرد على الرفض
+function showReplyToRejectionModal(manufacturingOrderId) {
+    $('#manufacturingOrderId').val(manufacturingOrderId);
+    $('#reply_to_rejection_message').val('');
+    $('#replyToRejectionModal').modal('show');
+}
+
+$(document).ready(function() {
+    // إضافة دالة تنظيف المودال
+    function forceCleanModal() {
+        // إزالة جميع آثار المودال
+        $('.modal-backdrop').remove();
+        $('.modal-backdrop.show').remove();
+        $('.modal-backdrop.fade').remove();
+        $('body').removeClass('modal-open');
+        $('html').removeClass('modal-open');
+        $('body').css({
+            'overflow': 'auto',
+            'padding-right': '0',
+            'margin-right': '0'
+        });
+    }
+    
+    // معالجة إرسال الرد على الرفض
+    $('#submitReplyToRejectionBtn').on('click', function() {
+        const manufacturingOrderId = $('#manufacturingOrderId').val();
+        const replyMessage = $('#reply_to_rejection_message').val().trim();
+        
+        if (!replyMessage) {
+            Swal.fire('خطأ', 'يرجى كتابة رد قبل الإرسال.', 'error');
+            return;
+        }
+        
+        // إخفاء المودال فوراً قبل إرسال الطلب
+        $('#replyToRejectionModal').modal('hide');
+        // تنظيف قوي للمودال وإزالة backdrop
+        setTimeout(() => {
+            forceCleanModal();
+        }, 100);
+        
+        // إظهار loading
+        Swal.fire({
+            title: 'جاري إرسال الرد...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+        
+        $.ajax({
+            url: `/manufacturing/send_reply/${manufacturingOrderId}/`,
+            method: 'POST',
+            data: JSON.stringify({
+                'reply_message': replyMessage
+            }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: 'تم بنجاح!',
+                        text: 'تم إرسال ردك للإدارة بنجاح',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    $('#reply_to_rejection_message').val('');
+                    // إعادة تحميل الصفحة لإظهار الرد
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء إرسال الرد', 'error');
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'حدث خطأ غير متوقع';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                Swal.fire('خطأ!', errorMessage, 'error');
+            }
+        });
+    });
+    
+    // تنظيف مودال الرد على الرفض عند إغلاقه
+    $('#replyToRejectionModal').on('hidden.bs.modal', function () {
+        forceCleanModal();
+        $('#reply_to_rejection_message').val('');
+    });
+    
+    // معالجة النقر على زر X أو خارج مودال الرد على الرفض
+    $('#replyToRejectionModal .btn-close, #replyToRejectionModal [data-bs-dismiss="modal"]').on('click', function() {
+        forceCleanModal();
+    });
+    
+    // معالجة النقر على الخلفية (backdrop) لمودال الرد على الرفض
+    $('#replyToRejectionModal').on('click', function(e) {
+        if (e.target === this) {
+            forceCleanModal();
+        }
+    });
+});
+</script>
 {% endblock %}

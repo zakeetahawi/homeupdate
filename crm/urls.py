@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
+from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 from . import views
@@ -76,6 +77,8 @@ urlpatterns = [
     path('reports/', include('reports.urls', namespace='reports')),
     path('inspections/', include('inspections.urls', namespace='inspections')),
     path('manufacturing/', include(('manufacturing.urls', 'manufacturing'), namespace='manufacturing')),
+    # إعادة توجيه من factory إلى manufacturing
+    path('factory/', RedirectView.as_view(url='/manufacturing/', permanent=True)),
     # إعادة توجيه من المسار القديم إلى المسار الجديد
     path('data_management/', views.data_management_redirect, name='data_management_redirect'),
     path('database/', views.data_management_redirect, name='database_redirect'),
