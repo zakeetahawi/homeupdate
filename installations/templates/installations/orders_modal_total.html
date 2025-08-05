@@ -44,6 +44,12 @@
                                         {% else %}
                                             <span class="text-muted">-</span>
                                         {% endif %}
+                                        {% if order.contract_number_2 %}
+                                            <br><span class="badge badge-secondary">{{ order.contract_number_2 }}</span>
+                                        {% endif %}
+                                        {% if order.contract_number_3 %}
+                                            <br><span class="badge badge-secondary">{{ order.contract_number_3 }}</span>
+                                        {% endif %}
                                     </td>
                                     <td>{{ order.customer.name }}</td>
                                     <td>{% if order.customer.address %}{{ order.customer.address }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
@@ -150,6 +156,12 @@
                                         {% else %}
                                             <span class="text-muted">-</span>
                                         {% endif %}
+                                        {% if installation.order.contract_number_2 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_2 }}</span>
+                                        {% endif %}
+                                        {% if installation.order.contract_number_3 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_3 }}</span>
+                                        {% endif %}
                                     </td>
                                     <td>{{ installation.order.customer.name }}</td>
                                     <td>{% if installation.order.customer.address %}{{ installation.order.customer.address }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
@@ -244,6 +256,12 @@
                                         {% else %}
                                             <span class="text-muted">-</span>
                                         {% endif %}
+                                        {% if installation.order.contract_number_2 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_2 }}</span>
+                                        {% endif %}
+                                        {% if installation.order.contract_number_3 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_3 }}</span>
+                                        {% endif %}
                                     </td>
                                     <td>{{ installation.order.customer.name }}</td>
                                     <td>{% if installation.order.customer.address %}{{ installation.order.customer.address }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
@@ -334,6 +352,12 @@
                                             <span class="badge badge-info">{{ installation.order.contract_number }}</span>
                                         {% else %}
                                             <span class="text-muted">-</span>
+                                        {% endif %}
+                                        {% if installation.order.contract_number_2 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_2 }}</span>
+                                        {% endif %}
+                                        {% if installation.order.contract_number_3 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_3 }}</span>
                                         {% endif %}
                                     </td>
                                     <td>{{ installation.order.customer.name }}</td>

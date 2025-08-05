@@ -4,9 +4,60 @@
 {% block title %}{{ title }} - نظام الخواجه{% endblock %}
 
 {% block extra_css %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css" rel="stylesheet" />
 <style>
     .notes-field {
         min-height: 150px;
+    }
+    
+    /* تحسين مظهر Select2 للعملاء */
+    .select2-container .select2-selection--single {
+        height: 38px;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection {
+        min-height: calc(1.5em + 0.75rem + 2px);
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+        padding-left: 12px;
+        padding-right: 20px;
+        color: #212529;
+        line-height: 1.5;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+        right: 3px;
+    }
+    
+    .select2-dropdown {
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+    }
+    
+    /* إخفاء الحقل الأصلي للعميل */
+    .customer-original-field {
+        display: none !important;
+    }
+    
+    /* تحسين مظهر نتائج البحث */
+    .select2-results__option {
+        padding: 8px 12px;
+    }
+    
+    .select2-results__option .fw-bold {
+        font-weight: 600 !important;
+        color: #212529;
+    }
+    
+    .select2-results__option .text-muted {
+        color: #6c757d !important;
+        font-size: 0.875rem;
     }
 </style>
 {% endblock %}
@@ -82,16 +133,28 @@
                                 <div class="mb-3">
                                     <label for="{{ form.customer.id_for_label }}" class="form-label">العميل *</label>
                                     {% if customer %}
-                                    <input type="text" class="form-control" value="{{ customer.name }}" readonly>
-                                    <input type="hidden" name="customer" value="{{ customer.pk }}">
+                                    <select id="customer_search_select" class="form-select" style="width: 100%;">
+                                        <option value="{{ customer.id }}" selected>
+                                            {{ customer.name }} - {{ customer.phone }}
+                                        </option>
+                                    </select>
+                                    <div class="customer-original-field">
+                                        {{ form.customer }}
+                                    </div>
                                     {% else %}
-                                    {{ form.customer }}
+                                    <select id="customer_search_select" class="form-select" style="width: 100%;">
+                                        <option value="">ابحث عن العميل بالاسم أو الهاتف...</option>
+                                    </select>
                                     {% endif %}
+                                    <div class="customer-original-field">
+                                        {{ form.customer }}
+                                    </div>
                                     {% if form.customer.errors %}
                                     <div class="alert alert-danger mt-2">
                                         {{ form.customer.errors }}
                                     </div>
                                     {% endif %}
+                                    <div class="form-text text-muted">ابحث عن العميل بالاسم أو الهاتف</div>
                                 </div>
                                 
                                 <!-- Order Number (Auto-generated but visible) -->
@@ -156,6 +219,32 @@
                                     {% if form.invoice_number.errors %}
                                         <div class="invalid-feedback d-block">
                                             {% for error in form.invoice_number.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <!-- Invoice Number 2 -->
+                                <div class="mb-3">
+                                    <label for="{{ form.invoice_number_2.id_for_label }}" class="form-label">رقم فاتورة إضافي 1</label>
+                                    {{ form.invoice_number_2 }}
+                                    <div class="form-text text-muted">اختياري: يمكنك إدخال رقم فاتورة إضافي إذا توفر.</div>
+                                    {% if form.invoice_number_2.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.invoice_number_2.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <!-- Invoice Number 3 -->
+                                <div class="mb-3">
+                                    <label for="{{ form.invoice_number_3.id_for_label }}" class="form-label">رقم فاتورة إضافي 2</label>
+                                    {{ form.invoice_number_3 }}
+                                    <div class="form-text text-muted">اختياري: يمكنك إدخال رقم فاتورة إضافي آخر إذا توفر.</div>
+                                    {% if form.invoice_number_3.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.invoice_number_3.errors %}
                                                 {{ error }}
                                             {% endfor %}
                                         </div>
@@ -241,6 +330,32 @@
                                     {% if form.contract_number.errors %}
                                     <div class="alert alert-danger mt-2">
                                         {% for error in form.contract_number.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Contract Number 2 -->
+                                <div class="mb-3 contract-field" style="display: none;">
+                                    <label for="{{ form.contract_number_2.id_for_label }}" class="form-label">رقم عقد إضافي 1</label>
+                                    {{ form.contract_number_2 }}
+                                    {% if form.contract_number_2.errors %}
+                                    <div class="alert alert-danger mt-2">
+                                        {% for error in form.contract_number_2.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Contract Number 3 -->
+                                <div class="mb-3 contract-field" style="display: none;">
+                                    <label for="{{ form.contract_number_3.id_for_label }}" class="form-label">رقم عقد إضافي 2</label>
+                                    {{ form.contract_number_3 }}
+                                    {% if form.contract_number_3.errors %}
+                                    <div class="alert alert-danger mt-2">
+                                        {% for error in form.contract_number_3.errors %}
                                             {{ error }}
                                         {% endfor %}
                                     </div>
@@ -404,14 +519,142 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- jQuery (مطلوب قبل Select2) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<!-- Select2 JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/ar.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    $(document).ready(function() {
+        console.log('تهيئة Select2 للبحث عن العملاء...');
+        
+        // تهيئة Select2 للبحث الذكي عن العملاء (نفس الطريقة في الشكاوى)
+        $('#customer_search_select').select2({
+            theme: 'bootstrap-5',
+            language: 'ar',
+            placeholder: 'ابحث عن العميل بالاسم أو الهاتف...',
+            allowClear: true,
+            minimumInputLength: 2,
+            ajax: {
+                url: '/customers/api/customers/',
+                dataType: 'json',
+                delay: 300,
+                data: function (params) {
+                    console.log('إرسال طلب بحث:', params.term);
+                    return {
+                        q: params.term,
+                        page: params.page
+                    };
+                },
+                processResults: function (data, params) {
+                    console.log('استلام نتائج البحث:', data);
+                    if (data.error) {
+                        console.error('خطأ في البحث:', data.error);
+                        return { results: [] };
+                    }
+                    if (!data.results) {
+                        console.error('لا توجد نتائج في الاستجابة');
+                        return { results: [] };
+                    }
+                    return {
+                        results: data.results.map(function(customer) {
+                            return {
+                                id: customer.id,
+                                text: customer.name + ' - ' + customer.phone,
+                                customer: customer
+                            };
+                        })
+                    };
+                },
+                cache: true
+            },
+            templateResult: function(customer) {
+                if (customer.loading) return customer.text;
+                if (!customer.customer) return customer.text;
+                
+                return $('<div><div class="fw-bold">' + customer.customer.name + '</div><div class="text-muted small">' + customer.customer.phone + ' - ' + (customer.customer.email || '') + '</div></div>');
+            },
+            templateSelection: function(customer) {
+                if (!customer.customer) return customer.text;
+                return customer.customer.name + ' - ' + customer.customer.phone;
+            }
+        }).on('select2:open', function() {
+            console.log('تم فتح قائمة Select2');
+        }).on('select2:close', function() {
+            console.log('تم إغلاق قائمة Select2');
+        });
+
+        // عند اختيار عميل
+        $('#customer_search_select').on('select2:select', function (e) {
+            console.log('تم اختيار عميل:', e.params.data);
+            var customerData = e.params.data.customer;
+            if (customerData) {
+                console.log('بيانات العميل:', customerData);
+                $('#{{ form.customer.id_for_label }}').val(customerData.id);
+                console.log('تم تعيين ID العميل:', customerData.id);
+                
+                // تحديث المعاينات المرتبطة إذا كان الحقل موجوداً
+                const relatedInspectionSelect = $('#{{ form.related_inspection.id_for_label }}');
+                if (relatedInspectionSelect.length) {
+                    relatedInspectionSelect.html('<option value="">جاري التحميل...</option>');
+                    relatedInspectionSelect.prop('disabled', true);
+                    
+                    fetch(`{% url 'orders:customer_inspections_api' %}?customer_id=${customerData.id}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                relatedInspectionSelect.html('<option value="">اختر معاينة مرتبطة (اختياري)</option>');
+                                data.choices.forEach(choice => {
+                                    const option = $('<option></option>')
+                                        .attr('value', choice.value)
+                                        .text(choice.text);
+                                    relatedInspectionSelect.append(option);
+                                });
+                                relatedInspectionSelect.prop('disabled', false);
+                            } else {
+                                relatedInspectionSelect.html('<option value="">خطأ في تحميل المعاينات</option>');
+                                relatedInspectionSelect.prop('disabled', true);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('خطأ في جلب المعاينات:', error);
+                            relatedInspectionSelect.html('<option value="">خطأ في الاتصال</option>');
+                            relatedInspectionSelect.prop('disabled', true);
+                        });
+                }
+            }
+        });
+
+        // عند إزالة اختيار العميل
+        $('#customer_search_select').on('select2:clear', function (e) {
+            console.log('تم إزالة اختيار العميل');
+            $('#{{ form.customer.id_for_label }}').val('');
+            
+            // إعادة تعيين المعاينات المرتبطة
+            const relatedInspectionSelect = $('#{{ form.related_inspection.id_for_label }}');
+            if (relatedInspectionSelect.length) {
+                relatedInspectionSelect.html('<option value="">اختر العميل أولاً</option>');
+                relatedInspectionSelect.prop('disabled', true);
+            }
+        });
+
+        // تعيين قيمة العميل المحدد مسبقاً
+        {% if customer %}
+        $('#{{ form.customer.id_for_label }}').val('{{ customer.id }}');
+        console.log('تم تعيين العميل المحدد مسبقاً: {{ customer.id }}');
+        {% endif %}
+
+        console.log('تم تهيئة Select2 بنجاح');
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
+
         // --- Elements ---
         const styledRadios = document.querySelectorAll('.styled-radio');
         const realRadios = document.querySelectorAll('input[name="selected_types"]');
         
-        const contractField = document.querySelector('.contract-field');
+        const contractFields = document.querySelectorAll('.contract-field');
         const contractFileField = document.querySelector('.contract-file-field');
         const relatedInspectionField = document.querySelector('.related-inspection-field');
         const productSelection = document.querySelector('#product-selection-section');
@@ -483,7 +726,10 @@
                 if (inspectionInvoiceHelp) inspectionInvoiceHelp.style.display = 'none';
             }
 
-            if (contractField) contractField.style.display = showForContract ? 'block' : 'none';
+            // إظهار/إخفاء جميع حقول العقد
+            contractFields.forEach(field => {
+                if (field) field.style.display = showForContract ? 'block' : 'none';
+            });
             if (contractFileField) contractFileField.style.display = showForContract ? 'block' : 'none';
             
             // إخفاء حقل المعاينة المرتبطة للمعاينات وإظهاره للخدمات الأخرى فقط
@@ -545,59 +791,7 @@
     });
     
     // --- Dynamic Inspection Loading ---
-    // إضافة كود لتحديث قائمة المعاينات عند تغيير العميل
-    document.addEventListener('DOMContentLoaded', function() {
-        const customerSelect = document.querySelector('#{{ form.customer.id_for_label }}');
-        const relatedInspectionSelect = document.querySelector('#{{ form.related_inspection.id_for_label }}');
-        
-        if (customerSelect && relatedInspectionSelect) {
-            customerSelect.addEventListener('change', function() {
-                const customerId = this.value;
-                
-                if (customerId) {
-                    // إظهار مؤشر التحميل
-                    relatedInspectionSelect.innerHTML = '<option value="">جاري التحميل...</option>';
-                    relatedInspectionSelect.disabled = true;
-                    
-                    // جلب معاينات العميل عبر AJAX
-                    fetch(`{% url 'orders:customer_inspections_api' %}?customer_id=${customerId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                // تحديث قائمة المعاينات
-                                relatedInspectionSelect.innerHTML = '';
-                                data.choices.forEach(choice => {
-                                    const option = document.createElement('option');
-                                    option.value = choice.value;
-                                    option.textContent = choice.text;
-                                    relatedInspectionSelect.appendChild(option);
-                                });
-                                relatedInspectionSelect.disabled = false;
-                            } else {
-                                // في حالة الخطأ، إظهار رسالة خطأ
-                                relatedInspectionSelect.innerHTML = '<option value="">خطأ في تحميل المعاينات</option>';
-                                relatedInspectionSelect.disabled = true;
-                                console.error('Error loading inspections:', data.message);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error fetching inspections:', error);
-                            relatedInspectionSelect.innerHTML = '<option value="">خطأ في الاتصال</option>';
-                            relatedInspectionSelect.disabled = true;
-                        });
-                } else {
-                    // إذا لم يتم اختيار عميل، إظهار رسالة
-                    relatedInspectionSelect.innerHTML = '<option value="">اختر العميل أولاً</option>';
-                    relatedInspectionSelect.disabled = true;
-                }
-            });
-            
-            // تشغيل الحدث مرة واحدة عند تحميل الصفحة إذا كان العميل محدد مسبقاً
-            if (customerSelect.value) {
-                customerSelect.dispatchEvent(new Event('change'));
-            }
-        }
-    });
+    // تم دمج هذا الكود مع Select2 أعلاه
 
     // تعريف orderItems كمصفوفة عامة على مستوى document
     if (typeof document.orderItems === 'undefined') {

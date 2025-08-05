@@ -585,12 +585,12 @@ def find_customer_by_phone(request):
     # البحث المحسن برقم الهاتف
     phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '')
     customers = Customer.objects.filter(
-        models.Q(phone__icontains=phone) | 
-        models.Q(phone2__icontains=phone) |
-        models.Q(phone__icontains=phone_clean) | 
-        models.Q(phone2__icontains=phone_clean) |
-        models.Q(phone=phone) | 
-        models.Q(phone2=phone)
+        Q(phone__icontains=phone) | 
+        Q(phone2__icontains=phone) |
+        Q(phone__icontains=phone_clean) | 
+        Q(phone2__icontains=phone_clean) |
+        Q(phone=phone) | 
+        Q(phone2=phone)
     ).select_related('branch')
     
     if customers.exists():
@@ -697,4 +697,51 @@ def update_customer_address(request, pk):
         'message': 'تم تحديث عنوان العميل بنجاح',
         'address': customer.address,
         'location_type': customer.location_type
+    })
+
+@login_required
+def customer_api(request):
+    """
+    API endpoint for Select2 customer search
+    يدعم البحث بالاسم والهاتف والبريد الإلكتروني
+    """
+    search_term = request.GET.get('q', '').strip()
+    page = int(request.GET.get('page', 1))
+    page_size = 20
+    
+    # الحصول على العملاء المسموح للمستخدم برؤيتهم
+    customers = get_user_customers_queryset(request.user, search_term)
+    
+    # إذا كان هناك مصطلح بحث، تطبيق التصفية
+    if search_term:
+        customers = customers.filter(
+            Q(name__icontains=search_term) |
+            Q(phone__icontains=search_term) |
+            Q(email__icontains=search_term)
+        )
+    
+    # ترتيب النتائج
+    customers = customers.order_by('name')
+    
+    # تطبيق التصفح
+    paginator = Paginator(customers, page_size)
+    page_obj = paginator.get_page(page)
+    
+    # تحويل البيانات للصيغة المطلوبة
+    results = []
+    for customer in page_obj:
+        results.append({
+            'id': customer.id,
+            'name': customer.name,
+            'phone': customer.phone,
+            'email': customer.email or '',
+            'address': customer.address or '',
+            'branch': customer.branch.name if customer.branch else ''
+        })
+    
+    return JsonResponse({
+        'results': results,
+        'has_next': page_obj.has_next(),
+        'has_previous': page_obj.has_previous(),
+        'total_count': paginator.count
     })

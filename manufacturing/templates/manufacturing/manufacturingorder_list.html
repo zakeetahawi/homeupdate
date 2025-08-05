@@ -775,7 +775,7 @@ body:not(.modal-open) .modal-backdrop {
                         <tr data-order-id="{{ order.id }}" data-order-type="{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}">
                             <td>{{ forloop.counter }}</td>
                             <td>
-                                <a href="{% url 'manufacturing:order_detail' order.id %}" style="color: var(--primary); text-decoration: none;">
+                                <a href="{% url 'orders:order_detail' order.order.id %}" style="color: var(--primary); text-decoration: none;" title="تفاصيل الطلب الأساسي">
                                     {{ order.order.order_number|default:order.order.id }}
                                 </a>
                             </td>
@@ -795,12 +795,22 @@ body:not(.modal-open) .modal-backdrop {
                                     {% endif %}
                                 {% endwith %}
                             </td>
-                            <td>{{ order.contract_number|default:'-' }}</td>
-                            <td>{{ order.invoice_number|default:'-' }}</td>
+                            <td>
+                                {{ order.contract_number|default:'-' }}
+                                {% if order.order.contract_number_2 %}<br><small class="text-muted">{{ order.order.contract_number_2 }}</small>{% endif %}
+                                {% if order.order.contract_number_3 %}<br><small class="text-muted">{{ order.order.contract_number_3 }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {{ order.invoice_number|default:'-' }}
+                                {% if order.order.invoice_number_2 %}<br><small class="text-muted">{{ order.order.invoice_number_2 }}</small>{% endif %}
+                                {% if order.order.invoice_number_3 %}<br><small class="text-muted">{{ order.order.invoice_number_3 }}</small>{% endif %}
+                            </td>
                             <td>
                                 {% if order.order.customer %}
                                     <a href="{% url 'customers:customer_detail' order.order.customer.id %}" style="color: var(--primary); text-decoration: none; font-weight: bold;">
-                                        <strong>{{ order.order.customer.name|default:'-' }}</strong>
+                                        <a href="{% url 'customers:customer_detail' order.order.customer.id %}" class="font-weight-bold text-info" title="بطاقة العميل">
+                                            {{ order.order.customer.name|default:'-' }}
+                                        </a>
                                     </a>
                                 {% else %}
                                     -

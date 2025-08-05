@@ -78,7 +78,19 @@
             <h3>تفاصيل الطلب:</h3>
             <p><strong>نوع الطلب:</strong> {{ manufacturing_order.get_order_type_display }}</p>
             <p><strong>رقم العقد:</strong> {{ manufacturing_order.contract_number|default:"-" }}</p>
+            {% if manufacturing_order.order.contract_number_2 %}
+            <p><strong>رقم العقد الإضافي 2:</strong> {{ manufacturing_order.order.contract_number_2 }}</p>
+            {% endif %}
+            {% if manufacturing_order.order.contract_number_3 %}
+            <p><strong>رقم العقد الإضافي 3:</strong> {{ manufacturing_order.order.contract_number_3 }}</p>
+            {% endif %}
             <p><strong>رقم الفاتورة:</strong> {{ manufacturing_order.invoice_number|default:"-" }}</p>
+            {% if manufacturing_order.order.invoice_number_2 %}
+            <p><strong>رقم الفاتورة الإضافي 2:</strong> {{ manufacturing_order.order.invoice_number_2 }}</p>
+            {% endif %}
+            {% if manufacturing_order.order.invoice_number_3 %}
+            <p><strong>رقم الفاتورة الإضافي 3:</strong> {{ manufacturing_order.order.invoice_number_3 }}</p>
+            {% endif %}
             <p><strong>تاريخ التسليم المتوقع:</strong> {{ manufacturing_order.expected_delivery_date|date:"Y/m/d" }}</p>
         </div>
         <div class="customer-info">

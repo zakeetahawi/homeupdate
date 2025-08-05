@@ -63,6 +63,18 @@
                                     <th>رقم العقد</th>
                                     <td>{{ order.contract_number|default:'-' }}</td>
                                 </tr>
+                                {% if order.contract_number_2 %}
+                                <tr>
+                                    <th>رقم العقد الإضافي 2</th>
+                                    <td>{{ order.contract_number_2 }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if order.contract_number_3 %}
+                                <tr>
+                                    <th>رقم العقد الإضافي 3</th>
+                                    <td>{{ order.contract_number_3 }}</td>
+                                </tr>
+                                {% endif %}
                                 <tr>
                                     <th>ملف العقد</th>
                                     <td>
@@ -112,6 +124,18 @@
                                 <th>رقم العقد</th>
                                 <td>{{ order.contract_number|default:'-' }}</td>
                             </tr>
+                            {% if order.contract_number_2 %}
+                            <tr>
+                                <th>رقم العقد الإضافي 2</th>
+                                <td>{{ order.contract_number_2 }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if order.contract_number_3 %}
+                            <tr>
+                                <th>رقم العقد الإضافي 3</th>
+                                <td>{{ order.contract_number_3 }}</td>
+                            </tr>
+                            {% endif %}
                             <tr>
                                 <th>ملف العقد</th>
                                 <td>
@@ -773,10 +797,34 @@
                             <td>{{ order.invoice_number }}</td>
                         </tr>
                         {% endif %}
+                        {% if order.invoice_number_2 %}
+                        <tr>
+                            <th>رقم الفاتورة الإضافي 2</th>
+                            <td>{{ order.invoice_number_2 }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.invoice_number_3 %}
+                        <tr>
+                            <th>رقم الفاتورة الإضافي 3</th>
+                            <td>{{ order.invoice_number_3 }}</td>
+                        </tr>
+                        {% endif %}
                         {% if order.contract_number %}
                         <tr>
                             <th>رقم العقد</th>
                             <td>{{ order.contract_number }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.contract_number_2 %}
+                        <tr>
+                            <th>رقم العقد الإضافي 2</th>
+                            <td>{{ order.contract_number_2 }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.contract_number_3 %}
+                        <tr>
+                            <th>رقم العقد الإضافي 3</th>
+                            <td>{{ order.contract_number_3 }}</td>
                         </tr>
                         {% endif %}
                         <tr>

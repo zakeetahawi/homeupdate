@@ -351,7 +351,7 @@
                                 {% for order in orders %}
                                 <tr>
                                     <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; text-align: center; font-weight: bold; font-size: 1em;">
-                                        <a href="{% url 'orders:order_detail' order.pk %}" tabindex="0" class="order-popover" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="<b>رقم العقد:</b> {{ order.contract_number|default:'-' }}<br/><b>البائع:</b> {{ order.salesperson.name|default:'-' }}<br/><b>تاريخ الطلب:</b> {{ order.order_date|date:'Y-m-d H:i' }}<br/><b>حالة التصنيع:</b> {% if order.manufacturing_order %}{{ order.manufacturing_order.get_status_display }}{% else %}-{% endif %}">
+                                        <a href="{% url 'orders:order_detail' order.pk %}" tabindex="0" class="order-popover" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="<b>رقم العقد:</b> {{ order.contract_number|default:'-' }}{% if order.contract_number_2 %}<br/><b>عقد إضافي 2:</b> {{ order.contract_number_2 }}{% endif %}{% if order.contract_number_3 %}<br/><b>عقد إضافي 3:</b> {{ order.contract_number_3 }}{% endif %}<br/><b>البائع:</b> {{ order.salesperson.name|default:'-' }}<br/><b>تاريخ الطلب:</b> {{ order.order_date|date:'Y-m-d H:i' }}<br/><b>حالة التصنيع:</b> {% if order.manufacturing_order %}{{ order.manufacturing_order.get_status_display }}{% else %}-{% endif %}">>
                                             {{ order.order_number }}
                                         </a>
                                     </td>

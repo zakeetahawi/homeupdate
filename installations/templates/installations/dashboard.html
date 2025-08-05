@@ -243,8 +243,16 @@
                                         </td>
                                         <td><strong>{{ installation.order.customer.name }}</strong></td>
                                         <td>{{ installation.order.salesperson.name|default:"غير محدد" }}</td>
-                                        <td>{{ installation.order.contract_number|default:"غير محدد" }}</td>
-                                        <td>{{ installation.order.invoice_number|default:"غير محدد" }}</td>
+                                        <td>
+                                            {{ installation.order.contract_number|default:"غير محدد" }}
+                                            {% if installation.order.contract_number_2 %}<br><small class="text-muted">{{ installation.order.contract_number_2 }}</small>{% endif %}
+                                            {% if installation.order.contract_number_3 %}<br><small class="text-muted">{{ installation.order.contract_number_3 }}</small>{% endif %}
+                                        </td>
+                                        <td>
+                                            {{ installation.order.invoice_number|default:"غير محدد" }}
+                                            {% if installation.order.invoice_number_2 %}<br><small class="text-muted">{{ installation.order.invoice_number_2 }}</small>{% endif %}
+                                            {% if installation.order.invoice_number_3 %}<br><small class="text-muted">{{ installation.order.invoice_number_3 }}</small>{% endif %}
+                                        </td>
                                         <td>{{ installation.order.branch.name|default:"غير محدد" }}</td>
                                         <td>{{ installation.team.name|default:"غير محدد" }}</td>
                                         <td>

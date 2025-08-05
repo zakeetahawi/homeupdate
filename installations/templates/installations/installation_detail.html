@@ -312,10 +312,34 @@
                                     <th>رقم العقد:</th>
                                     <td>{{ installation.order.contract_number|default:"غير محدد" }}</td>
                                 </tr>
+                                {% if installation.order.contract_number_2 %}
+                                <tr>
+                                    <th>رقم العقد الإضافي 2:</th>
+                                    <td>{{ installation.order.contract_number_2 }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if installation.order.contract_number_3 %}
+                                <tr>
+                                    <th>رقم العقد الإضافي 3:</th>
+                                    <td>{{ installation.order.contract_number_3 }}</td>
+                                </tr>
+                                {% endif %}
                                 <tr>
                                     <th>رقم الفاتورة:</th>
                                     <td>{{ installation.order.invoice_number|default:"غير محدد" }}</td>
                                 </tr>
+                                {% if installation.order.invoice_number_2 %}
+                                <tr>
+                                    <th>رقم الفاتورة الإضافي 2:</th>
+                                    <td>{{ installation.order.invoice_number_2 }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if installation.order.invoice_number_3 %}
+                                <tr>
+                                    <th>رقم الفاتورة الإضافي 3:</th>
+                                    <td>{{ installation.order.invoice_number_3 }}</td>
+                                </tr>
+                                {% endif %}
                                 <tr>
                                     <th>الفرع:</th>
                                     <td>{{ installation.order.branch.name|default:"غير محدد" }}</td>
@@ -362,6 +386,12 @@
                                 <h6>ملف العقد:</h6>
                                 <div class="mb-2">
                                     <strong>رقم العقد:</strong> {{ installation.order.contract_number|default:"غير محدد" }}
+                                    {% if installation.order.contract_number_2 %}
+                                        <br><strong>رقم العقد الإضافي 2:</strong> {{ installation.order.contract_number_2 }}
+                                    {% endif %}
+                                    {% if installation.order.contract_number_3 %}
+                                        <br><strong>رقم العقد الإضافي 3:</strong> {{ installation.order.contract_number_3 }}
+                                    {% endif %}
                                 </div>
                                 <a href="{{ installation.order.contract_file.url }}"
                                    class="btn btn-outline-primary" target="_blank">

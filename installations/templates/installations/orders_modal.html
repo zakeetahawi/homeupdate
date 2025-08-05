@@ -76,6 +76,12 @@
                         {% else %}
                             <span class="text-muted">-</span>
                         {% endif %}
+                        {% if order.contract_number_2 %}
+                            <br><span class="badge badge-secondary">{{ order.contract_number_2 }}</span>
+                        {% endif %}
+                        {% if order.contract_number_3 %}
+                            <br><span class="badge badge-secondary">{{ order.contract_number_3 }}</span>
+                        {% endif %}
                     </td>
                     <td class="text-dark font-weight-bold">{{ order.customer.name }}</td>
                     <td class="text-dark">

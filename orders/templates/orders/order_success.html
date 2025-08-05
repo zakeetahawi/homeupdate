@@ -215,11 +215,27 @@
                                 <span class="info-value">{{ order.invoice_number }}</span>
                             </div>
                             {% endif %}
+                            {% if order.invoice_number_2 %}
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-receipt me-2"></i>رقم الفاتورة الإضافي 2:
+                                </span>
+                                <span class="info-value">{{ order.invoice_number_2 }}</span>
+                            </div>
+                            {% endif %}
+                            {% if order.invoice_number_3 %}
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-receipt me-2"></i>رقم الفاتورة الإضافي 3:
+                                </span>
+                                <span class="info-value">{{ order.invoice_number_3 }}</span>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
 
                     <!-- Contract Information -->
-                    {% if order.contract_number or order.contract_file %}
+                    {% if order.contract_number or order.contract_number_2 or order.contract_number_3 or order.contract_file %}
                     <div class="contract-info">
                         <h6 class="mb-3">
                             <i class="fas fa-file-contract me-2"></i>
@@ -229,6 +245,18 @@
                         <div class="info-item">
                             <span class="info-label">رقم العقد:</span>
                             <span class="info-value">{{ order.contract_number }}</span>
+                        </div>
+                        {% endif %}
+                        {% if order.contract_number_2 %}
+                        <div class="info-item">
+                            <span class="info-label">رقم العقد الإضافي 2:</span>
+                            <span class="info-value">{{ order.contract_number_2 }}</span>
+                        </div>
+                        {% endif %}
+                        {% if order.contract_number_3 %}
+                        <div class="info-item">
+                            <span class="info-label">رقم العقد الإضافي 3:</span>
+                            <span class="info-value">{{ order.contract_number_3 }}</span>
                         </div>
                         {% endif %}
                         {% if order.is_contract_uploaded_to_drive %}

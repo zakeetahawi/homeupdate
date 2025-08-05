@@ -77,7 +77,7 @@ class OrderAdmin(admin.ModelAdmin):
         'delivery_type',
         'status',
     )
-    search_fields = ('order_number', 'customer__name', 'invoice_number', 'contract_number')
+    search_fields = ('order_number', 'customer__name', 'invoice_number', 'invoice_number_2', 'invoice_number_3', 'contract_number', 'contract_number_2', 'contract_number_3')
     inlines = [OrderItemInline, PaymentInline]
     readonly_fields = (
         'created_at',

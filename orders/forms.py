@@ -107,17 +107,23 @@ class OrderForm(forms.ModelForm):
         fields = [
             'customer', 'status', 'invoice_number',
             'contract_number', 'contract_file', 'branch', 'tracking_status',
-            'notes', 'selected_types', 'delivery_type', 'delivery_address', 'salesperson'
+            'notes', 'selected_types', 'delivery_type', 'delivery_address', 'salesperson',
+            'invoice_number_2', 'invoice_number_3', 'contract_number_2', 'contract_number_3'
         ]
         widgets = {
             'customer': forms.Select(attrs={
-                'class': 'form-select form-select-sm',
-                'data-placeholder': 'اختر العميل'
+                'class': 'form-select form-select-sm select2-customer',
+                'data-placeholder': 'اختر العميل',
+                'data-allow-clear': 'true'
             }),
             'tracking_status': forms.Select(attrs={'class': 'form-select form-select-sm'}),
             'invoice_number': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+            'invoice_number_2': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+            'invoice_number_3': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
             'branch': forms.Select(attrs={'class': 'form-select form-select-sm'}),
             'contract_number': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+            'contract_number_2': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+            'contract_number_3': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
             'contract_file': forms.FileInput(attrs={
                 'class': 'form-control form-control-sm',
                 'accept': '.pdf',
@@ -231,6 +237,8 @@ class OrderForm(forms.ModelForm):
         # Make invoice_number and contract_number not required initially
         self.fields['invoice_number'].required = False
         self.fields['contract_number'].required = False
+        self.fields['contract_number_2'].required = False
+        self.fields['contract_number_3'].required = False
         
         # Set branch to user's branch if available
         if user and hasattr(user, 'branch') and user.branch:

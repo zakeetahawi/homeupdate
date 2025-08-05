@@ -215,11 +215,35 @@ class Order(models.Model):
         blank=True,
         verbose_name='رقم الفاتورة'
     )
+    invoice_number_2 = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        verbose_name='رقم الفاتورة الإضافي 2'
+    )
+    invoice_number_3 = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        verbose_name='رقم الفاتورة الإضافي 3'
+    )
     contract_number = models.CharField(
         max_length=50,
         null=True,
         blank=True,
         verbose_name='رقم العقد'
+    )
+    contract_number_2 = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        verbose_name='رقم العقد الإضافي 2'
+    )
+    contract_number_3 = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        verbose_name='رقم العقد الإضافي 3'
     )
     contract_file = models.FileField(
         upload_to='contracts/',

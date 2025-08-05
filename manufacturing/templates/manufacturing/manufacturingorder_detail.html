@@ -45,10 +45,34 @@
                                     <th>رقم العقد:</th>
                                     <td>{{ manufacturing_order.contract_number|default:'-' }}</td>
                                 </tr>
+                                {% if manufacturing_order.order.contract_number_2 %}
+                                <tr>
+                                    <th>رقم العقد الإضافي 2:</th>
+                                    <td>{{ manufacturing_order.order.contract_number_2 }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if manufacturing_order.order.contract_number_3 %}
+                                <tr>
+                                    <th>رقم العقد الإضافي 3:</th>
+                                    <td>{{ manufacturing_order.order.contract_number_3 }}</td>
+                                </tr>
+                                {% endif %}
                                 <tr>
                                     <th>رقم الفاتورة:</th>
                                     <td>{{ manufacturing_order.invoice_number|default:'-' }}</td>
                                 </tr>
+                                {% if manufacturing_order.order.invoice_number_2 %}
+                                <tr>
+                                    <th>رقم الفاتورة الإضافي 2:</th>
+                                    <td>{{ manufacturing_order.order.invoice_number_2 }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if manufacturing_order.order.invoice_number_3 %}
+                                <tr>
+                                    <th>رقم الفاتورة الإضافي 3:</th>
+                                    <td>{{ manufacturing_order.order.invoice_number_3 }}</td>
+                                </tr>
+                                {% endif %}
                                 <tr>
                                     <th>نوع الطلب الأصلي:</th>
                                     <td>

@@ -100,12 +100,15 @@
                             {% for installation in installations %}
                             <tr>
                                 <td>
-                                    <a href="{% url 'installations:installation_detail' installation.id %}" 
-                                       class="font-weight-bold text-primary">
+                                    <a href="{% url 'orders:order_detail' installation.order.id %}" class="font-weight-bold text-primary" title="تفاصيل الطلب الأساسي">
                                         {{ installation.order.order_number }}
                                     </a>
                                 </td>
-                                <td><strong>{{ installation.order.customer.name }}</strong></td>
+                                <td>
+                                    <a href="{% url 'customers:customer_detail' installation.order.customer.id %}" class="font-weight-bold text-info" title="بطاقة العميل">
+                                        {{ installation.order.customer.name }}
+                                    </a>
+                                </td>
                                 <td>{{ installation.order.customer.phone }}</td>
                                 <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
                                 <td>
@@ -118,8 +121,16 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ installation.order.salesperson.name|default:"غير محدد" }}</td>
-                                <td>{{ installation.order.contract_number|default:"غير محدد" }}</td>
-                                <td>{{ installation.order.invoice_number|default:"غير محدد" }}</td>
+                                <td>
+                                    {{ installation.order.contract_number|default:"غير محدد" }}
+                                    {% if installation.order.contract_number_2 %}<br><span class="text-muted">{{ installation.order.contract_number_2 }}</span>{% endif %}
+                                    {% if installation.order.contract_number_3 %}<br><span class="text-muted">{{ installation.order.contract_number_3 }}</span>{% endif %}
+                                </td>
+                                <td>
+                                    {{ installation.order.invoice_number|default:"غير محدد" }}
+                                    {% if installation.order.invoice_number_2 %}<br><span class="text-muted">{{ installation.order.invoice_number_2 }}</span>{% endif %}
+                                    {% if installation.order.invoice_number_3 %}<br><span class="text-muted">{{ installation.order.invoice_number_3 }}</span>{% endif %}
+                                </td>
                                 <td>{{ installation.order.branch.name|default:"غير محدد" }}</td>
                                 <td>{{ installation.team.name|default:"غير محدد" }}</td>
                                 <td>

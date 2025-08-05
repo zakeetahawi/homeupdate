@@ -203,11 +203,25 @@
                         <td class="text-center">
                             {% if order.contract_number %}
                                 <span class="fw-bold text-primary">{{ order.contract_number }}</span>
+                                {% if order.contract_number_2 %}
+                                    <br><span class="fw-bold text-primary">{{ order.contract_number_2 }}</span>
+                                {% endif %}
+                                {% if order.contract_number_3 %}
+                                    <br><span class="fw-bold text-primary">{{ order.contract_number_3 }}</span>
+                                {% endif %}
                                 {% if order.contract_file %}
                                     <br>
                                     <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-outline-info">
                                         <i class="fas fa-file-pdf"></i>
                                     </a>
+                                {% endif %}
+                            {% elif order.contract_number_2 %}
+                                <span class="fw-bold text-primary">{{ order.contract_number_2 }}</span>
+                                {% if order.contract_number_3 %}
+                                    <br><span class="fw-bold text-primary">{{ order.contract_number_3 }}</span>
+                                {% endif %}
+                            {% elif order.contract_number_3 %}
+                                <span class="fw-bold text-primary">{{ order.contract_number_3 }}</span>
                                 {% endif %}
                             {% else %}
                                 <span class="text-muted">غير محدد</span>

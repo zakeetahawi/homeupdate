@@ -222,6 +222,20 @@
                     <span class="info-value">{{ object.contract_number|default:'غير محدد' }}</span>
                 </div>
                 
+                {% if object.order.contract_number_2 %}
+                <div class="info-row">
+                    <span class="info-label">رقم العقد الإضافي 2:</span>
+                    <span class="info-value">{{ object.order.contract_number_2 }}</span>
+                </div>
+                {% endif %}
+                
+                {% if object.order.contract_number_3 %}
+                <div class="info-row">
+                    <span class="info-label">رقم العقد الإضافي 3:</span>
+                    <span class="info-value">{{ object.order.contract_number_3 }}</span>
+                </div>
+                {% endif %}
+                
                 <div class="info-row">
                     <span class="info-label">تاريخ الإنشاء:</span>
                     <span class="info-value">{{ object.created_at|date:"Y-m-d H:i" }}</span>

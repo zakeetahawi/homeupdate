@@ -324,11 +324,11 @@
                                 {{ notification.created_at|date:"Y-m-d H:i" }}
                             </div>
                             <div class="col-md-6">
-                                {% if notification.complaint %}
-                                <a href="{% url 'complaints:complaint_detail' notification.complaint.pk %}" 
+                                {% if notification.content_object %}
+                                <a href="{% url 'complaints:complaint_detail' notification.content_object.pk %}" 
                                    class="text-decoration-none">
                                     <i class="fas fa-ticket-alt me-1"></i>
-                                    شكوى {{ notification.complaint.complaint_number }}
+                                    شكوى {{ notification.content_object.complaint_number }}
                                 </a>
                                 {% endif %}
                             </div>

@@ -109,7 +109,11 @@ def order_list(request):
             Q(customer__name__icontains=search_query) |
             Q(customer__phone__icontains=search_query) |
             Q(contract_number__icontains=search_query) |
+            Q(contract_number_2__icontains=search_query) |
+            Q(contract_number_3__icontains=search_query) |
             Q(invoice_number__icontains=search_query) |
+            Q(invoice_number_2__icontains=search_query) |
+            Q(invoice_number_3__icontains=search_query) |
             Q(salesperson__name__icontains=search_query) |
             Q(branch__name__icontains=search_query) |
             Q(notes__icontains=search_query) |
