@@ -716,11 +716,13 @@
                         window.customerOrders = data.orders;
                         
                         data.orders.forEach(function(order) {
-                            // حفظ هوية الطلب في المجموعة المتاحة
-                            window.availableOrderIds.add(order.id.toString());
+                            // تحويل معرف الطلب إلى رقم صحيح وحفظه
+                            const orderId = parseInt(order.id, 10);
+                            window.availableOrderIds.add(orderId);
+                            console.log('تمت إضافة معرف الطلب:', orderId, 'من النوع', typeof orderId);
                             
                             // تحضير نص الطلب مع معلومات إضافية
-                            let orderText = `${order.order_number} - ${order.created_at}`;
+                            let orderText = `${order.order_number || order.id} - ${order.created_at}`;
                             if (order.total_amount > 0) {
                                 orderText += ` (${order.total_amount} ج.م)`;
                             }
@@ -731,8 +733,11 @@
                                 orderText += ` - المنشئ: ${order.created_by}`;
                             }
                             
-                            const option = `<option value="${order.id}" 
-                                data-order-number="${order.order_number || ''}"
+                            // نستخدم معرف الطلب (id) كقيمة رقمية دائماً
+                            const orderValue = parseInt(order.id, 10);
+                            const orderNumber = order.order_number || `طلب #${order.id}`;
+                            const option = `<option value="${orderValue}" 
+                                data-order-number="${orderNumber}"
                                 data-salesperson="${order.salesperson || ''}"
                                 data-created-by="${order.created_by || ''}"
                                 data-status="${order.status || ''}"
@@ -878,6 +883,25 @@
             console.log('بدء التحقق من صحة النموذج...');
             
             const form = $(this);
+            const relatedOrderField = $('#id_related_order');
+            const customerId = $('#id_customer').val();
+            
+            // Reset any previous validation states
+            relatedOrderField.removeClass('is-invalid');
+            $('.related-order-error').remove();
+            
+            // Only validate related_order if a customer is selected
+            if (customerId) {
+                const selectedOrderId = relatedOrderField.val();
+                
+                // If an order is selected but not in the available orders, show error
+                if (selectedOrderId && !window.availableOrderIds.has(selectedOrderId)) {
+                    console.error('الطلب المحدد غير صالح للعميل الحالي');
+                    relatedOrderField.addClass('is-invalid');
+                    relatedOrderField.after('<div class="invalid-feedback related-order-error">الطلب المحدد غير صالح للعميل الحالي</div>');
+                    return false;
+                }
+            }
             const formData = new FormData(form[0]);
             const submitBtn = $(document.activeElement);
             const originalText = submitBtn.html();
@@ -895,12 +919,17 @@
             }
             
             // التحقق من الطلب المرتبط إذا تم اختياره وإزالته إذا كان هناك مشكلة
-            const relatedOrder = formData.get('related_order');
+            let relatedOrder = formData.get('related_order');
             if (relatedOrder && relatedOrder !== '') {
-                console.log('تم اختيار طلب مرتبط:', relatedOrder);
+                console.log('تم اختيار طلب مرتبط (قبل التحويل):', relatedOrder, typeof relatedOrder);
                 
-                // نحاول التحقق من صحة الطلب المرتبط
-                if (!window.availableOrderIds || !window.availableOrderIds.has(relatedOrder)) {
+                // تحويل معرف الطلب إلى رقم صحيح
+                relatedOrder = parseInt(relatedOrder, 10);
+                formData.set('related_order', relatedOrder);
+                console.log('تم تحويل معرف الطلب إلى رقم:', relatedOrder, typeof relatedOrder);
+                
+                // التحقق من صحة الطلب المرتبط
+                if (!window.availableOrderIds || !window.availableOrderIds.has(relatedOrder.toString())) {
                     console.warn('الطلب المحدد قد لا يكون صالحاً:', relatedOrder);
                     console.warn('الطلبات المتاحة:', window.availableOrderIds ? Array.from(window.availableOrderIds) : 'غير محدد');
                     
@@ -915,6 +944,9 @@
                 } else {
                     console.log('الطلب المرتبط صالح:', relatedOrder);
                     $('#id_related_order').removeClass('is-invalid').addClass('is-valid');
+                    
+                    // تحديث قيمة الطلب في النموذج بالرقم المحول
+                    formData.set('related_order', relatedOrder);
                 }
             }
             

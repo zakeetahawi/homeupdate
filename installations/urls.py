@@ -34,6 +34,7 @@ urlpatterns = [
     # URLs الموجودة مسبقاً
     path('installation/<int:installation_id>/schedule/', views.schedule_installation, name='schedule_installation'),
     path('quick-schedule/<int:order_id>/', views.quick_schedule_installation, name='quick_schedule_installation'),
+    path('check-debt/<int:order_id>/', views.check_debt_before_schedule, name='check_debt_before_schedule'),
     path('installation/<int:installation_id>/schedule-from-needs/', views.schedule_from_needs_scheduling, name='schedule_from_needs_scheduling'),
     path('installation/<int:installation_id>/', views.installation_detail, name='installation_detail'),
     path('daily-schedule/', views.daily_schedule, name='daily_schedule'),
@@ -46,6 +47,13 @@ urlpatterns = [
     path('add-team/', views.add_team, name='add_team'),
     path('add-technician/', views.add_technician, name='add_technician'),
     path('add-driver/', views.add_driver, name='add_driver'),
+    path('team/<int:team_id>/', views.team_detail, name='team_detail'),
+    path('team/<int:team_id>/edit/', views.edit_team, name='edit_team'),
+    path('team/<int:team_id>/delete/', views.delete_team, name='delete_team'),
+    path('technician/<int:technician_id>/edit/', views.edit_technician, name='edit_technician'),
+    path('technician/<int:technician_id>/delete/', views.delete_technician, name='delete_technician'),
+    path('driver/<int:driver_id>/edit/', views.edit_driver, name='edit_driver'),
+    path('driver/<int:driver_id>/delete/', views.delete_driver, name='delete_driver'),
     path('archive-list/', views.archive_list, name='archive_list'),
     path('installation/<int:installation_id>/update-status/', views.update_status, name='update_status'),
     path('installation/<int:installation_id>/add-payment/', views.add_payment, name='add_payment'),
@@ -72,4 +80,7 @@ urlpatterns = [
     path('installation/<int:installation_id>/scheduling-details/', views.view_scheduling_details, name='view_scheduling_details'),
     path('installation/<int:installation_id>/edit-scheduling-settings/', views.edit_scheduling_settings, name='edit_scheduling_settings'),
     path('installation/<int:installation_id>/update-date-from-scheduled/', views.update_installation_date_from_scheduled, name='update_installation_date_from_scheduled'),
+    
+    # جدول المديونية
+    path('debt-orders/', views.debt_orders_list, name='debt_orders_list'),
 ]

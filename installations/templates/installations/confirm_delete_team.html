@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}حذف الفريق - {{ team.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- عنوان الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-trash text-danger"></i>
+            حذف الفريق
+        </h1>
+        <a href="{% url 'installations:team_management' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-right"></i> العودة لإدارة الفرق
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        تأكيد الحذف
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>تحذير:</strong> هذا الإجراء لا يمكن التراجع عنه!
+                    </div>
+                    
+                    <p class="mb-3">هل أنت متأكد من حذف الفريق التالي؟</p>
+                    
+                    <div class="card border-left-danger">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ team.name }}</h6>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    الحالة: 
+                                    {% if team.is_active %}
+                                        <span class="badge badge-success">نشط</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">غير نشط</span>
+                                    {% endif %}
+                                </small>
+                            </p>
+                            
+                            {% if team.technicians.exists %}
+                            <div class="mt-2">
+                                <small class="text-muted">الفنيين المرتبطين:</small>
+                                <ul class="list-unstyled">
+                                    {% for technician in team.technicians.all %}
+                                    <li><small>• {{ technician.name }}</small></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                            
+                            {% if team.driver %}
+                            <div class="mt-2">
+                                <small class="text-muted">السائق: {{ team.driver.name }}</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 d-flex justify-content-between">
+                        <a href="{% url 'installations:team_management' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                        
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> تأكيد الحذف
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

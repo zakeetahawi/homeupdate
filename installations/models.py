@@ -51,9 +51,17 @@ class CustomerDebt(models.Model):
 
 class Technician(models.Model):
     """نموذج الفنيين"""
+    DEPARTMENT_CHOICES = [
+        ('installation', _('التركيبات')),
+        ('inspection', _('المعاينات')),
+        ('maintenance', _('الصيانة')),
+        ('general', _('عام')),
+    ]
+    
     name = models.CharField(_('اسم الفني'), max_length=100)
     phone = models.CharField(_('رقم الهاتف'), max_length=20)
     specialization = models.CharField(_('التخصص'), max_length=100, blank=True)
+    department = models.CharField(_('القسم'), max_length=20, choices=DEPARTMENT_CHOICES, default='general')
     is_active = models.BooleanField(_('نشط'), default=True)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
@@ -64,7 +72,7 @@ class Technician(models.Model):
         ordering = ['name']
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.get_department_display()})"
 
 
 class Driver(models.Model):

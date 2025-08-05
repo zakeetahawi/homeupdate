@@ -20,7 +20,7 @@ from .models import (
     ModificationErrorAnalysis, ModificationErrorType
 )
 from .forms import (
-    InstallationScheduleForm, InstallationTeamForm, TechnicianForm, DriverForm,
+    InstallationScheduleForm, InstallationTeamForm, TechnicianForm, TechnicianEditForm, DriverForm,
     ModificationRequestForm, ModificationImageForm, ManufacturingOrderForm,
     ModificationReportForm, ReceiptMemoForm, InstallationPaymentForm,
     InstallationStatusForm, ModificationErrorAnalysisForm, InstallationFilterForm,
@@ -42,172 +42,127 @@ def currency_format(amount):
 
 @login_required
 def dashboard(request):
-    """لوحة تحكم التركيبات"""
-    # إحصائيات عامة - إجمالي طلبات التركيب في النظام
-    from django.db.models import Q
-    # البحث الصحيح في JSON field للعثور على طلبات التركيب
+    """لوحة تحكم التركيبات - محسّنة للأداء"""
+    from django.db.models import Q, Count
+    from manufacturing.models import ManufacturingOrder
+    
+    # استخدام select_related و prefetch_related لتحسين الأداء
+    
+    # 1. إحصائيات عامة - إجمالي طلبات التركيب في النظام
     total_installation_orders = Order.objects.filter(
         selected_types__icontains='installation'
     ).count()
 
-    # إحصائيات التركيبات المجدولة
-    completed_installations = InstallationSchedule.objects.filter(status='completed').count()
-    in_installation_installations = InstallationSchedule.objects.filter(status='in_installation').count()
-    scheduled_installations = InstallationSchedule.objects.filter(status='scheduled').count()
-    pending_installations = InstallationSchedule.objects.filter(status='pending').count()
-    in_progress_installations = InstallationSchedule.objects.filter(status='in_progress').count()
+    # 2. إحصائيات التركيبات المجدولة - استعلام واحد فقط
+    installation_stats = InstallationSchedule.objects.aggregate(
+        completed=Count('id', filter=Q(status='completed')),
+        in_installation=Count('id', filter=Q(status='in_installation')),
+        scheduled=Count('id', filter=Q(status='scheduled')),
+        pending=Count('id', filter=Q(status='pending')),
+        in_progress=Count('id', filter=Q(status='in_progress')),
+        modification_required=Count('id', filter=Q(status='modification_required')),
+    )
 
-    # إحصائيات التعديلات
-    total_modifications = ModificationRequest.objects.count()
-    pending_modifications = ModificationRequest.objects.filter(installation__status='modification_required').count()
-    in_progress_modifications = ModificationRequest.objects.filter(installation__status='modification_in_progress').count()
-    completed_modifications = ModificationRequest.objects.filter(installation__status='modification_completed').count()
-
-    # الطلبات الجاهزة للتركيب (مكتملة في التصنيع) - فقط طلبات التركيب
-    # إصلاح: عدم حساب أوامر التصنيع مرتان
-    orders_ready_for_installation = Order.objects.filter(
-        selected_types__icontains='installation',
-        order_status__in=['ready_install', 'completed'],
-        installationschedule__isnull=True
-    ).count()
-
-    # أوامر التصنيع الجاهزة للتركيب من قسم manufacturing (فقط طلبات التركيب)
-    from manufacturing.models import ManufacturingOrder
-    # البحث عن أوامر التصنيع الجاهزة للتركيب بناءً على الطلب الأصلي
-    manufacturing_orders_ready = ManufacturingOrder.objects.filter(
-        status__in=['ready_install', 'delivered'],  # إضافة حالة "تم التسليم"
-        order__selected_types__icontains='installation',
-        order__installationschedule__isnull=True  # التأكد من عدم وجود جدولة تركيب
-    ).count()
-
-    # إجمالي الطلبات الجاهزة للتركيب (بدون تكرار)
-    # تحسين: حساب دقيق بدون تكرار
-    # جلب جميع الطلبات الجاهزة للتركيب
-    ready_orders = Order.objects.filter(
+    # 3. الطلبات الجاهزة للتركيب - استعلام محسّن
+    ready_orders_query = Order.objects.filter(
         selected_types__icontains='installation',
         order_status__in=['ready_install', 'completed'],
         installationschedule__isnull=True
     )
     
-    # جلب أوامر التصنيع الجاهزة للتركيب
-    ready_manufacturing_orders = ManufacturingOrder.objects.filter(
-        status__in=['ready_install', 'delivered'],  # إضافة حالة "تم التسليم"
+    ready_manufacturing_query = ManufacturingOrder.objects.filter(
+        status__in=['ready_install', 'delivered'],
         order__selected_types__icontains='installation',
         order__installationschedule__isnull=True
     )
     
-    # حساب العدد الإجمالي بدون تكرار
-    ready_order_ids = set(ready_orders.values_list('id', flat=True))
-    ready_mfg_order_ids = set(ready_manufacturing_orders.values_list('order__id', flat=True))
-    
-    # إضافة أوامر التصنيع التي لا توجد في الطلبات العادية
-    unique_mfg_orders = ready_mfg_order_ids - ready_order_ids
-    
-    total_orders_ready_for_installation = len(ready_order_ids) + len(unique_mfg_orders)
-    
+    # حساب العدد بطريقة محسّنة
+    ready_order_ids = set(ready_orders_query.values_list('id', flat=True))
+    ready_mfg_order_ids = set(ready_manufacturing_query.values_list('order_id', flat=True))
+    total_orders_ready_for_installation = len(ready_order_ids | ready_mfg_order_ids)
 
-
-    # الطلبات الجاهزة للتركيب مع مديونية - فقط طلبات التركيب
+    # 4. إحصائيات أخرى محسّنة
     orders_with_debt = Order.objects.filter(
         selected_types__icontains='installation',
-        order_status__in=['ready_install', 'completed'],
-        installationschedule__isnull=True
-    ).filter(
         total_amount__gt=F('paid_amount')
     ).count()
 
-    # الطلبات تحت التصنيع - فقط طلبات التركيب
     orders_in_manufacturing = ManufacturingOrder.objects.filter(
         status__in=['pending', 'in_progress'],
         order__selected_types__icontains='installation'
     ).count()
 
-    # الطلبات المكتملة في المصنع - فقط طلبات التركيب
-    orders_completed_in_factory = Order.objects.filter(
-        selected_types__icontains='installation',
-        order_status__in=['ready_install', 'completed', 'delivered']
-    ).count()
-
-    # التركيبات المجدولة اليوم
-    today = timezone.now().date()
-    today_installations = InstallationSchedule.objects.filter(
-        scheduled_date=today
-    ).select_related('order', 'order__customer', 'team')
-
-    # التركيبات القادمة
-    upcoming_installations = InstallationSchedule.objects.filter(
-        scheduled_date__gt=today
-    ).select_related('order', 'order__customer', 'team')[:5]
-
-    # الطلبات الجديدة (آخر 7 أيام) - فقط طلبات التركيب
-    # الطلبات الجديدة (آخر 7 أيام) - فقط طلبات التركيب مع الحالة الحقيقية
-    recent_orders = Order.objects.filter(
-        selected_types__icontains='installation',
-        created_at__gte=timezone.now() - timezone.timedelta(days=7)
-    ).select_related('customer', 'manufacturing_order').order_by('-created_at')[:10]
-
-    # الطلبات التي تحتاج جدولة - إصلاح: عدم تكرار أوامر التصنيع
-    orders_needing_scheduling = Order.objects.filter(
-        selected_types__icontains='installation',
-        order_status__in=['ready_install', 'completed'],
-        installationschedule__isnull=True
-    ).select_related('customer', 'manufacturing_order')[:10]
-    
-    # إضافة أوامر التصنيع الجاهزة للتركيب (بدون تكرار)
-    from manufacturing.models import ManufacturingOrder as MfgOrder
-    manufacturing_orders_ready = MfgOrder.objects.filter(
-        status__in=['ready_install', 'delivered'],  # إضافة حالة "تم التسليم"
-        order__selected_types__icontains='installation',
-        order__installationschedule__isnull=True
-    ).select_related('order', 'order__customer')[:10]
-    
-    # دمج الطلبات مع أوامر التصنيع (بدون تكرار)
-    additional_orders = [mfg.order for mfg in manufacturing_orders_ready]
-    # إزالة التكرار من القائمة
-    existing_order_ids = set(orders_needing_scheduling.values_list('id', flat=True))
-    unique_additional_orders = [order for order in additional_orders if order.id not in existing_order_ids]
-    orders_needing_scheduling = list(orders_needing_scheduling) + unique_additional_orders
-
-    # إحصائيات أوامر التصنيع التي تم تسليمها
     delivered_manufacturing_orders = ManufacturingOrder.objects.filter(
         status='delivered',
         order__selected_types__icontains='installation'
     ).count()
 
-    # إحصائيات الفرق
-    teams_stats = InstallationTeam.objects.annotate(
+    # 5. التركيبات المجدولة اليوم - مع select_related (استبعاد المكتملة)
+    today = timezone.now().date()
+    today_installations = InstallationSchedule.objects.filter(
+        scheduled_date=today,
+        status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
+    ).exclude(status='completed').select_related('order__customer', 'team')[:10]
+
+    # 6. التركيبات القادمة - محدودة (استبعاد المكتملة)
+    upcoming_installations = InstallationSchedule.objects.filter(
+        scheduled_date__gt=today,
+        status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
+    ).exclude(status='completed').select_related('order__customer', 'team')[:5]
+
+    # 7. الطلبات الجديدة - محسّنة
+    recent_orders = Order.objects.filter(
+        selected_types__icontains='installation',
+        created_at__gte=timezone.now() - timezone.timedelta(days=7)
+    ).select_related('customer', 'manufacturing_order')[:10]
+
+    # 8. الطلبات التي تحتاج جدولة - محسّنة ومحدودة
+    orders_needing_scheduling = list(
+        Order.objects.filter(
+            selected_types__icontains='installation',
+            order_status__in=['ready_install', 'completed'],
+            installationschedule__isnull=True
+        ).select_related('customer', 'manufacturing_order')[:10]
+    )
+    
+    # إضافة أوامر التصنيع الجاهزة (بدون تكرار)
+    existing_order_ids = {order.id for order in orders_needing_scheduling}
+    additional_mfg_orders = ManufacturingOrder.objects.filter(
+        status__in=['ready_install', 'delivered'],
+        order__selected_types__icontains='installation',
+        order__installationschedule__isnull=True
+    ).exclude(order_id__in=existing_order_ids).select_related('order__customer')[:5]
+    
+    additional_orders = [mfg.order for mfg in additional_mfg_orders]
+    orders_needing_scheduling.extend(additional_orders)
+
+    # 9. إحصائيات الفرق - محسّنة
+    teams_stats = InstallationTeam.objects.filter(
+        is_active=True
+    ).annotate(
         installations_count=Count('installationschedule')
-    ).filter(is_active=True)
+    )
 
     context = {
         'total_installations': total_installation_orders,
-        'completed_installations': completed_installations,
-        'pending_installations': pending_installations,
-        'in_progress_installations': in_progress_installations,
-        'in_installation_installations': in_installation_installations,
-        'needs_scheduling_installations': total_orders_ready_for_installation,  # إصلاح: استخدام العدد الصحيح
-        'scheduled_installations': scheduled_installations,
+        'completed_installations': installation_stats['completed'],
+        'pending_installations': installation_stats['pending'],
+        'in_progress_installations': installation_stats['in_progress'],
+        'in_installation_installations': installation_stats['in_installation'],
+        'scheduled_installations': installation_stats['scheduled'],
         'orders_ready_for_installation': total_orders_ready_for_installation,
-        'ready_for_installation_orders': total_orders_ready_for_installation,
+        'total_modifications': installation_stats['modification_required'],
         'orders_with_debt': orders_with_debt,
-        'ready_with_debt': orders_with_debt,
         'orders_in_manufacturing': orders_in_manufacturing,
-        'orders_completed_in_factory': orders_completed_in_factory,
-        'scheduled_orders': scheduled_installations,
+        'delivered_manufacturing_orders': delivered_manufacturing_orders,
         'today_installations': today_installations,
         'upcoming_installations': upcoming_installations,
         'recent_orders': recent_orders,
         'orders_needing_scheduling': orders_needing_scheduling,
         'teams_stats': teams_stats,
-        # إحصائيات التعديلات
-        'total_modifications': total_modifications,
-        'pending_modifications': pending_modifications,
-        'in_progress_modifications': in_progress_modifications,
-        'completed_modifications': completed_modifications,
-        # إحصائيات أوامر التصنيع التي تم تسليمها
-        'delivered_manufacturing_orders': delivered_manufacturing_orders,
-        'currency_format': currency_format,  # إضافة دالة تنسيق العملة للقوالب
     }
+
+    return render(request, 'installations/dashboard.html', context)
 
     return render(request, 'installations/dashboard.html', context)
 
@@ -320,52 +275,207 @@ def change_installation_status(request, installation_id):
 
 @login_required
 def installation_list(request):
-    """قائمة التركيبات - تعرض جميع التركيبات بما في ذلك غير المجدولة"""
-    # جلب جميع التركيبات بدون فلترة مسبقة
-    installations = InstallationSchedule.objects.select_related(
-        'order', 'order__customer', 'team'
-    ).order_by('-created_at')
+    """قائمة التركيبات - محسّنة مع فلاتر ذكية"""
+    from django.db.models import Q
+    from manufacturing.models import ManufacturingOrder
     
-    # إضافة معلومات أوامر التصنيع للطلبات
-    for installation in installations:
-        if hasattr(installation.order, 'manufacturing_order'):
-            # لا نحتاج لتعيين الخصائص لأنها محسوبة تلقائياً
-            # فقط نتأكد من وجود أمر التصنيع
-            pass
-
-    # تطبيق الفلاتر (اختيارية)
+    # معالجة الفلاتر
     filter_form = InstallationFilterForm(request.GET)
-    if filter_form.is_valid():
-        status = filter_form.cleaned_data.get('status')
-        team = filter_form.cleaned_data.get('team')
-        date_from = filter_form.cleaned_data.get('date_from')
-        date_to = filter_form.cleaned_data.get('date_to')
-        search = filter_form.cleaned_data.get('search')
-
-        # تطبيق الفلاتر فقط إذا تم تحديدها
-        if status and status != '':
-            installations = installations.filter(status=status)
-        if team and team != '':
-            installations = installations.filter(team=team)
+    
+    # استخراج قيم الفلاتر
+    status_filter = request.GET.get('status', '')
+    team_filter = request.GET.get('team', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    search = request.GET.get('search', '').strip()
+    location_type_filter = request.GET.get('location_type', '')
+    order_status_filter = request.GET.get('order_status', '')
+    
+    # بناء الاستعلامات بطريقة محسّنة
+    installation_items = []
+    
+    # 1. جلب التركيبات المجدولة
+    if not status_filter or status_filter in ['scheduled', 'in_installation', 'completed', 'cancelled', 'modification_required', 'modification_in_progress', 'modification_completed']:
+        scheduled_query = InstallationSchedule.objects.select_related(
+            'order__customer', 'team'
+        )
+        
+        # تطبيق فلاتر التركيبات المجدولة
+        if status_filter and status_filter != 'needs_scheduling':
+            scheduled_query = scheduled_query.filter(status=status_filter)
+        if team_filter:
+            scheduled_query = scheduled_query.filter(team_id=team_filter)
+        if location_type_filter:
+            scheduled_query = scheduled_query.filter(location_type=location_type_filter)
         if date_from:
-            installations = installations.filter(scheduled_date__gte=date_from)
+            try:
+                date_from_obj = timezone.datetime.strptime(date_from, '%Y-%m-%d').date()
+                scheduled_query = scheduled_query.filter(scheduled_date__gte=date_from_obj)
+            except ValueError:
+                pass
         if date_to:
-            installations = installations.filter(scheduled_date__lte=date_to)
-        if search and search.strip() != '':
-            installations = installations.filter(
-                Q(order__order_number__icontains=search) |
-                Q(order__customer__name__icontains=search)
-            )
-
+            try:
+                date_to_obj = timezone.datetime.strptime(date_to, '%Y-%m-%d').date()
+                scheduled_query = scheduled_query.filter(scheduled_date__lte=date_to_obj)
+            except ValueError:
+                pass
+        if search:
+            search_q = Q(order__order_number__icontains=search) | \
+                      Q(order__customer__name__icontains=search) | \
+                      Q(order__customer__phone__icontains=search)
+            scheduled_query = scheduled_query.filter(search_q)
+        
+        # إضافة التركيبات المجدولة للقائمة
+        for installation in scheduled_query:
+            installation_items.append({
+                'type': 'scheduled',
+                'installation': installation,
+                'order': installation.order,
+                'customer': installation.order.customer,
+                'team': installation.team,
+                'status': installation.status,
+                'scheduled_date': installation.scheduled_date,
+                'created_at': installation.created_at,
+                'location_type': getattr(installation, 'location_type', None),
+            })
+    
+    # 2. جلب الطلبات الجاهزة للتركيب (غير المجدولة)
+    if not status_filter or status_filter == 'needs_scheduling':
+        # الطلبات العادية الجاهزة
+        ready_orders_query = Order.objects.filter(
+            selected_types__icontains='installation',
+            order_status__in=['ready_install', 'completed'],
+            installationschedule__isnull=True
+        ).select_related('customer')
+        
+        # تطبيق فلاتر الطلبات الجاهزة
+        if order_status_filter:
+            ready_orders_query = ready_orders_query.filter(order_status=order_status_filter)
+        if search:
+            search_q = Q(order_number__icontains=search) | \
+                      Q(customer__name__icontains=search) | \
+                      Q(customer__phone__icontains=search)
+            ready_orders_query = ready_orders_query.filter(search_q)
+        
+        # إضافة الطلبات العادية
+        for order in ready_orders_query:
+            installation_items.append({
+                'type': 'needs_scheduling',
+                'installation': None,
+                'order': order,
+                'customer': order.customer,
+                'team': None,
+                'status': 'needs_scheduling',
+                'scheduled_date': None,
+                'created_at': order.created_at,
+                'location_type': getattr(order, 'location_type', None),
+            })
+        
+        # أوامر التصنيع الجاهزة
+        ready_manufacturing_query = ManufacturingOrder.objects.filter(
+            status__in=['ready_install', 'delivered'],
+            order__selected_types__icontains='installation',
+            order__installationschedule__isnull=True
+        ).select_related('order__customer')
+        
+        # تطبيق نفس فلاتر البحث
+        if search:
+            search_q = Q(order__order_number__icontains=search) | \
+                      Q(order__customer__name__icontains=search) | \
+                      Q(order__customer__phone__icontains=search)
+            ready_manufacturing_query = ready_manufacturing_query.filter(search_q)
+        
+        # تجنب التكرار
+        existing_order_ids = {item['order'].id for item in installation_items if item['type'] == 'needs_scheduling'}
+        
+        for mfg_order in ready_manufacturing_query:
+            if mfg_order.order_id not in existing_order_ids:
+                installation_items.append({
+                    'type': 'needs_scheduling',
+                    'installation': None,
+                    'order': mfg_order.order,
+                    'customer': mfg_order.order.customer,
+                    'team': None,
+                    'status': 'needs_scheduling',
+                    'scheduled_date': None,
+                    'created_at': mfg_order.created_at,
+                    'location_type': getattr(mfg_order.order, 'location_type', None),
+                })
+    
+    # 3. جلب الطلبات تحت التصنيع (للعرض فقط)
+    if not status_filter or status_filter == 'under_manufacturing':
+        under_manufacturing_query = ManufacturingOrder.objects.filter(
+            status__in=['pending_approval', 'approved', 'in_cutting', 'cutting_completed', 'in_manufacturing', 'quality_check'],
+            order__selected_types__icontains='installation'
+        ).select_related('order__customer')
+        
+        # تطبيق فلاتر البحث
+        if search:
+            search_q = Q(order__order_number__icontains=search) | \
+                      Q(order__customer__name__icontains=search) | \
+                      Q(order__customer__phone__icontains=search)
+            under_manufacturing_query = under_manufacturing_query.filter(search_q)
+        
+        for mfg_order in under_manufacturing_query:
+            installation_items.append({
+                'type': 'under_manufacturing',
+                'installation': None,
+                'order': mfg_order.order,
+                'customer': mfg_order.order.customer,
+                'team': None,
+                'status': 'under_manufacturing',
+                'manufacturing_status': mfg_order.status,
+                'scheduled_date': None,
+                'created_at': mfg_order.created_at,
+                'location_type': None,
+            })
+    
+    # ترتيب النتائج حسب الأولوية والتاريخ
+    def sort_key(item):
+        # أولوية للطلبات التي تحتاج جدولة
+        if item['status'] == 'needs_scheduling':
+            return (0, item['created_at'])
+        elif item['status'] == 'scheduled':
+            return (1, item['scheduled_date'] or item['created_at'])
+        else:
+            return (2, item['created_at'])
+    
+    installation_items.sort(key=sort_key, reverse=True)
+    
     # ترقيم الصفحات
-    paginator = Paginator(installations, 20)
+    from django.core.paginator import Paginator
+    page_size = int(request.GET.get('page_size', 25))
+    paginator = Paginator(installation_items, page_size)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+
+    # إحصائيات سريعة
+    total_count = len(installation_items)
+    needs_scheduling_count = sum(1 for item in installation_items if item['status'] == 'needs_scheduling')
+    scheduled_count = sum(1 for item in installation_items if item['status'] in ['scheduled', 'in_installation'])
+    completed_count = sum(1 for item in installation_items if item['status'] == 'completed')
 
     context = {
         'page_obj': page_obj,
         'filter_form': filter_form,
         'installations': page_obj,
+        'has_filters': bool(status_filter or team_filter or date_from or date_to or search or location_type_filter or order_status_filter),
+        # إحصائيات
+        'total_count': total_count,
+        'needs_scheduling_count': needs_scheduling_count,
+        'scheduled_count': scheduled_count,
+        'completed_count': completed_count,
+        # قيم الفلاتر الحالية للـ URL parameters
+        'current_filters': {
+            'status': status_filter,
+            'team': team_filter,
+            'date_from': date_from,
+            'date_to': date_to,
+            'search': search,
+            'location_type': location_type_filter,
+            'order_status': order_status_filter,
+            'page_size': page_size,
+        }
     }
 
     return render(request, 'installations/installation_list.html', context)
@@ -950,6 +1060,32 @@ def manufacturing_orders_list(request):
 
 @login_required
 @login_required
+def check_debt_before_schedule(request, order_id):
+    """التحقق من المديونية قبل الجدولة"""
+    order = get_object_or_404(Order, id=order_id)
+    
+    # الحصول على رمز العملة من إعدادات النظام
+    from accounts.models import SystemSettings
+    system_settings = SystemSettings.objects.first()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+    
+    # حساب المديونية
+    debt_amount = order.total_amount - order.paid_amount
+    
+    response_data = {
+        'has_debt': debt_amount > 0,
+        'debt_amount': float(debt_amount) if debt_amount > 0 else 0,
+        'customer_name': order.customer.name,
+        'order_number': order.order_number,
+        'total_amount': float(order.total_amount),
+        'paid_amount': float(order.paid_amount),
+        'currency_symbol': currency_symbol,
+    }
+    
+    return JsonResponse(response_data)
+
+
+@login_required
 def quick_schedule_installation(request, order_id):
     """جدولة سريعة للتركيب من الطلب"""
 
@@ -1275,11 +1411,17 @@ def add_receipt_memo(request, installation_id):
 
 @login_required
 def complete_installation(request, installation_id):
-    """إكمال التركيب"""
+    """إكمال التركيب مع تحديث التاريخ الفعلي"""
     installation = get_object_or_404(InstallationSchedule, id=installation_id)
 
     if request.method == 'POST':
+        # تحديث الحالة والتاريخ الفعلي للإكمال
         installation.status = 'completed'
+        installation.completion_date = timezone.now()
+        
+        # تحديث تاريخ التركيب الفعلي إلى تاريخ اليوم
+        installation.installation_date = timezone.now().date()
+        
         installation.save()
 
         # إنشاء أرشيف
@@ -1288,7 +1430,21 @@ def complete_installation(request, installation_id):
             archived_by=request.user
         )
 
-        messages.success(request, _('تم إكمال التركيب بنجاح'))
+        # إنشاء سجل حدث
+        from .models import InstallationEventLog
+        InstallationEventLog.objects.create(
+            installation=installation,
+            event_type='completion',
+            description=f'تم إكمال التركيب في {installation.installation_date}',
+            user=request.user,
+            metadata={
+                'scheduled_date': str(installation.scheduled_date),
+                'actual_completion_date': str(installation.installation_date),
+                'completion_time': str(installation.completion_date)
+            }
+        )
+
+        messages.success(request, _('تم إكمال التركيب بنجاح وتحديث التاريخ الفعلي'))
         return redirect('installations:installation_detail', installation_id=installation.id)
 
     context = {
@@ -1302,12 +1458,29 @@ def complete_installation(request, installation_id):
 def team_management(request):
     """إدارة الفرق"""
     teams = InstallationTeam.objects.all().prefetch_related('technicians', 'driver')
-    technicians = Technician.objects.filter(is_active=True)
+    
+    # جلب الفنيين المرتبطين بفرق التركيب فقط (من قسم التركيبات)
+    technicians_in_teams = []
+    for team in teams:
+        installation_technicians = team.technicians.filter(department='installation')
+        technicians_in_teams.extend(installation_technicians)
+    
+    # إزالة التكرار
+    technicians_in_teams = list(set(technicians_in_teams))
+    
+    # جلب فنيي التركيبات النشطين غير المرتبطين بأي فريق (متاحين للإضافة)
+    technicians_in_team_ids = [tech.id for tech in technicians_in_teams]
+    unassigned_technicians = Technician.objects.filter(
+        is_active=True,
+        department='installation'
+    ).exclude(id__in=technicians_in_team_ids)
+    
     drivers = Driver.objects.filter(is_active=True)
 
     context = {
         'teams': teams,
-        'technicians': technicians,
+        'technicians': technicians_in_teams,
+        'unassigned_technicians': unassigned_technicians,
         'drivers': drivers,
     }
 
@@ -1335,13 +1508,21 @@ def add_team(request):
 
 @login_required
 def add_technician(request):
-    """إضافة فني"""
+    """إضافة فني لقسم التركيبات"""
     if request.method == 'POST':
         form = TechnicianForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, _('تم إضافة الفني بنجاح'))
-            return redirect('installations:team_management')
+            try:
+                technician = form.save(commit=False)
+                # تعيين القسم للتركيبات افتراضياً
+                technician.department = 'installation'
+                technician.save()
+                messages.success(request, 'تم إضافة الفني لقسم التركيبات بنجاح')
+                return redirect('installations:team_management')
+            except Exception as e:
+                messages.error(request, f'حدث خطأ أثناء حفظ الفني: {str(e)}')
+        else:
+            messages.error(request, 'يرجى تصحيح الأخطاء في النموذج')
     else:
         form = TechnicianForm()
 
@@ -1358,9 +1539,14 @@ def add_driver(request):
     if request.method == 'POST':
         form = DriverForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, _('تم إضافة السائق بنجاح'))
-            return redirect('installations:team_management')
+            try:
+                form.save()
+                messages.success(request, 'تم إضافة السائق بنجاح')
+                return redirect('installations:team_management')
+            except Exception as e:
+                messages.error(request, f'حدث خطأ أثناء حفظ السائق: {str(e)}')
+        else:
+            messages.error(request, 'يرجى تصحيح الأخطاء في النموذج')
     else:
         form = DriverForm()
 
@@ -2078,3 +2264,230 @@ def delete_installation(request, installation_id):
     return render(request, 'installations/installation_confirm_delete.html', {
         'installation': installation
     })
+
+
+@login_required
+def debt_orders_list(request):
+    """قائمة الطلبات التي عليها مديونية"""
+    from django.db.models import Q, F
+    
+    # معالجة الفلاتر
+    order_status_filter = request.GET.get('order_status', '')
+    search = request.GET.get('search', '').strip()
+    page_size = int(request.GET.get('page_size', 25))
+    
+    # جلب الطلبات التي عليها مديونية (باستخدام F expressions لحساب المبلغ المتبقي)
+    debt_orders_query = Order.objects.filter(
+        total_amount__gt=F('paid_amount')
+    ).select_related('customer', 'salesperson', 'branch').annotate(
+        debt_amount=F('total_amount') - F('paid_amount')
+    )
+    
+    # تطبيق الفلاتر
+    if order_status_filter:
+        debt_orders_query = debt_orders_query.filter(order_status=order_status_filter)
+    
+    if search:
+        search_q = Q(order_number__icontains=search) | \
+                  Q(customer__name__icontains=search) | \
+                  Q(customer__phone__icontains=search)
+        debt_orders_query = debt_orders_query.filter(search_q)
+    
+    # ترتيب حسب المبلغ المتبقي (الأعلى أولاً)
+    debt_orders_query = debt_orders_query.order_by('-debt_amount', '-created_at')
+    
+    # ترقيم الصفحات
+    paginator = Paginator(debt_orders_query, page_size)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # حساب الإجماليات
+    total_debt = debt_orders_query.aggregate(
+        total=models.Sum('debt_amount')
+    )['total'] or 0
+    
+    # إحصائيات حسب الحالة
+    status_stats = debt_orders_query.values('order_status').annotate(
+        count=Count('id'),
+        debt_sum=models.Sum('debt_amount')
+    ).order_by('-debt_sum')
+    
+    context = {
+        'page_obj': page_obj,
+        'debt_orders': page_obj,
+        'total_debt': total_debt,
+        'total_count': debt_orders_query.count(),
+        'status_stats': status_stats,
+        'current_filters': {
+            'order_status': order_status_filter,
+            'search': search,
+            'page_size': page_size,
+        },
+        'has_filters': bool(order_status_filter or search),
+        'order_status_choices': [
+            ('', 'جميع الحالات'),
+            ('pending_approval', 'قيد الموافقة'),
+            ('approved', 'تمت الموافقة'),
+            ('ready_install', 'جاهز للتركيب'),
+            ('completed', 'مكتمل'),
+            ('delivered', 'تم التسليم'),
+        ]
+    }
+    
+    return render(request, 'installations/debt_orders_list.html', context)
+
+
+@login_required
+def team_detail(request, team_id):
+    """تفاصيل الفريق"""
+    team = get_object_or_404(InstallationTeam, id=team_id)
+    
+    # إحصائيات الفريق
+    team_installations = InstallationSchedule.objects.filter(team=team)
+    completed_count = team_installations.filter(status='completed').count()
+    in_progress_count = team_installations.filter(status='in_installation').count()
+    scheduled_count = team_installations.filter(status='scheduled').count()
+    
+    context = {
+        'team': team,
+        'team_installations': team_installations.order_by('-created_at')[:10],
+        'stats': {
+            'total': team_installations.count(),
+            'completed': completed_count,
+            'in_progress': in_progress_count,
+            'scheduled': scheduled_count,
+        }
+    }
+    
+    return render(request, 'installations/team_detail.html', context)
+
+
+@login_required
+def edit_team(request, team_id):
+    """تعديل الفريق"""
+    team = get_object_or_404(InstallationTeam, id=team_id)
+    
+    if request.method == 'POST':
+        form = InstallationTeamForm(request.POST, instance=team)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _('تم تحديث بيانات الفريق بنجاح'))
+            return redirect('installations:team_management')
+    else:
+        form = InstallationTeamForm(instance=team)
+    
+    context = {
+        'form': form,
+        'team': team,
+    }
+    
+    return render(request, 'installations/edit_team.html', context)
+
+
+@login_required
+def delete_team(request, team_id):
+    """حذف الفريق"""
+    team = get_object_or_404(InstallationTeam, id=team_id)
+    
+    if request.method == 'POST':
+        team_name = team.name
+        team.delete()
+        messages.success(request, f'تم حذف الفريق "{team_name}" بنجاح')
+        return redirect('installations:team_management')
+    
+    context = {
+        'team': team,
+    }
+    
+    return render(request, 'installations/confirm_delete_team.html', context)
+
+
+@login_required
+def edit_technician(request, technician_id):
+    """تعديل الفني"""
+    technician = get_object_or_404(Technician, id=technician_id)
+    
+    if request.method == 'POST':
+        form = TechnicianEditForm(request.POST, instance=technician)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'تم تحديث بيانات الفني بنجاح')
+            return redirect('installations:team_management')
+    else:
+        form = TechnicianEditForm(instance=technician)
+    
+    context = {
+        'form': form,
+        'technician': technician,
+    }
+    
+    return render(request, 'installations/edit_technician.html', context)
+
+
+@login_required
+def delete_technician(request, technician_id):
+    """حذف الفني - مع التحقق من عدم استخدامه في أقسام أخرى"""
+    technician = get_object_or_404(Technician, id=technician_id)
+    
+    # التحقق من أن الفني غير مرتبط بأي فريق تركيب
+    installation_teams = InstallationTeam.objects.filter(technicians=technician)
+    
+    if request.method == 'POST':
+        # إذا كان الفني مرتبط بفرق تركيب، لا يمكن حذفه
+        if installation_teams.exists():
+            teams_names = ', '.join([team.name for team in installation_teams])
+            messages.error(request, f'لا يمكن حذف الفني "{technician.name}" لأنه مرتبط بالفرق التالية: {teams_names}. يجب إزالته من الفرق أولاً.')
+            return redirect('installations:team_management')
+        
+        # تحذير: هذا سيحذف الفني من النظام بالكامل
+        technician_name = technician.name
+        technician.delete()
+        messages.warning(request, f'تم حذف الفني "{technician_name}" من النظام بالكامل')
+        return redirect('installations:team_management')
+    
+    context = {
+        'technician': technician,
+        'installation_teams': installation_teams,
+    }
+    
+    return render(request, 'installations/confirm_delete_technician.html', context)
+
+
+@login_required
+def edit_driver(request, driver_id):
+    """تعديل السائق"""
+    driver = get_object_or_404(Driver, id=driver_id)
+    
+    if request.method == 'POST':
+        form = DriverForm(request.POST, instance=driver)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _('تم تحديث بيانات السائق بنجاح'))
+            return redirect('installations:team_management')
+    else:
+        form = DriverForm(instance=driver)
+    
+    context = {
+        'form': form,
+        'driver': driver,
+    }
+    
+    return render(request, 'installations/edit_driver.html', context)
+
+
+@login_required
+def delete_driver(request, driver_id):
+    """حذف السائق"""
+    driver = get_object_or_404(Driver, id=driver_id)
+    
+    if request.method == 'POST':
+        driver_name = driver.name
+        driver.delete()
+        messages.success(request, f'تم حذف السائق "{driver_name}" بنجاح')
+        return redirect('installations:team_management')
+    
+    context = {
+        'driver': driver,
+    }
+    
+    return render(request, 'installations/confirm_delete_driver.html', context)

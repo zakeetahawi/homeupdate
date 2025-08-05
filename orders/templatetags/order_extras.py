@@ -212,3 +212,40 @@ def get_status_badge(status, status_type="default"):
     '''
     
     return mark_safe(html)
+
+
+@register.filter
+def get_status_display(status):
+    """Get display name for order status"""
+    status_map = {
+        'pending': 'قيد الانتظار',
+        'pending_approval': 'قيد الموافقة',
+        'approved': 'تمت الموافقة',
+        'processing': 'قيد التنفيذ',
+        'in_progress': 'قيد التصنيع',
+        'ready_install': 'جاهز للتركيب',
+        'completed': 'مكتمل',
+        'delivered': 'تم التسليم',
+        'rejected': 'مرفوض',
+        'cancelled': 'ملغي',
+        'scheduled': 'مجدول',
+        'not_scheduled': 'غير مجدول',
+        'needs_scheduling': 'بحاجة جدولة',
+        'modification_required': 'يحتاج تعديل',
+        'modification_in_progress': 'التعديل قيد التنفيذ',
+        'modification_completed': 'التعديل مكتمل',
+    }
+    return status_map.get(status, status)
+
+
+@register.filter
+def currency_format(amount):
+    """Format amount with currency"""
+    try:
+        from accounts.models import SystemSettings
+        settings = SystemSettings.get_settings()
+        symbol = settings.currency_symbol
+        formatted_amount = f"{amount:,.2f}"
+        return f"{formatted_amount} {symbol}"
+    except Exception:
+        return f"{amount:,.2f} ر.س"

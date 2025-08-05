@@ -468,41 +468,9 @@
             </div>
         </div>
         
-        <!-- Product Selection Section -->
-        <div class="card mb-4 product-selection-section" id="product-selection-section" style="display: none;">
-            <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="fas fa-box-open me-2"></i> اختيار المنتجات</h5>
-            </div>
-            <div class="card-body">
-                <!-- Product Search -->
-                <div class="mb-4">
-                    <div class="input-group">
-                        <input type="text" id="product-search" class="form-control" placeholder="ابحث عن منتج بالاسم أو الكود..." aria-label="ابحث عن منتج">
-                        <button class="btn btn-outline-primary" type="button" id="product-search-button">
-                            <i class="fas fa-search"></i> بحث
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="products-container" class="row">
-                    <!-- Products will be loaded here -->
-                    <div class="text-center py-3" id="products-loading">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">جاري التحميل...</span>
-                        </div>
-                        <p class="mt-2">جاري تحميل المنتجات...</p>
-                    </div>
-                </div>
-                
-                <!-- Selected Products -->
-                <div class="mb-4">
-                    <h5 class="mb-3">المنتجات المختارة</h5>
-                    <div id="selected-products-container">
-                        <p class="text-muted" id="no-products-message">لم يتم اختيار أي منتجات بعد</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- لم يعد هناك عرض منتجات تلقائي لنوع اكسسوار، فقط إضافة عناصر -->
+        <!-- إذا أردت عرض قسم المنتجات لأنواع أخرى، أضف شرطاً هنا -->
+        <!-- مثال: {% if order_type != 'accessory' %} ... {% endif %} -->
         
         <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
             <button type="button" class="btn btn-success btn-lg" id="add-order-item-btn-custom">

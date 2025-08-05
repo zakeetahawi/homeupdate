@@ -287,6 +287,9 @@
                                             <i class="fas fa-trash" style="font-size: 0.7em;"></i>
                                         </a>
                                     {% endif %}
+                                    <button type="button" class="btn btn-secondary" title="تكرار المعاينة" style="font-size: 0.7em; padding: 0.15rem 0.3rem;" data-bs-toggle="modal" data-bs-target="#duplicateInspectionModal" data-inspection-id="{{ inspection.pk }}" data-contract="{{ inspection.contract_number }}" data-customer="{{ inspection.customer.name }}">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>

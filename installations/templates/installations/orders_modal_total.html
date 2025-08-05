@@ -83,13 +83,13 @@
                                         <div class="btn-group btn-group-sm">
                                             {% if order.is_manufacturing_order %}
                                                 {% if order.is_delivered_manufacturing_order %}
-                                                    <a href="{% url 'installations:quick_schedule_installation' order.id %}" 
+                                                    <a href="{% url 'installations:quick_schedule_installation' order.id %}"
                                                        class="btn btn-primary btn-sm">
                                                         <i class="fas fa-calendar-plus"></i> جدولة
                                                     </a>
                                                 {% endif %}
                                             {% elif order.order_status == 'ready_install' or order.order_status == 'completed' %}
-                                                <a href="{% url 'installations:quick_schedule_installation' order.id %}" 
+                                                <a href="{% url 'installations:quick_schedule_installation' order.id %}"
                                                    class="btn btn-primary btn-sm">
                                                     <i class="fas fa-calendar-plus"></i> جدولة
                                                 </a>
@@ -493,5 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // لا نحتاج لنظام التحقق من المديونية هنا - مخصص فقط لقسم التركيبات
 });
 </script> 

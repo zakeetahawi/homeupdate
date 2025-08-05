@@ -405,15 +405,31 @@ class InstallationTeamForm(forms.ModelForm):
         model = InstallationTeam
         fields = ['name', 'technicians', 'driver']
         widgets = {
-            'name': forms.TextInput(attrs={'placeholder': 'اسم الفريق'}),
+            'name': forms.TextInput(attrs={
+                'placeholder': 'اسم الفريق',
+                'class': 'form-control'
+            }),
+            'technicians': forms.CheckboxSelectMultiple(),
+            'driver': forms.Select(attrs={'class': 'form-control'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # تصفية الفنيين لعرض فنيي التركيبات فقط
+        self.fields['technicians'].queryset = Technician.objects.filter(
+            department='installation',
+            is_active=True
+        )
+        # تصفية السائقين لعرض النشطين فقط
+        self.fields['driver'].queryset = Driver.objects.filter(is_active=True)
+        self.fields['driver'].empty_label = "اختر سائق (اختياري)"
 
     def clean(self):
         cleaned_data = super().clean()
         technicians = cleaned_data.get('technicians')
         
         if not technicians:
-            raise ValidationError(_('يجب اختيار فني واحد على الأقل'))
+            raise ValidationError('يجب اختيار فني واحد على الأقل')
 
         return cleaned_data
 
@@ -422,11 +438,44 @@ class TechnicianForm(forms.ModelForm):
     """نموذج الفني"""
     class Meta:
         model = Technician
-        fields = ['name', 'phone', 'specialization', 'is_active']
+        fields = ['name', 'phone', 'specialization', 'is_active']  # إزالة department من الحقول المعروضة
         widgets = {
-            'name': forms.TextInput(attrs={'placeholder': 'اسم الفني'}),
-            'phone': forms.TextInput(attrs={'placeholder': 'رقم الهاتف'}),
-            'specialization': forms.TextInput(attrs={'placeholder': 'التخصص'}),
+            'name': forms.TextInput(attrs={
+                'placeholder': 'اسم الفني',
+                'class': 'form-control'
+            }),
+            'phone': forms.TextInput(attrs={
+                'placeholder': 'رقم الهاتف',
+                'class': 'form-control'
+            }),
+            'specialization': forms.TextInput(attrs={
+                'placeholder': 'التخصص',
+                'class': 'form-control'
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class TechnicianEditForm(forms.ModelForm):
+    """نموذج تعديل الفني - يتضمن حقل القسم"""
+    class Meta:
+        model = Technician
+        fields = ['name', 'phone', 'specialization', 'department', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'placeholder': 'اسم الفني',
+                'class': 'form-control'
+            }),
+            'phone': forms.TextInput(attrs={
+                'placeholder': 'رقم الهاتف',
+                'class': 'form-control'
+            }),
+            'specialization': forms.TextInput(attrs={
+                'placeholder': 'التخصص',
+                'class': 'form-control'
+            }),
+            'department': forms.Select(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
 
@@ -436,10 +485,23 @@ class DriverForm(forms.ModelForm):
         model = Driver
         fields = ['name', 'phone', 'license_number', 'vehicle_number', 'is_active']
         widgets = {
-            'name': forms.TextInput(attrs={'placeholder': 'اسم السائق'}),
-            'phone': forms.TextInput(attrs={'placeholder': 'رقم الهاتف'}),
-            'license_number': forms.TextInput(attrs={'placeholder': 'رقم الرخصة'}),
-            'vehicle_number': forms.TextInput(attrs={'placeholder': 'رقم المركبة'}),
+            'name': forms.TextInput(attrs={
+                'placeholder': 'اسم السائق',
+                'class': 'form-control'
+            }),
+            'phone': forms.TextInput(attrs={
+                'placeholder': 'رقم الهاتف',
+                'class': 'form-control'
+            }),
+            'license_number': forms.TextInput(attrs={
+                'placeholder': 'رقم الرخصة',
+                'class': 'form-control'
+            }),
+            'vehicle_number': forms.TextInput(attrs={
+                'placeholder': 'رقم المركبة',
+                'class': 'form-control'
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
 
@@ -515,10 +577,11 @@ class InstallationPaymentForm(forms.ModelForm):
 
 
 class InstallationFilterForm(forms.Form):
-    """نموذج فلترة التركيبات"""
+    """نموذج فلترة التركيبات - محسّن للأداء"""
     STATUS_CHOICES = [
         ('', _('جميع الحالات')),
         ('needs_scheduling', _('بحاجة جدولة')),
+        ('under_manufacturing', _('تحت التصنيع')),
         ('scheduled', _('مجدول')),
         ('in_installation', _('قيد التركيب')),
         ('completed', _('مكتمل')),
@@ -528,36 +591,105 @@ class InstallationFilterForm(forms.Form):
         ('modification_completed', _('التعديل مكتمل')),
     ]
 
+    # فلاتر أساسية
     status = forms.ChoiceField(
         choices=STATUS_CHOICES,
         required=False,
-        label=_('حالة التركيب')
+        label=_('حالة التركيب'),
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'onchange': 'this.form.submit()'  # إرسال تلقائي عند التغيير
+        })
     )
     
     team = forms.ModelChoiceField(
         queryset=InstallationTeam.objects.filter(is_active=True),
         required=False,
         label=_('الفريق'),
-        empty_label=_('جميع الفرق')
+        empty_label=_('جميع الفرق'),
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'onchange': 'this.form.submit()'
+        })
     )
     
+    # فلاتر التاريخ
     date_from = forms.DateField(
         required=False,
         label=_('من تاريخ'),
-        widget=forms.DateInput(attrs={'type': 'date'})
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
     )
     
     date_to = forms.DateField(
         required=False,
         label=_('إلى تاريخ'),
-        widget=forms.DateInput(attrs={'type': 'date'})
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
     )
     
+    # بحث ذكي
     search = forms.CharField(
         required=False,
-        label=_('بحث'),
-        widget=forms.TextInput(attrs={'placeholder': 'بحث في أرقام الطلبات أو أسماء العملاء...'})
+        label=_('بحث سريع'),
+        widget=forms.TextInput(attrs={
+            'placeholder': 'رقم الطلب، اسم العميل، رقم الهاتف...',
+            'class': 'form-control',
+            'autocomplete': 'off'
+        })
     )
+    
+    # فلاتر إضافية
+    location_type = forms.ChoiceField(
+        choices=[
+            ('', _('جميع الأماكن')),
+            ('open', _('مفتوح')),
+            ('compound', _('كومبوند')),
+        ],
+        required=False,
+        label=_('نوع المكان'),
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'onchange': 'this.form.submit()'
+        })
+    )
+    
+    order_status = forms.ChoiceField(
+        choices=[
+            ('', _('جميع حالات الطلب')),
+            ('ready_install', _('جاهز للتركيب')),
+            ('completed', _('مكتمل')),
+            ('delivered', _('تم التسليم')),
+        ],
+        required=False,
+        label=_('حالة الطلب'),
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'onchange': 'this.form.submit()'
+        })
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # تحسين خيارات الفرق بناءً على البيانات الموجودة
+        active_teams = InstallationTeam.objects.filter(
+            is_active=True,
+            installationschedule__isnull=False
+        ).distinct()
+        self.fields['team'].queryset = active_teams
+        
+        # إضافة CSS classes للتحسين البصري
+        for field_name, field in self.fields.items():
+            if not field.widget.attrs.get('class'):
+                if isinstance(field.widget, forms.Select):
+                    field.widget.attrs['class'] = 'form-select'
+                else:
+                    field.widget.attrs['class'] = 'form-control'
 
 
 class DailyScheduleForm(forms.Form):

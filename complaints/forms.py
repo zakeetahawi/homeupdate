@@ -24,6 +24,17 @@ class ComplaintForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     
+    related_order = forms.ModelChoiceField(
+        queryset=Order.objects.none(),
+        label='الطلب المرتبط',
+        required=False,
+        empty_label='اختر الطلب المرتبط',
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'data-live-search': 'true'
+        })
+    )
+    
     assigned_department = forms.ModelChoiceField(
         queryset=Department.objects.filter(is_active=True),
         label='القسم المختص',
@@ -48,17 +59,19 @@ class ComplaintForm(forms.ModelForm):
         # إخفاء حقل العميل الأصلي واستخدام البحث الذكي
         self.fields['customer'].widget = forms.HiddenInput()
         
-        # تحديد الطلبات المرتبطة بالعميل
-        if self.customer:
-            self.fields['related_order'].queryset = Order.objects.filter(
-                customer=self.customer
-            ).order_by('-created_at')
-            self.fields['customer'].initial = self.customer
-            customer_info = f"{self.customer.name} - {self.customer.phone}"
-            self.fields['customer_search'].initial = customer_info
-        else:
-            # إذا لم يتم تحديد عميل، أظهر قائمة فارغة للطلبات
-            self.fields['related_order'].queryset = Order.objects.none()
+        # Add customer_search field for display
+        self.fields['customer_search'] = forms.CharField(
+            label='بحث العميل',
+            required=False,
+            widget=forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'ابحث عن عميل...',
+                'autocomplete': 'off'
+            })
+        )
+        
+        # تحديث قائمة الطلبات بناءً على العميل المحدد
+        self.update_related_order_queryset()
         
         # تحديد أنواع الشكاوى النشطة
         self.fields['complaint_type'].queryset = ComplaintType.objects.filter(
@@ -89,6 +102,30 @@ class ComplaintForm(forms.ModelForm):
             elif isinstance(field.widget, forms.widgets.Select):
                 field.widget.attrs['class'] = 'form-select'
     
+    def update_related_order_queryset(self):
+        """Update customer search field and related orders queryset"""
+        if hasattr(self, 'customer') and self.customer:
+            customer_info = f"{self.customer.name} - {self.customer.phone}"
+            self.fields['customer_search'].initial = customer_info
+            # Update orders queryset for the current customer
+            self.fields['related_order'].queryset = Order.objects.filter(
+                customer=self.customer
+            ).order_by('-created_at')
+        else:
+            self.fields['customer_search'].initial = ''
+            self.fields['related_order'].queryset = Order.objects.none()
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # تحديث قائمة الطلبات بناءً على العميل المحدد
+        customer = cleaned_data.get('customer')
+        if customer and customer != self.customer:
+            self.customer = customer
+            self.update_related_order_queryset()
+        
+        return cleaned_data
+    
     class Meta:
         model = Complaint
         fields = [
@@ -109,6 +146,58 @@ class ComplaintForm(forms.ModelForm):
                 'class': 'form-control'
             })
         }
+    
+    def clean_related_order(self):
+        """
+        التحقق من صحة الطلب المرتبط بالشكوى مع إضافة سجلات تصحيح
+        """
+        print("\n===== بدء التحقق من صحة الطلب المرتبط =====")
+        related_order = self.cleaned_data.get('related_order')
+        print(f"قيمة الطلب المستلمة: {related_order} (نوع: {type(related_order)})")
+        
+        # إذا لم يتم اختيار طلب، نرجع None
+        if not related_order:
+            print("لم يتم اختيار طلب - العودة بقيمة None")
+            return None
+            
+        # الحصول على معرف الطلب سواء كان كائن Order أو معرف رقمي
+        order_id = related_order.id if hasattr(related_order, 'id') else related_order
+        print(f"معرف الطلب المستخرج: {order_id} (نوع: {type(order_id)})")
+        
+        # إذا كان الطلب رقم، نحاول الحصول على كائن الطلب
+        if isinstance(order_id, (int, str)) and str(order_id).isdigit():
+            print(f"البحث عن الطلب بالمعرف: {order_id}")
+            try:
+                related_order = Order.objects.get(pk=order_id)
+                print(f"تم العثور على الطلب: {related_order}")
+                # تحديث القيمة في cleaned_data
+                self.cleaned_data['related_order'] = related_order
+            except Order.DoesNotExist:
+                error_msg = f'الطلب المحدد غير موجود (ID: {order_id})'
+                print(error_msg)
+                raise forms.ValidationError(error_msg)
+        
+        # الحصول على العميل من البيانات المدخلة أو من النموذج
+        customer = self.cleaned_data.get('customer')
+        if not customer and hasattr(self, 'customer'):
+            customer = self.customer
+            
+        print(f"العميل المستخدم للتحقق: {customer} (نوع: {type(customer) if customer else 'None'})")
+        
+        # إذا كان هناك عميل محدد، نتحقق من أن الطلب يخصه
+        if customer and hasattr(related_order, 'customer'):
+            print(f"مقارنة: معرف عميل الطلب: {related_order.customer_id} - معرف العميل المحدد: {customer.id}")
+            if related_order.customer_id != customer.id:
+                error_msg = (
+                    f'الطلب المحدد لا ينتمي إلى العميل الحالي. '
+                    f'(معرف طلب العميل: {related_order.customer_id}, '
+                    f'معرف العميل الحالي: {customer.id})'
+                )
+                print(error_msg)
+                raise forms.ValidationError(error_msg)
+        
+        print("التحقق من صحة الطلب اكتمل بنجاح")
+        return related_order
     
     def save(self, commit=True):
         complaint = super().save(commit=False)

@@ -63,10 +63,10 @@
                                                     <i class="fas fa-ellipsis-v"></i>
                                                 </button>
                                                 <ul class="dropdown-menu">
-                                                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit"></i> تعديل</a></li>
-                                                    <li><a class="dropdown-item" href="#"><i class="fas fa-eye"></i> عرض</a></li>
+                                                    <li><a class="dropdown-item" href="{% url 'installations:edit_team' team.id %}"><i class="fas fa-edit"></i> تعديل</a></li>
+                                                    <li><a class="dropdown-item" href="{% url 'installations:team_detail' team.id %}"><i class="fas fa-eye"></i> عرض</a></li>
                                                     <li><hr class="dropdown-divider"></li>
-                                                    <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash"></i> حذف</a></li>
+                                                    <li><a class="dropdown-item text-danger" href="{% url 'installations:delete_team' team.id %}" onclick="return confirm('هل أنت متأكد من حذف هذا الفريق؟')"><i class="fas fa-trash"></i> حذف</a></li>
                                                 </ul>
                                             </div>
                                         </div>
@@ -123,16 +123,20 @@
 
         <!-- الفنيين والسائقين -->
         <div class="col-lg-4">
-            <!-- الفنيين -->
+            <!-- الفنيين المرتبطين بالفرق -->
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">
                         <i class="fas fa-user-cog"></i>
-                        الفنيين
+                        فنيي التركيبات
                     </h6>
                 </div>
                 <div class="card-body">
                     {% if technicians %}
+                        <small class="text-muted mb-3 d-block">
+                            <i class="fas fa-info-circle"></i>
+                            هؤلاء الفنيون مرتبطون بفرق التركيب حالياً
+                        </small>
                         <div class="list-group list-group-flush">
                             {% for technician in technicians %}
                             <div class="list-group-item d-flex justify-content-between align-items-center">
@@ -142,21 +146,67 @@
                                     {% if technician.specialization %}
                                         <br><small class="text-info">{{ technician.specialization }}</small>
                                     {% endif %}
+                                    <br><small class="text-primary">{{ technician.get_department_display }}</small>
                                 </div>
-                                <span class="badge badge-{{ technician.is_active|yesno:'success,secondary' }}">
-                                    {{ technician.is_active|yesno:'نشط,غير نشط' }}
-                                </span>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge badge-{{ technician.is_active|yesno:'success,secondary' }} mr-2">
+                                        {{ technician.is_active|yesno:'نشط,غير نشط' }}
+                                    </span>
+                                    <a href="{% url 'installations:edit_technician' technician.id %}" class="btn btn-outline-primary btn-sm" title="عرض التفاصيل">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
                     {% else %}
                         <div class="text-center py-3">
                             <i class="fas fa-user-cog fa-3x text-gray-300 mb-2"></i>
-                            <p class="text-gray-500">لا يوجد فنيين</p>
+                            <p class="text-gray-500">لا يوجد فنيين مرتبطين بفرق التركيب</p>
                         </div>
                     {% endif %}
                 </div>
             </div>
+
+                        <!-- الفنيين المتاحين للإضافة -->
+            {% if unassigned_technicians %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-user-plus"></i>
+                        فنيين متاحين للإضافة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <small class="text-muted mb-3 d-block">
+                        <i class="fas fa-info-circle"></i>
+                        هؤلاء الفنيون غير مرتبطين بفرق التركيب حالياً ويمكن إضافتهم للفرق
+                    </small>
+                    <div class="list-group list-group-flush">
+                        {% for technician in unassigned_technicians %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ technician.name }}</h6>
+                                <small class="text-muted">{{ technician.phone }}</small>
+                                {% if technician.specialization %}
+                                    <br><small class="text-info">{{ technician.specialization }}</small>
+                                {% endif %}
+                                <br><small class="text-primary">{{ technician.get_department_display }}</small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="badge badge-warning mr-2">
+                                    متاح للإضافة
+                                </span>
+                                <a href="{% url 'installations:edit_technician' technician.id %}" class="btn btn-outline-primary btn-sm" title="عرض التفاصيل">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- السائقين -->
             <div class="card shadow mb-4">
@@ -178,9 +228,20 @@
                                         <br><small class="text-info">مركبة: {{ driver.vehicle_number }}</small>
                                     {% endif %}
                                 </div>
-                                <span class="badge badge-{{ driver.is_active|yesno:'success,secondary' }}">
-                                    {{ driver.is_active|yesno:'نشط,غير نشط' }}
-                                </span>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge badge-{{ driver.is_active|yesno:'success,secondary' }} me-2">
+                                        {{ driver.is_active|yesno:'نشط,غير نشط' }}
+                                    </span>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'installations:edit_driver' driver.id %}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'installations:delete_driver' driver.id %}" class="btn btn-outline-danger btn-sm" 
+                                           onclick="return confirm('هل أنت متأكد من حذف هذا السائق؟')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                             {% endfor %}
                         </div>

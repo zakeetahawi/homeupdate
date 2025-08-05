@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تأكيد حذف الفني - {{ technician.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        تأكيد حذف الفني
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if installation_teams %}
+                        <!-- تحذير: الفني مرتبط بفرق -->
+                        <div class="alert alert-danger">
+                            <h6><i class="fas fa-ban"></i> لا يمكن حذف هذا الفني</h6>
+                            <p class="mb-2">الفني <strong>{{ technician.name }}</strong> مرتبط بالفرق التالية:</p>
+                            <ul class="mb-2">
+                                {% for team in installation_teams %}
+                                <li>{{ team.name }}</li>
+                                {% endfor %}
+                            </ul>
+                            <p class="mb-0">يجب إزالة الفني من جميع الفرق قبل حذفه من النظام.</p>
+                        </div>
+                        
+                        <div class="text-center">
+                            <a href="{% url 'installations:team_management' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i>
+                                العودة لإدارة الفرق
+                            </a>
+                        </div>
+                    {% else %}
+                        <!-- تأكيد الحذف -->
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle"></i> تحذير مهم</h6>
+                            <p>أنت على وشك حذف الفني <strong>{{ technician.name }}</strong> من النظام بالكامل.</p>
+                            <p class="mb-0">هذا الإجراء لا يمكن التراجع عنه وقد يؤثر على أقسام أخرى في النظام.</p>
+                        </div>
+
+                        <div class="card border-left-primary">
+                            <div class="card-body">
+                                <h6>بيانات الفني:</h6>
+                                <p><strong>الاسم:</strong> {{ technician.name }}</p>
+                                <p><strong>الهاتف:</strong> {{ technician.phone }}</p>
+                                {% if technician.specialization %}
+                                <p><strong>التخصص:</strong> {{ technician.specialization }}</p>
+                                {% endif %}
+                                <p><strong>الحالة:</strong> 
+                                    <span class="badge badge-{{ technician.is_active|yesno:'success,secondary' }}">
+                                        {{ technician.is_active|yesno:'نشط,غير نشط' }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <form method="post" class="mt-4">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-6">
+                                    <a href="{% url 'installations:team_management' %}" class="btn btn-secondary btn-block">
+                                        <i class="fas fa-times"></i>
+                                        إلغاء
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <button type="submit" class="btn btn-danger btn-block">
+                                        <i class="fas fa-trash"></i>
+                                        تأكيد الحذف
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

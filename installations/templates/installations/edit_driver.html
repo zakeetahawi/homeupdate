@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تعديل السائق - {{ driver.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit text-primary"></i>
+                        تعديل السائق
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                        <div class="text-danger">{{ form.name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}
+                                        <div class="text-danger">{{ form.phone.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.license_number.id_for_label }}">{{ form.license_number.label }}</label>
+                                    {{ form.license_number }}
+                                    {% if form.license_number.errors %}
+                                        <div class="text-danger">{{ form.license_number.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.vehicle_number.id_for_label }}">{{ form.vehicle_number.label }}</label>
+                                    {{ form.vehicle_number }}
+                                    {% if form.vehicle_number.errors %}
+                                        <div class="text-danger">{{ form.vehicle_number.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    {{ form.is_active.label }}
+                                </label>
+                            </div>
+                            {% if form.is_active.errors %}
+                                <div class="text-danger">{{ form.is_active.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group mt-4">
+                            <div class="row">
+                                <div class="col-6">
+                                    <a href="{% url 'installations:team_management' %}" class="btn btn-secondary btn-block">
+                                        <i class="fas fa-arrow-left"></i>
+                                        العودة
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <button type="submit" class="btn btn-primary btn-block">
+                                        <i class="fas fa-save"></i>
+                                        حفظ التعديلات
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
