@@ -55,6 +55,30 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     inlines = [ManufacturingOrderItemInline]
     date_hierarchy = 'created_at'
 
+    actions = ['bulk_update_status']
+
+    def bulk_update_status(self, request, queryset):
+        from django import forms
+        from django.shortcuts import render, redirect
+        class StatusForm(forms.Form):
+            status = forms.ChoiceField(choices=queryset.model.STATUS_CHOICES, label='الحالة الجديدة')
+
+        if 'apply' in request.POST:
+            form = StatusForm(request.POST)
+            if form.is_valid():
+                new_status = form.cleaned_data['status']
+                count = queryset.update(status=new_status)
+                self.message_user(request, f'تم تحديث حالة {count} أمر تصنيع إلى {dict(queryset.model.STATUS_CHOICES)[new_status]} بنجاح.')
+                return None
+        else:
+            form = StatusForm()
+        return render(request, 'admin/bulk_update_status.html', {
+            'orders': queryset,
+            'form': form,
+            'action_checkbox_name': admin.helpers.ACTION_CHECKBOX_NAME,
+        })
+    bulk_update_status.short_description = 'تبديل حالة الأوامر المحددة جماعياً'
+
     fieldsets = (
         ('معلومات الطلب', {
             'fields': (
