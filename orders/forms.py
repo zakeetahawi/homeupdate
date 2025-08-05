@@ -144,6 +144,9 @@ class OrderForm(forms.ModelForm):
         customer = kwargs.pop('customer', None)
         super().__init__(*args, **kwargs)
         
+        # حفظ العميل الأولي للاستخدام في clean_customer
+        self.initial_customer = customer
+        
         # تقييد البائعين حسب الفرع إذا لم يكن المستخدم مديراً
         if user and not user.is_superuser and user.branch:
             self.fields['salesperson'].queryset = Salesperson.objects.filter(
@@ -193,6 +196,13 @@ class OrderForm(forms.ModelForm):
                         ).filter(status='active')
             
             self.fields['customer'].queryset = customer_queryset.order_by('name')
+            
+            # تعيين العميل كقيمة أولية إذا تم تمريره
+            if customer and customer.pk:
+                self.fields['customer'].initial = customer.pk
+                # جعل حقل العميل للقراءة فقط إذا تم تمريره من الرابط
+                # ملاحظة: لا نستخدم disabled لأنه يمنع إرسال القيمة
+                self.fields['customer'].widget.attrs['readonly'] = True
         
         # تعيين خيارات المعاينة المرتبطة للخدمات الأخرى
         if customer:
@@ -247,6 +257,28 @@ class OrderForm(forms.ModelForm):
             if not user.is_superuser:
                 self.fields['branch'].queryset = Branch.objects.filter(id=user.branch.id)
                 self.fields['branch'].widget.attrs['readonly'] = True
+
+    def clean_customer(self):
+        """تنظيف حقل العميل - للتعامل مع العميل المحدد مسبقاً"""
+        customer = self.cleaned_data.get('customer')
+        
+        # إذا لم يتم إرسال قيمة العميل، استخدم القيمة الأولية المحفوظة
+        if not customer and hasattr(self, 'initial_customer') and self.initial_customer:
+            customer = self.initial_customer
+            print(f"DEBUG: استخدام العميل الأولي: {customer}")
+        elif not customer and self.initial.get('customer'):
+            try:
+                from customers.models import Customer
+                customer = Customer.objects.get(pk=self.initial['customer'])
+                print(f"DEBUG: العثور على العميل من initial: {customer}")
+            except Customer.DoesNotExist:
+                print("DEBUG: لم يتم العثور على العميل في initial")
+                pass
+        
+        if not customer:
+            raise forms.ValidationError('يجب اختيار عميل للطلب')
+                
+        return customer
 
     def clean_related_inspection(self):
         """تنظيف حقل المعاينة المرتبطة"""

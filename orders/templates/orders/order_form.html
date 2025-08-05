@@ -133,28 +133,38 @@
                                 <div class="mb-3">
                                     <label for="{{ form.customer.id_for_label }}" class="form-label">العميل *</label>
                                     {% if customer %}
-                                    <select id="customer_search_select" class="form-select" style="width: 100%;">
-                                        <option value="{{ customer.id }}" selected>
-                                            {{ customer.name }} - {{ customer.phone }}
-                                        </option>
-                                    </select>
-                                    <div class="customer-original-field">
+                                    <!-- العميل محدد مسبقاً من رابط -->
+                                    <div class="input-group">
+                                        <input type="text" class="form-control bg-light" 
+                                               value="{{ customer.name }} - {{ customer.phone }}" 
+                                               readonly>
+                                        <span class="input-group-text bg-primary text-white">
+                                            <i class="fas fa-user-check"></i>
+                                        </span>
+                                    </div>
+                                    <div class="form-text text-primary">
+                                        <i class="fas fa-info-circle"></i> 
+                                        العميل مُحدد مسبقاً من بطاقة العميل
+                                    </div>
+                                    <!-- الحقل الأصلي مخفي مع القيمة المحددة -->
+                                    <div style="display: none;">
                                         {{ form.customer }}
                                     </div>
                                     {% else %}
+                                    <!-- البحث عن عميل -->
                                     <select id="customer_search_select" class="form-select" style="width: 100%;">
                                         <option value="">ابحث عن العميل بالاسم أو الهاتف...</option>
                                     </select>
-                                    {% endif %}
                                     <div class="customer-original-field">
                                         {{ form.customer }}
                                     </div>
+                                    <div class="form-text text-muted">ابحث عن العميل بالاسم أو الهاتف</div>
+                                    {% endif %}
                                     {% if form.customer.errors %}
                                     <div class="alert alert-danger mt-2">
                                         {{ form.customer.errors }}
                                     </div>
                                     {% endif %}
-                                    <div class="form-text text-muted">ابحث عن العميل بالاسم أو الهاتف</div>
                                 </div>
                                 
                                 <!-- Order Number (Auto-generated but visible) -->
@@ -497,6 +507,8 @@
     $(document).ready(function() {
         console.log('تهيئة Select2 للبحث عن العملاء...');
         
+        // تهيئة Select2 فقط إذا لم يتم تحديد عميل مسبقاً
+        {% if not customer %}
         // تهيئة Select2 للبحث الذكي عن العملاء (نفس الطريقة في الشكاوى)
         $('#customer_search_select').select2({
             theme: 'bootstrap-5',
@@ -607,13 +619,13 @@
             }
         });
 
-        // تعيين قيمة العميل المحدد مسبقاً
-        {% if customer %}
+        console.log('تم تهيئة Select2 بنجاح');
+        {% else %}
+        // العميل محدد مسبقاً - تعيين القيمة في الحقل المخفي
         $('#{{ form.customer.id_for_label }}').val('{{ customer.id }}');
         console.log('تم تعيين العميل المحدد مسبقاً: {{ customer.id }}');
+        console.log('تم تخطي تهيئة Select2 لأن العميل محدد مسبقاً');
         {% endif %}
-
-        console.log('تم تهيئة Select2 بنجاح');
     });
 
     document.addEventListener('DOMContentLoaded', function() {
