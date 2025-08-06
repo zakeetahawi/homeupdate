@@ -137,11 +137,17 @@ class InspectionListView(LoginRequiredMixin, ListView):
                 queryset = queryset.filter(
                     Q(order__order_number__icontains=q) |
                     Q(order__customer__name__icontains=q) |
+                    Q(order__customer__code__icontains=q) |
                     Q(order__customer__phone__icontains=q) |
                     Q(order__contract_number__icontains=q) |
                     Q(order__id__icontains=q) |
                     Q(order__customer__phone2__icontains=q) |
                     Q(order__customer__email__icontains=q) |
+                    Q(customer__name__icontains=q) |
+                    Q(customer__code__icontains=q) |
+                    Q(customer__phone__icontains=q) |
+                    Q(customer__phone2__icontains=q) |
+                    Q(customer__email__icontains=q) |
                     Q(notes__icontains=q) |
                     Q(inspector__username__icontains=q) |
                     Q(branch__name__icontains=q) |

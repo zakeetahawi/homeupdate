@@ -152,31 +152,23 @@ def customer_detail(request, pk):
     View for displaying customer details, orders, and notes
     تحسين الأداء باستخدام select_related و prefetch_related
     """
+    print("=" * 80)
+    print("🔥 CUSTOMER DETAIL VIEW STARTED!")
+    print(f"🔥 Request URL: {request.get_full_path()}")
+    print(f"🔥 Customer PK: {pk}")
+    print("=" * 80)
+    
+    # الحصول على العميل مباشرة (مثل الصفحة التجريبية)
     try:
-        # محاولة الحصول على العميل من queryset المستخدم العادي
-        queryset = get_queryset_for_user(request.user, None)
-        
-        # التحقق من أن queryset صحيح
-        if not hasattr(queryset, 'select_related'):
-            # إذا لم يكن QuerySet صحيح، استخدم جميع العملاء
-            queryset = Customer.objects.all()
-        
-        customer = queryset.select_related(
+        customer = Customer.objects.select_related(
             'category', 'branch', 'created_by'
         ).get(pk=pk)
-        is_cross_branch = False
     except Customer.DoesNotExist:
-        # إذا لم يوجد، محاولة البحث في جميع العملاء (للوصول عبر الفروع)
-        try:
-            customer = Customer.objects.select_related(
-                'category', 'branch', 'created_by'
-            ).get(pk=pk)
-            is_cross_branch = is_customer_cross_branch(request.user, customer)
-        except Customer.DoesNotExist:
-            messages.error(request, "العميل غير موجود.")
-            return redirect("customers:customer_list")
+        messages.error(request, "العميل غير موجود.")
+        return redirect("customers:customer_list")
 
-    # التحقق من صلاحية المستخدم لعرض هذا العميل
+    # التحقق من الصلاحيات بعد جلب العميل
+    is_cross_branch = is_customer_cross_branch(request.user, customer)
     if not can_user_view_customer(request.user, customer, allow_cross_branch=is_cross_branch):
         messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
         return redirect("customers:customer_list")
@@ -207,6 +199,30 @@ def customer_detail(request, pk):
 
     # تحسين استعلام المعاينات باستخدام select_related
     inspections = customer.inspections.select_related('customer', 'branch', 'created_by').order_by('-created_at')[:10]
+    
+    # إضافة معلومات تشخيصية مفصلة
+    print("=" * 50)
+    print(f"DEBUG START: Customer {customer.pk} - {customer.code}")
+    print("=" * 50)
+    print(f"DEBUG: Customer.inspections manager: {customer.inspections}")
+    print(f"DEBUG: Inspections count: {customer.inspections.count()}")
+    print(f"DEBUG: All inspections for customer: {list(customer.inspections.all().values_list('id', 'inspection_code', 'status', 'scheduled_date', 'customer_id'))}")
+    print(f"DEBUG: Recent inspections: {list(inspections.values_list('inspection_code', 'status', 'scheduled_date'))}")
+    print(f"DEBUG: Recent inspections objects: {list(inspections)}")
+    
+    # اختبار بديل للمعاينات - استعلام مباشر
+    from inspections.models import Inspection
+    direct_inspections = Inspection.objects.filter(customer=customer).order_by('-created_at')[:10]
+    print(f"DEBUG: Direct inspections query: {list(direct_inspections.values_list('inspection_code', 'status', 'scheduled_date'))}")
+    
+    # إذا كان الاستعلام المباشر يحتوي على معاينات ولكن customer.inspections فارغ، استخدم الاستعلام المباشر
+    if direct_inspections.exists() and not inspections.exists():
+        print("DEBUG: Using direct inspections query as fallback")
+        inspections = direct_inspections
+    
+    print("=" * 50)
+    print("DEBUG END")
+    print("=" * 50)
 
     # تحميل ملاحظات العميل مسبقًا
     customer_notes = customer.notes_history.select_related('created_by').order_by('-created_at')[:15]
@@ -802,6 +818,7 @@ def customer_detail_by_code(request, customer_code):
     View for displaying customer details using customer code
     عرض تفاصيل العميل باستخدام كود العميل
     """
+    
     try:
         # محاولة الحصول على العميل من queryset المستخدم العادي
         queryset = get_queryset_for_user(request.user, None)
@@ -857,6 +874,9 @@ def customer_detail_by_code(request, customer_code):
         else:
             orders.append(order)
 
+    # تحسين استعلام المعاينات باستخدام select_related
+    inspections = customer.inspections.select_related('customer', 'branch', 'created_by').order_by('-created_at')[:10]
+
     # تحسين استعلام الملاحظات مع التحقق من وجود العلاقة
     try:
         notes = customer.notes_history.select_related('created_by').order_by('-created_at')[:5]
@@ -870,6 +890,7 @@ def customer_detail_by_code(request, customer_code):
     context = {
         'customer': customer,
         'orders': orders,
+        'inspections': inspections,
         'notes': notes,
         'permissions': permissions,
         'is_cross_branch': is_cross_branch,

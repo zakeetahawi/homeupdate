@@ -90,7 +90,7 @@
                         </div>
                         <div class="col-md-2 text-end">
                             <div class="btn-group-vertical d-grid gap-2">
-                                <a href="{% url 'orders:order_create' %}?customer={{ customer.pk }}" class="btn btn-success btn-sm">
+                                <a href="{% url 'orders:order_create' %}?customer={{ customer.code }}" class="btn btn-success btn-sm">
                                     <i class="fas fa-plus"></i> {% trans 'إنشاء طلب' %}
                                     {% if is_cross_branch %}
                                         <small class="d-block">مرتبط بفرعك</small>
@@ -330,7 +330,7 @@
             <div class="card" style="font-size: 0.93em; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">{% trans 'آخر الطلبات' %}</h5>
-                    <a href="{% url 'orders:order_list' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-primary">
+                    <a href="{% url 'orders:order_list' %}?customer={{ customer.code }}" class="btn btn-sm btn-outline-primary">
                         {% trans 'عرض الكل' %}
                     </a>
                 </div>
@@ -412,59 +412,40 @@
 
         <!-- Recent Inspections -->
         <div class="col-md-6">
-            <div class="card">
+            <div class="card" style="font-size: 0.93em; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">{% trans 'آخر المعاينات' %}</h5>
-                    <a href="{% url 'inspections:inspection_list' %}?customer={{ customer.pk }}" class="btn btn-sm btn-outline-primary">
+                    <a href="{% url 'inspections:inspection_list' %}?q={{ customer.code }}" class="btn btn-sm btn-outline-success">
                         {% trans 'عرض الكل' %}
                     </a>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="padding: 0.7rem 0.7rem 0.5rem 0.7rem;">
                     {% if inspections %}
                     <div class="table-responsive">
-                        <table class="table table-sm">
+                        <table class="table table-sm" id="inspections-table-customer-detail">
                             <thead>
                                 <tr>
-                                    <th>{% trans 'رقم المعاينة' %}</th>
-                                    <th>{% trans 'تاريخ التنفيذ' %}</th>
-                                    <th>{% trans 'الحالة' %}</th>
-                                    <th>{% trans 'النتيجة' %}</th>
-                                    <th>{% trans 'ملف المعاينة' %}</th>
+                                    <th style="width: 80px; min-width: 80px; text-align: center;">كود المعاينة</th>
+                                    <th style="min-width: 100px; text-align: center;">التاريخ</th>
+                                    <th style="min-width: 120px; text-align: center;">الحالة</th>
+                                    <th style="min-width: 100px; text-align: center;">الموعد</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for inspection in inspections %}
-                                <tr>
-                                    <td>
-                                        <a href="{% url 'inspections:inspection_detail' inspection.pk %}">
-                                            {{ inspection.inspection_code }}
-                                        </a>
-                                    </td>
-                                    <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
-                                    <td>
-                                        <span class="badge {% if inspection.status == 'pending' %}bg-warning
-                                                   {% elif inspection.status == 'completed' %}bg-success
-                                                   {% else %}bg-danger{% endif %}">
+                                <tr onclick="window.location.href='{% url 'inspections:inspection_detail_by_code' inspection_code=inspection.inspection_code %}'" style="cursor: pointer;">
+                                    <td style="text-align: center;">{{ inspection.inspection_code|default:"--" }}</td>
+                                    <td style="text-align: center;">{{ inspection.created_at|date:"Y-m-d" }}</td>
+                                    <td style="text-align: center;">
+                                        <span class="status-label status-{{ inspection.status }}">
                                             {{ inspection.get_status_display }}
                                         </span>
                                     </td>
-                                    <td>
-                                        {% if inspection.result %}
-                                            <span class="badge {% if inspection.result == 'passed' %}bg-success
-                                                       {% else %}bg-danger{% endif %}">
-                                                {{ inspection.get_result_display }}
-                                            </span>
+                                    <td style="text-align: center;">
+                                        {% if inspection.scheduled_date %}
+                                            {{ inspection.scheduled_date|date:"Y-m-d" }}
                                         {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if inspection.inspection_file %}
-                                            <a href="{{ inspection.inspection_file.url }}" class="btn btn-sm btn-primary" target="_blank">
-                                                <i class="fas fa-file-pdf"></i>
-                                            </a>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
+                                            --
                                         {% endif %}
                                     </td>
                                 </tr>

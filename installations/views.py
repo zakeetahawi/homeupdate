@@ -541,8 +541,8 @@ def schedule_installation(request, installation_id):
             messages.success(request, _('تم جدولة التركيب بنجاح'))
             return redirect('installations:installation_detail', installation_id=installation.id)
     else:
-        # تعيين قيم افتراضية للجدولة
-        tomorrow = timezone.now().date() + timezone.timedelta(days=1)
+        # تعيين قيم افتراضية للجدولة (48 ساعة من الآن)
+        scheduled_date = timezone.now().date() + timezone.timedelta(days=2)
         default_time = timezone.datetime.strptime('09:00', '%H:%M').time()
         
         # محاولة جلب عدد الشبابيك من ملف المعاينة
@@ -569,7 +569,7 @@ def schedule_installation(request, installation_id):
             print(f"خطأ في جلب عدد الشبابيك: {e}")
         
         initial_data = {
-            'scheduled_date': tomorrow,
+            'scheduled_date': scheduled_date,
             'scheduled_time': default_time
         }
         
