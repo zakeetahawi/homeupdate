@@ -437,7 +437,7 @@
                                 <tr>
                                     <td>
                                         <a href="{% url 'inspections:inspection_detail' inspection.pk %}">
-                                            {{ inspection.id }}
+                                            {{ inspection.inspection_code }}
                                         </a>
                                     </td>
                                     <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>

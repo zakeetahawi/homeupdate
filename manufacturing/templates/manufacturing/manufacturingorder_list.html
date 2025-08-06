@@ -2,6 +2,7 @@
 {% load static %}
 {% load humanize %}
 {% load unified_status_tags %}
+{% load order_extras %}
 
 {% block title %}قائمة أوامر التصنيع{% endblock %}
 
@@ -766,6 +767,7 @@ body:not(.modal-open) .modal-backdrop {
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">تاريخ الطلب</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">تاريخ التسليم</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">الحالة</th>
+                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">معلومات التسليم</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">موافقة العقد</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 70px; word-break: break-word; white-space: normal;">الإجراءات</th>
                         </tr>
@@ -783,15 +785,29 @@ body:not(.modal-open) .modal-backdrop {
                                 {% with selected_types=order.order.get_selected_types_list %}
                                     {% if selected_types %}
                                         {% for type in selected_types %}
-                                            {% if type == 'tailoring' %}
-                                                <span class="badge bg-success"><i class="fas fa-cut me-1"></i> تسليم</span>
+                                            {% if type == 'installation' %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fas fa-tools me-1"></i> تركيب
+                                                </span>
+                                            {% elif type == 'tailoring' %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-cut me-1"></i> تسليم
+                                                </span>
+                                            {% elif type == 'accessory' %}
+                                                <span class="badge bg-primary">
+                                                    <i class="fas fa-gem me-1"></i> إكسسوار
+                                                </span>
+                                            {% elif type == 'inspection' %}
+                                                <span class="badge bg-info">
+                                                    <i class="fas fa-search me-1"></i> معاينة
+                                                </span>
                                             {% else %}
-                                                {% get_order_type_badge type order.order %}
+                                                <span class="badge bg-secondary">{{ type }}</span>
                                             {% endif %}
                                             {% if not forloop.last %}<br>{% endif %}
                                         {% endfor %}
                                     {% else %}
-                                        <span class="text-muted">-</span>
+                                        <span class="text-muted">غير محدد</span>
                                     {% endif %}
                                 {% endwith %}
                             </td>
@@ -861,6 +877,30 @@ body:not(.modal-open) .modal-backdrop {
                                             {{ order.get_status_display }}
                                         </button>
                                     {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.status == 'delivered' %}
+                                    {% if order.delivery_permit_number or order.delivery_recipient_name %}
+                                        <div style="font-size: 0.85em;">
+                                            {% if order.delivery_permit_number %}
+                                                <div class="text-success">
+                                                    <i class="fas fa-file-alt me-1"></i>
+                                                    <strong>إذن:</strong> {{ order.delivery_permit_number }}
+                                                </div>
+                                            {% endif %}
+                                            {% if order.delivery_recipient_name %}
+                                                <div class="text-primary">
+                                                    <i class="fas fa-user me-1"></i>
+                                                    <strong>المستلم:</strong> {{ order.delivery_recipient_name }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
                             <td class="approval-column">

@@ -226,7 +226,8 @@ class Inspection(models.Model):
         null=True,
         blank=True,
         related_name='inspections',
-        verbose_name=_('الطلب المرتبط')
+        verbose_name=_('الطلب المرتبط'),
+        help_text=_('كل معاينة يجب أن تكون مرتبطة بطلب من قسم الطلبات')
     )
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), default=timezone.now, editable=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
@@ -256,8 +257,25 @@ class Inspection(models.Model):
         ]
     def __str__(self):
         customer_name = self.customer.name if self.customer else 'عميل جديد'
-        return f"{self.contract_number} - {customer_name}"
+        return f"{self.inspection_code} - {customer_name}"
+    
+    @property
+    def inspection_code(self):
+        """إرجاع رقم طلب المعاينة الموحد (رقم الطلب + I)"""
+        if self.order and self.order.order_number:
+            return f"{self.order.order_number}-I"
+        return f"#{self.id}-I"  # للبيانات القديمة التي لا تحتوي على طلب
+    
+    def get_absolute_url(self):
+        """إرجاع رابط تفاصيل المعاينة باستخدام كود المعاينة"""
+        from django.urls import reverse
+        return reverse('inspections:inspection_detail_by_code', args=[self.inspection_code])
+    
     def clean(self):
+        # التأكد من وجود طلب مرتبط
+        if not self.order:
+            raise ValidationError(_('يجب ربط المعاينة بطلب من قسم الطلبات'))
+        
         # Ensure scheduled date is not before request date
         if self.scheduled_date and self.request_date:
             if self.scheduled_date < self.request_date:

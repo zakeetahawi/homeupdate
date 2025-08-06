@@ -110,7 +110,7 @@
                                                 {% if order.related_inspection.contract_number %}
                                                     {{ order.related_inspection.contract_number }}
                                                 {% else %}
-                                                    معاينة {{ order.related_inspection.id }}
+                                                    {{ order.related_inspection.inspection_code }}
                                                 {% endif %} - {{ order.related_inspection.created_at|date:"Y-m-d" }}
                                             </small>
                                         {% else %}
@@ -171,7 +171,7 @@
                                             {% if order.related_inspection.contract_number %}
                                                 {{ order.related_inspection.contract_number }}
                                             {% else %}
-                                                معاينة {{ order.related_inspection.id }}
+                                                {{ order.related_inspection.inspection_code }}
                                             {% endif %} - {{ order.related_inspection.created_at|date:"Y-m-d" }}
                                         </small>
                                     {% else %}
@@ -587,7 +587,7 @@
                                         {% if order.created_by == user %}
                                             <div class="mt-2">
                                                 <button class="btn btn-outline-primary btn-sm" 
-                                                        onclick="showReplyToRejectionModal({{ manufacturing_order.id }})">
+                                                        onclick="showReplyToRejectionModal({{ manufacturing_order.manufacturing_code }})">
                                                     <i class="fas fa-reply me-1"></i>
                                                     الرد على الرفض
                                                 </button>
@@ -1077,7 +1077,7 @@
                         {% for inspection in inspections %}
                         <tr class="{% if inspection.status == 'completed' %}table-success{% elif inspection.status == 'scheduled' %}table-info{% elif inspection.status == 'pending' %}table-warning{% endif %}">
                             <td>
-                                <strong class="text-primary">#{{ inspection.id }}</strong>
+                                <strong class="text-primary">{{ inspection.inspection_code }}</strong>
                             </td>
                             <td>
                                 <div class="text-center">

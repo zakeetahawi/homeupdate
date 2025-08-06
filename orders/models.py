@@ -631,6 +631,11 @@ class Order(models.Model):
     def __str__(self):
         return f'{self.order_number} - {self.customer.name}'
 
+    def get_absolute_url(self):
+        """إرجاع رابط تفاصيل الطلب باستخدام رقم الطلب"""
+        from django.urls import reverse
+        return reverse('orders:order_detail_by_code', args=[self.order_number])
+
     def get_selected_types_list(self):
         """Convert selected_types JSON to list"""
         if not self.selected_types:

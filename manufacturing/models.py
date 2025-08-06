@@ -181,12 +181,23 @@ class ManufacturingOrder(models.Model):
         ]
     
     def __str__(self):
-        return f'أمر تصنيع #{self.id} - {self.get_status_display()}'
+        return f'طلب تصنيع {self.manufacturing_code} - {self.get_status_display()}'
+    
+    @property
+    def manufacturing_code(self):
+        """إرجاع رقم طلب التصنيع الموحد (رقم الطلب + M)"""
+        if self.order and self.order.order_number:
+            return f"{self.order.order_number}-M"
+        return f"#{self.id}-M"  # للبيانات القديمة التي لا تحتوي على order_number
     
     def get_absolute_url(self):
-        return reverse('manufacturing:order_detail', args=[str(self.id)])
+        """إرجاع رابط تفاصيل أمر التصنيع باستخدام كود التصنيع"""
+        from django.urls import reverse
+        return reverse('manufacturing:order_detail_by_code', args=[self.manufacturing_code])
 
     def get_delete_url(self):
+        """إرجاع رابط حذف أمر التصنيع"""
+        from django.urls import reverse
         return reverse('manufacturing:order_delete', kwargs={'pk': self.pk})
     
     def update_order_status(self):

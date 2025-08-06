@@ -414,11 +414,11 @@ $(document).ready(function() {
 
     // تعيين معرف المعاينة للـ JavaScript (في حالة التعديل)
     {% if inspection %}
-        setCurrentInspectionId({{ inspection.id }});
+        setCurrentInspectionId({{ inspection.inspection_code }});
 
         // تحقق من حالة الرفع كل 3 ثوان إذا كان الملف لم يتم رفعه بعد
         {% if inspection.inspection_file and not inspection.is_uploaded_to_drive %}
-        checkUploadStatus({{ inspection.id }});
+        checkUploadStatus({{ inspection.inspection_code }});
         {% endif %}
     {% endif %}
 });

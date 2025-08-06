@@ -116,7 +116,7 @@
                             <tbody>
                                 {% for inspection in recent_inspections %}
                                 <tr>
-                                    <td>#{{ inspection.id }}</td>
+                                    <td>{{ inspection.inspection_code }}</td>
                                     <td>
                                         {% if inspection.order %}
                                             {% if inspection.order.order_number %}
@@ -139,12 +139,12 @@
                                     <td>
                                         {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
                                             <a href="{{ inspection.google_drive_file_url }}" target="_blank" title="عرض ملف المعاينة في Google Drive"
-                                               data-inspection-id="{{ inspection.id }}">
+                                               data-inspection-id="{{ inspection.inspection_code }}">
                                                 <i class="fas fa-file-pdf text-danger" style="font-size: 20px;"></i>
                                             </a>
                                         {% elif inspection.inspection_file %}
                                             <span title="جاري رفع الملف إلى Google Drive"
-                                                  data-inspection-id="{{ inspection.id }}"
+                                                  data-inspection-id="{{ inspection.inspection_code }}"
                                                   data-upload-pending="true">
                                                 <i class="fas fa-file-pdf text-warning" style="font-size: 20px;"></i>
                                                 <i class="fas fa-clock text-warning" style="font-size: 10px; position: relative; top: -8px; left: -3px;"></i>

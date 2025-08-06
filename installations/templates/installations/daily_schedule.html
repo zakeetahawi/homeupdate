@@ -468,7 +468,7 @@
                                     </a>
                                     {% if installation.status != 'completed' and installation.status != 'cancelled' %}
                                         <select class="form-control form-control-sm status-select" 
-                                                onchange="updateInstallationStatus('{{ installation.id }}', this.value)"
+                                                onchange="updateInstallationStatus('{{ installation.installation_code }}', this.value)"
                                                 style="width: auto; display: inline-block;">
                                             <option value="">تحديث الحالة</option>
                                             <option value="pending" {% if installation.status == 'pending' %}selected{% endif %}>في الانتظار</option>
@@ -484,14 +484,14 @@
                                     {% endif %}
                                     {% if installation.status == 'scheduled' %}
                                         <button type="button" class="btn btn-sm btn-primary update-status" 
-                                                data-installation-id="{{ installation.id }}" 
+                                                data-installation-id="{{ installation.installation_code }}" 
                                                 data-status="in_installation" title="بدء التركيب">
                                             <i class="fas fa-play"></i>
                                         </button>
                                     {% endif %}
                                     {% if installation.status == 'in_installation' %}
                                         <button type="button" class="btn btn-sm btn-success update-status" 
-                                                data-installation-id="{{ installation.id }}" 
+                                                data-installation-id="{{ installation.installation_code }}" 
                                                 data-status="completed" title="إكمال التركيب">
                                             <i class="fas fa-check"></i>
                                         </button>

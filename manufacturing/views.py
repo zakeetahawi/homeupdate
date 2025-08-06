@@ -1243,3 +1243,33 @@ def re_approve_after_reply(request, pk):
             'success': False,
             'error': f'حدث خطأ غير متوقع: {str(e)}'
         }, status=500)
+
+
+# Views للوصول بالكود بدلاً من ID
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def manufacturing_order_detail_by_code(request, manufacturing_code):
+    """عرض تفاصيل أمر التصنيع باستخدام كود التصنيع"""
+    # البحث بطريقة محسنة للأداء
+    if '-M' in manufacturing_code:
+        order_number = manufacturing_code.replace('-M', '')
+        manufacturing_order = get_object_or_404(
+            ManufacturingOrder.objects.select_related('order', 'order__customer'),
+            order__order_number=order_number
+        )
+    else:
+        # للأكواد القديمة
+        manufacturing_id = manufacturing_code.replace('#', '').replace('-M', '')
+        manufacturing_order = get_object_or_404(
+            ManufacturingOrder.objects.select_related('order', 'order__customer'),
+            id=manufacturing_id
+        )
+    
+    return ManufacturingOrderDetailView.as_view()(request, pk=manufacturing_order.pk)
+
+@login_required
+def manufacturing_order_detail_redirect(request, pk):
+    """إعادة توجيه من ID إلى كود التصنيع"""
+    manufacturing_order = get_object_or_404(ManufacturingOrder, pk=pk)
+    return redirect('manufacturing:order_detail_by_code', manufacturing_code=manufacturing_order.manufacturing_code)

@@ -338,4 +338,4 @@ class Customer(models.Model):
     def get_absolute_url(self):
         """الحصول على رابط تفاصيل العميل"""
         from django.urls import reverse
-        return reverse('customers:customer_detail', kwargs={'pk': self.pk})
+        return reverse('customers:customer_detail_by_code', kwargs={'customer_code': self.code})

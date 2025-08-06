@@ -36,7 +36,12 @@ urlpatterns = [
     path('quick-schedule/<int:order_id>/', views.quick_schedule_installation, name='quick_schedule_installation'),
     path('check-debt/<int:order_id>/', views.check_debt_before_schedule, name='check_debt_before_schedule'),
     path('installation/<int:installation_id>/schedule-from-needs/', views.schedule_from_needs_scheduling, name='schedule_from_needs_scheduling'),
-    path('installation/<int:installation_id>/', views.installation_detail, name='installation_detail'),
+    
+    # URLs باستخدام كود التركيب
+    path('installation/<str:installation_code>/', views.installation_detail_by_code, name='installation_detail_by_code'),
+    
+    # URLs القديمة مع إعادة توجيه
+    path('installation/<int:installation_id>/', views.installation_detail_redirect, name='installation_detail'),
     path('daily-schedule/', views.daily_schedule, name='daily_schedule'),
     path('print-daily-schedule/', views.print_daily_schedule, name='print_daily_schedule'),
     path('debt-list/', views.debt_list, name='debt_list'),

@@ -20,11 +20,21 @@ urlpatterns = [
 
     # Old dashboard (deactivated)
     path('dashboard/', OrdersDashboardView.as_view(), name='dashboard'),
-    path('<int:pk>/', views.order_detail, name='order_detail'),
-    path('<int:pk>/success/', views.order_success, name='order_success'),
+    
+    # URLs باستخدام رقم الطلب (order_number) - الأولوية الأولى
+    path('order/<str:order_number>/', views.order_detail_by_number, name='order_detail_by_number'),
+    path('order/<str:order_code>/', views.order_detail_by_code, name='order_detail_by_code'),
+    path('order/<str:order_number>/success/', views.order_success_by_number, name='order_success_by_number'),
+    path('order/<str:order_number>/update/', views.order_update_by_number, name='order_update_by_number'),
+    path('order/<str:order_number>/delete/', views.order_delete_by_number, name='order_delete_by_number'),
+    
+    # URLs القديمة مع إعادة توجيه للجديدة
+    path('<int:pk>/', views.order_detail_redirect, name='order_detail'),
+    path('<int:pk>/success/', views.order_success_redirect, name='order_success'),
+    path('<int:pk>/update/', views.order_update_redirect, name='order_update'),
+    path('<int:pk>/delete/', views.order_delete_redirect, name='order_delete'),
+    
     path('create/', views.order_create, name='order_create'),
-    path('<int:pk>/update/', views.order_update, name='order_update'),
-    path('<int:pk>/delete/', views.order_delete, name='order_delete'),
 
     # Payment Views
     path('payment/<int:order_pk>/create/', views.payment_create, name='payment_create'),

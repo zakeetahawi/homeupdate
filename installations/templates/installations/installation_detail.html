@@ -248,7 +248,7 @@
                                         {% if installation.scheduled_date and installation.scheduled_date != installation.get_installation_date %}
                                             <br>
                                             <button type="button" class="btn btn-sm btn-outline-primary mt-2" 
-                                                    onclick="updateDateFromScheduled('{{ installation.id }}')">
+                                                    onclick="updateDateFromScheduled('{{ installation.installation_code }}')">
                                                 <i class="fas fa-calendar-alt"></i> تحديث التاريخ من المجدول
                                             </button>
                                         {% endif %}
@@ -477,7 +477,7 @@
                         {% if installation.status != 'completed' and installation.status != 'cancelled' %}
                             <div class="mb-3">
                                 <label for="status-select" class="form-label">تحديث الحالة:</label>
-                                <select id="status-select" class="form-control" onchange="updateInstallationStatus('{{ installation.id }}', this.value)">
+                                <select id="status-select" class="form-control" onchange="updateInstallationStatus('{{ installation.installation_code }}', this.value)">
                                     <option value="">اختر الحالة الجديدة</option>
                                     <option value="needs_scheduling" {% if installation.status == 'needs_scheduling' %}selected{% endif %}>بحاجة جدولة</option>
                                     <option value="scheduled" {% if installation.status == 'scheduled' %}selected{% endif %}>مجدول</option>
@@ -509,7 +509,7 @@
 
                             {% if installation.status == 'scheduled' %}
                                 <button type="button" class="btn btn-primary update-status"
-                                        data-installation-id="{{ installation.id }}"
+                                        data-installation-id="{{ installation.installation_code }}"
                                         data-status="in_installation">
                                     <i class="fas fa-play"></i> بدء التركيب
                                 </button>

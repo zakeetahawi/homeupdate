@@ -1,9 +1,11 @@
 from django.contrib import admin
+
 from django.utils.translation import gettext_lazy as _
 from .models import Report, SavedReport, ReportSchedule
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('title', 'report_type', 'created_by', 'created_at', 'updated_at')
     list_filter = ('report_type', 'created_by', 'created_at')
     search_fields = ('title', 'description')
@@ -16,6 +18,7 @@ class ReportAdmin(admin.ModelAdmin):
 
 @admin.register(SavedReport)
 class SavedReportAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'report', 'created_by', 'created_at')
     list_filter = ('report', 'created_by', 'created_at')
     search_fields = ('name', 'report__title')
@@ -28,6 +31,7 @@ class SavedReportAdmin(admin.ModelAdmin):
 
 @admin.register(ReportSchedule)
 class ReportScheduleAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'report', 'frequency', 'is_active', 'created_by', 'created_at')
     list_filter = ('frequency', 'is_active', 'created_by', 'created_at')
     search_fields = ('name', 'report__title')

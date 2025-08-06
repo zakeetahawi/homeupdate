@@ -158,7 +158,19 @@ class InstallationSchedule(models.Model):
         ordering = ['-scheduled_date', '-scheduled_time']
 
     def __str__(self):
-        return f"تركيب الطلب {self.order.order_number} - {self.get_status_display()}"
+        return f"طلب تركيب {self.installation_code} - {self.get_status_display()}"
+    
+    @property
+    def installation_code(self):
+        """إرجاع رقم طلب التركيب الموحد (رقم الطلب + T)"""
+        if self.order and self.order.order_number:
+            return f"{self.order.order_number}-T"
+        return f"#{self.id}-T"  # للبيانات القديمة التي لا تحتوي على order_number
+
+    def get_absolute_url(self):
+        """إرجاع رابط تفاصيل التركيب باستخدام كود التركيب"""
+        from django.urls import reverse
+        return reverse('installations:installation_detail_by_code', args=[self.installation_code])
 
     def clean(self):
         """التحقق من صحة البيانات"""

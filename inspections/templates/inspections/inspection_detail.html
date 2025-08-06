@@ -111,7 +111,7 @@
                                     <!-- أيقونة الملف -->
                                     {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
                                         <a href="{{ inspection.google_drive_file_url }}" target="_blank" title="عرض ملف المعاينة في Google Drive"
-                                           data-inspection-id="{{ inspection.id }}" class="large-icon">
+                                           data-inspection-id="{{ inspection.inspection_code }}" class="large-icon">
                                             <i class="fas fa-file-pdf text-danger" style="font-size: 48px;"></i>
                                         </a>
                                         <div>
@@ -127,7 +127,7 @@
                                     {% else %}
                                         <!-- إذا لم يتم الرفع بعد -->
                                         <div style="position: relative;"
-                                             data-inspection-id="{{ inspection.id }}"
+                                             data-inspection-id="{{ inspection.inspection_code }}"
                                              data-upload-pending="true"
                                              class="large-icon">
                                             <i class="fas fa-file-pdf text-warning" style="font-size: 48px;"></i>

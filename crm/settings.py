@@ -208,8 +208,11 @@ DATABASES = {
         'PASSWORD': '5525',
         'HOST': 'localhost',
         'PORT': '5432',
+        'CONN_MAX_AGE': 300,  # إعادة استخدام الاتصالات لمدة 5 دقائق
         'OPTIONS': {
             'client_encoding': 'UTF8',
+            'sslmode': 'prefer',
+            'connect_timeout': 10,
         },
     }
 }
@@ -668,6 +671,8 @@ PERFORMANCE_SETTINGS = {
     'COMPRESSION_ENABLED': True,
     'LAZY_LOADING_ENABLED': True,
     'VIRTUAL_SCROLLING_ENABLED': True,
+    'QUERY_DEBUG_ENABLED': DEBUG,  # تمكين تحليل الاستعلامات في وضع التطوير
+    'SLOW_QUERY_THRESHOLD': 0.1,  # تسجيل الاستعلامات التي تستغرق أكثر من 100ms
 }
 
 # Security Settings

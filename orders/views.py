@@ -774,4 +774,159 @@ def get_customer_inspections(request):
         })
 
 
+# Views باستخدام رقم الطلب (order_number) بدلاً من ID
+
+@login_required
+def order_detail_by_number(request, order_number):
+    """عرض تفاصيل الطلب باستخدام رقم الطلب"""
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    # التحقق من صلاحية المستخدم لحذف أو تعديل أو عرض هذا الطلب
+    if not can_user_view_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
+        return redirect("orders:order_list")
+    if not can_user_edit_order(request.user, order):
+        messages.warning(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
+    if not can_user_delete_order(request.user, order):
+        messages.warning(request, "ليس لديك صلاحية لحذف هذا الطلب.")
+    
+    payments = order.payments.all().order_by('-payment_date')
+    order_items = order.items.all()
+    
+    # Get inspections related to this order
+    inspections = []
+    selected_types = order.get_selected_types_list()
+    if 'inspection' in selected_types:
+        from inspections.models import Inspection
+        inspections = Inspection.objects.filter(order=order)
+
+    context = {
+        'order': order,
+        'payments': payments,
+        'order_items': order_items,
+        'inspections': inspections,
+        'can_edit': can_user_edit_order(request.user, order),
+        'can_delete': can_user_delete_order(request.user, order),
+    }
+    
+    return render(request, 'orders/order_detail.html', context)
+
+
+@login_required  
+def order_detail_by_code(request, order_code):
+    """عرض تفاصيل الطلب باستخدام كود الطلب (نفس order_number)"""
+    order = get_object_or_404(Order, order_number=order_code)
+    
+    # التحقق من صلاحية المستخدم لحذف أو تعديل أو عرض هذا الطلب
+    if not can_user_view_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
+        return redirect("orders:order_list")
+    if not can_user_edit_order(request.user, order):
+        messages.warning(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
+    if not can_user_delete_order(request.user, order):
+        messages.warning(request, "ليس لديك صلاحية لحذف هذا الطلب.")
+    
+    payments = order.payments.select_related().all().order_by('-payment_date')
+    order_items = order.items.select_related('product').all()
+    
+    # Get inspections related to this order with optimization
+    inspections = []
+    selected_types = order.get_selected_types_list()
+    if 'inspection' in selected_types:
+        from inspections.models import Inspection
+        inspections = Inspection.objects.filter(order=order).select_related('inspector')
+
+    context = {
+        'order': order,
+        'payments': payments,
+        'order_items': order_items,
+        'inspections': inspections,
+        'can_edit': can_user_edit_order(request.user, order),
+        'can_delete': can_user_delete_order(request.user, order),
+    }
+    
+    return render(request, 'orders/order_detail.html', context)
+
+
+@login_required
+def order_success_by_number(request, order_number):
+    """صفحة نجاح إنشاء الطلب باستخدام رقم الطلب"""
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    if not can_user_view_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
+        return redirect("orders:order_list")
+    
+    return render(request, 'orders/order_success.html', {'order': order})
+
+
+@login_required
+def order_update_by_number(request, order_number):
+    """تحديث الطلب باستخدام رقم الطلب"""
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    if not can_user_edit_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
+        return redirect("orders:order_detail_by_number", order_number=order_number)
+    
+    if request.method == 'POST':
+        form = OrderForm(request.POST, instance=order)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'تم تحديث الطلب {order.order_number} بنجاح.')
+            return redirect('orders:order_detail_by_number', order_number=order_number)
+    else:
+        form = OrderForm(instance=order)
+    
+    return render(request, 'orders/order_form.html', {
+        'form': form,
+        'order': order,
+        'is_update': True
+    })
+
+
+@login_required
+def order_delete_by_number(request, order_number):
+    """حذف الطلب باستخدام رقم الطلب"""
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    if not can_user_delete_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لحذف هذا الطلب.")
+        return redirect("orders:order_detail_by_number", order_number=order_number)
+    
+    if request.method == 'POST':
+        order_number_for_message = order.order_number
+        order.delete()
+        messages.success(request, f'تم حذف الطلب {order_number_for_message} بنجاح.')
+        return redirect('orders:order_list')
+    
+    return render(request, 'orders/order_confirm_delete.html', {'order': order})
+
+
+# Views للإعادة التوجيه من ID إلى order_number
+@login_required
+def order_detail_redirect(request, pk):
+    """إعادة توجيه من ID إلى order_number"""
+    order = get_object_or_404(Order, pk=pk)
+    return redirect('orders:order_detail_by_number', order_number=order.order_number)
+
+@login_required
+def order_success_redirect(request, pk):
+    """إعادة توجيه من ID إلى order_number"""
+    order = get_object_or_404(Order, pk=pk)
+    return redirect('orders:order_success_by_number', order_number=order.order_number)
+
+@login_required
+def order_update_redirect(request, pk):
+    """إعادة توجيه من ID إلى order_number"""
+    order = get_object_or_404(Order, pk=pk)
+    return redirect('orders:order_update_by_number', order_number=order.order_number)
+
+@login_required
+def order_delete_redirect(request, pk):
+    """إعادة توجيه من ID إلى order_number"""
+    order = get_object_or_404(Order, pk=pk)
+    return redirect('orders:order_delete_by_number', order_number=order.order_number)
+
+
 #

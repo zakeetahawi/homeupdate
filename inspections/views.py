@@ -763,3 +763,68 @@ def ajax_upload_to_google_drive(request):
         'success': False,
         'message': 'طريقة الطلب غير صحيحة'
     })
+
+
+# Views للوصول بالكود بدلاً من ID
+@login_required
+def inspection_detail_by_code(request, inspection_code):
+    """عرض تفاصيل المعاينة باستخدام كود المعاينة"""
+    # البحث بطريقة محسنة للأداء
+    if '-I' in inspection_code:
+        order_number = inspection_code.replace('-I', '')
+        inspection = get_object_or_404(
+            Inspection.objects.select_related('customer', 'order', 'inspector', 'branch'),
+            order__order_number=order_number
+        )
+    else:
+        # للأكواد القديمة مثل #4489-I
+        inspection_id = inspection_code.replace('#', '').replace('-I', '')
+        inspection = get_object_or_404(
+            Inspection.objects.select_related('customer', 'order', 'inspector', 'branch'),
+            id=inspection_id
+        )
+    
+    return InspectionDetailView.as_view()(request, pk=inspection.pk)
+
+@login_required
+def inspection_update_by_code(request, inspection_code):
+    """تحديث المعاينة باستخدام كود المعاينة"""
+    if '-I' in inspection_code:
+        order_number = inspection_code.replace('-I', '')
+        inspection = get_object_or_404(Inspection, order__order_number=order_number)
+    else:
+        inspection_id = inspection_code.replace('#', '').replace('-I', '')
+        inspection = get_object_or_404(Inspection, id=inspection_id)
+    
+    return InspectionUpdateView.as_view()(request, pk=inspection.pk)
+
+@login_required
+def inspection_delete_by_code(request, inspection_code):
+    """حذف المعاينة باستخدام كود المعاينة"""
+    if '-I' in inspection_code:
+        order_number = inspection_code.replace('-I', '')
+        inspection = get_object_or_404(Inspection, order__order_number=order_number)
+    else:
+        inspection_id = inspection_code.replace('#', '').replace('-I', '')
+        inspection = get_object_or_404(Inspection, id=inspection_id)
+    
+    return InspectionDeleteView.as_view()(request, pk=inspection.pk)
+
+# Views للإعادة التوجيه من ID إلى كود
+@login_required
+def inspection_detail_redirect(request, pk):
+    """إعادة توجيه من ID إلى كود المعاينة"""
+    inspection = get_object_or_404(Inspection, pk=pk)
+    return redirect('inspections:inspection_detail_by_code', inspection_code=inspection.inspection_code)
+
+@login_required
+def inspection_update_redirect(request, pk):
+    """إعادة توجيه من ID إلى كود المعاينة للتحديث"""
+    inspection = get_object_or_404(Inspection, pk=pk)
+    return redirect('inspections:inspection_update_by_code', inspection_code=inspection.inspection_code)
+
+@login_required
+def inspection_delete_redirect(request, pk):
+    """إعادة توجيه من ID إلى كود المعاينة للحذف"""
+    inspection = get_object_or_404(Inspection, pk=pk)
+    return redirect('inspections:inspection_delete_by_code', inspection_code=inspection.inspection_code)

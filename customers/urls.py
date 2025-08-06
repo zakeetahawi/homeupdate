@@ -10,7 +10,12 @@ urlpatterns = [
 
     # Old dashboard (deactivated)
     path('dashboard/', CustomerDashboardView.as_view(), name='dashboard'),
-    path('<int:pk>/', views.customer_detail, name='customer_detail'),
+    
+    # URLs باستخدام كود العميل
+    path('customer/<str:customer_code>/', views.customer_detail_by_code, name='customer_detail_by_code'),
+    
+    # URLs القديمة مع إعادة توجيه
+    path('<int:pk>/', views.customer_detail_redirect, name='customer_detail'),
     path('create/', views.customer_create, name='customer_create'),
     path('<int:pk>/update/', views.customer_update, name='customer_update'),
     path('<int:pk>/delete/', views.customer_delete, name='customer_delete'),

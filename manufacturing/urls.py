@@ -16,9 +16,18 @@ urlpatterns = [
         views.ManufacturingOrderCreateView.as_view(),
         name='order_create'
     ),
+    
+    # URLs باستخدام كود التصنيع
+    path(
+        'order/<str:manufacturing_code>/',
+        views.manufacturing_order_detail_by_code,
+        name='order_detail_by_code'
+    ),
+    
+    # URLs القديمة مع إعادة توجيه
     path(
         'orders/<int:pk>/',
-        views.ManufacturingOrderDetailView.as_view(),
+        views.manufacturing_order_detail_redirect,
         name='order_detail'
     ),
     path(

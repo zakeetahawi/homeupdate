@@ -2491,3 +2491,31 @@ def delete_driver(request, driver_id):
     }
     
     return render(request, 'installations/confirm_delete_driver.html', context)
+
+
+# Views للوصول بالكود بدلاً من ID
+@login_required
+def installation_detail_by_code(request, installation_code):
+    """عرض تفاصيل التركيب باستخدام كود التركيب"""
+    # البحث بطريقة محسنة للأداء
+    if '-T' in installation_code:
+        order_number = installation_code.replace('-T', '')
+        installation = get_object_or_404(
+            InstallationSchedule.objects.select_related('order', 'order__customer', 'team'),
+            order__order_number=order_number
+        )
+    else:
+        # للأكواد القديمة
+        installation_id = installation_code.replace('#', '').replace('-T', '')
+        installation = get_object_or_404(
+            InstallationSchedule.objects.select_related('order', 'order__customer', 'team'),
+            id=installation_id
+        )
+    
+    return installation_detail(request, installation.id)
+
+@login_required
+def installation_detail_redirect(request, installation_id):
+    """إعادة توجيه من ID إلى كود التركيب"""
+    installation = get_object_or_404(InstallationSchedule, id=installation_id)
+    return redirect('installations:installation_detail_by_code', installation_code=installation.installation_code)

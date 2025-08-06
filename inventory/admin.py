@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from .models import (
@@ -8,12 +9,14 @@ from .models import (
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('name', 'parent')
     list_filter = ('parent',)
     search_fields = ('name', 'description')
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('name', 'code', 'category', 'price', 'get_current_stock', 'get_stock_status')
     list_filter = ('category', 'created_at')
     search_fields = ('name', 'code', 'description')
@@ -49,6 +52,7 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(StockTransaction)
 class StockTransactionAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('product', 'transaction_type', 'reason', 'quantity', 'date')
     list_filter = ('transaction_type', 'reason', 'date')
     search_fields = ('product__name', 'reference', 'notes')
@@ -68,17 +72,19 @@ class StockTransactionAdmin(admin.ModelAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        if not change:  # If creating new object
+        if not change:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('name', 'contact_person', 'phone', 'email')
     search_fields = ('name', 'contact_person', 'phone', 'email', 'address')
 
 @admin.register(PurchaseOrder)
 class PurchaseOrderAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('order_number', 'supplier', 'status', 'order_date', 'total_amount')
     list_filter = ('status', 'order_date')
     search_fields = ('order_number', 'supplier__name', 'notes')
@@ -104,30 +110,34 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        if not change:  # If creating new object
+        if not change:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
 @admin.register(PurchaseOrderItem)
 class PurchaseOrderItemAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('purchase_order', 'product', 'quantity', 'unit_price', 'received_quantity')
     list_filter = ('purchase_order__status',)
     search_fields = ('purchase_order__order_number', 'product__name')
 
 @admin.register(Warehouse)
 class WarehouseAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('name', 'code', 'branch', 'manager', 'is_active')
     list_filter = ('branch', 'is_active')
     search_fields = ('name', 'code', 'address')
 
 @admin.register(WarehouseLocation)
 class WarehouseLocationAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('name', 'code', 'warehouse')
     list_filter = ('warehouse',)
     search_fields = ('name', 'code', 'description')
 
 @admin.register(ProductBatch)
 class ProductBatchAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('product', 'batch_number', 'location', 'quantity', 'expiry_date')
     list_filter = ('location__warehouse', 'manufacturing_date', 'expiry_date')
     search_fields = ('product__name', 'batch_number', 'barcode')
@@ -135,6 +145,7 @@ class ProductBatchAdmin(admin.ModelAdmin):
 
 @admin.register(InventoryAdjustment)
 class InventoryAdjustmentAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('product', 'adjustment_type', 'quantity_before', 'quantity_after', 'date')
     list_filter = ('adjustment_type', 'date')
     search_fields = ('product__name', 'reason')
@@ -142,6 +153,7 @@ class InventoryAdjustmentAdmin(admin.ModelAdmin):
 
 @admin.register(StockAlert)
 class StockAlertAdmin(admin.ModelAdmin):
+    list_per_page = 50
     list_display = ('product', 'alert_type', 'status', 'created_at')
     list_filter = ('alert_type', 'status', 'created_at')
     search_fields = ('product__name', 'message')

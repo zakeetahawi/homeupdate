@@ -8,12 +8,64 @@ from django.conf import settings
 from django.db import connection
 from django.middleware.gzip import GZipMiddleware
 from django.utils.functional import SimpleLazyObject
+from django.utils.deprecation import MiddlewareMixin
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth.middleware import get_user
 from rest_framework_simplejwt.tokens import AccessToken
 
 # إعداد السجل الخاص بالاستعلامات البطيئة
 slow_queries_logger = logging.getLogger('slow_queries')
+query_logger = logging.getLogger('django.db.backends')
+
+
+class QueryAnalysisMiddleware(MiddlewareMixin):
+    """Middleware لتحليل وتسجيل الاستعلامات البطيئة"""
+    
+    def process_request(self, request):
+        """بداية تتبع الاستعلامات"""
+        self.start_time = time.time()
+        self.start_queries = len(connection.queries)
+        return None
+    
+    def process_response(self, request, response):
+        """تحليل الاستعلامات في نهاية الطلب"""
+        if not settings.DEBUG:
+            return response
+            
+        total_time = time.time() - self.start_time
+        total_queries = len(connection.queries) - self.start_queries
+        
+        # تسجيل المعلومات الأساسية
+        if total_time > getattr(settings, 'SLOW_REQUEST_THRESHOLD', 1.0):
+            query_logger.warning(
+                f"بطء في الطلب: {request.path} - "
+                f"الوقت: {total_time:.3f}s، "
+                f"الاستعلامات: {total_queries}"
+            )
+        
+        # تحليل الاستعلامات البطيئة
+        slow_queries = []
+        for query in connection.queries[-total_queries:]:
+            query_time = float(query['time'])
+            if query_time > getattr(settings, 'SLOW_QUERY_THRESHOLD', 0.1):
+                slow_queries.append({
+                    'sql': query['sql'][:200] + '...' if len(query['sql']) > 200 else query['sql'],
+                    'time': query_time
+                })
+        
+        if slow_queries:
+            query_logger.warning(
+                f"استعلامات بطيئة في {request.path}:\n" +
+                "\n".join([f"  - {q['time']:.3f}s: {q['sql']}" for q in slow_queries])
+            )
+        
+        # إضافة headers للمطورين
+        if settings.DEBUG:
+            response['X-DB-Queries'] = str(total_queries)
+            response['X-DB-Time'] = f"{total_time:.3f}s"
+            response['X-Slow-Queries'] = str(len(slow_queries))
+        
+        return response
 
 class DebugMiddleware:
     def __init__(self, get_response):

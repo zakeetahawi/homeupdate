@@ -1,10 +1,14 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
+from django.urls import reverse, path
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponseRedirect
 from django import forms
 from .models import (
     Customer, CustomerCategory, CustomerNote, CustomerType, get_customer_types
 )
+
 
 
 class CustomerAdminForm(forms.ModelForm):
@@ -45,6 +49,7 @@ class CustomerAdminForm(forms.ModelForm):
 
 @admin.register(CustomerCategory)
 class CustomerCategoryAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['name', 'description', 'created_at']
     search_fields = ['name', 'description']
     readonly_fields = ['created_at']
@@ -52,6 +57,7 @@ class CustomerCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(CustomerNote)
 class CustomerNoteAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['customer', 'note_preview', 'created_by', 'created_at']
     list_filter = ['created_at', 'created_by']
     search_fields = ['customer__name', 'note', 'created_by__username']
@@ -69,6 +75,7 @@ class CustomerNoteAdmin(admin.ModelAdmin):
 
 @admin.register(CustomerType)
 class CustomerTypeAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['code', 'name', 'description', 'is_active', 'created_at']
     list_filter = ['is_active', 'created_at']
     search_fields = ['code', 'name', 'description']
@@ -79,10 +86,19 @@ class CustomerTypeAdmin(admin.ModelAdmin):
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     form = CustomerAdminForm
+    list_per_page = 50  # زيادة العدد إلى 50
+    list_max_show_all = 100
     
     list_display = [
-        'code', 'customer_image', 'name', 'customer_type_display',
+        'customer_code_display', 'customer_image', 'name', 'customer_type_display',
         'branch', 'phone', 'phone2', 'birth_date_display', 'status', 'category'
+    ]
+    
+    # إضافة إمكانية الترتيب لجميع الأعمدة
+    sortable_by = [
+        'code', 'name', 'customer_type', 'branch__name',
+        'phone', 'phone2', 'birth_date', 'status', 'category__name',
+        'created_at'
     ]
     
     list_filter = [
@@ -149,12 +165,66 @@ class CustomerAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
+        qs = qs.select_related(
+            'category', 'branch', 'created_by'
+        )
+        
         if request.user.is_superuser:
             return qs
         # فلترة العملاء حسب فرع المستخدم
         if request.user.branch:
             return qs.filter(branch=request.user.branch)
         return qs.none()
+
+    def get_urls(self):
+        """إضافة URLs مخصصة للوصول للعملاء باستخدام الكود"""
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'by-code/<str:customer_code>/',
+                self.admin_site.admin_view(self.customer_by_code_view),
+                name='customers_customer_by_code',
+            ),
+        ]
+        return custom_urls + urls
+
+    def customer_by_code_view(self, request, customer_code):
+        """عرض العميل باستخدام الكود وإعادة التوجيه لصفحة التحرير"""
+        try:
+            customer = Customer.objects.get(code=customer_code)
+            return HttpResponseRedirect(
+                reverse('admin:customers_customer_change', args=[customer.pk])
+            )
+        except Customer.DoesNotExist:
+            self.message_user(request, f'العميل بكود {customer_code} غير موجود', level='error')
+            return HttpResponseRedirect(reverse('admin:customers_customer_changelist'))
+
+    def customer_code_display(self, obj):
+        """عرض كود العميل مع روابط للعرض والتحرير - تحديث للاستخدام الكود في admin"""
+        if not obj or not obj.code:
+            return '-'
+        
+        try:
+            # رابط عرض العميل في الواجهة
+            view_url = reverse('customers:customer_detail_by_code', kwargs={'customer_code': obj.code})
+            # رابط تحرير العميل في لوحة التحكم باستخدام الكود
+            admin_url = reverse('admin:customers_customer_by_code', kwargs={'customer_code': obj.code})
+            
+            return format_html(
+                '<strong>{}</strong><br/>'
+                '<a href="{}" target="_blank" title="عرض في الواجهة">'
+                '<span style="color: #0073aa;">👁️ عرض</span></a> | '
+                '<a href="{}" title="تحرير في لوحة التحكم">'
+                '<span style="color: #d63638;">✏️ تحرير</span></a>',
+                obj.code,
+                view_url,
+                admin_url
+            )
+        except Exception:
+            return obj.code
+    
+    customer_code_display.short_description = _('كود العميل')
+    customer_code_display.admin_order_field = 'code'
 
     def has_change_permission(self, request, obj=None):
         if not obj or request.user.is_superuser:

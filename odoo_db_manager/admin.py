@@ -10,14 +10,10 @@ from .google_sync import GoogleSyncConfig, GoogleSyncLog
 from .google_sync_advanced import (
     GoogleSheetMapping, GoogleSyncTask, GoogleSyncConflict, GoogleSyncSchedule
 )
-from .google_sync_advanced import (
-    GoogleSheetMapping, GoogleSyncTask, GoogleSyncConflict, GoogleSyncSchedule
-)
 
 @admin.register(Database)
 class DatabaseAdmin(admin.ModelAdmin):
     """إدارة قواعد البيانات"""
-
     list_display = ('name', 'db_type', 'is_active', 'created_at')
     list_filter = ('db_type', 'is_active')
     search_fields = ('name',)
@@ -39,7 +35,6 @@ class DatabaseAdmin(admin.ModelAdmin):
 @admin.register(Backup)
 class BackupAdmin(admin.ModelAdmin):
     """إدارة النسخ الاحتياطية"""
-
     list_display = ('name', 'database', 'size_display', 'created_at', 'created_by')
     list_filter = ('database', 'created_at')
     search_fields = ('name', 'database__name')
@@ -54,11 +49,9 @@ class BackupAdmin(admin.ModelAdmin):
         }),
     )
 
-
 @admin.register(GoogleDriveConfig)
 class GoogleDriveConfigAdmin(admin.ModelAdmin):
     """إدارة إعدادات Google Drive"""
-
     list_display = ('name', 'is_active', 'total_uploads', 'last_upload')
     list_filter = ('is_active', 'last_upload')
     search_fields = ('name',)
@@ -93,11 +86,9 @@ class GoogleDriveConfigAdmin(admin.ModelAdmin):
         }),
     )
 
-
 @admin.register(GoogleSyncConfig)
 class GoogleSyncConfigAdmin(admin.ModelAdmin):
     """إدارة إعدادات مزامنة غوغل"""
-
     list_display = ('name', 'is_active', 'last_sync', 'sync_frequency', 'created_at')
     list_filter = ('is_active', 'created_at')
     search_fields = ('name',)
@@ -115,7 +106,6 @@ class GoogleSyncConfigAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-
 
 @admin.register(GoogleSheetMapping)
 class GoogleSheetMappingAdmin(admin.ModelAdmin):
@@ -140,7 +130,6 @@ class GoogleSheetMappingAdmin(admin.ModelAdmin):
         }),
     )
     list_per_page = 20
-
 
 @admin.register(GoogleSyncTask)
 class GoogleSyncTaskAdmin(admin.ModelAdmin):
@@ -183,7 +172,6 @@ class GoogleSyncTaskAdmin(admin.ModelAdmin):
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
-
 @admin.register(GoogleSyncConflict)
 class GoogleSyncConflictAdmin(admin.ModelAdmin):
     """إدارة تعارضات المزامنة"""
@@ -218,7 +206,6 @@ class GoogleSyncConflictAdmin(admin.ModelAdmin):
         updated = queryset.update(resolution_status='ignored', resolved_at=timezone.now())
         self.message_user(request, f'تم تجاهل {updated} من التعارضات.')
     mark_as_ignored.short_description = 'تجاهل التعارضات المحددة'
-
 
 @admin.register(GoogleSyncSchedule)
 class GoogleSyncScheduleAdmin(admin.ModelAdmin):
@@ -261,11 +248,9 @@ class GoogleSyncScheduleAdmin(admin.ModelAdmin):
                 obj.calculate_next_run()
         super().save_model(request, obj, form, change)
 
-
 @admin.register(GoogleSyncLog)
 class GoogleSyncLogAdmin(admin.ModelAdmin):
     """إدارة سجلات مزامنة غوغل"""
-
     list_display = ('config', 'status', 'message', 'created_at')
     list_filter = ('status', 'created_at', 'config')
     search_fields = ('message',)
@@ -283,7 +268,3 @@ class GoogleSyncLogAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-
-
-# تم إزالة النماذج التي لا توجد حقولها في النماذج الفعلية
-# سيتم إضافتها لاحقاً عند إنشاء النماذج المناسبة

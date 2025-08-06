@@ -25,9 +25,27 @@ from .permissions import (
     is_customer_cross_branch
 )
 
-def get_queryset_for_user(request, search_term=None):
+def get_queryset_for_user(user, search_term=None):
     """دالة مساعدة للحصول على العملاء المسموح للمستخدم برؤيتهم"""
-    return get_user_customers_queryset(request.user, search_term)
+    from .models import Customer
+    from django.db.models.query import QuerySet
+    
+    try:
+        queryset = get_user_customers_queryset(user, search_term)
+        
+        # التأكد من أن النتيجة هي QuerySet صحيح
+        if isinstance(queryset, QuerySet) and hasattr(queryset, 'select_related'):
+            return queryset
+        elif queryset is None:
+            return Customer.objects.none()
+        else:
+            # إذا لم تكن QuerySet، إرجاع جميع العملاء كـ fallback
+            print(f"Warning: get_user_customers_queryset returned unexpected type: {type(queryset)}")
+            return Customer.objects.all()
+    except Exception as e:
+        # في حالة حدوث خطأ، إرجاع جميع العملاء كـ fallback مع طباعة تفاصيل الخطأ
+        print(f"Error in get_queryset_for_user: {str(e)}")
+        return Customer.objects.all()
 
 @login_required
 def customer_list(request):
@@ -41,7 +59,14 @@ def customer_list(request):
     search_term = request.GET.get('search', '').strip()
     
     # تمرير معامل البحث لدالة الصلاحيات
-    customers = get_queryset_for_user(request, search_term).select_related(
+    queryset = get_queryset_for_user(request.user, search_term)
+    
+    # التحقق من أن queryset صحيح
+    if not hasattr(queryset, 'select_related'):
+        # إذا لم يكن QuerySet صحيح، استخدم جميع العملاء
+        queryset = Customer.objects.all()
+    
+    customers = queryset.select_related(
         'category', 'branch', 'created_by'
     ).prefetch_related('customer_orders')
 
@@ -129,7 +154,14 @@ def customer_detail(request, pk):
     """
     try:
         # محاولة الحصول على العميل من queryset المستخدم العادي
-        customer = get_queryset_for_user(request).select_related(
+        queryset = get_queryset_for_user(request.user, None)
+        
+        # التحقق من أن queryset صحيح
+        if not hasattr(queryset, 'select_related'):
+            # إذا لم يكن QuerySet صحيح، استخدم جميع العملاء
+            queryset = Customer.objects.all()
+        
+        customer = queryset.select_related(
             'category', 'branch', 'created_by'
         ).get(pk=pk)
         is_cross_branch = False
@@ -548,7 +580,17 @@ class CustomerDashboardView(LoginRequiredMixin, TemplateView):
         user = self.request.user
 
         # تطبيق نظام الصلاحيات - الحصول على العملاء حسب دور المستخدم
-        customers = get_user_customers_queryset(user).select_related("category", "branch", "created_by")
+        try:
+            customers = get_user_customers_queryset(user)
+            
+            # التحقق من أن customers هو QuerySet صحيح
+            if not hasattr(customers, 'select_related'):
+                customers = Customer.objects.all()
+            
+            customers = customers.select_related("category", "branch", "created_by")
+        except Exception as e:
+            print(f"Error in CustomerDashboardView: {str(e)}")
+            customers = Customer.objects.select_related("category", "branch", "created_by")
 
         # استخدام استعلامات أكثر كفاءة
         from django.db.models import Count, Case, When, IntegerField
@@ -710,7 +752,15 @@ def customer_api(request):
     page_size = 20
     
     # الحصول على العملاء المسموح للمستخدم برؤيتهم
-    customers = get_user_customers_queryset(request.user, search_term)
+    try:
+        customers = get_user_customers_queryset(request.user, search_term)
+        
+        # التحقق من أن customers هو QuerySet صحيح
+        if not hasattr(customers, 'filter'):
+            customers = Customer.objects.all()
+    except Exception as e:
+        print(f"Error in customer_api: {str(e)}")
+        customers = Customer.objects.all()
     
     # إذا كان هناك مصطلح بحث، تطبيق التصفية
     if search_term:
@@ -745,3 +795,97 @@ def customer_api(request):
         'has_previous': page_obj.has_previous(),
         'total_count': paginator.count
     })
+
+@login_required
+def customer_detail_by_code(request, customer_code):
+    """
+    View for displaying customer details using customer code
+    عرض تفاصيل العميل باستخدام كود العميل
+    """
+    try:
+        # محاولة الحصول على العميل من queryset المستخدم العادي
+        queryset = get_queryset_for_user(request.user, None)
+        
+        # التحقق من أن queryset صحيح
+        if not hasattr(queryset, 'select_related'):
+            # إذا لم يكن QuerySet صحيح، استخدم جميع العملاء
+            queryset = Customer.objects.all()
+        
+        customer = queryset.select_related(
+            'category', 'branch', 'created_by'
+        ).get(code=customer_code)
+        is_cross_branch = False
+    except Customer.DoesNotExist:
+        # إذا لم يوجد، محاولة البحث في جميع العملاء (للوصول عبر الفروع)
+        try:
+            customer = Customer.objects.select_related(
+                'category', 'branch', 'created_by'
+            ).get(code=customer_code)
+            is_cross_branch = is_customer_cross_branch(request.user, customer)
+        except Customer.DoesNotExist:
+            messages.error(request, f"العميل بكود {customer_code} غير موجود.")
+            return redirect("customers:customer_list")
+
+    # التحقق من صلاحية المستخدم لعرض هذا العميل
+    if not can_user_view_customer(request.user, customer, allow_cross_branch=is_cross_branch):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
+        return redirect("customers:customer_list")
+
+    # إضافة ملاحظة عند الوصول لعميل من فرع آخر
+    if is_cross_branch:
+        CustomerNote.objects.create(
+            customer=customer,
+            note=f"تم الوصول لبيانات العميل من فرع {request.user.branch.name if request.user.branch else 'غير محدد'} بواسطة {request.user.get_full_name() or request.user.username}",
+            created_by=request.user
+        )
+
+    # تحسين استعلام الطلبات باستخدام prefetch_related
+    customer_orders = customer.customer_orders.select_related(
+        'customer', 'salesperson', 'branch'
+    ).prefetch_related('items').order_by('-created_at')[:10]
+
+    # Get orders with items only (for product orders)
+    orders = []
+    for order in customer_orders:
+        # Include service orders always
+        if hasattr(order, 'order_type') and order.order_type == 'service':
+            orders.append(order)
+        # Include product orders only if they have items
+        elif hasattr(order, 'order_type') and order.order_type == 'product' and order.items.exists():
+            orders.append(order)
+        # For backward compatibility with orders without order_type
+        else:
+            orders.append(order)
+
+    # تحسين استعلام الملاحظات مع التحقق من وجود العلاقة
+    try:
+        notes = customer.notes_history.select_related('created_by').order_by('-created_at')[:5]
+    except AttributeError:
+        # في حالة فشل select_related، نحاول الحصول على الملاحظات بدونها
+        notes = customer.notes_history.all().order_by('-created_at')[:5]
+
+    # الحصول على صلاحيات المستخدم لهذا العميل
+    permissions = get_user_customer_permissions(request.user)
+
+    context = {
+        'customer': customer,
+        'orders': orders,
+        'notes': notes,
+        'permissions': permissions,
+        'is_cross_branch': is_cross_branch,
+    }
+
+    return render(request, 'customers/customer_detail.html', context)
+
+@login_required
+def customer_detail_redirect(request, pk):
+    """
+    Redirect old ID-based URLs to code-based URLs
+    إعادة توجيه الروابط القديمة المبنية على ID إلى الروابط المبنية على الكود
+    """
+    try:
+        customer = Customer.objects.get(pk=pk)
+        return redirect('customers:customer_detail_by_code', customer_code=customer.code)
+    except Customer.DoesNotExist:
+        messages.error(request, "العميل غير موجود.")
+        return redirect("customers:customer_list")

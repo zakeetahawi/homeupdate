@@ -16,9 +16,16 @@ urlpatterns = [
 
     path('create/', views.InspectionCreateView.as_view(), name='inspection_create'),
     path('report/create/', views.InspectionReportCreateView.as_view(), name='inspection_report_create'),
-    path('<int:pk>/', views.InspectionDetailView.as_view(), name='inspection_detail'),
-    path('<int:pk>/update/', views.InspectionUpdateView.as_view(), name='inspection_update'),
-    path('<int:pk>/delete/', views.InspectionDeleteView.as_view(), name='inspection_delete'),
+    
+    # URLs باستخدام كود المعاينة
+    path('inspection/<str:inspection_code>/', views.inspection_detail_by_code, name='inspection_detail_by_code'),
+    path('inspection/<str:inspection_code>/update/', views.inspection_update_by_code, name='inspection_update_by_code'),
+    path('inspection/<str:inspection_code>/delete/', views.inspection_delete_by_code, name='inspection_delete_by_code'),
+    
+    # URLs القديمة مع إعادة توجيه
+    path('<int:pk>/', views.inspection_detail_redirect, name='inspection_detail'),
+    path('<int:pk>/update/', views.inspection_update_redirect, name='inspection_update'),
+    path('<int:pk>/delete/', views.inspection_delete_redirect, name='inspection_delete'),
     path('<int:pk>/iterate/', views.iterate_inspection, name='iterate_inspection'),
     path('ajax/duplicate-inspection/', views.ajax_duplicate_inspection, name='ajax_duplicate_inspection'),
     path('ajax/upload-to-google-drive/', views.ajax_upload_to_google_drive, name='ajax_upload_to_google_drive'),

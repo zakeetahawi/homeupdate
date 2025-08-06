@@ -12,6 +12,7 @@ from .models import (
 
 @admin.register(ComplaintType)
 class ComplaintTypeAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'name', 'default_priority', 'default_deadline_hours',
         'responsible_department', 'default_assignee', 'is_active', 'order'
@@ -64,6 +65,7 @@ class ComplaintNotificationInline(admin.TabularInline):
 
 @admin.register(Complaint)
 class ComplaintAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'complaint_number', 'customer_name', 'complaint_type',
         'status_display', 'priority_display', 'assigned_to',
@@ -214,6 +216,7 @@ class ComplaintAdmin(admin.ModelAdmin):
 
 @admin.register(ComplaintUpdate)
 class ComplaintUpdateAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'complaint', 'update_type', 'title', 'created_by',
         'created_at', 'is_visible_to_customer'
@@ -232,6 +235,7 @@ class ComplaintUpdateAdmin(admin.ModelAdmin):
 
 @admin.register(ComplaintAttachment)
 class ComplaintAttachmentAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'complaint', 'filename', 'file_size_display',
         'uploaded_by', 'uploaded_at'
@@ -254,6 +258,7 @@ class ComplaintAttachmentAdmin(admin.ModelAdmin):
 
 @admin.register(ComplaintNotification)
 class ComplaintNotificationAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'complaint', 'notification_type', 'title', 'recipient',
         'is_read', 'created_at'
@@ -278,6 +283,7 @@ class ComplaintNotificationAdmin(admin.ModelAdmin):
 
 @admin.register(ComplaintEscalation)
 class ComplaintEscalationAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'complaint', 'reason', 'escalated_from', 'escalated_to',
         'escalated_by', 'escalated_at', 'resolved_at'
@@ -294,6 +300,7 @@ class ComplaintEscalationAdmin(admin.ModelAdmin):
 
 @admin.register(ComplaintSLA)
 class ComplaintSLAAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'complaint_type', 'response_time_hours', 'resolution_time_hours',
         'escalation_time_hours', 'target_satisfaction_rate', 'is_active'

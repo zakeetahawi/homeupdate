@@ -10,6 +10,7 @@ from .models import BackupJob, RestoreJob, BackupSchedule
 
 @admin.register(BackupJob)
 class BackupJobAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     """إدارة مهام النسخ الاحتياطي"""
     
     list_display = [
@@ -82,6 +83,34 @@ class BackupJobAdmin(admin.ModelAdmin):
             return '-'
     progress_bar.short_description = 'التقدم'
     
+    def file_size_display(self, obj):
+        """عرض حجم الملف بتنسيق مقروء"""
+        if obj.file_size:
+            if obj.file_size < 1024:
+                return f'{obj.file_size} بايت'
+            elif obj.file_size < 1024 * 1024:
+                return f'{obj.file_size / 1024:.1f} كيلوبايت'
+            elif obj.file_size < 1024 * 1024 * 1024:
+                return f'{obj.file_size / (1024 * 1024):.1f} ميجابايت'
+            else:
+                return f'{obj.file_size / (1024 * 1024 * 1024):.1f} جيجابايت'
+        return '-'
+    file_size_display.short_description = 'حجم الملف'
+    
+    def compressed_size_display(self, obj):
+        """عرض حجم الملف المضغوط بتنسيق مقروء"""
+        if obj.compressed_size:
+            if obj.compressed_size < 1024:
+                return f'{obj.compressed_size} بايت'
+            elif obj.compressed_size < 1024 * 1024:
+                return f'{obj.compressed_size / 1024:.1f} كيلوبايت'
+            elif obj.compressed_size < 1024 * 1024 * 1024:
+                return f'{obj.compressed_size / (1024 * 1024):.1f} ميجابايت'
+            else:
+                return f'{obj.compressed_size / (1024 * 1024 * 1024):.1f} جيجابايت'
+        return '-'
+    compressed_size_display.short_description = 'حجم مضغوط'
+    
     def has_add_permission(self, request):
         """منع إضافة مهام جديدة من الإدارة"""
         return False
@@ -89,6 +118,7 @@ class BackupJobAdmin(admin.ModelAdmin):
 
 @admin.register(RestoreJob)
 class RestoreJobAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     """إدارة مهام الاستعادة"""
     
     list_display = [
@@ -171,6 +201,20 @@ class RestoreJobAdmin(admin.ModelAdmin):
         return '-'
     success_rate_display.short_description = 'نسبة النجاح'
     
+    def file_size_display(self, obj):
+        """عرض حجم الملف بتنسيق مقروء"""
+        if obj.file_size:
+            if obj.file_size < 1024:
+                return f'{obj.file_size} بايت'
+            elif obj.file_size < 1024 * 1024:
+                return f'{obj.file_size / 1024:.1f} كيلوبايت'
+            elif obj.file_size < 1024 * 1024 * 1024:
+                return f'{obj.file_size / (1024 * 1024):.1f} ميجابايت'
+            else:
+                return f'{obj.file_size / (1024 * 1024 * 1024):.1f} جيجابايت'
+        return '-'
+    file_size_display.short_description = 'حجم الملف'
+    
     def has_add_permission(self, request):
         """منع إضافة مهام جديدة من الإدارة"""
         return False
@@ -178,6 +222,7 @@ class RestoreJobAdmin(admin.ModelAdmin):
 
 @admin.register(BackupSchedule)
 class BackupScheduleAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     """إدارة جدولة النسخ الاحتياطية"""
     
     list_display = [

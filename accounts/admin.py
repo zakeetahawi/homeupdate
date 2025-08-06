@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Permission
@@ -124,6 +125,7 @@ class UserRoleInline(admin.TabularInline):
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = (
         'username', 'email', 'branch', 'first_name', 'last_name', 'is_staff',
         'get_user_role_display', 'get_roles', 'has_manufacturing_approval'
@@ -225,6 +227,7 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(CompanyInfo)
 class CompanyInfoAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'phone', 'email', 'website')
     fieldsets = (
         (_('معلومات أساسية'), {
@@ -307,6 +310,7 @@ class CompanyInfoAdmin(admin.ModelAdmin):
 
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('code', 'name', 'phone', 'is_active')
     list_filter = ('is_active',)
     search_fields = ('code', 'name', 'phone', 'email')
@@ -314,6 +318,7 @@ class BranchAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('title', 'sender', 'sender_department', 'target_department', 'priority', 'created_at', 'is_read')
     list_filter = ('is_read', 'priority', 'sender_department', 'target_department', 'created_at')
     search_fields = ('title', 'message')
@@ -343,6 +348,7 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'code', 'department_type', 'is_active', 'is_core', 'parent', 'manager')
     list_filter = (DepartmentFilter, 'department_type', 'is_active', 'is_core', 'parent')
     search_fields = ('name', 'code', 'description')
@@ -440,6 +446,7 @@ class DepartmentAdmin(admin.ModelAdmin):
 
 @admin.register(Salesperson)
 class SalespersonAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'employee_number', 'branch', 'is_active')
     list_filter = (DepartmentFilter, 'is_active', 'branch')
     search_fields = ('name', 'employee_number', 'phone', 'email')
@@ -515,6 +522,7 @@ admin.site.register(Role, RoleAdmin)
 
 @admin.register(Permission)
 class PermissionAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'codename', 'content_type')
     list_filter = ('content_type__app_label',)
     search_fields = ('name', 'codename')
@@ -537,6 +545,7 @@ class PermissionAdmin(admin.ModelAdmin):
 
 @admin.register(SystemSettings)
 class SystemSettingsAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'currency', 'version')
     readonly_fields = ('created_at', 'updated_at')
 
@@ -577,6 +586,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(BranchMessage)
 class BranchMessageAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('title', 'branch', 'is_for_all_branches', 'message_type', 'display_style', 'display_duration', 'is_active', 'start_date', 'end_date', 'color_preview', 'icon_preview')
     list_filter = ('branch', 'is_for_all_branches', 'message_type', 'display_style', 'is_active', 'display_duration')
     search_fields = ('title', 'message')
@@ -682,6 +692,7 @@ class BranchMessageAdmin(admin.ModelAdmin):
 
 @admin.register(DashboardYearSettings)
 class DashboardYearSettingsAdmin(admin.ModelAdmin):
+    list_per_page = 50  # عرض 50 صف كافتراضي
     """إدارة إعدادات السنوات في الداش بورد"""
     list_display = ('year', 'is_active', 'is_default', 'description', 'created_at')
     list_filter = ('is_active', 'is_default', 'created_at')
@@ -733,8 +744,4 @@ class DashboardYearSettingsAdmin(admin.ModelAdmin):
         """منع حذف السنة الافتراضية"""
         if obj and obj.is_default:
             return False
-        return super().has_delete_permission(request, obj)
-
-
-# تم إزالة النماذج التي لا توجد حقولها في النماذج الفعلية
-# سيتم إضافتها لاحقاً عند إنشاء النماذج المناسبة
+        return
