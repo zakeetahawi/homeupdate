@@ -250,11 +250,16 @@ def order_create(request):
     if request.method == 'POST':
         print("POST DATA:", request.POST)
         # الحصول على معرف العميل من POST أو GET
-        customer_id = request.POST.get('customer')
+        customer_param = request.POST.get('customer')
         customer = None
-        if customer_id:
+        if customer_param:
             try:
-                customer = Customer.objects.get(id=customer_id)
+                # محاولة البحث بالـ ID أولاً (في حالة كان رقمي)
+                if customer_param.isdigit():
+                    customer = Customer.objects.get(id=customer_param)
+                else:
+                    # البحث بكود العميل إذا لم يكن رقمي
+                    customer = Customer.objects.get(code=customer_param)
             except Customer.DoesNotExist:
                 customer = None
         
@@ -369,11 +374,16 @@ def order_create(request):
             messages.error(request, 'يرجى تصحيح الأخطاء في النموذج.')
     else:
         # GET request - الحصول على معرف العميل من GET إذا كان موجوداً
-        customer_id = request.GET.get('customer')
+        customer_param = request.GET.get('customer')
         customer = None
-        if customer_id:
+        if customer_param:
             try:
-                customer = Customer.objects.get(id=customer_id)
+                # محاولة البحث بالـ ID أولاً (في حالة كان رقمي)
+                if customer_param.isdigit():
+                    customer = Customer.objects.get(id=customer_param)
+                else:
+                    # البحث بكود العميل إذا لم يكن رقمي
+                    customer = Customer.objects.get(code=customer_param)
             except Customer.DoesNotExist:
                 customer = None
         
@@ -416,11 +426,16 @@ def order_update(request, pk):
     
     if request.method == 'POST':
         # الحصول على معرف العميل من POST
-        customer_id = request.POST.get('customer')
+        customer_param = request.POST.get('customer')
         customer = None
-        if customer_id:
+        if customer_param:
             try:
-                customer = Customer.objects.get(id=customer_id)
+                # محاولة البحث بالـ ID أولاً (في حالة كان رقمي)
+                if customer_param.isdigit():
+                    customer = Customer.objects.get(id=customer_param)
+                else:
+                    # البحث بكود العميل إذا لم يكن رقمي
+                    customer = Customer.objects.get(code=customer_param)
             except Customer.DoesNotExist:
                 customer = None
         
@@ -733,16 +748,21 @@ def get_customer_inspections(request):
     """
     API endpoint لجلب معاينات العميل المحدد
     """
-    customer_id = request.GET.get('customer_id')
+    customer_param = request.GET.get('customer_id')
     
-    if not customer_id:
+    if not customer_param:
         return JsonResponse({
             'success': False,
             'message': 'معرف العميل مطلوب'
         })
     
     try:
-        customer = Customer.objects.get(id=customer_id)
+        # محاولة البحث بالـ ID أولاً (في حالة كان رقمي)
+        if customer_param.isdigit():
+            customer = Customer.objects.get(id=customer_param)
+        else:
+            # البحث بكود العميل إذا لم يكن رقمي
+            customer = Customer.objects.get(code=customer_param)
         inspections = Inspection.objects.filter(customer=customer).order_by('-created_at')
         
         # تحضير قائمة المعاينات

@@ -215,7 +215,12 @@ class InspectionCreateView(LoginRequiredMixin, CreateView):
         if customer_id:
             try:
                 from customers.models import Customer
-                kwargs['customer'] = Customer.objects.get(id=customer_id)
+                # محاولة البحث بالـ ID أولاً (في حالة كان رقمي)
+                if customer_id.isdigit():
+                    kwargs['customer'] = Customer.objects.get(id=customer_id)
+                else:
+                    # البحث بكود العميل إذا لم يكن رقمي
+                    kwargs['customer'] = Customer.objects.get(code=customer_id)
             except Exception:
                 pass
         return kwargs
@@ -226,7 +231,12 @@ class InspectionCreateView(LoginRequiredMixin, CreateView):
         if customer_id:
             try:
                 from customers.models import Customer
-                context['customer'] = Customer.objects.get(id=customer_id)
+                # محاولة البحث بالـ ID أولاً (في حالة كان رقمي)
+                if customer_id.isdigit():
+                    context['customer'] = Customer.objects.get(id=customer_id)
+                else:
+                    # البحث بكود العميل إذا لم يكن رقمي
+                    context['customer'] = Customer.objects.get(code=customer_id)
             except Exception:
                 pass
         return context
