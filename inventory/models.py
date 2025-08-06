@@ -32,10 +32,24 @@ class Product(models.Model):
     """
     Model for products
     """
+    UNIT_CHOICES = [
+        ('piece', _('قطعة')),
+        ('kg', _('كيلوجرام')),
+        ('gram', _('جرام')),
+        ('liter', _('لتر')),
+        ('meter', _('متر')),
+        ('box', _('علبة')),
+        ('pack', _('عبوة')),
+        ('dozen', _('دستة')),
+        ('roll', _('لفة')),
+        ('sheet', _('ورقة')),
+    ]
+    
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=50, unique=True, null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(_('العملة'), max_length=3, default='EGP')
+    unit = models.CharField(_('الوحدة'), max_length=10, choices=UNIT_CHOICES, default='piece')
     category = models.ForeignKey(
         'Category',
         on_delete=models.CASCADE,
@@ -86,6 +100,10 @@ class Product(models.Model):
             return _('مخزون منخفض')
         return _('متوفر')
 
+    def get_unit_display(self):
+        """إرجاع عرض الوحدة"""
+        return dict(self.UNIT_CHOICES).get(self.unit, self.unit)
+
     def save(self, *args, **kwargs):
         # إنشاء كود للمنتج إذا لم يكن موجوداً
         if not self.code:
@@ -132,7 +150,9 @@ class Warehouse(models.Model):
         Branch,
         on_delete=models.CASCADE,
         related_name='warehouses',
-        verbose_name=_('الفرع')
+        verbose_name=_('الفرع'),
+        null=True,
+        blank=True
     )
     manager = models.ForeignKey(
         User,

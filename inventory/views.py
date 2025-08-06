@@ -17,7 +17,7 @@ from .inventory_utils import (
 from accounts.models import SystemSettings
 
 class InventoryDashboardView(LoginRequiredMixin, TemplateView):
-    template_name = 'inventory/dashboard_new_icons.html'
+    template_name = 'inventory/dashboard.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -135,8 +135,8 @@ def product_list(request):
     filter_type = request.GET.get('filter', '')
     sort_by = request.GET.get('sort', '-created_at')
 
-    # الحصول على المنتجات من قاعدة البيانات مع select_related لتحميل العلاقات
-    products = Product.objects.all().select_related('category')
+    # الحصول على المنتجات من قاعدة البيانات مع حساب المخزون
+    products = Product.objects.with_stock_level().select_related('category')
 
     # تطبيق البحث
     if search_query:

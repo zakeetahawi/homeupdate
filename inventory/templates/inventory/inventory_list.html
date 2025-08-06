@@ -10,9 +10,32 @@
             <h2 class="mb-3">إدارة المخزون</h2>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{% url 'inventory:product_create' %}" class="btn" style="background-color: var(--primary); color: white;">
-                <i class="fas fa-plus"></i> إضافة منتج جديد
-            </a>
+            <div class="btn-group" role="group">
+                <a href="{% url 'inventory:product_create' %}" class="btn" style="background-color: var(--primary); color: white;">
+                    <i class="fas fa-plus"></i> إضافة منتج جديد
+                </a>
+                <button type="button" class="btn dropdown-toggle" style="background-color: var(--secondary); color: white;" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-upload"></i> رفع بالجملة
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="{% url 'inventory:product_bulk_upload' %}">
+                            <i class="fas fa-plus-circle text-success"></i> إضافة منتجات جديدة
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'inventory:bulk_stock_update' %}">
+                            <i class="fas fa-sync-alt text-warning"></i> تحديث كميات المخزون
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'inventory:download_excel_template' %}">
+                            <i class="fas fa-download text-info"></i> تحميل قالب إكسل
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 

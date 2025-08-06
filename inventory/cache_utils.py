@@ -122,6 +122,26 @@ def invalidate_product_stock_cache(product_id):
     # También invalidar la caché del dashboard
     cache.delete('inventory_dashboard_stats')
 
+def invalidate_product_cache(product_id):
+    """
+    Invalida la caché de un producto específico y caches relacionadas.
+    """
+    cache_keys = [
+        f'product_detail_{product_id}',
+        f'product_stock_{product_id}',
+        'product_list_all',
+        'inventory_dashboard_stats'
+    ]
+    
+    for key in cache_keys:
+        cache.delete(key)
+    
+    # También invalidar la caché de listas de productos por categoría
+    cache.delete_many([
+        'product_list_None_False',
+        'product_list_None_True',
+    ])
+
 def get_cached_product_list(category_id=None, include_stock=False):
     """
     Obtiene la lista de productos desde la caché o la calcula si no está en caché.

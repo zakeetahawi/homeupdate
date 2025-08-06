@@ -251,8 +251,8 @@
                 labels: ['نشط', 'غير نشط'],
                 datasets: [{
                     data: [
-                        {{ warehouses|filter:"is_active"|length }},
-                        {{ warehouses|length|sub:warehouses|filter:"is_active"|length }}
+                        {{ active_warehouses_count }},
+                        {{ inactive_warehouses_count }}
                     ],
                     backgroundColor: ['#1cc88a', '#e74a3b'],
                     borderWidth: 1

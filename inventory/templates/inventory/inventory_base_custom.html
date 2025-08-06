@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% block inventory_title %}لوحة تحكم المخزون{% endblock %} | نظام إدارة العملاء{% endblock %}
+{% block title %}لوحة تحكم المخزون | نظام إدارة العملاء{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/inventory-dashboard-new.css' %}">
+<link rel="stylesheet" href="{% static 'css/inventory-dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'css/inventory-custom.css' %}">
 <link rel="stylesheet" href="{% static 'css/inventory-stats-unified.css' %}">
 <link rel="stylesheet" href="{% static 'css/mobile.css' %}">
@@ -12,31 +12,41 @@
 {% endblock %}
 
 {% block content %}
-<div class="inventory-dashboard-container">
-    <!-- شريط التنقل -->
-    <div class="dashboard-breadcrumb">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'home' %}">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">المخزون</a></li>
-                {% block breadcrumb_items %}
-                <li class="breadcrumb-item active" aria-current="page">لوحة التحكم</li>
-                {% endblock %}
-            </ol>
-        </nav>
-        <div class="quick-actions">
-            {% block quick_actions %}
-            <a href="{% url 'inventory:product_create' %}" class="btn btn-success btn-sm">
-                <i class="fas fa-plus"></i> منتج جديد
-            </a>
-            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-primary btn-sm">
-                <i class="fas fa-shopping-cart"></i> طلبات الشراء
-            </a>
-            {% endblock %}
+<div class="container-fluid inventory-container">
+    <!-- شريط التنقل السريع -->
+    <nav aria-label="breadcrumb" class="inventory-breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">المخزون</a></li>
+            {% block breadcrumb_items %}{% endblock %}
+        </ol>
+    </nav>
+
+    <!-- العنوان والإجراءات السريعة -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="page-title">
+                    <i class="fas fa-warehouse"></i>
+                    {% block inventory_title %}لوحة تحكم المخزون{% endblock %}
+                </h1>
+            </div>
+            <div class="col-auto">
+                <div class="btn-group" role="group">
+                    {% block quick_actions %}
+                    <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> منتج جديد
+                    </a>
+                    <a href="{% url 'inventory:product_bulk_upload' %}" class="btn btn-success">
+                        <i class="fas fa-upload"></i> رفع ملف
+                    </a>
+                    {% endblock %}
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- محتوى الصفحة -->
+    <!-- المحتوى الرئيسي -->
     <div class="dashboard-content">
         {% block inventory_content %}{% endblock %}
     </div>
@@ -44,5 +54,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/inventory-dashboard-new.js' %}"></script>
+<!-- يتم تحميل الـ JavaScript في الصفحات التي تحتاجه فقط -->
 {% endblock %}

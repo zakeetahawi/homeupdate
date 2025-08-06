@@ -147,6 +147,10 @@ def warehouse_list(request):
     for warehouse in warehouses:
         warehouse.product_count = 0  # سيتم تحديثه لاحقاً عند تنفيذ نموذج المخزون الفعلي
 
+    # حساب إحصائيات المستودعات
+    active_warehouses_count = warehouses.filter(is_active=True).count()
+    inactive_warehouses_count = warehouses.filter(is_active=False).count()
+
     # إضافة عدد التنبيهات النشطة
     alerts_count = StockAlert.objects.filter(status='active').count()
 
@@ -165,6 +169,8 @@ def warehouse_list(request):
 
     context = {
         'warehouses': warehouses,
+        'active_warehouses_count': active_warehouses_count,
+        'inactive_warehouses_count': inactive_warehouses_count,
         'branches': branches,
         'users': users,
         'active_menu': 'warehouses',
@@ -195,7 +201,10 @@ def warehouse_create(request):
             messages.error(request, 'رمز المستودع مستخدم بالفعل')
             return redirect('inventory:warehouse_list')
 
-        branch = get_object_or_404(Branch, id=branch_id)
+        # إذا لم يتم تحديد فرع، يمكن تركه فارغاً
+        branch = None
+        if branch_id:
+            branch = get_object_or_404(Branch, id=branch_id)
 
         manager = None
         if manager_id:
@@ -215,6 +224,94 @@ def warehouse_create(request):
         return redirect('inventory:warehouse_list')
 
     return redirect('inventory:warehouse_list')
+
+
+@login_required
+def warehouse_update(request, pk):
+    """View for updating a warehouse"""
+    warehouse = get_object_or_404(Warehouse, pk=pk)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        code = request.POST.get('code')
+        branch_id = request.POST.get('branch')
+        manager_id = request.POST.get('manager')
+        address = request.POST.get('address')
+        notes = request.POST.get('notes')
+        is_active = request.POST.get('is_active') == 'on'
+
+        if not all([name, code]):
+            messages.error(request, 'يجب إدخال اسم المستودع والرمز')
+            return redirect('inventory:warehouse_list')
+
+        # التحقق من عدم تكرار الرمز (باستثناء المستودع الحالي)
+        if Warehouse.objects.filter(code=code).exclude(pk=pk).exists():
+            messages.error(request, 'رمز المستودع مستخدم بالفعل')
+            return redirect('inventory:warehouse_list')
+
+        # تحديث البيانات
+        warehouse.name = name
+        warehouse.code = code
+        warehouse.address = address
+        warehouse.notes = notes
+        warehouse.is_active = is_active
+        
+        # تحديث الفرع إذا تم تحديده
+        if branch_id:
+            warehouse.branch = get_object_or_404(Branch, id=branch_id)
+        else:
+            warehouse.branch = None
+            
+        # تحديث المدير إذا تم تحديده
+        if manager_id:
+            warehouse.manager = get_object_or_404(User, id=manager_id)
+        else:
+            warehouse.manager = None
+
+        warehouse.save()
+        messages.success(request, 'تم تحديث المستودع بنجاح')
+        return redirect('inventory:warehouse_list')
+
+    # عرض نموذج التحديث
+    branches = Branch.objects.all()
+    users = User.objects.filter(is_active=True)
+    
+    context = {
+        'warehouse': warehouse,
+        'branches': branches,
+        'users': users,
+        'active_menu': 'warehouses'
+    }
+    return render(request, 'inventory/warehouse_form.html', context)
+
+
+@login_required
+def warehouse_delete(request, pk):
+    """View for deleting a warehouse"""
+    warehouse = get_object_or_404(Warehouse, pk=pk)
+    
+    if request.method == 'POST':
+        warehouse_name = warehouse.name
+        warehouse.delete()
+        messages.success(request, f'تم حذف المستودع "{warehouse_name}" بنجاح')
+        return redirect('inventory:warehouse_list')
+    
+    return redirect('inventory:warehouse_list')
+
+
+@login_required
+def warehouse_detail(request, pk):
+    """View for warehouse details"""
+    warehouse = get_object_or_404(Warehouse, pk=pk)
+    
+    # إحصائيات المستودع
+    # TODO: إضافة إحصائيات فعلية عندما يتم ربط المنتجات بالمستودعات
+    
+    context = {
+        'warehouse': warehouse,
+        'active_menu': 'warehouses'
+    }
+    return render(request, 'inventory/warehouse_detail.html', context)
 
 # Supplier Views
 @login_required

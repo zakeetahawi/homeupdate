@@ -22,7 +22,7 @@ class ProductQuerySet(models.QuerySet):
                     output_field=IntegerField()
                 )
             ),
-            current_stock=F('stock_in') - F('stock_out')
+            current_stock_calc=F('stock_in') - F('stock_out')
         )
 
     def low_stock(self):
@@ -30,21 +30,21 @@ class ProductQuerySet(models.QuerySet):
         تصفية المنتجات ذات المخزون المنخفض
         """
         return self.with_stock_level().filter(
-            current_stock__gt=0,
-            current_stock__lte=F('minimum_stock')
+            current_stock_calc__gt=0,
+            current_stock_calc__lte=F('minimum_stock')
         )
 
     def out_of_stock(self):
         """
         تصفية المنتجات التي نفدت من المخزون
         """
-        return self.with_stock_level().filter(current_stock__lte=0)
+        return self.with_stock_level().filter(current_stock_calc__lte=0)
 
     def in_stock(self):
         """
         تصفية المنتجات المتوفرة في المخزون
         """
-        return self.with_stock_level().filter(current_stock__gt=0)
+        return self.with_stock_level().filter(current_stock_calc__gt=0)
 
     def with_related(self):
         """
@@ -100,7 +100,7 @@ class ProductManager(models.Manager):
                 'low_stock_count': products.low_stock().count(),
                 'out_of_stock_count': products.out_of_stock().count(),
                 'total_value': products.aggregate(
-                    total=Sum(F('current_stock') * F('price'))
+                    total=Sum(F('current_stock_calc') * F('price'))
                 )['total'] or 0
             }
             cache.set(cache_key, stats, 1800)  # تخزين لمدة 30 دقيقة

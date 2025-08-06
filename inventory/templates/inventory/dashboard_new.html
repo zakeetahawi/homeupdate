@@ -5,6 +5,48 @@
 
 {% block inventory_content %}
 <div class="dashboard-container">
+    <!-- إجراءات سريعة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt"></i> إجراءات سريعة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>إدارة المنتجات</h6>
+                            <div class="btn-group-vertical w-100" role="group">
+                                <a href="{% url 'inventory:product_create' %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-plus"></i> إضافة منتج جديد
+                                </a>
+                                <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-info">
+                                    <i class="fas fa-list"></i> قائمة المنتجات
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>رفع البيانات بالجملة</h6>
+                            <div class="btn-group-vertical w-100" role="group">
+                                <a href="{% url 'inventory:product_bulk_upload' %}" class="btn btn-outline-success">
+                                    <i class="fas fa-plus-circle"></i> إضافة منتجات من إكسل
+                                </a>
+                                <a href="{% url 'inventory:bulk_stock_update' %}" class="btn btn-outline-warning">
+                                    <i class="fas fa-sync-alt"></i> تحديث كميات المخزون
+                                </a>
+                                <a href="{% url 'inventory:download_excel_template' %}" class="btn btn-outline-info">
+                                    <i class="fas fa-download"></i> تحميل قالب إكسل
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- إحصائيات سريعة -->
     <div class="row">
         <div class="col-xl-3 col-md-6">

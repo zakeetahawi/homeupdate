@@ -4,7 +4,7 @@ from .views import InventoryDashboardView
 from .dashboard_view_append import optimized_product_detail
 from .views_extended import (
     category_list, category_create, category_update, category_delete,
-    warehouse_list, warehouse_create,
+    warehouse_list, warehouse_create, warehouse_update, warehouse_delete, warehouse_detail,
     supplier_list,
     purchase_order_list,
     alert_list, alert_resolve, alert_ignore, alert_resolve_multiple
@@ -15,6 +15,9 @@ from .views_warehouse_locations import (
 )
 from .views_reports import (
     report_list, low_stock_report, stock_movement_report
+)
+from .views_bulk import (
+    product_bulk_upload, bulk_stock_update, download_excel_template
 )
 
 app_name = 'inventory'
@@ -61,9 +64,9 @@ urlpatterns = [
     # Warehouses
     path('warehouses/', warehouse_list, name='warehouse_list'),
     path('warehouse/create/', warehouse_create, name='warehouse_create'),
-    path('warehouse/<int:pk>/update/', views.product_list, name='warehouse_update'),  # مؤقتاً يستخدم نفس صفحة المنتجات
-    path('warehouse/<int:pk>/delete/', views.product_list, name='warehouse_delete'),  # مؤقتاً يستخدم نفس صفحة المنتجات
-    path('warehouse/<int:pk>/', views.product_list, name='warehouse_detail'),  # مؤقتاً يستخدم نفس صفحة المنتجات
+    path('warehouse/<int:pk>/update/', warehouse_update, name='warehouse_update'),
+    path('warehouse/<int:pk>/delete/', warehouse_delete, name='warehouse_delete'),
+    path('warehouse/<int:pk>/', warehouse_detail, name='warehouse_detail'),
 
     # Warehouse Locations
     path('warehouse-locations/', warehouse_location_list, name='warehouse_location_list'),
@@ -83,6 +86,11 @@ urlpatterns = [
     path('alert/<int:pk>/resolve/', alert_resolve, name='alert_resolve'),
     path('alert/<int:pk>/ignore/', alert_ignore, name='alert_ignore'),
     path('alerts/resolve-multiple/', alert_resolve_multiple, name='alert_resolve_multiple'),
+
+    # Bulk Operations
+    path('products/bulk-upload/', product_bulk_upload, name='product_bulk_upload'),
+    path('stock/bulk-update/', bulk_stock_update, name='bulk_stock_update'),
+    path('download-excel-template/', download_excel_template, name='download_excel_template'),
 
     # API Endpoints
     path('api/product/<int:pk>/', views.product_api_detail, name='product_api_detail'),

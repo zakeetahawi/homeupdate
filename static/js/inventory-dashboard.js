@@ -1,5 +1,5 @@
 /**
- * سكريبت لوحة تحكم المخزون
+ * سكريبت لوحة تحكم المخزون الجديدة
  */
 
 (function() {
@@ -7,9 +7,6 @@
     
     // تهيئة عند تحميل الصفحة
     document.addEventListener('DOMContentLoaded', function() {
-        // زر تبديل القائمة الجانبية للشاشات الصغيرة
-        setupSidebarToggle();
-        
         // تهيئة الرسوم البيانية
         initCharts();
         
@@ -18,40 +15,24 @@
         
         // تهيئة التنبيهات
         setupAlerts();
+        
+        // تهيئة بطاقات الأيقونات
+        setupIconCards();
     });
-    
-    /**
-     * إعداد زر تبديل القائمة الجانبية
-     */
-    function setupSidebarToggle() {
-        const sidebarToggleBtn = document.getElementById('sidebar-toggle');
-        const sidebar = document.querySelector('.inventory-sidebar');
-        
-        if (sidebarToggleBtn && sidebar) {
-            sidebarToggleBtn.addEventListener('click', function() {
-                sidebar.classList.toggle('active');
-            });
-        }
-        
-        // إغلاق القائمة الجانبية عند النقر خارجها في الشاشات الصغيرة
-        document.addEventListener('click', function(event) {
-            if (window.innerWidth <= 768 && 
-                sidebar && 
-                sidebar.classList.contains('active') && 
-                !sidebar.contains(event.target) && 
-                event.target !== sidebarToggleBtn) {
-                sidebar.classList.remove('active');
-            }
-        });
-    }
     
     /**
      * تهيئة الرسوم البيانية
      */
     function initCharts() {
+        // التحقق من وجود Chart.js
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js غير متوفر');
+            return;
+        }
+        
         // رسم بياني للمخزون حسب الفئة
         const stockByCategoryChart = document.getElementById('stockByCategoryChart');
-        if (stockByCategoryChart) {
+        if (stockByCategoryChart && typeof stockByCategoryData !== 'undefined') {
             new Chart(stockByCategoryChart, {
                 type: 'doughnut',
                 data: {
@@ -68,20 +49,22 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutoutPercentage: 70,
-                    legend: {
-                        position: 'right',
-                        rtl: true
-                    },
-                    tooltips: {
-                        rtl: true,
-                        callbacks: {
-                            label: function(tooltipItem, data) {
-                                const dataset = data.datasets[tooltipItem.datasetIndex];
-                                const total = dataset.data.reduce((acc, val) => acc + val, 0);
-                                const currentValue = dataset.data[tooltipItem.index];
-                                const percentage = Math.round((currentValue / total) * 100);
-                                return `${data.labels[tooltipItem.index]}: ${currentValue} (${percentage}%)`;
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            rtl: true
+                        },
+                        tooltip: {
+                            rtl: true,
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    const dataset = tooltipItem.dataset;
+                                    const total = dataset.data.reduce((acc, val) => acc + val, 0);
+                                    const currentValue = dataset.data[tooltipItem.dataIndex];
+                                    const percentage = Math.round((currentValue / total) * 100);
+                                    return `${tooltipItem.label}: ${currentValue} (${percentage}%)`;
+                                }
                             }
                         }
                     }
@@ -91,7 +74,7 @@
         
         // رسم بياني لحركة المخزون
         const stockMovementChart = document.getElementById('stockMovementChart');
-        if (stockMovementChart) {
+        if (stockMovementChart && typeof stockMovementData !== 'undefined') {
             new Chart(stockMovementChart, {
                 type: 'line',
                 data: {
@@ -127,33 +110,35 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        xAxes: [{
-                            gridLines: {
+                        x: {
+                            grid: {
                                 display: false
                             },
                             ticks: {
-                                fontColor: '#858796'
+                                color: '#858796'
                             }
-                        }],
-                        yAxes: [{
-                            gridLines: {
+                        },
+                        y: {
+                            grid: {
                                 color: 'rgba(0, 0, 0, 0.05)',
                                 zeroLineColor: 'rgba(0, 0, 0, 0.1)'
                             },
                             ticks: {
-                                fontColor: '#858796',
+                                color: '#858796',
                                 beginAtZero: true
                             }
-                        }]
+                        }
                     },
-                    legend: {
-                        rtl: true,
-                        position: 'top'
-                    },
-                    tooltips: {
-                        rtl: true,
-                        mode: 'index',
-                        intersect: false
+                    plugins: {
+                        legend: {
+                            rtl: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            rtl: true,
+                            mode: 'index',
+                            intersect: false
+                        }
                     }
                 }
             });
@@ -164,6 +149,12 @@
      * تهيئة جداول البيانات
      */
     function initDataTables() {
+        // التحقق من وجود DataTable
+        if (typeof $.fn.DataTable === 'undefined') {
+            console.warn('DataTables غير متوفر');
+            return;
+        }
+        
         const dataTables = document.querySelectorAll('.datatable');
         
         if (dataTables.length > 0) {
@@ -221,20 +212,38 @@
         }
     }
     
+    /**
+     * إعداد بطاقات الأيقونات
+     */
+    function setupIconCards() {
+        const iconCards = document.querySelectorAll('.icon-card');
+        
+        if (iconCards.length > 0) {
+            iconCards.forEach(function(card) {
+                card.addEventListener('mouseenter', function() {
+                    const icon = this.querySelector('.icon-card-icon i');
+                    if (icon) {
+                        icon.classList.add('fa-bounce');
+                    }
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    const icon = this.querySelector('.icon-card-icon i');
+                    if (icon) {
+                        icon.classList.remove('fa-bounce');
+                    }
+                });
+            });
+        }
+    }
+    
     // تصدير الوظائف العامة
-    window.InventoryDashboard = {
+    window.InventoryDashboardNew = {
         refreshChart: function(chartId, newData) {
             const chart = Chart.getChart(chartId);
             if (chart) {
                 chart.data = newData;
                 chart.update();
-            }
-        },
-        
-        toggleSidebar: function() {
-            const sidebar = document.querySelector('.inventory-sidebar');
-            if (sidebar) {
-                sidebar.classList.toggle('active');
             }
         }
     };
