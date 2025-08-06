@@ -102,7 +102,7 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                     # استخدم تاريخ الطلب كـ request_date
                     request_date = instance.order_date.date() if instance.order_date else timezone.now().date()
                     # حاول استخراج تاريخ تنفيذ محدد من notes أو من بيانات الطلب إذا كان ذلك ممكناً (يمكنك تطوير هذا لاحقاً)
-                    scheduled_date = request_date + timedelta(days=1)
+                    scheduled_date = request_date + timedelta(days=2)
                     Inspection.objects.create(
                         customer=instance.customer,
                         branch=instance.branch,
