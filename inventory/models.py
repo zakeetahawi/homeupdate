@@ -28,6 +28,27 @@ class Category(models.Model):
         if self.parent:
             return f"{self.parent.name} - {self.name}"
         return self.name
+    
+    def get_ancestors(self, include_self=False):
+        """الحصول على جميع أسلاف الفئة"""
+        ancestors = []
+        current = self
+        if include_self:
+            ancestors.append(current)
+        while current.parent:
+            ancestors.append(current.parent)
+            current = current.parent
+        return ancestors
+    
+    def get_total_products_count(self):
+        """الحصول على العدد الإجمالي للمنتجات في الفئة وجميع فئاتها الفرعية"""
+        total_count = self.products.count()
+        
+        # إضافة عدد المنتجات في الفئات الفرعية
+        for child in self.children.all():
+            total_count += child.get_total_products_count()
+        
+        return total_count
 class Product(models.Model):
     """
     Model for products

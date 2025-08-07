@@ -64,7 +64,7 @@
                             </td>
                             <td>{{ category.description|default:"-" }}</td>
                             <td>
-                                <span class="badge bg-info">{{ category.products.count }}</span>
+                                <span class="badge bg-info">{{ category.get_total_products_count }}</span>
                             </td>
                             <td>-</td>
                             <td>
@@ -207,7 +207,7 @@
             data: {
                 labels: [{% for category in categories %}{% if not category.parent %}'{{ category.name }}',{% endif %}{% endfor %}],
                 datasets: [{
-                    data: [{% for category in categories %}{% if not category.parent %}{{ category.products.count }},{% endif %}{% endfor %}],
+                    data: [{% for category in categories %}{% if not category.parent %}{{ category.get_total_products_count }},{% endif %}{% endfor %}],
                     backgroundColor: [
                         '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
                         '#5a5c69', '#6f42c1', '#fd7e14', '#20c9a6', '#858796'

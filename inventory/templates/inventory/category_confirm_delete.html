@@ -23,7 +23,7 @@
                         <hr>
                         <p class="mb-0 text-danger">
                             <i class="fas fa-exclamation-circle"></i>
-                            <strong>تحذير:</strong> هذه الفئة تحتوي على {{ category.products.count }} منتج. لا يمكن حذفها حتى تقوم بنقل أو حذف هذه المنتجات أولاً.
+                            <strong>تحذير:</strong> هذه الفئة تحتوي على {{ category.get_total_products_count }} منتج. لا يمكن حذفها حتى تقوم بنقل أو حذف هذه المنتجات أولاً.
                         </p>
                         {% endif %}
                         
@@ -57,7 +57,7 @@
                             {% endif %}
                             <tr>
                                 <th>عدد المنتجات</th>
-                                <td>{{ category.products.count }}</td>
+                                <td>{{ category.get_total_products_count }}</td>
                             </tr>
                             <tr>
                                 <th>عدد الفئات الفرعية</th>
