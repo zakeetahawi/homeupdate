@@ -165,12 +165,50 @@ class Warehouse(models.Model):
     address = models.TextField(_('العنوان'), blank=True)
     is_active = models.BooleanField(_('نشط'), default=True)
     notes = models.TextField(_('ملاحظات'), blank=True)
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_warehouses',
+        verbose_name=_('تم الإنشاء بواسطة')
+    )
+    
     class Meta:
         verbose_name = _('مستودع')
         verbose_name_plural = _('المستودعات')
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['name', 'code']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['is_active']),
+        ]
+    
     def __str__(self):
         return f"{self.name} ({self.code})"
+    
+    @property
+    def created_by_name(self):
+        """الحصول على اسم منشئ المستودع"""
+        if self.created_by:
+            return self.created_by.get_full_name() or self.created_by.username
+        return "غير محدد"
+    
+    @property
+    def created_date_display(self):
+        """الحصول على تاريخ الإنشاء بصيغة مقروءة"""
+        if self.created_at:
+            return self.created_at.strftime("%Y-%m-%d %H:%M")
+        return "غير متوفر"
+    
+    @property
+    def updated_date_display(self):
+        """الحصول على تاريخ التحديث بصيغة مقروءة"""
+        if self.updated_at:
+            return self.updated_at.strftime("%Y-%m-%d %H:%M")
+        return "غير متوفر"
 class WarehouseLocation(models.Model):
     """
     Model for specific locations within warehouses
@@ -258,6 +296,14 @@ class StockTransaction(models.Model):
         related_name='transactions',
         verbose_name=_('المنتج')
     )
+    warehouse = models.ForeignKey(
+        'Warehouse',
+        on_delete=models.CASCADE,
+        related_name='stock_transactions',
+        verbose_name=_('المستودع'),
+        null=True,  # للسماح بالقيم الفارغة للبيانات الموجودة
+        blank=True
+    )
     transaction_type = models.CharField(_('نوع الحركة'), max_length=10, choices=TRANSACTION_TYPES)
     reason = models.CharField(_('السبب'), max_length=20, choices=REASON_CHOICES, default='other')
     quantity = models.DecimalField(_('الكمية'), max_digits=10, decimal_places=2)
@@ -279,9 +325,11 @@ class StockTransaction(models.Model):
         verbose_name_plural = _('حركات المخزون')
         ordering = ['-transaction_date', '-date']
         indexes = [
-            models.Index(fields=['product'], name='transaction_product_idx'),
-            models.Index(fields=['transaction_type'], name='transaction_type_idx'),
-            models.Index(fields=['transaction_date'], name='transaction_date_idx'),
+            models.Index(fields=['product'], name='stock_product_idx'),
+            models.Index(fields=['warehouse'], name='stock_warehouse_idx'),
+            models.Index(fields=['transaction_type'], name='stock_type_idx'),
+            models.Index(fields=['transaction_date'], name='stock_date_idx'),
+            models.Index(fields=['product', 'warehouse'], name='stock_prod_wareh_idx'),
         ]
 
     def __str__(self):

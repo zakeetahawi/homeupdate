@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block quick_actions %}
-<button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+<button type="button" class="btn btn-success btn-sm" onclick="openAddLocationModal()">
     <i class="fas fa-plus"></i> إضافة موقع
 </button>
 <a href="{% url 'inventory:warehouse_list' %}" class="btn btn-primary btn-sm">
@@ -144,9 +144,9 @@
                         <li><a class="dropdown-item" href="#"><i class="fas fa-print"></i> طباعة</a></li>
                     </ul>
                 </div>
-                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addLocationModal">
-                    <i class="fas fa-plus"></i> إضافة موقع
-                </button>
+                                    <button type="button" class="btn btn-success" onclick="openAddLocationModal()">
+                        <i class="fas fa-plus"></i> إضافة موقع
+                    </button>
             </div>
         </div>
         <div class="data-table-body">
@@ -278,64 +278,5 @@
     </div>
 </div>
 
-<!-- Modal إضافة موقع تخزين جديد -->
-<div class="modal fade" id="addLocationModal" tabindex="-1" aria-labelledby="addLocationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addLocationModalLabel">إضافة موقع تخزين جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="post" action="{% url 'inventory:warehouse_location_create' %}">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="name" class="form-label">اسم الموقع</label>
-                                <input type="text" class="form-control" id="name" name="name" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="code" class="form-label">رمز الموقع</label>
-                                <input type="text" class="form-control" id="code" name="code" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="warehouse" class="form-label">المستودع</label>
-                                <select class="form-select" id="warehouse" name="warehouse" required>
-                                    {% for warehouse in warehouses %}
-                                    <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="capacity" class="form-label">السعة</label>
-                                <input type="number" class="form-control" id="capacity" name="capacity" min="1" value="100" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label">الوصف</label>
-                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
-                        <label class="form-check-label" for="is_active">نشط</label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إضافة</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+{% include 'inventory/sweetalert2_utils.html' %}
 {% endblock %}

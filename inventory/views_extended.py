@@ -49,6 +49,11 @@ def category_create(request):
         parent_id = request.POST.get('parent')
 
         if not name:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يجب إدخال اسم الفئة'
+                })
             messages.error(request, 'يجب إدخال اسم الفئة')
             return redirect('inventory:category_list')
 
@@ -56,14 +61,31 @@ def category_create(request):
         if parent_id:
             parent = get_object_or_404(Category, id=parent_id)
 
-        Category.objects.create(
-            name=name,
-            description=description,
-            parent=parent
-        )
-
-        messages.success(request, 'تم إضافة الفئة بنجاح')
-        return redirect('inventory:category_list')
+        try:
+            category = Category.objects.create(
+                name=name,
+                description=description,
+                parent=parent
+            )
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'تم إضافة الفئة بنجاح',
+                    'category_id': category.id
+                })
+            
+            messages.success(request, 'تم إضافة الفئة بنجاح')
+            return redirect('inventory:category_list')
+            
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'حدث خطأ أثناء إضافة الفئة: {str(e)}'
+                })
+            messages.error(request, f'حدث خطأ أثناء إضافة الفئة: {str(e)}')
+            return redirect('inventory:category_list')
 
     return redirect('inventory:category_list')
 
@@ -141,15 +163,23 @@ def category_delete(request, pk):
 @login_required
 def warehouse_list(request):
     """View for listing warehouses"""
-    warehouses = Warehouse.objects.all().select_related('branch', 'manager')
+    warehouses = Warehouse.objects.all().select_related('branch', 'manager', 'created_by')
 
-    # حساب عدد المنتجات في كل مستودع
+    # حساب عدد المنتجات في كل مستودع بناءً على حركات المخزون
     for warehouse in warehouses:
-        warehouse.product_count = 0  # سيتم تحديثه لاحقاً عند تنفيذ نموذج المخزون الفعلي
+        # حساب المنتجات التي لها حركات مخزون في هذا المستودع
+        warehouse.product_count = StockTransaction.objects.filter(
+            warehouse=warehouse
+        ).values('product').distinct().count()
+        
+        # إضافة قائمة المنتجات للعرض في التفاصيل
+        warehouse.products = Product.objects.filter(
+            transactions__warehouse=warehouse
+        ).distinct()
 
     # حساب إحصائيات المستودعات
-    active_warehouses_count = warehouses.filter(is_active=True).count()
-    inactive_warehouses_count = warehouses.filter(is_active=False).count()
+    active_warehouses_count = Warehouse.objects.filter(is_active=True).count()
+    inactive_warehouses_count = Warehouse.objects.filter(is_active=False).count()
 
     # إضافة عدد التنبيهات النشطة
     alerts_count = StockAlert.objects.filter(status='active').count()
@@ -168,7 +198,7 @@ def warehouse_list(request):
     users = User.objects.filter(is_active=True)
 
     context = {
-        'warehouses': warehouses,
+        'warehouses': list(warehouses),  # تحويل إلى list لتجنب مشاكل QuerySet
         'active_warehouses_count': active_warehouses_count,
         'inactive_warehouses_count': inactive_warehouses_count,
         'branches': branches,
@@ -192,36 +222,83 @@ def warehouse_create(request):
         notes = request.POST.get('notes')
         is_active = request.POST.get('is_active') == 'on'
 
-        if not all([name, code, branch_id]):
-            messages.error(request, 'يجب إدخال جميع الحقول المطلوبة')
+        # التحقق من البيانات المطلوبة
+        if not all([name, code]):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يجب إدخال اسم المستودع والرمز'
+                })
+            messages.error(request, 'يجب إدخال اسم المستودع والرمز')
             return redirect('inventory:warehouse_list')
 
         # التحقق من عدم تكرار الرمز
         if Warehouse.objects.filter(code=code).exists():
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'رمز المستودع مستخدم بالفعل'
+                })
             messages.error(request, 'رمز المستودع مستخدم بالفعل')
             return redirect('inventory:warehouse_list')
 
-        # إذا لم يتم تحديد فرع، يمكن تركه فارغاً
+        # الفرع اختياري - يمكن تركه فارغاً
         branch = None
         if branch_id:
-            branch = get_object_or_404(Branch, id=branch_id)
+            try:
+                branch = Branch.objects.get(id=branch_id)
+            except Branch.DoesNotExist:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'الفرع المحدد غير موجود'
+                    })
+                messages.error(request, 'الفرع المحدد غير موجود')
+                return redirect('inventory:warehouse_list')
 
         manager = None
         if manager_id:
-            manager = get_object_or_404(User, id=manager_id)
+            try:
+                manager = User.objects.get(id=manager_id)
+            except User.DoesNotExist:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'المدير المحدد غير موجود'
+                    })
+                messages.error(request, 'المدير المحدد غير موجود')
+                return redirect('inventory:warehouse_list')
 
-        Warehouse.objects.create(
-            name=name,
-            code=code,
-            branch=branch,
-            manager=manager,
-            address=address,
-            notes=notes,
-            is_active=is_active
-        )
-
-        messages.success(request, 'تم إضافة المستودع بنجاح')
-        return redirect('inventory:warehouse_list')
+        try:
+            warehouse = Warehouse.objects.create(
+                name=name,
+                code=code,
+                branch=branch,
+                manager=manager,
+                address=address,
+                notes=notes,
+                is_active=is_active,
+                created_by=request.user
+            )
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'تم إضافة المستودع بنجاح',
+                    'warehouse_id': warehouse.id
+                })
+            
+            messages.success(request, 'تم إضافة المستودع بنجاح')
+            return redirect('inventory:warehouse_list')
+            
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'حدث خطأ أثناء إضافة المستودع: {str(e)}'
+                })
+            messages.error(request, f'حدث خطأ أثناء إضافة المستودع: {str(e)}')
+            return redirect('inventory:warehouse_list')
 
     return redirect('inventory:warehouse_list')
 
@@ -292,8 +369,43 @@ def warehouse_delete(request, pk):
     
     if request.method == 'POST':
         warehouse_name = warehouse.name
-        warehouse.delete()
-        messages.success(request, f'تم حذف المستودع "{warehouse_name}" بنجاح')
+        
+        # التحقق من وجود حركات مخزون مرتبطة بالمستودع
+        stock_transactions_count = StockTransaction.objects.filter(
+            warehouse=warehouse
+        ).count()
+        
+        # التحقق من وجود طلبات شراء مرتبطة بالمستودع
+        purchase_orders_count = PurchaseOrder.objects.filter(warehouse=warehouse).count()
+        
+        # التحقق من وجود مواقع تخزين مرتبطة
+        locations_count = warehouse.locations.count()
+        
+        # جمع جميع البيانات المرتبطة
+        total_related_items = stock_transactions_count + purchase_orders_count + locations_count
+        
+        if total_related_items > 0:
+            # تحضير رسالة تفصيلية بالبيانات المرتبطة
+            error_details = []
+            if stock_transactions_count > 0:
+                error_details.append(f"حركات المخزون ({stock_transactions_count})")
+            if purchase_orders_count > 0:
+                error_details.append(f"طلبات الشراء ({purchase_orders_count})")
+            if locations_count > 0:
+                error_details.append(f"مواقع التخزين ({locations_count})")
+            
+            error_message = f'لا يمكن حذف المستودع "{warehouse_name}" لأنه مرتبط بـ: {", ".join(error_details)}. يجب حذف هذه البيانات أولاً.'
+            
+            messages.error(request, error_message)
+            return redirect('inventory:warehouse_list')
+        
+        # إذا لم توجد عوائق، قم بالحذف
+        try:
+            warehouse.delete()
+            messages.success(request, f'تم حذف المستودع "{warehouse_name}" بنجاح')
+        except Exception as e:
+            messages.error(request, f'حدث خطأ أثناء حذف المستودع: {str(e)}')
+        
         return redirect('inventory:warehouse_list')
     
     return redirect('inventory:warehouse_list')
@@ -302,14 +414,88 @@ def warehouse_delete(request, pk):
 @login_required
 def warehouse_detail(request, pk):
     """View for warehouse details"""
-    warehouse = get_object_or_404(Warehouse, pk=pk)
+    warehouse = get_object_or_404(Warehouse.objects.select_related('branch', 'manager', 'created_by'), pk=pk)
     
-    # إحصائيات المستودع
-    # TODO: إضافة إحصائيات فعلية عندما يتم ربط المنتجات بالمستودعات
+    # إحصائيات المستودع الفعلية
+    from django.db.models import Sum, Count, Q
+    
+    # عدد المنتجات في المستودع
+    products_in_warehouse = StockTransaction.objects.filter(
+        warehouse=warehouse
+    ).values('product').distinct().count()
+    
+    # إجمالي الكمية في المستودع
+    total_quantity = StockTransaction.objects.filter(
+        warehouse=warehouse,
+        transaction_type='in'
+    ).aggregate(total=Sum('quantity'))['total'] or 0
+    
+    # إجمالي الكمية الصادرة
+    total_out_quantity = StockTransaction.objects.filter(
+        warehouse=warehouse,
+        transaction_type='out'
+    ).aggregate(total=Sum('quantity'))['total'] or 0
+    
+    # الكمية المتوفرة حالياً
+    available_quantity = total_quantity - total_out_quantity
+    
+    # القيمة الإجمالية للمخزون
+    total_value = 0
+    if available_quantity > 0:
+        # حساب القيمة بناءً على سعر المنتجات
+        product_values = StockTransaction.objects.filter(
+            warehouse=warehouse,
+            transaction_type='in'
+        ).select_related('product').values('product__price', 'quantity')
+        
+        for item in product_values:
+            total_value += float(item['product__price'] or 0) * float(item['quantity'] or 0)
+    
+    # آخر حركات المخزون
+    recent_transactions = StockTransaction.objects.filter(
+        warehouse=warehouse
+    ).select_related('product', 'created_by').order_by('-transaction_date')[:10]
+    
+    # المنتجات في المستودع مع كمياتها
+    warehouse_products = []
+    products_data = StockTransaction.objects.filter(
+        warehouse=warehouse
+    ).values('product__id', 'product__name', 'product__code').distinct()
+    
+    for product_data in products_data:
+        product_id = product_data['product__id']
+        # حساب الكمية المتوفرة للمنتج في هذا المستودع
+        product_in = StockTransaction.objects.filter(
+            warehouse=warehouse,
+            product_id=product_id,
+            transaction_type='in'
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        
+        product_out = StockTransaction.objects.filter(
+            warehouse=warehouse,
+            product_id=product_id,
+            transaction_type='out'
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        
+        available = product_in - product_out
+        
+        if available > 0:  # إظهار المنتجات المتوفرة فقط
+            warehouse_products.append({
+                'id': product_id,
+                'name': product_data['product__name'],
+                'code': product_data['product__code'],
+                'quantity': available
+            })
     
     context = {
         'warehouse': warehouse,
-        'active_menu': 'warehouses'
+        'active_menu': 'warehouses',
+        'products_count': products_in_warehouse,
+        'total_quantity': available_quantity,
+        'total_value': total_value,
+        'recent_transactions': recent_transactions,
+        'warehouse_products': warehouse_products,
+        'locations_count': warehouse.locations.count()
     }
     return render(request, 'inventory/warehouse_detail.html', context)
 
@@ -381,6 +567,57 @@ def supplier_list(request):
         'current_year': current_year
     }
     return render(request, 'inventory/supplier_list_new.html', context)
+
+@login_required
+def supplier_create(request):
+    """View for creating a new supplier"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        contact_person = request.POST.get('contact_person')
+        phone = request.POST.get('phone')
+        email = request.POST.get('email')
+        address = request.POST.get('address')
+        notes = request.POST.get('notes')
+
+        if not name:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يجب إدخال اسم المورد'
+                })
+            messages.error(request, 'يجب إدخال اسم المورد')
+            return redirect('inventory:supplier_list')
+
+        try:
+            supplier = Supplier.objects.create(
+                name=name,
+                contact_person=contact_person,
+                phone=phone,
+                email=email,
+                address=address,
+                notes=notes
+            )
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'تم إضافة المورد بنجاح',
+                    'supplier_id': supplier.id
+                })
+            
+            messages.success(request, 'تم إضافة المورد بنجاح')
+            return redirect('inventory:supplier_list')
+            
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'حدث خطأ أثناء إضافة المورد: {str(e)}'
+                })
+            messages.error(request, f'حدث خطأ أثناء إضافة المورد: {str(e)}')
+            return redirect('inventory:supplier_list')
+
+    return redirect('inventory:supplier_list')
 
 # Purchase Order Views
 @login_required
@@ -480,6 +717,60 @@ def purchase_order_list(request):
         'today': today
     }
     return render(request, 'inventory/purchase_order_list_new.html', context)
+
+@login_required
+def purchase_order_create(request):
+    """View for creating a new purchase order"""
+    if request.method == 'POST':
+        supplier_id = request.POST.get('supplier')
+        warehouse_id = request.POST.get('warehouse')
+        expected_date = request.POST.get('expected_date')
+        notes = request.POST.get('notes')
+        
+        if not supplier_id:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يجب اختيار المورد'
+                })
+            messages.error(request, 'يجب اختيار المورد')
+            return redirect('inventory:purchase_order_list')
+        
+        try:
+            supplier = get_object_or_404(Supplier, id=supplier_id)
+            warehouse = None
+            if warehouse_id:
+                warehouse = get_object_or_404(Warehouse, id=warehouse_id)
+            
+            # إنشاء طلب الشراء
+            purchase_order = PurchaseOrder.objects.create(
+                supplier=supplier,
+                warehouse=warehouse,
+                expected_date=expected_date if expected_date else None,
+                notes=notes,
+                created_by=request.user
+            )
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'تم إنشاء طلب الشراء بنجاح',
+                    'purchase_order_id': purchase_order.id
+                })
+            
+            messages.success(request, 'تم إنشاء طلب الشراء بنجاح')
+            return redirect('inventory:purchase_order_list')
+            
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'حدث خطأ أثناء إنشاء طلب الشراء: {str(e)}'
+                })
+            messages.error(request, f'حدث خطأ أثناء إنشاء طلب الشراء: {str(e)}')
+            return redirect('inventory:purchase_order_list')
+    
+    return redirect('inventory:purchase_order_list')
 
 # Alert Views
 @login_required

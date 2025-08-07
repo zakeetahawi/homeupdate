@@ -3,21 +3,30 @@
 
 {% block inventory_title %}المستودعات{% endblock %}
 
+{% block extra_css %}
+{{ block.super }}
+<!-- تم إزالة CSS القديم للـ Modal واستبداله بـ SweetAlert2 -->
+{% endblock %}
+
 {% block breadcrumb_items %}
 <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
 <li class="breadcrumb-item active" aria-current="page">المستودعات</li>
 {% endblock %}
 
 {% block quick_actions %}
-<button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addWarehouseModal">
+<button type="button" class="btn btn-success btn-sm" onclick="openAddWarehouseModal()">
     <i class="fas fa-plus"></i> إضافة مستودع
 </button>
 <a href="{% url 'inventory:warehouse_location_list' %}" class="btn btn-primary btn-sm">
     <i class="fas fa-map-marker-alt"></i> مواقع التخزين
 </a>
+<button type="button" class="btn btn-warning btn-sm" onclick="testDeleteButton()">
+    <i class="fas fa-test"></i> اختبار الحذف
+</button>
 {% endblock %}
 
 {% block inventory_content %}
+{% csrf_token %}
 <div class="warehouse-list-container">
     <!-- قائمة المستودعات -->
     <div class="data-table-container">
@@ -47,6 +56,8 @@
                             <th>المدير</th>
                             <th>العنوان</th>
                             <th>الحالة</th>
+                            <th>تاريخ الإنشاء</th>
+                            <th>تم الإنشاء بواسطة</th>
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
@@ -57,7 +68,7 @@
                                 <strong>{{ warehouse.name }}</strong>
                             </td>
                             <td>{{ warehouse.code }}</td>
-                            <td>{{ warehouse.branch.name }}</td>
+                            <td>{% if warehouse.branch %}{{ warehouse.branch.name }}{% else %}<span class="text-muted">جميع الفروع</span>{% endif %}</td>
                             <td>{{ warehouse.manager.get_full_name|default:"-" }}</td>
                             <td>{{ warehouse.address|default:"-" }}</td>
                             <td>
@@ -68,13 +79,21 @@
                                 {% endif %}
                             </td>
                             <td>
+                                <small>{{ warehouse.created_date_display }}</small>
+                            </td>
+                            <td>
+                                <small>{{ warehouse.created_by_name }}</small>
+                            </td>
+                            <td>
                                 <div class="btn-group" role="group">
                                     <a href="{% url 'inventory:warehouse_update' warehouse.id %}" class="btn btn-primary btn-sm">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="{% url 'inventory:warehouse_delete' warehouse.id %}" class="btn btn-danger btn-sm">
+                                    <button type="button" class="btn btn-danger btn-sm delete-warehouse-btn" 
+                                            data-url="{% url 'inventory:warehouse_delete' warehouse.id %}" 
+                                            data-name="{{ warehouse.name|escapejs }}">
                                         <i class="fas fa-trash"></i>
-                                    </a>
+                                    </button>
                                     <a href="{% url 'inventory:warehouse_detail' warehouse.id %}" class="btn btn-info btn-sm">
                                         <i class="fas fa-eye"></i>
                                     </a>
@@ -83,7 +102,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center">لا توجد مستودعات مضافة</td>
+                            <td colspan="9" class="text-center">لا توجد مستودعات مضافة</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -117,77 +136,7 @@
     </div>
 </div>
 
-<!-- Modal إضافة مستودع جديد -->
-<div class="modal fade" id="addWarehouseModal" tabindex="-1" aria-labelledby="addWarehouseModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addWarehouseModalLabel">إضافة مستودع جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="post" action="{% url 'inventory:warehouse_create' %}">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="name" class="form-label">اسم المستودع</label>
-                                <input type="text" class="form-control" id="name" name="name" required>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="code" class="form-label">رمز المستودع</label>
-                                <input type="text" class="form-control" id="code" name="code" required>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="branch" class="form-label">الفرع</label>
-                                <select class="form-select" id="branch" name="branch" required>
-                                    {% for branch in branches %}
-                                    <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="manager" class="form-label">المدير</label>
-                                <select class="form-select" id="manager" name="manager">
-                                    <option value="">بدون مدير</option>
-                                    {% for user in users %}
-                                    <option value="{{ user.id }}">{{ user.get_full_name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="address" class="form-label">العنوان</label>
-                                <textarea class="form-control" id="address" name="address" rows="1"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">ملاحظات</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
-                        <label class="form-check-label" for="is_active">نشط</label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إضافة</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+{% include 'inventory/sweetalert2_utils.html' %}
 {% endblock %}
 
 {% block extra_js %}
@@ -195,6 +144,20 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('SweetAlert2 loaded successfully');
+        
+        // تم استبدال معالجة أزرار الحذف بـ دالة confirmDelete من SweetAlert2
+        
+        // معالجة أزرار حذف المستودع
+        const deleteButtons = document.querySelectorAll('.delete-warehouse-btn');
+        deleteButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                const name = this.getAttribute('data-name');
+                confirmDelete(url, name);
+            });
+        });
+        
         // فلترة المستودعات
         const filterButtons = document.querySelectorAll('[data-filter]');
         filterButtons.forEach(button => {
@@ -222,61 +185,72 @@
         });
         
         // رسم بياني لتوزيع المنتجات حسب المستودعات
-        const productsCtx = document.getElementById('warehouseProductsChart').getContext('2d');
-        const warehouseProductsChart = new Chart(productsCtx, {
-            type: 'bar',
-            data: {
-                labels: [{% for warehouse in warehouses %}'{{ warehouse.name }}',{% endfor %}],
-                datasets: [{
-                    label: 'عدد المنتجات',
-                    data: [{% for warehouse in warehouses %}{{ warehouse.product_count }},{% endfor %}],
-                    backgroundColor: '#4e73df',
-                    borderColor: '#4e73df',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
+        const productsCtx = document.getElementById('warehouseProductsChart');
+        if (productsCtx) {
+            try {
+                const warehouseProductsChart = new Chart(productsCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: [{% for warehouse in warehouses %}'{{ warehouse.name|escapejs }}',{% endfor %}],
+                        datasets: [{
+                            label: 'Products Count',
+                            data: [{% for warehouse in warehouses %}{{ warehouse.product_count|default:0 }},{% endfor %}],
+                            backgroundColor: '#4e73df',
+                            borderColor: '#4e73df',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
                     }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
+                });
+            } catch (chartError) {
+                console.error('خطأ في رسم الجدول البياني للمنتجات:', chartError);
             }
-        });
+        }
         
         // رسم بياني لحالة المستودعات
-        const statusCtx = document.getElementById('warehouseStatusChart').getContext('2d');
-        const warehouseStatusChart = new Chart(statusCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['نشط', 'غير نشط'],
-                datasets: [{
-                    data: [
-                        {{ active_warehouses_count }},
-                        {{ inactive_warehouses_count }}
-                    ],
-                    backgroundColor: ['#1cc88a', '#e74a3b'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        rtl: true
+        const statusCtx = document.getElementById('warehouseStatusChart');
+        if (statusCtx) {
+            try {
+                const warehouseStatusChart = new Chart(statusCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Active', 'Inactive'],
+                        datasets: [{
+                            data: [
+                                {{ active_warehouses_count|default:0 }},
+                                {{ inactive_warehouses_count|default:0 }}
+                            ],
+                            backgroundColor: ['#1cc88a', '#e74a3b'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right'
+                            }
+                        }
                     }
-                }
+                });
+            } catch (chartError) {
+                console.error('خطأ في رسم الجدول البياني للحالة:', chartError);
             }
-        });
+        }
     });
 </script>
 {% endblock %}

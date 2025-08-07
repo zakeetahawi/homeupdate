@@ -136,15 +136,103 @@
             <div class="card-header bg-warning text-dark">
                 <h5 class="mb-0">
                     <i class="fas fa-boxes"></i>
-                    المنتجات المخزنة
+                    المنتجات المخزنة ({{ warehouse_products|length }})
                 </h5>
             </div>
             <div class="card-body">
+                {% if warehouse_products %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>المنتج</th>
+                                <th>الرمز</th>
+                                <th>الكمية المتوفرة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in warehouse_products %}
+                            <tr>
+                                <td>
+                                    <strong>{{ product.name }}</strong>
+                                </td>
+                                <td><code>{{ product.code|default:"-" }}</code></td>
+                                <td>
+                                    <span class="badge bg-success">{{ product.quantity|floatformat:0 }}</span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'inventory:product_detail' product.id %}" class="btn btn-info btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
                 <div class="text-center py-4">
                     <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">لا توجد منتجات مخزنة</h5>
                     <p class="text-muted">سيتم عرض المنتجات هنا عند ربطها بالمستودع</p>
                 </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- حركات المخزون الأخيرة -->
+        <div class="card mt-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exchange-alt"></i>
+                    حركات المخزون الأخيرة
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>المنتج</th>
+                                <th>النوع</th>
+                                <th>الكمية</th>
+                                <th>التاريخ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in recent_transactions %}
+                            <tr>
+                                <td>
+                                    <small>{{ transaction.product.name }}</small>
+                                </td>
+                                <td>
+                                    {% if transaction.transaction_type == 'in' %}
+                                        <span class="badge bg-success">وارد</span>
+                                    {% elif transaction.transaction_type == 'out' %}
+                                        <span class="badge bg-danger">صادر</span>
+                                    {% else %}
+                                        <span class="badge bg-info">{{ transaction.get_transaction_type_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ transaction.quantity }}</small>
+                                </td>
+                                <td>
+                                    <small>{{ transaction.transaction_date|date:"d/m/Y" }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                    <p class="text-muted small">لا توجد حركات مخزون حديثة</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -165,15 +253,15 @@
                         <small>مواقع التخزين</small>
                     </div>
                     <div class="col-6 mb-3">
-                        <h3 class="text-success">0</h3>
+                        <h3 class="text-success">{{ products_count }}</h3>
                         <small>المنتجات</small>
                     </div>
                     <div class="col-6">
-                        <h3 class="text-info">0</h3>
+                        <h3 class="text-info">{{ total_quantity|floatformat:0 }}</h3>
                         <small>الكمية الإجمالية</small>
                     </div>
                     <div class="col-6">
-                        <h3 class="text-warning">0</h3>
+                        <h3 class="text-warning">{{ total_value|floatformat:2 }}</h3>
                         <small>القيمة الإجمالية</small>
                     </div>
                 </div>
@@ -199,7 +287,7 @@
                     <button type="button" class="btn btn-outline-info">
                         <i class="fas fa-print"></i> طباعة التقرير
                     </button>
-                    <button type="button" class="btn btn-outline-danger" onclick="confirmDelete()">
+                    <button type="button" class="btn btn-outline-danger" onclick="confirmDelete('{% url 'inventory:warehouse_delete' warehouse.id %}', '{{ warehouse.name }}')">
                         <i class="fas fa-trash"></i> حذف المستودع
                     </button>
                 </div>
@@ -216,46 +304,21 @@
             </div>
             <div class="card-body">
                 <small class="text-muted">
-                    <strong>تاريخ الإنشاء:</strong> غير متوفر<br>
-                    <strong>آخر تعديل:</strong> غير متوفر<br>
-                    <strong>تم إنشاؤه بواسطة:</strong> غير متوفر
+                    <strong>تاريخ الإنشاء:</strong> {{ warehouse.created_date_display }}<br>
+                    <strong>آخر تعديل:</strong> {{ warehouse.updated_date_display }}<br>
+                    <strong>تم إنشاؤه بواسطة:</strong> {{ warehouse.created_by_name }}
                 </small>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal تأكيد الحذف -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">تأكيد الحذف</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                هل أنت متأكد من حذف المستودع "{{ warehouse.name }}"؟
-                <br><br>
-                <strong>تحذير:</strong> هذا الإجراء لا يمكن التراجع عنه.
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <form method="post" action="{% url 'inventory:warehouse_delete' warehouse.id %}" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">حذف</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'inventory/sweetalert2_utils.html' %}
 {% endblock %}
 
 {% block extra_js %}
 {{ block.super }}
 <script>
-function confirmDelete() {
-    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    modal.show();
-}
+// تم استبدال confirmDelete بـ SweetAlert2 في ملف sweetalert2_utils.html
 </script>
 {% endblock %}

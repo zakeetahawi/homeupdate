@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
+from django.http import JsonResponse
 from datetime import timedelta, datetime
 from .models import Warehouse, WarehouseLocation, StockAlert
 
@@ -110,27 +111,54 @@ def warehouse_location_create(request):
         is_active = request.POST.get('is_active') == 'on'
         
         if not all([name, code, warehouse_id, capacity]):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يجب إدخال جميع الحقول المطلوبة'
+                })
             messages.error(request, 'يجب إدخال جميع الحقول المطلوبة')
             return redirect('inventory:warehouse_location_list')
         
         # التحقق من عدم تكرار الرمز
         if WarehouseLocation.objects.filter(code=code).exists():
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'رمز الموقع مستخدم بالفعل'
+                })
             messages.error(request, 'رمز الموقع مستخدم بالفعل')
             return redirect('inventory:warehouse_location_list')
         
-        warehouse = get_object_or_404(Warehouse, id=warehouse_id)
-        
-        WarehouseLocation.objects.create(
-            name=name,
-            code=code,
-            warehouse=warehouse,
-            capacity=capacity,
-            description=description,
-            is_active=is_active
-        )
-        
-        messages.success(request, 'تم إضافة موقع التخزين بنجاح')
-        return redirect('inventory:warehouse_location_list')
+        try:
+            warehouse = get_object_or_404(Warehouse, id=warehouse_id)
+            
+            location = WarehouseLocation.objects.create(
+                name=name,
+                code=code,
+                warehouse=warehouse,
+                capacity=capacity,
+                description=description,
+                is_active=is_active
+            )
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'تم إضافة موقع التخزين بنجاح',
+                    'location_id': location.id
+                })
+            
+            messages.success(request, 'تم إضافة موقع التخزين بنجاح')
+            return redirect('inventory:warehouse_location_list')
+            
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'حدث خطأ أثناء إضافة موقع التخزين: {str(e)}'
+                })
+            messages.error(request, f'حدث خطأ أثناء إضافة موقع التخزين: {str(e)}')
+            return redirect('inventory:warehouse_location_list')
     
     return redirect('inventory:warehouse_location_list')
 

@@ -1,0 +1,325 @@
+/* تخصيص SweetAlert2 للغة العربية */
+.swal2-popup {
+    font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.swal2-title {
+    text-align: right !important;
+    font-weight: 600 !important;
+    color: #2c3e50 !important;
+}
+
+.swal2-content {
+    text-align: right !important;
+    color: #34495e !important;
+}
+
+.swal2-actions {
+    flex-direction: row-reverse !important;
+    gap: 10px !important;
+}
+
+.swal2-confirm {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: white !important;
+    font-weight: 500 !important;
+    border-radius: 6px !important;
+    padding: 8px 20px !important;
+}
+
+.swal2-confirm:hover {
+    background-color: #218838 !important;
+    border-color: #1e7e34 !important;
+}
+
+.swal2-cancel {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: white !important;
+    font-weight: 500 !important;
+    border-radius: 6px !important;
+    padding: 8px 20px !important;
+}
+
+.swal2-cancel:hover {
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
+}
+
+.swal2-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: white !important;
+    font-weight: 500 !important;
+    border-radius: 6px !important;
+    padding: 8px 20px !important;
+}
+
+.swal2-danger:hover {
+    background-color: #c82333 !important;
+    border-color: #bd2130 !important;
+}
+
+/* تحسين مظهر النماذج داخل SweetAlert2 */
+.swal2-popup .form-control,
+.swal2-popup .form-select {
+    border-radius: 6px !important;
+    border: 1px solid #ced4da !important;
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    color: #495057 !important;
+    background-color: #fff !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+.swal2-popup .form-control:focus,
+.swal2-popup .form-select:focus {
+    border-color: #80bdff !important;
+    outline: 0 !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
+
+.swal2-popup .form-label {
+    font-weight: 500 !important;
+    margin-bottom: 8px !important;
+    color: #495057 !important;
+    display: block !important;
+}
+
+.swal2-popup .mb-3 {
+    margin-bottom: 1rem !important;
+}
+
+.swal2-popup .row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    margin-right: -8px !important;
+    margin-left: -8px !important;
+}
+
+.swal2-popup .col-md-4,
+.swal2-popup .col-md-6 {
+    position: relative !important;
+    width: 100% !important;
+    padding-right: 8px !important;
+    padding-left: 8px !important;
+}
+
+.swal2-popup .col-md-4 {
+    flex: 0 0 33.333333% !important;
+    max-width: 33.333333% !important;
+}
+
+.swal2-popup .col-md-6 {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+}
+
+.swal2-popup .form-check {
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: 1rem !important;
+}
+
+.swal2-popup .form-check-input {
+    margin-left: 8px !important;
+    margin-right: 0 !important;
+}
+
+.swal2-popup .form-check-label {
+    margin-bottom: 0 !important;
+    cursor: pointer !important;
+}
+
+/* تحسين مظهر الأزرار */
+.swal2-popup .btn {
+    display: inline-block !important;
+    font-weight: 400 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    user-select: none !important;
+    border: 1px solid transparent !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+    border-radius: 0.25rem !important;
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+.swal2-popup .btn-success {
+    color: #fff !important;
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+}
+
+.swal2-popup .btn-success:hover {
+    color: #fff !important;
+    background-color: #218838 !important;
+    border-color: #1e7e34 !important;
+}
+
+.swal2-popup .btn-secondary {
+    color: #fff !important;
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+.swal2-popup .btn-secondary:hover {
+    color: #fff !important;
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
+}
+
+.swal2-popup .btn-danger {
+    color: #fff !important;
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.swal2-popup .btn-danger:hover {
+    color: #fff !important;
+    background-color: #c82333 !important;
+    border-color: #bd2130 !important;
+}
+
+/* تحسين مظهر الرسائل */
+.swal2-popup .swal2-html-container {
+    margin: 1em 1.6em 0.3em !important;
+    padding: 0 1em !important;
+    overflow: hidden !important;
+    color: inherit !important;
+    font-size: 1.125em !important;
+    font-weight: normal !important;
+    line-height: normal !important;
+    text-align: right !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+}
+
+/* تحسين مظهر الأيقونات */
+.swal2-popup .swal2-icon {
+    margin: 1.25em auto 1.875em !important;
+    border: 0.25em solid transparent !important;
+    border-radius: 50% !important;
+    font-family: inherit !important;
+    line-height: 5em !important;
+    zoom: normal !important;
+}
+
+.swal2-popup .swal2-icon.swal2-success {
+    border-color: #a5dc86 !important;
+}
+
+.swal2-popup .swal2-icon.swal2-error {
+    border-color: #f27474 !important;
+}
+
+.swal2-popup .swal2-icon.swal2-warning {
+    border-color: #f8bb86 !important;
+}
+
+.swal2-popup .swal2-icon.swal2-info {
+    border-color: #3fc3ee !important;
+}
+
+/* تحسين مظهر النافذة */
+.swal2-popup {
+    background: #fff !important;
+    padding: 1.25em !important;
+    border-radius: 5px !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+    overflow: hidden !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    position: relative !important;
+    margin: auto !important;
+    display: none !important;
+    z-index: 1060 !important;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 2px 10px rgba(0,0,0,.1) !important;
+}
+
+/* تحسين مظهر الخلفية */
+.swal2-backdrop-show {
+    background: rgba(0,0,0,.4) !important;
+}
+
+/* تحسين مظهر الرسائل التحذيرية */
+.swal2-validation-message {
+    display: none !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 1em 0 0 !important;
+    padding: 0.625em !important;
+    overflow: hidden !important;
+    color: #545454 !important;
+    font-size: 1em !important;
+    font-weight: 300 !important;
+    background: #f0f0f0 !important;
+    border-radius: 0.3125em !important;
+}
+
+.swal2-validation-message::before {
+    content: "! " !important;
+    display: inline-block !important;
+    width: 1.5em !important;
+    min-width: 1.5em !important;
+    height: 1.5em !important;
+    margin: 0 0.625em 0 0 !important;
+    border-radius: 50% !important;
+    background-color: #f27474 !important;
+    color: #fff !important;
+    font-family: serif !important;
+    font-weight: 600 !important;
+    line-height: 1.5em !important;
+    text-align: center !important;
+}
+
+/* تحسين مظهر النماذج */
+.swal2-popup form {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.swal2-popup .form-group {
+    margin-bottom: 1rem !important;
+}
+
+/* تحسين مظهر الجداول */
+.swal2-popup table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 1rem !important;
+}
+
+.swal2-popup th,
+.swal2-popup td {
+    padding: 8px !important;
+    text-align: right !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+.swal2-popup th {
+    font-weight: 600 !important;
+    background-color: #f8f9fa !important;
+}
+
+/* تحسين مظهر القوائم */
+.swal2-popup ul {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.swal2-popup li {
+    padding: 4px 0 !important;
+    border-bottom: 1px solid #eee !important;
+}
+
+.swal2-popup li:last-child {
+    border-bottom: none !important;
+} 

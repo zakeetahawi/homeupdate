@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block quick_actions %}
-<button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+<button type="button" class="btn btn-success btn-sm" onclick="openAddCategoryModal()">
     <i class="fas fa-plus"></i> إضافة فئة
 </button>
 <a href="{% url 'inventory:product_list' %}" class="btn btn-primary btn-sm">
@@ -141,43 +141,7 @@
     </div>
 </div>
 
-<!-- Modal إضافة فئة جديدة -->
-<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addCategoryModalLabel">إضافة فئة جديدة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="post" action="{% url 'inventory:category_create' %}">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="name" class="form-label">اسم الفئة</label>
-                        <input type="text" class="form-control" id="name" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="parent" class="form-label">الفئة الأب</label>
-                        <select class="form-select" id="parent" name="parent">
-                            <option value="">بدون فئة أب</option>
-                            {% for category in categories %}
-                            <option value="{{ category.id }}">{{ category.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label">الوصف</label>
-                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إضافة</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+{% include 'inventory/sweetalert2_utils.html' %}
 {% endblock %}
 
 {% block extra_js %}

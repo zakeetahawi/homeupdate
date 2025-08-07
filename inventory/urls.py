@@ -5,8 +5,8 @@ from .dashboard_view_append import optimized_product_detail
 from .views_extended import (
     category_list, category_create, category_update, category_delete,
     warehouse_list, warehouse_create, warehouse_update, warehouse_delete, warehouse_detail,
-    supplier_list,
-    purchase_order_list,
+    supplier_list, supplier_create,
+    purchase_order_list, purchase_order_create,
     alert_list, alert_resolve, alert_ignore, alert_resolve_multiple
 )
 from .views_warehouse_locations import (
@@ -48,7 +48,7 @@ urlpatterns = [
 
     # Purchase Orders
     path('purchase-orders/', purchase_order_list, name='purchase_order_list'),
-    path('purchase-order/create/', views.product_list, name='purchase_order_create'),  # مؤقتاً يستخدم نفس صفحة المنتجات
+    path('purchase-order/create/', purchase_order_create, name='purchase_order_create'),
     path('purchase-order/<int:pk>/', views.product_list, name='purchase_order_detail'),  # مؤقتاً يستخدم نفس صفحة المنتجات
     path('purchase-order/<int:pk>/update/', views.product_list, name='purchase_order_update'),  # مؤقتاً يستخدم نفس صفحة المنتجات
     path('purchase-order/<int:pk>/delete/', views.product_list, name='purchase_order_delete'),  # مؤقتاً يستخدم نفس صفحة المنتجات
@@ -56,7 +56,7 @@ urlpatterns = [
 
     # Suppliers
     path('suppliers/', supplier_list, name='supplier_list'),
-    path('supplier/create/', views.product_list, name='supplier_create'),  # مؤقتاً يستخدم نفس صفحة المنتجات
+    path('supplier/create/', supplier_create, name='supplier_create'),
     path('supplier/<int:pk>/update/', views.product_list, name='supplier_update'),  # مؤقتاً يستخدم نفس صفحة المنتجات
     path('supplier/<int:pk>/delete/', views.product_list, name='supplier_delete'),  # مؤقتاً يستخدم نفس صفحة المنتجات
     path('supplier/<int:pk>/', views.product_list, name='supplier_detail'),  # مؤقتاً يستخدم نفس صفحة المنتجات

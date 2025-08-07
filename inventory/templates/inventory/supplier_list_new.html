@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block quick_actions %}
-<button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+<button type="button" class="btn btn-success btn-sm" onclick="openAddSupplierModal()">
     <i class="fas fa-plus"></i> إضافة مورد
 </button>
 <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-primary btn-sm">
@@ -125,9 +125,9 @@
                         <li><a class="dropdown-item" href="#"><i class="fas fa-print"></i> طباعة</a></li>
                     </ul>
                 </div>
-                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                    <i class="fas fa-plus"></i> إضافة مورد
-                </button>
+                                    <button type="button" class="btn btn-success" onclick="openAddSupplierModal()">
+                        <i class="fas fa-plus"></i> إضافة مورد
+                    </button>
             </div>
         </div>
         <div class="data-table-body">
@@ -249,70 +249,5 @@
     </div>
 </div>
 
-<!-- Modal إضافة مورد جديد -->
-<div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addSupplierModalLabel">إضافة مورد جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="post" action="{% url 'inventory:supplier_create' %}">
-                <div class="modal-body">
-                    {% csrf_token %}
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="name" class="form-label">اسم المورد</label>
-                                <input type="text" class="form-control" id="name" name="name" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="contact_person" class="form-label">جهة الاتصال</label>
-                                <input type="text" class="form-control" id="contact_person" name="contact_person">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="phone" class="form-label">رقم الهاتف</label>
-                                <input type="text" class="form-control" id="phone" name="phone">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="email" class="form-label">البريد الإلكتروني</label>
-                                <input type="email" class="form-control" id="email" name="email">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="tax_number" class="form-label">الرقم الضريبي</label>
-                                <input type="text" class="form-control" id="tax_number" name="tax_number">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="address" class="form-label">العنوان</label>
-                                <textarea class="form-control" id="address" name="address" rows="1"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">ملاحظات</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">إضافة</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+{% include 'inventory/sweetalert2_utils.html' %}
 {% endblock %}

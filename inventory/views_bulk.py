@@ -370,6 +370,7 @@ def process_excel_upload(excel_file, warehouse, overwrite_existing, user):
                     if quantity > 0 and product:
                         StockTransaction.objects.create(
                             product=product,
+                            warehouse=warehouse,  # إضافة المستودع المحدد
                             transaction_type='in',
                             reason='purchase',
                             quantity=quantity,
@@ -378,22 +379,31 @@ def process_excel_upload(excel_file, warehouse, overwrite_existing, user):
                             created_by=user,
                             transaction_date=timezone.now()
                         )
+                        # حساب الرصيد المتحرك بناءً على المنتج والمستودع
                         previous_transactions = StockTransaction.objects.filter(
                             product=product,
+                            warehouse=warehouse,
                             transaction_date__lt=timezone.now()
                         ).order_by('-transaction_date')
+                        
                         previous_balance = 0
                         if previous_transactions.exists():
                             previous_balance = previous_transactions.first().running_balance
+                        
                         # تحويل الكمية إلى Decimal لتجنب مشاكل الجمع
                         from decimal import Decimal
                         quantity_decimal = Decimal(str(quantity))
                         new_balance = previous_balance + quantity_decimal
+                        
+                        # تحديث الحركة الحالية بالرصيد الجديد
                         transaction_obj = StockTransaction.objects.filter(
-                            product=product
+                            product=product,
+                            warehouse=warehouse
                         ).order_by('-transaction_date').first()
-                        transaction_obj.running_balance = new_balance
-                        transaction_obj.save()
+                        
+                        if transaction_obj:
+                            transaction_obj.running_balance = new_balance
+                            transaction_obj.save()
                     result['total_processed'] += 1
                     if product:
                         invalidate_product_cache(product.id)

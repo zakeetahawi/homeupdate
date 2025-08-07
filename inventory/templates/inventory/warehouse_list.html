@@ -31,7 +31,8 @@
                             <div class="col-md-3">
                                 <div class="mb-3">
                                     <label for="branch" class="form-label">الفرع</label>
-                                    <select class="form-select" id="branch" name="branch" required>
+                                    <select class="form-select" id="branch" name="branch">
+                                        <option value="">اختر الفرع (اختياري)</option>
                                         {% for branch in branches %}
                                         <option value="{{ branch.id }}">{{ branch.name }}</option>
                                         {% endfor %}
@@ -108,6 +109,7 @@
                                     <th>الفرع</th>
                                     <th>المدير</th>
                                     <th>العنوان</th>
+                                    <th>عدد المنتجات</th>
                                     <th>الحالة</th>
                                     <th>الإجراءات</th>
                                 </tr>
@@ -119,9 +121,14 @@
                                         <strong>{{ warehouse.name }}</strong>
                                     </td>
                                     <td>{{ warehouse.code }}</td>
-                                    <td>{{ warehouse.branch.name }}</td>
+                                    <td>{{ warehouse.branch.name|default:"-" }}</td>
                                     <td>{{ warehouse.manager.get_full_name|default:"-" }}</td>
                                     <td>{{ warehouse.address|default:"-" }}</td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ warehouse.product_count|default:0 }}
+                                        </span>
+                                    </td>
                                     <td>
                                         {% if warehouse.is_active %}
                                         <span class="badge bg-success">نشط</span>
@@ -134,9 +141,11 @@
                                             <a href="{% url 'inventory:warehouse_update' warehouse.id %}" class="btn btn-primary btn-sm">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="{% url 'inventory:warehouse_delete' warehouse.id %}" class="btn btn-danger btn-sm">
+                                            <button type="button" class="btn btn-danger btn-sm delete-warehouse-btn" 
+                                                    data-warehouse-id="{{ warehouse.id }}" 
+                                                    data-warehouse-name="{{ warehouse.name }}">
                                                 <i class="fas fa-trash"></i>
-                                            </a>
+                                            </button>
                                             <a href="{% url 'inventory:warehouse_detail' warehouse.id %}" class="btn btn-info btn-sm">
                                                 <i class="fas fa-eye"></i>
                                             </a>
@@ -145,7 +154,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="7" class="text-center">لا توجد مستودعات مضافة</td>
+                                    <td colspan="8" class="text-center">لا توجد مستودعات مضافة</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -187,6 +196,74 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        try {
+            // معالجة أزرار حذف المستودع
+            const deleteButtons = document.querySelectorAll('.delete-warehouse-btn');
+            deleteButtons.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const warehouseId = this.getAttribute('data-warehouse-id');
+                    const warehouseName = this.getAttribute('data-warehouse-name');
+                    
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'تأكيد الحذف',
+                            html: `
+                                <p>هل أنت متأكد من حذف المستودع "<strong>${warehouseName}</strong>"؟</p>
+                                <div class="alert alert-warning mt-3" style="font-size: 14px;">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>تحذير:</strong> سيتم التحقق من وجود منتجات أو طلبات شراء مرتبطة بالمستودع قبل الحذف.
+                                </div>
+                            `,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#dc3545',
+                            cancelButtonColor: '#6c757d',
+                            confirmButtonText: 'نعم، احذف',
+                            cancelButtonText: 'إلغاء',
+                            reverseButtons: true,
+                            width: '500px'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // إرسال طلب الحذف
+                                const deleteUrl = `/inventory/warehouse/${warehouseId}/delete/`;
+                                
+                                const form = document.createElement('form');
+                                form.method = 'POST';
+                                form.action = deleteUrl;
+                                
+                                const csrfToken = document.createElement('input');
+                                csrfToken.type = 'hidden';
+                                csrfToken.name = 'csrfmiddlewaretoken';
+                                csrfToken.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                                form.appendChild(csrfToken);
+                                
+                                document.body.appendChild(form);
+                                form.submit();
+                            }
+                        });
+                    } else {
+                        // fallback للمتصفحات التي لا تدعم SweetAlert
+                        if (confirm(`هل أنت متأكد من حذف المستودع "${warehouseName}"؟\n\nتحذير: سيتم التحقق من وجود بيانات مرتبطة قبل الحذف.`)) {
+                            const deleteUrl = `/inventory/warehouse/${warehouseId}/delete/`;
+                            
+                            const form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = deleteUrl;
+                            
+                            const csrfToken = document.createElement('input');
+                            csrfToken.type = 'hidden';
+                            csrfToken.name = 'csrfmiddlewaretoken';
+                            csrfToken.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                            form.appendChild(csrfToken);
+                            
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    }
+                });
+            });
+
         // فلترة المستودعات
         const filterButtons = document.querySelectorAll('[data-filter]');
         filterButtons.forEach(button => {
@@ -214,61 +291,76 @@
         });
         
         // رسم بياني لتوزيع المنتجات حسب المستودعات
-        const productsCtx = document.getElementById('warehouseProductsChart').getContext('2d');
-        const warehouseProductsChart = new Chart(productsCtx, {
-            type: 'bar',
-            data: {
-                labels: [{% for warehouse in warehouses %}'{{ warehouse.name }}',{% endfor %}],
-                datasets: [{
-                    label: 'عدد المنتجات',
-                    data: [{% for warehouse in warehouses %}{{ warehouse.product_count }},{% endfor %}],
-                    backgroundColor: '#4e73df',
-                    borderColor: '#4e73df',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
+        const productsCtx = document.getElementById('warehouseProductsChart');
+        if (productsCtx) {
+            try {
+                const warehouseProductsChart = new Chart(productsCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: [{% for warehouse in warehouses %}'{{ warehouse.name|escapejs }}',{% endfor %}],
+                        datasets: [{
+                            label: 'عدد المنتجات',
+                            data: [{% for warehouse in warehouses %}{{ warehouse.product_count|default:0 }},{% endfor %}],
+                            backgroundColor: '#4e73df',
+                            borderColor: '#4e73df',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
                     }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
+                });
+            } catch (chartError) {
+                console.error('خطأ في رسم الجدول البياني للمنتجات:', chartError);
             }
-        });
+        }
         
         // رسم بياني لحالة المستودعات
-        const statusCtx = document.getElementById('warehouseStatusChart').getContext('2d');
-        const warehouseStatusChart = new Chart(statusCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['نشط', 'غير نشط'],
-                datasets: [{
-                    data: [
-                        {{ active_warehouses_count }},
-                        {{ inactive_warehouses_count }}
-                    ],
-                    backgroundColor: ['#1cc88a', '#e74a3b'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        rtl: true
+        const statusCtx = document.getElementById('warehouseStatusChart');
+        if (statusCtx) {
+            try {
+                const warehouseStatusChart = new Chart(statusCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['نشط', 'غير نشط'],
+                        datasets: [{
+                            data: [
+                                {{ active_warehouses_count|default:0 }},
+                                {{ inactive_warehouses_count|default:0 }}
+                            ],
+                            backgroundColor: ['#1cc88a', '#e74a3b'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                rtl: true
+                            }
+                        }
                     }
-                }
+                });
+            } catch (chartError) {
+                console.error('خطأ في رسم الجدول البياني للحالة:', chartError);
             }
-        });
+        }
+        } catch (error) {
+            console.error('خطأ في JavaScript:', error);
+        }
     });
 </script>
 {% endblock %}
