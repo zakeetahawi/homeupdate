@@ -292,10 +292,37 @@ def process_excel_upload(excel_file, warehouse, overwrite_existing, user):
                     name = str(row['اسم المنتج']).strip()
                     code = str(row['الكود']).strip() if pd.notna(row['الكود']) else None
                     category_name = str(row['الفئة']).strip()
-                    price = float(row['السعر'])
-                    quantity = float(row['الكمية']) if pd.notna(row['الكمية']) else 0
+                    
+                    # معالجة السعر بشكل آمن
+                    try:
+                        price_value = str(row['السعر']).strip()
+                        if price_value and price_value.lower() not in ['', 'nan', 'none', 'z', 'n/a']:
+                            price = float(price_value)
+                        else:
+                            price = 0.0
+                    except (ValueError, TypeError):
+                        price = 0.0
+                    
+                    # معالجة الكمية بشكل آمن
+                    try:
+                        quantity_value = str(row['الكمية']).strip() if pd.notna(row['الكمية']) else '0'
+                        if quantity_value and quantity_value.lower() not in ['', 'nan', 'none', 'z', 'n/a']:
+                            quantity = float(quantity_value)
+                        else:
+                            quantity = 0.0
+                    except (ValueError, TypeError):
+                        quantity = 0.0
                     description = str(row.get('الوصف', '')).strip()
-                    minimum_stock = int(row.get('الحد الأدنى', 0)) if pd.notna(row.get('الحد الأدنى', 0)) else 0
+                    
+                    # معالجة الحد الأدنى للمخزون بشكل آمن
+                    try:
+                        min_stock_value = str(row.get('الحد الأدنى', 0)).strip() if pd.notna(row.get('الحد الأدنى', 0)) else '0'
+                        if min_stock_value and min_stock_value.lower() not in ['', 'nan', 'none', 'z', 'n/a']:
+                            minimum_stock = int(float(min_stock_value))
+                        else:
+                            minimum_stock = 0
+                    except (ValueError, TypeError):
+                        minimum_stock = 0
                     currency = str(row.get('العملة', 'EGP')).strip().upper()
                     unit = str(row.get('الوحدة', 'piece')).strip()
                     if currency not in ['EGP', 'USD', 'EUR']:
@@ -442,7 +469,17 @@ def process_stock_update(excel_file, warehouse, update_type, reason, user):
             for index, row in df.iterrows():
                 try:
                     code = str(row['كود المنتج']).strip()
-                    quantity = float(row['الكمية'])
+                    
+                    # معالجة الكمية بشكل آمن
+                    try:
+                        quantity_value = str(row['الكمية']).strip()
+                        if quantity_value and quantity_value.lower() not in ['', 'nan', 'none', 'z', 'n/a']:
+                            quantity = float(quantity_value)
+                        else:
+                            quantity = 0.0
+                    except (ValueError, TypeError):
+                        quantity = 0.0
+                    
                     if not code or quantity < 0:
                         result['errors'].append('الصف {}: كود المنتج والكمية مطلوبان'.format(index + 2))
                         continue
