@@ -22,114 +22,106 @@ logger = logging.getLogger(__name__)
 
 @staff_member_required
 def invoice_editor(request, template_id=None):
-    """محرر الفواتير - إعادة توجيه للمحرر البسيط"""
-    # إعادة توجيه للمحرر البسيط
-    return simple_invoice_editor(request, template_id)
+    """محرر الفواتير - يفتح محرر البناء الجديد (GrapesJS)"""
+    return invoice_builder(request, template_id)
 
 
 @staff_member_required
-def simple_invoice_editor(request, template_id=None):
-    """محرر الفواتير البسيط - سهل وسلس"""
-    template = None
-    if template_id:
-        template = get_object_or_404(InvoiceTemplate, id=template_id)
-    
+def invoice_builder(request, template_id=None):
+    """محرر بناء القوالب (GrapesJS) بديل للمحرر البسيط"""
     # جلب إعدادات النظام والشركة
     from accounts.models import SystemSettings, CompanyInfo
+    from .models import Order
+    
     system_settings = SystemSettings.get_settings()
     company_info = CompanyInfo.objects.first()
     
+    # جلب بيانات الطلب إذا كان في وضع الطباعة
+    order = None
+    print_mode = request.GET.get('print_mode', False)
+    order_id = request.GET.get('order_id')
+    auto_print = request.GET.get('auto_print', False)
+    
+    if order_id:
+        try:
+            order = Order.objects.get(id=order_id)
+        except Order.DoesNotExist:
+            order = None
+    
+    # إذا لم يتم تحديد قالب، استخدام القالب الافتراضي أو إنشاء واحد جديد
+    template = None
+    if template_id:
+        template = get_object_or_404(InvoiceTemplate, id=template_id)
+    else:
+        # البحث عن القالب الافتراضي أو إنشاء واحد جديد
+        template = InvoiceTemplate.objects.filter(is_default=True).first()
+        if not template:
+            # إنشاء قالب افتراضي بناء على بيانات الشركة
+            template = InvoiceTemplate.objects.create(
+                name='القالب الافتراضي',
+                is_default=True,
+                company_name=company_info.name if company_info else 'اسم الشركة',
+                company_address=company_info.address if company_info else 'العنوان',
+                company_phone=company_info.phone if company_info else '01234567890',
+                company_email=company_info.email if company_info else 'info@example.com',
+                company_website=company_info.website if company_info else '',
+                primary_color=company_info.primary_color if company_info else '#0d6efd',
+                secondary_color=company_info.secondary_color if company_info else '#198754',
+                accent_color=company_info.accent_color if company_info else '#ffc107',
+            )
+    
+    # تجهيز بيانات الحفظ لإرسالها للقالب قبل render
+    saved_html_content = ''
+    saved_meta_content = {}
+    if template:
+        try:
+            meta = {
+                'settings': {
+                    'primary_color': template.primary_color,
+                    'secondary_color': template.secondary_color,
+                    'accent_color': template.accent_color,
+                    'font_family': template.font_family,
+                    'font_size': template.font_size,
+                    'page_size': template.page_size,
+                    'page_margins': template.page_margins,
+                },
+                'company_info': {
+                    'name': template.company_name,
+                    'address': template.company_address,
+                    'phone': template.company_phone,
+                    'email': template.company_email,
+                    'website': template.company_website,
+                },
+                'content_settings': {
+                    'show_company_logo': template.show_company_logo,
+                    'show_order_details': template.show_order_details,
+                    'show_customer_details': template.show_customer_details,
+                    'show_payment_details': template.show_payment_details,
+                    'show_notes': template.show_notes,
+                    'show_terms': template.show_terms,
+                },
+                'advanced_settings': template.advanced_settings or {},
+            }
+            saved_html_content = template.html_content or ''
+            saved_meta_content = meta
+        except Exception:
+            saved_html_content = ''
+            saved_meta_content = {}
+    
     context = {
         'template': template,
-        'page_title': 'محرر الفواتير البسيط',
+        'template_id': template.id if template else None,
+        'page_title': 'مُنشئ قالب الفاتورة',
         'system_settings': system_settings,
         'company_info': company_info,
         'currency_symbol': system_settings.currency_symbol if system_settings else 'ريال',
+        'order': order,
+        'print_mode': print_mode,
+        'auto_print': auto_print,
+        'saved_html_content': saved_html_content,
+        'saved_meta_content': saved_meta_content,
     }
-
-    # مرر نسخة JSON من القالب المحفوظ إلى القالب لتفادي حقن سكربتات معقدة
-    if template:
-        try:
-            import json as _json
-            meta = {
-                'settings': {
-                    'primary_color': template.primary_color,
-                    'secondary_color': template.secondary_color,
-                    'accent_color': template.accent_color,
-                    'font_family': template.font_family,
-                    'font_size': template.font_size,
-                    'page_size': template.page_size,
-                    'page_margins': template.page_margins,
-                },
-                'company_info': {
-                    'name': template.company_name,
-                    'address': template.company_address,
-                    'phone': template.company_phone,
-                    'email': template.company_email,
-                    'website': template.company_website,
-                },
-                'content_settings': {
-                    'show_company_logo': template.show_company_logo,
-                    'show_order_details': template.show_order_details,
-                    'show_customer_details': template.show_customer_details,
-                    'show_payment_details': template.show_payment_details,
-                    'show_notes': template.show_notes,
-                    'show_terms': template.show_terms,
-                },
-                'advanced_settings': template.advanced_settings or {}
-            }
-            context['saved_html_json'] = _json.dumps(template.html_content or '')
-            context['saved_meta_json'] = _json.dumps(meta, ensure_ascii=False)
-        except Exception:
-            context['saved_html_json'] = "''"
-            context['saved_meta_json'] = 'null'
-    
-    response = render(request, 'orders/simple_invoice_editor.html', context)
-    # تمرير html_content والميتا المحفوظة إلى القالب عبر JavaScript عالمي
-    if template:
-        try:
-            import json as _json
-            meta = {
-                'settings': {
-                    'primary_color': template.primary_color,
-                    'secondary_color': template.secondary_color,
-                    'accent_color': template.accent_color,
-                    'font_family': template.font_family,
-                    'font_size': template.font_size,
-                    'page_size': template.page_size,
-                    'page_margins': template.page_margins,
-                },
-                'company_info': {
-                    'name': template.company_name,
-                    'address': template.company_address,
-                    'phone': template.company_phone,
-                    'email': template.company_email,
-                    'website': template.company_website,
-                },
-                'content_settings': {
-                    'show_company_logo': template.show_company_logo,
-                    'show_order_details': template.show_order_details,
-                    'show_customer_details': template.show_customer_details,
-                    'show_payment_details': template.show_payment_details,
-                    'show_notes': template.show_notes,
-                    'show_terms': template.show_terms,
-                },
-                'advanced_settings': template.advanced_settings or {}
-            }
-            scripts = []
-            if template.html_content:
-                # استخدام JSON لحقن النص بأمان مع الهروب من </script>
-                saved_html_json = _json.dumps(template.html_content)
-                saved_html_json = saved_html_json.replace('</script>', '<\\/script>')
-                scripts.append(f"<script>window.SAVED_HTML = {saved_html_json};</script>")
-            saved_meta_json = _json.dumps(meta, ensure_ascii=False).replace('</script>', '<\\/script>')
-            scripts.append(f"<script>window.SAVED_META = {saved_meta_json};</script>")
-            content = response.content.decode('utf-8')
-            content = content.replace('</body>', f"{''.join(scripts)}</body>")
-            response.content = content.encode('utf-8')
-        except Exception:
-            pass
-    return response
+    return render(request, 'orders/invoice_builder.html', context)
 
 
 @staff_member_required
@@ -216,7 +208,7 @@ def save_template(request):
         company_info_db = CompanyInfo.objects.first()
         
         company_info = template_data.get('company_info', {})
-        template.company_name = company_info.get('name') or (company_info_db.name if company_info_db else 'شركة الخواجه للستائر والمفروشات')
+        template.company_name = company_info.get('name') or (company_info_db.name if company_info_db else 'اسم الشركة')
         template.company_address = company_info.get('address') or (company_info_db.address if company_info_db else 'المملكة العربية السعودية')
         template.company_phone = company_info.get('phone') or (company_info_db.phone if company_info_db else '')
         template.company_email = company_info.get('email') or (company_info_db.email if company_info_db else '')
@@ -294,7 +286,7 @@ def load_template(request, template_id):
                 'page_margins': template.page_margins,
             },
             'company_info': {
-                'name': template.company_name or (company_info_db.name if company_info_db else 'شركة الخواجه'),
+                'name': template.company_name or (company_info_db.name if company_info_db else 'اسم الشركة'),
                 'address': template.company_address or (company_info_db.address if company_info_db else 'المملكة العربية السعودية'),
                 'phone': template.company_phone or (company_info_db.phone if company_info_db else ''),
                 'email': template.company_email or (company_info_db.email if company_info_db else ''),
@@ -602,7 +594,7 @@ def import_template(request):
         
         # معلومات الشركة
         company_info = template_data.get('company_info', {})
-        template.company_name = company_info.get('name', 'شركة الخواجه')
+        template.company_name = company_info.get('name') or (company_info_db.name if company_info_db else 'اسم الشركة')
         template.company_address = company_info.get('address', 'المملكة العربية السعودية')
         template.company_phone = company_info.get('phone', '')
         template.company_email = company_info.get('email', '')

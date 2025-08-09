@@ -80,9 +80,9 @@ def orders_dashboard(request):
     completed_orders = orders.filter(tracking_status__in=['ready', 'delivered']).count()
     ready_install_orders = orders.filter(tracking_status='ready').count()
     
-    # إجمالي الإيرادات - استخدام final_price بدلاً من total_amount
-    total_revenue = orders.filter(tracking_status__in=['ready', 'delivered']).aggregate(
-        total=Sum('final_price')
+    # إجمالي الإيرادات لجميع الطلبات بغض النظر عن الحالة
+    total_revenue = orders.aggregate(
+        total=Sum('total_amount')
     )['total'] or 0
     
     # أحدث الطلبات

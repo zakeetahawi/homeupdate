@@ -120,11 +120,10 @@ class InvoiceTemplateAdmin(admin.ModelAdmin):
     def preview_link(self, obj):
         """رابط معاينة القالب"""
         if obj.pk:
-            simple_editor_url = reverse('orders:simple_invoice_editor_edit', args=[obj.pk])
+            simple_editor_url = reverse('orders:invoice_editor_edit', args=[obj.pk])
             return format_html(
-                '<a href="{}" class="button" target="_blank" style="background-color: #198754; color: white; margin-left: 5px;">تحرير القالب</a>'
-                '<a href="#" onclick="previewTemplate({})" class="button">معاينة</a>',
-                simple_editor_url, obj.pk
+                '<a href="{}" class="button" target="_blank" style="background-color: #198754; color: white; margin-left: 5px;">فتح مُنشئ القالب</a>',
+                simple_editor_url
             )
         return '-'
     preview_link.short_description = 'الإجراءات'

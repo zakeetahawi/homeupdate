@@ -53,13 +53,9 @@ urlpatterns = [
     path('api/order-details/<int:order_id>/', views.get_order_details_api, name='order_details_api'),
     path('api/customer-inspections/', views.get_customer_inspections, name='customer_inspections_api'),
     
-    # Invoice Editor URLs (Simple Editor Only)
-    path('invoice-editor/', invoice_views.simple_invoice_editor, name='invoice_editor'),
-    path('invoice-editor/<int:template_id>/', invoice_views.simple_invoice_editor, name='invoice_editor_edit'),
-    
-    # Simple Invoice Editor URLs
-    path('simple-invoice-editor/', invoice_views.simple_invoice_editor, name='simple_invoice_editor'),
-    path('simple-invoice-editor/<int:template_id>/', invoice_views.simple_invoice_editor, name='simple_invoice_editor_edit'),
+    # Invoice Builder (GrapesJS-based)
+    path('invoice-editor/', invoice_views.invoice_builder, name='invoice_editor'),
+    path('invoice-editor/<int:template_id>/', invoice_views.invoice_builder, name='invoice_editor_edit'),
     path('templates/', invoice_views.template_list, name='template_list'),
     path('templates/analytics/', invoice_views.template_analytics, name='template_analytics'),
     

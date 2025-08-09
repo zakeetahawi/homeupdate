@@ -1,4 +1,6 @@
 import json
+from django.http import JsonResponse, HttpResponse
+import re
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
@@ -6,7 +8,6 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.db.models import Q, Sum, Count
 from django.core.paginator import Paginator
-from django.http import JsonResponse
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from .models import Order, OrderItem, Payment
@@ -717,7 +718,7 @@ def get_order_details_api(request, order_id):
 
         # البحث في ملاحظات الطلب عن عدد الشبابيك
         if order.notes:
-            import re
+        
             windows_match = re.search(r'(\d+)\s*شباك', order.notes)
             if windows_match:
                 windows_count = int(windows_match.group(1))
@@ -968,403 +969,319 @@ def order_delete_redirect(request, pk):
 
 @login_required
 def invoice_print(request, order_number):
-    """طباعة فاتورة الطلب باستخدام القوالب المُعدلة"""
+    """طباعة فاتورة الطلب مباشرةً وفق القالب المحفوظ أو قالب افتراضي، مع ضمان A4 والطباعة مباشرة عند الطلب."""
     order = get_object_or_404(Order, order_number=order_number)
-    
-    # الحصول على القالب المناسب
+
+    # نماذج القوالب والسجلات
     from .invoice_models import InvoiceTemplate, InvoicePrintLog
     from accounts.models import SystemSettings, CompanyInfo
-    
+
+    # استرجاع القالب الافتراضي أو إنشاؤه من بيانات الشركة
     template = InvoiceTemplate.get_default_template()
-    
     if not template:
-        # إنشاء قالب افتراضي إذا لم يوجد
+        company_info = CompanyInfo.objects.first()
         template = InvoiceTemplate.objects.create(
             name='القالب الافتراضي',
             is_default=True,
-            company_name='شركة الخواجه',
-            company_address='المملكة العربية السعودية',
-            created_by=request.user
+            company_name=(company_info.name if company_info else 'اسم الشركة'),
+            company_address=(company_info.address if company_info else 'عنوان الشركة'),
+            company_phone=(company_info.phone if company_info else ''),
+            company_email=(company_info.email if company_info else ''),
+            company_website=(company_info.website if company_info else ''),
+            primary_color=(company_info.primary_color if company_info else '#0d6efd'),
+            secondary_color=(company_info.secondary_color if company_info else '#198754'),
+            accent_color=(company_info.accent_color if company_info else '#ffc107'),
+            created_by=request.user,
         )
-    
-    # تحديث عداد الاستخدام
+
+    # تسجيل الاستخدام
     template.increment_usage()
-    
-    # تسجيل عملية الطباعة
-    print_type = 'auto' if request.GET.get('auto_print') == '1' else 'manual'
-    InvoicePrintLog.objects.create(
-        order=order,
-        template=template,
-        printed_by=request.user,
-        print_type=print_type
-    )
-    
-    # الحصول على إعدادات النظام والشركة
+    print_type = 'auto' if request.GET.get('auto_print') in ['1', 'true', 'True'] else 'manual'
+    InvoicePrintLog.objects.create(order=order, template=template, printed_by=request.user, print_type=print_type)
+
+    # إعدادات النظام والعملات
     system_settings = SystemSettings.get_settings()
     company_info = CompanyInfo.objects.first()
     currency_symbol = system_settings.currency_symbol if system_settings else 'ريال'
-    
-    # إذا كان القالب يحتوي على محتوى HTML مخصص، استخدمه
-    if template.html_content:
-        # استخدام المحتوى المحفوظ من المحرر
-        html_content = template.html_content
-        
-        # استبدال المتغيرات في المحتوى
-        html_content = html_content.replace('${companyInfo.name}', template.company_name or (company_info.name if company_info else 'شركة الخواجه'))
-        html_content = html_content.replace('${companyInfo.address}', template.company_address or (company_info.address if company_info else 'المملكة العربية السعودية'))
-        html_content = html_content.replace('${companyInfo.phone}', template.company_phone or (company_info.phone if company_info else ''))
-        html_content = html_content.replace('${companyInfo.email}', template.company_email or (company_info.email if company_info else ''))
-        html_content = html_content.replace('${systemSettings.currency_symbol}', currency_symbol)
-        
-        # استبدال بيانات الطلب الأساسية
-        html_content = html_content.replace('ORD-2025-001', order.order_number)
-        html_content = html_content.replace('INV-2025-001', order.invoice_number or order.order_number)
 
-        # تحديد نوع الطلب المعروض بالاعتماد على selected_types
-        # يستخدم دالة النموذج الموحدة لعرض القيمة بشكل صحيح
+    # إنشاء جدول العناصر مرة واحدة للاستخدام في كلا الفرعين
+    items_html_rows = []
+    for item in order.items.all():
+        # تنسيق الأسعار لإزالة الأصفار الزائدة
+        try:
+            unit_price = float(item.unit_price or 0)
+            total_price = float(item.total_price or 0)
+            quantity = int(item.quantity or 0)
+            
+            # تنسيق الأسعار بحيث تظهر بشكل صحيح
+            unit_price_formatted = f"{unit_price:.2f}".rstrip('0').rstrip('.')
+            total_price_formatted = f"{total_price:.2f}".rstrip('0').rstrip('.')
+            
+        except (ValueError, TypeError):
+            unit_price_formatted = "0"
+            total_price_formatted = "0"
+            quantity = 0
+            
+        items_html_rows.append(
+            f"""
+            <tr>
+                <td style=\"padding:10px;border:1px solid #ddd;text-align:right;word-break:break-word;\">{item.product.name if getattr(item, 'product', None) else 'منتج'}</td>
+                <td style=\"padding:10px;border:1px solid #ddd;text-align:center;\">{quantity}</td>
+                <td style=\"padding:10px;border:1px solid #ddd;text-align:center;\">{unit_price_formatted} {currency_symbol}</td>
+                <td style=\"padding:10px;border:1px solid #ddd;text-align:center;\">{total_price_formatted} {currency_symbol}</td>
+            </tr>
+            """
+        )
+    items_html = "".join(items_html_rows)
+
+    # محتوى القالب
+    if template.html_content and len(template.html_content) > 50:
+        html_content = template.html_content
+
+        # استبدال بيانات الشركة والطلب الأساسية
+        basic_replacements = {
+            '${companyInfo.name}': template.company_name or (company_info.name if company_info else 'اسم الشركة'),
+            '${companyInfo.address}': template.company_address or (company_info.address if company_info else 'المملكة العربية السعودية'),
+            '${companyInfo.phone}': template.company_phone or (company_info.phone if company_info else ''),
+            '${companyInfo.email}': template.company_email or (company_info.email if company_info else ''),
+            '${companyInfo.website}': template.company_website or (company_info.website if company_info else ''),
+            '${systemSettings.currency_symbol}': currency_symbol,
+            '${order.order_number}': order.order_number,
+            '${order.code}': order.order_number,
+            '${order.contract_number}': getattr(order, 'contract_number', '') or '',
+            '${order.invoice_number}': getattr(order, 'invoice_number', '') or str(order.order_number),
+        }
+        for placeholder, value in basic_replacements.items():
+            html_content = html_content.replace(placeholder, str(value))
+ 
+        # العميل
+        customer_name = getattr(order.customer, 'name', '') or ''
+        customer_phone = getattr(order.customer, 'phone', '') or ''
+        html_content = html_content.replace('${customer.name}', customer_name)
+        html_content = html_content.replace('${customer.phone}', customer_phone)
+
+        # البائع والفرع
+        salesperson_name = ''
+        salesperson_phone = ''
+        try:
+            if getattr(order, 'salesperson', None):
+                salesperson_name = order.salesperson.name or ''
+                salesperson_phone = order.salesperson.phone or ''
+            elif getattr(order, 'salesperson_name_raw', None):
+                salesperson_name = order.salesperson_name_raw or ''
+        except Exception:
+            pass
+        branch_phone = getattr(getattr(order, 'branch', None), 'phone', '') or ''
+        branch_name = getattr(getattr(order, 'branch', None), 'name', '') or ''
+        html_content = html_content.replace('${salesperson.name}', salesperson_name)
+        html_content = html_content.replace('${salesperson.phone}', salesperson_phone)
+        html_content = html_content.replace('${branch.phone}', branch_phone)
+        html_content = html_content.replace('${branch.name}', branch_name)
+
+        # موعد التسليم المتوقع
+        expected_delivery = ''
+        if getattr(order, 'expected_delivery_date', None):
+            expected_delivery = order.expected_delivery_date.strftime('%Y-%m-%d')
+        html_content = html_content.replace('${order.expected_delivery_date}', expected_delivery)
+
+        # المبالغ المالية - التأكد من الحصول على القيم الصحيحة
+        try:
+            # أولوية للـ final_price ثم total_amount
+            total_amount = float(order.final_price or order.total_amount or 0)
+            paid_amount = float(order.paid_amount or 0)
+            remaining_amount = max(0, total_amount - paid_amount)  # تجنب القيم السالبة
+            
+            # تنسيق الأسعار لإزالة الأصفار الزائدة
+            total_formatted = f"{total_amount:.2f}".rstrip('0').rstrip('.')
+            paid_formatted = f"{paid_amount:.2f}".rstrip('0').rstrip('.')
+            remaining_formatted = f"{remaining_amount:.2f}".rstrip('0').rstrip('.')
+            
+            html_content = html_content.replace('${order.total_amount}', total_formatted)
+            html_content = html_content.replace('${order.paid_amount}', paid_formatted)
+            html_content = html_content.replace('${order.remaining_amount}', remaining_formatted)
+        except (ValueError, TypeError):
+            # في حالة وجود خطأ، استخدم قيم افتراضية
+            html_content = html_content.replace('${order.total_amount}', '0')
+            html_content = html_content.replace('${order.paid_amount}', '0')
+            html_content = html_content.replace('${order.remaining_amount}', '0')
+        
+        # رمز العملة من إعدادات النظام
+        html_content = html_content.replace('${systemSettings.currency_symbol}', currency_symbol)
+
+        # اسم العميل والهاتف والعنوان
+        address_value = (order.delivery_address or getattr(order.customer, 'address', None) or 'غير محدد')
+        html_content = html_content.replace('أحمد محمد', order.customer.name)
+        html_content = html_content.replace('0501234567', order.customer.phone or '')
+        html_content = html_content.replace('سيتم تحديد العنوان لاحقاً', address_value)
+        html_content = html_content.replace('الرياض، المملكة العربية السعودية', address_value)
+        html_content = html_content.replace('${customer.address}', address_value)
+        html_content = html_content.replace('${order.address}', address_value)
+
+        # التاريخ (ميلادي)
+        order_date_str = (order.order_date or order.created_at).strftime('%Y-%m-%d')
+        html_content = html_content.replace('2025-01-01', order_date_str)
+        html_content = html_content.replace('${order.order_date}', order_date_str)
+
+        # نوع الطلب
         try:
             order_type_display = order.get_selected_type_display()
         except Exception:
-            order_type_display = order.get_order_type_display()
-
-        # استبدال كلمة النوع في القالب المحفوظ
-        # نستبدل الكلمات الأربعة المحتملة لضمان عرض الصحيح
-        for placeholder in ['معاينة', 'تركيب', 'تسليم', 'إكسسوار', 'منتج', 'خدمة', 'product', 'service']:
-            html_content = html_content.replace(placeholder, order_type_display)
-
-        # أيضاً دعم عنصر مخصص في القالب ${order.type}
+            order_type_display = getattr(order, 'get_order_type_display', lambda: 'طلب')( )
+        for typ in ['معاينة', 'تركيب', 'تسليم', 'إكسسوار', 'منتج', 'خدمة']:
+            html_content = html_content.replace(typ, order_type_display)
         html_content = html_content.replace('${order.type}', order_type_display)
-        html_content = html_content.replace('أحمد محمد', order.customer.name)
-        html_content = html_content.replace('0501234567', order.customer.phone or '')
-        html_content = html_content.replace('الرياض، المملكة العربية السعودية', order.delivery_address or '')
-        
-        # استبدال التاريخ بالتاريخ الميلادي من تاريخ الطلب الفعلي وبالتنسيق من القالب إن وُجد
-        try:
-            date_source = order.order_date or order.created_at
-        except Exception:
-            date_source = order.created_at
-        # تنسيق التاريخ من إعدادات القالب
-        date_format = None
-        if template.advanced_settings and isinstance(template.advanced_settings, dict):
-            date_format = template.advanced_settings.get('date_format')
-        if not date_format:
-            date_format = '%Y-%m-%d'
-        try:
-            order_date = date_source.strftime(date_format)
-        except Exception:
-            order_date = date_source.strftime('%Y-%m-%d')
-        # دعم أكثر من صيغة placeholder
-        for date_placeholder in [
-            "${new Date().toLocaleDateString('en-CA')}",
-            "${new Date().toLocaleDateString('ar-SA')}",
-            '${order.date}',
-            '${order.order_date}'
-        ]:
-            html_content = html_content.replace(date_placeholder, order_date)
-        
-        # إنشاء جدول العناصر الحقيقي مع التصغير التلقائي
-        items_html = ""
-        total_amount = 0
-        item_count = order.items.count()
-        
-        for idx, item in enumerate(order.items.all(), 1):
-            items_html += f"""
-                <tr class="dynamic-sizing">
-                    <td>{idx}</td>
-                    <td>{item.product.name if item.product else 'منتج غير محدد'}</td>
-                    <td>{item.quantity}</td>
-                    <td>{item.unit_price} {currency_symbol}</td>
-                    <td>{item.total_price} {currency_symbol}</td>
-                </tr>
-            """
-            total_amount += float(item.total_price)
-        
-        # إذا لم توجد عناصر، أضف رسالة
-        if not items_html:
-            items_html = f"""
-                <tr>
-                    <td colspan="5" style="text-align: center; color: #6c757d;">
-                        لا توجد عناصر في هذا الطلب
-                    </td>
-                </tr>
-            """
-        
-        # استبدال جدول العناصر التجريبي بالحقيقي
-        import re
-        table_pattern = r'<tbody>.*?</tbody>'
-        html_content = re.sub(table_pattern, f'<tbody>{items_html}</tbody>', html_content, flags=re.DOTALL)
-        
-        # استبدال المجاميع وإضافة معلومات الدفع
-        html_content = html_content.replace('1150.00', f'{total_amount:.2f}')
-        html_content = html_content.replace('1000.00', f'{total_amount:.2f}')
+        html_content = html_content.replace('${order.order_type}', order_type_display)
 
-        # المبلغ المدفوع والمتبقي
+        # إدراج عناصر الطلب داخل tbody إن وجد، أو ضمن عنصر بديل
+        tbody_pattern = r'<tbody[^>]*>.*?</tbody>'
+        if re.search(tbody_pattern, html_content, re.DOTALL):
+            html_content = re.sub(tbody_pattern, f'<tbody>{items_html}</tbody>', html_content, flags=re.DOTALL)
+        else:
+            html_content = html_content.replace('${order.items_table}', f'<tbody>{items_html}</tbody>')
+
+        # مجاميع أساسية - استبدال الأرقام الثابتة القديمة
         try:
             paid_amount_val = float(order.paid_amount or 0)
-        except Exception:
-            paid_amount_val = 0.0
-        remaining_amount_val = max(total_amount - paid_amount_val, 0)
-
-        # استبدال عناصر مخصصة إن وُجدت
-        html_content = html_content.replace('${order.paid_amount}', f'{paid_amount_val:.2f} {currency_symbol}')
-        html_content = html_content.replace('${order.remaining_amount}', f'{remaining_amount_val:.2f} {currency_symbol}')
-
-        # إذا لم تتوفر العناصر المخصصة في القالب، أضف ملخص الدفع أسفل المحتوى
-        if '${order.paid_amount}' not in template.html_content and '${order.remaining_amount}' not in template.html_content:
-            payment_summary = f"""
-            <div class=\"totals-section\" style=\"text-align: right; margin: 10px 0 20px;\">
-                <div class=\"total-row\" style=\"display: flex; justify-content: space-between; padding: 5px 0;\">
-                    <span>المبلغ الإجمالي:</span>
-                    <span>{total_amount:.2f} {currency_symbol}</span>
-                </div>
-                <div class=\"total-row\" style=\"display: flex; justify-content: space-between; padding: 5px 0;\">
-                    <span>المبلغ المدفوع:</span>
-                    <span>{paid_amount_val:.2f} {currency_symbol}</span>
-                </div>
-                <div class=\"total-row final\" style=\"display: flex; justify-content: space-between; padding: 5px 0; border-top: 2px solid var(--primary-color); font-weight: bold; color: var(--primary-color);\">
-                    <span>المبلغ المتبقي:</span>
-                    <span>{remaining_amount_val:.2f} {currency_symbol}</span>
-                </div>
-            </div>
-            """
-            # إلحاق الملخص بنهاية المحتوى
-            html_content = html_content + payment_summary
-
-        # استبدالات إضافية: رقم العقد وكود الطلب، النصوص المخصصة
-        # كود الطلب ورقم الطلب
-        html_content = html_content.replace('${order.order_number}', order.order_number)
-        html_content = html_content.replace('${order.code}', order.order_number)
-        # رقم العقد إن وجد
-        contract_number = getattr(order, 'contract_number', None) or getattr(order, 'contract_number_2', None) or getattr(order, 'contract_number_3', None) or ''
-        html_content = html_content.replace('${order.contract_number}', contract_number)
-        # دعم قيم تجريبية محتملة في القالب الافتراضي
-        if 'CN-0001' in html_content and contract_number:
-            html_content = html_content.replace('CN-0001', contract_number)
-        # نصوص مخصصة من القالب (ملاحظات وسياسات)
-        notes_text = ''
-        policies_text = ''
-        if template.advanced_settings and isinstance(template.advanced_settings, dict):
-            notes_text = template.advanced_settings.get('notes_text') or ''
-            policies_text = template.advanced_settings.get('policies_text') or ''
-        html_content = html_content.replace('${order.notes_text}', notes_text)
-        html_content = html_content.replace('${order.policies_text}', policies_text)
-        
-        # إنشاء قالب HTML كامل
-        full_html = f"""
-        <!DOCTYPE html>
-        <html lang="ar" dir="rtl">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>{template.advanced_settings.get('invoice_title', 'فاتورة') if template.advanced_settings else 'فاتورة'} رقم {order.invoice_number}</title>
-            <style>
-                * {{
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }}
-                
-                body {{
-                    font-family: '{template.font_family}';
-                    font-size: {template.font_size}px;
-                    line-height: 1.6;
-                    color: #333;
-                    background: white;
-                    direction: rtl;
-                    padding: 20px;
-                    position: relative;
-                }}
-                
-                .background-logo {{
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    opacity: 0.05;
-                    z-index: 0;
-                    pointer-events: none;
-                }}
-                
-                .content {{
-                    position: relative;
-                    z-index: 1;
-                }}
-                
-                /* تصغير الخطوط التلقائي حسب عدد العناصر */
-                .dynamic-sizing {{
-                    font-size: calc(14px - min(var(--item-count, 0) * 0.3px, 4px));
-                }}
-                
-                .items-table {{
-                    font-size: calc(12px - min(var(--item-count, 0) * 0.2px, 3px));
-                }}
-                
-                .items-table th, .items-table td {{
-                    padding: calc(8px - min(var(--item-count, 0) * 0.1px, 3px));
-                }}
-                
-                /* إخفاء قسم المجاميع حسب طلب العميل */
-                .totals-section { display: none !important; }
-                
-                /* إخفاء أزرار الطباعة في وضع الطباعة */
-                @media print {{
-                    .print-button, .no-print {{
-                        display: none !important;
-                    }}
-                    
-                    body {{
-                        padding: 0 !important;
-                        margin: 0 !important;
-                    }}
-                    
-                    .content {{
-                        max-width: 100% !important;
-                        margin: 0 !important;
-                    }}
-                    
-                    /* تحسين الطباعة للعناصر الكثيرة */
-                    .items-table {{
-                        font-size: 10px !important;
-                    }}
-                    
-                    .items-table th, .items-table td {{
-                        padding: 4px !important;
-                        line-height: 1.2 !important;
-                    }}
-                }}
-                
-                :root {{
-                    --primary-color: {template.primary_color};
-                    --secondary-color: {template.secondary_color};
-                    --accent-color: {template.accent_color};
-                    --item-count: {order.items.count()};
-                    --header-bg: {template.advanced_settings.get('header_color', '#f8f9fa') if template.advanced_settings else '#f8f9fa'};
-                }}
-                
-                /* الأنماط من المحرر */
-                .invoice-header {{
-                    padding: 30px;
-                    border-bottom: 3px solid var(--accent-color);
-                    margin-bottom: 30px;
-                }}
-                
-                .invoice-header h1 {{
-                    color: var(--primary-color);
-                    margin: 0;
-                }}
-                
-                .company-logo {{
-                    max-width: 100px;
-                    max-height: 60px;
-                }}
-                
-                .info-section {{
-                    background: #f8f9fa;
-                    padding: 20px;
-                    border-radius: 8px;
-                    border-right: 4px solid var(--accent-color);
-                    margin-bottom: 20px;
-                }}
-                
-                .items-table {{
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 20px;
-                }}
-                
-                .items-table th,
-                .items-table td {{
-                    padding: 10px;
-                    border: 1px solid #ddd;
-                    text-align: center;
-                }}
-                
-                .items-table th {{
-                    background: var(--primary-color);
-                    color: white;
-                }}
-                
-                .totals-section {{
-                    text-align: right;
-                    margin-bottom: 20px;
-                }}
-                
-                .total-row {{
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 5px 0;
-                }}
-                
-                .total-row.final {{
-                    border-top: 2px solid var(--primary-color);
-                    font-weight: bold;
-                    font-size: 18px;
-                    color: var(--primary-color);
-                }}
-                
-                @media print {{
-                    body {{ padding: 0; }}
-                }}
-            </style>
-        </head>
-        <body>
-            {"<div class='background-logo'><img src='" + (template.company_logo.url if template.company_logo else (company_info.logo.url if company_info and company_info.logo else '')) + "' style='max-width: 400px; max-height: 400px;'></div>" if template.advanced_settings.get('show_background_logo') else ""}
-            <div class="content">
-                {html_content}
-            </div>
+            total_amount_val = float(order.final_price or order.total_amount or 0)
+            remaining_amount_val = max(0, total_amount_val - paid_amount_val)
             
-            <script>
-                // إزالة أي أزرار طباعة موجودة
-                window.onload = function() {{
-                    // إخفاء جميع أزرار الطباعة
-                    const printButtons = document.querySelectorAll('.print-button, .no-print, button[onclick*="print"], a[onclick*="print"]');
-                    printButtons.forEach(btn => {{
-                        btn.style.display = 'none';
-                    }});
-                    
-                    // إزالة أي نصوص طباعة
-                    const printTexts = document.querySelectorAll('*');
-                    printTexts.forEach(el => {{
-                        if (el.textContent && el.textContent.includes('طباعة')) {{
-                            el.style.display = 'none';
-                        }});
-                    }});
-                    
-                    // طباعة تلقائية إذا طُلب ذلك
-                    {f"setTimeout(() => {{ window.print(); }}, 1000);" if request.GET.get('auto_print') == '1' else ""}
-                }};
-                
-                // تحسين الطباعة للعناصر الكثيرة
-                if (window.matchMedia) {{
-                    const mediaQueryList = window.matchMedia('print');
-                    mediaQueryList.addListener(function(mql) {{
-                        if (mql.matches) {{
-                            // وضع الطباعة
-                            document.body.classList.add('printing');
-                        }}
-                    }});
-                }}
-            </script>
-        </body>
-        </html>
-        """
-        
-        from django.http import HttpResponse
-        return HttpResponse(full_html)
-    
-    else:
-        # إذا لم يكن هناك محتوى مخصص، استخدم القالب الافتراضي
-        context = {
-            'order': order,
-            'template': template,
-            'system_settings': system_settings,
-            'company_info': company_info,
-            'currency_symbol': currency_symbol,
-            'auto_print': request.GET.get('auto_print') == '1',
-        }
-        
-        return render(request, 'orders/invoice_print_dynamic.html', context)
+            # تنسيق الأسعار لإزالة الأصفار الزائدة
+            total_val_formatted = f"{total_amount_val:.2f}".rstrip('0').rstrip('.')
+            paid_val_formatted = f"{paid_amount_val:.2f}".rstrip('0').rstrip('.')
+            remaining_val_formatted = f"{remaining_amount_val:.2f}".rstrip('0').rstrip('.')
+            
+            # استبدال الأرقام الثابتة القديمة
+            html_content = html_content.replace('34280.00', total_val_formatted)
+            html_content = html_content.replace('0.00', paid_val_formatted)
+            
+            # استبدال المتغيرات إذا لم تكن قد استُبدلت من قبل
+            if '${order.paid_amount}' in html_content:
+                html_content = html_content.replace('${order.paid_amount}', paid_val_formatted)
+            if '${order.remaining_amount}' in html_content:
+                html_content = html_content.replace('${order.remaining_amount}', remaining_val_formatted)
+        except (ValueError, TypeError):
+            # في حالة وجود خطأ، استخدم قيم افتراضية
+            html_content = html_content.replace('34280.00', '0')
+            html_content = html_content.replace('${order.paid_amount}', '0')
+            html_content = html_content.replace('${order.remaining_amount}', '0')
 
+    else:
+        # قالب افتراضي بسيط - مع تنسيق الأسعار
+        try:
+            total_amount = float(order.final_price or order.total_amount or 0)
+            paid_amount = float(order.paid_amount or 0)
+            remaining_amount = max(0, total_amount - paid_amount)
+            
+            # تنسيق الأسعار لإزالة الأصفار الزائدة
+            total_formatted = f"{total_amount:.2f}".rstrip('0').rstrip('.')
+            paid_formatted = f"{paid_amount:.2f}".rstrip('0').rstrip('.')
+            remaining_formatted = f"{remaining_amount:.2f}".rstrip('0').rstrip('.')
+        except (ValueError, TypeError):
+            total_formatted = "0"
+            paid_formatted = "0"
+            remaining_formatted = "0"
+            
+        html_content = f"""
+        <div style=\"font-family: 'Cairo', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;\">
+            <div style=\"text-align: center; border-bottom: 2px solid #0d6efd; padding-bottom: 20px; margin-bottom: 30px;\">
+                <h1 style=\"color: #0d6efd; margin: 0;\">فاتورة</h1>
+                <p style=\"margin: 10px 0;\">رقم الطلب: {order.order_number}</p>
+                <p style=\"margin: 10px 0;\">التاريخ: {(order.order_date or order.created_at).strftime('%Y-%m-%d')}</p>
+            </div>
+
+            <div style=\"margin-bottom: 30px;\">
+                <h3 style=\"color: #0d6efd; border-bottom: 1px solid #dee2e6; padding-bottom: 10px;\">معلومات العميل</h3>
+                <p><strong>الاسم:</strong> {order.customer.name}</p>
+                <p><strong>الهاتف:</strong> {order.customer.phone or 'غير محدد'}</p>
+                <p><strong>العنوان:</strong> {(order.delivery_address or getattr(order.customer, 'address', None) or 'غير محدد')}</p>
+                <p><strong>نوع الطلب:</strong> {getattr(order, 'get_selected_type_display', lambda: 'طلب')( )}</p>
+            </div>
+
+            <div style=\"margin-bottom: 30px;\">
+                <h3 style=\"color: #0d6efd; border-bottom: 1px solid #dee2e6; padding-bottom: 10px;\">تفاصيل الطلب</h3>
+                <table style=\"width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 15px;\">
+                    <thead>
+                        <tr style=\"background: #0d6efd; color: white;\">
+                            <th style=\"padding: 12px; text-align: right; border: 1px solid #ddd;\">الوصف</th>
+                            <th style=\"padding: 12px; text-align: center; border: 1px solid #ddd;\">الكمية</th>
+                            <th style=\"padding: 12px; text-align: center; border: 1px solid #ddd;\">السعر</th>
+                            <th style=\"padding: 12px; text-align: center; border: 1px solid #ddd;\">المجموع</th>
+                        </tr>
+                    </thead>
+                    <tbody>{items_html}</tbody>
+                </table>
+            </div>
+
+            <div style=\"background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;\">
+                <div style=\"display: flex; justify-content: space-between; margin-bottom: 10px;\">
+                    <span><strong>المجموع الكلي:</strong></span>
+                    <span><strong>{total_formatted} {currency_symbol}</strong></span>
+                </div>
+                <div style=\"display: flex; justify-content: space-between; margin-bottom: 10px; color: #198754;\">
+                    <span>المبلغ المدفوع:</span>
+                    <span>{paid_formatted} {currency_symbol}</span>
+                </div>
+                <div style=\"display: flex; justify-content: space-between; color: #dc3545; border-top: 1px solid #dee2e6; padding-top: 10px;\">
+                    <span>المبلغ المتبقي:</span>
+                    <span>{remaining_formatted} {currency_symbol}</span>
+                </div>
+            </div>
+
+            <div style=\"text-align: center; color: #6c757d; font-size: 12px; border-top: 1px solid #dee2e6; padding-top: 20px;\">
+                <p>شكراً لتعاملكم معنا</p>
+                <p>{template.company_name or (company_info.name if company_info else 'اسم الشركة')}</p>
+            </div>
+        </div>
+        """
+
+    # غلاف HTML للطباعة على A4 + طباعة تلقائية اختيارية
+    auto_print_script = (
+        """
+        <script>
+            window.addEventListener('load', function() {
+                setTimeout(function() { window.print(); }, 500);
+            });
+        </script>
+        """
+        if request.GET.get('auto_print') in ['1', 'true', 'True'] else ''
+    )
+
+    full_html = f"""
+    <!DOCTYPE html>
+    <html dir=\"rtl\" lang=\"ar\">
+    <head>
+        <meta charset=\"UTF-8\">
+        <title>فاتورة - {order.order_number}</title>
+        <link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css\" rel=\"stylesheet\">
+        <link href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css\" rel=\"stylesheet\">
+        <link href=\"https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap\" rel=\"stylesheet\">
+        <style>
+            body {{ font-family: 'Cairo', Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }}
+            @media print {{
+                @page {{ size: A4; margin: 10mm; }}
+                body {{ margin: 0; padding: 0; background: white !important; font-size: 10px !important; }}
+                .print-buttons {{ display: none !important; }}
+                .invoice-container {{ box-shadow: none !important; border-radius: 0 !important; max-width: none !important; }}
+            }}
+            .invoice-container {{ max-width: 210mm; margin: 0 auto; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }}
+            .invoice-container table {{ width: 100%; border-collapse: collapse; table-layout: fixed; }}
+            .invoice-container th, .invoice-container td {{ padding: 10px; border: 1px solid #ddd; }}
+            .invoice-container td:first-child {{ text-align: right; word-break: break-word; }}
+            .invoice-container td:nth-child(2), .invoice-container td:nth-child(3), .invoice-container td:nth-child(4) {{ text-align: center; }}
+        </style>
+        {auto_print_script}
+    </head>
+    <body>
+        <div class=\"invoice-container\">{html_content}</div>
+        <div class=\"print-buttons text-center mt-4\">
+            <button onclick=\"window.print()\" class=\"btn btn-primary me-2\"><i class=\"fas fa-print\"></i> طباعة</button>
+            <button onclick=\"window.close()\" class=\"btn btn-secondary\"><i class=\"fas fa-times\"></i> إغلاق</button>
+        </div>
+    </body>
+    </html>
+    """
+
+    return HttpResponse(full_html)
 
 @login_required  
 def invoice_print_redirect(request, pk):

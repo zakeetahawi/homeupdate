@@ -268,3 +268,26 @@ def paid_percentage(order):
         return f"{pct_value}%"
     except Exception:
         return '0%'
+
+@register.filter
+def remaining_amount(total, paid):
+    """
+    حساب المبلغ المتبقي
+    """
+    try:
+        total_val = float(total) if total else 0
+        paid_val = float(paid) if paid else 0
+        remaining = total_val - paid_val
+        return f"{remaining:.2f}"
+    except (ValueError, TypeError):
+        return "0.00"
+
+@register.filter
+def get_selected_type_display(order):
+    """
+    إرجاع عرض نوع الطلب المحدد
+    """
+    try:
+        return order.get_selected_type_display()
+    except Exception:
+        return order.get_order_type_display()

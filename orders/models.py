@@ -457,6 +457,9 @@ class Order(models.Model):
                     self.final_price = final_price
                     # حفظ التغيير في السعر النهائي فقط إذا تغير
                     super().save(update_fields=['final_price'])
+                    # تحديث المبلغ الإجمالي ليطابق السعر النهائي
+                    self.total_amount = self.final_price
+                    super().save(update_fields=['total_amount'])
             except Exception as e:
                 pass
                 self.final_price = 0
