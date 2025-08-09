@@ -13,6 +13,9 @@
             <a href="{% url 'orders:order_update' order.pk %}" class="btn btn-primary">
                 <i class="fas fa-edit"></i> تعديل الطلب
             </a>
+            <button type="button" class="btn btn-success" onclick="printInvoice('{{ order.order_number }}')">
+                <i class="fas fa-print"></i> طباعة الفاتورة
+            </button>
             <a href="{% url 'orders:order_delete' order.pk %}" class="btn btn-danger">
                 <i class="fas fa-trash"></i> حذف الطلب
             </a>
@@ -830,11 +833,13 @@
                         <tr>
                             <th>تم التحقق من الدفع</th>
                             <td>
+                                {% load order_extras %}
                                 {% if order.payment_verified %}
                                     <span class="badge bg-success">نعم</span>
                                 {% else %}
                                     <span class="badge bg-danger">لا</span>
                                 {% endif %}
+                                <span class="ms-2 text-muted">( {% paid_percentage order %} )</span>
                             </td>
                         </tr>
                         <tr>
@@ -1238,7 +1243,7 @@
                             <th>المبلغ</th>
                             <th>طريقة الدفع</th>
                             <th>تاريخ الدفع</th>
-                            <th>رقم المرجع</th>
+                            <th>رقم الفاتورة</th>
                             <th>ملاحظات</th>
                             <th>تم الإنشاء بواسطة</th>
                             <th>الإجراءات</th>
@@ -1251,7 +1256,7 @@
                             <td>{{ payment.amount }} {{ currency_symbol }}</td>
                             <td>{{ payment.get_payment_method_display }}</td>
                             <td>{{ payment.payment_date|date:"Y-m-d H:i" }}</td>
-                            <td>{{ payment.reference_number|default:"-" }}</td>
+                            <td>{{ payment.order.invoice_number|default:"-" }}</td>
                             <td>{{ payment.notes|default:"-" }}</td>
                             <td>
                                 {% if payment.created_by %}
@@ -1583,5 +1588,62 @@ $(document).ready(function() {
         }
     });
 });
+
+// دالة طباعة الفاتورة المباشرة
+function printInvoice(orderNumber) {
+    // إظهار رسالة تحميل
+    Swal.fire({
+        title: 'جاري التحضير للطباعة...',
+        text: 'يرجى الانتظار',
+        icon: 'info',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // إنشاء iframe مخفي للطباعة المباشرة
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    document.body.appendChild(iframe);
+    
+    // معالج تحميل الإطار
+    iframe.onload = function() {
+        setTimeout(() => {
+            Swal.close();
+            // محاولة الطباعة
+            try {
+                iframe.contentWindow.print();
+            } catch (e) {
+                console.log('طباعة تلقائية:', e);
+                // فتح في نافذة جديدة كبديل
+                window.open(`/orders/order/${orderNumber}/invoice/`, '_blank');
+            }
+        }, 1000);
+    };
+    
+    // معالج الخطأ
+    iframe.onerror = function() {
+        Swal.close();
+        Swal.fire({
+            title: 'خطأ!',
+            text: 'حدث خطأ في تحميل الفاتورة',
+            icon: 'error'
+        });
+    };
+    
+    // تحميل محتوى الفاتورة
+    iframe.src = `/orders/order/${orderNumber}/invoice/`;
+    
+    // إزالة الـ iframe بعد الطباعة
+    setTimeout(() => {
+        if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+        }
+    }, 10000);
+}
 </script>
 {% endblock %}

@@ -1,0 +1,1066 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}محرر الفواتير البسيط - تصميم سهل وسريع{% endblock %}
+
+{% block extra_css %}
+<style>
+/* محرر الفواتير البسيط */
+.simple-editor {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 20px 0;
+}
+
+.editor-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #198754 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px 10px 0 0;
+    text-align: center;
+}
+
+.editor-body {
+    background: white;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+/* الشريط العلوي البسيط */
+.simple-toolbar {
+    background: #fff;
+    border-bottom: 1px solid #dee2e6;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.toolbar-left {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.toolbar-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.simple-btn {
+    background: #0d6efd;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.simple-btn:hover {
+    background: #0b5ed7;
+    transform: translateY(-1px);
+}
+
+.simple-btn.secondary {
+    background: #6c757d;
+}
+
+.simple-btn.secondary:hover {
+    background: #5a6268;
+}
+
+.simple-btn.success {
+    background: #198754;
+}
+
+.simple-btn.success:hover {
+    background: #157347;
+}
+
+/* منطقة التحرير المبسطة */
+.editor-content {
+    display: flex;
+    min-height: 70vh;
+}
+
+/* لوحة الإعدادات البسيطة */
+.settings-panel {
+    width: 300px;
+    background: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.setting-group {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.setting-title {
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.setting-row {
+    margin-bottom: 12px;
+}
+
+.setting-label {
+    display: block;
+    font-size: 13px;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.setting-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.setting-input:focus {
+    outline: none;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 2px rgba(13,110,253,0.25);
+}
+
+.setting-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.setting-checkbox input {
+    margin: 0;
+}
+
+/* منطقة المعاينة */
+.preview-area {
+    flex: 1;
+    padding: 30px;
+    background: #fff;
+    overflow: auto;
+}
+
+.invoice-paper {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: 'Cairo', sans-serif;
+}
+
+/* رأس الفاتورة */
+.invoice-header {
+    background: var(--header-bg, linear-gradient(135deg, #0d6efd 0%, #198754 100%));
+    color: white;
+    padding: 30px;
+    text-align: center;
+    position: relative;
+}
+
+.company-logo {
+    max-width: 120px;
+    max-height: 80px;
+    margin-bottom: 15px;
+}
+
+.company-name {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.company-details {
+    font-size: 14px;
+    opacity: 0.9;
+    line-height: 1.6;
+}
+
+.invoice-title {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    background: rgba(255,255,255,0.2);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* محتوى الفاتورة */
+.invoice-content {
+    padding: 30px;
+}
+
+.invoice-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.info-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid var(--accent-color, #0d6efd);
+}
+
+.info-title {
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 15px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.info-label {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.info-value {
+    color: #212529;
+    font-weight: 600;
+}
+
+/* جدول العناصر */
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+    font-size: 14px;
+}
+
+.items-table th {
+    background: var(--accent-color, #0d6efd);
+    color: white;
+    padding: 15px 10px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.items-table td {
+    padding: 12px 10px;
+    text-align: center;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.items-table tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+/* المجاميع */
+.totals-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.total-row.final {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--accent-color, #0d6efd);
+    border-top: 2px solid var(--accent-color, #0d6efd);
+    padding-top: 10px;
+    margin-top: 15px;
+}
+
+/* تذييل الفاتورة */
+.invoice-footer {
+    background: #f8f9fa;
+    padding: 20px;
+    text-align: center;
+    border-top: 1px solid #dee2e6;
+    font-size: 13px;
+    color: #6c757d;
+}
+
+/* الاستجابة */
+@media (max-width: 768px) {
+    .editor-content {
+        flex-direction: column;
+    }
+    
+    .settings-panel {
+        width: 100%;
+    }
+    
+    .simple-toolbar {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .invoice-info {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+}
+
+/* تحسينات إضافية */
+.color-picker {
+    width: 40px;
+    height: 30px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.template-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.template-option {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.3s ease;
+    font-size: 12px;
+}
+
+.template-option:hover {
+    border-color: #0d6efd;
+}
+
+.template-option.active {
+    border-color: #198754;
+    background: rgba(25,135,84,0.1);
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #0d6efd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* تصغير تلقائي للخطوط حسب عدد العناصر */
+.dynamic-sizing {
+    font-size: calc(14px - min(var(--item-count, 0) * 0.3px, 4px));
+}
+
+.items-table.dynamic-sizing {
+    font-size: calc(12px - min(var(--item-count, 0) * 0.2px, 3px));
+}
+
+.items-table.dynamic-sizing th,
+.items-table.dynamic-sizing td {
+    padding: calc(8px - min(var(--item-count, 0) * 0.1px, 3px));
+}
+
+/* متغيرات CSS للعدد الافتراضي */
+:root {
+    --item-count: 5; /* عدد افتراضي للمعاينة */
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="simple-editor">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <!-- رأس المحرر -->
+                <div class="editor-header">
+                    <h2><i class="fas fa-edit me-2"></i>محرر الفواتير البسيط</h2>
+                    <p class="mb-0">صمم فاتورتك بسهولة وسرعة</p>
+                </div>
+                
+                <div class="editor-body">
+                    <!-- شريط الأدوات البسيط -->
+                    <div class="simple-toolbar">
+                        <div class="toolbar-left">
+                            <button class="simple-btn" onclick="loadDefaultTemplate(true)">
+                                <i class="fas fa-sync"></i>
+                                تحميل البيانات الافتراضية
+                            </button>
+                        </div>
+                        <div class="toolbar-right">
+                            <button class="simple-btn" onclick="previewInvoice()">
+                                <i class="fas fa-eye"></i>
+                                معاينة
+                            </button>
+                            <button class="simple-btn success" onclick="saveTemplate()">
+                                <i class="fas fa-save"></i>
+                                حفظ القالب
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- محتوى المحرر -->
+                    <div class="editor-content">
+                        <!-- لوحة الإعدادات -->
+                        <div class="settings-panel">
+                            <!-- إعدادات الفاتورة -->
+                            <div class="setting-group">
+                                <div class="setting-title">
+                                    <i class="fas fa-file-invoice"></i>
+                                    إعدادات الفاتورة
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">عنوان الفاتورة</label>
+                                    <input type="text" class="setting-input" id="invoice-title" 
+                                           value="فاتورة"
+                                           onchange="updatePreview()">
+                                </div>
+                            </div>
+                            
+                            <!-- إعدادات الشركة -->
+                            <div class="setting-group">
+                                <div class="setting-title">
+                                    <i class="fas fa-building"></i>
+                                    معلومات الشركة
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">اسم الشركة</label>
+                                    <input type="text" class="setting-input" id="company-name" 
+                                           value="{{ company_info.name|default:'شركة الخواجه للستائر والمفروشات' }}"
+                                           onchange="updatePreview()">
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">عنوان الشركة</label>
+                                    <textarea class="setting-input" id="company-address" rows="2" 
+                                              onchange="updatePreview()">{{ company_info.address|default:'المملكة العربية السعودية' }}</textarea>
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">هاتف الشركة</label>
+                                    <input type="text" class="setting-input" id="company-phone" 
+                                           value="{{ company_info.phone|default:'+966 XX XXX XXXX' }}"
+                                           onchange="updatePreview()">
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">بريد الشركة</label>
+                                    <input type="email" class="setting-input" id="company-email" 
+                                           value="{{ company_info.email|default:'info@company.com' }}"
+                                           onchange="updatePreview()">
+                                </div>
+                            </div>
+                            
+                            <!-- إعدادات الألوان -->
+                            <div class="setting-group">
+                                <div class="setting-title">
+                                    <i class="fas fa-palette"></i>
+                                    الألوان والتصميم
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">لون الرأس</label>
+                                    <input type="color" class="color-picker" id="header-color" 
+                                           value="#0d6efd" onchange="updatePreview()">
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">اللون المميز</label>
+                                    <input type="color" class="color-picker" id="accent-color" 
+                                           value="#198754" onchange="updatePreview()">
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">حجم الخط</label>
+                                    <select class="setting-input" id="font-size" onchange="updatePreview()">
+                                        <option value="12">صغير (12px)</option>
+                                        <option value="14" selected>متوسط (14px)</option>
+                                        <option value="16">كبير (16px)</option>
+                                        <option value="18">كبير جداً (18px)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- إعدادات المحتوى -->
+                            <div class="setting-group">
+                                <div class="setting-title">
+                                    <i class="fas fa-list-check"></i>
+                                    عناصر الفاتورة
+                                </div>
+                                <div class="setting-checkbox">
+                                    <input type="checkbox" id="show-logo" checked onchange="updatePreview()">
+                                    <label for="show-logo">إظهار شعار الشركة</label>
+                                </div>
+                                <div class="setting-checkbox">
+                                    <input type="checkbox" id="show-background-logo" onchange="updatePreview()">
+                                    <label for="show-background-logo">شعار شفاف في الخلفية</label>
+                                </div>
+                                <div class="setting-checkbox">
+                                    <input type="checkbox" id="show-order-number" checked onchange="updatePreview()">
+                                    <label for="show-order-number">إظهار رقم الطلب</label>
+                                </div>
+                                <div class="setting-checkbox">
+                                    <input type="checkbox" id="show-order-type" checked onchange="updatePreview()">
+                                    <label for="show-order-type">إظهار نوع الطلب</label>
+                                </div>
+                                <div class="setting-checkbox">
+                                    <input type="checkbox" id="show-customer-info" checked onchange="updatePreview()">
+                                    <label for="show-customer-info">إظهار بيانات العميل</label>
+                                </div>
+                                <div class="setting-checkbox">
+                                    <input type="checkbox" id="show-items-table" checked onchange="updatePreview()">
+                                    <label for="show-items-table">إظهار جدول العناصر</label>
+                                </div>
+                                <div class="setting-checkbox">
+                                    <input type="checkbox" id="show-totals" checked onchange="updatePreview()">
+                                    <label for="show-totals">إظهار المجاميع</label>
+                                </div>
+                                <div class="setting-checkbox">
+                                    <input type="checkbox" id="show-notes" checked onchange="updatePreview()">
+                                    <label for="show-notes">إظهار الملاحظات</label>
+                                </div>
+                            </div>
+                            
+                            <!-- إعدادات العملة -->
+                            <div class="setting-group">
+                                <div class="setting-title">
+                                    <i class="fas fa-coins"></i>
+                                    العملة
+                                </div>
+                                <div class="setting-row">
+                                    <label class="setting-label">رمز العملة</label>
+                                    <input type="text" class="setting-input" id="currency-symbol" 
+                                           value="{{ currency_symbol|default:'ريال' }}" readonly>
+                                    <small class="text-muted">يتم تحديثه من إعدادات النظام</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- منطقة المعاينة -->
+                        <div class="preview-area">
+                            <div class="invoice-paper" id="invoice-preview">
+                                <!-- سيتم تحديث المحتوى هنا -->
+                                <div class="text-center p-5" style="color: #6c757d;">
+                                    <i class="fas fa-file-invoice fa-3x mb-3"></i>
+                                    <h4>اختر قالباً لبدء التصميم</h4>
+                                    <p>استخدم الأزرار في الأعلى لاختيار قالب أو ابدأ من الصفر</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- شاشة التحميل -->
+<div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// المتغيرات العامة
+let currentTemplate = null;
+
+// بيانات محفوظة من الخادم (JSON آمن)
+window.SAVED_HTML = window.SAVED_HTML || ({{ saved_html_json|default:"''"|safe }});
+window.SAVED_META = window.SAVED_META || ({{ saved_meta_json|default:'null'|safe }});
+
+let companyInfo = {
+    name: '{{ company_info.name|default:"شركة الخواجه للستائر والمفروشات" }}',
+    address: '{{ company_info.address|default:"المملكة العربية السعودية" }}',
+    phone: '{{ company_info.phone|default:"+966 XX XXX XXXX" }}',
+    email: '{{ company_info.email|default:"info@company.com" }}',
+    logo_url: '{% if company_info.logo %}{{ company_info.logo.url }}{% else %}/static/img/logo.png{% endif %}'
+};
+
+let systemSettings = {
+    currency_symbol: '{{ currency_symbol|default:"ريال" }}',
+    currency_code: '{{ system_settings.currency|default:"SAR" }}'
+};
+
+// تحميل القالب الافتراضي
+function loadTemplate(templateType = 'default') {
+    showLoading();
+    currentTemplate = 'default';
+    
+    setTimeout(() => {
+        if (window.SAVED_HTML && window.SAVED_HTML.length > 50) {
+            const preview = document.getElementById('invoice-preview');
+            preview.innerHTML = window.SAVED_HTML;
+        } else {
+            loadDefaultTemplate();
+        }
+        hideLoading();
+    }, 500);
+}
+
+// تم حذف القالب الحديث - الاعتماد على الكلاسيكي فقط
+
+function loadDefaultTemplate(force = false) {
+    const preview = document.getElementById('invoice-preview');
+    
+    // شعار شفاف في الخلفية
+    const backgroundLogo = document.getElementById('show-background-logo').checked ? 
+        `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.05; z-index: 0; pointer-events: none;">
+            <img src="${companyInfo.logo_url}" alt="شعار خلفية" style="max-width: 400px; max-height: 400px;">
+        </div>` : '';
+    
+    if (!force && window.SAVED_HTML && window.SAVED_HTML.length > 50) {
+        preview.innerHTML = window.SAVED_HTML;
+        return;
+    }
+
+    preview.innerHTML = `
+        <div style="position: relative; min-height: 800px;">
+            ${backgroundLogo}
+            
+            <!-- رأس الفاتورة -->
+            <div style="padding: 30px; border-bottom: 3px solid var(--accent-color, #0d6efd); position: relative; z-index: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div class="company-logo-container" style="display: ${document.getElementById('show-logo').checked ? 'block' : 'none'}">
+                            <img src="${companyInfo.logo_url}" alt="شعار الشركة" style="max-width: 100px; max-height: 60px;">
+                        </div>
+                        <h2 style="color: var(--accent-color, #0d6efd); margin: 10px 0;" id="preview-company-name">${companyInfo.name}</h2>
+                        <div style="color: #6c757d; font-size: 14px;" id="preview-company-details">
+                            ${companyInfo.address}<br>
+                            ${companyInfo.phone} | ${companyInfo.email}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <h1 style="color: var(--accent-color, #0d6efd); margin: 0;" id="preview-invoice-title-classic">${document.getElementById('invoice-title').value}</h1>
+                        <div style="margin-top: 15px; font-size: 14px;">
+                            <div class="order-number-row" style="display: ${document.getElementById('show-order-number').checked ? 'block' : 'none'}">
+                                <strong>رقم الطلب:</strong> ORD-2025-001
+                            </div>
+                            <div class="order-type-row" style="display: ${document.getElementById('show-order-type').checked ? 'block' : 'none'}">
+                                <strong>نوع الطلب:</strong> معاينة
+                            </div>
+                            <div><strong>رقم الفاتورة:</strong> INV-2025-001</div>
+                            <div><strong>التاريخ:</strong> ${new Date().toLocaleDateString('en-CA')}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        
+        <!-- المحتوى -->
+        <div style="padding: 30px;">
+            <!-- بيانات العميل -->
+            <div class="customer-info-section" style="margin-bottom: 30px; display: ${document.getElementById('show-customer-info').checked ? 'block' : 'none'}; position: relative; z-index: 1;">
+                <h4 style="color: var(--accent-color, #0d6efd); border-bottom: 2px solid var(--accent-color, #0d6efd); padding-bottom: 5px;">
+                    <i class="fas fa-user me-2"></i>بيانات العميل
+                </h4>
+                <div style="margin-top: 15px; line-height: 1.8;">
+                    <strong>الاسم:</strong> أحمد محمد<br>
+                    <strong>الهاتف:</strong> 0501234567<br>
+                    <strong>العنوان:</strong> الرياض، المملكة العربية السعودية
+                </div>
+            </div>
+            
+            <!-- جدول العناصر -->
+            <div class="items-table-section" style="margin-bottom: 30px; display: ${document.getElementById('show-items-table').checked ? 'block' : 'none'}; position: relative; z-index: 1;">
+                <table class="items-table dynamic-sizing">
+                    <thead>
+                        <tr>
+                            <th>م</th>
+                            <th>الوصف</th>
+                            <th>الكمية</th>
+                            <th>السعر</th>
+                            <th>المجموع</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>ستائر غرفة المعيشة</td>
+                            <td>2</td>
+                            <td>500.00</td>
+                            <td>1000.00</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>تركيب وتثبيت</td>
+                            <td>1</td>
+                            <td>150.00</td>
+                            <td>150.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- تم إخفاء قسم المجاميع حسب طلب العميل -->
+            
+            <!-- الملاحظات -->
+            <div class="notes-section-content">
+                <h4 style="color: var(--accent-color, #0d6efd);">
+                    <i class="fas fa-sticky-note me-2"></i>ملاحظات
+                </h4>
+                <p style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                    شكراً لثقتكم بنا. يرجى التواصل معنا في حالة وجود أي استفسار.
+                </p>
+            </div>
+        </div>
+        
+        <!-- التذييل -->
+        <div class="invoice-footer">
+            <p><strong>شكراً لثقتكم بنا</strong></p>
+            <p>${companyInfo.name} | ${companyInfo.phone} | ${companyInfo.email}</p>
+        </div>
+    `;
+    
+    // تم تحميل القالب بالفعل
+}
+
+// تحديث المعاينة
+function updatePreview() {
+    // تحديث عنوان الفاتورة
+    const invoiceTitle = document.getElementById('invoice-title').value;
+    
+    // تحديث معلومات الشركة
+    companyInfo.name = document.getElementById('company-name').value;
+    companyInfo.address = document.getElementById('company-address').value;
+    companyInfo.phone = document.getElementById('company-phone').value;
+    companyInfo.email = document.getElementById('company-email').value;
+    
+    // تحديث الألوان
+    const headerColor = document.getElementById('header-color').value;
+    const accentColor = document.getElementById('accent-color').value;
+    const fontSize = document.getElementById('font-size').value;
+    
+    const preview = document.getElementById('invoice-preview');
+    preview.style.setProperty('--header-bg', headerColor);
+    preview.style.setProperty('--accent-color', accentColor);
+    preview.style.fontSize = fontSize + 'px';
+    
+    // تحديث النصوص في المعاينة فقط إذا وجدت
+    updateCompanyTexts();
+    updateVisibleElements();
+}
+
+// تحديث نصوص الشركة في المعاينة
+function updateCompanyTexts() {
+    const preview = document.getElementById('invoice-preview');
+    const invoiceTitle = document.getElementById('invoice-title').value;
+    
+    // تحديث عنوان الفاتورة
+    const invoiceTitleElements = preview.querySelectorAll('#preview-invoice-title, #preview-invoice-title-classic');
+    invoiceTitleElements.forEach(el => {
+        if (el) el.textContent = invoiceTitle;
+    });
+    
+    // تحديث معلومات الشركة
+    const companyNameElements = preview.querySelectorAll('#preview-company-name');
+    const companyDetailsElements = preview.querySelectorAll('#preview-company-details');
+    
+    companyNameElements.forEach(el => {
+        if (el) el.textContent = companyInfo.name;
+    });
+    
+    companyDetailsElements.forEach(el => {
+        if (el) el.innerHTML = `${companyInfo.address}<br>${companyInfo.phone} | ${companyInfo.email}`;
+    });
+}
+
+// تحديث العناصر المرئية
+function updateVisibleElements() {
+    const preview = document.getElementById('invoice-preview');
+    
+    // إظهار/إخفاء العناصر حسب الإعدادات
+    const elementsToToggle = [
+        { checkboxId: 'show-logo', selector: '.company-logo-container' },
+        { checkboxId: 'show-order-number', selector: '.order-number-row' },
+        { checkboxId: 'show-order-type', selector: '.order-type-row' },
+        { checkboxId: 'show-customer-info', selector: '.customer-info-section' },
+        { checkboxId: 'show-items-table', selector: '.items-table-section' },
+        { checkboxId: 'show-totals', selector: '.totals-section-content' },
+        { checkboxId: 'show-notes', selector: '.notes-section-content' }
+    ];
+    
+    elementsToToggle.forEach(item => {
+        const checkbox = document.getElementById(item.checkboxId);
+        const elements = preview.querySelectorAll(item.selector);
+        const display = checkbox && checkbox.checked ? 'block' : 'none';
+        
+        elements.forEach(el => {
+            if (el) el.style.display = display;
+        });
+    });
+}
+
+// إعادة تعيين
+function resetTemplate() {
+    document.getElementById('invoice-preview').innerHTML = `
+        <div class="text-center p-5" style="color: #6c757d;">
+            <i class="fas fa-file-invoice fa-3x mb-3"></i>
+            <h4>اختر قالباً لبدء التصميم</h4>
+            <p>استخدم الأزرار في الأعلى لاختيار قالب أو ابدأ من الصفر</p>
+        </div>
+    `;
+    currentTemplate = null;
+}
+
+// معاينة الفاتورة
+function previewInvoice() {
+    const preview = document.getElementById('invoice-preview');
+    const newWindow = window.open('', '_blank', 'width=800,height=600');
+    newWindow.document.write(`
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+            <meta charset="UTF-8">
+            <title>معاينة الفاتورة</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Cairo', sans-serif; margin: 20px; }
+                .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                .items-table th { background: #0d6efd; color: white; padding: 15px 10px; text-align: center; }
+                .items-table td { padding: 12px 10px; text-align: center; border-bottom: 1px solid #dee2e6; }
+                .items-table tr:nth-child(even) { background: #f8f9fa; }
+                @media print { body { margin: 0; } }
+            </style>
+        </head>
+        <body>
+            ${preview.innerHTML}
+            <div class="text-center mt-4">
+                <button onclick="window.print()" class="btn btn-primary">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+                <button onclick="window.close()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+            </div>
+        </body>
+        </html>
+    `);
+    newWindow.document.close();
+}
+
+// حفظ القالب
+function saveTemplate() {
+    if (!currentTemplate) {
+        Swal.fire({
+            title: 'تنبيه',
+            text: 'يرجى اختيار قالب أولاً',
+            icon: 'warning',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    
+    showLoading();
+    
+    // جمع البيانات من النموذج
+    const templateData = {
+        name: 'قالب كلاسيكي مُعدل',
+        template_type: 'custom',
+        html_content: document.getElementById('invoice-preview').innerHTML,
+        css_styles: '',
+        settings: {
+            primary_color: document.getElementById('accent-color').value,
+            secondary_color: '#198754',
+            accent_color: document.getElementById('header-color').value,
+            font_family: 'Cairo, Arial, sans-serif',
+            font_size: parseInt(document.getElementById('font-size').value),
+            page_size: 'A4',
+            page_margins: 20
+        },
+        company_info: {
+            name: document.getElementById('company-name').value,
+            address: document.getElementById('company-address').value,
+            phone: document.getElementById('company-phone').value,
+            email: document.getElementById('company-email').value
+        },
+        content_settings: {
+            show_company_logo: document.getElementById('show-logo').checked,
+            show_background_logo: document.getElementById('show-background-logo').checked,
+            show_order_details: document.getElementById('show-order-number').checked,
+            show_customer_details: document.getElementById('show-customer-info').checked,
+            show_payment_details: true,
+            show_notes: document.getElementById('show-notes').checked,
+            show_terms: true
+        },
+        advanced_settings: {
+            invoice_title: document.getElementById('invoice-title').value,
+            header_color: document.getElementById('header-color').value,
+            template_style: 'classic', // دائماً كلاسيكي
+            date_format: document.getElementById('date-format').value,
+            notes_text: document.getElementById('notes-text').value,
+            policies_text: document.getElementById('policies-text').value
+        },
+        is_active: true,
+        is_default: true // جعله افتراضي
+    };
+    
+    // إرسال البيانات للخادم
+    fetch('/orders/api/templates/save/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            template_data: templateData
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.success) {
+            Swal.fire({
+                title: 'تم الحفظ بنجاح!',
+                text: 'تم حفظ قالب الفاتورة وسيتم استخدامه في الطباعة',
+                icon: 'success',
+                confirmButtonText: 'ممتاز'
+            });
+        } else {
+            Swal.fire({
+                title: 'خطأ في الحفظ',
+                text: data.error || 'حدث خطأ أثناء حفظ القالب',
+                icon: 'error',
+                confirmButtonText: 'حسناً'
+            });
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('خطأ:', error);
+        Swal.fire({
+            title: 'خطأ في الاتصال',
+            text: 'تعذر الاتصال بالخادم',
+            icon: 'error',
+            confirmButtonText: 'حسناً'
+        });
+    });
+}
+
+// دالة للحصول على CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// إظهار/إخفاء شاشة التحميل
+function showLoading() {
+    document.getElementById('loading-overlay').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.getElementById('loading-overlay').style.display = 'none';
+}
+
+// تهيئة المحرر عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎨 محرر الفواتير البسيط جاهز!');
+    
+    // تحميل القالب الافتراضي
+    setTimeout(() => {
+        loadTemplate('default');
+        // في حال وجود SAVED_META، طبّق القيم على الحقول
+        setTimeout(() => {
+            try {
+                if (window.SAVED_META) {
+                    const m = window.SAVED_META;
+                    // شركة
+                    if (m.company_info) {
+                        if (m.company_info.name) document.getElementById('company-name').value = m.company_info.name;
+                        if (m.company_info.address) document.getElementById('company-address').value = m.company_info.address;
+                        if (m.company_info.phone) document.getElementById('company-phone').value = m.company_info.phone;
+                        if (m.company_info.email) document.getElementById('company-email').value = m.company_info.email;
+                    }
+                    // ألوان وخطوط
+                    if (m.settings) {
+                        if (m.settings.accent_color) document.getElementById('header-color').value = m.settings.accent_color;
+                        if (m.settings.primary_color) document.getElementById('accent-color').value = m.settings.primary_color;
+                        if (m.settings.font_size) document.getElementById('font-size').value = String(m.settings.font_size);
+                    }
+                    // المحتوى
+                    if (m.content_settings) {
+                        document.getElementById('show-logo').checked = !!m.content_settings.show_company_logo;
+                        document.getElementById('show-order-number').checked = !!m.content_settings.show_order_details;
+                        document.getElementById('show-customer-info').checked = !!m.content_settings.show_customer_details;
+                        document.getElementById('show-items-table').checked = true;
+                        document.getElementById('show-totals').checked = true;
+                        document.getElementById('show-notes').checked = !!m.content_settings.show_notes;
+                    }
+                    // متقدم
+                    if (m.advanced_settings) {
+                        if (m.advanced_settings.invoice_title) document.getElementById('invoice-title').value = m.advanced_settings.invoice_title;
+                        if (m.advanced_settings.date_format) document.getElementById('date-format').value = m.advanced_settings.date_format;
+                        if (m.advanced_settings.notes_text) document.getElementById('notes-text').value = m.advanced_settings.notes_text;
+                        if (m.advanced_settings.policies_text) document.getElementById('policies-text').value = m.advanced_settings.policies_text;
+                        if (m.advanced_settings.show_background_logo !== undefined) document.getElementById('show-background-logo').checked = !!m.advanced_settings.show_background_logo;
+                    }
+                }
+            } catch (e) { console.warn('Meta apply error', e); }
+            // تحديث المعاينة
+            updatePreview();
+        }, 150);
+    }, 500);
+});
+</script>
+{% endblock %}

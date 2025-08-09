@@ -426,3 +426,7 @@ class PaymentAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+# استيراد إدارة الفواتير
+from . import invoice_admin

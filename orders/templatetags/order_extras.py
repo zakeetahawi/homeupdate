@@ -1,6 +1,7 @@
 from django import template
 from django.utils.safestring import mark_safe
 import json
+import math
 
 register = template.Library()
 
@@ -249,3 +250,21 @@ def currency_format(amount):
         return f"{formatted_amount} {symbol}"
     except Exception:
         return f"{amount:,.2f} ر.س"
+
+@register.simple_tag
+def paid_percentage(order):
+    """حساب نسبة المبلغ المدفوع من الإجمالي بدون التقريب للأعلى لتفادي 100% مع وجود متبقي"""
+    try:
+        total = float(getattr(order, 'total_amount', 0) or 0)
+        paid = float(getattr(order, 'paid_amount', 0) or 0)
+        if total <= 0:
+            return '0%'
+        pct_value = math.floor((paid * 100.0) / total)
+        # إذا كان هناك متبقي لا تسمح بإظهار 100%
+        remaining = float(total - paid)
+        if remaining > 0 and pct_value >= 100:
+            pct_value = 99
+        pct_value = max(0, min(100, pct_value))
+        return f"{pct_value}%"
+    except Exception:
+        return '0%'

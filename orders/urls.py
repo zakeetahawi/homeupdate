@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import dashboard_views
+from . import invoice_views
 from .views import OrdersDashboardView
 
 app_name = 'orders'
@@ -27,12 +28,14 @@ urlpatterns = [
     path('order/<str:order_number>/success/', views.order_success_by_number, name='order_success_by_number'),
     path('order/<str:order_number>/update/', views.order_update_by_number, name='order_update_by_number'),
     path('order/<str:order_number>/delete/', views.order_delete_by_number, name='order_delete_by_number'),
+    path('order/<str:order_number>/invoice/', views.invoice_print, name='invoice_print'),
     
     # URLs القديمة مع إعادة توجيه للجديدة
     path('<int:pk>/', views.order_detail_redirect, name='order_detail'),
     path('<int:pk>/success/', views.order_success_redirect, name='order_success'),
     path('<int:pk>/update/', views.order_update_redirect, name='order_update'),
     path('<int:pk>/delete/', views.order_delete_redirect, name='order_delete'),
+    path('<int:pk>/invoice/', views.invoice_print_redirect, name='invoice_print_old'),
     
     path('create/', views.order_create, name='order_create'),
 
@@ -49,4 +52,29 @@ urlpatterns = [
     # API endpoints
     path('api/order-details/<int:order_id>/', views.get_order_details_api, name='order_details_api'),
     path('api/customer-inspections/', views.get_customer_inspections, name='customer_inspections_api'),
+    
+    # Invoice Editor URLs (Simple Editor Only)
+    path('invoice-editor/', invoice_views.simple_invoice_editor, name='invoice_editor'),
+    path('invoice-editor/<int:template_id>/', invoice_views.simple_invoice_editor, name='invoice_editor_edit'),
+    
+    # Simple Invoice Editor URLs
+    path('simple-invoice-editor/', invoice_views.simple_invoice_editor, name='simple_invoice_editor'),
+    path('simple-invoice-editor/<int:template_id>/', invoice_views.simple_invoice_editor, name='simple_invoice_editor_edit'),
+    path('templates/', invoice_views.template_list, name='template_list'),
+    path('templates/analytics/', invoice_views.template_analytics, name='template_analytics'),
+    
+    # Template Management APIs
+    path('api/templates/save/', invoice_views.save_template, name='save_template'),
+    path('api/templates/<int:template_id>/load/', invoice_views.load_template, name='load_template'),
+    path('api/templates/<int:template_id>/clone/', invoice_views.clone_template, name='clone_template'),
+    path('api/templates/<int:template_id>/delete/', invoice_views.delete_template, name='delete_template'),
+    path('api/templates/<int:template_id>/set-default/', invoice_views.set_default_template, name='set_default_template'),
+    path('api/templates/<int:template_id>/export/', invoice_views.export_template, name='export_template'),
+    path('api/templates/import/', invoice_views.import_template, name='import_template'),
+    
+    # Enhanced Invoice Printing
+    path('order/<int:order_id>/preview/', invoice_views.preview_invoice, name='preview_invoice'),
+    path('order/<int:order_id>/preview/<int:template_id>/', invoice_views.preview_invoice, name='preview_invoice_template'),
+    path('order/<int:order_id>/print/', invoice_views.print_invoice_with_template, name='print_invoice_template'),
+    path('order/<int:order_id>/print/<int:template_id>/', invoice_views.print_invoice_with_template, name='print_invoice_with_template'),
 ]

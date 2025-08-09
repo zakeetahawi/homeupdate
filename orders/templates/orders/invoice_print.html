@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاتورة رقم {{ order.invoice_number }}</title>
+    <style>
+        /* إعادة تعيين الأنماط */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: {{ template.font_family|default:"'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }};
+            font-size: {{ template.font_size|default:12 }}px;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+            direction: rtl;
+        }
+        
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+        }
+        
+        /* رأس الفاتورة */
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid {{ template.primary_color|default:"#2563eb" }};
+        }
+        
+        .company-info {
+            flex: 1;
+        }
+        
+        .company-logo {
+            max-width: 150px;
+            max-height: 100px;
+            object-fit: contain;
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: {{ template.primary_color|default:"#2563eb" }};
+            margin: 10px 0;
+        }
+        
+        .company-details {
+            color: {{ template.secondary_color|default:"#64748b" }};
+            font-size: 14px;
+        }
+        
+        .invoice-title {
+            text-align: left;
+            flex: 0 0 auto;
+        }
+        
+        .invoice-title h1 {
+            font-size: 28px;
+            color: {{ template.primary_color|default:"#2563eb" }};
+            margin-bottom: 10px;
+        }
+        
+        .invoice-number {
+            font-size: 18px;
+            color: {{ template.secondary_color|default:"#64748b" }};
+        }
+        
+        /* معلومات العميل والطلب */
+        .invoice-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .detail-section {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border-right: 4px solid {{ template.primary_color|default:"#2563eb" }};
+        }
+        
+        .detail-section h3 {
+            color: {{ template.primary_color|default:"#2563eb" }};
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px dotted #e2e8f0;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: {{ template.secondary_color|default:"#64748b" }};
+        }
+        
+        .detail-value {
+            font-weight: normal;
+            color: #334155;
+        }
+        
+        /* جدول العناصر */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .items-table th {
+            background: {{ template.primary_color|default:"#2563eb" }};
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .items-table td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .items-table tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .items-table tbody tr:hover {
+            background: #f1f5f9;
+        }
+        
+        /* الإجماليات */
+        .totals-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 30px;
+        }
+        
+        .totals-table {
+            min-width: 300px;
+            border-collapse: collapse;
+        }
+        
+        .totals-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .totals-table .label {
+            font-weight: 600;
+            color: {{ template.secondary_color|default:"#64748b" }};
+            text-align: right;
+        }
+        
+        .totals-table .value {
+            text-align: left;
+            font-weight: bold;
+            color: #334155;
+        }
+        
+        .total-final {
+            background: {{ template.primary_color|default:"#2563eb" }};
+            color: white !important;
+            font-size: 18px;
+        }
+        
+        .total-final .label,
+        .total-final .value {
+            color: white !important;
+        }
+        
+        /* معلومات الدفع */
+        .payment-section {
+            background: #f0fdf4;
+            border: 2px solid #22c55e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .payment-section h3 {
+            color: #16a34a;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .payment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        /* الملاحظات */
+        .notes-section {
+            background: #fffbeb;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .notes-section h3 {
+            color: #d97706;
+            margin-bottom: 10px;
+        }
+        
+        /* التذييل */
+        .invoice-footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 2px solid {{ template.primary_color|default:"#2563eb" }};
+            color: {{ template.secondary_color|default:"#64748b" }};
+            font-size: 14px;
+        }
+        
+        /* أنماط الطباعة */
+        @media print {
+            body {
+                font-size: 12px;
+            }
+            
+            .invoice-container {
+                padding: 0;
+                box-shadow: none;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .items-table,
+            .detail-section,
+            .payment-section,
+            .notes-section {
+                break-inside: avoid;
+            }
+        }
+        
+        /* زر الطباعة */
+        .print-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: {{ template.primary_color|default:"#2563eb" }};
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            z-index: 1000;
+        }
+        
+        .print-button:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-paid {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .status-pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .status-partial {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button no-print" onclick="window.print()">
+        🖨️ طباعة الفاتورة
+    </button>
+    
+    <div class="invoice-container">
+        <!-- رأس الفاتورة -->
+        <div class="invoice-header">
+            <div class="company-info">
+                {% if template.show_company_logo and template.company_logo %}
+                <img src="{{ template.company_logo.url }}" alt="{{ template.company_name }}" class="company-logo">
+                {% endif %}
+                <div class="company-name">{{ template.company_name }}</div>
+                <div class="company-details">
+                    {{ template.company_address|linebreaks }}
+                    {% if template.company_phone %}<div>📞 {{ template.company_phone }}</div>{% endif %}
+                    {% if template.company_email %}<div>📧 {{ template.company_email }}</div>{% endif %}
+                    {% if template.company_website %}<div>🌐 {{ template.company_website }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="invoice-title">
+                <h1>فاتورة</h1>
+                <div class="invoice-number"># {{ order.invoice_number }}</div>
+                <div style="margin-top: 10px; font-size: 14px; color: #64748b;">
+                    {{ order.order_date|date:"Y/m/d" }}
+                </div>
+            </div>
+        </div>
+        
+        {% if template.header_text %}
+        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; color: #64748b;">
+            {{ template.header_text|linebreaks }}
+        </div>
+        {% endif %}
+        
+        <!-- معلومات العميل والطلب -->
+        <div class="invoice-details">
+            {% if template.show_customer_details %}
+            <div class="detail-section">
+                <h3>🏢 بيانات العميل</h3>
+                <div class="detail-row">
+                    <span class="detail-label">الاسم:</span>
+                    <span class="detail-value">{{ order.customer.name }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">الهاتف:</span>
+                    <span class="detail-value">{{ order.customer.phone }}</span>
+                </div>
+                {% if order.customer.email %}
+                <div class="detail-row">
+                    <span class="detail-label">البريد:</span>
+                    <span class="detail-value">{{ order.customer.email }}</span>
+                </div>
+                {% endif %}
+                {% if order.customer.address %}
+                <div class="detail-row">
+                    <span class="detail-label">العنوان:</span>
+                    <span class="detail-value">{{ order.customer.address }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if template.show_order_details %}
+            <div class="detail-section">
+                <h3>📋 تفاصيل الطلب</h3>
+                <div class="detail-row">
+                    <span class="detail-label">رقم الطلب:</span>
+                    <span class="detail-value">{{ order.order_number }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">تاريخ الطلب:</span>
+                    <span class="detail-value">{{ order.order_date|date:"Y/m/d H:i" }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">نوع الطلب:</span>
+                    <span class="detail-value">{{ order.get_selected_types_display }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">البائع:</span>
+                    <span class="detail-value">{{ order.salesperson.name|default:"غير محدد" }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">الفرع:</span>
+                    <span class="detail-value">{{ order.branch.name }}</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- جدول العناصر -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>اسم المنتج</th>
+                    <th>الكود</th>
+                    <th>الكمية</th>
+                    <th>السعر</th>
+                    <th>الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items.all %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td style="text-align: right; font-weight: 600;">{{ item.product.name }}</td>
+                    <td>{{ item.product.code|default:"-" }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.unit_price|floatformat:2 }} {{ currency_symbol }}</td>
+                    <td style="font-weight: 600;">{{ item.total_price|floatformat:2 }} {{ currency_symbol }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: #64748b; padding: 30px;">
+                        لا توجد عناصر في هذا الطلب
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- الإجماليات -->
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td class="label">المجموع الفرعي:</td>
+                    <td class="value">{{ order.total_amount|floatformat:2 }} {{ currency_symbol }}</td>
+                </tr>
+                {% if order.discount_amount and order.discount_amount > 0 %}
+                <tr>
+                    <td class="label">الخصم:</td>
+                    <td class="value">-{{ order.discount_amount|floatformat:2 }} {{ currency_symbol }}</td>
+                </tr>
+                {% endif %}
+                <tr class="total-final">
+                    <td class="label">الإجمالي النهائي:</td>
+                    <td class="value">{{ order.final_price|floatformat:2 }} {{ currency_symbol }}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- معلومات الدفع -->
+        {% if template.show_payment_details %}
+        <div class="payment-section">
+            <h3>💳 معلومات الدفع</h3>
+            <div class="payment-grid">
+                <div class="detail-row">
+                    <span class="detail-label">المبلغ المدفوع:</span>
+                    <span class="detail-value">{{ order.paid_amount|floatformat:2 }} {{ currency_symbol }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">المبلغ المتبقي:</span>
+                    <span class="detail-value">{{ order.remaining_amount|floatformat:2 }} {{ currency_symbol }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">حالة الدفع:</span>
+                    <span class="detail-value">
+                        {% if order.remaining_amount <= 0 %}
+                            <span class="status-badge status-paid">مدفوع بالكامل</span>
+                        {% elif order.paid_amount > 0 %}
+                            <span class="status-badge status-partial">مدفوع جزئياً</span>
+                        {% else %}
+                            <span class="status-badge status-pending">غير مدفوع</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if order.payments.exists %}
+                <div style="grid-column: 1 / -1;">
+                    <strong>سجل الدفعات:</strong>
+                    {% for payment in order.payments.all %}
+                    <div style="margin: 5px 0; padding: 8px; background: white; border-radius: 4px;">
+                        {{ payment.amount|floatformat:2 }} {{ currency_symbol }} - 
+                        {{ payment.get_payment_method_display }} - 
+                        {{ payment.payment_date|date:"Y/m/d" }}
+                        {% if payment.reference_number %} ({{ payment.reference_number }}){% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- الملاحظات -->
+        {% if template.show_notes and order.notes %}
+        <div class="notes-section">
+            <h3>📝 ملاحظات</h3>
+            <div>{{ order.notes|linebreaks }}</div>
+        </div>
+        {% endif %}
+        
+        <!-- الشروط والأحكام -->
+        {% if template.show_terms and template.terms_text %}
+        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; color: #64748b;">
+            <strong>الشروط والأحكام:</strong><br>
+            {{ template.terms_text|linebreaks }}
+        </div>
+        {% endif %}
+        
+        <!-- التذييل -->
+        <div class="invoice-footer">
+            {% if template.footer_text %}
+                {{ template.footer_text|linebreaks }}
+            {% else %}
+                <div>شكراً لتعاملكم معنا</div>
+                <div style="margin-top: 10px;">تم إنشاء هذه الفاتورة تلقائياً في {{ "now"|date:"Y/m/d H:i" }}</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        // طباعة تلقائية عند الفتح إذا كان مطلوباً
+        if (new URLSearchParams(window.location.search).get('auto_print') === '1') {
+            setTimeout(() => {
+                window.print();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

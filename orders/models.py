@@ -1541,3 +1541,7 @@ class DeliveryTimeSettings(models.Model):
         if scheduling_date:
             return scheduling_date.strftime('%Y-%m-%d')
         return None
+
+
+# استيراد نماذج الفواتير
+from .invoice_models import InvoiceTemplate, InvoicePrintLog

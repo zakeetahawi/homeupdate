@@ -204,7 +204,7 @@ def payment_post_save(sender, instance, created, **kwargs):
             total=models.Sum('amount')
         )['total'] or 0
         # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
-        Order.objects.filter(pk=order.pk).update(paid_amount=paid_amount)
+        Order.objects.filter(pk=order.pk).update(paid_amount=paid_amount, payment_verified=True)
 
 # إشارات تحديث حالة الطلب من الأقسام الأخرى
 # تم إزالة signal التركيب لتجنب الحلقة اللانهائية - يتم التعامل معه في orders/models.py

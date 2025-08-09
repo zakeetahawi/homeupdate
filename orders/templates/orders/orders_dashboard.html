@@ -12,16 +12,19 @@
     transition: all 0.3s ease;
     cursor: pointer;
     height: 200px;
+    text-decoration: none;
 }
 
 .dashboard-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    text-decoration: none;
 }
 
 .card-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
+    opacity: 0.5;
 }
 
 .card-number {
@@ -41,25 +44,60 @@
     opacity: 0.8;
 }
 
-/* ألوان البطاقات - متناسقة مع هوية المشروع */
+/* ألوان البطاقات - مشابهة لقسم المعاينات */
 .inspection-card {
-    background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+    background: #0d6efd;
     color: white;
 }
 
 .installation-card {
-    background: linear-gradient(135deg, #CD853F 0%, #DEB887 100%);
-    color: #8B4513;
+    background: #198754;
+    color: white;
 }
 
 .accessory-card {
-    background: linear-gradient(135deg, #A0522D 0%, #D2691E 100%);
+    background: #ffc107;
     color: white;
 }
 
 .tailoring-card {
-    background: linear-gradient(135deg, #D2691E 0%, #F4A460 100%);
+    background: #dc3545;
     color: white;
+}
+
+/* بطاقات الإحصائيات العامة */
+.stats-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    text-align: center;
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.stats-card.total-orders {
+    border-left: 4px solid #0d6efd;
+}
+
+.stats-card.pending-orders {
+    border-left: 4px solid #ffc107;
+}
+
+.stats-card.completed-orders {
+    border-left: 4px solid #198754;
+}
+
+.stats-card.total-revenue {
+    border-left: 4px solid #dc3545;
 }
 
 .stats-section {
@@ -109,11 +147,40 @@
 }
 
 .page-header {
-    background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+    background: linear-gradient(135deg, #0d6efd 0%, #198754 100%);
     color: white;
     padding: 2rem 0;
     margin-bottom: 2rem;
     border-radius: 15px;
+}
+
+.action-btn {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #0d6efd 0%, #198754 100%);
+    color: white;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.year-filter {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 </style>
 {% endblock %}
@@ -139,90 +206,122 @@
     </div>
 
     <!-- Dashboard Cards -->
-    <div class="row g-4 mb-4">
+    <div class="row mb-4">
         <!-- بطاقة طلبات المعاينة -->
-        <div class="col-lg-3 col-md-6">
-            <div class="card dashboard-card inspection-card" onclick="window.location.href='{% url 'orders:inspection_orders' %}'">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div class="card-icon">
-                        <i class="fas fa-search"></i>
+        <div class="col-md-3">
+            <a href="{% url 'orders:inspection_orders' %}" style="text-decoration: none;">
+                <div class="card inspection-card text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">طلبات المعاينة</h6>
+                                <h2 class="mb-0">{{ inspection_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-search fa-2x opacity-50"></i>
+                        </div>
                     </div>
-                    <div class="card-number">{{ inspection_count }}</div>
-                    <div class="card-title">طلبات المعاينة</div>
-                    <div class="card-subtitle">معاينات العملاء والمواقع</div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <!-- بطاقة طلبات التركيب -->
-        <div class="col-lg-3 col-md-6">
-            <div class="card dashboard-card installation-card" onclick="window.location.href='{% url 'orders:installation_orders' %}'">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div class="card-icon">
-                        <i class="fas fa-tools"></i>
+        <div class="col-md-3">
+            <a href="{% url 'orders:installation_orders' %}" style="text-decoration: none;">
+                <div class="card installation-card text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">طلبات التركيب</h6>
+                                <h2 class="mb-0">{{ installation_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-tools fa-2x opacity-50"></i>
+                        </div>
                     </div>
-                    <div class="card-number">{{ installation_count }}</div>
-                    <div class="card-title">طلبات التركيب</div>
-                    <div class="card-subtitle">تركيب الستائر والمفروشات</div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <!-- بطاقة طلبات الإكسسوار -->
-        <div class="col-lg-3 col-md-6">
-            <div class="card dashboard-card accessory-card" onclick="window.location.href='{% url 'orders:accessory_orders' %}'">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div class="card-icon">
-                        <i class="fas fa-gem"></i>
+        <div class="col-md-3">
+            <a href="{% url 'orders:accessory_orders' %}" style="text-decoration: none;">
+                <div class="card accessory-card text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">طلبات الإكسسوار</h6>
+                                <h2 class="mb-0">{{ accessory_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-gem fa-2x opacity-50"></i>
+                        </div>
                     </div>
-                    <div class="card-number">{{ accessory_count }}</div>
-                    <div class="card-title">طلبات الإكسسوار</div>
-                    <div class="card-subtitle">إكسسوارات وقطع إضافية</div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <!-- بطاقة طلبات التسليم -->
-        <div class="col-lg-3 col-md-6">
-            <div class="card dashboard-card tailoring-card" onclick="window.location.href='{% url 'orders:tailoring_orders' %}'">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div class="card-icon">
-                        <i class="fas fa-shipping-fast"></i>
+        <div class="col-md-3">
+            <a href="{% url 'orders:tailoring_orders' %}" style="text-decoration: none;">
+                <div class="card tailoring-card text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">طلبات التسليم</h6>
+                                <h2 class="mb-0">{{ tailoring_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-shipping-fast fa-2x opacity-50"></i>
+                        </div>
                     </div>
-                    <div class="card-number">{{ tailoring_count }}</div>
-                    <div class="card-title">طلبات التسليم</div>
-                    <div class="card-subtitle">تسليم المنتجات النهائية</div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 
     <!-- Statistics Section -->
-    <div class="stats-section">
+    <div class="mb-4">
         <h3 class="text-center mb-4"><i class="fas fa-chart-bar me-2"></i>إحصائيات عامة</h3>
-        <div class="row">
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-item">
-                    <div class="stat-number">{{ total_orders }}</div>
-                    <div class="stat-label">إجمالي الطلبات</div>
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="stats-card total-orders">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">إجمالي الطلبات</h6>
+                            <h2 class="mb-0 text-primary">{{ total_orders|default_if_none:0 }}</h2>
+                        </div>
+                        <i class="fas fa-shopping-cart fa-2x text-primary opacity-50"></i>
+                    </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-item">
-                    <div class="stat-number">{{ pending_orders }}</div>
-                    <div class="stat-label">طلبات قيد الانتظار</div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="stats-card pending-orders">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">قيد الانتظار</h6>
+                            <h2 class="mb-0 text-warning">{{ pending_orders|default_if_none:0 }}</h2>
+                        </div>
+                        <i class="fas fa-clock fa-2x text-warning opacity-50"></i>
+                    </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-item">
-                    <div class="stat-number">{{ completed_orders }}</div>
-                    <div class="stat-label">طلبات مكتملة</div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="stats-card completed-orders">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">طلبات مكتملة</h6>
+                            <h2 class="mb-0 text-success">{{ completed_orders|default_if_none:0 }}</h2>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x text-success opacity-50"></i>
+                    </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-item">
-                    <div class="stat-number">{{ currency_symbol }}{{ total_revenue|floatformat:0 }}</div>
-                    <div class="stat-label">إجمالي الإيرادات</div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="stats-card total-revenue">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">إجمالي الإيرادات</h6>
+                            <h2 class="mb-0 text-danger">{{ currency_symbol }}{{ total_revenue|floatformat:0|default_if_none:0 }}</h2>
+                        </div>
+                        <i class="fas fa-money-bill-wave fa-2x text-danger opacity-50"></i>
+                    </div>
                 </div>
             </div>
         </div>

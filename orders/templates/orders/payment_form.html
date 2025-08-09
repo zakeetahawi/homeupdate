@@ -48,7 +48,7 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.reference_number.id_for_label }}" class="form-label">رقم المرجع</label>
+                            <label for="{{ form.reference_number.id_for_label }}" class="form-label">رقم الفاتورة</label>
                             {{ form.reference_number }}
                             {% if form.reference_number.errors %}
                             <div class="text-danger">
@@ -57,7 +57,7 @@
                                 {% endfor %}
                             </div>
                             {% endif %}
-                            <div class="form-text">رقم الشيك أو رقم التحويل البنكي أو أي مرجع آخر للدفعة</div>
+                            <div class="form-text">رقم الفاتورة المرتبطة بهذه الدفعة</div>
                         </div>
                         
                         <div class="mb-3">
