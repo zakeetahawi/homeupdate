@@ -443,7 +443,7 @@
   const TEMPLATE_ID = {% if template_id %}{{ template_id }}{% else %}null{% endif %};
   const SAVED_HTML = JSON.parse(document.getElementById('saved-html').textContent || '""');
   const META = JSON.parse(document.getElementById('saved-meta').textContent || '{}');
-  const COMPANY_LOGO_URL = "{{ company_info.logo.url|default_if_none:''|escapejs }}";
+  const COMPANY_LOGO_URL = "{% if company_info.logo %}{{ company_info.logo.url|escapejs }}{% else %}{% endif %}";
 
   // Rich Text Editors
   let notesEditor, termsEditor, footerNoteEditor;
@@ -669,12 +669,12 @@
       @media print { .bg-logo{ display:${bg?'block':'none'} !important; } }
     </style>
     <div class="bg-logo">
-      ${bg && COMPANY_LOGO_URL ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
     </div>
     <div class="content">
       <div class="main-content">
         <div style="text-align:center; border-bottom: 2px solid var(--primary-color); padding-bottom:10px; margin-bottom:18px;">
-          ${showLogoHeader && COMPANY_LOGO_URL ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;"/>` : ''}
+          ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;"/>` : ''}
           <h1 style="color:var(--primary-color); margin:0;">${title}</h1>
           <div>${labelInvoice}: ${'${order.invoice_number}'} — ${labelDate}: ${'${order.order_date}'}</div>
         </div>
@@ -805,11 +805,11 @@
       @media print { .bg-logo{ display:${bg?'block':'none'} !important; } }
     </style>
     <div class="bg-logo">
-      ${bg && COMPANY_LOGO_URL ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
     </div>
     <div class="main-content">
       <div class="hero">
-        ${showLogoHeader && COMPANY_LOGO_URL ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto; border-radius: 8px;"/>` : ''}
+        ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto; border-radius: 8px;"/>` : ''}
         <h2 style="margin:0;">${title}</h2>
         <div class="small">${labelInvoice}: ${'${order.invoice_number}'} — ${labelDate}: ${'${order.order_date}'}</div>
       </div>
@@ -910,7 +910,7 @@
       @media print { .bg-logo{ display:${bg?'block':'none'} !important; } }
     </style>
     <div class="bg-logo">
-      ${bg && COMPANY_LOGO_URL ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
     </div>
     <div class="main-content">
       <div class="header">
@@ -919,7 +919,7 @@
           <div class="small">${caddr}</div>
           <div class="small">${cphone}</div>
         </div>
-        ${showLogoHeader && COMPANY_LOGO_URL ? `<img class=\"logo\" src=\"${COMPANY_LOGO_URL}\" style=\"max-height: ${logoSize}px; max-width: ${logoSize}px;\"/>` : ''}
+        ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img class=\"logo\" src=\"${COMPANY_LOGO_URL}\" style=\"max-height: ${logoSize}px; max-width: ${logoSize}px;\"/>` : ''}
       </div>
     <div class="small" style="margin-top:6px;">
       ${labelInvoice}: ${'${order.invoice_number}'} • ${labelDate}: ${'${order.order_date}'}

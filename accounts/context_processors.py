@@ -104,6 +104,16 @@ def company_info(request):
             working_hours="9 صباحاً - 5 مساءً",
             copyright_text="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi"
         )
+    
+    # التأكد من أن اللوغو موجود قبل إرجاعه
+    if hasattr(company, 'logo') and company.logo:
+        try:
+            # اختبار الوصول إلى URL للتأكد من وجود الملف
+            company.logo.url
+        except (ValueError, FileNotFoundError):
+            # إذا لم يكن الملف موجود، تعيين اللوغو كـ None
+            company.logo = None
+    
     return {'company_info': company}
 
 def footer_settings(request):
