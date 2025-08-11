@@ -38,4 +38,8 @@ urlpatterns = [
     path('notifications/', views.NotificationListView.as_view(), name='notification_list'),
     path('<int:inspection_pk>/notify/', views.NotificationCreateView.as_view(), name='notification_create'),
     path('notifications/<int:pk>/mark-read/', views.mark_notification_read, name='mark_notification_read'),
+
+    # Schedule
+    path('schedule/', views.inspection_schedule_view, name='inspection_schedule'),
+    path('schedule/print/', views.print_daily_schedule, name='print_daily_schedule'),
 ]

@@ -466,10 +466,101 @@ class Order(models.Model):
                 pass
                 self.final_price = 0
                 super().save(update_fields=['final_price'])
+
+            # إنشاء إشعارات تلقائية للطلب الجديد
+            self.create_order_notifications()
+
         except Exception as e:
             # تسجيل الخطأ
             pass
             raise
+    def create_order_notifications(self):
+        """إنشاء إشعار جماعي موحد للطلب الجديد"""
+        try:
+            from accounts.models import GroupNotification, User
+
+            # تحديد نوع الطلب
+            selected_types = self.get_selected_types_list()
+            types_display = []
+
+            if 'inspection' in selected_types:
+                types_display.append('معاينة')
+            if 'installation' in selected_types:
+                types_display.append('تركيب')
+            if 'fabric' in selected_types:
+                types_display.append('أقمشة')
+            if 'accessory' in selected_types:
+                types_display.append('إكسسوار')
+            if 'tailoring' in selected_types:
+                types_display.append('تفصيل')
+            if 'transport' in selected_types:
+                types_display.append('نقل')
+
+            types_str = ' + '.join(types_display) if types_display else 'عام'
+
+            # إنشاء عنوان ومحتوى الإشعار
+            title = f"طلب جديد: {types_str}"
+            message = f"تم إنشاء طلب جديد للعميل {self.customer.name} من فرع {self.branch.name if self.branch else 'غير محدد'}"
+
+            # تحديد المستخدمين المستهدفين حسب نوع الطلب
+            target_users = []
+
+            # مدير النظام والمدير العام يرون جميع الإشعارات
+            superusers = User.objects.filter(is_superuser=True)
+            general_managers = User.objects.filter(is_general_manager=True)
+            target_users.extend(superusers)
+            target_users.extend(general_managers)
+
+            # إضافة المستخدمين حسب نوع الطلب
+            if 'inspection' in selected_types:
+                inspection_managers = User.objects.filter(is_inspection_manager=True)
+                target_users.extend(inspection_managers)
+
+            if 'installation' in selected_types:
+                installation_managers = User.objects.filter(is_installation_manager=True)
+                target_users.extend(installation_managers)
+
+            if any(t in selected_types for t in ['fabric', 'accessory', 'tailoring']):
+                factory_managers = User.objects.filter(is_factory_manager=True)
+                target_users.extend(factory_managers)
+
+            # إضافة مدير الفرع
+            if self.branch:
+                branch_manager = getattr(self.branch, 'manager', None)
+                if branch_manager:
+                    target_users.append(branch_manager)
+
+            # إزالة التكرارات
+            target_users = list(set(target_users))
+
+            # إنشاء إشعار جماعي واحد
+            if target_users:
+                group_notification = GroupNotification.objects.create(
+                    title=title,
+                    message=message,
+                    customer_name=self.customer.name,
+                    order_number=self.order_number,
+                    notification_type='order_created',
+                    priority='normal',
+                    created_by=self.created_by,
+                    related_object_id=self.id,
+                    related_object_type='Order'
+                )
+
+                # إضافة المستخدمين المستهدفين
+                group_notification.target_users.set(target_users)
+
+                # تسجيل نجاح العملية
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"تم إنشاء إشعار جماعي للطلب {self.order_number} لـ {len(target_users)} مستخدم")
+
+        except Exception as e:
+            # تسجيل الخطأ دون إيقاف عملية الحفظ
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في إنشاء إشعار الطلب {self.order_number}: {str(e)}")
+
     def notify_status_change(self, old_status, new_status, changed_by=None, notes=''):
         """إرسال إشعار عند تغيير حالة تتبع الطلب"""
         # إنشاء سجل لتغيير الحالة فقط
@@ -1330,6 +1421,69 @@ class Payment(models.Model):
         except Exception as e:
             pass
             raise
+
+
+class OrderNote(models.Model):
+    """نموذج موحد لملاحظات الطلب من جميع الأقسام"""
+    NOTE_TYPES = [
+        ('general', 'عام'),
+        ('inspection', 'معاينة'),
+        ('installation', 'تركيب'),
+        ('manufacturing', 'تصنيع'),
+        ('delivery', 'تسليم'),
+        ('payment', 'دفع'),
+        ('complaint', 'شكوى'),
+        ('status_change', 'تغيير حالة'),
+    ]
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_notes', verbose_name='الطلب')
+    note_type = models.CharField(max_length=20, choices=NOTE_TYPES, default='general', verbose_name='نوع الملاحظة')
+    title = models.CharField(max_length=200, blank=True, verbose_name='عنوان الملاحظة')
+    content = models.TextField(verbose_name='محتوى الملاحظة')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='تم الإنشاء بواسطة')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    is_important = models.BooleanField(default=False, verbose_name='ملاحظة مهمة')
+    is_visible_to_customer = models.BooleanField(default=False, verbose_name='مرئية للعميل')
+
+    class Meta:
+        verbose_name = 'ملاحظة الطلب'
+        verbose_name_plural = 'ملاحظات الطلب'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['order', 'note_type']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_note_type_display()} - {self.title or self.content[:50]}"
+
+    def get_icon(self):
+        """إرجاع أيقونة حسب نوع الملاحظة"""
+        icons = {
+            'general': 'fas fa-sticky-note',
+            'inspection': 'fas fa-search',
+            'installation': 'fas fa-tools',
+            'manufacturing': 'fas fa-industry',
+            'delivery': 'fas fa-truck',
+            'payment': 'fas fa-money-bill',
+            'complaint': 'fas fa-exclamation-triangle',
+            'status_change': 'fas fa-exchange-alt',
+        }
+        return icons.get(self.note_type, 'fas fa-sticky-note')
+
+    def get_color_class(self):
+        """إرجاع فئة اللون حسب نوع الملاحظة"""
+        colors = {
+            'general': 'primary',
+            'inspection': 'info',
+            'installation': 'success',
+            'manufacturing': 'warning',
+            'delivery': 'secondary',
+            'payment': 'success',
+            'complaint': 'danger',
+            'status_change': 'dark',
+        }
+        return colors.get(self.note_type, 'primary')
 
 
 class OrderStatusLog(models.Model):

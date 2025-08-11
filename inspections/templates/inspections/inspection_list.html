@@ -10,6 +10,9 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>{% trans 'المعاينات' %}</h2>
         <div class="d-flex gap-2">
+            <a href="{% url 'inspections:inspection_schedule' %}" class="btn btn-info">
+                <i class="fas fa-calendar-alt"></i> البرنامج اليومي
+            </a>
             <a href="{% url 'inspections:inspection_report_create' %}" class="btn btn-success">
                 <i class="fas fa-file-alt"></i> تقرير جديد
             </a>

@@ -63,7 +63,7 @@ class InspectionAdmin(admin.ModelAdmin):
             'description': 'يجب ربط المعاينة بطلب من قسم الطلبات'
         }),
         (_('معلومات المعاينة'), {
-            'fields': ('inspector', 'windows_count', 'request_date', 'scheduled_date')
+            'fields': ('inspector', 'windows_count', 'request_date', 'scheduled_date', 'scheduled_time')
         }),
         (_('حالة المعاينة'), {
             'fields': ('status', 'result', 'expected_delivery_date')

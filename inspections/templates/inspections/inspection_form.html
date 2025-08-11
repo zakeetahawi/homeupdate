@@ -94,9 +94,11 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="{{ form.scheduled_date.id_for_label }}" class="form-label">{% trans 'تاريخ التنفيذ' %}</label>
+                                    <label for="{{ form.scheduled_date.id_for_label }}" class="form-label">
+                                        <i class="fas fa-calendar me-2"></i>{% trans 'تاريخ التنفيذ' %}
+                                    </label>
                                     {% render_field form.scheduled_date class="form-control" %}
                                     {% if form.scheduled_date.errors %}
                                     <div class="invalid-feedback d-block">
@@ -105,6 +107,22 @@
                                         {% endfor %}
                                     </div>
                                     {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label for="{{ form.scheduled_time.id_for_label }}" class="form-label">
+                                        <i class="fas fa-clock me-2"></i>{% trans 'وقت التنفيذ' %}
+                                    </label>
+                                    {% render_field form.scheduled_time class="form-control" %}
+                                    {% if form.scheduled_time.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.scheduled_time.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">اختياري - مثال: 14:30</small>
                                 </div>
                             </div>
                         </div>
@@ -133,7 +151,7 @@
                         </div>
 
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label for="{{ form.status.id_for_label }}" class="form-label">{% trans 'الحالة' %}</label>
                                     {% render_field form.status class="form-control" %}
@@ -143,6 +161,24 @@
                                             {{ error }}
                                         {% endfor %}
                                     </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label for="{{ form.payment_status.id_for_label }}" class="form-label">
+                                        <i class="fas fa-money-bill me-2"></i>{% trans 'حالة المديونية' %}
+                                    </label>
+                                    {% render_field form.payment_status class="form-control" %}
+                                    {% if form.payment_status.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.payment_status.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    {% if form.payment_status.help_text %}
+                                    <small class="form-text text-muted">{{ form.payment_status.help_text }}</small>
                                     {% endif %}
                                 </div>
                             </div>

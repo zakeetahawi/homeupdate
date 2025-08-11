@@ -922,3 +922,108 @@ class ComplaintNotification(models.Model):
             models.Index(fields=['complaint_type']),
             models.Index(fields=['priority']),
         ]
+
+
+# ==================== نظام الإشعارات الجماعية الموحدة 🎯 ====================
+
+class GroupNotification(models.Model):
+    """نموذج الإشعارات الجماعية الموحدة - إشعار واحد لعدة مستخدمين"""
+    NOTIFICATION_TYPES = [
+        ('order_created', 'طلب جديد'),
+        ('order_updated', 'تحديث طلب'),
+        ('order_status_changed', 'تغيير حالة طلب'),
+        ('inspection_scheduled', 'جدولة معاينة'),
+        ('installation_scheduled', 'جدولة تركيب'),
+        ('payment_received', 'دفعة جديدة'),
+        ('general', 'عام'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('low', 'منخفض'),
+        ('normal', 'عادي'),
+        ('high', 'عالي'),
+        ('urgent', 'عاجل'),
+    ]
+
+    title = models.CharField(max_length=200, verbose_name='العنوان')
+    message = models.TextField(verbose_name='محتوى الإشعار')
+    customer_name = models.CharField(max_length=100, blank=True, verbose_name='اسم العميل')
+    order_number = models.CharField(max_length=50, blank=True, verbose_name='رقم الطلب')
+    notification_type = models.CharField(max_length=25, choices=NOTIFICATION_TYPES, default='general', verbose_name='نوع الإشعار')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal', verbose_name='الأولوية')
+    target_users = models.ManyToManyField(User, related_name='group_notifications', verbose_name='المستخدمون المستهدفون')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_group_notifications', verbose_name='تم الإنشاء بواسطة')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    related_object_id = models.PositiveIntegerField(null=True, blank=True, verbose_name='معرف الكائن المرتبط')
+    related_object_type = models.CharField(max_length=50, blank=True, verbose_name='نوع الكائن المرتبط')
+
+    class Meta:
+        verbose_name = 'إشعار جماعي'
+        verbose_name_plural = 'الإشعارات الجماعية'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['created_at']),
+            models.Index(fields=['notification_type']),
+            models.Index(fields=['order_number']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} - {self.target_users.count()} مستخدم"
+
+    def get_icon(self):
+        """إرجاع أيقونة حسب نوع الإشعار"""
+        icons = {
+            'order_created': 'fas fa-plus-circle',
+            'order_updated': 'fas fa-edit',
+            'order_status_changed': 'fas fa-exchange-alt',
+            'inspection_scheduled': 'fas fa-search',
+            'installation_scheduled': 'fas fa-tools',
+            'payment_received': 'fas fa-money-bill',
+            'general': 'fas fa-bell',
+        }
+        return icons.get(self.notification_type, 'fas fa-bell')
+
+    def get_color_class(self):
+        """إرجاع فئة اللون حسب الأولوية"""
+        colors = {
+            'low': 'text-muted',
+            'normal': 'text-primary',
+            'high': 'text-warning',
+            'urgent': 'text-danger',
+        }
+        return colors.get(self.priority, 'text-primary')
+
+    def get_read_count(self):
+        """عدد المستخدمين الذين قرأوا الإشعار"""
+        return self.reads.count()
+
+    def get_unread_count(self):
+        """عدد المستخدمين الذين لم يقرأوا الإشعار"""
+        return self.target_users.count() - self.get_read_count()
+
+    def is_read_by_user(self, user):
+        """فحص ما إذا كان المستخدم قد قرأ الإشعار"""
+        return self.reads.filter(user=user).exists()
+
+    def mark_as_read_by_user(self, user):
+        """تحديد الإشعار كمقروء من قبل مستخدم معين"""
+        GroupNotificationRead.objects.get_or_create(notification=self, user=user)
+
+
+class GroupNotificationRead(models.Model):
+    """نموذج تتبع قراءة الإشعارات الجماعية"""
+    notification = models.ForeignKey(GroupNotification, on_delete=models.CASCADE, related_name='reads', verbose_name='الإشعار')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='المستخدم')
+    read_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ القراءة')
+
+    class Meta:
+        verbose_name = 'قراءة إشعار جماعي'
+        verbose_name_plural = 'قراءات الإشعارات الجماعية'
+        unique_together = ['notification', 'user']
+        indexes = [
+            models.Index(fields=['notification', 'user']),
+            models.Index(fields=['read_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} قرأ {self.notification.title}"

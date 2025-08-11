@@ -20,7 +20,7 @@ class CustomerForm(forms.ModelForm):
         fields = [
             'name', 'phone', 'phone2', 'email', 'birth_date', 'address',
             'customer_type', 'category', 'status', 'interests',
-            'notes', 'image'
+            'image'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -37,7 +37,6 @@ class CustomerForm(forms.ModelForm):
             'category': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'interests': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
         }
 

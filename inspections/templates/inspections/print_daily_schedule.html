@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول المعاينات اليومي - {{ selected_date }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: white;
+            color: #333;
+            padding: 20px;
+        }
+        
+        .print-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 15px;
+        }
+
+        .print-header h1 {
+            color: #007bff;
+            margin-bottom: 5px;
+            font-size: 1.8rem;
+        }
+
+        .inspector-section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+            page-break-after: always; /* كل جدول في صفحة منفصلة */
+        }
+
+        .inspector-section:last-child {
+            page-break-after: auto; /* الجدول الأخير لا يحتاج فاصل */
+        }
+
+        .inspector-header {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-left: 4px solid #007bff;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .inspector-header h3 {
+            margin: 0;
+            color: #007bff;
+            font-size: 1.2rem;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .page-header h2 {
+            color: #007bff;
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        
+        .print-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .stats-row {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .inspection-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .inspection-table th,
+        .inspection-table td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: right;
+            vertical-align: top;
+        }
+        
+        .inspection-table th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .inspection-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        
+        .status-scheduled {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+
+        
+        @media print {
+            body { margin: 0; padding: 15px; }
+            .no-print { display: none !important; }
+            .print-header h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    
+    {% if inspections %}
+
+    <!-- الجدول الشامل لمسؤول القسم -->
+    <div class="inspector-section">
+        <div class="page-header">
+            <h2><i class="fas fa-calendar-alt me-2"></i>جدول المعاينات - {{ selected_date }}</h2>
+            <p class="mb-0">الجدول الشامل لمسؤول القسم - {{ total_inspections }} معاينة</p>
+        </div>
+        <div class="inspector-header">
+            <h3><i class="fas fa-list-alt me-2"></i>جميع المعاينات</h3>
+        </div>
+        <table class="inspection-table">
+            <thead>
+                <tr>
+                    <th width="5%">#</th>
+                    <th width="18%">اسم العميل</th>
+                    <th width="13%">العنوان</th>
+                    <th width="11%">رقم الهاتف</th>
+                    <th width="11%">البائع</th>
+                    <th width="7%">الوقت</th>
+                    <th width="13%">الفني</th>
+                    <th width="10%">الفرع</th>
+                    <th width="12%">المديونية</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inspection in inspections %}
+                <tr>
+                    <td class="text-center">{{ forloop.counter }}</td>
+                    <td>
+                        <strong>{{ inspection.customer.name }}</strong>
+                        {% if inspection.customer.code %}
+                        <br><small class="text-muted">{{ inspection.customer.code }}</small>
+                        {% endif %}
+                    </td>
+                    <td><small>{{ inspection.customer.address|default:"غير محدد"|truncatewords:4 }}</small></td>
+                    <td>
+                        {{ inspection.customer.phone }}
+                        {% if inspection.customer.phone2 %}
+                        <br><small>{{ inspection.customer.phone2 }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if inspection.responsible_employee %}
+                            {{ inspection.responsible_employee.name|default:"غير محدد" }}
+                        {% elif inspection.order and inspection.order.salesperson %}
+                            {{ inspection.order.salesperson.name|default:"غير محدد" }}
+                        {% else %}
+                            غير محدد
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if inspection.scheduled_time %}
+                            <strong>{{ inspection.scheduled_time|time:"H:i" }}</strong>
+                        {% else %}
+                            غير محدد
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if inspection.inspector %}
+                            {{ inspection.inspector.get_full_name|default:inspection.inspector.username }}
+                        {% else %}
+                            غير محدد
+                        {% endif %}
+                    </td>
+                    <td>{{ inspection.branch.name|default:"غير محدد" }}</td>
+                    <td class="text-center">
+                        {% if inspection.payment_status == 'paid' %}
+                            <span class="badge bg-success">مكتمل السداد</span>
+                        {% else %}
+                            <span class="badge bg-danger">تحصيل عند العميل</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- جداول منفصلة لكل معاين -->
+    {% for inspector_name, inspector_inspections in inspections_by_inspector.items %}
+    <div class="inspector-section">
+        <div class="page-header">
+            <h2><i class="fas fa-calendar-alt me-2"></i>جدول المعاينات - {{ selected_date }}</h2>
+            <p class="mb-0">معاينات الفني: {{ inspector_name }} - {{ inspector_inspections|length }} معاينة</p>
+        </div>
+        <div class="inspector-header">
+            <h3><i class="fas fa-user-tie me-2"></i>{{ inspector_name }}</h3>
+        </div>
+        <table class="inspection-table">
+            <thead>
+                <tr>
+                    <th width="5%">#</th>
+                    <th width="22%">اسم العميل</th>
+                    <th width="17%">العنوان</th>
+                    <th width="13%">رقم الهاتف</th>
+                    <th width="13%">البائع</th>
+                    <th width="8%">الوقت</th>
+                    <th width="10%">الفرع</th>
+                    <th width="12%">المديونية</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inspection in inspector_inspections %}
+                <tr>
+                    <td class="text-center">{{ forloop.counter }}</td>
+                    <td>
+                        <strong>{{ inspection.customer.name }}</strong>
+                        {% if inspection.customer.code %}
+                        <br><small class="text-muted">{{ inspection.customer.code }}</small>
+                        {% endif %}
+                    </td>
+                    <td><small>{{ inspection.customer.address|default:"غير محدد"|truncatewords:5 }}</small></td>
+                    <td>
+                        {{ inspection.customer.phone }}
+                        {% if inspection.customer.phone2 %}
+                        <br><small>{{ inspection.customer.phone2 }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if inspection.responsible_employee %}
+                            {{ inspection.responsible_employee.name|default:"غير محدد" }}
+                        {% elif inspection.order and inspection.order.salesperson %}
+                            {{ inspection.order.salesperson.name|default:"غير محدد" }}
+                        {% else %}
+                            غير محدد
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if inspection.scheduled_time %}
+                            <strong>{{ inspection.scheduled_time|time:"H:i" }}</strong>
+                        {% else %}
+                            غير محدد
+                        {% endif %}
+                    </td>
+                    <td>{{ inspection.branch.name|default:"غير محدد" }}</td>
+                    <td class="text-center">
+                        {% if inspection.payment_status == 'paid' %}
+                            <span class="badge bg-success">مكتمل السداد</span>
+                        {% else %}
+                            <span class="badge bg-danger">تحصيل عند العميل</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if inspection.notes %}
+                <tr>
+                    <td></td>
+                    <td colspan="7">
+                        <small class="text-muted">
+                            <i class="fas fa-sticky-note me-1"></i>
+                            <strong>ملاحظات:</strong> {{ inspection.notes|truncatewords:15 }}
+                        </small>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+
+    <!-- المعاينات بدون معاين محدد -->
+    {% if inspections_without_inspector %}
+    <div class="inspector-section">
+        <div class="page-header">
+            <h2><i class="fas fa-calendar-alt me-2"></i>جدول المعاينات - {{ selected_date }}</h2>
+            <p class="mb-0">معاينات بدون فني محدد - {{ inspections_without_inspector|length }} معاينة</p>
+        </div>
+        <div class="inspector-header">
+            <h3><i class="fas fa-question-circle me-2"></i>معاينات بدون فني محدد</h3>
+        </div>
+        <table class="inspection-table">
+            <thead>
+                <tr>
+                    <th width="5%">#</th>
+                    <th width="22%">اسم العميل</th>
+                    <th width="17%">العنوان</th>
+                    <th width="13%">رقم الهاتف</th>
+                    <th width="13%">البائع</th>
+                    <th width="8%">الوقت</th>
+                    <th width="10%">الفرع</th>
+                    <th width="12%">المديونية</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inspection in inspections_without_inspector %}
+                <tr>
+                    <td class="text-center">{{ forloop.counter }}</td>
+                    <td>
+                        <strong>{{ inspection.customer.name }}</strong>
+                        {% if inspection.customer.code %}
+                        <br><small class="text-muted">{{ inspection.customer.code }}</small>
+                        {% endif %}
+                    </td>
+                    <td><small>{{ inspection.customer.address|default:"غير محدد"|truncatewords:5 }}</small></td>
+                    <td>
+                        {{ inspection.customer.phone }}
+                        {% if inspection.customer.phone2 %}
+                        <br><small>{{ inspection.customer.phone2 }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if inspection.responsible_employee %}
+                            {{ inspection.responsible_employee.name|default:"غير محدد" }}
+                        {% elif inspection.order and inspection.order.salesperson %}
+                            {{ inspection.order.salesperson.name|default:"غير محدد" }}
+                        {% else %}
+                            غير محدد
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if inspection.scheduled_time %}
+                            <strong>{{ inspection.scheduled_time|time:"H:i" }}</strong>
+                        {% else %}
+                            غير محدد
+                        {% endif %}
+                    </td>
+                    <td>{{ inspection.branch.name|default:"غير محدد" }}</td>
+                    <td class="text-center">
+                        {% if inspection.payment_status == 'paid' %}
+                            <span class="badge bg-success">مكتمل السداد</span>
+                        {% else %}
+                            <span class="badge bg-danger">تحصيل عند العميل</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if inspection.notes %}
+                <tr>
+                    <td></td>
+                    <td colspan="7">
+                        <small class="text-muted">
+                            <i class="fas fa-sticky-note me-1"></i>
+                            <strong>ملاحظات:</strong> {{ inspection.notes|truncatewords:15 }}
+                        </small>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">لا توجد معاينات مجدولة لهذا التاريخ</h4>
+        <p class="text-muted">{{ selected_date }} - {{ selected_date|date:"l" }}</p>
+        <p class="text-muted">يمكنك العودة لجدولة معاينات جديدة أو اختيار تاريخ آخر</p>
+    </div>
+    {% endif %}
+    
+
+    
+    <script>
+        // طباعة تلقائية عند تحميل الصفحة
+        window.onload = function() {
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

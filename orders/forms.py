@@ -437,3 +437,110 @@ class OrderForm(forms.ModelForm):
             self.save_m2m()  # Important for inline formsets if any
         
         return instance
+
+
+# ==================== نماذج تعديل الطلب المتقدمة 🎯 ====================
+
+class OrderEditForm(forms.ModelForm):
+    """نموذج تعديل الطلب الأساسي مع عناصر الطلب"""
+
+    class Meta:
+        model = Order
+        fields = [
+            'customer', 'branch', 'salesperson', 'selected_types',
+            'notes', 'total_amount', 'paid_amount'
+        ]
+        widgets = {
+            'customer': forms.Select(attrs={'class': 'form-control select2'}),
+            'branch': forms.Select(attrs={'class': 'form-control'}),
+            'salesperson': forms.Select(attrs={'class': 'form-control select2'}),
+            'selected_types': forms.TextInput(attrs={
+                'class': 'form-control',
+                'readonly': True,
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'ملاحظات الطلب'
+            }),
+            'total_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'step': '0.01',
+                'readonly': True
+            }),
+            'paid_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'step': '0.01'
+            }),
+        }
+        labels = {
+            'customer': 'العميل',
+            'branch': 'الفرع',
+            'salesperson': 'البائع',
+            'selected_types': 'نوع الطلب',
+            'notes': 'ملاحظات الطلب',
+            'total_amount': 'إجمالي المبلغ',
+            'paid_amount': 'المبلغ المدفوع',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # تخصيص الحقول
+        from customers.models import Customer
+        self.fields['customer'].queryset = Customer.objects.all()
+        self.fields['branch'].queryset = Branch.objects.all()
+        self.fields['salesperson'].queryset = Salesperson.objects.all()
+
+        # إضافة help text
+        self.fields['selected_types'].help_text = 'نوع الطلب لا يمكن تعديله بعد الإنشاء'
+        self.fields['total_amount'].help_text = 'يتم حساب المبلغ تلقائياً من عناصر الطلب'
+
+        # تعطيل بعض الحقول
+        self.fields['selected_types'].widget.attrs['readonly'] = True
+        self.fields['total_amount'].widget.attrs['readonly'] = True
+
+        # تحويل selected_types من JSON إلى نص قابل للقراءة
+        if self.instance and self.instance.selected_types:
+            try:
+                import json
+                types_list = json.loads(self.instance.selected_types)
+                types_display = []
+                type_mapping = {
+                    'inspection': 'معاينة',
+                    'installation': 'تركيب',
+                    'fabric': 'أقمشة',
+                    'accessory': 'إكسسوار',
+                    'tailoring': 'تفصيل',
+                    'transport': 'نقل'
+                }
+                for t in types_list:
+                    types_display.append(type_mapping.get(t, t))
+                self.fields['selected_types'].initial = ' + '.join(types_display)
+            except:
+                self.fields['selected_types'].initial = self.instance.selected_types
+
+    def clean(self):
+        cleaned_data = super().clean()
+        total_amount = cleaned_data.get('total_amount', 0)
+        paid_amount = cleaned_data.get('paid_amount', 0)
+
+        # التحقق من المبلغ المدفوع
+        if paid_amount and paid_amount > total_amount:
+            raise forms.ValidationError('المبلغ المدفوع لا يمكن أن يكون أكبر من إجمالي المبلغ')
+
+        return cleaned_data
+
+
+# تحديث OrderItemFormSet للتعديل
+OrderItemEditFormSet = forms.inlineformset_factory(
+    Order,
+    OrderItem,
+    form=OrderItemForm,
+    extra=0,  # لا نريد عناصر إضافية فارغة في التعديل
+    can_delete=True,
+    min_num=1,  # على الأقل عنصر واحد
+    validate_min=True
+)

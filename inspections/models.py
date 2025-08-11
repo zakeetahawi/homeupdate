@@ -218,6 +218,19 @@ class Inspection(models.Model):
     is_uploaded_to_drive = models.BooleanField(_('تم الرفع إلى Google Drive'), default=False)
     request_date = models.DateField(_('تاريخ طلب المعاينة'), default=timezone.now, editable=True)
     scheduled_date = models.DateField(_('تاريخ تنفيذ المعاينة'), default=timezone.now, editable=True)
+    scheduled_time = models.TimeField(_('وقت تنفيذ المعاينة'), blank=True, null=True)
+
+    # حالة المديونية
+    PAYMENT_STATUS_CHOICES = [
+        ('paid', 'مكتمل السداد'),
+        ('collect_on_visit', 'تحصيل عند العميل'),
+    ]
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUS_CHOICES,
+        default='paid',
+        verbose_name=_('حالة المديونية')
+    )
     status = models.CharField(
         _('الحالة'),
         max_length=10,
@@ -318,6 +331,13 @@ class Inspection(models.Model):
         # نسخ ملاحظات الطلب إلى الحقل الجديد إذا كان الطلب موجودًا
         if self.order and self.order.notes and not self.order_notes:
             self.order_notes = self.order.notes
+
+        # تحديد حالة المديونية تلقائياً بناءً على حالة الدفع في الطلب
+        if self.order:
+            if self.order.is_fully_paid:
+                self.payment_status = 'paid'
+            else:
+                self.payment_status = 'collect_on_visit'
         # التحقق من تغيير الملف
         file_changed = False
         if self.pk:  # إذا كان هذا تحديث وليس إنشاء جديد

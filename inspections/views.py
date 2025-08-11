@@ -6,7 +6,8 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q, Count, F
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from datetime import datetime, timedelta
 from .models import Inspection, InspectionReport, InspectionNotification, InspectionEvaluation
 from .forms import InspectionForm, InspectionReportForm, InspectionNotificationForm, InspectionEvaluationForm
 
@@ -844,3 +845,112 @@ def inspection_delete_redirect(request, pk):
     """إعادة توجيه من ID إلى كود المعاينة للحذف"""
     inspection = get_object_or_404(Inspection, pk=pk)
     return redirect('inspections:inspection_delete_by_code', inspection_code=inspection.inspection_code)
+
+
+@login_required
+def inspection_schedule_view(request):
+    """عرض جدولة المعاينات حسب التاريخ"""
+    # الحصول على التاريخ المحدد أو التاريخ الحالي
+    selected_date = request.GET.get('date')
+    if selected_date:
+        try:
+            selected_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        except ValueError:
+            selected_date = timezone.now().date()
+    else:
+        selected_date = timezone.now().date()
+
+    # الحصول على المعاينات المجدولة فقط لهذا التاريخ
+    inspections = Inspection.objects.filter(
+        scheduled_date=selected_date,
+        status='scheduled'  # المجدولة فقط
+    ).select_related('customer', 'inspector', 'branch', 'order', 'responsible_employee').order_by('scheduled_time', 'created_at')
+
+    # تطبيق فلتر الصلاحيات
+    if not request.user.is_superuser:
+        inspections = inspections.filter(
+            Q(inspector=request.user) | Q(created_by=request.user)
+        )
+
+    # إحصائيات التاريخ المحدد
+    total_inspections = inspections.count()
+    scheduled_inspections = total_inspections  # كلها مجدولة
+    pending_inspections = 0  # لا نعرض المعلقة
+
+    # الحصول على التواريخ التي تحتوي على معاينات مجدولة (للتنقل السريع)
+    dates_with_inspections = Inspection.objects.filter(
+        scheduled_date__isnull=False,
+        status='scheduled'  # المجدولة فقط
+    ).values_list('scheduled_date', flat=True).distinct().order_by('scheduled_date')
+
+    if not request.user.is_superuser:
+        dates_with_inspections = Inspection.objects.filter(
+            Q(inspector=request.user) | Q(created_by=request.user),
+            scheduled_date__isnull=False,
+            status='scheduled'  # المجدولة فقط
+        ).values_list('scheduled_date', flat=True).distinct().order_by('scheduled_date')
+
+    context = {
+        'inspections': inspections,
+        'selected_date': selected_date,
+        'total_inspections': total_inspections,
+        'scheduled_inspections': scheduled_inspections,
+        'pending_inspections': pending_inspections,
+        'dates_with_inspections': dates_with_inspections,
+        'today': timezone.now().date(),
+        'prev_date': selected_date - timedelta(days=1),
+        'next_date': selected_date + timedelta(days=1),
+    }
+
+    return render(request, 'inspections/inspection_schedule.html', context)
+
+
+@login_required
+def print_daily_schedule(request):
+    """طباعة الجدول اليومي للمعاينات"""
+    # الحصول على التاريخ المحدد
+    selected_date = request.GET.get('date')
+    if selected_date:
+        try:
+            selected_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        except ValueError:
+            selected_date = timezone.now().date()
+    else:
+        selected_date = timezone.now().date()
+
+    # الحصول على المعاينات المجدولة فقط لهذا التاريخ
+    inspections = Inspection.objects.filter(
+        scheduled_date=selected_date,
+        status='scheduled'  # المجدولة فقط
+    ).select_related('customer', 'inspector', 'branch', 'order', 'responsible_employee').order_by('scheduled_time', 'created_at')
+
+    # تطبيق فلتر الصلاحيات
+    if not request.user.is_superuser:
+        inspections = inspections.filter(
+            Q(inspector=request.user) | Q(created_by=request.user)
+        )
+
+    # تجميع المعاينات حسب المعاين
+    inspections_by_inspector = {}
+    inspections_without_inspector = []
+
+    for inspection in inspections:
+        if inspection.inspector:
+            inspector_name = inspection.inspector.get_full_name() or inspection.inspector.username
+            if inspector_name not in inspections_by_inspector:
+                inspections_by_inspector[inspector_name] = []
+            inspections_by_inspector[inspector_name].append(inspection)
+        else:
+            inspections_without_inspector.append(inspection)
+
+    context = {
+        'inspections': inspections,
+        'inspections_by_inspector': inspections_by_inspector,
+        'inspections_without_inspector': inspections_without_inspector,
+        'selected_date': selected_date,
+        'total_inspections': inspections.count(),
+        'print_date': timezone.now(),
+        'user': request.user,
+    }
+
+    return render(request, 'inspections/print_daily_schedule.html', context)

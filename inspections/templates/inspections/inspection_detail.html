@@ -70,10 +70,15 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4">
-                            <strong>{% trans 'تاريخ التنفيذ' %}:</strong>
+                            <strong><i class="fas fa-calendar-alt text-primary"></i> {% trans 'تاريخ ووقت التنفيذ' %}:</strong>
                         </div>
                         <div class="col-sm-8">
-                            {{ inspection.scheduled_date }}
+                            <span class="badge bg-primary me-2">{{ inspection.scheduled_date }}</span>
+                            {% if inspection.scheduled_time %}
+                                <span class="badge bg-info">{{ inspection.scheduled_time|time:"H:i" }}</span>
+                            {% else %}
+                                <span class="text-muted">الوقت غير محدد</span>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="row mb-3">
