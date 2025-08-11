@@ -669,7 +669,7 @@
             <!-- Notes -->
             <div class="card mb-4">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0">ملاحظات</h5>
+                    <h5 class="mb-0">ملاحظات الطلب</h5>
                 </div>
                 <div class="card-body">
                     {% if order.notes %}
@@ -679,6 +679,41 @@
                     {% endif %}
                 </div>
             </div>
+
+            <!-- Order Modification Notes -->
+            {% if order.order_notes.exists %}
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>تعديلات الطلب
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for note in order.order_notes.all %}
+                    {% if note.note_type == 'modification' %}
+                    <div class="alert alert-info mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="alert-heading mb-0">
+                                <i class="fas fa-pencil-alt me-2"></i>{{ note.title }}
+                            </h6>
+                            <small class="text-muted">
+                                {{ note.created_at|date:"Y-m-d H:i" }}
+                            </small>
+                        </div>
+                        <div class="modification-content">
+                            {{ note.content|linebreaks }}
+                        </div>
+                        <hr class="my-2">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>
+                            بواسطة: {{ note.created_by.get_full_name|default:note.created_by.username }}
+                        </small>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Order Type Information -->
             <div class="card mb-4">

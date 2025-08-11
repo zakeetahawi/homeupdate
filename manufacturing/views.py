@@ -235,12 +235,18 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        items = self.object.items.all()
-        context['items'] = items
 
-        # حساب إجمالي الكمية لمسؤول المصنع
-        total_quantity = sum(item.quantity for item in items)
-        context['total_quantity'] = total_quantity
+        # الحصول على عناصر الطلب الأساسي
+        if self.object.order:
+            order_items = self.object.order.items.all()
+            context['order_items'] = order_items
+
+            # حساب إجمالي الكمية من عناصر الطلب الأساسي
+            total_quantity = sum(item.quantity for item in order_items)
+            context['total_quantity'] = total_quantity
+        else:
+            context['order_items'] = []
+            context['total_quantity'] = 0
 
         return context
 

@@ -11,7 +11,7 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from .models import Order, OrderItem, Payment
-from .forms import OrderForm, OrderItemFormSet, PaymentForm
+from .forms import OrderForm, OrderItemFormSet, PaymentForm, OrderEditForm, OrderItemEditFormSet
 from .permissions import get_user_orders_queryset, can_user_view_order, can_user_edit_order, can_user_delete_order
 from accounts.models import Branch, Salesperson, Department, SystemSettings
 from customers.models import Customer
@@ -896,24 +896,193 @@ def order_success_by_number(request, order_number):
 
 @login_required
 def order_update_by_number(request, order_number):
-    """تحديث الطلب باستخدام رقم الطلب"""
+    """تحديث الطلب المتقدم مع عناصر الطلب"""
     order = get_object_or_404(Order, order_number=order_number)
-    
+
     if not can_user_edit_order(request.user, order):
         messages.error(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
         return redirect("orders:order_detail_by_number", order_number=order_number)
-    
+
     if request.method == 'POST':
-        form = OrderForm(request.POST, instance=order)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'تم تحديث الطلب {order.order_number} بنجاح.')
+        form = OrderEditForm(request.POST, instance=order)
+        formset = OrderItemEditFormSet(request.POST, instance=order)
+
+        # تشخيص الأخطاء
+        if not form.is_valid():
+            for field, errors in form.errors.items():
+                messages.error(request, f"خطأ في {field}: {', '.join(errors)}")
+
+        if not formset.is_valid():
+            for i, form_errors in enumerate(formset.errors):
+                if form_errors:
+                    for field, errors in form_errors.items():
+                        messages.error(request, f"خطأ في العنصر {i+1} - {field}: {', '.join(errors)}")
+
+        if form.is_valid() and formset.is_valid():
+            # حفظ القيم القديمة للعناصر قبل التعديل
+            old_items_data = {}
+            for form_item in formset:
+                if form_item.instance.pk:
+                    old_items_data[form_item.instance.pk] = {
+                        'product': form_item.instance.product,
+                        'quantity': form_item.instance.quantity,
+                        'unit_price': form_item.instance.unit_price,
+                        'notes': form_item.instance.notes,
+                    }
+
+            # تتبع التغييرات قبل الحفظ
+            changes = []
+
+            # تتبع تغييرات الطلب الأساسي بتفصيل أكثر
+            for field in form.changed_data:
+                if field in form.fields:
+                    old_value = getattr(order, field, '')
+                    new_value = form.cleaned_data[field]
+                    field_label = form.fields[field].label or field
+
+                    # تحسين عرض القيم للحقول المختلفة
+                    if field == 'customer':
+                        old_name = old_value.name if old_value else 'غير محدد'
+                        new_name = new_value.name if new_value else 'غير محدد'
+                        changes.append(f"تم تغيير العميل من '{old_name}' إلى '{new_name}'")
+                    elif field == 'branch':
+                        old_name = old_value.name if old_value else 'غير محدد'
+                        new_name = new_value.name if new_value else 'غير محدد'
+                        changes.append(f"تم تغيير الفرع من '{old_name}' إلى '{new_name}'")
+                    elif field == 'salesperson':
+                        old_name = old_value.name if old_value else 'غير محدد'
+                        new_name = new_value.name if new_value else 'غير محدد'
+                        changes.append(f"تم تغيير البائع من '{old_name}' إلى '{new_name}'")
+                    elif field == 'paid_amount':
+                        changes.append(f"تم تغيير المبلغ المدفوع من {old_value} ج.م إلى {new_value} ج.م")
+                    elif field == 'notes':
+                        old_notes = old_value or 'بدون ملاحظات'
+                        new_notes = new_value or 'بدون ملاحظات'
+                        changes.append(f"تم تغيير ملاحظات الطلب من '{old_notes}' إلى '{new_notes}'")
+                    else:
+                        changes.append(f"تم تغيير {field_label} من '{old_value}' إلى '{new_value}'")
+
+            # تتبع تغييرات العناصر بتفصيل أكثر
+            deleted_items = []
+            modified_items = []
+            added_items = []
+
+            for form_item in formset:
+                if form_item.cleaned_data.get('DELETE'):
+                    if form_item.instance.pk:
+                        product_name = form_item.instance.product.name if form_item.instance.product else 'غير محدد'
+                        quantity = form_item.instance.quantity
+                        price = form_item.instance.unit_price
+                        deleted_items.append(f"حذف الصنف: {product_name} (الكمية: {quantity}, السعر: {price} ج.م)")
+                elif form_item.instance.pk:
+                    # عنصر موجود تم تعديله
+                    if form_item.changed_data and form_item.instance.pk in old_items_data:
+                        item_changes = []
+                        old_data = old_items_data[form_item.instance.pk]
+                        current_product_name = old_data['product'].name if old_data['product'] else 'غير محدد'
+
+                        for field in form_item.changed_data:
+                            if field == 'product':
+                                old_product = old_data['product']
+                                new_product = form_item.cleaned_data[field]
+                                old_name = old_product.name if old_product else 'غير محدد'
+                                new_name = new_product.name if new_product else 'غير محدد'
+                                item_changes.append(f"تبديل نوع الصنف من '{old_name}' إلى '{new_name}'")
+                            elif field == 'quantity':
+                                old_value = old_data['quantity']
+                                new_value = form_item.cleaned_data[field]
+                                item_changes.append(f"تعديل كمية الصنف '{current_product_name}' من {old_value} إلى {new_value}")
+                            elif field == 'unit_price':
+                                old_value = old_data['unit_price']
+                                new_value = form_item.cleaned_data[field]
+                                item_changes.append(f"تعديل سعر الصنف '{current_product_name}' من {old_value} ج.م إلى {new_value} ج.م")
+                            elif field == 'notes':
+                                old_value = old_data['notes'] or 'بدون ملاحظات'
+                                new_value = form_item.cleaned_data[field] or 'بدون ملاحظات'
+                                item_changes.append(f"تعديل ملاحظات الصنف '{current_product_name}' من '{old_value}' إلى '{new_value}'")
+
+                        if item_changes:
+                            modified_items.extend(item_changes)
+                else:
+                    # عنصر جديد
+                    if form_item.cleaned_data and not form_item.cleaned_data.get('DELETE'):
+                        product_name = form_item.cleaned_data.get('product').name if form_item.cleaned_data.get('product') else 'غير محدد'
+                        quantity = form_item.cleaned_data.get('quantity', 0)
+                        price = form_item.cleaned_data.get('unit_price', 0)
+                        notes = form_item.cleaned_data.get('notes', '') or 'بدون ملاحظات'
+                        added_items.append(f"إضافة صنف جديد: {product_name} (الكمية: {quantity}, السعر: {price} ج.م, ملاحظات: {notes})")
+
+            # حفظ الطلب
+            updated_order = form.save()
+
+            # حفظ عناصر الطلب
+            formset.instance = updated_order
+            formset.save()
+
+            # إعادة حساب المبلغ الإجمالي
+            updated_order.calculate_total()
+
+            # تسجيل التعديلات
+            from .models import OrderNote
+
+            # تسجيل التعديلات العامة
+            if changes or deleted_items or modified_items or added_items:
+                content_parts = []
+                content_parts.append(f'تم تعديل الطلب بواسطة {request.user.get_full_name() or request.user.username}')
+                content_parts.append('=' * 50)
+
+                if changes:
+                    content_parts.append('📝 تعديلات البيانات الأساسية:')
+                    for change in changes:
+                        content_parts.append(f'• {change}')
+                    content_parts.append('')
+
+                if added_items:
+                    content_parts.append('➕ إضافة أصناف جديدة:')
+                    for item in added_items:
+                        content_parts.append(f'• {item}')
+                    content_parts.append('')
+
+                if modified_items:
+                    content_parts.append('✏️ تعديل الأصناف الموجودة:')
+                    for item in modified_items:
+                        content_parts.append(f'• {item}')
+                    content_parts.append('')
+
+                if deleted_items:
+                    content_parts.append('🗑️ حذف الأصناف:')
+                    for item in deleted_items:
+                        content_parts.append(f'• {item}')
+                    content_parts.append('')
+
+                # إضافة معلومات إضافية
+                content_parts.append(f'💰 إجمالي المبلغ بعد التعديل: {updated_order.total_amount} ج.م')
+                content_parts.append(f'💳 المبلغ المدفوع: {updated_order.paid_amount} ج.م')
+                content_parts.append(f'📊 المديونية: {updated_order.remaining_amount} ج.م')
+
+                content = '\n'.join(content_parts)
+
+                OrderNote.objects.create(
+                    order=updated_order,
+                    note_type='modification',
+                    title='تعديل الطلب',
+                    content=content,
+                    created_by=request.user,
+                    is_important=True
+                )
+
+            messages.success(request, f'تم تحديث الطلب {order.order_number} وعناصره بنجاح.')
             return redirect('orders:order_detail_by_number', order_number=order_number)
+        else:
+            # إذا كان هناك أخطاء في النموذج
+            messages.error(request, 'حدث خطأ في حفظ التعديلات. يرجى مراجعة البيانات المدخلة.')
     else:
-        form = OrderForm(instance=order)
-    
-    return render(request, 'orders/order_form.html', {
+        form = OrderEditForm(instance=order)
+        formset = OrderItemEditFormSet(instance=order)
+
+    return render(request, 'orders/order_edit_form.html', {
         'form': form,
+        'formset': formset,
         'order': order,
         'is_update': True
     })

@@ -614,3 +614,49 @@ def dashboard_view(request):
             {'error': str(e)},
             status=500
         )
+
+
+@login_required
+def product_search_api(request):
+    """API للبحث عن المنتجات لـ Select2"""
+    query = request.GET.get('q', '').strip()
+    page = int(request.GET.get('page', 1))
+    page_size = 30
+
+    # البحث في المنتجات
+    products = Product.objects.all()
+
+    if query:
+        products = products.filter(
+            Q(name__icontains=query) |
+            Q(code__icontains=query) |
+            Q(description__icontains=query)
+        )
+
+    # حساب العدد الإجمالي
+    total_count = products.count()
+
+    # تطبيق الصفحات
+    start = (page - 1) * page_size
+    end = start + page_size
+    products = products[start:end]
+
+    # تحضير النتائج
+    results = []
+    for product in products:
+        results.append({
+            'id': product.id,
+            'text': f"{product.name} - {product.price} ج.م",
+            'name': product.name,
+            'price': float(product.price),
+            'code': product.code or '',
+            'current_stock': get_cached_stock_level(product.id)
+        })
+
+    return JsonResponse({
+        'results': results,
+        'pagination': {
+            'more': end < total_count
+        },
+        'total_count': total_count
+    })

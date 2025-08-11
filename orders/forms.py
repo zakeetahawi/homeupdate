@@ -7,17 +7,61 @@ from django.utils import timezone
 from datetime import timedelta
 from inspections.models import Inspection
 
+
+class ProductSelectWidget(forms.Select):
+    """Widget مخصص لإضافة data-price للمنتجات"""
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+
+        if value:
+            try:
+                from inventory.models import Product
+                product = Product.objects.get(pk=value)
+                option['attrs']['data-price'] = str(product.price)
+            except:
+                pass
+
+        return option
+
+
 class OrderItemForm(forms.ModelForm):
     class Meta:
         model = OrderItem
-        fields = ['product', 'quantity', 'unit_price', 'item_type', 'notes']
+        fields = ['product', 'quantity', 'unit_price', 'notes']
         widgets = {
-            'product': forms.Select(attrs={'class': 'form-select form-select-sm'}),
-            'quantity': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
-            'unit_price': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
-            'item_type': forms.Select(attrs={'class': 'form-select form-select-sm'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 2}),
+            'product': ProductSelectWidget(attrs={'class': 'form-control product-select'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control item-quantity', 'min': '1'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control item-price', 'min': '0', 'step': '0.01'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # إضافة data-price للمنتجات
+        if 'product' in self.fields:
+            from inventory.models import Product
+            products = Product.objects.all()
+
+            # إنشاء widget مخصص مع data attributes
+            choices = [('', 'اختر المنتج')]
+            for product in products:
+                choices.append((product.id, f"{product.name} - {product.price} ج.م"))
+
+            self.fields['product'].widget.choices = choices
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # تعيين قيمة افتراضية لـ item_type إذا لم تكن موجودة
+        if not instance.item_type:
+            instance.item_type = 'product'  # أو أي قيمة افتراضية مناسبة
+
+        if commit:
+            instance.save()
+
+        return instance
 
 class PaymentForm(forms.ModelForm):
     class Meta:
@@ -524,12 +568,13 @@ class OrderEditForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        total_amount = cleaned_data.get('total_amount', 0)
-        paid_amount = cleaned_data.get('paid_amount', 0)
+        total_amount = float(cleaned_data.get('total_amount', 0) or 0)
+        paid_amount = float(cleaned_data.get('paid_amount', 0) or 0)
 
-        # التحقق من المبلغ المدفوع
-        if paid_amount and paid_amount > total_amount:
-            raise forms.ValidationError('المبلغ المدفوع لا يمكن أن يكون أكبر من إجمالي المبلغ')
+        # السماح بأن يكون المبلغ المدفوع أقل من الإجمالي (مديونية)
+        # التحقق فقط من أن المبلغ المدفوع لا يكون سالب
+        if paid_amount < 0:
+            raise forms.ValidationError('المبلغ المدفوع لا يمكن أن يكون سالباً')
 
         return cleaned_data
 
@@ -541,6 +586,7 @@ OrderItemEditFormSet = forms.inlineformset_factory(
     form=OrderItemForm,
     extra=0,  # لا نريد عناصر إضافية فارغة في التعديل
     can_delete=True,
-    min_num=1,  # على الأقل عنصر واحد
-    validate_min=True
+    min_num=0,  # السماح بحذف جميع العناصر مؤقتاً
+    validate_min=False,
+    fk_name='order'  # تحديد اسم العلاقة
 )

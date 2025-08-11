@@ -333,7 +333,7 @@
             </div>
             
                     <!-- عناصر الطلب -->
-                    {% if items %}
+                    {% if order_items %}
                     <div class="row mt-4">
                         <div class="col-md-12">
                             {% if user.is_superuser or user.is_factory_manager %}
@@ -366,7 +366,7 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {% for item in items %}
+                                                    {% for item in order_items %}
                                                     <tr>
                                                         <td class="text-center">
                                                             <span class="badge bg-secondary">{{ forloop.counter }}</span>
@@ -374,7 +374,7 @@
                                                         <td>
                                                             <div class="d-flex align-items-center">
                                                                 <i class="fas fa-box text-primary me-2"></i>
-                                                                <strong>{{ item.product_name }}</strong>
+                                                                <strong>{{ item.product.name }}</strong>
                                                             </div>
                                                         </td>
                                                         <td class="text-center">
@@ -403,7 +403,7 @@
                                         </div>
 
                                         <!-- إحصائيات سريعة -->
-                                        {% if items %}
+                                        {% if order_items %}
                                         <div class="mt-3 p-3 bg-light rounded">
                                             <div class="row text-center">
                                                 <div class="col-md-4">
@@ -411,7 +411,7 @@
                                                         <i class="fas fa-list-ol text-primary me-2"></i>
                                                         <div>
                                                             <h6 class="text-muted mb-0">إجمالي العناصر</h6>
-                                                            <h4 class="text-primary mb-0">{{ items|length }}</h4>
+                                                            <h4 class="text-primary mb-0">{{ order_items|length }}</h4>
                                                         </div>
                                                     </div>
                                                 </div>

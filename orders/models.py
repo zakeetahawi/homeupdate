@@ -747,6 +747,17 @@ class Order(models.Model):
         """التحقق من سداد الطلب بالكامل"""
         return self.remaining_amount <= 0
 
+    def calculate_total(self):
+        """حساب المبلغ الإجمالي من عناصر الطلب"""
+        total = 0
+        for item in self.items.all():
+            if item.quantity and item.unit_price:
+                total += item.quantity * item.unit_price
+
+        self.total_amount = total
+        self.save(update_fields=['total_amount'])
+        return total
+
     def get_smart_delivery_date(self):
         """إرجاع التاريخ المناسب حسب حالة الطلب"""
         # إذا كان الطلب يحتوي على معاينة، اعرض تاريخ المعاينة

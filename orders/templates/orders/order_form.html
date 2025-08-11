@@ -664,7 +664,7 @@
 <script src="{% static 'js/order_items.js' %}"></script>
 <script src="{% static 'js/order_form_simplified.js' %}"></script>
 <!-- ملفات JavaScript لرفع العقود إلى Google Drive -->
-<script src="{% static 'js/contract_google_drive_upload.js' %}"></script>
+<script src="{% static 'js/contract_google_drive_upload.js' %}?v={{ timestamp|default:'20250811' }}"></script>
 <script src="{% static 'js/contract_upload_status_checker.js' %}"></script>
 
 <script>

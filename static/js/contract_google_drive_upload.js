@@ -56,40 +56,21 @@ function handleContractFileSelection(file) {
     if (currentOrderId) {
         uploadContractToGoogleDrive();
     } else {
-        // في حالة الإنشاء الجديد، عرض معاينة فقط
-        showContractUploadPreview(file);
+        // في حالة الإنشاء الجديد، لا نعرض معاينة - سيتم الرفع عند الحفظ
+        // تم إزالة showContractUploadPreview لتجنب الإزعاج
+        console.log('تم اختيار ملف العقد:', file.name, 'سيتم رفعه عند حفظ الطلب');
     }
 }
 
 /**
- * عرض معاينة رفع العقد
+ * عرض معاينة رفع العقد - تم تعطيلها نهائياً
+ * تحديث: 2025-08-11 - إزالة جميع الإشعارات المنبثقة
  */
 function showContractUploadPreview(file) {
-    const customerName = getCustomerName();
-    const branchName = getBranchName();
-    const contractNumber = getContractNumber();
-    const date = getOrderDate();
-    const expectedFilename = generateContractFilename(customerName, branchName, date, contractNumber);
-    
-    Swal.fire({
-        icon: 'info',
-        title: 'معاينة رفع ملف العقد',
-        html: `
-            <div class="upload-preview">
-                <p><strong>سيتم رفع الملف إلى Google Drive عند حفظ الطلب</strong></p>
-                <hr>
-                <p><strong>اسم الملف المحدد:</strong> ${file.name}</p>
-                <p><strong>حجم الملف:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                <p><strong>اسم الملف في Google Drive:</strong> ${expectedFilename}</p>
-                <hr>
-                <p class="text-muted small">سيتم رفع الملف تلقائياً بعد حفظ الطلب</p>
-            </div>
-        `,
-        confirmButtonText: 'موافق',
-        customClass: {
-            confirmButton: 'btn btn-primary'
-        }
-    });
+    // تم تعطيل معاينة رفع العقد نهائياً لتجنب الإزعاج
+    // سيتم رفع الملف تلقائياً عند حفظ الطلب بدون أي إشعارات
+    console.log('تم تعطيل معاينة رفع العقد - الملف سيرفع تلقائياً');
+    return false;
 }
 
 /**
