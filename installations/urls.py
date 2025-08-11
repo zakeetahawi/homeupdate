@@ -61,6 +61,7 @@ urlpatterns = [
     path('driver/<int:driver_id>/delete/', views.delete_driver, name='delete_driver'),
     path('archive-list/', views.archive_list, name='archive_list'),
     path('installation/<int:installation_id>/update-status/', views.update_status, name='update_status'),
+    path('installation/<str:installation_code>/update-status/', views.update_status_by_code, name='update_status_by_code'),
     path('installation/<int:installation_id>/add-payment/', views.add_payment, name='add_payment'),
     path('installation/<int:installation_id>/add-modification-report/', views.add_modification_report, name='add_modification_report'),
     path('installation/<int:installation_id>/add-receipt-memo/', views.add_receipt_memo, name='add_receipt_memo'),

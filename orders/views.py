@@ -979,7 +979,16 @@ def order_update_by_number(request, order_number):
                     if form_item.changed_data and form_item.instance.pk in old_items_data:
                         item_changes = []
                         old_data = old_items_data[form_item.instance.pk]
-                        current_product_name = old_data['product'].name if old_data['product'] else 'غير محدد'
+
+                        # تحديد اسم المنتج للاستخدام في الرسائل
+                        # إذا تم تغيير المنتج، استخدم الاسم القديم والجديد
+                        # وإلا استخدم الاسم الحالي
+                        if 'product' in form_item.changed_data:
+                            old_product_name = old_data['product'].name if old_data['product'] else 'غير محدد'
+                            new_product_name = form_item.cleaned_data['product'].name if form_item.cleaned_data.get('product') else 'غير محدد'
+                        else:
+                            # لم يتم تغيير المنتج، استخدم الاسم الحالي
+                            current_product_name = old_data['product'].name if old_data['product'] else 'غير محدد'
 
                         for field in form_item.changed_data:
                             if field == 'product':
@@ -991,15 +1000,27 @@ def order_update_by_number(request, order_number):
                             elif field == 'quantity':
                                 old_value = old_data['quantity']
                                 new_value = form_item.cleaned_data[field]
-                                item_changes.append(f"تعديل كمية الصنف '{current_product_name}' من {old_value} إلى {new_value}")
+                                # استخدام الاسم المناسب حسب ما إذا تم تغيير المنتج أم لا
+                                if 'product' in form_item.changed_data:
+                                    item_changes.append(f"تعديل كمية الصنف من {old_value} إلى {new_value} (المنتج: {old_product_name} → {new_product_name})")
+                                else:
+                                    item_changes.append(f"تعديل كمية الصنف '{current_product_name}' من {old_value} إلى {new_value}")
                             elif field == 'unit_price':
                                 old_value = old_data['unit_price']
                                 new_value = form_item.cleaned_data[field]
-                                item_changes.append(f"تعديل سعر الصنف '{current_product_name}' من {old_value} ج.م إلى {new_value} ج.م")
+                                # استخدام الاسم المناسب حسب ما إذا تم تغيير المنتج أم لا
+                                if 'product' in form_item.changed_data:
+                                    item_changes.append(f"تعديل سعر الصنف من {old_value} ج.م إلى {new_value} ج.م (المنتج: {old_product_name} → {new_product_name})")
+                                else:
+                                    item_changes.append(f"تعديل سعر الصنف '{current_product_name}' من {old_value} ج.م إلى {new_value} ج.م")
                             elif field == 'notes':
                                 old_value = old_data['notes'] or 'بدون ملاحظات'
                                 new_value = form_item.cleaned_data[field] or 'بدون ملاحظات'
-                                item_changes.append(f"تعديل ملاحظات الصنف '{current_product_name}' من '{old_value}' إلى '{new_value}'")
+                                # استخدام الاسم المناسب حسب ما إذا تم تغيير المنتج أم لا
+                                if 'product' in form_item.changed_data:
+                                    item_changes.append(f"تعديل ملاحظات الصنف من '{old_value}' إلى '{new_value}' (المنتج: {old_product_name} → {new_product_name})")
+                                else:
+                                    item_changes.append(f"تعديل ملاحظات الصنف '{current_product_name}' من '{old_value}' إلى '{new_value}'")
 
                         if item_changes:
                             modified_items.extend(item_changes)

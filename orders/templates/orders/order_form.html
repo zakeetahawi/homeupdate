@@ -405,6 +405,24 @@
                                     </div>
                                     {% endif %}
                                 </div>
+
+                                <!-- Customer Status (VIP/Normal) -->
+                                <div class="mb-4">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label fw-bold">
+                                        <i class="fas fa-crown me-1"></i>وضع العميل
+                                    </label>
+                                    {{ form.status }}
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        حدد ما إذا كان العميل VIP أم عادي (يؤثر على أولوية التسليم)
+                                    </div>
+                                    {% if form.status.errors %}
+                                    <div class="alert alert-danger mt-2">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        {{ form.status.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
                                 
                                 <!-- Notes - تم نقله من الجانب الأيمن -->
                                 <div class="mb-4">

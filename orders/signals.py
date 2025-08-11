@@ -326,6 +326,31 @@ def order_status_change_notification(sender, instance, **kwargs):
             logger.error(f"خطأ في إنشاء إشعار تغيير حالة الطلب: {str(e)}")
 
 
+@receiver(pre_save, sender=Order)
+def comprehensive_order_status_change_notification(sender, instance, **kwargs):
+    """إنشاء إشعارات شاملة عند تغيير حالة الطلب (order_status)"""
+    if instance.pk:  # إذا كان الطلب موجوداً مسبقاً
+        try:
+            from accounts.services.simple_notifications import SimpleNotificationService
+            # الحصول على الحالة القديمة
+            old_instance = Order.objects.get(pk=instance.pk)
+            old_order_status = old_instance.order_status
+            new_order_status = instance.order_status
+
+            # إذا تغيرت حالة الطلب (order_status)
+            if old_order_status != new_order_status:
+                # إنشاء إشعارات شاملة لجميع الأقسام المعنية
+                SimpleNotificationService.notify_order_status_change_comprehensive(
+                    instance, old_order_status, new_order_status
+                )
+                logger.info(f"تم إنشاء إشعارات شاملة لتغيير حالة الطلب {instance.order_number} من {old_order_status} إلى {new_order_status}")
+
+        except Order.DoesNotExist:
+            pass
+        except Exception as e:
+            logger.error(f"خطأ في إنشاء إشعارات شاملة لتغيير حالة الطلب: {str(e)}")
+
+
 @receiver(post_save, sender=ManufacturingOrder)
 def manufacturing_order_notification(sender, instance, created, **kwargs):
     """إنشاء إشعارات عند إنشاء أو تحديث أمر تصنيع"""

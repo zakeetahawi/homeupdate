@@ -57,15 +57,17 @@ class InstallationStatusForm(forms.ModelForm):
             
             self.fields['status'].choices = possible_statuses
         
-        # إخفاء حقل تاريخ الإكمال إذا لم تكن الحالة مكتمل
-        if self.instance and self.instance.status != 'completed':
-            self.fields['completion_date'].widget = forms.HiddenInput()
+        # تعيين قيمة افتراضية لتاريخ الإكمال
+        if not self.instance.completion_date:
+            from django.utils import timezone
+            self.fields['completion_date'].initial = timezone.now()
 
     def clean(self):
         cleaned_data = super().clean()
         new_status = cleaned_data.get('status')
         reason = cleaned_data.get('reason')
-        
+        completion_date = cleaned_data.get('completion_date')
+
         # التحقق من صحة تغيير الحالة
         if self.instance and self.instance.pk:
             if new_status != self.instance.status:
@@ -73,11 +75,17 @@ class InstallationStatusForm(forms.ModelForm):
                     raise forms.ValidationError(
                         f'لا يمكن تغيير الحالة من {self.instance.get_status_display()} إلى {dict(self.instance.STATUS_CHOICES)[new_status]}'
                     )
-                
+
                 # التحقق من وجود سبب للتغييرات المهمة
                 if new_status in ['cancelled', 'modification_required'] and not reason:
                     raise forms.ValidationError('سبب التغيير مطلوب لهذا النوع من التغيير')
-        
+
+        # التحقق من تاريخ الإكمال عند تغيير الحالة إلى مكتمل
+        if new_status == 'completed':
+            if not completion_date:
+                from django.utils import timezone
+                cleaned_data['completion_date'] = timezone.now()
+
         return cleaned_data
 
 

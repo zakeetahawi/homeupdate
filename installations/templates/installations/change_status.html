@@ -44,10 +44,7 @@
                                             <label for="{{ form.completion_date.id_for_label }}" class="form-label">
                                                 <strong>تاريخ الإكمال</strong>
                                             </label>
-                                            <input type="date" name="completion_date" id="completion-date" 
-                                                   class="form-control" 
-                                                   value="{% if installation.completion_date %}{{ installation.completion_date|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}"
-                                                   required>
+                                            {{ form.completion_date }}
                                             <small class="form-text text-muted">
                                                 إذا لم يتم تحديد تاريخ، سيتم استخدام التاريخ الحالي
                                             </small>
@@ -157,13 +154,25 @@ $(document).ready(function() {
         var selectedStatus = $(this).val();
         if (selectedStatus === 'completed') {
             $('#completion-date-group').show();
-            $('#completion-date').prop('required', true);
+            $('#{{ form.completion_date.id_for_label }}').prop('required', true);
+
+            // تعيين التاريخ والوقت الحالي كقيمة افتراضية إذا لم يكن محدد
+            var currentField = $('#{{ form.completion_date.id_for_label }}');
+            if (!currentField.val()) {
+                var now = new Date();
+                var dateTimeString = now.getFullYear() + '-' +
+                                    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                                    String(now.getDate()).padStart(2, '0') + 'T' +
+                                    String(now.getHours()).padStart(2, '0') + ':' +
+                                    String(now.getMinutes()).padStart(2, '0');
+                currentField.val(dateTimeString);
+            }
         } else {
             $('#completion-date-group').hide();
-            $('#completion-date').prop('required', false);
+            $('#{{ form.completion_date.id_for_label }}').prop('required', false);
         }
     });
-    
+
     // تشغيل عند تحميل الصفحة
     $('#installation-status').trigger('change');
 });

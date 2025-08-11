@@ -610,14 +610,27 @@ def update_status(request, installation_id):
                     'success': False,
                     'error': f'الحالة غير صحيحة: {new_status}'
                 })
-            
+
             # حفظ الحالة القديمة
             old_status = installation.status
-            
-            # تحديث الحالة بدون التحقق من Google Drive
+
+            # التحقق من إمكانية تغيير الحالة
+            if not installation.can_change_status_to(new_status):
+                return JsonResponse({
+                    'success': False,
+                    'error': f'لا يمكن تغيير الحالة من {installation.get_status_display()} إلى {valid_statuses[new_status]}'
+                })
+
+            # تحديث الحالة
             installation.status = new_status
-            # استخدام update_fields لتجنب استدعاء دالة save الكاملة
-            installation.save(update_fields=['status'])
+
+            # إذا كانت الحالة الجديدة مكتمل، تعيين تاريخ الإكمال
+            if new_status == 'completed' and not installation.completion_date:
+                from django.utils import timezone
+                installation.completion_date = timezone.now()
+                installation.save(update_fields=['status', 'completion_date'])
+            else:
+                installation.save(update_fields=['status'])
             
             # إنشاء سجل حدث
             try:
@@ -637,12 +650,21 @@ def update_status(request, installation_id):
                 # لا نريد أن يفشل التحديث بسبب سجل الحدث
                 print(f"خطأ في إنشاء سجل الحدث: {e}")
             
+            # تحديث حالة الطلب عند الإكمال
+            if new_status == 'completed' and old_status != 'completed':
+                installation.order.order_status = 'completed'
+                installation.order.save(update_fields=['order_status'])
+
             # إرسال رسالة نجاح
-            messages.success(request, f'تم تحديث حالة التركيب بنجاح إلى: {valid_statuses.get(new_status, new_status)}')
-            
+            success_message = f'تم تحديث حالة التركيب بنجاح إلى: {valid_statuses.get(new_status, new_status)}'
+            if new_status == 'completed':
+                success_message += ' وتم إكمال الطلب'
+
+            messages.success(request, success_message)
+
             return JsonResponse({
                 'success': True,
-                'message': f'تم تحديث الحالة بنجاح إلى: {valid_statuses.get(new_status, new_status)}',
+                'message': success_message,
                 'new_status': new_status,
                 'new_status_display': valid_statuses.get(new_status, new_status)
             })
@@ -652,6 +674,106 @@ def update_status(request, installation_id):
                 'error': 'طريقة الطلب غير صحيحة'
             })
             
+    except InstallationSchedule.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'التركيب غير موجود'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'حدث خطأ أثناء تحديث الحالة: {str(e)}'
+        })
+
+
+@login_required
+def update_status_by_code(request, installation_code):
+    """تحديث حالة التركيب باستخدام كود التركيب"""
+    try:
+        # البحث عن التركيب باستخدام الكود
+        installation = get_object_or_404(InstallationSchedule, order__order_number=installation_code.replace('-T', ''))
+
+        if request.method == 'POST':
+            new_status = request.POST.get('status')
+
+            # التحقق من صحة الحالة الجديدة
+            if not new_status:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'لم يتم تحديد الحالة الجديدة'
+                })
+
+            # التحقق من أن الحالة صحيحة
+            valid_statuses = dict(InstallationSchedule.STATUS_CHOICES)
+            if new_status not in valid_statuses:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'الحالة غير صحيحة: {new_status}'
+                })
+
+            # حفظ الحالة القديمة
+            old_status = installation.status
+
+            # التحقق من إمكانية تغيير الحالة
+            if not installation.can_change_status_to(new_status):
+                return JsonResponse({
+                    'success': False,
+                    'error': f'لا يمكن تغيير الحالة من {installation.get_status_display()} إلى {valid_statuses[new_status]}'
+                })
+
+            # تحديث الحالة
+            installation.status = new_status
+
+            # إذا كانت الحالة الجديدة مكتمل، تعيين تاريخ الإكمال
+            if new_status == 'completed' and not installation.completion_date:
+                from django.utils import timezone
+                installation.completion_date = timezone.now()
+                installation.save(update_fields=['status', 'completion_date'])
+            else:
+                installation.save(update_fields=['status'])
+
+            # إنشاء سجل حدث
+            try:
+                from .models import InstallationEventLog
+                InstallationEventLog.objects.create(
+                    installation=installation,
+                    event_type='status_change',
+                    description=f'تم تغيير الحالة من {valid_statuses.get(old_status, old_status)} إلى {valid_statuses.get(new_status, new_status)}',
+                    user=request.user,
+                    metadata={
+                        'old_status': old_status,
+                        'new_status': new_status,
+                        'changed_by': request.user.username
+                    }
+                )
+            except Exception as e:
+                # لا نريد أن يفشل التحديث بسبب سجل الحدث
+                print(f"خطأ في إنشاء سجل الحدث: {e}")
+
+            # تحديث حالة الطلب عند الإكمال
+            if new_status == 'completed' and old_status != 'completed':
+                installation.order.order_status = 'completed'
+                installation.order.save(update_fields=['order_status'])
+
+            # إرسال رسالة نجاح
+            success_message = f'تم تحديث حالة التركيب بنجاح إلى: {valid_statuses.get(new_status, new_status)}'
+            if new_status == 'completed':
+                success_message += ' وتم إكمال الطلب'
+
+            messages.success(request, success_message)
+
+            return JsonResponse({
+                'success': True,
+                'message': success_message,
+                'new_status': new_status,
+                'new_status_display': valid_statuses.get(new_status, new_status)
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'طريقة الطلب غير صحيحة'
+            })
+
     except InstallationSchedule.DoesNotExist:
         return JsonResponse({
             'success': False,

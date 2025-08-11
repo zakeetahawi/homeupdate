@@ -404,6 +404,115 @@ class SimpleNotificationService:
 
         logger.info(f"تم إنشاء {len(notifications)} إشعار لتعديل الطلب {order.order_number}")
         return notifications
+
+    @classmethod
+    def notify_order_status_change_comprehensive(cls, order, old_status, new_status, changed_by=None):
+        """إشعار شامل لتغيير حالة الطلب لجميع الأقسام المعنية"""
+        notifications = []
+
+        # تحديد الرسالة حسب نوع التغيير
+        status_messages = {
+            'pending_approval': 'في انتظار الموافقة',
+            'pending': 'قيد الانتظار',
+            'in_progress': 'قيد التصنيع',
+            'ready_install': 'جاهز للتركيب',
+            'completed': 'مكتمل',
+            'delivered': 'تم التسليم',
+            'rejected': 'مرفوض',
+            'cancelled': 'ملغي',
+        }
+
+        old_status_text = status_messages.get(old_status, old_status)
+        new_status_text = status_messages.get(new_status, new_status)
+
+        # تحديد الأقسام المعنية حسب الحالة الجديدة
+        departments_to_notify = []
+        priority = 'normal'
+
+        if new_status == 'pending_approval':
+            departments_to_notify = ['manufacturing', 'administration']
+            priority = 'high'
+        elif new_status == 'in_progress':
+            departments_to_notify = ['manufacturing', 'quality_control']
+            priority = 'high'
+        elif new_status == 'ready_install':
+            departments_to_notify = ['installations', 'customer_service']
+            priority = 'high'
+        elif new_status == 'completed':
+            departments_to_notify = ['installations', 'customer_service', 'administration', 'accounting']
+            priority = 'normal'
+        elif new_status == 'delivered':
+            departments_to_notify = ['customer_service', 'administration', 'accounting']
+            priority = 'normal'
+        elif new_status == 'rejected':
+            departments_to_notify = ['customer_service', 'administration']
+            priority = 'high'
+        elif new_status == 'cancelled':
+            departments_to_notify = ['manufacturing', 'installations', 'customer_service', 'administration']
+            priority = 'medium'
+
+        # إرسال إشعارات للأقسام المعنية
+        for dept_code in departments_to_notify:
+            try:
+                from accounts.models import Department
+                department = Department.objects.get(code=dept_code)
+                users = department.users.filter(is_active=True)
+
+                for user in users:
+                    # تجنب إرسال إشعار للشخص الذي قام بالتغيير
+                    if changed_by and user == changed_by:
+                        continue
+
+                    notification = cls.create_order_notification(
+                        customer_name=order.customer.name,
+                        order_number=order.order_number,
+                        status=f'تم تغيير حالة الطلب من "{old_status_text}" إلى "{new_status_text}"',
+                        notification_type='status_change',
+                        priority=priority,
+                        recipient=user,
+                        related_object=order
+                    )
+                    if notification:
+                        notifications.append(notification)
+
+            except Department.DoesNotExist:
+                logger.warning(f"القسم {dept_code} غير موجود")
+
+        # إشعار البائع/منشئ الطلب
+        if order.salesperson and (not changed_by or order.salesperson.user != changed_by):
+            notification = cls.create_order_notification(
+                customer_name=order.customer.name,
+                order_number=order.order_number,
+                status=f'تم تغيير حالة طلبك من "{old_status_text}" إلى "{new_status_text}"',
+                notification_type='status_change',
+                priority=priority,
+                recipient=order.salesperson.user,
+                related_object=order
+            )
+            if notification:
+                notifications.append(notification)
+
+        # إشعار المدير العام
+        from accounts.models import User
+        admin_users = User.objects.filter(is_superuser=True, is_active=True)
+        for admin in admin_users:
+            if changed_by and admin == changed_by:
+                continue
+
+            notification = cls.create_order_notification(
+                customer_name=order.customer.name,
+                order_number=order.order_number,
+                status=f'تم تغيير حالة الطلب من "{old_status_text}" إلى "{new_status_text}"',
+                notification_type='status_change',
+                priority=priority,
+                recipient=admin,
+                related_object=order
+            )
+            if notification:
+                notifications.append(notification)
+
+        logger.info(f"تم إنشاء {len(notifications)} إشعار لتغيير حالة الطلب {order.order_number} من {old_status} إلى {new_status}")
+        return notifications
     
     @classmethod
     def notify_complaint_created(cls, complaint):

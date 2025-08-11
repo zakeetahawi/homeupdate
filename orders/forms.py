@@ -163,6 +163,10 @@ class OrderForm(forms.ModelForm):
                 'data-placeholder': 'اختر العميل',
                 'data-allow-clear': 'true'
             }),
+            'status': forms.Select(attrs={
+                'class': 'form-select form-select-sm',
+                'data-help': 'حدد وضع العميل (عادي أو VIP)'
+            }),
             'tracking_status': forms.Select(attrs={'class': 'form-select form-select-sm'}),
             'invoice_number': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
             'invoice_number_2': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),

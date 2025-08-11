@@ -589,8 +589,8 @@
                                         <!-- زر الرد على الرفض إذا لم يتم الرد بعد -->
                                         {% if order.created_by == user %}
                                             <div class="mt-2">
-                                                <button class="btn btn-outline-primary btn-sm" 
-                                                        onclick="showReplyToRejectionModal({{ manufacturing_order.manufacturing_code }})">
+                                                <button class="btn btn-outline-primary btn-sm"
+                                                        onclick="showReplyToRejectionModal({{ manufacturing_order.id }})">
                                                     <i class="fas fa-reply me-1"></i>
                                                     الرد على الرفض
                                                 </button>
