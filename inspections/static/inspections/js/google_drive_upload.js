@@ -46,9 +46,9 @@ function handleFileSelection(file) {
         return;
     }
     
-    // التحقق من حجم الملف (أقل من 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-        showError('حجم الملف كبير جداً (الحد الأقصى 10MB)');
+    // التحقق من حجم الملف (أقل من 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+        showError('حجم الملف كبير جداً (الحد الأقصى 50MB)');
         return;
     }
     

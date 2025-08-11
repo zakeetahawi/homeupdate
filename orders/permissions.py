@@ -52,15 +52,32 @@ def get_user_orders_queryset(user):
     # فني المعاينة يرى طلبات المعاينة فقط
     if hasattr(user, 'is_inspection_technician') and user.is_inspection_technician:
         return Order.objects.filter(selected_types__icontains='inspection')
-    
+
+    # مدير النظام بدون دور محدد يرى طلباته فقط
+    if user.is_superuser:
+        return Order.objects.filter(created_by=user)
+
     # المستخدم العادي لا يرى أي طلبات
     return Order.objects.none()
 
 
 def can_user_view_order(user, order):
     """التحقق من إمكانية المستخدم لعرض طلب معين"""
-    if user.is_superuser:
+    # فحص الأدوار المخصصة أولاً قبل is_superuser
+
+    # المدير العام يرى جميع الطلبات
+    if hasattr(user, 'is_general_manager') and user.is_general_manager:
         return True
+
+    # مسؤول المصنع يرى جميع الطلبات
+    if hasattr(user, 'is_factory_manager') and user.is_factory_manager:
+        return True
+
+    # إذا كان superuser بدون دور محدد، يتبع قواعد البائع
+    if user.is_superuser:
+        # البحث في الطلبات التي يمكن للمستخدم رؤيتها
+        user_orders = get_user_orders_queryset(user)
+        return user_orders.filter(id=order.id).exists()
     
     # المدير العام يرى جميع الطلبات
     if hasattr(user, 'is_general_manager') and user.is_general_manager:

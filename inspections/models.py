@@ -1,3 +1,4 @@
+import os
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
@@ -6,6 +7,18 @@ from django.utils import timezone
 from model_utils.tracker import FieldTracker
 import re
 from datetime import timedelta
+
+
+def validate_inspection_pdf_file(value):
+    """التحقق من أن ملف المعاينة المرفوع هو PDF"""
+    if value:
+        ext = os.path.splitext(value.name)[1]
+        if ext.lower() != '.pdf':
+            raise ValidationError('يجب أن يكون الملف من نوع PDF فقط')
+
+        # التحقق من حجم الملف (أقل من 50 ميجابايت)
+        if value.size > 50 * 1024 * 1024:
+            raise ValidationError('حجم الملف يجب أن يكون أقل من 50 ميجابايت')
 
 class InspectionEvaluation(models.Model):
     CRITERIA_CHOICES = [
@@ -190,7 +203,14 @@ class Inspection(models.Model):
     )
     is_from_orders = models.BooleanField(_('من قسم الطلبات'), default=False)
     windows_count = models.IntegerField(_('عدد الشبابيك'), null=True, blank=True)
-    inspection_file = models.FileField(_('ملف المعاينة'), upload_to='inspections/files/', null=True, blank=True)
+    inspection_file = models.FileField(
+        _('ملف المعاينة'),
+        upload_to='inspections/files/',
+        null=True,
+        blank=True,
+        validators=[validate_inspection_pdf_file],
+        help_text='يجب أن يكون الملف من نوع PDF وأقل من 50 ميجابايت'
+    )
     # حقول Google Drive
     google_drive_file_id = models.CharField(_('معرف ملف Google Drive'), max_length=255, blank=True, null=True)
     google_drive_file_url = models.URLField(_('رابط ملف Google Drive'), blank=True, null=True)

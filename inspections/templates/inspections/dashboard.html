@@ -137,20 +137,41 @@
                                     </td>
                                     <td>{{ inspection.inspector.get_full_name }}</td>
                                     <td>
-                                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                            <a href="{{ inspection.google_drive_file_url }}" target="_blank" title="عرض ملف المعاينة في Google Drive"
-                                               data-inspection-id="{{ inspection.inspection_code }}">
-                                                <i class="fas fa-file-pdf text-danger" style="font-size: 20px;"></i>
-                                            </a>
-                                        {% elif inspection.inspection_file %}
-                                            <span title="جاري رفع الملف إلى Google Drive"
-                                                  data-inspection-id="{{ inspection.inspection_code }}"
-                                                  data-upload-pending="true">
-                                                <i class="fas fa-file-pdf text-warning" style="font-size: 20px;"></i>
-                                                <i class="fas fa-clock text-warning" style="font-size: 10px; position: relative; top: -8px; left: -3px;"></i>
-                                            </span>
+                                        {% if inspection.inspection_file %}
+                                            <div class="d-flex flex-column gap-1">
+                                                <!-- الملف المحلي -->
+                                                <a href="{{ inspection.inspection_file.url }}" target="_blank"
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="عرض ملف المعاينة محلياً">
+                                                    <i class="fas fa-file-pdf me-1"></i>
+                                                    محلي
+                                                </a>
+
+                                                {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                                    <!-- رابط Google Drive -->
+                                                    <a href="{{ inspection.google_drive_file_url }}" target="_blank"
+                                                       class="btn btn-sm btn-success"
+                                                       title="عرض ملف المعاينة في Google Drive"
+                                                       data-inspection-id="{{ inspection.inspection_code }}">
+                                                        <i class="fas fa-cloud me-1"></i>
+                                                        Drive
+                                                    </a>
+                                                {% else %}
+                                                    <!-- جاري الرفع -->
+                                                    <span class="badge bg-warning text-dark"
+                                                          title="جاري رفع الملف إلى Google Drive"
+                                                          data-inspection-id="{{ inspection.inspection_code }}"
+                                                          data-upload-pending="true">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        جاري الرفع
+                                                    </span>
+                                                {% endif %}
+                                            </div>
                                         {% else %}
-                                            <i class="fas fa-file-pdf text-muted" style="font-size: 20px;" title="لا يوجد ملف"></i>
+                                            <span class="text-muted">
+                                                <i class="fas fa-file-slash me-1"></i>
+                                                لا يوجد ملف
+                                            </span>
                                         {% endif %}
                                     </td>
                                     <td>

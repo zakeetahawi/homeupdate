@@ -513,6 +513,15 @@
                                         </a>
                                         {% endif %}
                                     </div>
+                                    {% elif form.instance.contract_file and form.instance.pk %}
+                                    <!-- زر رفع يدوي للعقد -->
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="uploadContractToGoogleDrive()">
+                                            <i class="fas fa-cloud-upload-alt me-1"></i>
+                                            رفع العقد إلى Google Drive
+                                        </button>
+                                        <div class="contract-upload-status mt-2" data-order-id="{{ form.instance.pk }}"></div>
+                                    </div>
                                     {% endif %}
                                 </div>
                                 
@@ -654,4 +663,24 @@
 <!-- ملفات الجافاسكريبت المخصصة -->
 <script src="{% static 'js/order_items.js' %}"></script>
 <script src="{% static 'js/order_form_simplified.js' %}"></script>
+<!-- ملفات JavaScript لرفع العقود إلى Google Drive -->
+<script src="{% static 'js/contract_google_drive_upload.js' %}"></script>
+<script src="{% static 'js/contract_upload_status_checker.js' %}"></script>
+
+<script>
+// تعيين معرف الطلب للعقود إذا كان في وضع التعديل
+{% if order and order.pk %}
+    // تعيين معرف الطلب الحالي لنظام رفع العقود
+    if (typeof setCurrentOrderId === 'function') {
+        setCurrentOrderId({{ order.pk }});
+    }
+
+    // بدء فحص حالة رفع العقد إذا لم يتم رفعه بعد
+    {% if order.contract_file and not order.is_contract_uploaded_to_drive %}
+        if (typeof contractUploadStatusChecker !== 'undefined') {
+            contractUploadStatusChecker.startChecking({{ order.pk }});
+        }
+    {% endif %}
+{% endif %}
+</script>
 {% endblock %}

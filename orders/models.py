@@ -1,15 +1,18 @@
 import json
 import os
+import logging
 from datetime import timedelta
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
-from accounts.utils import send_notification
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from model_utils import FieldTracker
+
+logger = logging.getLogger(__name__)
 
 
 def validate_pdf_file(value):
@@ -19,9 +22,9 @@ def validate_pdf_file(value):
         if ext.lower() != '.pdf':
             raise ValidationError('يجب أن يكون الملف من نوع PDF فقط')
 
-        # التحقق من حجم الملف (أقل من 10 ميجابايت)
-        if value.size > 10 * 1024 * 1024:
-            raise ValidationError('حجم الملف يجب أن يكون أقل من 10 ميجابايت')
+        # التحقق من حجم الملف (أقل من 50 ميجابايت)
+        if value.size > 50 * 1024 * 1024:
+            raise ValidationError('حجم الملف يجب أن يكون أقل من 50 ميجابايت')
 
 
 class Order(models.Model):
@@ -251,7 +254,7 @@ class Order(models.Model):
         blank=True,
         validators=[validate_pdf_file],
         verbose_name='ملف العقد',
-        help_text='يجب أن يكون الملف من نوع PDF وأقل من 10 ميجابايت'
+        help_text='يجب أن يكون الملف من نوع PDF وأقل من 50 ميجابايت'
     )
     payment_verified = models.BooleanField(
         default=False,
@@ -439,17 +442,16 @@ class Order(models.Model):
             if not self.pk:
                 raise models.ValidationError('فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي')
 
-            # تم إزالة التحقق من Google Drive بناءً على طلب المستخدم
             # رفع ملف العقد إلى Google Drive إذا كان موجوداً ولم يتم رفعه مسبقاً
-            # if self.contract_file and not self.is_contract_uploaded_to_drive:
-            #     try:
-            #         success, message = self.upload_contract_to_google_drive()
-            #         if success:
-            #             pass
-            #         else:
-            #             pass
-            #     except Exception as e:
-            #         pass
+            if self.contract_file and not self.is_contract_uploaded_to_drive:
+                try:
+                    success, message = self.upload_contract_to_google_drive()
+                    if success:
+                        logger.info(f"تم رفع ملف العقد للطلب {self.order_number} بنجاح")
+                    else:
+                        logger.warning(f"فشل في رفع ملف العقد للطلب {self.order_number}: {message}")
+                except Exception as e:
+                    logger.error(f"خطأ في رفع ملف العقد للطلب {self.order_number}: {str(e)}")
             # حساب السعر النهائي بعد الحفظ (بعد وجود pk)
             try:
                 final_price = self.calculate_final_price()
@@ -470,24 +472,7 @@ class Order(models.Model):
             raise
     def notify_status_change(self, old_status, new_status, changed_by=None, notes=''):
         """إرسال إشعار عند تغيير حالة تتبع الطلب"""
-        status_messages = {
-            'pending': _('الطلب في قائمة الانتظار'),
-            'processing': _('جاري معالجة الطلب'),
-            'warehouse': _('الطلب في المستودع'),
-            'factory': _('الطلب في المصنع'),
-            'cutting': _('جاري قص القماش'),
-            'ready': _('الطلب جاهز للتسليم'),
-            'delivered': _('تم تسليم الطلب'),
-        }
-        title = _('تحديث حالة الطلب #{}'.format(self.order_number))
-        message = _('{}\nتم تغيير الحالة من {} إلى {}'.format(
-            status_messages.get(new_status, ''),
-            self.get_tracking_status_display(),
-            dict(self.TRACKING_STATUS_CHOICES)[new_status]
-        ))
-        if notes:
-            message += f'\nملاحظات: {notes}'
-        # إنشاء سجل لتغيير الحالة
+        # إنشاء سجل لتغيير الحالة فقط
         OrderStatusLog.objects.create(
             order=self,
             old_status=old_status,
@@ -495,38 +480,7 @@ class Order(models.Model):
             changed_by=changed_by,
             notes=notes
         )
-        # إرسال إشعار للعميل
-        send_notification(
-            title=title,
-            message=message,
-            sender=changed_by or self.created_by,
-            sender_department_code='orders',
-            target_department_code='customers',
-            target_branch=self.branch,
-            priority='high' if new_status in ['ready', 'delivered'] else 'medium',
-            related_object=self
-        )
-    def send_status_notification(self):
-        """إرسال إشعار عند تغيير حالة الطلب"""
-        status_messages = {
-            'pending': _('تم إنشاء طلب جديد وهو قيد الانتظار'),
-            'processing': _('تم بدء العمل على الطلب'),
-            'completed': _('تم إكمال الطلب بنجاح'),
-            'cancelled': _('تم إلغاء الطلب')
-        }
-        title = _('تحديث حالة الطلب #{}'.format(self.order_number))
-        message = status_messages.get(self.status, _('تم تحديث حالة الطلب'))
-        # إرسال إشعار للعميل
-        send_notification(
-            title=title,
-            message=message,
-            sender=self.created_by,  # استخدام created_by فقط لأن last_modified_by غير موجود
-            sender_department_code='orders',
-            target_department_code='customers',
-            target_branch=self.branch,
-            priority='high' if self.status in ['completed', 'cancelled'] else 'medium',
-            related_object=self
-        )
+
 
     def calculate_expected_delivery_date(self):
         """حساب تاريخ التسليم المتوقع بناءً على وضع الطلب ونوع الطلب"""
@@ -848,21 +802,7 @@ class Order(models.Model):
             self.is_fully_completed = is_completed
             self.save(update_fields=['is_fully_completed'])
             
-            # إرسال إشعار عند اكتمال الطلب
-            if is_completed and self.created_by:
-                try:
-                    send_notification(
-                        title="تم إكمال الطلب",
-                        message=f"تم إكمال الطلب {self.order_number} بنجاح",
-                        sender=self.created_by,
-                        sender_department_code='orders',
-                        target_department_code='customers',
-                        target_branch=self.branch,
-                        priority='high',
-                        related_object=self
-                    )
-                except Exception as e:
-                    print(f"خطأ في إرسال إشعار إكمال الطلب: {e}")
+
     
     def update_all_statuses(self):
         """تحديث جميع الحالات"""

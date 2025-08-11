@@ -851,17 +851,41 @@
                             <th>ملف المعاينة</th>
                             <td>
                                 {% for inspection in order.inspections.all %}
-                                    {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                        <a href="{{ inspection.google_drive_file_url }}" target="_blank" title="عرض ملف المعاينة {{ forloop.counter }} في Google Drive">
-                                            <i class="fas fa-file-pdf text-danger" style="font-size: 20px;"></i>
-                                        </a>
-                                    {% elif inspection.inspection_file %}
-                                        <span title="جاري رفع ملف المعاينة {{ forloop.counter }} إلى Google Drive">
-                                            <i class="fas fa-file-pdf text-warning" style="font-size: 20px;"></i>
-                                            <i class="fas fa-clock text-warning" style="font-size: 10px; position: relative; top: -8px; left: -3px;"></i>
-                                        </span>
-                                    {% endif %}
-                                    {% if not forloop.last %}<br>{% endif %}
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        {% if inspection.inspection_file %}
+                                            <!-- الملف المحلي -->
+                                            <a href="{{ inspection.inspection_file.url }}" target="_blank"
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="عرض ملف المعاينة {{ forloop.counter }} محلياً">
+                                                <i class="fas fa-file-pdf me-1"></i>
+                                                عرض محلي
+                                            </a>
+                                        {% endif %}
+
+                                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                            <!-- رابط Google Drive -->
+                                            <a href="{{ inspection.google_drive_file_url }}" target="_blank"
+                                               class="btn btn-sm btn-success"
+                                               title="عرض ملف المعاينة {{ forloop.counter }} في Google Drive">
+                                                <i class="fas fa-cloud me-1"></i>
+                                                Google Drive
+                                            </a>
+                                        {% elif inspection.inspection_file %}
+                                            <!-- جاري الرفع -->
+                                            <span class="badge bg-warning text-dark"
+                                                  title="جاري رفع ملف المعاينة {{ forloop.counter }} إلى Google Drive">
+                                                <i class="fas fa-clock me-1"></i>
+                                                جاري الرفع
+                                            </span>
+                                        {% endif %}
+
+                                        {% if not inspection.inspection_file %}
+                                            <span class="text-muted">
+                                                <i class="fas fa-file-slash me-1"></i>
+                                                لم يتم رفع ملف المعاينة {{ forloop.counter }} بعد
+                                            </span>
+                                        {% endif %}
+                                    </div>
                                 {% endfor %}
                             </td>
                         </tr>
@@ -1169,18 +1193,33 @@
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                    <a href="{{ inspection.google_drive_file_url }}" target="_blank"
-                                       class="btn btn-sm btn-outline-danger"
-                                       title="عرض ملف المعاينة في Google Drive">
-                                        <i class="fas fa-file-pdf me-1"></i>
-                                        عرض الملف
-                                    </a>
-                                {% elif inspection.inspection_file %}
-                                    <span class="badge bg-warning text-dark" title="جاري رفع الملف إلى Google Drive">
-                                        <i class="fas fa-clock me-1"></i>
-                                        جاري الرفع
-                                    </span>
+                                {% if inspection.inspection_file %}
+                                    <div class="d-flex flex-column gap-1">
+                                        <!-- الملف المحلي -->
+                                        <a href="{{ inspection.inspection_file.url }}" target="_blank"
+                                           class="btn btn-sm btn-outline-primary"
+                                           title="عرض ملف المعاينة محلياً">
+                                            <i class="fas fa-file-pdf me-1"></i>
+                                            محلي
+                                        </a>
+
+                                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                            <!-- رابط Google Drive -->
+                                            <a href="{{ inspection.google_drive_file_url }}" target="_blank"
+                                               class="btn btn-sm btn-success"
+                                               title="عرض ملف المعاينة في Google Drive">
+                                                <i class="fas fa-cloud me-1"></i>
+                                                Drive
+                                            </a>
+                                        {% else %}
+                                            <!-- جاري الرفع -->
+                                            <span class="badge bg-warning text-dark"
+                                                  title="جاري رفع الملف إلى Google Drive">
+                                                <i class="fas fa-clock me-1"></i>
+                                                جاري الرفع
+                                            </span>
+                                        {% endif %}
+                                    </div>
                                 {% else %}
                                     <span class="text-muted">
                                         <i class="fas fa-file-slash me-1"></i>

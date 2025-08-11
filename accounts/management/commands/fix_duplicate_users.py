@@ -135,15 +135,7 @@ class Command(BaseCommand):
                         # نقل الأقسام
                         primary_user.departments.add(*dup_user.departments.all())
 
-                        # نقل الإشعارات
-                        from accounts.models import Notification
-                        Notification.objects.filter(sender=dup_user).update(sender=primary_user)
-                        Notification.objects.filter(read_by=dup_user).update(read_by=primary_user)
-
-                        # نقل الإشعارات المستلمة
-                        for notification in Notification.objects.filter(target_users=dup_user):
-                            notification.target_users.remove(dup_user)
-                            notification.target_users.add(primary_user)
+                        # تم حذف نظام الإشعارات
 
                         # حذف المستخدم المكرر
                         self.stdout.write(f'حذف المستخدم المكرر (ID: {dup_user.id})')

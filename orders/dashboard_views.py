@@ -80,10 +80,13 @@ def orders_dashboard(request):
     completed_orders = orders.filter(tracking_status__in=['ready', 'delivered']).count()
     ready_install_orders = orders.filter(tracking_status='ready').count()
     
-    # إجمالي الإيرادات لجميع الطلبات بغض النظر عن الحالة
-    total_revenue = orders.aggregate(
-        total=Sum('total_amount')
-    )['total'] or 0
+    # إجمالي الإيرادات - مسؤول المصنع فقط لا يرى الإيرادات
+    if hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager and not request.user.is_superuser:
+        total_revenue = 0  # مسؤول المصنع لا يرى الإيرادات
+    else:
+        total_revenue = orders.aggregate(
+            total=Sum('total_amount')
+        )['total'] or 0
     
     # أحدث الطلبات
     recent_orders = orders.order_by('-created_at')[:10]
@@ -95,7 +98,10 @@ def orders_dashboard(request):
     # معلومات فلتر السنة
     available_years = get_available_years()
     selected_year = request.GET.get('year', '')
-    
+
+    # تحديد ما إذا كان يجب إخفاء الإيرادات - مسؤول المصنع فقط (وليس مدير النظام)
+    hide_revenue = hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager and not request.user.is_superuser
+
     context = {
         'inspection_count': inspection_count,
         'installation_count': installation_count,
@@ -111,6 +117,7 @@ def orders_dashboard(request):
         'currency_symbol': currency_symbol,
         'available_years': available_years,
         'selected_year': selected_year,
+        'hide_revenue': hide_revenue,
     }
     
     return render(request, 'orders/orders_dashboard.html', context)

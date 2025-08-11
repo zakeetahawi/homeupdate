@@ -20,14 +20,7 @@ urlpatterns = [
         name='auth_compat_login_alias'
     ),
 
-    # Notification URLs
-    path('notifications/', views.notifications_list, name='notifications'),
-    path('notifications/<int:notification_id>/',
-         views.notification_detail, name='notification_detail'),
-    path('notifications/<int:notification_id>/mark-read/',
-         views.mark_notification_read, name='mark_notification_read'),
-    path('notifications/mark-all-read/',
-         views.mark_all_notifications_read, name='mark_all_notifications_read'),
+
 
     # Company Info URLs
     path('company-info/', views.company_info_view, name='company_info'),
@@ -76,4 +69,16 @@ urlpatterns = [
 
     # Theme Management
     path('save-theme/', views.set_default_theme, name='set_default_theme'),
+
+    # 🎨 نظام الإشعارات البسيط والجميل
+    path('notifications/data/', views.get_notifications_data, name='notifications_data'),
+    path('notifications/orders/', views.order_notifications_list, name='order_notifications_list'),
+    path('notifications/complaints/', views.complaint_notifications_list, name='complaint_notifications_list'),
+    path('notifications/order/<int:notification_id>/mark-read/', views.mark_order_notification_read, name='mark_order_notification_read'),
+    path('notifications/complaint/<int:notification_id>/mark-read/', views.mark_complaint_notification_read, name='mark_complaint_notification_read'),
+    path('notifications/orders/mark-all-read/', views.mark_all_order_notifications_read, name='mark_all_order_notifications_read'),
+    path('notifications/complaints/mark-all-read/', views.mark_all_complaint_notifications_read, name='mark_all_complaint_notifications_read'),
+    path('notifications/<str:notification_type>/<int:notification_id>/', views.notification_detail, name='notification_detail'),
+    path('notifications/', views.notifications_list, name='notifications_list'),
+    path('complaints/', views.complaints_list, name='complaints_list'),
 ]

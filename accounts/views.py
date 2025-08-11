@@ -8,9 +8,10 @@ from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 
-from .models import Notification, CompanyInfo, FormField, Department, Salesperson, Branch, Role, UserRole
-from .utils import get_user_notifications
+from .models import CompanyInfo, FormField, Department, Salesperson, Branch, Role, UserRole, SimpleNotification, ComplaintNotification
 from .forms import CompanyInfoForm, FormFieldForm, DepartmentForm, SalespersonForm, RoleForm, RoleAssignForm
+
+# سيتم إضافة دوال الإشعارات هنا
 
 # الحصول على نموذج المستخدم المخصص
 User = get_user_model()
@@ -118,98 +119,6 @@ def profile_view(request):
     }
     return render(request, 'accounts/profile.html', context)
 
-@login_required
-def notifications_list(request):
-    """
-    View for listing all notifications
-    """
-    # Get filter parameters
-    filter_type = request.GET.get('filter', 'all')
-
-    # Get all notifications for the user
-    all_notifications = get_user_notifications(request.user)
-
-    # Filter notifications based on read status
-    if filter_type == 'unread':
-        notifications = all_notifications.filter(is_read=False)
-    elif filter_type == 'read':
-        notifications = all_notifications.filter(is_read=True)
-    else:  # 'all'
-        notifications = all_notifications
-
-    # Paginate notifications
-    paginator = Paginator(notifications, 10)  # Show 10 notifications per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'page_obj': page_obj,
-        'filter_type': filter_type,
-        'title': 'الإشعارات',
-    }
-    return render(request, 'accounts/notifications.html', context)
-
-@login_required
-def notification_detail(request, notification_id):
-    """
-    View for notification detail
-    """
-    # Get notification
-    notification = get_object_or_404(Notification, id=notification_id)
-
-    # Check if user has access to this notification
-    user_notifications = get_user_notifications(request.user)
-    if notification not in user_notifications:
-        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذا الإشعار.')
-        return redirect('accounts:notifications')
-
-    # Mark notification as read
-    if not notification.is_read:
-        notification.mark_as_read(request.user)
-
-    context = {
-        'notification': notification,
-        'title': notification.title,
-    }
-    return render(request, 'accounts/notification_detail.html', context)
-
-@login_required
-def mark_notification_read(request, notification_id):
-    """
-    View for marking notification as read
-    """
-    if request.method == 'POST':
-        # Get notification
-        notification = get_object_or_404(Notification, id=notification_id)
-
-        # Check if user has access to this notification
-        user_notifications = get_user_notifications(request.user)
-        if notification not in user_notifications:
-            return JsonResponse({'success': False, 'message': 'ليس لديك صلاحية للوصول إلى هذا الإشعار.'})
-
-        # Mark notification as read
-        notification.mark_as_read(request.user)
-
-        return JsonResponse({'success': True})
-
-    return JsonResponse({'success': False, 'message': 'طريقة غير صالحة.'})
-
-@login_required
-def mark_all_notifications_read(request):
-    """
-    View for marking all notifications as read
-    """
-    if request.method == 'POST':
-        # Get all unread notifications for the user
-        unread_notifications = get_user_notifications(request.user, unread_only=True)
-
-        # Mark all as read
-        for notification in unread_notifications:
-            notification.mark_as_read(request.user)
-
-        return JsonResponse({'success': True, 'count': unread_notifications.count()})
-
-    return JsonResponse({'success': False, 'message': 'طريقة غير صالحة.'})
 
 @login_required
 def company_info_view(request):
@@ -867,6 +776,445 @@ def set_default_theme(request):
             })
     
     return JsonResponse({
-        'success': False, 
+        'success': False,
         'message': 'طريقة غير مدعومة'
     })
+
+
+# ==================== 🎨 نظام الإشعارات البسيط والجميل ====================
+
+@login_required
+def get_notifications_data(request):
+    """الحصول على بيانات الإشعارات للواجهة"""
+    try:
+        # إشعارات الطلبات - مدير النظام له صلاحيات مطلقة
+        if request.user.is_superuser or \
+           (hasattr(request.user, 'is_general_manager') and request.user.is_general_manager) or \
+           (hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager):
+            # المدير العام ومسؤول المصنع يرون كل الإشعارات
+            order_notifications = SimpleNotification.objects.all().order_by('-created_at')[:20]
+            complaint_notifications = ComplaintNotification.objects.all().order_by('-created_at')[:20]
+        elif hasattr(request.user, 'is_region_manager') and request.user.is_region_manager:
+            # مدير المنطقة يرى إشعارات فروعه
+            managed_branches = request.user.managed_branches.all()
+            if managed_branches.exists():
+                # استيراد Order model محلياً لتجنب circular import
+                from orders.models import Order
+                order_notifications = SimpleNotification.objects.filter(
+                    related_object_id__in=Order.objects.filter(branch__in=managed_branches).values_list('id', flat=True)
+                ).order_by('-created_at')[:15]
+            else:
+                order_notifications = SimpleNotification.objects.filter(recipient=request.user).order_by('-created_at')[:10]
+            complaint_notifications = ComplaintNotification.objects.filter(recipient=request.user).order_by('-created_at')[:10]
+        elif hasattr(request.user, 'is_branch_manager') and request.user.is_branch_manager:
+            # مدير الفرع يرى إشعارات فرعه
+            if hasattr(request.user, 'branch') and request.user.branch:
+                # استيراد Order model محلياً لتجنب circular import
+                from orders.models import Order
+                order_notifications = SimpleNotification.objects.filter(
+                    related_object_id__in=Order.objects.filter(branch=request.user.branch).values_list('id', flat=True)
+                ).order_by('-created_at')[:15]
+            else:
+                order_notifications = SimpleNotification.objects.filter(recipient=request.user).order_by('-created_at')[:10]
+            complaint_notifications = ComplaintNotification.objects.filter(recipient=request.user).order_by('-created_at')[:10]
+        elif hasattr(request.user, 'is_salesperson') and request.user.is_salesperson:
+            # البائع يرى إشعاراته فقط
+            order_notifications = SimpleNotification.objects.filter(
+                recipient=request.user
+            ).order_by('-created_at')[:10]
+            complaint_notifications = ComplaintNotification.objects.filter(
+                recipient=request.user
+            ).order_by('-created_at')[:10]
+
+        else:
+            # المستخدمون الآخرون يرون إشعاراتهم فقط
+            order_notifications = SimpleNotification.objects.filter(
+                recipient=request.user
+            ).order_by('-created_at')[:10]
+            complaint_notifications = ComplaintNotification.objects.filter(
+                recipient=request.user
+            ).order_by('-created_at')[:10]
+
+        # تحويل إلى قوائم
+        order_data = []
+        for notification in order_notifications:
+            order_data.append({
+                'id': notification.id,
+                'title': notification.title,
+                'customer_name': notification.customer_name,
+                'order_number': notification.order_number,
+                'status': notification.status,
+                'icon': notification.get_icon(),
+                'color_class': notification.get_color_class(),
+                'time_ago': notification.get_time_ago(),
+                'is_read': notification.is_read,
+                'notification_type': notification.notification_type,
+                'priority': notification.priority,
+            })
+
+        complaint_data = []
+        for notification in complaint_notifications:
+            complaint_data.append({
+                'id': notification.id,
+                'title': notification.title,
+                'customer_name': notification.customer_name,
+                'complaint_number': notification.complaint_number,
+                'icon': notification.get_icon(),
+                'color_class': notification.get_color_class(),
+                'time_ago': notification.get_time_ago(),
+                'is_read': notification.is_read,
+                'complaint_type': notification.complaint_type,
+                'priority': notification.priority,
+            })
+
+        # العدادات - حسب الدور
+        if request.user.is_superuser or \
+           (hasattr(request.user, 'is_general_manager') and request.user.is_general_manager) or \
+           (hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager):
+            # المدير العام ومسؤول المصنع يرون كل الإشعارات
+            unread_orders = SimpleNotification.objects.filter(is_read=False).count()
+            urgent_complaints = ComplaintNotification.objects.filter(
+                is_read=False,
+                priority__in=['high', 'critical']
+            ).count()
+        else:
+            # المستخدمون الآخرون يرون إشعاراتهم فقط
+            unread_orders = SimpleNotification.objects.filter(
+                recipient=request.user,
+                is_read=False
+            ).count()
+            urgent_complaints = ComplaintNotification.objects.filter(
+                recipient=request.user,
+                is_read=False,
+                priority__in=['high', 'critical']
+            ).count()
+
+        return JsonResponse({
+            'success': True,
+            'order_notifications': order_data,
+            'complaint_notifications': complaint_data,
+            'unread_orders_count': unread_orders,
+            'urgent_complaints_count': urgent_complaints,
+        })
+
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"خطأ في get_notifications_data: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def mark_order_notification_read(request, notification_id):
+    """تحديد إشعار طلب كمقروء"""
+    try:
+        # مدير النظام والمدير العام ومسؤول المصنع يمكنهم تحديد أي إشعار كمقروء
+        if request.user.is_superuser or \
+           (hasattr(request.user, 'is_general_manager') and request.user.is_general_manager) or \
+           (hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager):
+            notification = get_object_or_404(SimpleNotification, id=notification_id)
+        else:
+            # المستخدمون الآخرون يحددون إشعاراتهم فقط
+            notification = get_object_or_404(
+                SimpleNotification,
+                id=notification_id,
+                recipient=request.user
+            )
+
+        notification.mark_as_read()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'تم تحديد الإشعار كمقروء'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def mark_complaint_notification_read(request, notification_id):
+    """تحديد إشعار شكوى كمقروء"""
+    if request.method == 'POST':
+        try:
+            # مدير النظام والمدير العام ومسؤول المصنع يمكنهم تحديد أي إشعار كمقروء
+            if request.user.is_superuser or \
+               (hasattr(request.user, 'is_general_manager') and request.user.is_general_manager) or \
+               (hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager):
+                notification = get_object_or_404(ComplaintNotification, id=notification_id)
+            else:
+                # المستخدمون الآخرون يحددون إشعاراتهم فقط
+                notification = get_object_or_404(
+                    ComplaintNotification,
+                    id=notification_id,
+                    recipient=request.user
+                )
+
+            notification.mark_as_read()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'تم تحديد الإشعار كمقروء'
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+
+    return JsonResponse({'success': False, 'error': 'طريقة غير صحيحة'})
+
+
+@login_required
+def mark_all_order_notifications_read(request):
+    """تحديد جميع إشعارات الطلبات كمقروءة"""
+    if request.method == 'POST':
+        try:
+            from django.utils import timezone
+            updated_count = SimpleNotification.objects.filter(
+                recipient=request.user,
+                is_read=False
+            ).update(
+                is_read=True,
+                read_at=timezone.now()
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': f'تم تحديد {updated_count} إشعار كمقروء',
+                'updated_count': updated_count
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+
+    return JsonResponse({'success': False, 'error': 'طريقة غير صحيحة'})
+
+
+@login_required
+def mark_all_complaint_notifications_read(request):
+    """تحديد جميع إشعارات الشكاوى كمقروءة"""
+    if request.method == 'POST':
+        try:
+            from django.utils import timezone
+            updated_count = ComplaintNotification.objects.filter(
+                recipient=request.user,
+                is_read=False
+            ).update(
+                is_read=True,
+                read_at=timezone.now()
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': f'تم تحديد {updated_count} إشعار كمقروء',
+                'updated_count': updated_count
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+
+    return JsonResponse({'success': False, 'error': 'طريقة غير صحيحة'})
+
+
+@login_required
+def order_notifications_list(request):
+    """قائمة إشعارات الطلبات"""
+    notifications = SimpleNotification.objects.filter(
+        recipient=request.user
+    ).order_by('-created_at')
+
+    # فلترة حسب النوع
+    notification_type = request.GET.get('type')
+    if notification_type:
+        notifications = notifications.filter(notification_type=notification_type)
+
+    # فلترة حسب الأولوية
+    priority = request.GET.get('priority')
+    if priority:
+        notifications = notifications.filter(priority=priority)
+
+    # فلترة حسب حالة القراءة
+    read_status = request.GET.get('read')
+    if read_status == 'unread':
+        notifications = notifications.filter(is_read=False)
+    elif read_status == 'read':
+        notifications = notifications.filter(is_read=True)
+
+    # البحث
+    search = request.GET.get('search')
+    if search:
+        notifications = notifications.filter(
+            Q(title__icontains=search) |
+            Q(customer_name__icontains=search) |
+            Q(order_number__icontains=search)
+        )
+
+    # التصفح
+    paginator = Paginator(notifications, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'notifications': page_obj,
+        'notification_types': SimpleNotification.TYPE_CHOICES,
+        'priorities': SimpleNotification.PRIORITY_CHOICES,
+        'current_filters': {
+            'type': notification_type,
+            'priority': priority,
+            'read': read_status,
+            'search': search,
+        }
+    }
+
+    return render(request, 'accounts/notifications/order_list.html', context)
+
+
+@login_required
+def complaint_notifications_list(request):
+    """قائمة إشعارات الشكاوى"""
+    notifications = ComplaintNotification.objects.filter(
+        recipient=request.user
+    ).order_by('-created_at')
+
+    # فلترة حسب النوع
+    complaint_type = request.GET.get('type')
+    if complaint_type:
+        notifications = notifications.filter(complaint_type=complaint_type)
+
+    # فلترة حسب الأولوية
+    priority = request.GET.get('priority')
+    if priority:
+        notifications = notifications.filter(priority=priority)
+
+    # فلترة حسب حالة القراءة
+    read_status = request.GET.get('read')
+    if read_status == 'unread':
+        notifications = notifications.filter(is_read=False)
+    elif read_status == 'read':
+        notifications = notifications.filter(is_read=True)
+
+    # البحث
+    search = request.GET.get('search')
+    if search:
+        notifications = notifications.filter(
+            Q(title__icontains=search) |
+            Q(customer_name__icontains=search) |
+            Q(complaint_number__icontains=search)
+        )
+
+    # التصفح
+    paginator = Paginator(notifications, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'notifications': page_obj,
+        'complaint_types': ComplaintNotification.TYPE_CHOICES,
+        'priorities': ComplaintNotification.PRIORITY_CHOICES,
+        'current_filters': {
+            'type': complaint_type,
+            'priority': priority,
+            'read': read_status,
+            'search': search,
+        }
+    }
+
+    return render(request, 'accounts/notifications/complaint_list.html', context)
+
+
+@login_required
+def notification_detail(request, notification_type, notification_id):
+    """تفاصيل الإشعار"""
+    if notification_type == 'order':
+        notification = get_object_or_404(
+            SimpleNotification,
+            id=notification_id,
+            recipient=request.user
+        )
+        template = 'accounts/notifications/order_detail.html'
+    elif notification_type == 'complaint':
+        notification = get_object_or_404(
+            ComplaintNotification,
+            id=notification_id,
+            recipient=request.user
+        )
+        template = 'accounts/notifications/complaint_detail.html'
+    else:
+        return JsonResponse({'error': 'نوع إشعار غير صحيح'}, status=400)
+
+    # تحديد كمقروء
+    notification.mark_as_read()
+
+    context = {
+        'notification': notification,
+    }
+
+    return render(request, template, context)
+
+
+@login_required
+def notifications_list(request):
+    """صفحة قائمة الإشعارات"""
+    # مدير النظام والمدير العام ومسؤول المصنع يرون كل الإشعارات
+    if request.user.is_superuser or \
+       (hasattr(request.user, 'is_general_manager') and request.user.is_general_manager) or \
+       (hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager):
+        notifications = SimpleNotification.objects.all().order_by('-created_at')
+        unread_count = SimpleNotification.objects.filter(is_read=False).count()
+    else:
+        # المستخدمون الآخرون يرون إشعاراتهم فقط
+        notifications = SimpleNotification.objects.filter(
+            recipient=request.user
+        ).order_by('-created_at')
+        unread_count = notifications.filter(is_read=False).count()
+
+    total_count = notifications.count()
+
+    context = {
+        'notifications': notifications,
+        'unread_count': unread_count,
+        'total_count': total_count,
+    }
+
+    return render(request, 'accounts/notifications_list.html', context)
+
+
+@login_required
+def complaints_list(request):
+    """صفحة قائمة الشكاوى"""
+    # مدير النظام والمدير العام ومسؤول المصنع يرون كل الشكاوى
+    if request.user.is_superuser or \
+       (hasattr(request.user, 'is_general_manager') and request.user.is_general_manager) or \
+       (hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager):
+        complaints = ComplaintNotification.objects.all().order_by('-created_at')
+        unread_count = ComplaintNotification.objects.filter(is_read=False).count()
+    else:
+        # المستخدمون الآخرون يرون شكاواهم فقط
+        complaints = ComplaintNotification.objects.filter(
+            recipient=request.user
+        ).order_by('-created_at')
+        unread_count = complaints.filter(is_read=False).count()
+
+    total_count = complaints.count()
+
+    context = {
+        'complaints': complaints,
+        'unread_count': unread_count,
+        'total_count': total_count,
+    }
+
+    return render(request, 'accounts/complaints_list.html', context)

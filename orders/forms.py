@@ -130,7 +130,7 @@ class OrderForm(forms.ModelForm):
             'contract_file': forms.FileInput(attrs={
                 'class': 'form-control form-control-sm',
                 'accept': '.pdf',
-                'data-help': 'يجب أن يكون الملف من نوع PDF وأقل من 10 ميجابايت'
+                'data-help': 'يجب أن يكون الملف من نوع PDF وأقل من 50 ميجابايت'
             }),
             'notes': forms.Textarea(attrs={'class': 'form-control notes-field', 'rows': 6}),
             'delivery_type': forms.RadioSelect(attrs={'class': 'form-check-input'}),

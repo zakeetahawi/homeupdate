@@ -19,7 +19,7 @@ from django.db import transaction
 
 from .models import ManufacturingOrder, ManufacturingOrderItem
 from orders.models import Order
-from accounts.models import Notification, Department
+from accounts.models import Department
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +235,13 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['items'] = self.object.items.all()
+        items = self.object.items.all()
+        context['items'] = items
+
+        # حساب إجمالي الكمية لمسؤول المصنع
+        total_quantity = sum(item.quantity for item in items)
+        context['total_quantity'] = total_quantity
+
         return context
 
 
@@ -623,19 +629,7 @@ def create_from_order(request, order_id):
             created_by=request.user
         )
         
-        # إرسال إشعار بإنشاء أمر التصنيع
-        try:
-            from accounts.models import Notification
-            # إنشاء إشعار للإدارة
-            Notification.objects.create(
-                title=f'تم إنشاء أمر تصنيع جديد',
-                message=f'تم إنشاء أمر تصنيع للعميل {order.customer.name} - الطلب #{order.order_number}',
-                priority='medium',
-                link=manufacturing_order.get_absolute_url()
-            )
-        except Exception as e:
-            # لا نريد أن يفشل إنشاء الطلب بسبب الإشعار
-            pass
+        # تم حذف نظام الإشعارات
         
         # Add order items to manufacturing order
         for item in order.items.all():
@@ -900,24 +894,7 @@ def update_approval_status(request, pk):
                 order.rejection_reason = None
                 order.save()
                 
-                # Create a notification for the user who created the original order
-                if order.order and order.order.created_by:
-                    try:
-                        from accounts.models import Notification
-                        recipient = order.order.created_by
-                        title = f'بدء تصنيع طلب {order.order.customer.name}'
-                        message = f'تمت الموافقة على أمر التصنيع للعميل {order.order.customer.name} - الطلب #{order.order.order_number}\nدخل الطلب مرحلة التصنيع. رقم أمر التصنيع #{order.pk}.'
-                    
-                        Notification.objects.create(
-                            recipient=recipient,
-                            title=title,
-                            message=message,
-                            priority='high',
-                            link=order.get_absolute_url()
-                        )
-                        logger.info(f"Approval notification sent to {recipient.username}")
-                    except Exception as e:
-                        logger.error(f"Failed to create approval notification: {e}")
+                # تم حذف نظام الإشعارات
                 
                 # Update order tracking status to in_progress
                 if order.order:
@@ -948,20 +925,7 @@ def update_approval_status(request, pk):
                     original_order.tracking_status = 'processing'  # Or 'pending'
                     original_order.save(update_fields=['tracking_status'])
 
-                # Create a notification for the user who created the original order
-                if order.order and order.order.created_by:
-                    try:
-                        from accounts.models import Notification
-                        Notification.objects.create(
-                            recipient=order.order.created_by,
-                            title=f'طلب مرفوض - {order.order.customer.name}',
-                            message=f'تم رفض أمر التصنيع للعميل {order.order.customer.name} - الطلب #{order.order.order_number}\n\nسبب الرفض: "{reason}"\n\nيرجى مراجعة الطلب وإجراء التعديلات المطلوبة.',
-                            priority='high',
-                            link=order.get_absolute_url()
-                        )
-                        logger.info(f"Rejection notification sent to {order.order.created_by.username}")
-                    except Exception as e:
-                        logger.error(f"Failed to create rejection notification: {e}")
+                # تم حذف نظام الإشعارات
                 
                 # Update order tracking status to rejected
                 if order.order:

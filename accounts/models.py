@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.utils.timesince import timesince
 from django.conf import settings
 class User(AbstractUser):
     """Custom User model for the application."""
@@ -186,43 +187,6 @@ class Department(models.Model):
         verbose_name = 'قسم'
         verbose_name_plural = 'الأقسام'
         ordering = ['order', 'name']
-class Notification(models.Model):
-    PRIORITY_CHOICES = [
-        ('low', 'منخفضة'),
-        ('medium', 'متوسطة'),
-        ('high', 'عالية'),
-    ]
-    title = models.CharField(max_length=200)
-    message = models.TextField()
-    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    read_at = models.DateTimeField(null=True, blank=True)
-    is_read = models.BooleanField(default=False)
-    read_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='read_notifications')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications')
-    target_users = models.ManyToManyField(User, blank=True, related_name='received_notifications')
-    target_department = models.ForeignKey(Department, on_delete=models.CASCADE, null=True, blank=True)
-    target_branch = models.ForeignKey(Branch, on_delete=models.CASCADE, null=True, blank=True)
-    # Generic relation to any model
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
-    object_id = models.PositiveIntegerField(null=True, blank=True)
-    content_object = GenericForeignKey('content_type', 'object_id')
-    sender_department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='sent_notifications')
-    def mark_as_read(self, user):
-        """
-        Mark notification as read by a specific user
-        """
-        self.is_read = True
-        self.read_at = timezone.now()
-        self.read_by = user
-        self.save()
-    def __str__(self):
-        return self.title
-    class Meta:
-        verbose_name = 'إشعار'
-        verbose_name_plural = 'الإشعارات'
-        ordering = ['-created_at']
 class CompanyInfo(models.Model):
     # حقول مخصصة للنظام - لا يمكن تغييرها إلا من المبرمج
     version = models.CharField(max_length=50, blank=True, default='1.0.0', verbose_name='إصدار النظام', editable=False)
@@ -499,8 +463,7 @@ class SystemSettings(models.Model):
     name = models.CharField(_('اسم النظام'), max_length=100, default='نظام الخواجه')
     currency = models.CharField(_('العملة'), max_length=3, choices=CURRENCY_CHOICES, default='SAR')
     version = models.CharField(_('إصدار النظام'), max_length=20, default='1.0.0')
-    enable_notifications = models.BooleanField(_('تفعيل الإشعارات'), default=True)
-    enable_email_notifications = models.BooleanField(_('تفعيل إشعارات البريد الإلكتروني'), default=False)
+
     items_per_page = models.PositiveIntegerField(_('عدد العناصر في الصفحة'), default=20)
     low_stock_threshold = models.PositiveIntegerField(_('حد المخزون المنخفض (%)'), default=20)
     enable_analytics = models.BooleanField(_('تفعيل التحليلات'), default=True)
@@ -651,3 +614,311 @@ class DashboardYearSettings(models.Model):
         # إذا لم تكن هناك سنة افتراضية، استخدم السنة الحالية
         from django.utils import timezone
         return timezone.now().year
+
+
+# ==================== نظام الإشعارات البسيط والمتقدم 🎨 ====================
+
+class SimpleNotification(models.Model):
+    """
+    نموذج إشعارات بسيط وجميل 🌟
+    يعرض فقط: اسم العميل + رقم الطلب + الحالة
+    """
+
+    # أنواع الإشعارات
+    TYPE_CHOICES = [
+        ('order_created', '🆕 طلب جديد'),
+        ('order_updated', '🔄 تحديث طلب'),
+        ('order_completed', '✅ طلب مكتمل'),
+        ('order_cancelled', '❌ طلب ملغي'),
+        ('complaint_new', '⚠️ شكوى جديدة'),
+        ('complaint_resolved', '✅ شكوى محلولة'),
+        ('inspection_scheduled', '📅 معاينة مجدولة'),
+        ('manufacturing_started', '🏭 بدء التصنيع'),
+        ('installation_completed', '🔧 تركيب مكتمل'),
+    ]
+
+    # الأولوية
+    PRIORITY_CHOICES = [
+        ('low', '🟢 منخفضة'),
+        ('normal', '🟡 عادية'),
+        ('high', '🟠 عالية'),
+        ('urgent', '🔴 عاجلة'),
+    ]
+
+    # الحقول الأساسية
+    title = models.CharField(
+        max_length=100,
+        verbose_name='العنوان',
+        help_text='عنوان مختصر وواضح'
+    )
+
+    customer_name = models.CharField(
+        max_length=100,
+        verbose_name='اسم العميل',
+        help_text='اسم العميل المرتبط بالإشعار'
+    )
+
+    order_number = models.CharField(
+        max_length=50,
+        verbose_name='رقم الطلب',
+        help_text='رقم الطلب أو المرجع'
+    )
+
+    status = models.CharField(
+        max_length=50,
+        verbose_name='الحالة',
+        help_text='الحالة الحالية للطلب'
+    )
+
+    notification_type = models.CharField(
+        max_length=30,
+        choices=TYPE_CHOICES,
+        default='order_updated',
+        verbose_name='نوع الإشعار'
+    )
+
+    priority = models.CharField(
+        max_length=10,
+        choices=PRIORITY_CHOICES,
+        default='normal',
+        verbose_name='الأولوية'
+    )
+
+    # المستخدم المستهدف
+    recipient = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='simple_notifications',
+        verbose_name='المستلم'
+    )
+
+    # حالة القراءة
+    is_read = models.BooleanField(
+        default=False,
+        verbose_name='مقروء'
+    )
+
+    read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ القراءة'
+    )
+
+    # التواريخ
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء'
+    )
+
+    # ربط مع الكائن المرتبط (اختياري)
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    related_object = GenericForeignKey('content_type', 'object_id')
+
+    def mark_as_read(self):
+        """تحديد الإشعار كمقروء"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=['is_read', 'read_at'])
+
+    def get_icon(self):
+        """إرجاع أيقونة الإشعار"""
+        icons = {
+            'order_created': '🆕',
+            'order_updated': '🔄',
+            'order_completed': '✅',
+            'order_cancelled': '❌',
+            'complaint_new': '⚠️',
+            'complaint_resolved': '✅',
+            'inspection_scheduled': '📅',
+            'manufacturing_started': '🏭',
+            'installation_completed': '🔧',
+        }
+        return icons.get(self.notification_type, '📢')
+
+    def get_color_class(self):
+        """إرجاع فئة اللون حسب الأولوية"""
+        colors = {
+            'low': 'success',
+            'normal': 'info',
+            'high': 'warning',
+            'urgent': 'danger',
+        }
+        return colors.get(self.priority, 'info')
+
+    def get_time_ago(self):
+        """إرجاع الوقت المنقضي بشكل جميل"""
+        return timesince(self.created_at)
+
+    def __str__(self):
+        return f"{self.get_icon()} {self.customer_name} - {self.order_number}"
+
+    class Meta:
+        verbose_name = '🔔 إشعار بسيط'
+        verbose_name_plural = '🔔 الإشعارات البسيطة'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', '-created_at']),
+            models.Index(fields=['is_read']),
+            models.Index(fields=['notification_type']),
+            models.Index(fields=['priority']),
+        ]
+
+
+class ComplaintNotification(models.Model):
+    """
+    إشعارات الشكاوى المنفصلة 📢
+    صندوق منفصل للشكاوى فقط
+    """
+
+    # أنواع إشعارات الشكاوى
+    TYPE_CHOICES = [
+        ('new', '🆕 شكوى جديدة'),
+        ('assigned', '👤 تم التعيين'),
+        ('in_progress', '⏳ قيد المعالجة'),
+        ('resolved', '✅ تم الحل'),
+        ('closed', '🔒 مغلقة'),
+        ('escalated', '⬆️ تم التصعيد'),
+    ]
+
+    # الأولوية
+    PRIORITY_CHOICES = [
+        ('low', '🟢 منخفضة'),
+        ('medium', '🟡 متوسطة'),
+        ('high', '🟠 عالية'),
+        ('critical', '🔴 حرجة'),
+    ]
+
+    # الحقول الأساسية
+    title = models.CharField(
+        max_length=150,
+        verbose_name='عنوان الشكوى'
+    )
+
+    customer_name = models.CharField(
+        max_length=100,
+        verbose_name='اسم العميل'
+    )
+
+    complaint_number = models.CharField(
+        max_length=50,
+        verbose_name='رقم الشكوى'
+    )
+
+    complaint_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default='new',
+        verbose_name='نوع الإشعار'
+    )
+
+    priority = models.CharField(
+        max_length=10,
+        choices=PRIORITY_CHOICES,
+        default='medium',
+        verbose_name='الأولوية'
+    )
+
+    # المستخدم المستهدف
+    recipient = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='complaint_notifications',
+        verbose_name='المستلم'
+    )
+
+    # حالة القراءة
+    is_read = models.BooleanField(
+        default=False,
+        verbose_name='مقروء'
+    )
+
+    read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ القراءة'
+    )
+
+    # التواريخ
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء'
+    )
+
+    # ربط مع الشكوى
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    related_complaint = GenericForeignKey('content_type', 'object_id')
+
+    def mark_as_read(self):
+        """تحديد الإشعار كمقروء"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=['is_read', 'read_at'])
+
+    def get_icon(self):
+        """إرجاع أيقونة الشكوى"""
+        icons = {
+            'new': '🆕',
+            'assigned': '👤',
+            'in_progress': '⏳',
+            'resolved': '✅',
+            'closed': '🔒',
+            'escalated': '⬆️',
+        }
+        return icons.get(self.complaint_type, '📢')
+
+    def get_color_class(self):
+        """إرجاع فئة اللون حسب الأولوية"""
+        colors = {
+            'low': 'success',
+            'medium': 'info',
+            'high': 'warning',
+            'critical': 'danger',
+        }
+        return colors.get(self.priority, 'info')
+
+    def get_time_ago(self):
+        """إرجاع الوقت المنقضي منذ إنشاء الإشعار"""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        now = timezone.now()
+        diff = now - self.created_at
+
+        if diff.days > 0:
+            return f"{diff.days} يوم"
+        elif diff.seconds > 3600:
+            hours = diff.seconds // 3600
+            return f"{hours} ساعة"
+        elif diff.seconds > 60:
+            minutes = diff.seconds // 60
+            return f"{minutes} دقيقة"
+        else:
+            return "الآن"
+
+    def __str__(self):
+        return f"{self.get_icon()} {self.customer_name} - {self.complaint_number}"
+
+    class Meta:
+        verbose_name = '📢 إشعار شكوى'
+        verbose_name_plural = '📢 إشعارات الشكاوى'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', '-created_at']),
+            models.Index(fields=['is_read']),
+            models.Index(fields=['complaint_type']),
+            models.Index(fields=['priority']),
+        ]

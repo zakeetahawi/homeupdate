@@ -14,7 +14,7 @@ from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, TemplateView
 )
 
-from accounts.models import Department, Notification
+from accounts.models import Department
 from customers.models import Customer
 from orders.models import Order
 
@@ -730,17 +730,12 @@ def bulk_action(request):
 @login_required
 def notifications_list(request):
     """قائمة إشعارات الشكاوى للمستخدم مع إحصائيات وفلاتر متقدمة."""
-    base_queryset = Notification.objects.filter(
-        target_users=request.user,
-        content_type__app_label='complaints'
-    ).select_related('content_type')
-
-    # Calculate stats before filtering
+    # تم حذف نظام الإشعارات
     stats = {
-        'total_notifications': base_queryset.count(),
-        'unread_notifications': base_queryset.filter(is_read=False).count(),
-        'urgent_notifications': base_queryset.filter(priority='high').count(),
-        'today_notifications': base_queryset.filter(created_at__date=timezone.now().date()).count(),
+        'total_notifications': 0,
+        'unread_notifications': 0,
+        'urgent_notifications': 0,
+        'today_notifications': 0,
     }
 
     # Apply filters

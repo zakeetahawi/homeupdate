@@ -213,7 +213,7 @@ def get_contract_google_drive_service():
         if not GOOGLE_AVAILABLE:
             logger.warning("Google API libraries not available")
             return None
-        
+
         service = ContractGoogleDriveService()
         if service.service:
             return service
@@ -223,3 +223,53 @@ def get_contract_google_drive_service():
     except Exception as e:
         logger.error(f"خطأ في الحصول على خدمة Google Drive للعقود: {str(e)}")
         return None
+
+
+def test_contract_file_upload_to_folder():
+    """اختبار رفع ملف عقد تجريبي إلى المجلد المحدد"""
+    try:
+        drive_service = get_contract_google_drive_service()
+        if not drive_service:
+            return {
+                'success': False,
+                'message': 'خدمة Google Drive للعقود غير متوفرة'
+            }
+
+        # إنشاء ملف تجريبي
+        from io import BytesIO
+        test_content = BytesIO(f'ملف عقد تجريبي تم إنشاؤه في {timezone.now()}'.encode('utf-8'))
+
+        # الحصول على مجلد العقود أو إنشاؤه
+        contracts_folder_id = drive_service._get_or_create_contracts_folder()
+
+        file_metadata = {
+            'name': f'test_contract_{timezone.now().strftime("%Y%m%d_%H%M%S")}.txt',
+            'parents': [contracts_folder_id]
+        }
+
+        from googleapiclient.http import MediaIoBaseUpload
+        media = MediaIoBaseUpload(test_content, mimetype='text/plain')
+
+        # رفع الملف
+        file = drive_service.service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id,name,webViewLink,parents'
+        ).execute()
+
+        # حذف الملف فوراً بعد الاختبار
+        drive_service.service.files().delete(fileId=file.get('id')).execute()
+
+        return {
+            'success': True,
+            'message': 'تم اختبار رفع ملف العقد بنجاح',
+            'file_name': file.get('name'),
+            'folder_id': contracts_folder_id
+        }
+
+    except Exception as e:
+        logger.error(f"فشل في اختبار رفع ملف العقد: {str(e)}")
+        return {
+            'success': False,
+            'message': f'فشل في اختبار رفع ملف العقد: {str(e)}'
+        }

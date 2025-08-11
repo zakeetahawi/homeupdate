@@ -2329,6 +2329,48 @@ def google_drive_test_file_upload(request):
         'message': 'طريقة الطلب غير صحيحة'
     })
 
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def google_drive_test_contract_upload(request):
+    """اختبار رفع ملف عقد تجريبي إلى المجلد المحدد"""
+    if request.method == 'POST':
+        try:
+            from orders.services.google_drive_service import test_contract_file_upload_to_folder
+
+            # اختبار رفع ملف عقد
+            result = test_contract_file_upload_to_folder()
+
+            if result and result.get('success'):
+                messages.success(request, 'تم اختبار رفع ملف العقد بنجاح')
+                return JsonResponse({
+                    'success': True,
+                    'message': result.get('message'),
+                    'details': {
+                        'file_name': result.get('file_name'),
+                        'folder_id': result.get('folder_id')
+                    }
+                })
+            else:
+                error_message = result.get('message') if result else 'فشل في اختبار رفع ملف العقد'
+                return JsonResponse({
+                    'success': False,
+                    'message': error_message
+                })
+
+        except Exception as e:
+            error_message = f'خطأ في اختبار رفع ملف العقد: {str(e)}'
+            messages.error(request, error_message)
+            return JsonResponse({
+                'success': False,
+                'message': error_message
+            })
+
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة الطلب غير صحيحة'
+    })
+
 @login_required
 @user_passes_test(is_staff_or_superuser)
 def database_register(request):

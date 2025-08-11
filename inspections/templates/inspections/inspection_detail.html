@@ -107,39 +107,46 @@
                         </div>
                         <div class="col-sm-8">
                             {% if inspection.inspection_file %}
-                                <div class="d-flex align-items-center gap-3">
-                                    <!-- أيقونة الملف -->
-                                    {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                        <a href="{{ inspection.google_drive_file_url }}" target="_blank" title="عرض ملف المعاينة في Google Drive"
-                                           data-inspection-id="{{ inspection.inspection_code }}" class="large-icon">
-                                            <i class="fas fa-file-pdf text-danger" style="font-size: 48px;"></i>
+                                <div class="d-flex flex-column gap-3">
+                                    <!-- الملف المحلي -->
+                                    <div>
+                                        <a href="{{ inspection.inspection_file.url }}" target="_blank"
+                                           class="btn btn-outline-primary btn-lg"
+                                           title="عرض ملف المعاينة محلياً">
+                                            <i class="fas fa-file-pdf me-2"></i>
+                                            عرض الملف محلياً
                                         </a>
+                                    </div>
+
+                                    <!-- Google Drive -->
+                                    {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
                                         <div>
+                                            <a href="{{ inspection.google_drive_file_url }}" target="_blank"
+                                               class="btn btn-success btn-lg"
+                                               title="عرض ملف المعاينة في Google Drive"
+                                               data-inspection-id="{{ inspection.inspection_code }}">
+                                                <i class="fas fa-cloud me-2"></i>
+                                                عرض في Google Drive
+                                            </a>
                                             {% if inspection.google_drive_file_name %}
-                                            <div class="mt-1">
+                                            <div class="mt-2">
                                                 <small class="text-muted">
                                                     <i class="fas fa-file-signature"></i>
-                                                    <strong>اسم الملف:</strong> {{ inspection.google_drive_file_name }}
+                                                    <strong>اسم الملف في Google Drive:</strong> {{ inspection.google_drive_file_name }}
                                                 </small>
                                             </div>
                                             {% endif %}
                                         </div>
                                     {% else %}
-                                        <!-- إذا لم يتم الرفع بعد -->
-                                        <div style="position: relative;"
-                                             data-inspection-id="{{ inspection.inspection_code }}"
-                                             data-upload-pending="true"
-                                             class="large-icon">
-                                            <i class="fas fa-file-pdf text-warning" style="font-size: 48px;"></i>
-                                            <i class="fas fa-clock text-warning" style="font-size: 16px; position: absolute; top: 0; right: -5px;"></i>
-                                        </div>
+                                        <!-- جاري الرفع -->
                                         <div>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="badge bg-warning">
-                                                    <i class="fas fa-clock"></i> جاري الرفع إلى Google Drive
-                                                </span>
-                                            </div>
-                                            <div class="mt-1">
+                                            <span class="badge bg-warning text-dark p-3"
+                                                  data-inspection-id="{{ inspection.inspection_code }}"
+                                                  data-upload-pending="true">
+                                                <i class="fas fa-clock me-2"></i>
+                                                جاري رفع الملف إلى Google Drive
+                                            </span>
+                                            <div class="mt-2">
                                                 <small class="text-muted">
                                                     <i class="fas fa-info-circle"></i>
                                                     سيتم رفع الملف تلقائياً...

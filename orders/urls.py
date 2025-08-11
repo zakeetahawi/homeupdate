@@ -52,6 +52,10 @@ urlpatterns = [
     # API endpoints
     path('api/order-details/<int:order_id>/', views.get_order_details_api, name='order_details_api'),
     path('api/customer-inspections/', views.get_customer_inspections, name='customer_inspections_api'),
+
+    # Contract file upload endpoints
+    path('ajax/upload-contract-to-google-drive/', views.ajax_upload_contract_to_google_drive, name='ajax_upload_contract_to_google_drive'),
+    path('<int:pk>/check-contract-upload-status/', views.check_contract_upload_status, name='check_contract_upload_status'),
     
     # Invoice Builder (GrapesJS-based)
     path('invoice-editor/', invoice_views.invoice_builder, name='invoice_editor'),

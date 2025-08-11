@@ -50,6 +50,7 @@ urlpatterns = [
     path('google-drive/test-connection/', views.google_drive_test_connection, name='google_drive_test_connection'),
     path('google-drive/create-test-folder/', views.google_drive_create_test_folder, name='google_drive_create_test_folder'),
     path('google-drive/test-file-upload/', views.google_drive_test_file_upload, name='google_drive_test_file_upload'),
+    path('google-drive/test-contract-upload/', views.google_drive_test_contract_upload, name='google_drive_test_contract_upload'),
 
     # Google Sync
     path('google-sync/', google_sync_views.google_sync, name='google_sync'),

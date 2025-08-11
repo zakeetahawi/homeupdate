@@ -11,6 +11,7 @@ from django.db import transaction
 import logging
 from django.db import models
 
+
 logger = logging.getLogger(__name__)
 
 @receiver(pre_save, sender='orders.Order')
@@ -266,3 +267,86 @@ def log_manufacturing_order_deletion(sender, instance, **kwargs):
         
     except Exception as e:
         logger.error(f"خطأ في تسجيل حذف أمر التصنيع: {str(e)}")
+
+
+# ==================== 🎨 إشعارات الطلبات التلقائية ====================
+
+@receiver(post_save, sender=Order)
+def order_created_notification(sender, instance, created, **kwargs):
+    """إنشاء إشعارات عند إنشاء طلب جديد"""
+    if created:
+        try:
+            from accounts.services.simple_notifications import SimpleNotificationService
+            # إشعار للأقسام المختصة
+            notifications = SimpleNotificationService.notify_new_order(instance)
+            logger.info(f"تم إنشاء {len(notifications)} إشعار للطلب الجديد: {instance.order_number}")
+        except Exception as e:
+            logger.error(f"خطأ في إنشاء إشعارات الطلب الجديد: {str(e)}")
+    else:
+        # تحقق من تغيير الحالة للطلبات الموجودة
+        try:
+            from accounts.services.simple_notifications import SimpleNotificationService
+            # الحصول على الحالة القديمة من قاعدة البيانات
+            old_instance = Order.objects.get(pk=instance.pk)
+            if hasattr(old_instance, '_original_status'):
+                old_status = old_instance._original_status
+                new_status = instance.status
+
+                if old_status != new_status:
+                    SimpleNotificationService.notify_order_status_change(
+                        instance, old_status, new_status
+                    )
+                    logger.info(f"تم إنشاء إشعار تغيير حالة الطلب {instance.order_number}")
+        except Exception as e:
+            logger.error(f"خطأ في إنشاء إشعار تغيير الحالة: {str(e)}")
+
+
+@receiver(pre_save, sender=Order)
+def order_status_change_notification(sender, instance, **kwargs):
+    """إنشاء إشعارات عند تغيير حالة الطلب"""
+    if instance.pk:  # إذا كان الطلب موجوداً مسبقاً
+        try:
+            from accounts.services.simple_notifications import SimpleNotificationService
+            # الحصول على الحالة القديمة
+            old_instance = Order.objects.get(pk=instance.pk)
+            old_status = old_instance.status
+            new_status = instance.status
+
+            # إذا تغيرت الحالة
+            if old_status != new_status:
+                # إنشاء إشعار تغيير الحالة
+                SimpleNotificationService.notify_order_status_change(
+                    instance, old_status, new_status
+                )
+                logger.info(f"تم إنشاء إشعار تغيير حالة الطلب {instance.order_number} من {old_status} إلى {new_status}")
+
+        except Order.DoesNotExist:
+            pass
+        except Exception as e:
+            logger.error(f"خطأ في إنشاء إشعار تغيير حالة الطلب: {str(e)}")
+
+
+@receiver(post_save, sender=ManufacturingOrder)
+def manufacturing_order_notification(sender, instance, created, **kwargs):
+    """إنشاء إشعارات عند إنشاء أو تحديث أمر تصنيع"""
+    try:
+        from accounts.services.simple_notifications import SimpleNotificationService
+
+        if created:
+            # إشعار بدء التصنيع
+            if instance.order and instance.order.created_by:
+                SimpleNotificationService.create_order_notification(
+                    customer_name=instance.order.customer.name,
+                    order_number=instance.order.order_number,
+                    status='دخل مرحلة التصنيع',
+                    notification_type='manufacturing_started',
+                    priority='normal',
+                    recipient=instance.order.created_by,
+                    related_object=instance.order
+                )
+                logger.info(f"تم إنشاء إشعار بدء التصنيع للطلب: {instance.order.order_number}")
+
+    except Exception as e:
+        logger.error(f"خطأ في إنشاء إشعار التصنيع: {str(e)}")
+
+

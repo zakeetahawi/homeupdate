@@ -3,7 +3,8 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import Complaint, ComplaintUpdate, ComplaintNotification, ComplaintEscalation
-from accounts.models import Notification, Department
+from accounts.models import Department
+
 
 User = get_user_model()
 
@@ -12,35 +13,13 @@ User = get_user_model()
 def complaint_post_save(sender, instance, created, **kwargs):
     """إشارة بعد حفظ الشكوى"""
     if created:
-        # إنشاء إشعار للشكوى الجديدة
-        create_complaint_notification(
-            complaint=instance,
-            notification_type='new_complaint',
-            title=f'شكوى جديدة #{instance.complaint_number}',
-            message=f'تم تقديم شكوى جديدة من العميل {instance.customer.name}',
-            recipient=instance.assigned_to
-        )
-        
-        # إشعار القسم المسؤول
-        if instance.assigned_department:
-            notify_department_users(
-                complaint=instance,
-                department=instance.assigned_department,
-                title=f'شكوى جديدة #{instance.complaint_number}',
-                message=f'تم تحويل شكوى جديدة إلى قسم {instance.assigned_department.name}'
-            )
-        
-        # إشعار خدمة العملاء
-        customer_service_dept = Department.objects.filter(
-            code='customer_service'
-        ).first()
-        if customer_service_dept:
-            notify_department_users(
-                complaint=instance,
-                department=customer_service_dept,
-                title=f'شكوى جديدة #{instance.complaint_number}',
-                message=f'تم تقديم شكوى جديدة من العميل {instance.customer.name}'
-            )
+        try:
+            from accounts.services.simple_notifications import SimpleNotificationService
+            # إنشاء إشعارات للشكوى الجديدة
+            SimpleNotificationService.notify_complaint_created(instance)
+            logger.info(f"تم إنشاء إشعارات للشكوى الجديدة: {instance.complaint_number}")
+        except Exception as e:
+            logger.error(f"خطأ في إنشاء إشعارات الشكوى الجديدة: {str(e)}")
 
 
 @receiver(pre_save, sender=Complaint)
@@ -49,7 +28,7 @@ def complaint_status_change(sender, instance, **kwargs):
     if instance.pk:
         try:
             old_instance = Complaint.objects.get(pk=instance.pk)
-            
+
             # تسجيل تغيير الحالة
             if old_instance.status != instance.status:
                 ComplaintUpdate.objects.create(
@@ -61,21 +40,21 @@ def complaint_status_change(sender, instance, **kwargs):
                     new_status=instance.status,
                     is_visible_to_customer=True
                 )
-                
-                # إشعار تغيير الحالة
-                if instance.assigned_to:
-                    create_complaint_notification(
-                        complaint=instance,
-                        notification_type='status_change',
-                        title=f'تغيير حالة الشكوى #{instance.complaint_number}',
-                        message=f'تم تغيير حالة الشكوى إلى {instance.get_status_display()}',
-                        recipient=instance.assigned_to
+
+                # إنشاء إشعار تغيير الحالة
+                try:
+                    from accounts.services.simple_notifications import SimpleNotificationService
+                    SimpleNotificationService.notify_complaint_status_change(
+                        instance, old_instance.status, instance.status
                     )
-                
+                    logger.info(f"تم إنشاء إشعار تغيير حالة الشكوى {instance.complaint_number}")
+                except Exception as e:
+                    logger.error(f"خطأ في إنشاء إشعار تغيير حالة الشكوى: {str(e)}")
+
                 # إشعار المدير في حالة التأخير
                 if instance.status == 'overdue':
                     notify_managers_overdue(instance)
-            
+
             # تسجيل تغيير المسؤول
             if old_instance.assigned_to != instance.assigned_to:
                 ComplaintUpdate.objects.create(
@@ -87,17 +66,7 @@ def complaint_status_change(sender, instance, **kwargs):
                     new_assignee=instance.assigned_to,
                     is_visible_to_customer=False
                 )
-                
-                # إشعار المسؤول الجديد
-                if instance.assigned_to:
-                    create_complaint_notification(
-                        complaint=instance,
-                        notification_type='assignment',
-                        title=f'تم تعيينك مسؤولاً عن الشكوى #{instance.complaint_number}',
-                        message=f'تم تعيينك مسؤولاً عن شكوى العميل {instance.customer.name}',
-                        recipient=instance.assigned_to
-                    )
-        
+
         except Complaint.DoesNotExist:
             pass
 
@@ -111,16 +80,6 @@ def create_complaint_notification(complaint, notification_type, title, message, 
             title=title,
             message=message,
             recipient=recipient
-        )
-        
-        # إشعار النظام العام
-        Notification.objects.create(
-            title=title,
-            message=message,
-            sender=complaint.created_by or recipient,
-            content_type_id=complaint._meta.model._state.db,
-            object_id=complaint.pk,
-            priority='high' if notification_type in ['overdue', 'escalation'] else 'medium'
         )
 
 

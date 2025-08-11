@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError
 from .models import Order, OrderItem, Payment
 from .forms import OrderForm, OrderItemFormSet, PaymentForm
 from .permissions import get_user_orders_queryset, can_user_view_order, can_user_edit_order, can_user_delete_order
-from accounts.models import Branch, Salesperson, Department, Notification, SystemSettings
+from accounts.models import Branch, Salesperson, Department, SystemSettings
 from customers.models import Customer
 from inventory.models import Product
 from inspections.models import Inspection
@@ -1290,4 +1290,101 @@ def invoice_print_redirect(request, pk):
     return redirect('orders:invoice_print', order_number=order.order_number)
 
 
-#
+# AJAX endpoints for contract file upload to Google Drive
+
+@login_required
+def ajax_upload_contract_to_google_drive(request):
+    """رفع ملف العقد إلى Google Drive عبر AJAX"""
+    if request.method == 'POST':
+        try:
+            order_id = request.POST.get('order_id')
+
+            if not order_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'معرف الطلب مطلوب'
+                })
+
+            # الحصول على الطلب
+            order = get_object_or_404(Order, id=order_id)
+
+            # التحقق من وجود ملف العقد
+            if not order.contract_file:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'لا يوجد ملف عقد للرفع'
+                })
+
+            # التحقق من أن الملف لم يتم رفعه مسبقاً
+            if order.is_contract_uploaded_to_drive:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'تم رفع هذا الملف مسبقاً إلى Google Drive'
+                })
+
+            # رفع الملف إلى Google Drive
+            from orders.services.google_drive_service import get_contract_google_drive_service
+
+            drive_service = get_contract_google_drive_service()
+            if not drive_service:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'خدمة Google Drive غير متوفرة. يرجى التحقق من الإعدادات.'
+                })
+
+            # رفع الملف
+            result = drive_service.upload_contract_file(
+                order.contract_file.path,
+                order
+            )
+
+            # تحديث بيانات الطلب
+            order.contract_google_drive_file_id = result['file_id']
+            order.contract_google_drive_file_url = result['view_url']
+            order.contract_google_drive_file_name = result['filename']
+            order.is_contract_uploaded_to_drive = True
+            order.save(update_fields=[
+                'contract_google_drive_file_id', 'contract_google_drive_file_url',
+                'contract_google_drive_file_name', 'is_contract_uploaded_to_drive'
+            ])
+
+            return JsonResponse({
+                'success': True,
+                'message': 'تم رفع الملف بنجاح إلى Google Drive',
+                'data': {
+                    'filename': result['filename'],
+                    'view_url': result['view_url'],
+                    'customer_name': result['customer_name'],
+                    'branch_name': result['branch_name']
+                }
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'خطأ في رفع الملف: {str(e)}'
+            })
+
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة الطلب غير صحيحة'
+    })
+
+
+@login_required
+def check_contract_upload_status(request, pk):
+    """التحقق من حالة رفع ملف العقد إلى Google Drive"""
+    try:
+        order = get_object_or_404(Order, pk=pk)
+
+        return JsonResponse({
+            'is_uploaded': order.is_contract_uploaded_to_drive,
+            'google_drive_url': order.contract_google_drive_file_url,
+            'file_name': order.contract_google_drive_file_name,
+            'file_id': order.contract_google_drive_file_id
+        })
+    except Exception as e:
+        return JsonResponse({
+            'is_uploaded': False,
+            'error': str(e)
+        })

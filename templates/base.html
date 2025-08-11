@@ -151,6 +151,319 @@
     </style>
 
     {% block extra_css %}{% endblock %}
+
+    <!-- 🎨 CSS الإشعارات الإبداعي والجميل -->
+    <style>
+        /* صندوق الإشعارات الرئيسي */
+        .notification-container {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        /* جرس الإشعارات */
+        .notification-bell, .complaint-bell {
+            position: relative;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .notification-bell:hover, .complaint-bell:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .notification-bell i, .complaint-bell i {
+            font-size: 18px;
+            color: #fff;
+        }
+
+        /* شارات العدد */
+        .notification-badge, .complaint-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: linear-gradient(45deg, #0d6efd, #6f42c1);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: bounce 2s infinite;
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.4);
+        }
+
+        .complaint-badge {
+            background: linear-gradient(45deg, #dc3545, #fd7e14);
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
+        }
+
+        /* نبضة الإشعار */
+        .notification-pulse, .complaint-pulse {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(13, 110, 253, 0.3);
+            animation: pulse 2s infinite;
+            pointer-events: none;
+        }
+
+        .complaint-pulse {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        /* صناديق الإشعارات المنبثقة */
+        .notification-box, .complaint-box {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            width: 380px;
+            max-height: 500px;
+            background: linear-gradient(135deg, #0d6efd 0%, #6f42c1 100%);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(13, 110, 253, 0.2);
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-20px) scale(0.95);
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .complaint-box {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+            box-shadow: 0 10px 30px rgba(220, 53, 69, 0.2);
+        }
+
+        .notification-box.show, .complaint-box.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        /* رأس الصندوق */
+        .notification-header, .complaint-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            color: white;
+        }
+
+        .notification-header h6, .complaint-header h6 {
+            color: white;
+            font-weight: 600;
+            margin: 0;
+            flex: 1;
+        }
+
+        .btn-close-notifications {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .btn-close-notifications:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+
+        /* محتوى الإشعارات */
+        .notification-content, .complaint-content {
+            max-height: 350px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        /* عنصر الإشعار */
+        .notification-item, .complaint-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .notification-item:hover, .complaint-item:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateX(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .notification-item.unread::before, .complaint-item.urgent::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, #ff6b6b, #ee5a24);
+        }
+
+        .complaint-item.urgent::before {
+            background: linear-gradient(to bottom, #ffa726, #ff7043);
+        }
+
+        /* أيقونة الإشعار */
+        .notification-icon, .complaint-icon {
+            font-size: 24px;
+            margin-right: 15px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #0d6efd, #6f42c1);
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .complaint-icon {
+            background: linear-gradient(45deg, #dc3545, #fd7e14);
+        }
+
+        /* تفاصيل الإشعار */
+        .notification-details, .complaint-details {
+            flex: 1;
+        }
+
+        .notification-title, .complaint-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .notification-meta, .complaint-meta {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        .order-number, .complaint-number {
+            background: linear-gradient(45deg, #0d6efd, #6f42c1);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .complaint-number {
+            background: linear-gradient(45deg, #dc3545, #fd7e14);
+        }
+
+        .status, .priority {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .priority.high {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .priority.critical {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .notification-time, .complaint-time {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        /* تذييل الصندوق */
+        .notification-footer, .complaint-footer {
+            padding: 15px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .view-all-link {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .view-all-link:hover {
+            color: #f8f9fa;
+            text-decoration: underline;
+        }
+
+        /* الرسوم المتحركة */
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-3px);
+            }
+            60% {
+                transform: translateY(-2px);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1.4);
+                opacity: 0;
+            }
+        }
+
+        /* حالة عدم وجود إشعارات */
+        .no-notifications {
+            text-align: center;
+            padding: 30px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-style: italic;
+        }
+
+        /* تجاوب مع الشاشات الصغيرة */
+        @media (max-width: 768px) {
+            .notification-box, .complaint-box {
+                width: 95%;
+                right: 2.5%;
+                left: 2.5%;
+            }
+        }
+    </style>
 </head>
 <body id="main-body" data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
     <!-- Navigation -->
@@ -248,15 +561,22 @@
                 </ul>
                 <div class="d-flex align-items-center ms-auto">
                     {% if user.is_authenticated %}
-                        <button class="btn btn-outline-light position-relative me-3" id="customNotificationsBtn" type="button">
-                            <i class="fas fa-bell"></i>
-                            {% if notifications_count > 0 %}
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                {{ notifications_count }}
-                                <span class="visually-hidden">إشعارات غير مقروءة</span>
-                            </span>
-                            {% endif %}
-                        </button>
+                        <!-- صندوق الإشعارات الجميل 🎨 -->
+                        <div class="notification-container me-3">
+                            <!-- إشعارات الطلبات -->
+                            <div class="notification-bell" id="orderNotificationBell">
+                                <i class="fas fa-bell"></i>
+                                <span class="notification-badge" id="orderNotificationCount" style="display: none;">0</span>
+                                <div class="notification-pulse"></div>
+                            </div>
+
+                            <!-- إشعارات الشكاوى -->
+                            <div class="complaint-bell ms-2" id="complaintNotificationBell">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span class="complaint-badge" id="complaintNotificationCount" style="display: none;">0</span>
+                                <div class="complaint-pulse"></div>
+                            </div>
+                        </div>
                         <button class="btn btn-outline-light dropdown-toggle" id="customUserBtn" type="button">
                             <i class="fas fa-user"></i> {{ user.get_full_name|default:user.username }}
                         </button>
@@ -266,7 +586,52 @@
                 </div>
             </div>
         </div>
-    </nav>      <!-- Branch Messages - Only shown on home page -->
+    </nav>
+
+    <!-- صناديق الإشعارات المنبثقة الجميلة 🎨 -->
+    {% if user.is_authenticated %}
+
+    <!-- صندوق إشعارات الطلبات -->
+    <div id="orderNotificationBox" class="notification-box">
+        <div class="notification-header">
+            <h6 class="mb-0">
+                <i class="fas fa-bell me-2"></i>
+                إشعارات الطلبات
+            </h6>
+            <button class="btn-close-notifications" onclick="closeNotificationBox('order')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="notification-content">
+            <div class="no-notifications">جاري تحميل الإشعارات...</div>
+        </div>
+        <div class="notification-footer">
+            <a href="{% url 'accounts:notifications_list' %}" class="view-all-link">عرض جميع الإشعارات</a>
+        </div>
+    </div>
+
+    <!-- صندوق إشعارات الشكاوى -->
+    <div id="complaintNotificationBox" class="complaint-box">
+        <div class="complaint-header">
+            <h6 class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                إشعارات الشكاوى
+            </h6>
+            <button class="btn-close-notifications" onclick="closeNotificationBox('complaint')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="complaint-content">
+            <div class="no-notifications">جاري تحميل الشكاوى...</div>
+        </div>
+        <div class="complaint-footer">
+            <a href="{% url 'accounts:complaints_list' %}" class="view-all-link">عرض جميع الشكاوى</a>
+        </div>
+    </div>
+
+    {% endif %}
+
+    <!-- Branch Messages - Only shown on home page -->
     {% if branch_messages and request.path == '/' %}
     <script>
         // Wait for all DOM content and resources to load for optimal display timing
@@ -486,56 +851,7 @@
     </style>
     {% endif %}
 
-    <!-- قائمة الإشعارات المنبثقة خارج تدفق الهيدر -->
-    {% if user.is_authenticated %}
-    <div id="customNotificationsDropdown" class="custom-dropdown-menu notification-dropdown" style="display:none; position:fixed; top:70px; left:30px; z-index:2147483647; min-width:350px; max-width:95vw; max-height:400px; overflow-y:auto; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18); border:1px solid #eee;">
-        <div class="dropdown-header fw-bold py-2 px-3 border-bottom">الإشعارات</div>
-        <div>
-            {% if recent_notifications %}
-                {% for notification in recent_notifications %}
-                <a class="dropdown-item d-flex align-items-start py-3 border-bottom {% if not notification.is_read %}bg-light{% endif %}" href="{% url 'accounts:notification_detail' notification.id %}">
-                    <div class="flex-shrink-0 me-3">
-                        {% if notification.priority == 'urgent' %}
-                            <i class="fas fa-exclamation-triangle text-danger fa-lg"></i>
-                        {% elif notification.priority == 'high' %}
-                            <i class="fas fa-exclamation-circle text-warning fa-lg"></i>
-                        {% else %}
-                            <i class="fas fa-bell text-info fa-lg"></i>
-                        {% endif %}
-                    </div>
-                    <div class="flex-grow-1">
-                        <div class="d-flex justify-content-between align-items-start mb-1">
-                            <div class="fw-bold text-truncate" style="max-width:200px;">{{ notification.title }}</div>
-                            {% if not notification.is_read %}
-                                <span class="badge bg-primary rounded-pill ms-2">جديد</span>
-                            {% endif %}
-                        </div>
-                        <div class="small text-muted mb-1">
-                            <i class="fas fa-clock me-1"></i>
-                            {{ notification.created_at|date:"Y-m-d H:i" }}
-                        </div>
-                        <div class="small text-muted">
-                            <i class="fas fa-hashtag me-1"></i>#{{ notification.id }}
-                            <span class="ms-2">
-                                {% if notification.priority == 'urgent' %}
-                                    <span class="badge bg-danger rounded-pill">عاجل</span>
-                                {% elif notification.priority == 'high' %}
-                                    <span class="badge bg-warning text-dark rounded-pill">مهم</span>
-                                {% else %}
-                                    <span class="badge bg-info rounded-pill">عادي</span>
-                                {% endif %}
-                            </span>
-                        </div>
-                    </div>
-                </a>
-                {% endfor %}
-                <a class="dropdown-item text-center py-2" href="{% url 'accounts:notifications' %}">عرض كل الإشعارات</a>
-            {% else %}
-                <div class="dropdown-item text-center py-3">لا توجد إشعارات</div>
-                <a class="dropdown-item text-center py-2" href="{% url 'accounts:notifications' %}">عرض كل الإشعارات</a>
-            {% endif %}
-        </div>
-    </div>
+
     <!-- قائمة المستخدم المنبثقة خارج تدفق الهيدر -->
     <div id="customUserDropdown" class="custom-dropdown-menu" style="display:none; position:fixed; top:70px; left:90px; z-index:2147483647; min-width:260px; max-width:95vw; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18); border:1px solid #eee;">
         <div class="dropdown-header fw-bold py-2 px-3 border-bottom">القائمة الشخصية</div>
@@ -555,41 +871,422 @@
         <hr class="my-1">
         <a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
     </div>
-    {% endif %}
 
     <script>
-    // منطق إظهار/إخفاء القوائم المنبثقة بشكل يدوي
+    // 🎨 نظام الإشعارات الإبداعي والجميل
     document.addEventListener('DOMContentLoaded', function() {
-        var notifBtn = document.getElementById('customNotificationsBtn');
-        var notifDropdown = document.getElementById('customNotificationsDropdown');
-        var userBtn = document.getElementById('customUserBtn');
-        var userDropdown = document.getElementById('customUserDropdown');
-        function closeAllDropdowns(e) {
-            if (notifDropdown) notifDropdown.style.display = 'none';
-            if (userDropdown) userDropdown.style.display = 'none';
-        }
-        if (notifBtn && notifDropdown) {
-            notifBtn.addEventListener('click', function(e) {
+        // عناصر الإشعارات
+        const orderBell = document.getElementById('orderNotificationBell');
+        const complaintBell = document.getElementById('complaintNotificationBell');
+        const orderBox = document.getElementById('orderNotificationBox');
+        const complaintBox = document.getElementById('complaintNotificationBox');
+
+        // إظهار/إخفاء صندوق إشعارات الطلبات
+        if (orderBell && orderBox) {
+            orderBell.addEventListener('click', function(e) {
                 e.stopPropagation();
-                notifDropdown.style.display = notifDropdown.style.display === 'block' ? 'none' : 'block';
-                notifDropdown.focus();
-                if (userDropdown) userDropdown.style.display = 'none';
+                toggleNotificationBox('order');
             });
         }
+
+        // إظهار/إخفاء صندوق إشعارات الشكاوى
+        if (complaintBell && complaintBox) {
+            complaintBell.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleNotificationBox('complaint');
+            });
+        }
+
+        // إغلاق الصناديق عند النقر خارجها
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.notification-box') && !e.target.closest('.notification-bell')) {
+                closeNotificationBox('order');
+            }
+            if (!e.target.closest('.complaint-box') && !e.target.closest('.complaint-bell')) {
+                closeNotificationBox('complaint');
+            }
+        });
+
+        // تأثير النقر على الإشعارات
+        document.querySelectorAll('.notification-item, .complaint-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // تأثير النقر
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+
+                // تحديد كمقروء
+                this.classList.remove('unread', 'urgent');
+
+                // الحصول على معرف الإشعار
+                const notificationId = this.getAttribute('data-notification-id');
+                const isComplaint = this.classList.contains('complaint-item');
+
+                // تحديد الإشعار كمقروء في الخادم
+                if (notificationId) {
+                    markNotificationAsRead(notificationId, isComplaint ? 'complaint' : 'order');
+                }
+
+                // توجيه المستخدم للمكان المناسب
+                redirectToNotificationTarget(this);
+
+                // تحديث العداد
+                updateNotificationCount();
+            });
+        });
+
+        // تحميل الإشعارات فور تحميل الصفحة
+        loadNotificationsFromServer();
+
+        // تحديث العدادات كل 30 ثانية
+        setInterval(function() {
+            loadNotificationsFromServer();
+        }, 30000);
+    });
+
+    // 🎨 الدوال المساعدة للإشعارات الجميلة
+    function toggleNotificationBox(type) {
+        const orderBox = document.getElementById('orderNotificationBox');
+        const complaintBox = document.getElementById('complaintNotificationBox');
+
+        if (type === 'order') {
+            // إغلاق صندوق الشكاوى إذا كان مفتوحاً
+            if (complaintBox) {
+                complaintBox.classList.remove('show');
+            }
+
+            // تبديل صندوق الطلبات
+            if (orderBox) {
+                orderBox.classList.toggle('show');
+
+                // تأثير صوتي لطيف (اختياري)
+                if (orderBox.classList.contains('show')) {
+                    playNotificationSound();
+                }
+            }
+        } else if (type === 'complaint') {
+            // إغلاق صندوق الطلبات إذا كان مفتوحاً
+            if (orderBox) {
+                orderBox.classList.remove('show');
+            }
+
+            // تبديل صندوق الشكاوى
+            if (complaintBox) {
+                complaintBox.classList.toggle('show');
+
+                // تأثير صوتي لطيف (اختياري)
+                if (complaintBox.classList.contains('show')) {
+                    playNotificationSound();
+                }
+            }
+        }
+    }
+
+    function closeNotificationBox(type) {
+        const orderBox = document.getElementById('orderNotificationBox');
+        const complaintBox = document.getElementById('complaintNotificationBox');
+
+        if (type === 'order' && orderBox) {
+            orderBox.classList.remove('show');
+        } else if (type === 'complaint' && complaintBox) {
+            complaintBox.classList.remove('show');
+        }
+    }
+
+    function updateNotificationCount() {
+        // تحديث عداد إشعارات الطلبات
+        const unreadOrders = document.querySelectorAll('.notification-item.unread').length;
+        const orderCountBadge = document.getElementById('orderNotificationCount');
+        if (orderCountBadge) {
+            if (unreadOrders > 0) {
+                orderCountBadge.textContent = unreadOrders;
+                orderCountBadge.style.display = 'flex';
+            } else {
+                orderCountBadge.style.display = 'none';
+            }
+        }
+
+        // تحديث عداد إشعارات الشكاوى
+        const urgentComplaints = document.querySelectorAll('.complaint-item.urgent').length;
+        const complaintCountBadge = document.getElementById('complaintNotificationCount');
+        if (complaintCountBadge) {
+            if (urgentComplaints > 0) {
+                complaintCountBadge.textContent = urgentComplaints;
+                complaintCountBadge.style.display = 'flex';
+            } else {
+                complaintCountBadge.style.display = 'none';
+            }
+        }
+    }
+
+    function playNotificationSound() {
+        // تأثير صوتي لطيف وخفيف
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        } catch (e) {
+            // تجاهل الأخطاء الصوتية
+        }
+    }
+
+    function markNotificationAsRead(notificationId, type) {
+        // إرسال طلب AJAX لتحديد الإشعار كمقروء
+        fetch(`/accounts/notifications/${type}/${notificationId}/mark-read/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // تحديث الواجهة
+                const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                if (item) {
+                    item.classList.remove('unread', 'urgent');
+                }
+                updateNotificationCount();
+            }
+        })
+        .catch(error => {
+            console.log('تم تحديد الإشعار محلياً');
+        });
+    }
+
+    function loadNotificationsFromServer() {
+        // تحميل الإشعارات الحقيقية من الخادم
+        fetch('/accounts/notifications/data/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // تحديث إشعارات الطلبات
+                updateOrderNotifications(data.order_notifications);
+
+                // تحديث إشعارات الشكاوى
+                updateComplaintNotifications(data.complaint_notifications);
+
+                // تحديث العدادات
+                updateNotificationBadges(data.unread_orders_count, data.urgent_complaints_count);
+            } else {
+                // عرض رسالة خطأ
+                const orderContainer = document.querySelector('#orderNotificationBox .notification-content');
+                const complaintContainer = document.querySelector('#complaintNotificationBox .complaint-content');
+
+                if (orderContainer) {
+                    orderContainer.innerHTML = '<div class="no-notifications">❌ خطأ في تحميل الإشعارات</div>';
+                }
+                if (complaintContainer) {
+                    complaintContainer.innerHTML = '<div class="no-notifications">❌ خطأ في تحميل الشكاوى</div>';
+                }
+            }
+        })
+        .catch(error => {
+            console.log('خطأ في تحميل الإشعارات:', error);
+            // عرض رسالة خطأ
+            const orderContainer = document.querySelector('#orderNotificationBox .notification-content');
+            const complaintContainer = document.querySelector('#complaintNotificationBox .complaint-content');
+
+            if (orderContainer) {
+                orderContainer.innerHTML = '<div class="no-notifications">📭 لا توجد إشعارات جديدة</div>';
+            }
+            if (complaintContainer) {
+                complaintContainer.innerHTML = '<div class="no-notifications">📢 لا توجد شكاوى جديدة</div>';
+            }
+        });
+    }
+
+    function updateOrderNotifications(notifications) {
+        const container = document.querySelector('#orderNotificationBox .notification-content');
+        if (!container) return;
+
+        if (notifications.length === 0) {
+            container.innerHTML = '<div class="no-notifications">📭 لا توجد إشعارات جديدة</div>';
+            return;
+        }
+
+        container.innerHTML = notifications.map(notification => `
+            <div class="notification-item ${notification.is_read ? '' : 'unread'}" data-notification-id="${notification.id}" style="cursor: pointer;">
+                <div class="notification-icon ${notification.notification_type}">
+                    ${notification.icon}
+                </div>
+                <div class="notification-details">
+                    <div class="notification-title">${notification.title}</div>
+                    <div class="notification-meta">
+                        <span class="order-number">${notification.order_number}</span>
+                        <span class="status">${notification.status}</span>
+                    </div>
+                    <div class="notification-time">منذ ${notification.time_ago}</div>
+                </div>
+            </div>
+        `).join('');
+
+        // إضافة event listeners للإشعارات الجديدة
+        container.querySelectorAll('.notification-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // تأثير النقر
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+
+                // تحديد كمقروء
+                this.classList.remove('unread');
+
+                // الحصول على معرف الإشعار
+                const notificationId = this.getAttribute('data-notification-id');
+
+                // تحديد الإشعار كمقروء في الخادم
+                if (notificationId) {
+                    markNotificationAsRead(notificationId, 'order');
+                }
+
+                // توجيه المستخدم للمكان المناسب
+                redirectToNotificationTarget(this);
+
+                // تحديث العداد
+                updateNotificationCount();
+            });
+        });
+    }
+
+    function updateComplaintNotifications(notifications) {
+        const container = document.querySelector('#complaintNotificationBox .complaint-content');
+        if (!container) return;
+
+        if (notifications.length === 0) {
+            container.innerHTML = '<div class="no-notifications">📢 لا توجد شكاوى جديدة</div>';
+            return;
+        }
+
+        container.innerHTML = notifications.map(notification => `
+            <div class="complaint-item ${notification.is_read ? '' : 'urgent'}" data-notification-id="${notification.id}" style="cursor: pointer;">
+                <div class="complaint-icon ${notification.complaint_type}">
+                    ${notification.icon}
+                </div>
+                <div class="complaint-details">
+                    <div class="complaint-title">${notification.title}</div>
+                    <div class="complaint-meta">
+                        <span class="complaint-number">${notification.complaint_number}</span>
+                        <span class="priority ${notification.priority}">${notification.priority}</span>
+                    </div>
+                    <div class="complaint-time">منذ ${notification.time_ago}</div>
+                </div>
+            </div>
+        `).join('');
+
+        // إضافة event listeners للشكاوى الجديدة
+        container.querySelectorAll('.complaint-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // تأثير النقر
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+
+                // تحديد كمقروء
+                this.classList.remove('urgent');
+
+                // الحصول على معرف الإشعار
+                const notificationId = this.getAttribute('data-notification-id');
+
+                // تحديد الإشعار كمقروء في الخادم
+                if (notificationId) {
+                    markNotificationAsRead(notificationId, 'complaint');
+                }
+
+                // توجيه المستخدم للمكان المناسب
+                redirectToNotificationTarget(this);
+
+                // تحديث العداد
+                updateNotificationCount();
+            });
+        });
+    }
+
+    function updateNotificationBadges(orderCount, complaintCount) {
+        const orderBadge = document.getElementById('orderNotificationCount');
+        const complaintBadge = document.getElementById('complaintNotificationCount');
+
+        if (orderBadge) {
+            if (orderCount > 0) {
+                orderBadge.textContent = orderCount;
+                orderBadge.style.display = 'flex';
+            } else {
+                orderBadge.style.display = 'none';
+            }
+        }
+
+        if (complaintBadge) {
+            if (complaintCount > 0) {
+                complaintBadge.textContent = complaintCount;
+                complaintBadge.style.display = 'flex';
+            } else {
+                complaintBadge.style.display = 'none';
+            }
+        }
+    }
+
+    function redirectToNotificationTarget(notificationElement) {
+        // توجيه المستخدم للمكان المناسب حسب نوع الإشعار
+        const orderNumber = notificationElement.querySelector('.order-number, .complaint-number');
+
+        if (notificationElement.classList.contains('complaint-item')) {
+            // توجيه لصفحة الشكاوى
+            window.location.href = '/complaints/';
+        } else if (notificationElement.classList.contains('notification-item')) {
+            // توجيه لصفحة الطلبات
+            const notificationType = notificationElement.querySelector('.notification-icon').className;
+
+            if (notificationType.includes('inspection')) {
+                // توجيه لصفحة المعاينات
+                window.location.href = '/inspections/';
+            } else if (notificationType.includes('manufacturing')) {
+                // توجيه لصفحة التصنيع
+                window.location.href = '/manufacturing/';
+            } else if (notificationType.includes('installation')) {
+                // توجيه لصفحة التركيبات
+                window.location.href = '/installations/';
+            } else {
+                // توجيه لصفحة الطلبات العامة
+                window.location.href = '/orders/';
+            }
+        }
+    }
+
+    // تحديث العدادات عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+        updateNotificationCount();
+        loadNotificationsFromServer();
+
+        var userBtn = document.getElementById('customUserBtn');
+        var userDropdown = document.getElementById('customUserDropdown');
         if (userBtn && userDropdown) {
             userBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
                 userDropdown.focus();
-                if (notifDropdown) notifDropdown.style.display = 'none';
             });
         }
         document.addEventListener('click', function(e) {
             // إغلاق القوائم إذا تم الضغط خارجها
-            if (notifDropdown) notifDropdown.style.display = 'none';
             if (userDropdown) userDropdown.style.display = 'none';
         });
-        if (notifDropdown) notifDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
         if (userDropdown) userDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
     });
     </script>

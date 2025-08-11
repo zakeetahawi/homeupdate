@@ -1,18 +1,19 @@
 from django.contrib import admin
-
-from django.utils.translation import gettext_lazy as _
+from django.contrib import messages
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Permission
-from django import forms
-from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django import forms
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy as _
 
 from .models import (
-    User, CompanyInfo, Branch, Notification, Department, Salesperson,
+    User, CompanyInfo, Branch, Department, Salesperson,
     Role, UserRole, SystemSettings, BranchMessage, DashboardYearSettings,
-    ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings
+    ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings,
+    SimpleNotification, ComplaintNotification
 )
 from .forms import THEME_CHOICES
 from .widgets import ColorPickerWidget, IconPickerWidget, DurationRangeWidget
@@ -316,35 +317,7 @@ class BranchAdmin(admin.ModelAdmin):
     search_fields = ('code', 'name', 'phone', 'email')
     ordering = ['code']
 
-@admin.register(Notification)
-class NotificationAdmin(admin.ModelAdmin):
-    list_per_page = 50  # عرض 50 صف كافتراضي
-    list_display = ('title', 'sender', 'sender_department', 'target_department', 'priority', 'created_at', 'is_read')
-    list_filter = ('is_read', 'priority', 'sender_department', 'target_department', 'created_at')
-    search_fields = ('title', 'message')
-    readonly_fields = ('created_at', 'updated_at', 'read_at', 'read_by')
-    date_hierarchy = 'created_at'
 
-    fieldsets = (
-        (None, {
-            'fields': ('title', 'message', 'priority')
-        }),
-        (_('معلومات المرسل'), {
-            'fields': ('sender', 'sender_department')
-        }),
-        (_('معلومات المستلم'), {
-            'fields': ('target_department', 'target_branch')
-        }),
-        (_('الكائن المرتبط'), {
-            'fields': ('content_type', 'object_id')
-        }),
-        (_('حالة الإشعار'), {
-            'fields': ('is_read', 'read_at', 'read_by')
-        }),
-        (_('التواريخ'), {
-            'fields': ('created_at', 'updated_at')
-        }),
-    )
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
@@ -560,9 +533,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
         (_('إعدادات العرض'), {
             'fields': ('items_per_page', 'low_stock_threshold')
         }),
-        (_('إعدادات الإشعارات'), {
-            'fields': ('enable_notifications', 'enable_email_notifications')
-        }),
+
         (_('إعدادات متقدمة'), {
             'fields': ('enable_analytics', 'maintenance_mode', 'maintenance_message'),
             'classes': ('collapse',)
@@ -744,4 +715,276 @@ class DashboardYearSettingsAdmin(admin.ModelAdmin):
         """منع حذف السنة الافتراضية"""
         if obj and obj.is_default:
             return False
-        return
+        return super().has_delete_permission(request, obj)
+
+
+# ==================== 🎨 إدارة نظام الإشعارات البسيط والجميل ====================
+
+@admin.register(SimpleNotification)
+class SimpleNotificationAdmin(admin.ModelAdmin):
+    """إدارة الإشعارات البسيطة"""
+
+    list_display = [
+        'notification_icon',
+        'title',
+        'customer_name',
+        'order_number',
+        'status',
+        'notification_type',
+        'priority_badge',
+        'recipient',
+        'is_read_badge',
+        'created_at'
+    ]
+
+    list_filter = [
+        'notification_type',
+        'priority',
+        'is_read',
+        'created_at',
+        'recipient__departments'
+    ]
+
+    search_fields = [
+        'title',
+        'customer_name',
+        'order_number',
+        'recipient__username',
+        'recipient__first_name',
+        'recipient__last_name'
+    ]
+
+    readonly_fields = [
+        'created_at',
+        'read_at',
+        'content_type',
+        'object_id'
+    ]
+
+    fieldsets = (
+        ('📋 معلومات الإشعار', {
+            'fields': (
+                'title',
+                'customer_name',
+                'order_number',
+                'status'
+            )
+        }),
+        ('🎯 تصنيف الإشعار', {
+            'fields': (
+                'notification_type',
+                'priority',
+                'recipient'
+            )
+        }),
+        ('📖 حالة القراءة', {
+            'fields': (
+                'is_read',
+                'read_at'
+            )
+        }),
+        ('🔗 الربط', {
+            'fields': (
+                'content_type',
+                'object_id'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('📅 التواريخ', {
+            'fields': (
+                'created_at',
+            ),
+            'classes': ('collapse',)
+        })
+    )
+
+    actions = ['mark_as_read', 'mark_as_unread', 'delete_selected']
+
+    def notification_icon(self, obj):
+        """عرض أيقونة الإشعار"""
+        return mark_safe(f'<span style="font-size: 20px;">{obj.get_icon()}</span>')
+    notification_icon.short_description = '🔔'
+
+    def priority_badge(self, obj):
+        """عرض شارة الأولوية"""
+        colors = {
+            'low': '#28a745',
+            'normal': '#17a2b8',
+            'high': '#ffc107',
+            'urgent': '#dc3545'
+        }
+        color = colors.get(obj.priority, '#6c757d')
+        return mark_safe(
+            f'<span style="background: {color}; color: white; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: bold;">{obj.get_priority_display()}</span>'
+        )
+    priority_badge.short_description = 'الأولوية'
+
+    def is_read_badge(self, obj):
+        """عرض حالة القراءة"""
+        if obj.is_read:
+            return mark_safe('<span style="color: #28a745; font-weight: bold;">✅ مقروء</span>')
+        else:
+            return mark_safe('<span style="color: #dc3545; font-weight: bold;">🔴 غير مقروء</span>')
+    is_read_badge.short_description = 'حالة القراءة'
+
+    def mark_as_read(self, request, queryset):
+        """تحديد كمقروء"""
+        from django.utils import timezone
+        updated = queryset.update(is_read=True, read_at=timezone.now())
+        self.message_user(
+            request,
+            f'تم تحديد {updated} إشعار كمقروء',
+            messages.SUCCESS
+        )
+    mark_as_read.short_description = 'تحديد كمقروء'
+
+    def mark_as_unread(self, request, queryset):
+        """تحديد كغير مقروء"""
+        updated = queryset.update(is_read=False, read_at=None)
+        self.message_user(
+            request,
+            f'تم تحديد {updated} إشعار كغير مقروء',
+            messages.SUCCESS
+        )
+    mark_as_unread.short_description = 'تحديد كغير مقروء'
+
+    def get_queryset(self, request):
+        """تحسين الاستعلامات"""
+        return super().get_queryset(request).select_related(
+            'recipient',
+            'content_type'
+        )
+
+
+@admin.register(ComplaintNotification)
+class ComplaintNotificationAdmin(admin.ModelAdmin):
+    """إدارة إشعارات الشكاوى"""
+
+    list_display = [
+        'complaint_icon',
+        'title',
+        'customer_name',
+        'complaint_number',
+        'complaint_type',
+        'priority_badge',
+        'recipient',
+        'is_read_badge',
+        'created_at'
+    ]
+
+    list_filter = [
+        'complaint_type',
+        'priority',
+        'is_read',
+        'created_at',
+        'recipient__departments'
+    ]
+
+    search_fields = [
+        'title',
+        'customer_name',
+        'complaint_number',
+        'recipient__username',
+        'recipient__first_name',
+        'recipient__last_name'
+    ]
+
+    readonly_fields = [
+        'created_at',
+        'read_at',
+        'content_type',
+        'object_id'
+    ]
+
+    fieldsets = (
+        ('📢 معلومات الشكوى', {
+            'fields': (
+                'title',
+                'customer_name',
+                'complaint_number'
+            )
+        }),
+        ('🎯 تصنيف الشكوى', {
+            'fields': (
+                'complaint_type',
+                'priority',
+                'recipient'
+            )
+        }),
+        ('📖 حالة القراءة', {
+            'fields': (
+                'is_read',
+                'read_at'
+            )
+        }),
+        ('🔗 الربط', {
+            'fields': (
+                'content_type',
+                'object_id'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('📅 التواريخ', {
+            'fields': (
+                'created_at',
+            ),
+            'classes': ('collapse',)
+        })
+    )
+
+    actions = ['mark_as_read', 'mark_as_unread', 'delete_selected']
+
+    def complaint_icon(self, obj):
+        """عرض أيقونة الشكوى"""
+        return mark_safe(f'<span style="font-size: 20px;">{obj.get_icon()}</span>')
+    complaint_icon.short_description = '📢'
+
+    def priority_badge(self, obj):
+        """عرض شارة الأولوية"""
+        colors = {
+            'low': '#28a745',
+            'medium': '#17a2b8',
+            'high': '#ffc107',
+            'critical': '#dc3545'
+        }
+        color = colors.get(obj.priority, '#6c757d')
+        return mark_safe(
+            f'<span style="background: {color}; color: white; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: bold;">{obj.get_priority_display()}</span>'
+        )
+    priority_badge.short_description = 'الأولوية'
+
+    def is_read_badge(self, obj):
+        """عرض حالة القراءة"""
+        if obj.is_read:
+            return mark_safe('<span style="color: #28a745; font-weight: bold;">✅ مقروء</span>')
+        else:
+            return mark_safe('<span style="color: #dc3545; font-weight: bold;">🔴 غير مقروء</span>')
+    is_read_badge.short_description = 'حالة القراءة'
+
+    def mark_as_read(self, request, queryset):
+        """تحديد كمقروء"""
+        from django.utils import timezone
+        updated = queryset.update(is_read=True, read_at=timezone.now())
+        self.message_user(
+            request,
+            f'تم تحديد {updated} إشعار كمقروء',
+            messages.SUCCESS
+        )
+    mark_as_read.short_description = 'تحديد كمقروء'
+
+    def mark_as_unread(self, request, queryset):
+        """تحديد كغير مقروء"""
+        updated = queryset.update(is_read=False, read_at=None)
+        self.message_user(
+            request,
+            f'تم تحديد {updated} إشعار كغير مقروء',
+            messages.SUCCESS
+        )
+    mark_as_unread.short_description = 'تحديد كغير مقروء'
+
+    def get_queryset(self, request):
+        """تحسين الاستعلامات"""
+        return super().get_queryset(request).select_related(
+            'recipient',
+            'content_type'
+        )
