@@ -371,104 +371,25 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- الجداول الأساسية -->
-                            <div class="mb-3">
-                                <h6 class="text-secondary mb-2"><i class="fas fa-table me-1"></i> الجداول الأساسية</h6>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="databases" id="sync_databases">
-                                            <label class="form-check-label" for="sync_databases">
-                                                <i class="fas fa-database me-1"></i> قواعد البيانات
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="users" id="sync_users">
-                                            <label class="form-check-label" for="sync_users">
-                                                <i class="fas fa-users me-1"></i> المستخدمين
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="customers" id="sync_customers">
-                                            <label class="form-check-label" for="sync_customers">
-                                                <i class="fas fa-user-tie me-1"></i> العملاء
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="inspections" id="sync_inspections">
-                                            <label class="form-check-label" for="sync_inspections">
-                                                <i class="fas fa-search me-1"></i> المعاينات
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="branches" id="sync_branches">
-                                            <label class="form-check-label" for="sync_branches">
-                                                <i class="fas fa-code-branch me-1"></i> الفروع
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="orders" id="sync_orders">
-                                            <label class="form-check-label" for="sync_orders">
-                                                <i class="fas fa-shopping-cart me-1"></i> الطلبات
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="products" id="sync_products">
-                                            <label class="form-check-label" for="sync_products">
-                                                <i class="fas fa-box me-1"></i> المنتجات
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="settings" id="sync_settings">
-                                            <label class="form-check-label" for="sync_settings">
-                                                <i class="fas fa-cogs me-1"></i> الإعدادات
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="manufacturing_orders" id="sync_manufacturing_orders">
-                                            <label class="form-check-label" for="sync_manufacturing_orders">
-                                                <i class="fas fa-industry me-1"></i> أوامر التصنيع
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="technicians" id="sync_technicians">
-                                            <label class="form-check-label" for="sync_technicians">
-                                                <i class="fas fa-tools me-1"></i> الفنيين
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- صف إضافي للجداول الجديدة -->
-                                <div class="row mt-2">
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="installation_teams" id="sync_installation_teams">
-                                            <label class="form-check-label" for="sync_installation_teams">
-                                                <i class="fas fa-users-cog me-1"></i> فرق التركيب
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="suppliers" id="sync_suppliers">
-                                            <label class="form-check-label" for="sync_suppliers">
-                                                <i class="fas fa-truck me-1"></i> الموردين
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="salespersons" id="sync_salespersons">
-                                            <label class="form-check-label" for="sync_salespersons">
-                                                <i class="fas fa-user-tag me-1"></i> البائعين
-                                            </label>
+                                <!-- دورة حياة الطلبات الكاملة -->
+                                <div class="mb-3">
+                                    <h6 class="text-warning mb-2"><i class="fas fa-project-diagram me-1"></i> دورة حياة الطلبات الكاملة</h6>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="form-check">
+                                                <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="complete_orders_lifecycle" id="sync_complete_orders_lifecycle">
+                                                <label class="form-check-label fw-bold text-warning" for="sync_complete_orders_lifecycle">
+                                                    <i class="fas fa-sitemap me-1"></i> دورة حياة الطلبات الكاملة
+                                                </label>
+                                                <small class="d-block text-muted">الطلب + التصنيع + التركيب + المعاينة + التسليم في صفحة واحدة شاملة</small>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- تم إزالة الجداول الأساسية لتجنب التضارب في المزامنة -->
                         </div>
                         <div class="mt-3">
                             <div class="form-group">
@@ -480,6 +401,44 @@
                             <i class="fas fa-sync-alt"></i> مزامنة الآن
                         </button>
                     </form>
+
+                    <!-- المزامنة العكسية -->
+                    <div class="mt-4 pt-4 border-top">
+                        <h6 class="text-danger mb-3">
+                            <i class="fas fa-download me-1"></i> المزامنة العكسية
+                            <small class="text-muted d-block">استقبال البيانات من Google Sheets إلى النظام</small>
+                        </h6>
+
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>تحذير:</strong> هذه العملية تتطلب كلمة مرور المدير وقد تؤثر على البيانات الموجودة.
+                        </div>
+
+                        <form id="reverse-sync-form">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="admin_password" class="form-label">
+                                    <i class="fas fa-key me-1"></i> كلمة مرور المدير
+                                </label>
+                                <input type="password" class="form-control" id="admin_password" name="admin_password" required>
+                                <small class="text-muted">مطلوبة للتحقق من الهوية قبل تنفيذ المزامنة العكسية</small>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="delete_old_data" name="delete_old_data">
+                                <label class="form-check-label text-danger" for="delete_old_data">
+                                    <i class="fas fa-trash me-1"></i> حذف البيانات القديمة قبل الاستيراد
+                                </label>
+                                <small class="d-block text-muted">
+                                    إذا تم تفعيل هذا الخيار، سيتم حذف جميع البيانات الموجودة قبل استيراد البيانات الجديدة
+                                </small>
+                            </div>
+
+                            <button type="submit" class="btn btn-danger" id="reverse-sync-btn">
+                                <i class="fas fa-download"></i> تنفيذ المزامنة العكسية
+                            </button>
+                        </form>
+                    </div>
                     <script>
                         // تعطيل full_backup إذا تم اختيار أي جدول منفصل والعكس
                         document.addEventListener('DOMContentLoaded', function() {
@@ -720,5 +679,88 @@ function showLogDetailsSwal(idx) {
         });
     }
 }
+
+// المزامنة العكسية
+document.getElementById('reverse-sync-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const adminPassword = document.getElementById('admin_password').value;
+    const deleteOldData = document.getElementById('delete_old_data').checked;
+    const submitBtn = document.getElementById('reverse-sync-btn');
+
+    if (!adminPassword) {
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'يرجى إدخال كلمة مرور المدير'
+        });
+        return;
+    }
+
+    // تأكيد العملية
+    let confirmText = 'هل أنت متأكد من تنفيذ المزامنة العكسية؟';
+    if (deleteOldData) {
+        confirmText = 'تحذير: سيتم حذف جميع البيانات القديمة! هل أنت متأكد من المتابعة؟';
+    }
+
+    Swal.fire({
+        title: 'تأكيد المزامنة العكسية',
+        text: confirmText,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، تنفيذ المزامنة',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // تعطيل الزر وإظهار التحميل
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التنفيذ...';
+
+            // إرسال الطلب
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            formData.append('admin_password', adminPassword);
+            formData.append('delete_old_data', deleteOldData);
+
+            fetch('{% url "odoo_db_manager:reverse_sync" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'نجحت المزامنة العكسية',
+                        text: data.message
+                    });
+                    // مسح النموذج
+                    document.getElementById('admin_password').value = '';
+                    document.getElementById('delete_old_data').checked = false;
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'فشلت المزامنة العكسية',
+                        text: data.message
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ في الشبكة',
+                    text: 'حدث خطأ أثناء الاتصال بالخادم'
+                });
+            })
+            .finally(() => {
+                // إعادة تفعيل الزر
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-download"></i> تنفيذ المزامنة العكسية';
+            });
+        }
+    });
+});
 </script>
 {% endblock %}

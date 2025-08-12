@@ -284,6 +284,9 @@ def sync_with_google_sheets(config_id=None, manual=False, full_backup=False, sel
             if 'comprehensive_system' in selected_tables:
                 comp_system_result = sync_comprehensive_system_settings(sheets_service, config.spreadsheet_id)
                 sync_results['comprehensive_system'] = comp_system_result
+            if 'complete_orders_lifecycle' in selected_tables:
+                complete_lifecycle_result = sync_complete_orders_lifecycle(sheets_service, config.spreadsheet_id)
+                sync_results['complete_orders_lifecycle'] = complete_lifecycle_result
 
         # إذا لم يتم تحديد جداول، أو تم اختيار full_backup=True، مزامنة كل الجداول دفعة واحدة
         else:
@@ -330,6 +333,10 @@ def sync_with_google_sheets(config_id=None, manual=False, full_backup=False, sel
             if config.sync_comprehensive_system:
                 comp_system_result = sync_comprehensive_system_settings(sheets_service, config.spreadsheet_id)
                 sync_results['comprehensive_system'] = comp_system_result
+
+            # دورة حياة الطلبات الكاملة (دائماً مفعلة في المزامنة الشاملة)
+            complete_lifecycle_result = sync_complete_orders_lifecycle(sheets_service, config.spreadsheet_id)
+            sync_results['complete_orders_lifecycle'] = complete_lifecycle_result
 
         # تحديث وقت آخر مزامنة
         config.update_last_sync()
@@ -671,12 +678,16 @@ def sync_orders(service, spreadsheet_id):
         Order = apps.get_model('orders', 'Order')
         orders = Order.objects.select_related('customer', 'branch', 'salesperson').all()
 
-        # تحديد العناوين المخصصة للطلبات مع ربط العملاء
+        # تحديد العناوين المخصصة للطلبات مع ربط العملاء وجميع البيانات
         header = [
-            'معرف الطلب', 'رقم الطلب', 'اسم العميل', 'رقم هاتف العميل', 'عنوان العميل',
-            'نوع الطلب', 'حالة التتبع', 'حالة الطلب', 'الأولوية', 'الفرع', 'البائع',
-            'المبلغ الإجمالي', 'المبلغ المدفوع', 'المبلغ المتبقي', 'تاريخ الطلب', 'تاريخ التسليم المتوقع',
-            'نوع التسليم', 'عنوان التسليم', 'ملاحظات', 'تاريخ الإنشاء', 'تاريخ التحديث'
+            'معرف الطلب', 'رقم الطلب', 'اسم العميل', 'رقم هاتف العميل', 'رقم الهاتف الثاني', 'عنوان العميل',
+            'رقم الفاتورة', 'رقم الفاتورة 2', 'رقم الفاتورة 3', 'رقم العقد', 'رقم العقد 2', 'رقم العقد 3',
+            'ملف العقد', 'رابط العقد في Google Drive', 'أنواع الطلب المختارة', 'أنواع الخدمات',
+            'وضع الطلب', 'حالة الطلب', 'حالة التتبع', 'حالة التركيب', 'حالة المعاينة', 'مكتمل بالكامل',
+            'الفرع', 'البائع', 'المبلغ الإجمالي', 'السعر النهائي', 'المبلغ المدفوع', 'المبلغ المتبقي',
+            'تم التحقق من السداد', 'تاريخ الطلب', 'تاريخ التسليم المتوقع', 'نوع التسليم', 'عنوان التسليم',
+            'نوع المكان', 'عنوان التركيب', 'اسم المستلم', 'المعاينة المرتبطة', 'نوع المعاينة المرتبطة',
+            'تاريخ آخر إشعار', 'ملاحظات', 'تاريخ الإنشاء', 'تاريخ التحديث'
         ]
 
         data = [header]
@@ -684,33 +695,89 @@ def sync_orders(service, spreadsheet_id):
             # التأكد من وجود العميل وعدم فقدان أي بيانات
             customer_name = order.customer.name if order.customer else 'عميل غير محدد'
             customer_phone = order.customer.phone if order.customer else ''
+            customer_phone2 = order.customer.phone2 if order.customer and hasattr(order.customer, 'phone2') else ''
             customer_address = order.customer.address if order.customer else ''
 
             # حساب المبلغ المتبقي
             remaining_amount = (order.total_amount or 0) - (order.paid_amount or 0)
+
+            # تحضير أنواع الخدمات
+            service_types_str = ', '.join(order.service_types) if order.service_types else ''
+
+            # تحضير أنواع الطلب المختارة مع الترجمة الصحيحة
+            selected_types_display = []
+            if order.selected_types:
+                type_mapping = {
+                    'accessory': 'إكسسوار',
+                    'installation': 'تركيب',
+                    'inspection': 'معاينة',
+                    'tailoring': 'تسليم'
+                }
+                # التعامل مع البيانات سواء كانت list أو string
+                if isinstance(order.selected_types, list):
+                    types_list = order.selected_types
+                elif isinstance(order.selected_types, str):
+                    # إذا كانت string، نحاول تحويلها إلى list
+                    try:
+                        import json
+                        types_list = json.loads(order.selected_types)
+                    except:
+                        # إذا فشل، نعتبرها نوع واحد
+                        types_list = [order.selected_types] if order.selected_types else []
+                else:
+                    types_list = []
+
+                for type_code in types_list:
+                    if type_code and type_code.strip():  # تجاهل القيم الفارغة
+                        selected_types_display.append(type_mapping.get(type_code.strip(), type_code.strip()))
+            selected_types_str = ', '.join(selected_types_display)
+
+            # تحضير ملف العقد
+            contract_file_name = order.contract_file.name if order.contract_file else ''
 
             row = [
                 str(order.id),
                 order.order_number or '',
                 customer_name,
                 customer_phone,
+                customer_phone2,
                 customer_address,
-                order.get_order_type_display() if order.order_type else '',
-                order.get_tracking_status_display() if order.tracking_status else '',
-                order.get_status_display() if hasattr(order, 'status') and order.status else '',
-                order.get_priority_display() if hasattr(order, 'priority') and order.priority else '',
+                order.invoice_number or '',
+                order.invoice_number_2 or '',
+                order.invoice_number_3 or '',
+                order.contract_number or '',
+                order.contract_number_2 or '',
+                order.contract_number_3 or '',
+                contract_file_name,
+                order.contract_google_drive_file_url or '',
+                selected_types_str,
+                service_types_str,
+                order.get_status_display(),  # وضع الطلب (عادي/VIP)
+                order.get_order_status_display(),  # حالة الطلب (من التصنيع)
+                order.get_tracking_status_display(),  # حالة التتبع
+                order.get_installation_status_display(),  # حالة التركيب
+                order.get_inspection_status_display(),  # حالة المعاينة
+                'نعم' if order.is_fully_completed else 'لا',  # مكتمل بالكامل
                 order.branch.name if order.branch else '',
                 order.salesperson.name if order.salesperson else '',
                 str(order.total_amount) if order.total_amount else '0',
+                str(order.final_price) if order.final_price else '0',
                 str(order.paid_amount) if order.paid_amount else '0',
                 str(remaining_amount),
+                'نعم' if order.payment_verified else 'لا',
                 order.order_date.strftime('%Y-%m-%d') if order.order_date else '',
-                order.expected_delivery_date.strftime('%Y-%m-%d') if hasattr(order, 'expected_delivery_date') and order.expected_delivery_date else '',
-                order.get_delivery_type_display() if hasattr(order, 'delivery_type') and order.delivery_type else '',
-                order.delivery_address if hasattr(order, 'delivery_address') and order.delivery_address else '',
-                order.notes if hasattr(order, 'notes') and order.notes else '',
+                order.expected_delivery_date.strftime('%Y-%m-%d') if order.expected_delivery_date else '',
+                order.get_delivery_type_display() if order.delivery_type else '',
+                order.delivery_address or '',
+                order.get_location_type_display() if order.location_type else '',
+                order.location_address or '',
+                order.delivery_recipient_name or '',
+                order.related_inspection or '',
+                order.related_inspection_type or '',
+                order.last_notification_date.strftime('%Y-%m-%d %H:%M') if order.last_notification_date else '',
+                order.notes or '',
                 order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '',
-                order.modified_at.strftime('%Y-%m-%d %H:%M') if hasattr(order, 'modified_at') and order.modified_at else ''
+                order.updated_at.strftime('%Y-%m-%d %H:%M') if order.updated_at else ''
             ]
             data.append(row)
 
@@ -835,7 +902,8 @@ def sync_manufacturing_orders(service, spreadsheet_id):
         # تحديد العناوين المخصصة لأوامر التصنيع
         header = [
             'معرف أمر التصنيع', 'رقم أمر التصنيع', 'رقم الطلب', 'اسم العميل', 'رقم هاتف العميل',
-            'رقم العقد', 'نوع الطلب', 'الحالة', 'الأولوية', 'تاريخ البدء المتوقع', 'تاريخ الانتهاء المتوقع',
+            'رقم الفاتورة', 'رقم الفاتورة 2', 'رقم الفاتورة 3', 'رقم العقد', 'رقم العقد 2', 'رقم العقد 3',
+            'نوع الطلب', 'الحالة', 'الأولوية', 'تاريخ البدء المتوقع', 'تاريخ الانتهاء المتوقع',
             'تاريخ الإكمال الفعلي', 'ملاحظات التصنيع', 'تاريخ الإنشاء', 'تاريخ التحديث'
         ]
 
@@ -846,13 +914,26 @@ def sync_manufacturing_orders(service, spreadsheet_id):
             customer_phone = manufacturing_order.order.customer.phone if manufacturing_order.order and manufacturing_order.order.customer else ''
             order_number = manufacturing_order.order.order_number if manufacturing_order.order else ''
 
+            # جلب أرقام الفواتير والعقود من الطلب
+            invoice_number = manufacturing_order.order.invoice_number if manufacturing_order.order else ''
+            invoice_number_2 = manufacturing_order.order.invoice_number_2 if manufacturing_order.order else ''
+            invoice_number_3 = manufacturing_order.order.invoice_number_3 if manufacturing_order.order else ''
+            contract_number = manufacturing_order.order.contract_number if manufacturing_order.order else ''
+            contract_number_2 = manufacturing_order.order.contract_number_2 if manufacturing_order.order else ''
+            contract_number_3 = manufacturing_order.order.contract_number_3 if manufacturing_order.order else ''
+
             row = [
                 str(manufacturing_order.id),
                 manufacturing_order.manufacturing_code,
                 order_number,
                 customer_name,
                 customer_phone,
-                manufacturing_order.contract_number or '',
+                invoice_number or '',
+                invoice_number_2 or '',
+                invoice_number_3 or '',
+                contract_number or '',
+                contract_number_2 or '',
+                contract_number_3 or '',
                 manufacturing_order.get_order_type_display() if manufacturing_order.order_type else '',
                 manufacturing_order.get_status_display(),
                 manufacturing_order.get_priority_display() if hasattr(manufacturing_order, 'priority') else '',
@@ -1190,7 +1271,7 @@ def sync_comprehensive_customers(service, spreadsheet_id):
             'معرف العميل', 'كود العميل', 'اسم العميل', 'رقم الهاتف', 'رقم الهاتف الثاني',
             'البريد الإلكتروني', 'العنوان', 'نوع المكان', 'الفرع', 'تصنيف العميل',
             'عدد الطلبات', 'عدد المعاينات', 'عدد أوامر التصنيع', 'إجمالي قيمة الطلبات',
-            'آخر طلب', 'آخر معاينة', 'الحالة', 'تاريخ الإنشاء'
+            'آخر طلب', 'آخر رقم فاتورة', 'آخر رقم عقد', 'آخر معاينة', 'الحالة', 'تاريخ الإنشاء'
         ]
 
         data = [header]
@@ -1203,9 +1284,21 @@ def sync_comprehensive_customers(service, spreadsheet_id):
             # حساب إجمالي قيمة الطلبات
             total_orders_value = sum([order.total_amount or 0 for order in customer.customer_orders.all()])
 
-            # آخر طلب ومعاينة
+            # آخر طلب ومعاينة مع تفاصيل الفواتير والعقود
             last_order = customer.customer_orders.order_by('-created_at').first()
             last_inspection = customer.inspections.order_by('-request_date').first()
+
+            # آخر رقم فاتورة وعقد من آخر طلب
+            last_invoice_number = ''
+            last_contract_number = ''
+            if last_order:
+                # جمع جميع أرقام الفواتير
+                invoice_numbers = [num for num in [last_order.invoice_number, last_order.invoice_number_2, last_order.invoice_number_3] if num]
+                last_invoice_number = ', '.join(invoice_numbers) if invoice_numbers else ''
+
+                # جمع جميع أرقام العقود
+                contract_numbers = [num for num in [last_order.contract_number, last_order.contract_number_2, last_order.contract_number_3] if num]
+                last_contract_number = ', '.join(contract_numbers) if contract_numbers else ''
 
             row = [
                 str(customer.id),
@@ -1223,6 +1316,8 @@ def sync_comprehensive_customers(service, spreadsheet_id):
                 str(manufacturing_orders_count),
                 str(total_orders_value),
                 last_order.order_number if last_order else '',
+                last_invoice_number,
+                last_contract_number,
                 last_inspection.contract_number if last_inspection else '',
                 customer.get_status_display(),
                 customer.created_at.strftime('%Y-%m-%d') if customer.created_at else ''
@@ -1427,3 +1522,401 @@ def sync_comprehensive_system_settings(service, spreadsheet_id):
         message = f"حدث خطأ أثناء المزامنة الشاملة لإعدادات النظام: {str(e)}"
         logger.error(message)
         return {'status': 'error', 'message': message}
+
+
+def sync_complete_orders_lifecycle(service, spreadsheet_id):
+    """
+    مزامنة دورة حياة الطلبات الكاملة - الطلب + التصنيع + التركيب + المعاينة + التسليم
+    """
+    try:
+        Order = apps.get_model('orders', 'Order')
+        ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+        InstallationSchedule = apps.get_model('installations', 'InstallationSchedule')
+        Inspection = apps.get_model('inspections', 'Inspection')
+
+        # جلب جميع الطلبات مع البيانات المترابطة
+        orders = Order.objects.select_related(
+            'customer', 'branch', 'salesperson', 'manufacturing_order'
+        ).prefetch_related(
+            'installation_schedules', 'inspections'
+        ).all()
+
+        # تحديد العناوين الشاملة لدورة حياة الطلب
+        header = [
+            # بيانات الطلب الأساسية
+            'معرف الطلب', 'رقم الطلب', 'اسم العميل', 'رقم هاتف العميل', 'عنوان العميل',
+            'أنواع الطلب', 'وضع الطلب', 'حالة الطلب', 'حالة التتبع', 'الفرع', 'البائع',
+            'المبلغ الإجمالي', 'المبلغ المدفوع', 'المبلغ المتبقي', 'تم التحقق من السداد',
+            'تاريخ الطلب', 'تاريخ التسليم المتوقع',
+
+            # بيانات الفواتير والعقود
+            'رقم الفاتورة', 'رقم الفاتورة 2', 'رقم الفاتورة 3',
+            'رقم العقد', 'رقم العقد 2', 'رقم العقد 3',
+
+            # بيانات أمر التصنيع
+            'رقم أمر التصنيع', 'حالة التصنيع', 'نوع أمر التصنيع', 'تاريخ بدء التصنيع',
+            'تاريخ انتهاء التصنيع المتوقع', 'تاريخ إكمال التصنيع الفعلي', 'رقم إذن الخروج',
+            'ملاحظات التصنيع',
+
+            # بيانات التركيب
+            'حالة التركيب', 'فريق التركيب', 'تاريخ التركيب المجدول', 'وقت التركيب',
+            'نوع مكان التركيب', 'عنوان التركيب', 'تاريخ إكمال التركيب', 'ملاحظات التركيب',
+
+            # بيانات المعاينة
+            'رقم عقد المعاينة', 'حالة المعاينة', 'نتيجة المعاينة', 'المعاين', 'عدد الشبابيك',
+            'تاريخ طلب المعاينة', 'تاريخ تنفيذ المعاينة', 'وقت المعاينة', 'حالة السداد للمعاينة',
+            'ملاحظات المعاينة',
+
+            # بيانات التسليم
+            'تم التسليم', 'رقم إذن التسليم', 'اسم المستلم', 'تاريخ التسليم الفعلي',
+
+            # بيانات عامة
+            'مكتمل بالكامل', 'ملاحظات عامة', 'تاريخ إنشاء الطلب', 'تاريخ آخر تحديث'
+        ]
+
+        data = [header]
+        for order in orders:
+            # بيانات العميل
+            customer_name = order.customer.name if order.customer else 'عميل غير محدد'
+            customer_phone = order.customer.phone if order.customer else ''
+            customer_address = order.customer.address if order.customer else ''
+
+            # حساب المبلغ المتبقي
+            remaining_amount = (order.total_amount or 0) - (order.paid_amount or 0)
+
+            # أنواع الطلب
+            selected_types_display = []
+            if order.selected_types:
+                type_mapping = {
+                    'accessory': 'إكسسوار',
+                    'installation': 'تركيب',
+                    'inspection': 'معاينة',
+                    'tailoring': 'تسليم'
+                }
+                if isinstance(order.selected_types, list):
+                    types_list = order.selected_types
+                elif isinstance(order.selected_types, str):
+                    try:
+                        import json
+                        types_list = json.loads(order.selected_types)
+                    except:
+                        types_list = [order.selected_types] if order.selected_types else []
+                else:
+                    types_list = []
+
+                for type_code in types_list:
+                    if type_code and type_code.strip():
+                        selected_types_display.append(type_mapping.get(type_code.strip(), type_code.strip()))
+            selected_types_str = ', '.join(selected_types_display)
+
+            # بيانات أمر التصنيع
+            manufacturing_order = getattr(order, 'manufacturing_order', None)
+            mfg_code = manufacturing_order.manufacturing_code if manufacturing_order else ''
+            mfg_status = manufacturing_order.get_status_display() if manufacturing_order else ''
+            mfg_type = manufacturing_order.get_order_type_display() if manufacturing_order else ''
+            mfg_start_date = manufacturing_order.order_date.strftime('%Y-%m-%d') if manufacturing_order and manufacturing_order.order_date else ''
+            mfg_expected_end = manufacturing_order.expected_delivery_date.strftime('%Y-%m-%d') if manufacturing_order and manufacturing_order.expected_delivery_date else ''
+            mfg_actual_completion = manufacturing_order.completion_date.strftime('%Y-%m-%d') if manufacturing_order and manufacturing_order.completion_date else ''
+            mfg_exit_permit = manufacturing_order.exit_permit_number if manufacturing_order else ''
+            mfg_notes = manufacturing_order.notes if manufacturing_order else ''
+
+            # بيانات التركيب
+            installation = order.installation_schedules.first() if hasattr(order, 'installation_schedules') else None
+            inst_status = installation.get_status_display() if installation else ''
+            inst_team = installation.team.name if installation and installation.team else ''
+            inst_scheduled_date = installation.scheduled_date.strftime('%Y-%m-%d') if installation and installation.scheduled_date else ''
+            inst_scheduled_time = installation.scheduled_time.strftime('%H:%M') if installation and installation.scheduled_time else ''
+            inst_location_type = installation.get_location_type_display() if installation and installation.location_type else ''
+            inst_location_address = installation.location_address if installation else ''
+            inst_completion_date = installation.completion_date.strftime('%Y-%m-%d %H:%M') if installation and installation.completion_date else ''
+            inst_notes = installation.notes if installation else ''
+
+            # بيانات المعاينة
+            inspection = order.inspections.first() if hasattr(order, 'inspections') else None
+            insp_contract = inspection.contract_number if inspection else ''
+            insp_status = inspection.get_status_display() if inspection else ''
+            insp_result = inspection.get_result_display() if inspection and inspection.result else ''
+            insp_inspector = f"{inspection.inspector.first_name} {inspection.inspector.last_name}" if inspection and inspection.inspector else ''
+            insp_windows_count = str(inspection.windows_count) if inspection and inspection.windows_count else ''
+            insp_request_date = inspection.request_date.strftime('%Y-%m-%d') if inspection and inspection.request_date else ''
+            insp_scheduled_date = inspection.scheduled_date.strftime('%Y-%m-%d') if inspection and inspection.scheduled_date else ''
+            insp_scheduled_time = inspection.scheduled_time.strftime('%H:%M') if inspection and inspection.scheduled_time else ''
+            insp_payment_status = inspection.get_payment_status_display() if inspection else ''
+            insp_notes = inspection.notes if inspection else ''
+
+            # بيانات التسليم
+            is_delivered = 'نعم' if manufacturing_order and manufacturing_order.status == 'delivered' else 'لا'
+            delivery_permit = manufacturing_order.delivery_permit_number if manufacturing_order else ''
+            delivery_recipient = manufacturing_order.delivery_recipient_name if manufacturing_order else ''
+            delivery_date = manufacturing_order.delivery_date.strftime('%Y-%m-%d %H:%M') if manufacturing_order and manufacturing_order.delivery_date else ''
+
+            # إنشاء الصف الشامل
+            row = [
+                # بيانات الطلب الأساسية
+                str(order.id),
+                order.order_number or '',
+                customer_name,
+                customer_phone,
+                customer_address,
+                selected_types_str,
+                order.get_status_display(),
+                order.get_order_status_display(),
+                order.get_tracking_status_display(),
+                order.branch.name if order.branch else '',
+                order.salesperson.name if order.salesperson else '',
+                str(order.total_amount) if order.total_amount else '0',
+                str(order.paid_amount) if order.paid_amount else '0',
+                str(remaining_amount),
+                'نعم' if order.payment_verified else 'لا',
+                order.order_date.strftime('%Y-%m-%d') if order.order_date else '',
+                order.expected_delivery_date.strftime('%Y-%m-%d') if order.expected_delivery_date else '',
+
+                # بيانات الفواتير والعقود
+                order.invoice_number or '',
+                order.invoice_number_2 or '',
+                order.invoice_number_3 or '',
+                order.contract_number or '',
+                order.contract_number_2 or '',
+                order.contract_number_3 or '',
+
+                # بيانات أمر التصنيع
+                mfg_code,
+                mfg_status,
+                mfg_type,
+                mfg_start_date,
+                mfg_expected_end,
+                mfg_actual_completion,
+                mfg_exit_permit,
+                mfg_notes,
+
+                # بيانات التركيب
+                inst_status,
+                inst_team,
+                inst_scheduled_date,
+                inst_scheduled_time,
+                inst_location_type,
+                inst_location_address,
+                inst_completion_date,
+                inst_notes,
+
+                # بيانات المعاينة
+                insp_contract,
+                insp_status,
+                insp_result,
+                insp_inspector,
+                insp_windows_count,
+                insp_request_date,
+                insp_scheduled_date,
+                insp_scheduled_time,
+                insp_payment_status,
+                insp_notes,
+
+                # بيانات التسليم
+                is_delivered,
+                delivery_permit,
+                delivery_recipient,
+                delivery_date,
+
+                # بيانات عامة
+                'نعم' if order.is_fully_completed else 'لا',
+                order.notes or '',
+                order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '',
+                order.updated_at.strftime('%Y-%m-%d %H:%M') if order.updated_at else ''
+            ]
+            data.append(row)
+
+        sheet_name = 'Complete Orders Lifecycle'
+        result = update_sheet(service, spreadsheet_id, sheet_name, data)
+        return {'status': 'success', 'message': f"تمت مزامنة دورة حياة {len(orders)} طلب كاملة"}
+    except Exception as e:
+        message = f"حدث خطأ أثناء مزامنة دورة حياة الطلبات الكاملة: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}
+
+
+def reverse_sync_from_google_sheets(service, spreadsheet_id, admin_password, delete_old_data=False):
+    """
+    المزامنة العكسية - استقبال البيانات من Google Sheets إلى النظام
+    مع حماية بكلمة مرور المدير وخيار حذف البيانات القديمة
+    """
+    try:
+        from django.contrib.auth import get_user_model
+
+        # الحصول على نموذج المستخدم الصحيح
+        User = get_user_model()
+
+        # التحقق من كلمة مرور المدير
+        admin_users = User.objects.filter(is_superuser=True)
+        logger.info(f"عدد المستخدمين المديرين: {admin_users.count()}")
+
+        if not admin_users.exists():
+            return {'status': 'error', 'message': 'لا يوجد مستخدم مدير في النظام'}
+
+        # البحث عن مستخدم مدير بكلمة المرور الصحيحة
+        admin_user = None
+        for user in admin_users:
+            logger.info(f"فحص المستخدم: {user.username}")
+            if user.check_password(admin_password):
+                admin_user = user
+                logger.info(f"تم العثور على مستخدم مدير صحيح: {user.username}")
+                break
+
+        if not admin_user:
+            # إعطاء معلومات أكثر تفصيلاً للتشخيص
+            admin_usernames = [user.username for user in admin_users]
+            logger.warning(f"كلمة مرور خاطئة. المستخدمين المديرين المتاحين: {admin_usernames}")
+            return {'status': 'error', 'message': f'كلمة مرور المدير غير صحيحة. المستخدمين المديرين: {", ".join(admin_usernames)}'}
+
+        # قراءة البيانات من Google Sheets
+        try:
+            # الحصول على قائمة جميع الصفحات المتاحة
+            spreadsheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+            sheets = spreadsheet_metadata.get('sheets', [])
+
+            # البحث عن الصفحة المناسبة
+            target_sheet = None
+            possible_names = [
+                'Complete Orders Lifecycle',
+                'دورة حياة الطلبات الكاملة',
+                'Orders',
+                'الطلبات',
+                'Sheet1'
+            ]
+
+            for sheet in sheets:
+                sheet_title = sheet['properties']['title']
+                logger.info(f"صفحة متاحة: {sheet_title}")
+
+                if sheet_title in possible_names:
+                    target_sheet = sheet_title
+                    break
+
+            # إذا لم نجد صفحة مناسبة، استخدم أول صفحة
+            if not target_sheet and sheets:
+                target_sheet = sheets[0]['properties']['title']
+                logger.info(f"استخدام أول صفحة متاحة: {target_sheet}")
+
+            if not target_sheet:
+                return {'status': 'error', 'message': 'لا توجد صفحات في الجدول'}
+
+            # قراءة البيانات من الصفحة المحددة
+            result = service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range=f"'{target_sheet}'!A:BH"  # من A إلى BH لتغطية 57 عمود
+            ).execute()
+
+            values = result.get('values', [])
+            if not values:
+                return {'status': 'error', 'message': 'لا توجد بيانات في الجدول'}
+
+            # إزالة صف العناوين
+            header = values[0]
+            data_rows = values[1:]
+
+            if not data_rows:
+                return {'status': 'error', 'message': 'لا توجد بيانات للمزامنة'}
+
+            # حذف البيانات القديمة إذا تم طلب ذلك
+            if delete_old_data:
+                Order = apps.get_model('orders', 'Order')
+                ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+                InstallationSchedule = apps.get_model('installations', 'InstallationSchedule')
+                Inspection = apps.get_model('inspections', 'Inspection')
+
+                # حذف البيانات بالترتيب الصحيح (البيانات المترابطة أولاً)
+                InstallationSchedule.objects.all().delete()
+                Inspection.objects.all().delete()
+                ManufacturingOrder.objects.all().delete()
+                Order.objects.all().delete()
+
+                logger.info("تم حذف جميع البيانات القديمة")
+
+            # معالجة البيانات وإدراجها
+            processed_count = 0
+            error_count = 0
+
+            for row_index, row in enumerate(data_rows, start=2):  # بدء من الصف 2
+                try:
+                    # التأكد من وجود بيانات كافية في الصف
+                    if len(row) < 10:  # الحد الأدنى من الأعمدة المطلوبة
+                        continue
+
+                    # استخراج البيانات الأساسية
+                    order_id = row[0] if len(row) > 0 else ''
+                    order_number = row[1] if len(row) > 1 else ''
+                    customer_name = row[2] if len(row) > 2 else ''
+
+                    if not order_number or not customer_name:
+                        continue
+
+                    # معالجة البيانات وإنشاء/تحديث السجلات
+                    # هذا مثال مبسط - يمكن توسيعه حسب الحاجة
+                    success = process_reverse_sync_row(row, header)
+
+                    if success:
+                        processed_count += 1
+                    else:
+                        error_count += 1
+
+                except Exception as e:
+                    error_count += 1
+                    logger.error(f"خطأ في معالجة الصف {row_index}: {str(e)}")
+                    continue
+
+            message = f"تمت المزامنة العكسية بنجاح. تم معالجة {processed_count} سجل"
+            if error_count > 0:
+                message += f" مع {error_count} خطأ"
+
+            return {'status': 'success', 'message': message}
+
+        except Exception as e:
+            return {'status': 'error', 'message': f"خطأ في قراءة البيانات من Google Sheets: {str(e)}"}
+
+    except Exception as e:
+        message = f"حدث خطأ أثناء المزامنة العكسية: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}
+
+
+def process_reverse_sync_row(row, header):
+    """
+    معالجة صف واحد من البيانات المستقبلة من Google Sheets
+    """
+    try:
+        # هذه دالة مبسطة للمثال
+        # يمكن توسيعها لمعالجة جميع الحقول حسب الحاجة
+
+        # استخراج البيانات الأساسية
+        order_number = row[1] if len(row) > 1 else ''
+        customer_name = row[2] if len(row) > 2 else ''
+
+        if not order_number or not customer_name:
+            return False
+
+        # البحث عن العميل أو إنشاؤه
+        Customer = apps.get_model('customers', 'Customer')
+        customer, created = Customer.objects.get_or_create(
+            name=customer_name,
+            defaults={
+                'phone': row[3] if len(row) > 3 else '',
+                'address': row[4] if len(row) > 4 else '',
+            }
+        )
+
+        # البحث عن الطلب أو إنشاؤه
+        Order = apps.get_model('orders', 'Order')
+        order, created = Order.objects.get_or_create(
+            order_number=order_number,
+            defaults={
+                'customer': customer,
+                'total_amount': float(row[11]) if len(row) > 11 and row[11] else 0,
+                'paid_amount': float(row[12]) if len(row) > 12 and row[12] else 0,
+                'notes': row[-4] if len(row) > 4 else '',  # ملاحظات عامة
+            }
+        )
+
+        return True
+
+    except Exception as e:
+        logger.error(f"خطأ في معالجة الصف: {str(e)}")
+        return False

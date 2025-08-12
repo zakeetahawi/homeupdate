@@ -19,7 +19,8 @@ from django.core.files.base import ContentFile
 
 from .google_sync import (
     GoogleSyncConfig, GoogleSyncLog, sync_with_google_sheets, sync_databases,
-    sync_users, sync_customers, sync_orders, sync_products, sync_inspections, sync_settings, create_sheets_service
+    sync_users, sync_customers, sync_orders, sync_products, sync_inspections, sync_settings,
+    reverse_sync_from_google_sheets, create_sheets_service
 )
 from .views import is_staff_or_superuser
 
@@ -325,6 +326,78 @@ def google_sync_advanced_settings(request):
     except Exception as e:
         logger.error(f"فشل حفظ الإعدادات المتقدمة: {str(e)}")
         return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+@require_POST
+@csrf_exempt
+def reverse_sync_view(request):
+    """
+    المزامنة العكسية - استقبال البيانات من Google Sheets إلى النظام
+    """
+    try:
+        # التحقق من وجود إعداد مزامنة نشط
+        config = GoogleSyncConfig.get_active_config()
+        if not config:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'لا يوجد إعداد مزامنة نشط. يرجى إعداد المزامنة أولاً.'
+            })
+
+        # الحصول على البيانات من الطلب
+        admin_password = request.POST.get('admin_password', '')
+        delete_old_data = request.POST.get('delete_old_data') == 'true'
+
+        if not admin_password:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'يرجى إدخال كلمة مرور المدير'
+            })
+
+        # إنشاء خدمة Google Sheets
+        credentials = config.get_credentials()
+        if not credentials:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'لا يمكن قراءة بيانات الاعتماد'
+            })
+
+        sheets_service = create_sheets_service(credentials)
+        if not sheets_service:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'فشل في الاتصال بـ Google Sheets'
+            })
+
+        # تنفيذ المزامنة العكسية
+        result = reverse_sync_from_google_sheets(
+            sheets_service,
+            config.spreadsheet_id,
+            admin_password,
+            delete_old_data
+        )
+
+        # تسجيل العملية
+        GoogleSyncLog.objects.create(
+            config=config,
+            status=result['status'],
+            message=f"المزامنة العكسية: {result['message']}",
+            details={
+                'operation_type': 'reverse_sync',
+                'delete_old_data': delete_old_data,
+                'admin_user': admin_password[:3] + '***' if admin_password else 'غير محدد'  # إخفاء كلمة المرور
+            }
+        )
+
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"خطأ في المزامنة العكسية: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'message': f'حدث خطأ غير متوقع: {str(e)}'
+        })
 
 @login_required
 @user_passes_test(is_staff_or_superuser)

@@ -65,33 +65,33 @@ class BackupJob(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.name} - {self.get_status_display()}"
+        return "{} - {}".format(self.name, self.get_status_display())
     
     @property
     def file_size_display(self):
         """عرض حجم الملف بشكل مقروء"""
         if self.file_size == 0:
             return "0 B"
-        
+
         size = self.file_size
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
             if size < 1024.0:
-                return f"{size:.1f} {unit}"
+                return "{:.1f} {}".format(size, unit)
             size /= 1024.0
-        return f"{size:.1f} PB"
+        return "{:.1f} PB".format(size)
     
     @property
     def compressed_size_display(self):
         """عرض الحجم المضغوط بشكل مقروء"""
         if self.compressed_size == 0:
             return "0 B"
-        
+
         size = self.compressed_size
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
             if size < 1024.0:
-                return f"{size:.1f} {unit}"
+                return "{:.1f} {}".format(size, unit)
             size /= 1024.0
-        return f"{size:.1f} PB"
+        return "{:.1f} PB".format(size)
     
     @property
     def space_saved_display(self):
@@ -100,13 +100,13 @@ class BackupJob(models.Model):
             saved = self.file_size - self.compressed_size
             if saved <= 0:
                 return "0 B"
-            
+
             size = saved
             for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
                 if size < 1024.0:
-                    return f"{size:.1f} {unit}"
+                    return "{:.1f} {}".format(size, unit)
                 size /= 1024.0
-            return f"{size:.1f} PB"
+            return "{:.1f} PB".format(size)
         return "0 B"
     
     @property
@@ -206,20 +206,20 @@ class RestoreJob(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.name} - {self.get_status_display()}"
+        return "{} - {}".format(self.name, self.get_status_display())
     
     @property
     def file_size_display(self):
         """عرض حجم الملف بشكل مقروء"""
         if self.file_size == 0:
             return "0 B"
-        
+
         size = self.file_size
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
             if size < 1024.0:
-                return f"{size:.1f} {unit}"
+                return "{:.1f} {}".format(size, unit)
             size /= 1024.0
-        return f"{size:.1f} PB"
+        return "{:.1f} PB".format(size)
     
     @property
     def duration(self):

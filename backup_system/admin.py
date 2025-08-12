@@ -73,12 +73,12 @@ class BackupJobAdmin(admin.ModelAdmin):
         if obj.status == 'running':
             return format_html(
                 '<div style="width: 100px; background-color: #f0f0f0; border-radius: 3px;">'
-                '<div style="width: {}%; background-color: #007cba; height: 20px; border-radius: 3px; text-align: center; color: white; font-size: 12px; line-height: 20px;">'
-                '{}%</div></div>',
+                '<div style="width: {}%%; background-color: #007cba; height: 20px; border-radius: 3px; text-align: center; color: white; font-size: 12px; line-height: 20px;">'
+                '{}%%</div></div>',
                 obj.progress_percentage, int(obj.progress_percentage)
             )
         elif obj.status == 'completed':
-            return format_html('<span style="color: green; font-weight: bold;">100%</span>')
+            return format_html('<span style="color: green; font-weight: bold;">100%%</span>')
         else:
             return '-'
     progress_bar.short_description = 'التقدم'
@@ -87,13 +87,13 @@ class BackupJobAdmin(admin.ModelAdmin):
         """عرض حجم الملف بتنسيق مقروء"""
         if obj.file_size:
             if obj.file_size < 1024:
-                return f'{obj.file_size} بايت'
+                return '{} بايت'.format(obj.file_size)
             elif obj.file_size < 1024 * 1024:
-                return f'{obj.file_size / 1024:.1f} كيلوبايت'
+                return '{:.1f} كيلوبايت'.format(obj.file_size / 1024)
             elif obj.file_size < 1024 * 1024 * 1024:
-                return f'{obj.file_size / (1024 * 1024):.1f} ميجابايت'
+                return '{:.1f} ميجابايت'.format(obj.file_size / (1024 * 1024))
             else:
-                return f'{obj.file_size / (1024 * 1024 * 1024):.1f} جيجابايت'
+                return '{:.1f} جيجابايت'.format(obj.file_size / (1024 * 1024 * 1024))
         return '-'
     file_size_display.short_description = 'حجم الملف'
     
@@ -101,13 +101,13 @@ class BackupJobAdmin(admin.ModelAdmin):
         """عرض حجم الملف المضغوط بتنسيق مقروء"""
         if obj.compressed_size:
             if obj.compressed_size < 1024:
-                return f'{obj.compressed_size} بايت'
+                return '{} بايت'.format(obj.compressed_size)
             elif obj.compressed_size < 1024 * 1024:
-                return f'{obj.compressed_size / 1024:.1f} كيلوبايت'
+                return '{:.1f} كيلوبايت'.format(obj.compressed_size / 1024)
             elif obj.compressed_size < 1024 * 1024 * 1024:
-                return f'{obj.compressed_size / (1024 * 1024):.1f} ميجابايت'
+                return '{:.1f} ميجابايت'.format(obj.compressed_size / (1024 * 1024))
             else:
-                return f'{obj.compressed_size / (1024 * 1024 * 1024):.1f} جيجابايت'
+                return '{:.1f} جيجابايت'.format(obj.compressed_size / (1024 * 1024 * 1024))
         return '-'
     compressed_size_display.short_description = 'حجم مضغوط'
     
@@ -179,12 +179,12 @@ class RestoreJobAdmin(admin.ModelAdmin):
         if obj.status == 'running':
             return format_html(
                 '<div style="width: 100px; background-color: #f0f0f0; border-radius: 3px;">'
-                '<div style="width: {}%; background-color: #007cba; height: 20px; border-radius: 3px; text-align: center; color: white; font-size: 12px; line-height: 20px;">'
-                '{}%</div></div>',
+                '<div style="width: {}%%; background-color: #007cba; height: 20px; border-radius: 3px; text-align: center; color: white; font-size: 12px; line-height: 20px;">'
+                '{}%%</div></div>',
                 obj.progress_percentage, int(obj.progress_percentage)
             )
         elif obj.status == 'completed':
-            return format_html('<span style="color: green; font-weight: bold;">100%</span>')
+            return format_html('<span style="color: green; font-weight: bold;">100%%</span>')
         else:
             return '-'
     progress_bar.short_description = 'التقدم'
@@ -194,9 +194,10 @@ class RestoreJobAdmin(admin.ModelAdmin):
         if obj.status == 'completed' and obj.total_records > 0:
             rate = obj.success_rate
             color = 'green' if rate >= 90 else 'orange' if rate >= 70 else 'red'
+            rate_formatted = "{:.1f}".format(rate)
             return format_html(
-                '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
-                color, rate
+                '<span style="color: {}; font-weight: bold;">{}%%</span>',
+                color, rate_formatted
             )
         return '-'
     success_rate_display.short_description = 'نسبة النجاح'
@@ -205,13 +206,13 @@ class RestoreJobAdmin(admin.ModelAdmin):
         """عرض حجم الملف بتنسيق مقروء"""
         if obj.file_size:
             if obj.file_size < 1024:
-                return f'{obj.file_size} بايت'
+                return '{} بايت'.format(obj.file_size)
             elif obj.file_size < 1024 * 1024:
-                return f'{obj.file_size / 1024:.1f} كيلوبايت'
+                return '{:.1f} كيلوبايت'.format(obj.file_size / 1024)
             elif obj.file_size < 1024 * 1024 * 1024:
-                return f'{obj.file_size / (1024 * 1024):.1f} ميجابايت'
+                return '{:.1f} ميجابايت'.format(obj.file_size / (1024 * 1024))
             else:
-                return f'{obj.file_size / (1024 * 1024 * 1024):.1f} جيجابايت'
+                return '{:.1f} جيجابايت'.format(obj.file_size / (1024 * 1024 * 1024))
         return '-'
     file_size_display.short_description = 'حجم الملف'
     

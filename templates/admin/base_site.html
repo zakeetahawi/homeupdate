@@ -39,3 +39,79 @@
     {% endif %}
 </div>
 {% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        /* تحسين شريط التنقل العلوي */
+        #header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-bottom: 3px solid #ffeb3b;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* تحسين breadcrumbs */
+        .breadcrumbs {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .breadcrumbs a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .breadcrumbs a:hover {
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+        }
+
+        /* تحسين قائمة التطبيقات */
+        .app-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .app-list .module {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .app-list .module:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.25);
+        }
+
+        .app-list .module h2 {
+            color: white;
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            padding-bottom: 10px;
+        }
+
+        .app-list .module h2 a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .app-list .module h2 a:hover {
+            color: #ffeb3b;
+        }
+    </style>
+{% endblock %}

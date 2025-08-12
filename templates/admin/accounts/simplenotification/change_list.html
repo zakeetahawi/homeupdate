@@ -75,15 +75,15 @@
         <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404;">
             <h4 style="margin: 0 0 10px 0; color: #856404;">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                تنبيه مهم: الإشعارات الظاهرة في الواجهة (118 إشعار)
+                تنبيه مهم: الإشعارات الظاهرة في الواجهة 
             </h4>
             <p style="margin: 0 0 10px 0;">
-                الإشعارات الـ 118 الظاهرة في الواجهة هي <strong>إشعارات جماعية</strong> وليست إشعارات بسيطة.
+                الإشعارات الظاهرة في الواجهة هي <strong>إشعارات جماعية</strong> وليست إشعارات بسيطة.
                 لحذف أو إدارة هذه الإشعارات، يرجى الانتقال إلى:
             </p>
             <a href="/admin/accounts/groupnotification/" style="background: #28a745; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: bold;">
                 <i class="fas fa-users me-2"></i>
-                إدارة الإشعارات الجماعية (118 إشعار)
+                إدارة الإشعارات الجماعية 
             </a>
         </div>
 
@@ -183,7 +183,7 @@
         }
         
         function deleteAllNotifications() {
-            if (confirm('⚠️ تحذير: هل أنت متأكد من حذف جميع الإشعارات البسيطة؟\n\nسيتم حذف جميع الإشعارات ({{ notifications_stats.total }}) نهائياً.\nهذا الإجراء لا يمكن التراجع عنه!\n\nاكتب "نعم" للتأكيد:')) {
+            if (confirm('⚠️ تحذير: هل أنت متأكد من حذف جميع الإشعارات البسيطة؟\n\nسيتم حذف جميع الإشعارات نهائياً.\nهذا الإجراء لا يمكن التراجع عنه!\n\nاكتب "نعم" للتأكيد:')) {
                 const confirmation = prompt('اكتب "حذف جميع الإشعارات" للتأكيد النهائي:');
                 if (confirmation === 'حذف جميع الإشعارات') {
                     // استخدام Django admin action

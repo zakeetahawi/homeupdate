@@ -380,14 +380,28 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         try:
             # تحقق مما إذا كان هذا كائن جديد (ليس له مفتاح أساسي)
-            # is_new = self.pk is None <- تم الحذف
+            is_new = self.pk is None
+
+            # متغيرات لتتبع تغيير الحالة
+            old_order_status = None
+            old_tracking_status = None
+
+            # إذا كان الطلب موجود مسبقاً، احفظ الحالات القديمة
+            if not is_new:
+                try:
+                    old_instance = Order.objects.get(pk=self.pk)
+                    old_order_status = old_instance.order_status
+                    old_tracking_status = old_instance.tracking_status
+                except Order.DoesNotExist:
+                    pass
+
             # تحقق من وجود العميل
             if not self.customer:
                 raise models.ValidationError('يجب اختيار العميل')
             # تحقق من وجود رقم طلب
             if not self.order_number:
                 self.order_number = self.generate_unique_order_number()
-            
+
             # Validate selected types
             selected_types = self.selected_types or []
             if isinstance(selected_types, str):
@@ -400,16 +414,16 @@ class Order(models.Model):
             if not selected_types:
                 selected_types = ['inspection']  # Default to inspection if no types are selected
                 self.selected_types = selected_types
-            
+
             # Contract number validation
             if 'tailoring' in selected_types and not self.contract_number:
                 raise ValidationError('رقم العقد مطلوب لخدمة التسليم')
-            
+
             # Invoice number validation - required for all types except inspection alone
             if not (len(selected_types) == 1 and selected_types[0] == 'inspection'):
                 if not self.invoice_number:
                     raise ValidationError('رقم الفاتورة مطلوب')
-            
+
             # Set legacy fields for backward compatibility
             has_products = any(t in ['fabric', 'accessory'] for t in selected_types)
             has_services = any(
@@ -425,7 +439,7 @@ class Order(models.Model):
                         'installation', 'inspection', 'transport', 'tailoring'
                     ]
                 ]
-            
+
             # Validate delivery address for home delivery
             if self.delivery_type == 'home' and not self.delivery_address:
                 raise models.ValidationError(
@@ -467,12 +481,22 @@ class Order(models.Model):
                 self.final_price = 0
                 super().save(update_fields=['final_price'])
 
-            # إنشاء إشعارات تلقائية للطلب الجديد
-            self.create_order_notifications()
+            # إنشاء الإشعارات المناسبة
+            if is_new:
+                # إشعار طلب جديد
+                self.create_order_notifications()
+            else:
+                # تحقق من تغيير الحالة وإنشاء إشعار إذا لزم الأمر
+                if old_order_status and old_order_status != self.order_status:
+                    self.create_status_change_notification(old_order_status, self.order_status)
+                elif old_tracking_status and old_tracking_status != self.tracking_status:
+                    self.create_status_change_notification(old_tracking_status, self.tracking_status, status_type='tracking')
 
         except Exception as e:
             # تسجيل الخطأ
-            pass
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في حفظ الطلب {getattr(self, 'order_number', 'غير محدد')}: {str(e)}")
             raise
     def create_order_notifications(self):
         """إنشاء إشعار جماعي موحد للطلب الجديد"""
@@ -506,22 +530,22 @@ class Order(models.Model):
             target_users = []
 
             # مدير النظام والمدير العام يرون جميع الإشعارات
-            superusers = User.objects.filter(is_superuser=True)
-            general_managers = User.objects.filter(is_general_manager=True)
+            superusers = User.objects.filter(is_superuser=True, is_active=True)
+            general_managers = User.objects.filter(is_general_manager=True, is_active=True)
             target_users.extend(superusers)
             target_users.extend(general_managers)
 
             # إضافة المستخدمين حسب نوع الطلب
             if 'inspection' in selected_types:
-                inspection_managers = User.objects.filter(is_inspection_manager=True)
+                inspection_managers = User.objects.filter(is_inspection_manager=True, is_active=True)
                 target_users.extend(inspection_managers)
 
             if 'installation' in selected_types:
-                installation_managers = User.objects.filter(is_installation_manager=True)
+                installation_managers = User.objects.filter(is_installation_manager=True, is_active=True)
                 target_users.extend(installation_managers)
 
             if any(t in selected_types for t in ['fabric', 'accessory', 'tailoring']):
-                factory_managers = User.objects.filter(is_factory_manager=True)
+                factory_managers = User.objects.filter(is_factory_manager=True, is_active=True)
                 target_users.extend(factory_managers)
 
             # إضافة مدير الفرع
@@ -560,6 +584,82 @@ class Order(models.Model):
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"خطأ في إنشاء إشعار الطلب {self.order_number}: {str(e)}")
+
+    def create_status_change_notification(self, old_status, new_status, status_type='order'):
+        """إنشاء إشعار جماعي عند تغيير حالة الطلب"""
+        try:
+            from accounts.models import GroupNotification, User
+
+            # تحديد نوع التغيير
+            status_display = {
+                'pending': 'في الانتظار',
+                'confirmed': 'مؤكد',
+                'in_progress': 'قيد التنفيذ',
+                'completed': 'مكتمل',
+                'cancelled': 'ملغي',
+                'on_hold': 'معلق',
+                'ready_for_delivery': 'جاهز للتسليم',
+                'delivered': 'تم التسليم'
+            }
+
+            old_status_ar = status_display.get(old_status, old_status)
+            new_status_ar = status_display.get(new_status, new_status)
+
+            # إنشاء عنوان ومحتوى الإشعار
+            title = f"تغيير حالة الطلب: {self.order_number}"
+            message = f"تم تغيير حالة الطلب للعميل {self.customer.name} من '{old_status_ar}' إلى '{new_status_ar}'"
+
+            # تحديد المستخدمين المستهدفين
+            target_users = []
+
+            # مدير النظام والمدير العام يرون جميع الإشعارات
+            superusers = User.objects.filter(is_superuser=True, is_active=True)
+            general_managers = User.objects.filter(is_general_manager=True, is_active=True)
+            target_users.extend(superusers)
+            target_users.extend(general_managers)
+
+            # إضافة منشئ الطلب
+            if self.created_by:
+                target_users.append(self.created_by)
+
+            # إضافة البائع إذا كان مختلف عن منشئ الطلب
+            if self.salesperson and self.salesperson.user != self.created_by:
+                target_users.append(self.salesperson.user)
+
+            # إضافة مدير الفرع
+            if self.branch and hasattr(self.branch, 'manager') and self.branch.manager:
+                target_users.append(self.branch.manager)
+
+            # إزالة التكرارات
+            target_users = list(set(target_users))
+
+            # إنشاء إشعار جماعي واحد
+            if target_users:
+                group_notification = GroupNotification.objects.create(
+                    title=title,
+                    message=message,
+                    customer_name=self.customer.name,
+                    order_number=self.order_number,
+                    notification_type='order_status_changed',
+                    priority='normal',
+                    created_by=self.created_by,
+                    related_object_id=self.id,
+                    related_object_type='Order'
+                )
+
+                # إضافة المستخدمين المستهدفين
+                group_notification.target_users.set(target_users)
+
+                # تسجيل نجاح العملية
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"تم إنشاء إشعار تغيير حالة للطلب {self.order_number} لـ {len(target_users)} مستخدم")
+
+        except Exception as e:
+            # تسجيل الخطأ دون إيقاف عملية الحفظ
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في إنشاء إشعار تغيير حالة الطلب {self.order_number}: {str(e)}")
 
     def notify_status_change(self, old_status, new_status, changed_by=None, notes=''):
         """إرسال إشعار عند تغيير حالة تتبع الطلب"""

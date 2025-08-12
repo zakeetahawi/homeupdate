@@ -1086,7 +1086,7 @@ class ComplaintNotificationAdmin(admin.ModelAdmin):
 
 @admin.register(GroupNotification)
 class GroupNotificationAdmin(admin.ModelAdmin):
-    """إدارة الإشعارات الجماعية - هذه هي الإشعارات الظاهرة في الواجهة (118 إشعار)"""
+    """إدارة الإشعارات الجماعية - هذه هي الإشعارات الظاهرة في الواجهة """
 
     list_display = [
         'notification_icon',
