@@ -48,13 +48,20 @@ def dashboard(request):
     
     # استخدام select_related و prefetch_related لتحسين الأداء
     
-    # 1. إحصائيات عامة - إجمالي طلبات التركيب في النظام
-    total_installation_orders = Order.objects.filter(
-        selected_types__icontains='installation'
-    ).count()
+    # تطبيق فلتر السنة الافتراضية
+    from accounts.utils import apply_default_year_filter
 
-    # 2. إحصائيات التركيبات المجدولة - استعلام واحد فقط
-    installation_stats = InstallationSchedule.objects.aggregate(
+    # 1. إحصائيات عامة - إجمالي طلبات التركيب في النظام (مفلترة بالسنة الافتراضية)
+    installation_orders_queryset = Order.objects.filter(
+        selected_types__icontains='installation'
+    )
+    installation_orders_queryset = apply_default_year_filter(installation_orders_queryset, request, 'order_date')
+    total_installation_orders = installation_orders_queryset.count()
+
+    # 2. إحصائيات التركيبات المجدولة - استعلام واحد فقط (مفلترة بالسنة الافتراضية)
+    installation_schedules_queryset = InstallationSchedule.objects.all()
+    installation_schedules_queryset = apply_default_year_filter(installation_schedules_queryset, request, 'scheduled_date')
+    installation_stats = installation_schedules_queryset.aggregate(
         completed=Count('id', filter=Q(status='completed')),
         in_installation=Count('id', filter=Q(status='in_installation')),
         scheduled=Count('id', filter=Q(status='scheduled')),
@@ -63,39 +70,47 @@ def dashboard(request):
         modification_required=Count('id', filter=Q(status='modification_required')),
     )
 
-    # 3. الطلبات الجاهزة للتركيب - استعلام محسّن
+    # 3. الطلبات الجاهزة للتركيب - استعلام محسّن (مفلترة بالسنة الافتراضية)
     ready_orders_query = Order.objects.filter(
         selected_types__icontains='installation',
         order_status__in=['ready_install', 'completed'],
         installationschedule__isnull=True
     )
-    
+    ready_orders_query = apply_default_year_filter(ready_orders_query, request, 'order_date')
+
     ready_manufacturing_query = ManufacturingOrder.objects.filter(
         status__in=['ready_install', 'delivered'],
         order__selected_types__icontains='installation',
         order__installationschedule__isnull=True
     )
+    ready_manufacturing_query = apply_default_year_filter(ready_manufacturing_query, request, 'order_date')
     
     # حساب العدد بطريقة محسّنة
     ready_order_ids = set(ready_orders_query.values_list('id', flat=True))
     ready_mfg_order_ids = set(ready_manufacturing_query.values_list('order_id', flat=True))
     total_orders_ready_for_installation = len(ready_order_ids | ready_mfg_order_ids)
 
-    # 4. إحصائيات أخرى محسّنة
-    orders_with_debt = Order.objects.filter(
+    # 4. إحصائيات أخرى محسّنة (مفلترة بالسنة الافتراضية)
+    orders_with_debt_query = Order.objects.filter(
         selected_types__icontains='installation',
         total_amount__gt=F('paid_amount')
-    ).count()
+    )
+    orders_with_debt_query = apply_default_year_filter(orders_with_debt_query, request, 'order_date')
+    orders_with_debt = orders_with_debt_query.count()
 
-    orders_in_manufacturing = ManufacturingOrder.objects.filter(
+    orders_in_manufacturing_query = ManufacturingOrder.objects.filter(
         status__in=['pending', 'in_progress'],
         order__selected_types__icontains='installation'
-    ).count()
+    )
+    orders_in_manufacturing_query = apply_default_year_filter(orders_in_manufacturing_query, request, 'order_date')
+    orders_in_manufacturing = orders_in_manufacturing_query.count()
 
-    delivered_manufacturing_orders = ManufacturingOrder.objects.filter(
+    delivered_manufacturing_orders_query = ManufacturingOrder.objects.filter(
         status='delivered',
         order__selected_types__icontains='installation'
-    ).count()
+    )
+    delivered_manufacturing_orders_query = apply_default_year_filter(delivered_manufacturing_orders_query, request, 'order_date')
+    delivered_manufacturing_orders = delivered_manufacturing_orders_query.count()
 
     # 5. التركيبات المجدولة اليوم - مع select_related (استبعاد المكتملة)
     today = timezone.now().date()
@@ -110,37 +125,49 @@ def dashboard(request):
         status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
     ).exclude(status='completed').select_related('order__customer', 'team')[:5]
 
-    # 7. الطلبات الجديدة - محسّنة
-    recent_orders = Order.objects.filter(
+    # 7. الطلبات الجديدة - محسّنة (مفلترة بالسنة الافتراضية)
+    recent_orders_query = Order.objects.filter(
         selected_types__icontains='installation',
         created_at__gte=timezone.now() - timezone.timedelta(days=7)
-    ).select_related('customer', 'manufacturing_order')[:10]
-
-    # 8. الطلبات التي تحتاج جدولة - محسّنة ومحدودة
-    orders_needing_scheduling = list(
-        Order.objects.filter(
-            selected_types__icontains='installation',
-            order_status__in=['ready_install', 'completed'],
-            installationschedule__isnull=True
-        ).select_related('customer', 'manufacturing_order')[:10]
     )
-    
-    # إضافة أوامر التصنيع الجاهزة (بدون تكرار)
+    recent_orders_query = apply_default_year_filter(recent_orders_query, request, 'order_date')
+    recent_orders = recent_orders_query.select_related('customer', 'manufacturing_order')[:10]
+
+    # 8. الطلبات التي تحتاج جدولة - محسّنة ومحدودة (مفلترة بالسنة الافتراضية)
+    orders_needing_scheduling_query = Order.objects.filter(
+        selected_types__icontains='installation',
+        order_status__in=['ready_install', 'completed'],
+        installationschedule__isnull=True
+    )
+    orders_needing_scheduling_query = apply_default_year_filter(orders_needing_scheduling_query, request, 'order_date')
+    orders_needing_scheduling = list(
+        orders_needing_scheduling_query.select_related('customer', 'manufacturing_order')[:10]
+    )
+
+    # إضافة أوامر التصنيع الجاهزة (بدون تكرار) - مفلترة بالسنة الافتراضية
     existing_order_ids = {order.id for order in orders_needing_scheduling}
-    additional_mfg_orders = ManufacturingOrder.objects.filter(
+    additional_mfg_orders_query = ManufacturingOrder.objects.filter(
         status__in=['ready_install', 'delivered'],
         order__selected_types__icontains='installation',
         order__installationschedule__isnull=True
-    ).exclude(order_id__in=existing_order_ids).select_related('order__customer')[:5]
+    ).exclude(order_id__in=existing_order_ids)
+    additional_mfg_orders_query = apply_default_year_filter(additional_mfg_orders_query, request, 'order_date')
+    additional_mfg_orders = additional_mfg_orders_query.select_related('order__customer')[:5]
     
     additional_orders = [mfg.order for mfg in additional_mfg_orders]
     orders_needing_scheduling.extend(additional_orders)
 
-    # 9. إحصائيات الفرق - محسّنة
+    # 9. إحصائيات الفرق - محسّنة (مفلترة بالسنة الافتراضية)
+    from accounts.models import DashboardYearSettings
+    default_year = DashboardYearSettings.get_default_year()
+
     teams_stats = InstallationTeam.objects.filter(
         is_active=True
     ).annotate(
-        installations_count=Count('installationschedule')
+        installations_count=Count(
+            'installationschedule',
+            filter=Q(installationschedule__scheduled_date__year=default_year)
+        )
     )
 
     context = {
@@ -294,11 +321,14 @@ def installation_list(request):
     # بناء الاستعلامات بطريقة محسّنة
     installation_items = []
     
-    # 1. جلب التركيبات المجدولة
+    # 1. جلب التركيبات المجدولة (مفلترة بالسنة الافتراضية)
     if not status_filter or status_filter in ['scheduled', 'in_installation', 'completed', 'cancelled', 'modification_required', 'modification_in_progress', 'modification_completed']:
         scheduled_query = InstallationSchedule.objects.select_related(
             'order__customer', 'team'
         )
+        # تطبيق فلتر السنة الافتراضية
+        from accounts.utils import apply_default_year_filter
+        scheduled_query = apply_default_year_filter(scheduled_query, request, 'scheduled_date')
         
         # تطبيق فلاتر التركيبات المجدولة
         if status_filter and status_filter != 'needs_scheduling':
@@ -339,7 +369,7 @@ def installation_list(request):
                 'location_type': getattr(installation, 'location_type', None),
             })
     
-    # 2. جلب الطلبات الجاهزة للتركيب (غير المجدولة)
+    # 2. جلب الطلبات الجاهزة للتركيب (غير المجدولة) - مفلترة بالسنة الافتراضية
     if not status_filter or status_filter == 'needs_scheduling':
         # الطلبات العادية الجاهزة
         ready_orders_query = Order.objects.filter(
@@ -347,6 +377,8 @@ def installation_list(request):
             order_status__in=['ready_install', 'completed'],
             installationschedule__isnull=True
         ).select_related('customer')
+        # تطبيق فلتر السنة الافتراضية
+        ready_orders_query = apply_default_year_filter(ready_orders_query, request, 'order_date')
         
         # تطبيق فلاتر الطلبات الجاهزة
         if order_status_filter:
@@ -371,12 +403,14 @@ def installation_list(request):
                 'location_type': getattr(order, 'location_type', None),
             })
         
-        # أوامر التصنيع الجاهزة
+        # أوامر التصنيع الجاهزة (مفلترة بالسنة الافتراضية)
         ready_manufacturing_query = ManufacturingOrder.objects.filter(
             status__in=['ready_install', 'delivered'],
             order__selected_types__icontains='installation',
             order__installationschedule__isnull=True
         ).select_related('order__customer')
+        # تطبيق فلتر السنة الافتراضية
+        ready_manufacturing_query = apply_default_year_filter(ready_manufacturing_query, request, 'order_date')
         
         # تطبيق نفس فلاتر البحث
         if search:
@@ -402,12 +436,14 @@ def installation_list(request):
                     'location_type': getattr(mfg_order.order, 'location_type', None),
                 })
     
-    # 3. جلب الطلبات تحت التصنيع (للعرض فقط)
+    # 3. جلب الطلبات تحت التصنيع (للعرض فقط) - مفلترة بالسنة الافتراضية
     if not status_filter or status_filter == 'under_manufacturing':
         under_manufacturing_query = ManufacturingOrder.objects.filter(
             status__in=['pending_approval', 'approved', 'in_cutting', 'cutting_completed', 'in_manufacturing', 'quality_check'],
             order__selected_types__icontains='installation'
         ).select_related('order__customer')
+        # تطبيق فلتر السنة الافتراضية
+        under_manufacturing_query = apply_default_year_filter(under_manufacturing_query, request, 'order_date')
         
         # تطبيق فلاتر البحث
         if search:
@@ -2157,6 +2193,10 @@ def installation_in_progress_list(request):
         'order', 'order__customer', 'team'
     ).order_by('scheduled_date', 'scheduled_time')
 
+    # تطبيق فلتر السنة الافتراضية
+    from accounts.utils import apply_default_year_filter
+    installations = apply_default_year_filter(installations, request, 'scheduled_date')
+
     # فلترة حسب الفريق
     team_filter = request.GET.get('team')
     if team_filter:
@@ -2198,6 +2238,10 @@ def print_installation_schedule(request):
     installations = InstallationSchedule.objects.select_related(
         'order', 'order__customer', 'team'
     ).order_by('scheduled_date', 'scheduled_time')
+
+    # تطبيق فلتر السنة الافتراضية
+    from accounts.utils import apply_default_year_filter
+    installations = apply_default_year_filter(installations, request, 'scheduled_date')
 
     # تطبيق الفلاتر
     if date:

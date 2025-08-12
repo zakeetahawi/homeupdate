@@ -339,16 +339,16 @@ def comprehensive_order_status_change_notification(sender, instance, **kwargs):
 
             # إذا تغيرت حالة الطلب (order_status)
             if old_order_status != new_order_status:
-                # إنشاء إشعارات شاملة لجميع الأقسام المعنية
-                SimpleNotificationService.notify_order_status_change_comprehensive(
+                # إنشاء إشعار جماعي واحد فقط لجميع الأقسام المعنية
+                SimpleNotificationService.notify_order_status_change_unique(
                     instance, old_order_status, new_order_status
                 )
-                logger.info(f"تم إنشاء إشعارات شاملة لتغيير حالة الطلب {instance.order_number} من {old_order_status} إلى {new_order_status}")
+                logger.info(f"تم إنشاء إشعار جماعي لتغيير حالة الطلب {instance.order_number} من {old_order_status} إلى {new_order_status}")
 
         except Order.DoesNotExist:
             pass
         except Exception as e:
-            logger.error(f"خطأ في إنشاء إشعارات شاملة لتغيير حالة الطلب: {str(e)}")
+            logger.error(f"خطأ في إنشاء إشعار جماعي لتغيير حالة الطلب: {str(e)}")
 
 
 @receiver(post_save, sender=ManufacturingOrder)

@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تفاصيل الإشعار - {{ notification.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- عنوان الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-bell me-2"></i>
+            تفاصيل الإشعار الفردي
+        </h1>
+        <div class="btn-group">
+            <a href="{% url 'accounts:notifications_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right"></i> العودة للإشعارات
+            </a>
+        </div>
+    </div>
+
+    <!-- بطاقة تفاصيل الإشعار -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold {{ notification.get_color_class }}">
+                        <span class="me-2">{{ notification.get_icon }}</span>
+                        {{ notification.title }}
+                    </h6>
+                    <span class="badge badge-{{ notification.get_color_class|slice:'5:' }} badge-pill">
+                        {{ notification.get_priority_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <!-- معلومات الإشعار -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">معلومات الإشعار</h6>
+                            <table class="table table-borderless table-sm">
+                                <tr>
+                                    <td><strong>العنوان:</strong></td>
+                                    <td>{{ notification.title }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>النوع:</strong></td>
+                                    <td>{{ notification.get_notification_type_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>الأولوية:</strong></td>
+                                    <td>
+                                        <span class="badge badge-{{ notification.get_color_class|slice:'5:' }}">
+                                            {{ notification.get_priority_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>تاريخ الإنشاء:</strong></td>
+                                    <td>{{ notification.created_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% if notification.read_at %}
+                                <tr>
+                                    <td><strong>تاريخ القراءة:</strong></td>
+                                    <td>{{ notification.read_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">معلومات الطلب</h6>
+                            <table class="table table-borderless table-sm">
+                                {% if notification.customer_name %}
+                                <tr>
+                                    <td><strong>اسم العميل:</strong></td>
+                                    <td>{{ notification.customer_name }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if notification.order_number %}
+                                <tr>
+                                    <td><strong>رقم الطلب:</strong></td>
+                                    <td>
+                                        <span class="text-primary font-weight-bold">
+                                            {{ notification.order_number }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if notification.status %}
+                                <tr>
+                                    <td><strong>الحالة:</strong></td>
+                                    <td>
+                                        <span class="badge badge-info">
+                                            {{ notification.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- محتوى الإشعار -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>محتوى الإشعار
+                        </h6>
+                        <p class="mb-0">
+                            {{ notification.customer_name }} - {{ notification.order_number }} - {{ notification.status }}
+                        </p>
+                    </div>
+
+                    <!-- إجراءات -->
+                    <div class="d-flex justify-content-between">
+                        {% if notification.related_object %}
+                        <a href="#" class="btn btn-primary">
+                            <i class="fas fa-eye"></i> عرض الطلب المرتبط
+                        </a>
+                        {% endif %}
+                        
+                        {% if not notification.is_read %}
+                        <button class="btn btn-success" onclick="markAsRead({{ notification.id }})">
+                            <i class="fas fa-check"></i> تحديد كمقروء
+                        </button>
+                        {% else %}
+                        <span class="badge badge-success">
+                            <i class="fas fa-check-circle"></i> تم القراءة
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة حالة القراءة -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold {% if notification.is_read %}text-success{% else %}text-warning{% endif %}">
+                        <i class="fas {% if notification.is_read %}fa-check-circle{% else %}fa-clock{% endif %} me-2"></i>
+                        حالة القراءة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if notification.is_read %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>تم القراءة</strong>
+                        <br>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ notification.read_at|date:"Y-m-d H:i:s" }}
+                        </small>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-clock me-2"></i>
+                        <strong>لم يتم القراءة بعد</strong>
+                        <br>
+                        <small class="text-muted">
+                            تم الإنشاء: {{ notification.created_at|date:"Y-m-d H:i:s" }}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- معلومات إضافية -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        معلومات إضافية
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <small class="text-muted">
+                        <i class="fas fa-user me-1"></i>
+                        إشعار فردي موجه لك شخصياً
+                    </small>
+                    <br>
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        {{ notification.get_time_ago }} مضت
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAsRead(notificationId) {
+    // الحصول على CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    const headers = {
+        'Content-Type': 'application/json',
+    };
+
+    if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken.value;
+    }
+
+    fetch(`/accounts/notifications/order/${notificationId}/mark-read/`, {
+        method: 'POST',
+        headers: headers,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}

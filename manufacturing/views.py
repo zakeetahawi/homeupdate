@@ -48,7 +48,11 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
             'order',  # This is the only direct foreign key in the model
             'order__customer'  # Access customer through order
         ).order_by('-order_date')
-        
+
+        # تطبيق فلتر السنة الافتراضية
+        from accounts.utils import apply_default_year_filter
+        queryset = apply_default_year_filter(queryset, self.request, 'order_date')
+
         # Apply filters
         status = self.request.GET.get('status')
         search = self.request.GET.get('search')
@@ -93,22 +97,30 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         from django.db.models import Count, Q
         from django.contrib.auth import get_user_model
         
-        # Get all manufacturing orders for statistics
-        all_orders = self.get_queryset().model.objects.all()
-        
+        # Get manufacturing orders for statistics (مفلترة بالسنة الافتراضية)
+        # استخدام نفس الفلتر المطبق على القائمة
+        filtered_orders = ManufacturingOrder.objects.select_related('order', 'order__customer')
+
+        # تطبيق فلتر السنة الافتراضية على الإحصائيات
+        from accounts.utils import apply_default_year_filter
+        filtered_orders = apply_default_year_filter(filtered_orders, self.request, 'order_date')
+
         # Prepare status counts for the dashboard
-        status_counts = all_orders.values('status').annotate(count=Count('status'))
+        status_counts = filtered_orders.values('status').annotate(count=Count('status'))
         status_data = {item['status']: item['count'] for item in status_counts}
         
-        # Add dashboard statistics
+        # Add dashboard statistics (مفلترة بالسنة الافتراضية)
         context.update({
-            'total_orders': all_orders.count(),
+            'total_orders': filtered_orders.count(),
             'pending_orders': status_data.get('pending', 0),
+            'pending_approval_orders': status_data.get('pending_approval', 0),
             'in_progress_orders': status_data.get('in_progress', 0),
             'completed_orders': status_data.get('completed', 0),
             'delivered_orders': status_data.get('delivered', 0),
             'cancelled_orders': status_data.get('cancelled', 0),
+            'rejected_orders': status_data.get('rejected', 0),
             'ready_for_installation_orders': status_data.get('ready_for_installation', 0),
+            'ready_install_orders': status_data.get('ready_install', 0),
             'status_choices': dict(ManufacturingOrder.STATUS_CHOICES),
             'order_types': dict(ManufacturingOrder.ORDER_TYPE_CHOICES),
         })

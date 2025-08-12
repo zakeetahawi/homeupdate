@@ -1046,16 +1046,54 @@
 
     function markNotificationAsRead(notificationId, type) {
         // إرسال طلب AJAX لتحديد الإشعار كمقروء
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken.value;
+        }
+
         fetch(`/accounts/notifications/${type}/${notificationId}/mark-read/`, {
             method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                // تحديث الواجهة
+                const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                if (item) {
+                    item.classList.remove('unread', 'urgent');
+                }
+                updateNotificationCount();
+            }
+        })
+        .catch(error => {
+            console.log('تم تحديد الإشعار محلياً');
+        });
+    }
+
+    function markGroupNotificationAsRead(notificationId) {
+        // دالة لتحديد الإشعار الجماعي كمقروء
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken.value;
+        }
+
+        fetch(`/accounts/notifications/group/${notificationId}/mark-read/`, {
+            method: 'POST',
+            headers: headers,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('تم تحديد الإشعار الجماعي كمقروء');
                 // تحديث الواجهة
                 const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
                 if (item) {
@@ -1153,7 +1191,7 @@
 
                 // تحديد الإشعار كمقروء في الخادم
                 if (notificationId) {
-                    markNotificationAsRead(notificationId, 'order');
+                    markGroupNotificationAsRead(notificationId);
                 }
 
                 // توجيه المستخدم للمكان المناسب
@@ -1244,13 +1282,20 @@
 
     function redirectToNotificationTarget(notificationElement) {
         // توجيه المستخدم للمكان المناسب حسب نوع الإشعار
-        const orderNumber = notificationElement.querySelector('.order-number, .complaint-number');
+        const notificationId = notificationElement.getAttribute('data-notification-id');
 
         if (notificationElement.classList.contains('complaint-item')) {
             // توجيه لصفحة الشكاوى
             window.location.href = '/complaints/';
         } else if (notificationElement.classList.contains('notification-item')) {
-            // توجيه لصفحة الطلبات
+            // للإشعارات الجديدة، توجيه لصفحة تفاصيل الإشعار الجماعي
+            if (notificationId) {
+                console.log('توجيه للإشعار الجماعي:', notificationId);
+                window.location.href = `/accounts/notifications/group/${notificationId}/`;
+                return;
+            }
+
+            // للإشعارات القديمة، استخدام النظام القديم
             const notificationType = notificationElement.querySelector('.notification-icon').className;
 
             if (notificationType.includes('inspection')) {

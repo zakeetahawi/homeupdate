@@ -6,7 +6,7 @@ Simple & Beautiful Notification Service
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
-from accounts.models import SimpleNotification, ComplaintNotification
+from accounts.models import SimpleNotification, ComplaintNotification, GroupNotification, GroupNotificationRead
 import logging
 
 User = get_user_model()
@@ -513,6 +513,161 @@ class SimpleNotificationService:
 
         logger.info(f"تم إنشاء {len(notifications)} إشعار لتغيير حالة الطلب {order.order_number} من {old_status} إلى {new_status}")
         return notifications
+
+    @classmethod
+    def create_unique_group_notification(
+        cls,
+        title: str,
+        message: str,
+        notification_type: str,
+        order_number: str = '',
+        customer_name: str = '',
+        priority: str = 'normal',
+        target_users: list = None,
+        created_by = None,
+        related_object = None
+    ):
+        """
+        إنشاء إشعار جماعي مرة واحدة فقط
+        يتحقق من وجود إشعار مماثل قبل الإنشاء
+        """
+        try:
+            # التحقق من وجود إشعار مماثل
+            existing_notification = GroupNotification.objects.filter(
+                notification_type=notification_type,
+                order_number=order_number,
+                customer_name=customer_name,
+                title=title
+            ).first()
+
+            if existing_notification:
+                logger.info(f"إشعار موجود بالفعل: {title} - {order_number}")
+                return existing_notification
+
+            # إنشاء إشعار جديد
+            notification = GroupNotification.objects.create(
+                title=title,
+                message=message,
+                notification_type=notification_type,
+                order_number=order_number,
+                customer_name=customer_name,
+                priority=priority,
+                created_by=created_by,
+                related_object_id=related_object.pk if related_object else None,
+                related_object_type=related_object.__class__.__name__ if related_object else ''
+            )
+
+            # إضافة المستخدمين المستهدفين
+            if target_users:
+                notification.target_users.set(target_users)
+
+            logger.info(f"تم إنشاء إشعار جماعي جديد: {title} لـ {len(target_users) if target_users else 0} مستخدم")
+            return notification
+
+        except Exception as e:
+            logger.error(f"خطأ في إنشاء الإشعار الجماعي: {str(e)}")
+            return None
+
+    @classmethod
+    def notify_order_status_change_unique(cls, order, old_status, new_status, changed_by=None):
+        """إشعار شامل لتغيير حالة الطلب مع منع التكرار"""
+
+        # تحديد الرسالة حسب نوع التغيير
+        status_messages = {
+            'pending_approval': 'في انتظار الموافقة',
+            'pending': 'قيد الانتظار',
+            'in_progress': 'قيد التصنيع',
+            'ready_install': 'جاهز للتركيب',
+            'completed': 'مكتمل',
+            'delivered': 'تم التسليم',
+            'rejected': 'مرفوض',
+            'cancelled': 'ملغي',
+        }
+
+        old_status_text = status_messages.get(old_status, old_status)
+        new_status_text = status_messages.get(new_status, new_status)
+
+        # تحديد الأقسام المعنية حسب الحالة الجديدة
+        departments_to_notify = []
+        priority = 'normal'
+
+        if new_status == 'pending_approval':
+            departments_to_notify = ['manufacturing', 'administration']
+            priority = 'high'
+        elif new_status == 'in_progress':
+            departments_to_notify = ['manufacturing', 'quality_control']
+            priority = 'high'
+        elif new_status == 'ready_install':
+            departments_to_notify = ['installations', 'customer_service']
+            priority = 'high'
+        elif new_status == 'completed':
+            departments_to_notify = ['installations', 'customer_service', 'administration', 'accounting']
+            priority = 'normal'
+        elif new_status == 'delivered':
+            departments_to_notify = ['customer_service', 'administration', 'accounting']
+            priority = 'normal'
+        elif new_status == 'rejected':
+            departments_to_notify = ['customer_service', 'administration']
+            priority = 'high'
+        elif new_status == 'cancelled':
+            departments_to_notify = ['manufacturing', 'installations', 'customer_service', 'administration']
+            priority = 'medium'
+
+        # جمع المستخدمين المعنيين
+        target_users = []
+
+        # إضافة مستخدمي الأقسام المعنية
+        for dept_code in departments_to_notify:
+            try:
+                from accounts.models import Department
+                department = Department.objects.get(code=dept_code)
+                dept_users = department.users.filter(is_active=True)
+                target_users.extend(dept_users)
+            except Department.DoesNotExist:
+                logger.warning(f"القسم {dept_code} غير موجود")
+
+        # إضافة البائع/منشئ الطلب
+        if order.salesperson:
+            try:
+                # البحث عن المستخدم المرتبط بالبائع
+                if hasattr(order.salesperson, 'user') and order.salesperson.user:
+                    target_users.append(order.salesperson.user)
+                elif hasattr(order.salesperson, 'created_by') and order.salesperson.created_by:
+                    target_users.append(order.salesperson.created_by)
+            except Exception as e:
+                logger.warning(f"لا يمكن العثور على مستخدم للبائع {order.salesperson}: {e}")
+
+        # إضافة منشئ الطلب إذا كان موجوداً
+        if hasattr(order, 'created_by') and order.created_by:
+            target_users.append(order.created_by)
+
+        # إضافة المدير العام
+        from accounts.models import User
+        admin_users = User.objects.filter(is_superuser=True, is_active=True)
+        target_users.extend(admin_users)
+
+        # إزالة التكرارات واستبعاد من قام بالتغيير
+        unique_users = list(set(target_users))
+        if changed_by:
+            unique_users = [user for user in unique_users if user != changed_by]
+
+        # إنشاء الإشعار الجماعي
+        title = f"تغيير حالة الطلب {order.order_number}"
+        message = f"تم تغيير حالة طلب العميل {order.customer.name} من '{old_status_text}' إلى '{new_status_text}'"
+
+        notification = cls.create_unique_group_notification(
+            title=title,
+            message=message,
+            notification_type='order_status_changed',
+            order_number=order.order_number,
+            customer_name=order.customer.name,
+            priority=priority,
+            target_users=unique_users,
+            created_by=changed_by,
+            related_object=order
+        )
+
+        return notification
     
     @classmethod
     def notify_complaint_created(cls, complaint):

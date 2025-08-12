@@ -78,6 +78,11 @@ urlpatterns = [
     path('notifications/complaint/<int:notification_id>/mark-read/', views.mark_complaint_notification_read, name='mark_complaint_notification_read'),
     path('notifications/orders/mark-all-read/', views.mark_all_order_notifications_read, name='mark_all_order_notifications_read'),
     path('notifications/complaints/mark-all-read/', views.mark_all_complaint_notifications_read, name='mark_all_complaint_notifications_read'),
+    # URLs الأكثر تحديداً أولاً
+    path('notifications/group/<int:notification_id>/mark-read/', views.mark_group_notification_read, name='mark_group_notification_read'),
+    path('notifications/group/<int:notification_id>/', views.group_notification_detail, name='group_notification_detail'),
+    path('notifications/debug/<int:notification_id>/', views.debug_notification, name='debug_notification'),
+    # URL العام أخيراً
     path('notifications/<str:notification_type>/<int:notification_id>/', views.notification_detail, name='notification_detail'),
     path('notifications/', views.notifications_list, name='notifications_list'),
     path('complaints/', views.complaints_list, name='complaints_list'),
