@@ -15,7 +15,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- إعدادات الأمان ---
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-development-key-for-jazzmin-testing-only-change-in-production-123456789')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured("يجب تعيين المفتاح السري (SECRET_KEY) في متغيرات البيئة.")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -74,7 +76,6 @@ ALLOWED_HOSTS.extend([
 
 # Application definition
 INSTALLED_APPS = [
-    'jazzmin',  # Django Jazzmin - قالب لوحة التحكم الحديث
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -158,8 +159,6 @@ TEMPLATES = [
                 'accounts.context_processors.branch_messages',
                 'accounts.context_processors.notifications_context',
                 'accounts.context_processors.admin_notifications_context',
-                'crm.context_processors.admin_stats',
-                'crm.context_processors.jazzmin_extras',
             ],
         },
     },
@@ -773,159 +772,3 @@ ADMIN_URL = 'admin/'
 ADMIN_SITE_HEADER = "نظام إدارة الخواجة"
 ADMIN_SITE_TITLE = "لوحة الإدارة"
 ADMIN_INDEX_TITLE = "مرحباً بك في نظام إدارة الخواجة"
-
-# Django Jazzmin Configuration
-JAZZMIN_SETTINGS = {
-    # العناوين الأساسية
-    "site_title": "نظام إدارة الخواجة",
-    "site_header": "شركة الخواجة للنوافذ والأبواب",
-    "site_brand": "الخواجة",
-    "site_logo": "img/logo.png",
-    "login_logo": "img/logo.png",
-    "login_logo_dark": "img/logo.png",
-    "site_logo_classes": "img-circle",
-    "site_icon": "img/logo.png",
-    "welcome_sign": "مرحباً بك في نظام إدارة الخواجة",
-    "copyright": "شركة الخواجة للنوافذ والأبواب © 2024",
-    "search_model": ["auth.User", "customers.Customer", "orders.Order"],
-    "user_avatar": "accounts.User.image",
-
-    # القوائم العلوية
-    "topmenu_links": [
-        {"name": "الرئيسية", "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "الموقع الرئيسي", "url": "/", "new_window": True},
-        {"name": "العملاء", "url": "admin:customers_customer_changelist", "permissions": ["customers.view_customer"]},
-        {"name": "الطلبات", "url": "admin:orders_order_changelist", "permissions": ["orders.view_order"]},
-        {"name": "المعاينات", "url": "admin:inspections_inspection_changelist", "permissions": ["inspections.view_inspection"]},
-        {"name": "التصنيع", "url": "admin:manufacturing_manufacturingorder_changelist", "permissions": ["manufacturing.view_manufacturingorder"]},
-        {"name": "التركيبات", "url": "admin:installations_installationschedule_changelist", "permissions": ["installations.view_installationschedule"]},
-        {"name": "المخزون", "url": "admin:inventory_product_changelist", "permissions": ["inventory.view_product"]},
-        {"name": "التقارير", "url": "admin:reports_report_changelist", "permissions": ["reports.view_report"]},
-        {"name": "النسخ الاحتياطي", "url": "admin:backup_system_backupjob_changelist", "permissions": ["backup_system.view_backupjob"]},
-    ],
-
-    # القوائم الجانبية للمستخدم
-    "usermenu_links": [
-        {"name": "إعدادات الشركة", "url": "/accounts/company_info/", "icon": "fas fa-building"},
-        {"model": "auth.user"},
-    ],
-
-    # إظهار/إخفاء عناصر
-    "show_sidebar": True,
-    "navigation_expanded": True,
-    "hide_apps": [],
-    "hide_models": [],
-    "order_with_respect_to": [
-        "accounts", "customers", "orders", "inspections",
-        "manufacturing", "installations", "inventory",
-        "reports", "complaints", "backup_system", "odoo_db_manager"
-    ],
-
-    # الأيقونات المخصصة
-    "icons": {
-        "auth": "fas fa-users-cog",
-        "auth.user": "fas fa-user",
-        "auth.Group": "fas fa-users",
-        "accounts.User": "fas fa-user-tie",
-        "accounts.CompanyInfo": "fas fa-building",
-        "accounts.Branch": "fas fa-map-marker-alt",
-        "accounts.Department": "fas fa-sitemap",
-        "accounts.Salesperson": "fas fa-user-tag",
-        "customers.Customer": "fas fa-user-friends",
-        "customers.CustomerCategory": "fas fa-tags",
-        "orders.Order": "fas fa-shopping-cart",
-        "orders.Payment": "fas fa-credit-card",
-        "inspections.Inspection": "fas fa-search",
-        "manufacturing.ManufacturingOrder": "fas fa-industry",
-        "installations.InstallationSchedule": "fas fa-tools",
-        "installations.Technician": "fas fa-hard-hat",
-        "inventory.Product": "fas fa-box",
-        "inventory.Category": "fas fa-list",
-        "inventory.Warehouse": "fas fa-warehouse",
-        "reports.Report": "fas fa-chart-bar",
-        "complaints.Complaint": "fas fa-exclamation-triangle",
-        "backup_system.BackupJob": "fas fa-save",
-        "backup_system.RestoreJob": "fas fa-undo",
-        "odoo_db_manager.Database": "fas fa-database",
-    },
-
-    # الألوان والثيم
-    "default_icon_parents": "fas fa-chevron-circle-right",
-    "default_icon_children": "fas fa-circle",
-    "related_modal_active": False,
-    "custom_css": "admin/css/jazzmin_custom.css",
-    "custom_js": "admin/js/custom_admin.js",
-    "use_google_fonts_cdn": True,
-    "show_ui_builder": False,
-
-    # إعدادات الثيم
-    "theme": "flatly",
-    "dark_mode_theme": "darkly",
-
-    # إعدادات الجدول
-    "changeform_format": "horizontal_tabs",
-    "changeform_format_overrides": {
-        "auth.user": "collapsible",
-        "auth.group": "vertical_tabs"
-    },
-
-    # اللغة والاتجاه
-    "language_chooser": False,
-
-    # تخصيص الصفحة الرئيسية
-    "show_ui_builder": False,
-
-    # إضافة context processors مخصص
-    "custom_links": {
-        "customers": [
-            {
-                "name": "إضافة عميل جديد",
-                "url": "admin:customers_customer_add",
-                "icon": "fas fa-plus",
-                "permissions": ["customers.add_customer"]
-            }
-        ],
-        "orders": [
-            {
-                "name": "إنشاء طلب جديد",
-                "url": "admin:orders_order_add",
-                "icon": "fas fa-plus",
-                "permissions": ["orders.add_order"]
-            }
-        ]
-    },
-}
-
-# إعدادات واجهة المستخدم لـ Jazzmin
-JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": False,
-    "footer_small_text": False,
-    "body_small_text": False,
-    "brand_small_text": False,
-    "brand_colour": "navbar-primary",
-    "accent": "accent-primary",
-    "navbar": "navbar-primary navbar-dark",
-    "no_navbar_border": False,
-    "navbar_fixed": False,
-    "layout_boxed": False,
-    "footer_fixed": False,
-    "sidebar_fixed": False,
-    "sidebar": "sidebar-dark-primary",
-    "sidebar_nav_small_text": False,
-    "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": False,
-    "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": False,
-    "sidebar_nav_flat_style": False,
-    "theme": "flatly",
-    "dark_mode_theme": "darkly",
-    "button_classes": {
-        "primary": "btn-primary",
-        "secondary": "btn-secondary",
-        "info": "btn-info",
-        "warning": "btn-warning",
-        "danger": "btn-danger",
-        "success": "btn-success"
-    },
-    "actions_sticky_top": False
-}
