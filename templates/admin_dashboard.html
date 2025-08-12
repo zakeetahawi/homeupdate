@@ -2,7 +2,7 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}داش بورد الإدارة المحسن - نظام الخواجه{% endblock %}
+{% block title %}داش بورد الإدارة  - نظام الخواجه{% endblock %}
 
 {% block extra_css %}
 <!-- Chart.js -->
@@ -874,6 +874,73 @@
             </div>
         </div>
     </div>
+
+    <!-- قسم الإشعارات البسيطة -->
+    {% if simple_notifications %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-bell me-2"></i>
+                    الإشعارات البسيطة
+                    {% if notifications_stats.total_unread > 0 %}
+                        <span class="badge bg-danger ms-2">{{ notifications_stats.total_unread }}</span>
+                    {% endif %}
+                </h5>
+
+                <div class="row">
+                    {% for notification in simple_notifications %}
+                    <div class="col-lg-6 col-md-12 mb-3">
+                        <div class="notification-card border-start border-{{ notification.get_color_class }} border-3 p-3 bg-light">
+                            <div class="d-flex align-items-start">
+                                <div class="notification-icon me-3">
+                                    <span style="font-size: 1.5rem;">{{ notification.get_icon }}</span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-bold">{{ notification.title }}</h6>
+                                    <div class="text-muted small mb-2">
+                                        <i class="fas fa-user me-1"></i>{{ notification.customer_name }}
+                                        <span class="mx-2">|</span>
+                                        <i class="fas fa-hashtag me-1"></i>{{ notification.order_number }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="badge bg-{{ notification.get_color_class }}">{{ notification.status }}</span>
+                                        <span class="badge bg-secondary ms-1">{{ notification.get_notification_type_display }}</span>
+                                    </div>
+                                    <div class="text-muted small">
+                                        <i class="fas fa-clock me-1"></i>{{ notification.get_time_ago }} مضت
+                                    </div>
+                                </div>
+                                <div class="notification-actions">
+                                    {% if notification.content_object %}
+                                        <a href="#" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-success ms-1"
+                                            onclick="markAsRead({{ notification.id }})"
+                                            title="تحديد كمقروء">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if notifications_stats.total_unread > 10 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'accounts:notifications_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>
+                        عرض جميع الإشعارات ({{ notifications_stats.total_unread }})
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <script>

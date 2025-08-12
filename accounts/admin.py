@@ -13,7 +13,7 @@ from .models import (
     User, CompanyInfo, Branch, Department, Salesperson,
     Role, UserRole, SystemSettings, BranchMessage, DashboardYearSettings,
     ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings,
-    SimpleNotification, ComplaintNotification
+    SimpleNotification, ComplaintNotification, GroupNotification
 )
 from .forms import THEME_CHOICES
 from .widgets import ColorPickerWidget, IconPickerWidget, DurationRangeWidget
@@ -742,7 +742,9 @@ class SimpleNotificationAdmin(admin.ModelAdmin):
         'priority',
         'is_read',
         'created_at',
-        'recipient__departments'
+        'recipient__username',
+        'recipient__is_superuser',
+        'recipient__is_staff',
     ]
 
     search_fields = [
@@ -798,7 +800,14 @@ class SimpleNotificationAdmin(admin.ModelAdmin):
         })
     )
 
-    actions = ['mark_as_read', 'mark_as_unread', 'delete_selected']
+    actions = ['mark_as_read', 'mark_as_unread', 'delete_selected', 'delete_old_notifications', 'mark_all_as_read', 'delete_all_notifications']
+
+    # إعدادات العرض
+    list_per_page = 50  # عرض 50 إشعار في الصفحة
+    list_max_show_all = 200  # إمكانية عرض 200 إشعار في صفحة واحدة
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']
+    show_full_result_count = True  # عرض العدد الكامل
 
     def notification_icon(self, obj):
         """عرض أيقونة الإشعار"""
@@ -848,12 +857,97 @@ class SimpleNotificationAdmin(admin.ModelAdmin):
         )
     mark_as_unread.short_description = 'تحديد كغير مقروء'
 
+    def delete_old_notifications(self, request, queryset):
+        """حذف الإشعارات القديمة (أكثر من 30 يوم)"""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        old_notifications = SimpleNotification.objects.filter(created_at__lt=thirty_days_ago)
+        count = old_notifications.count()
+        old_notifications.delete()
+
+        self.message_user(
+            request,
+            f'تم حذف {count} إشعار قديم (أكثر من 30 يوم)',
+            messages.SUCCESS
+        )
+    delete_old_notifications.short_description = 'حذف الإشعارات القديمة (30+ يوم)'
+
+    def mark_all_as_read(self, request, queryset):
+        """تحديد جميع الإشعارات كمقروءة"""
+        from django.utils import timezone
+
+        updated = SimpleNotification.objects.filter(is_read=False).update(
+            is_read=True,
+            read_at=timezone.now()
+        )
+
+        self.message_user(
+            request,
+            f'تم تحديد جميع الإشعارات ({updated}) كمقروءة',
+            messages.SUCCESS
+        )
+    mark_all_as_read.short_description = 'تحديد جميع الإشعارات كمقروءة'
+
+    def delete_all_notifications(self, request, queryset):
+        """حذف جميع الإشعارات البسيطة"""
+        if request.user.is_superuser:
+            total_count = SimpleNotification.objects.count()
+            SimpleNotification.objects.all().delete()
+
+            self.message_user(
+                request,
+                f'تم حذف جميع الإشعارات البسيطة ({total_count}) بنجاح',
+                messages.SUCCESS
+            )
+        else:
+            self.message_user(
+                request,
+                'يجب أن تكون مدير نظام لتنفيذ هذا الإجراء',
+                messages.ERROR
+            )
+    delete_all_notifications.short_description = '🗑️ حذف جميع الإشعارات (مديرين فقط)'
+
     def get_queryset(self, request):
         """تحسين الاستعلامات"""
         return super().get_queryset(request).select_related(
             'recipient',
             'content_type'
         )
+
+    def changelist_view(self, request, extra_context=None):
+        """إضافة إحصائيات الإشعارات إلى صفحة القائمة"""
+        extra_context = extra_context or {}
+
+        # إحصائيات الإشعارات
+        total_notifications = SimpleNotification.objects.count()
+        unread_notifications = SimpleNotification.objects.filter(is_read=False).count()
+        urgent_notifications = SimpleNotification.objects.filter(
+            is_read=False,
+            priority='urgent'
+        ).count()
+        high_notifications = SimpleNotification.objects.filter(
+            is_read=False,
+            priority='high'
+        ).count()
+
+        extra_context['notifications_stats'] = {
+            'total': total_notifications,
+            'unread': unread_notifications,
+            'urgent': urgent_notifications,
+            'high': high_notifications,
+        }
+
+        # إذا طلب المستخدم عرض الكل
+        if request.GET.get('all') == '1':
+            self.list_per_page = total_notifications if total_notifications > 0 else 1
+            extra_context['showing_all'] = True
+        else:
+            self.list_per_page = 50  # العودة للقيمة الافتراضية
+            extra_context['showing_all'] = False
+
+        return super().changelist_view(request, extra_context)
 
 
 @admin.register(ComplaintNotification)
@@ -987,4 +1081,196 @@ class ComplaintNotificationAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related(
             'recipient',
             'content_type'
+        )
+
+
+@admin.register(GroupNotification)
+class GroupNotificationAdmin(admin.ModelAdmin):
+    """إدارة الإشعارات الجماعية - هذه هي الإشعارات الظاهرة في الواجهة (118 إشعار)"""
+
+    list_display = [
+        'notification_icon',
+        'title',
+        'customer_name',
+        'order_number',
+        'notification_type',
+        'priority_badge',
+        'target_users_count',
+        'read_count',
+        'created_at'
+    ]
+
+    list_filter = [
+        'notification_type',
+        'priority',
+        'created_at',
+        'target_users',
+    ]
+
+    search_fields = [
+        'title',
+        'customer_name',
+        'order_number',
+        'target_users__username',
+        'target_users__first_name',
+        'target_users__last_name'
+    ]
+
+    readonly_fields = [
+        'created_at',
+        'related_object_id',
+        'related_object_type'
+    ]
+
+    filter_horizontal = ['target_users']
+
+    actions = ['delete_selected', 'delete_old_notifications', 'mark_all_as_read', 'delete_all_notifications']
+
+    # إعدادات العرض
+    list_per_page = 50
+    list_max_show_all = 200
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']
+    show_full_result_count = True
+
+    def notification_icon(self, obj):
+        """عرض أيقونة الإشعار"""
+        return mark_safe(f'<span style="font-size: 20px;">{obj.get_icon()}</span>')
+    notification_icon.short_description = '🔔'
+
+    def priority_badge(self, obj):
+        """عرض شارة الأولوية"""
+        colors = {
+            'low': '#28a745',
+            'normal': '#17a2b8',
+            'high': '#ffc107',
+            'urgent': '#dc3545'
+        }
+        color = colors.get(obj.priority, '#6c757d')
+        return mark_safe(
+            f'<span style="background: {color}; color: white; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: bold;">{obj.get_priority_display()}</span>'
+        )
+    priority_badge.short_description = 'الأولوية'
+
+    def target_users_count(self, obj):
+        """عدد المستخدمين المستهدفين"""
+        count = obj.target_users.count()
+        return mark_safe(f'<span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px;">{count} مستخدم</span>')
+    target_users_count.short_description = 'المستهدفين'
+
+    def read_count(self, obj):
+        """عدد المستخدمين الذين قرأوا الإشعار"""
+        read_count = obj.get_read_count()
+        total_count = obj.target_users.count()
+        percentage = (read_count / total_count * 100) if total_count > 0 else 0
+
+        color = '#28a745' if percentage > 50 else '#ffc107' if percentage > 0 else '#dc3545'
+        return mark_safe(
+            f'<span style="background: {color}; color: white; padding: 2px 6px; border-radius: 8px; font-size: 11px;">{read_count}/{total_count} ({percentage:.0f}%)</span>'
+        )
+    read_count.short_description = 'معدل القراءة'
+
+    def delete_old_notifications(self, request, queryset):
+        """حذف الإشعارات القديمة (أكثر من 30 يوم)"""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        old_notifications = GroupNotification.objects.filter(created_at__lt=thirty_days_ago)
+        count = old_notifications.count()
+        old_notifications.delete()
+
+        self.message_user(
+            request,
+            f'تم حذف {count} إشعار جماعي قديم (أكثر من 30 يوم)',
+            messages.SUCCESS
+        )
+    delete_old_notifications.short_description = 'حذف الإشعارات القديمة (30+ يوم)'
+
+    def mark_all_as_read(self, request, queryset):
+        """تحديد جميع الإشعارات كمقروءة للمستخدم الحالي"""
+        from accounts.models import GroupNotificationRead
+        from django.utils import timezone
+
+        count = 0
+        for notification in GroupNotification.objects.all():
+            read_obj, created = GroupNotificationRead.objects.get_or_create(
+                notification=notification,
+                user=request.user,
+                defaults={'read_at': timezone.now()}
+            )
+            if created:
+                count += 1
+
+        self.message_user(
+            request,
+            f'تم تحديد {count} إشعار جماعي كمقروء للمستخدم {request.user.username}',
+            messages.SUCCESS
+        )
+    mark_all_as_read.short_description = 'تحديد جميع الإشعارات كمقروءة لي'
+
+    def delete_all_notifications(self, request, queryset):
+        """حذف جميع الإشعارات الجماعية"""
+        if request.user.is_superuser:
+            total_count = GroupNotification.objects.count()
+            GroupNotification.objects.all().delete()
+
+            self.message_user(
+                request,
+                f'تم حذف جميع الإشعارات الجماعية ({total_count}) بنجاح',
+                messages.SUCCESS
+            )
+        else:
+            self.message_user(
+                request,
+                'يجب أن تكون مدير نظام لتنفيذ هذا الإجراء',
+                messages.ERROR
+            )
+    delete_all_notifications.short_description = '🗑️ حذف جميع الإشعارات الجماعية (مديرين فقط)'
+
+    def changelist_view(self, request, extra_context=None):
+        """إضافة إحصائيات الإشعارات الجماعية إلى صفحة القائمة"""
+        extra_context = extra_context or {}
+
+        # إحصائيات الإشعارات الجماعية
+        total_notifications = GroupNotification.objects.count()
+        user_notifications = GroupNotification.objects.filter(target_users=request.user).count()
+        urgent_notifications = GroupNotification.objects.filter(
+            target_users=request.user,
+            priority='urgent'
+        ).count()
+        high_notifications = GroupNotification.objects.filter(
+            target_users=request.user,
+            priority='high'
+        ).count()
+
+        # حساب الإشعارات غير المقروءة للمستخدم الحالي
+        unread_count = 0
+        for notification in GroupNotification.objects.filter(target_users=request.user):
+            if not notification.is_read_by_user(request.user):
+                unread_count += 1
+
+        extra_context['notifications_stats'] = {
+            'total': total_notifications,
+            'user_total': user_notifications,
+            'unread': unread_count,
+            'urgent': urgent_notifications,
+            'high': high_notifications,
+        }
+
+        # إذا طلب المستخدم عرض الكل
+        if request.GET.get('all') == '1':
+            self.list_per_page = total_notifications if total_notifications > 0 else 1
+            extra_context['showing_all'] = True
+        else:
+            self.list_per_page = 50
+            extra_context['showing_all'] = False
+
+        return super().changelist_view(request, extra_context)
+
+    def get_queryset(self, request):
+        """تحسين الاستعلامات"""
+        return super().get_queryset(request).prefetch_related(
+            'target_users',
+            'created_by'
         )

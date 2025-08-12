@@ -105,7 +105,7 @@ def admin_dashboard(request):
     
     # ملخص الداشبورد
     dashboard_summary = get_dashboard_summary(stats)
-    
+
     context = {
         **stats,
         'comparison_data': comparison_data,

@@ -785,14 +785,19 @@ def set_default_theme(request):
 
 @login_required
 def get_notifications_data(request):
-    """الحصول على بيانات الإشعارات للواجهة - محدث للإشعارات الجماعية"""
+    """الحصول على بيانات الإشعارات للواجهة - محدث للإشعارات البسيطة والجماعية"""
     try:
-        from accounts.models import GroupNotification
+        from accounts.models import GroupNotification, SimpleNotification
 
-        # استخدام الإشعارات الجماعية الجديدة بدلاً من الإشعارات الفردية القديمة
+        # جلب الإشعارات البسيطة للمستخدم
+        simple_notifications = SimpleNotification.objects.filter(
+            recipient=request.user
+        ).order_by('-created_at')[:15]
+
+        # جلب الإشعارات الجماعية أيضاً
         group_notifications = GroupNotification.objects.filter(
             target_users=request.user
-        ).order_by('-created_at')[:20]
+        ).order_by('-created_at')[:5]
 
         # إشعارات الشكاوى (تبقى كما هي)
         if request.user.is_superuser or \
@@ -817,18 +822,36 @@ def get_notifications_data(request):
                 recipient=request.user
             ).order_by('-created_at')[:10]
 
-        # تحويل الإشعارات الجماعية إلى قوائم
+        # تحويل الإشعارات البسيطة والجماعية إلى قوائم
         order_data = []
-        for notification in group_notifications:
-            # فحص ما إذا كان المستخدم قد قرأ الإشعار
-            is_read = notification.is_read_by_user(request.user)
 
+        # إضافة الإشعارات البسيطة
+        for notification in simple_notifications:
             order_data.append({
                 'id': notification.id,
                 'title': notification.title,
                 'customer_name': notification.customer_name,
                 'order_number': notification.order_number,
-                'status': notification.get_priority_display(),  # استخدام الأولوية كحالة
+                'status': notification.status,
+                'icon': notification.get_icon(),
+                'color_class': notification.get_color_class(),
+                'time_ago': notification.get_time_ago(),
+                'is_read': notification.is_read,
+                'notification_type': notification.notification_type,
+                'priority': notification.priority,
+            })
+
+        # إضافة الإشعارات الجماعية
+        for notification in group_notifications:
+            # فحص ما إذا كان المستخدم قد قرأ الإشعار
+            is_read = notification.is_read_by_user(request.user)
+
+            order_data.append({
+                'id': f"group_{notification.id}",  # تمييز الإشعارات الجماعية
+                'title': notification.title,
+                'customer_name': notification.customer_name,
+                'order_number': notification.order_number,
+                'status': notification.get_priority_display(),
                 'icon': notification.get_icon(),
                 'color_class': notification.get_color_class(),
                 'time_ago': str(notification.created_at.strftime('%Y-%m-%d %H:%M')),
@@ -852,9 +875,14 @@ def get_notifications_data(request):
                 'priority': notification.priority,
             })
 
-        # العدادات - استخدام الإشعارات الجماعية
-        # حساب الإشعارات غير المقروءة للمستخدم الحالي
-        unread_orders = 0
+        # العدادات - حساب الإشعارات غير المقروءة
+        # حساب الإشعارات البسيطة غير المقروءة
+        unread_orders = SimpleNotification.objects.filter(
+            recipient=request.user,
+            is_read=False
+        ).count()
+
+        # إضافة الإشعارات الجماعية غير المقروءة
         for notification in group_notifications:
             if not notification.is_read_by_user(request.user):
                 unread_orders += 1
@@ -1338,6 +1366,199 @@ def notifications_list(request):
     }
 
     return render(request, 'accounts/notifications_list.html', context)
+
+
+@login_required
+def simple_notifications_list(request):
+    """صفحة إدارة الإشعارات البسيطة مع فلترة وحذف"""
+    from accounts.models import SimpleNotification
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+
+    # الفلاتر
+    notification_type = request.GET.get('type', '')
+    priority = request.GET.get('priority', '')
+    is_read = request.GET.get('is_read', '')
+    search = request.GET.get('search', '')
+
+    # بناء الاستعلام
+    queryset = SimpleNotification.objects.filter(recipient=request.user)
+
+    if notification_type:
+        queryset = queryset.filter(notification_type=notification_type)
+
+    if priority:
+        queryset = queryset.filter(priority=priority)
+
+    if is_read:
+        if is_read == 'read':
+            queryset = queryset.filter(is_read=True)
+        elif is_read == 'unread':
+            queryset = queryset.filter(is_read=False)
+
+    if search:
+        queryset = queryset.filter(
+            Q(title__icontains=search) |
+            Q(customer_name__icontains=search) |
+            Q(order_number__icontains=search) |
+            Q(status__icontains=search)
+        )
+
+    # ترتيب النتائج
+    queryset = queryset.order_by('-created_at')
+
+    # التصفح
+    paginator = Paginator(queryset, 20)
+    page_number = request.GET.get('page')
+    notifications = paginator.get_page(page_number)
+
+    # الإحصائيات
+    stats = {
+        'total': SimpleNotification.objects.filter(recipient=request.user).count(),
+        'unread': SimpleNotification.objects.filter(recipient=request.user, is_read=False).count(),
+        'urgent': SimpleNotification.objects.filter(recipient=request.user, priority='urgent', is_read=False).count(),
+        'high': SimpleNotification.objects.filter(recipient=request.user, priority='high', is_read=False).count(),
+    }
+
+    # خيارات الفلاتر
+    filter_options = {
+        'types': SimpleNotification.TYPE_CHOICES,
+        'priorities': SimpleNotification.PRIORITY_CHOICES,
+    }
+
+    context = {
+        'notifications': notifications,
+        'stats': stats,
+        'filter_options': filter_options,
+        'current_filters': {
+            'type': notification_type,
+            'priority': priority,
+            'is_read': is_read,
+            'search': search,
+        },
+        'title': 'إدارة الإشعارات البسيطة',
+    }
+
+    return render(request, 'accounts/simple_notifications_list.html', context)
+
+
+@login_required
+def mark_notification_as_read(request, notification_id):
+    """تحديد إشعار كمقروء"""
+    from accounts.models import SimpleNotification
+    from django.http import JsonResponse
+
+    try:
+        notification = SimpleNotification.objects.get(
+            id=notification_id,
+            recipient=request.user
+        )
+        notification.mark_as_read()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'تم تحديد الإشعار كمقروء'
+        })
+    except SimpleNotification.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'الإشعار غير موجود'
+        })
+
+
+@login_required
+def delete_notification(request, notification_id):
+    """حذف إشعار"""
+    from accounts.models import SimpleNotification
+    from django.http import JsonResponse
+
+    if request.method == 'POST':
+        try:
+            notification = SimpleNotification.objects.get(
+                id=notification_id,
+                recipient=request.user
+            )
+            notification.delete()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'تم حذف الإشعار بنجاح'
+            })
+        except SimpleNotification.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'الإشعار غير موجود'
+            })
+
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة غير مسموحة'
+    })
+
+
+@login_required
+def bulk_notifications_action(request):
+    """إجراءات جماعية على الإشعارات"""
+    from accounts.models import SimpleNotification
+    from django.http import JsonResponse
+    import json
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            action = data.get('action')
+            notification_ids = data.get('notification_ids', [])
+
+            if not notification_ids:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'لم يتم تحديد أي إشعارات'
+                })
+
+            # التأكد من أن الإشعارات تخص المستخدم الحالي
+            notifications = SimpleNotification.objects.filter(
+                id__in=notification_ids,
+                recipient=request.user
+            )
+
+            if action == 'mark_read':
+                count = notifications.update(is_read=True, read_at=timezone.now())
+                return JsonResponse({
+                    'success': True,
+                    'message': f'تم تحديد {count} إشعار كمقروء'
+                })
+
+            elif action == 'mark_unread':
+                count = notifications.update(is_read=False, read_at=None)
+                return JsonResponse({
+                    'success': True,
+                    'message': f'تم تحديد {count} إشعار كغير مقروء'
+                })
+
+            elif action == 'delete':
+                count = notifications.count()
+                notifications.delete()
+                return JsonResponse({
+                    'success': True,
+                    'message': f'تم حذف {count} إشعار'
+                })
+
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'إجراء غير صحيح'
+                })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'حدث خطأ: {str(e)}'
+            })
+
+    return JsonResponse({
+        'success': False,
+        'message': 'طريقة غير مسموحة'
+    })
 
 
 @login_required

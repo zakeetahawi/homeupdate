@@ -18,9 +18,6 @@
             <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> العودة
             </a>
-            <a href="{% url 'odoo_db_manager:backup_create_for_database' database.id %}" class="btn btn-success">
-                <i class="fas fa-save"></i> نسخة احتياطية
-            </a>
             {% if not database.is_active %}
             <a href="{% url 'odoo_db_manager:activate_database' database.id %}" class="btn btn-primary">
                 <i class="fas fa-check"></i> تنشيط
@@ -132,49 +129,7 @@
         </div>
     </div>
 
-    <!-- النسخ الاحتياطية -->
-    <div class="mt-4">
-        <h3>النسخ الاحتياطية</h3>
-        <div class="odoo-list-view">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>الاسم</th>
-                        <th>الحجم</th>
-                        <th>تاريخ الإنشاء</th>
-                        <th>تم الإنشاء بواسطة</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for backup in backups %}
-                    <tr>
-                        <td>{{ backup.name }}</td>
-                        <td>{{ backup.size_display }}</td>
-                        <td>{{ backup.created_at|date:"Y-m-d H:i" }}</td>
-                        <td>{{ backup.created_by.username|default:"" }}</td>
-                        <td>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
-                                    إجراءات
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{% url 'odoo_db_manager:backup_detail' backup.id %}">عرض</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'odoo_db_manager:backup_restore' backup.id %}">استعادة</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="{% url 'odoo_db_manager:backup_delete' backup.id %}">حذف</a></li>
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center">لا توجد نسخ احتياطية</td>
-                    </tr>
-                    {% endfor %}                </tbody>
-            </table>
-        </div>
-    </div>
+    <!-- تم حذف قسم النسخ الاحتياطية - استخدم backup_system بدلاً من ذلك -->
 </div>
 {% endblock %}
 

@@ -157,6 +157,8 @@ TEMPLATES = [
                 'accounts.context_processors.footer_settings',
                 'accounts.context_processors.system_settings',
                 'accounts.context_processors.branch_messages',
+                'accounts.context_processors.notifications_context',
+                'accounts.context_processors.admin_notifications_context',
             ],
         },
     },

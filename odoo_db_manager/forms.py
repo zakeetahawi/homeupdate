@@ -4,7 +4,7 @@
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Database, Backup, BackupSchedule, GoogleDriveConfig
+from .models import Database, BackupSchedule, GoogleDriveConfig
 
 
 class DatabaseForm(forms.ModelForm):
@@ -80,64 +80,7 @@ class DatabaseForm(forms.ModelForm):
         return instance
 
 
-class BackupForm(forms.ModelForm):
-    """نموذج إنشاء نسخة احتياطية"""
-
-    database = forms.ModelChoiceField(
-        queryset=Database.objects.all(),
-        label=_('قاعدة البيانات'),
-        empty_label=_('-- اختر قاعدة البيانات --'),
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-
-    class Meta:
-        model = Backup
-        fields = ['database', 'name', 'backup_type']
-        widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'backup_type': forms.Select(attrs={'class': 'form-select'}),
-        }
-
-
-class BackupRestoreForm(forms.Form):
-    """نموذج استعادة نسخة احتياطية"""
-
-    clear_data = forms.BooleanField(
-        label=_('حذف البيانات الحالية قبل الاستعادة'),
-        required=False,
-        initial=False,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
-    )
-
-
-class BackupUploadForm(forms.Form):
-    """نموذج تحميل ملف نسخة احتياطية"""
-
-    database = forms.ModelChoiceField(
-        queryset=Database.objects.all(),
-        label=_('قاعدة البيانات'),
-        empty_label=_('-- اختر قاعدة البيانات --'),
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-
-    backup_file = forms.FileField(
-        label=_('ملف النسخة الاحتياطية'),
-        widget=forms.FileInput(attrs={'class': 'form-control'})
-    )
-
-    backup_type = forms.ChoiceField(
-        label=_('نوع النسخة الاحتياطية'),
-        choices=Backup.BACKUP_TYPES,
-        initial='full',
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-
-    clear_data = forms.BooleanField(
-        label=_('حذف البيانات الحالية قبل الاستعادة'),
-        required=False,
-        initial=False,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
-    )
+# تم حذف نماذج النسخ الاحتياطي القديمة - استخدم backup_system بدلاً من ذلك
 
 
 class BackupScheduleForm(forms.ModelForm):

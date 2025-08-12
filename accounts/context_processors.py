@@ -194,3 +194,64 @@ def branch_messages(request):
         messages = BranchMessage.objects.filter(messages_query).order_by('-created_at')
         return {'branch_messages': messages}
     return {'branch_messages': []}
+
+
+def notifications_context(request):
+    """إضافة عدادات الإشعارات إلى السياق"""
+    context = {}
+
+    if request.user.is_authenticated:
+        from accounts.models import SimpleNotification, ComplaintNotification
+
+        # عداد الإشعارات البسيطة غير المقروءة
+        simple_unread = SimpleNotification.objects.filter(
+            recipient=request.user,
+            is_read=False
+        ).count()
+
+        # عداد إشعارات الشكاوى غير المقروءة
+        complaint_unread = ComplaintNotification.objects.filter(
+            recipient=request.user,
+            is_read=False
+        ).count()
+
+        # إجمالي الإشعارات غير المقروءة
+        total_unread = simple_unread + complaint_unread
+
+        context.update({
+            'simple_notifications_unread': simple_unread,
+            'complaint_notifications_unread': complaint_unread,
+            'total_notifications_unread': total_unread,
+        })
+
+    return context
+
+
+def admin_notifications_context(request):
+    """إضافة عدادات الإشعارات لـ admin panel"""
+    context = {}
+
+    if request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser):
+        from accounts.models import SimpleNotification, ComplaintNotification
+
+        # إحصائيات شاملة للمديرين
+        total_simple = SimpleNotification.objects.count()
+        unread_simple = SimpleNotification.objects.filter(is_read=False).count()
+        urgent_simple = SimpleNotification.objects.filter(
+            is_read=False,
+            priority='urgent'
+        ).count()
+
+        total_complaints = ComplaintNotification.objects.count()
+        unread_complaints = ComplaintNotification.objects.filter(is_read=False).count()
+
+        context.update({
+            'admin_simple_total': total_simple,
+            'admin_simple_unread': unread_simple,
+            'admin_simple_urgent': urgent_simple,
+            'admin_complaints_total': total_complaints,
+            'admin_complaints_unread': unread_complaints,
+            'admin_total_unread': unread_simple + unread_complaints,
+        })
+
+    return context

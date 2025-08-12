@@ -5,7 +5,7 @@
 from django.contrib import admin
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .models import Database, Backup, GoogleDriveConfig
+from .models import Database, GoogleDriveConfig
 from .google_sync import GoogleSyncConfig, GoogleSyncLog
 from .google_sync_advanced import (
     GoogleSheetMapping, GoogleSyncTask, GoogleSyncConflict, GoogleSyncSchedule
@@ -32,22 +32,7 @@ class DatabaseAdmin(admin.ModelAdmin):
         }),
     )
 
-@admin.register(Backup)
-class BackupAdmin(admin.ModelAdmin):
-    """إدارة النسخ الاحتياطية"""
-    list_display = ('name', 'database', 'size_display', 'created_at', 'created_by')
-    list_filter = ('database', 'created_at')
-    search_fields = ('name', 'database__name')
-    readonly_fields = ('size', 'created_at', 'created_by')
-    fieldsets = (
-        (None, {
-            'fields': ('name', 'database', 'file_path')
-        }),
-        (_('معلومات النظام'), {
-            'fields': ('size', 'created_at', 'created_by'),
-            'classes': ('collapse',)
-        }),
-    )
+# تم حذف BackupAdmin - استخدم backup_system بدلاً من ذلك
 
 @admin.register(GoogleDriveConfig)
 class GoogleDriveConfigAdmin(admin.ModelAdmin):

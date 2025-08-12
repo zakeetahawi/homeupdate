@@ -16,7 +16,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db import connection
 from django.contrib.auth.models import User
-from odoo_db_manager.models import Database, Backup
+from odoo_db_manager.models import Database
 
 class BackupService:
     """خدمة النسخ الاحتياطي المحسنة"""

@@ -12,7 +12,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from django_apscheduler.jobstores import DjangoJobStore
 from django_apscheduler.models import DjangoJobExecution
 
-from odoo_db_manager.models import Database, Backup, BackupSchedule
+from odoo_db_manager.models import Database, BackupSchedule
 
 logger = logging.getLogger(__name__)
 

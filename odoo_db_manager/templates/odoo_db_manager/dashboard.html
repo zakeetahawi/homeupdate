@@ -48,50 +48,120 @@
         padding-right: 20px;
     }
 
-    /* أنماط النظام الجديد */
-    .new-system-alert {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        color: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    /* تخطيط الصفحة الجديد */
+    .page-header {
         margin-bottom: 2rem;
     }
 
-    .new-system-alert .btn {
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: white;
-        backdrop-filter: blur(10px);
-        transition: all 0.3s ease;
+    .page-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        text-align: right;
     }
 
-    .new-system-alert .btn:hover {
-        background: rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.5);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-    }
-
-    .new-system-features {
+    .action-buttons {
         display: flex;
         gap: 1rem;
-        margin-top: 1rem;
         flex-wrap: wrap;
+        justify-content: flex-start;
+        margin-bottom: 2rem;
     }
 
-    .feature-badge {
-        background: rgba(255, 255, 255, 0.15);
-        padding: 0.3rem 0.8rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        backdrop-filter: blur(5px);
+    /* تصميم أزرار جديد وجميل */
+    .modern-btn {
+        position: relative;
+        padding: 0.8rem 1.5rem;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        cursor: pointer;
+    }
+
+    .modern-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .modern-btn:hover::before {
+        left: 100%;
+    }
+
+    .modern-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        text-decoration: none;
+    }
+
+    .modern-btn:active {
+        transform: translateY(0);
+    }
+
+    /* ألوان الأزرار الحديثة */
+    .modern-btn.btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .modern-btn.btn-success {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+    }
+
+    .modern-btn.btn-secondary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .modern-btn.btn-info {
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+        color: white;
+    }
+
+    .modern-btn.btn-warning {
+        background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+        color: white;
+    }
+
+    .modern-btn.btn-dark {
+        background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+        color: white;
+    }
+
+    .modern-btn.btn-danger {
+        background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+        color: white;
     }
 
     @media (max-width: 768px) {
-        .new-system-features {
+        .page-title {
+            font-size: 2rem;
+            text-align: center;
+        }
+
+        .action-buttons {
             flex-direction: column;
-            gap: 0.5rem;
+            align-items: stretch;
+        }
+
+        .modern-btn {
+            width: 100%;
+            justify-content: center;
         }
     }
 </style>
@@ -101,77 +171,36 @@
 <div class="container-fluid">
     <div class="odoo-dashboard">
         
-        <!-- إعلان النظام الجديد -->
-        <div class="alert new-system-alert">
-            <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <h4 class="mb-2">
-                        <i class="fas fa-shield-alt me-2"></i>
-                        النظام الجديد للنسخ الاحتياطي والاستعادة
-                    </h4>
-                    <p class="mb-2">
-                        نظام محسن وآمن مع واجهة عصرية وميزات متقدمة لإدارة النسخ الاحتياطي بكفاءة عالية
-                    </p>
-                    <div class="new-system-features">
-                        <span class="feature-badge">
-                            <i class="fas fa-compress-alt me-1"></i>
-                            ضغط تلقائي
-                        </span>
-                        <span class="feature-badge">
-                            <i class="fas fa-chart-line me-1"></i>
-                            تتبع التقدم
-                        </span>
-                        <span class="feature-badge">
-                            <i class="fas fa-mobile-alt me-1"></i>
-                            واجهة متجاوبة
-                        </span>
-                        <span class="feature-badge">
-                            <i class="fas fa-lock me-1"></i>
-                            أمان محسن
-                        </span>
-                    </div>
-                </div>
-                <div class="ms-3">
-                    <a href="{% url 'backup_system:dashboard' %}" class="btn btn-lg">
-                        <i class="fas fa-rocket me-2"></i>
-                        جرب النظام الجديد
-                    </a>
-                </div>
-            </div>
-        </div>
 
-        <!-- شريط الأدوات العلوي -->
-        <div class="odoo-toolbar">
-            <div class="odoo-toolbar-left">
-                <h1>{{ title }}</h1>
-            </div>
-            <div class="odoo-toolbar-right">
-                <a href="{% url 'odoo_db_manager:database_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> إنشاء قاعدة بيانات
+
+        <!-- رأس الصفحة الجديد -->
+        <div class="page-header">
+            <h1 class="page-title">إدارة قواعد البيانات</h1>
+
+            <div class="action-buttons">
+                <a href="{% url 'odoo_db_manager:database_create' %}" class="modern-btn btn-primary">
+                    <i class="fas fa-plus"></i>
+                    إنشاء قاعدة بيانات
                 </a>
-                <a href="{% url 'odoo_db_manager:backup_create' %}" class="btn btn-success">
-                    <i class="fas fa-save"></i> نسخة احتياطية
+                <a href="{% url 'backup_system:dashboard' %}" class="modern-btn btn-success">
+                    <i class="fas fa-shield-alt"></i>
+                    نظام النسخ الاحتياطي
                 </a>
-                <a href="{% url 'odoo_db_manager:schedule_list' %}" class="btn btn-warning">
-                    <i class="fas fa-clock"></i> جدولة النسخ الاحتياطية
-                </a>
-                <a href="{% url 'odoo_db_manager:backup_upload' %}" class="btn btn-info">
-                    <i class="fas fa-upload"></i> استعادة من ملف
-                </a>
-                <a href="{% url 'backup_system:dashboard' %}" class="btn btn-outline-dark">
-                    <i class="fas fa-shield-alt"></i> النظام الجديد
-                </a>
-                <button onclick="refreshConnectionStatus()" class="btn btn-secondary">
-                    <i class="fas fa-sync-alt"></i> تحديث حالة الاتصال
+                <button onclick="refreshConnectionStatus()" class="modern-btn btn-secondary">
+                    <i class="fas fa-sync-alt"></i>
+                    تحديث حالة الاتصال
                 </button>
-                <a href="{% url 'odoo_db_manager:google_drive_settings' %}" class="btn btn-outline-primary">
-                    <i class="fab fa-google-drive"></i> إعدادات Google Drive
+                <a href="{% url 'odoo_db_manager:google_drive_settings' %}" class="modern-btn btn-info">
+                    <i class="fab fa-google-drive"></i>
+                    إعدادات Google Drive
                 </a>
-                <a href="{% url 'odoo_db_manager:google_sync' %}" class="btn btn-outline-success">
-                    <i class="fas fa-sync-alt"></i> مزامنة غوغل
+                <a href="{% url 'odoo_db_manager:google_sync' %}" class="modern-btn btn-warning">
+                    <i class="fas fa-sync-alt"></i>
+                    مزامنة غوغل
                 </a>
-                <a href="{% url 'odoo_db_manager:advanced_sync_dashboard' %}" class="btn btn-outline-warning">
-                    <i class="fas fa-sync-alt"></i> المزامنة المتقدمة
+                <a href="{% url 'odoo_db_manager:advanced_sync_dashboard' %}" class="modern-btn btn-dark">
+                    <i class="fas fa-cogs"></i>
+                    المزامنة المتقدمة
                 </a>
             </div>
         </div>
@@ -220,9 +249,6 @@
                             <div class="d-flex justify-content-center gap-1">
                                 <a href="{% url 'odoo_db_manager:database_detail' db.id %}" class="btn btn-link text-info p-1" title="عرض التفاصيل">
                                     <i class="fas fa-eye fa-lg"></i>
-                                </a>
-                                <a href="{% url 'odoo_db_manager:backup_create_for_database' db.id %}" class="btn btn-link text-success p-1" title="إنشاء نسخة احتياطية">
-                                    <i class="fas fa-download fa-lg"></i>
                                 </a>
                                 <a href="{% url 'odoo_db_manager:schedule_create_for_database' db.id %}" class="btn btn-link text-warning p-1" title="جدولة النسخ الاحتياطية">
                                     <i class="fas fa-clock fa-lg"></i>
@@ -285,53 +311,7 @@
             </div>
         </div>
 
-        <!-- النسخ الاحتياطية الأخيرة -->
-        <div class="mt-4">
-            <h3>النسخ الاحتياطية الأخيرة</h3>
-            <div class="odoo-list-view">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>الاسم</th>
-                            <th>قاعدة البيانات</th>
-                            <th>الحجم</th>
-                            <th>تاريخ الإنشاء</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for backup in backups %}
-                        <tr>
-                            <td>{{ backup.name }}</td>
-                            <td>{{ backup.database.name }}</td>
-                            <td>{{ backup.size_display }}</td>
-                            <td>{{ backup.created_at|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                <div class="d-flex justify-content-center gap-1">
-                                    <a href="{% url 'odoo_db_manager:backup_detail' backup.id %}" class="btn btn-link text-info p-1" title="عرض التفاصيل">
-                                        <i class="fas fa-eye fa-lg"></i>
-                                    </a>
-                                    <a href="{% url 'odoo_db_manager:backup_download' backup.id %}" class="btn btn-link text-success p-1" title="تنزيل">
-                                        <i class="fas fa-download fa-lg"></i>
-                                    </a>
-                                    <a href="{% url 'odoo_db_manager:backup_restore' backup.id %}" class="btn btn-link text-warning p-1" title="استعادة">
-                                        <i class="fas fa-undo fa-lg"></i>
-                                    </a>
-                                    <a href="{% url 'odoo_db_manager:backup_delete' backup.id %}" class="btn btn-link text-danger p-1" title="حذف">
-                                        <i class="fas fa-trash fa-lg"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center">لا توجد نسخ احتياطية</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <!-- تم حذف قسم النسخ الاحتياطية - استخدم backup_system بدلاً من ذلك -->
 
         <!-- قواعد البيانات المكتشفة في PostgreSQL -->
         {% if discovered_databases %}

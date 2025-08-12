@@ -379,82 +379,7 @@ class Database(models.Model):
             return False
         return True
     # ...existing code...
-class Backup(models.Model):
-    """نموذج النسخ الاحتياطي"""
-    BACKUP_TYPES = [
-        ('customers', 'بيانات العملاء'),
-        ('users', 'بيانات المستخدمين'),
-        ('settings', 'إعدادات النظام'),
-        ('full', 'كل البيانات'),
-    ]
-    database = models.ForeignKey(
-        Database,
-        on_delete=models.CASCADE,
-        related_name='backups',
-        verbose_name=_('قاعدة البيانات')
-    )
-    name = models.CharField(_('اسم النسخة الاحتياطية'), max_length=100)
-    file_path = models.CharField(_('مسار الملف'), max_length=255)
-    size = models.BigIntegerField(_('الحجم (بايت)'), default=0)
-    backup_type = models.CharField(
-        _('نوع النسخة الاحتياطية'),
-        max_length=20,
-        choices=BACKUP_TYPES,
-        default='full'
-    )
-    is_scheduled = models.BooleanField(_('مجدولة'), default=False)
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        verbose_name=_('تم الإنشاء بواسطة')
-    )
-    class Meta:
-        verbose_name = _('نسخة احتياطية')
-        verbose_name_plural = _('النسخ الاحتياطية')
-        ordering = ['-created_at']
-    def __str__(self):
-        return self.name
-    @property
-    def size_display(self):
-        """عرض حجم النسخة الاحتياطية بشكل مقروء"""
-        size = self.size
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size < 1024.0:
-                return f"{size:.1f} {unit}"
-            size /= 1024.0
-        return f"{size:.1f} TB"
-
-    @property
-    def is_compressed(self):
-        """تحديد ما إذا كان الملف مضغوط"""
-        return self.file_path.lower().endswith('.gz')
-
-    @property
-    def file_type_display(self):
-        """عرض نوع الملف"""
-        if self.is_compressed:
-            if '.json.gz' in self.file_path.lower():
-                return 'JSON مضغوط (GZ)'
-            elif '.sqlite3.gz' in self.file_path.lower():
-                return 'SQLite مضغوط (GZ)'
-            else:
-                return 'ملف مضغوط (GZ)'
-        elif self.file_path.lower().endswith('.json'):
-            return 'JSON'
-        elif self.file_path.lower().endswith('.sqlite3'):
-            return 'SQLite'
-        else:
-            return 'غير محدد'
-
-    @property
-    def compression_info(self):
-        """معلومات الضغط"""
-        if self.is_compressed:
-            return "✅ مضغوط - يوفر مساحة أكبر"
-        else:
-            return "⚠️ غير مضغوط"
+# تم حذف نموذج Backup القديم - استخدم backup_system بدلاً من ذلك
 class BackupSchedule(models.Model):
     """نموذج جدولة النسخ الاحتياطية"""
     FREQUENCY_CHOICES = [
@@ -482,7 +407,12 @@ class BackupSchedule(models.Model):
     backup_type = models.CharField(
         _('نوع النسخة الاحتياطية'),
         max_length=20,
-        choices=Backup.BACKUP_TYPES,
+        choices=[
+            ('customers', 'بيانات العملاء'),
+            ('users', 'بيانات المستخدمين'),
+            ('settings', 'إعدادات النظام'),
+            ('full', 'كل البيانات'),
+        ],
         default='full'
     )
     frequency = models.CharField(

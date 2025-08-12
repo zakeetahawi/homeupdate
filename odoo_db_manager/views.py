@@ -20,7 +20,7 @@ from django.core.cache import cache
 from django.contrib.auth import get_user_model
 
 from .models import (
-    Database, Backup, BackupSchedule,
+    Database, BackupSchedule,
     GoogleDriveConfig, RestoreProgress
 )
 from .services.database_service import DatabaseService
@@ -63,24 +63,12 @@ def dashboard(request):
         discovered_databases = []
         print(f"خطأ في اكتشاف قواعد البيانات: {e}")
 
-    # الحصول على النسخ الاحتياطية
-    backups = Backup.objects.all().order_by('-created_at')[:10]
-
-    # حساب إجمالي حجم النسخ الاحتياطية
-    total_size = sum(backup.size for backup in Backup.objects.all())
-
-    # تحويل الحجم إلى وحدة مناسبة
+    # تم حذف النسخ الاحتياطية القديمة - استخدم backup_system بدلاً من ذلك
+    backups = []
     total_size_display = "0 B"
-    for unit in ['B', 'KB', 'MB', 'GB']:
-        if total_size < 1024.0:
-            total_size_display = f"{total_size:.1f} {unit}"
-            break
-        total_size /= 1024.0
-    else:
-        total_size_display = f"{total_size:.1f} TB"
 
-    # الحصول على آخر نسخة احتياطية
-    last_backup = Backup.objects.order_by('-created_at').first()
+    # تم حذف النسخ الاحتياطية القديمة - استخدم backup_system بدلاً من ذلك
+    last_backup = None
 
     # التحقق من وجود رسالة نجاح لتنشيط قاعدة البيانات
     show_activation_success = request.session.pop('show_db_activation_success', False)
@@ -155,9 +143,10 @@ def dashboard(request):
         pass
 
     context = {
-        'databases': databases,        'backups': backups,
+        'databases': databases,
+        'backups': backups,
         'total_size_display': total_size_display,
-        'last_backup': last_backup,
+        'last_backup': None,  # تم حذف النسخ الاحتياطية القديمة
         'title': _('إدارة قواعد البيانات'),
         'show_activation_success': show_activation_success,
         'activated_db_name': activated_db_name,
@@ -250,8 +239,10 @@ def database_discover(request):
 def database_detail(request, pk):
     """عرض تفاصيل قاعدة البيانات"""
     # الحصول على قاعدة البيانات
-    database = get_object_or_404(Database, pk=pk)    # الحصول على النسخ الاحتياطية
-    backups = database.backups.all().order_by('-created_at')    # التحقق من رسائل نجاح إنشاء قاعدة البيانات
+    database = get_object_or_404(Database, pk=pk)
+
+    # تم حذف النسخ الاحتياطية القديمة - استخدم backup_system بدلاً من ذلك
+    backups = []    # التحقق من رسائل نجاح إنشاء قاعدة البيانات
     database_created_success = request.session.pop('database_created_success', False)
     created_database_name = request.session.pop('created_database_name', '')
     default_user_created = request.session.pop('default_user_created', False)
@@ -505,812 +496,23 @@ def database_delete(request, pk):
 
     return render(request, 'odoo_db_manager/database_delete.html', context)
 
-@login_required
-@user_passes_test(is_staff_or_superuser)
-def backup_create(request, database_id=None):
-    """إنشاء نسخة احتياطية مضغوطة"""
-    import os
-    import shutil
-    import datetime
-    import gzip
-    import json
+# تم حذف دوال النسخ الاحتياطي القديمة - استخدم backup_system بدلاً من ذلك
 
-    # الحصول على قاعدة البيانات
-    database = None
-    if database_id:
-        database = get_object_or_404(Database, pk=database_id)
+# backup_create, backup_detail, backup_restore, backup_delete, backup_download, backup_upload
+# تم نقلها إلى backup_system للحصول على نظام موحد ومحسن
 
-    if request.method == 'POST':
-        # الحصول على بيانات النموذج
-        database_id = request.POST.get('database_id', database_id)
-        name = request.POST.get('name', '')
-        backup_type = request.POST.get('backup_type', 'full')
 
-        try:
-            # طباعة معلومات تشخيصية
-            print(f"إنشاء نسخة احتياطية جديدة")
-            print(f"معرف قاعدة البيانات: {database_id}")
-            print(f"اسم النسخة الاحتياطية: {name}")
-            print(f"نوع النسخة الاحتياطية: {backup_type}")
 
-            # الحصول على قاعدة البيانات
-            db = Database.objects.get(id=database_id)
-            print(f"معلومات قاعدة البيانات: {db.name}, {db.db_type}, {db.connection_info}")
 
-            # التأكد من وجود كلمة المرور الصحيحة
-            if db.db_type == 'postgresql' and (not db.connection_info.get('PASSWORD') or db.connection_info.get('PASSWORD') != '5525'):
-                # تحديث كلمة المرور
-                connection_info = db.connection_info
-                connection_info['PASSWORD'] = '5525'
-                db.connection_info = connection_info
-                db.save()
-                print(f"تم تحديث كلمة المرور لقاعدة البيانات: {db.name}")
 
-            # إنشاء نسخة احتياطية بسيطة عن طريق نسخ ملف قاعدة البيانات SQLite مباشرة
-            if settings.DATABASES['default']['ENGINE'].endswith('sqlite3'):
 
-                # الحصول على مسار ملف قاعدة البيانات
-                db_file = settings.DATABASES['default']['NAME']
-                print(f"مسار ملف قاعدة البيانات: {db_file}")
 
-                # إنشاء اسم النسخة الاحتياطية إذا لم يتم توفيره
-                if not name:
-                    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-                    name = f"{db.name}_{backup_type}_{timestamp}"
 
-                # إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجود
-                backup_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
-                os.makedirs(backup_dir, exist_ok=True)
 
-                # إنشاء مسار ملف النسخة الاحتياطية المضغوط
-                backup_file = os.path.join(backup_dir, f"{name}.sqlite3.gz")
-                print(f"مسار ملف النسخة الاحتياطية المضغوط: {backup_file}")
 
-                # ضغط ملف قاعدة البيانات إلى .gz
-                original_size = os.path.getsize(db_file)
-                with open(db_file, 'rb') as f_in:
-                    with gzip.open(backup_file, 'wb', compresslevel=9) as f_out:
-                        shutil.copyfileobj(f_in, f_out)
 
-                compressed_size = os.path.getsize(backup_file)
-                compression_ratio = ((original_size - compressed_size) / original_size * 100) if original_size > 0 else 0
-                print(f"تم ضغط ملف قاعدة البيانات بنجاح:")
-                print(f"  الحجم الأصلي: {original_size:,} بايت")
-                print(f"  الحجم المضغوط: {compressed_size:,} بايت")
-                print(f"  نسبة الضغط: {compression_ratio:.1f}%")
 
-                # إنشاء سجل النسخة الاحتياطية في قاعدة البيانات
-                backup = Backup.objects.create(
-                    name=name,
-                    database=db,
-                    backup_type=backup_type,
-                    file_path=backup_file,
-                    size=compressed_size,
-                    created_by=request.user
-                )
-                print(f"تم إنشاء سجل النسخة الاحتياطية بنجاح: {backup.id}")
-            else:
-                # إنشاء النسخة الاحتياطية لقاعدة بيانات PostgreSQL
-                if not name:
-                    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-                    name = f"{db.name}_{backup_type}_{timestamp}"
 
-                # إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجود
-                backup_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
-                os.makedirs(backup_dir, exist_ok=True)
-
-                # إنشاء ملف JSON مضغوط باستخدام Django dumpdata
-                backup_file = os.path.join(backup_dir, f"{name}.json.gz")
-                print(f"🔄 إنشاء نسخة احتياطية JSON مضغوطة: {backup_file}")
-
-                try:
-                    # استخدام Django dumpdata لإنشاء النسخة الاحتياطية
-                    from django.core.management import call_command
-                    from io import StringIO
-
-                    # تحديد التطبيقات المراد نسخها حسب نوع النسخة الاحتياطية
-                    if backup_type == 'customers':
-                        apps_to_backup = ['customers']
-                    elif backup_type == 'users':
-                        apps_to_backup = ['auth', 'accounts']
-                    elif backup_type == 'settings':
-                        apps_to_backup = ['odoo_db_manager']
-                    else:  # full
-                        apps_to_backup = ['customers', 'orders', 'inspections', 'inventory', 'installations', 'manufacturing', 'accounts', 'odoo_db_manager']
-
-                    # تنفيذ dumpdata مع معالجة مشاكل الترميز والضغط المباشر
-                    import tempfile
-
-                    # إنشاء ملف مؤقت غير مضغوط
-                    with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', delete=False, suffix='.json') as temp_file:
-                        temp_path = temp_file.name
-
-                    try:
-                        # تنفيذ dumpdata إلى ملف مؤقت مباشرة
-                        with open(temp_path, 'w', encoding='utf-8') as temp_output:
-                            call_command('dumpdata', *apps_to_backup, stdout=temp_output,
-                                       format='json', indent=2, verbosity=0)
-
-                        # قراءة الملف المؤقت وضغطه مباشرة
-                        original_size = os.path.getsize(temp_path)
-                        with open(temp_path, 'rb') as temp_input:
-                            with gzip.open(backup_file, 'wb', compresslevel=9) as compressed_output:
-                                shutil.copyfileobj(temp_input, compressed_output)
-
-                    finally:
-                        # حذف الملف المؤقت
-                        if os.path.exists(temp_path):
-                            os.unlink(temp_path)
-
-                    compressed_size = os.path.getsize(backup_file)
-                    compression_ratio = ((original_size - compressed_size) / original_size * 100) if original_size > 0 else 0
-
-                    print(f"تم إنشاء ملف النسخة الاحتياطية المضغوط: {backup_file}")
-                    print(f"الحجم الأصلي: {original_size:,} بايت")
-                    print(f"الحجم المضغوط: {compressed_size:,} بايت")
-                    print(f"نسبة الضغط: {compression_ratio:.1f}%")
-                    print(f"المساحة الموفرة: {original_size - compressed_size:,} بايت")
-
-                    # إنشاء سجل النسخة الاحتياطية في قاعدة البيانات
-                    backup = Backup.objects.create(
-                        name=name,
-                        database=db,
-                        backup_type=backup_type,
-                        file_path=backup_file,
-                        size=compressed_size,
-                        created_by=request.user
-                    )
-                    print(f"تم إنشاء سجل النسخة الاحتياطية بنجاح: {backup.id}")
-
-                except Exception as backup_error:
-                    print(f"خطأ في إنشاء النسخة الاحتياطية: {str(backup_error)}")
-                    # في حالة الفشل، إنشاء سجل بدون ملف
-                    backup = Backup.objects.create(
-                        name=name,
-                        database=db,
-                        backup_type=backup_type,
-                        file_path="",
-                        created_by=request.user
-                    )
-                    raise backup_error
-
-            messages.success(request, _('تم إنشاء النسخة الاحتياطية بنجاح.'))
-            return redirect('odoo_db_manager:backup_detail', pk=backup.pk)
-        except Exception as e:
-            messages.error(request, _(f'حدث خطأ أثناء إنشاء النسخة الاحتياطية: {str(e)}'))
-            return redirect('odoo_db_manager:backup_create')
-
-    # الحصول على قواعد البيانات
-    databases = Database.objects.all()
-
-    # الحصول على أنواع النسخ الاحتياطية من نموذج Backup
-    backup_types = Backup.BACKUP_TYPES
-
-    context = {
-        'database': database,
-        'databases': databases,
-        'backup_types': backup_types,
-        'title': _('إنشاء نسخة احتياطية جديدة'),
-    }
-
-    return render(request, 'odoo_db_manager/backup_form.html', context)
-
-@login_required
-@user_passes_test(is_staff_or_superuser)
-def backup_detail(request, pk):
-    """عرض تفاصيل النسخة الاحتياطية"""
-    # الحصول على النسخة الاحتياطية
-    backup = get_object_or_404(Backup, pk=pk)
-
-    context = {
-        'backup': backup,
-        'title': _('تفاصيل النسخة الاحتياطية'),
-    }
-
-    return render(request, 'odoo_db_manager/backup_detail.html', context)
-
-@login_required
-@user_passes_test(is_staff_or_superuser)
-def backup_restore(request, pk):
-    """استعادة النسخة الاحتياطية"""
-    # الحصول على النسخة الاحتياطية
-    backup = get_object_or_404(Backup, pk=pk)
-
-    # حفظ معلومات النسخة الاحتياطية قبل استعادتها
-    backup_info = {
-        'id': backup.id,
-        'name': backup.name,
-        'database_id': backup.database.id,
-        'backup_type': backup.backup_type,
-        'file_path': backup.file_path,
-        'created_at': backup.created_at,
-        'created_by_id': backup.created_by.id if backup.created_by else None
-    }
-
-    if request.method == 'POST':
-        # الحصول على خيار حذف البيانات القديمة
-        clear_data = request.POST.get('clear_data', 'off') == 'on'
-
-        try:
-            # التحقق من وجود الملف
-            if not os.path.exists(backup.file_path):
-                raise FileNotFoundError(f"ملف النسخة الاحتياطية '{backup.file_path}' غير موجود")
-
-            # إذا كان ملف SQLite3، نقوم باستعادته مباشرة
-            if backup.file_path.endswith('.sqlite3'):
-                # الحصول على مسار ملف قاعدة البيانات الحالية
-                db_file = settings.DATABASES['default']['NAME']
-
-                # إنشاء نسخة احتياطية من قاعدة البيانات الحالية قبل الاستبدال
-                backup_current_db = f"{db_file}.bak"
-                shutil.copy2(db_file, backup_current_db)
-
-                try:
-                    # نسخ ملف النسخة الاحتياطية إلى مسار قاعدة البيانات الحالية
-                    shutil.copy2(backup.file_path, db_file)
-
-                    # إعادة إنشاء سجل النسخة الاحتياطية بعد استعادة قاعدة البيانات
-                    from accounts.models import User
-
-                    # الحصول على قاعدة البيانات
-                    try:
-                        db = Database.objects.get(id=backup_info['database_id'])
-                    except Database.DoesNotExist:
-                        # إذا لم تكن قاعدة البيانات موجودة، نستخدم أول قاعدة بيانات متاحة
-                        db = Database.objects.first()
-                        if not db:
-                            # إذا لم تكن هناك قواعد بيانات، نقوم بإنشاء واحدة
-                            db = Database.objects.create(
-                                name="Default Database",
-                                db_type="sqlite3",
-                                connection_info={}
-                            )
-
-                    # الحصول على المستخدم
-                    user_id = backup_info['created_by_id']
-                    user = None
-                    if user_id:
-                        try:
-                            user = User.objects.get(id=user_id)
-                        except User.DoesNotExist:
-                            # إذا لم يكن المستخدم موجودًا، نستخدم أول مستخدم متاح
-                            user = User.objects.first()
-
-                    # إعادة إنشاء سجل النسخة الاحتياطية
-                    try:
-                        Backup.objects.get(id=backup_info['id'])
-                    except Backup.DoesNotExist:
-                        Backup.objects.create(
-                            id=backup_info['id'],
-                            name=backup_info['name'],
-                            database=db,
-                            backup_type=backup_info['backup_type'],
-                            file_path=backup_info['file_path'],
-                            created_at=backup_info['created_at'],
-                            created_by=user
-                        )
-
-                    messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
-                except Exception as e:
-                    # استعادة النسخة الاحتياطية في حالة حدوث خطأ
-                    shutil.copy2(backup_current_db, db_file)
-                    raise RuntimeError(f"فشل استعادة قاعدة البيانات: {str(e)}")
-                finally:
-                    # حذف النسخة الاحتياطية المؤقتة
-                    if os.path.exists(backup_current_db):
-                        os.unlink(backup_current_db)
-            else:                # استعادة النسخة الاحتياطية بطريقة مبسطة
-                # تم إزالة BackupService لتجنب التعقيدات
-                result = None
-                if backup.file_path.endswith('.json'):
-                    result = _restore_json_simple(backup.file_path, clear_existing=clear_data)
-                elif backup.file_path.endswith('.json.gz'):
-                    # التعامل مع الملفات المضغوطة
-                    import gzip
-                    import tempfile
-
-                    # print(f"📦 ملف مضغوط - فك الضغط: {backup.file_path}")  # تعطيل الطباعة
-
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as temp_file:
-                        temp_path = temp_file.name
-
-                    try:
-                        # فك ضغط الملف
-                        with gzip.open(backup.file_path, 'rt', encoding='utf-8') as gz_file:
-                            content = gz_file.read()
-
-                        # كتابة المحتوى المفكوك
-                        with open(temp_path, 'w', encoding='utf-8') as json_file:
-                            json_file.write(content)
-
-                        # print(f"✅ تم فك الضغط بنجاح إلى: {temp_path}")  # تعطيل الطباعة
-
-                        # استعادة من الملف المفكوك
-                        result = _restore_json_simple(temp_path, clear_existing=clear_data)
-
-                    finally:
-                        # حذف الملف المؤقت
-                        if os.path.exists(temp_path):
-                            os.unlink(temp_path)
-                            # print(f"🗑️ تم حذف الملف المؤقت: {temp_path}")  # تعطيل الطباعة
-                else:
-                    raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON أو JSON.GZ.")
-
-                # إنشاء رسالة تفصيلية
-                if result:
-                    success_count = result.get('success_count', 0)
-                    error_count = result.get('error_count', 0)
-                    total_count = result.get('total_count', 0)
-
-                    if error_count == 0:
-                        success_message = f"🎉 تم استعادة جميع البيانات بنجاح!\n\n📊 الإحصائيات:\n• إجمالي العناصر: {total_count}\n• تم الاستعادة: {success_count}\n• نسبة النجاح: 100%"
-                    else:
-                        success_rate = (success_count / total_count * 100) if total_count > 0 else 0
-                        success_message = f"✅ تمت الاستعادة بنجاح!\n\n📊 الإحصائيات:\n• إجمالي العناصر: {total_count}\n• تم الاستعادة: {success_count}\n• فشل: {error_count}\n• نسبة النجاح: {success_rate:.1f}%"
-
-                        if error_count > 0:
-                            success_message += f"\n\n⚠️ تحذير: {error_count} عنصر لم يتم استعادته (عادة بسبب بيانات غير متوافقة مع النسخة الحالية)."
-
-                    messages.success(request, success_message)
-                else:
-                    messages.success(request, _('تم استعادة النسخة الاحتياطية بنجاح.'))
-
-            print("\033[92m🎉 تمت الاستعادة بنجاح!\033[0m")
-            print("\033[92m" + "="*50 + "\033[0m")
-            print("\033[92m✨ عملية الاستعادة اكتملت بنجاح! ✨\033[0m")
-            print("\033[92m" + "="*50 + "\033[0m")
-
-            return redirect('odoo_db_manager:dashboard')
-        except Exception as e:
-            messages.error(request, _(f'حدث خطأ أثناء استعادة النسخة الاحتياطية: {str(e)}'))
-            try:
-                # محاولة الوصول إلى صفحة تفاصيل النسخة الاحتياطية
-                return redirect('odoo_db_manager:backup_detail', pk=backup.pk)
-            except:
-                # إذا لم يكن سجل النسخة الاحتياطية موجودًا، نعود إلى لوحة التحكم
-                return redirect('odoo_db_manager:dashboard')
-
-    context = {
-        'backup': backup,
-        'title': _('استعادة النسخة الاحتياطية'),
-    }
-
-    return render(request, 'odoo_db_manager/backup_restore.html', context)
-
-@login_required
-@user_passes_test(is_staff_or_superuser)
-def backup_delete(request, pk):
-    """حذف النسخة الاحتياطية"""
-    # الحصول على النسخة الاحتياطية
-    backup = get_object_or_404(Backup, pk=pk)
-
-    if request.method == 'POST':
-        try:
-            # حذف النسخة الاحتياطية بطريقة مبسطة
-            # حذف الملف إذا كان موجوداً
-            if backup.file_path and os.path.exists(backup.file_path):
-                os.unlink(backup.file_path)
-
-            # حذف السجل من قاعدة البيانات
-            backup.delete()
-
-            messages.success(request, _('تم حذف النسخة الاحتياطية بنجاح.'))
-            return redirect('odoo_db_manager:dashboard')
-        except Exception as e:
-            messages.error(request, _(f'حدث خطأ أثناء حذف النسخة الاحتياطية: {str(e)}'))
-            return redirect('odoo_db_manager:backup_detail', pk=backup.pk)
-
-    context = {
-        'backup': backup,
-        'title': _('حذف النسخة الاحتياطية'),
-    }
-
-    return render(request, 'odoo_db_manager/backup_delete.html', context)
-
-@login_required
-@user_passes_test(is_staff_or_superuser)
-def backup_download(request, pk):
-    """تحميل ملف النسخة الاحتياطية المضغوط"""
-    import mimetypes
-    import gzip
-    import tempfile
-    from django.http import HttpResponse, StreamingHttpResponse
-    from wsgiref.util import FileWrapper
-    import urllib.parse
-
-    # الحصول على النسخة الاحتياطية
-    backup = get_object_or_404(Backup, pk=pk)
-
-    # التحقق من وجود الملف
-    if not os.path.exists(backup.file_path):
-        messages.error(request, _('ملف النسخة الاحتياطية غير موجود.'))
-        return redirect('odoo_db_manager:backup_detail', pk=backup.pk)
-
-    # الحصول على اسم الملف وحجمه
-    filename = os.path.basename(backup.file_path)
-    file_size = os.path.getsize(backup.file_path)
-
-    # إنشاء اسم ملف آمن للتحميل مع تاريخ
-    from datetime import datetime
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-
-    try:
-        # قراءة الملف مباشرة (يجب أن يكون مضغوطاً مسبقاً)
-        with open(backup.file_path, 'rb') as f:
-            file_data = f.read()
-
-        # تحديد اسم الملف للتحميل
-        if filename.endswith('.gz'):
-            # ملف مضغوط أصلاً - استخدمه كما هو
-            safe_filename = f"{filename.replace('.gz', '')}_{timestamp}.gz"
-            print(f"📦 تحميل ملف مضغوط مسبقاً: {filename}")
-            print(f"📊 حجم الملف المضغوط: {file_size:,} بايت")
-        elif filename.endswith('.json'):
-            # ملف JSON غير مضغوط - اضغطه الآن
-            print(f"🗜️ ضغط ملف JSON: {filename}")
-            original_size = len(file_data)
-            compressed_data = gzip.compress(file_data, compresslevel=9)
-            file_data = compressed_data
-            safe_filename = f"{filename.replace('.json', '')}_{timestamp}.gz"
-
-            compression_ratio = ((original_size - len(compressed_data)) / original_size * 100) if original_size > 0 else 0
-            print(f"📊 حجم الملف الأصلي: {original_size:,} بايت")
-            print(f"📊 حجم الملف المضغوط: {len(compressed_data):,} بايت")
-            print(f"📊 نسبة الضغط: {compression_ratio:.1f}%")
-        else:
-            # ملفات أخرى - اضغطها
-            print(f"🗜️ ضغط ملف: {filename}")
-            original_size = len(file_data)
-            compressed_data = gzip.compress(file_data, compresslevel=9)
-            file_data = compressed_data
-            safe_filename = f"backup_{timestamp}.gz"
-
-            compression_ratio = ((original_size - len(compressed_data)) / original_size * 100) if original_size > 0 else 0
-            print(f"📊 نسبة الضغط: {compression_ratio:.1f}%")
-
-        # إزالة المسافات والأحرف الخاصة
-        safe_filename = safe_filename.replace(' ', '_').replace(',', '_').replace('(', '').replace(')', '')
-
-        # إنشاء الاستجابة مع headers محسنة للملفات المضغوطة
-        response = HttpResponse(file_data, content_type='application/gzip')
-
-        # إعداد headers لإجبار التحميل كملف مضغوط
-        encoded_filename = urllib.parse.quote(safe_filename.encode('utf-8'))
-        response['Content-Disposition'] = f'attachment; filename="{safe_filename}"; filename*=UTF-8\'\'{encoded_filename}'
-        response['Content-Length'] = len(file_data)
-        response['Content-Type'] = 'application/gzip'
-
-        # headers إضافية لمنع فتح الملف في المتصفح
-        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
-        response['Pragma'] = 'no-cache'
-        response['Expires'] = '0'
-        response['X-Content-Type-Options'] = 'nosniff'
-        response['Content-Transfer-Encoding'] = 'binary'
-        response['X-Download-Options'] = 'noopen'
-
-        # headers خاصة للملفات المضغوطة
-        response['Content-Encoding'] = 'identity'  # منع فك الضغط التلقائي
-        response['X-Content-Compressed'] = 'gzip'
-        response['X-Original-Filename'] = filename
-
-        print(f"📥 تحميل ملف مضغوط: {safe_filename} ({len(file_data)} bytes)")
-        return response
-
-    except Exception as e:
-        print(f"❌ خطأ في تحميل الملف: {str(e)}")
-        messages.error(request, _(f'حدث خطأ أثناء تحميل الملف: {str(e)}'))
-        return redirect('odoo_db_manager:backup_detail', pk=backup.pk)
-
-@login_required
-@user_passes_test(is_staff_or_superuser)
-def backup_upload(request, database_id=None):
-    """رفع واستعادة نسخة احتياطية"""
-
-    # الحصول على قاعدة البيانات
-    database = None
-    if database_id:
-        database = get_object_or_404(Database, pk=database_id)
-
-    # قائمة قواعد البيانات
-    databases = Database.objects.filter(is_active=True)
-
-    if request.method == 'POST':
-        print(f"🔍 [DEBUG] POST request received for backup upload")
-        print(f"🔍 [DEBUG] User: {request.user}")
-        print(f"🔍 [DEBUG] Files: {request.FILES}")
-        print(f"🔍 [DEBUG] POST data: {request.POST}")
-
-        # تمديد الجلسة لمدة 3 ساعات للعمليات الطويلة
-        request.session.set_expiry(10800)  # 3 ساعات
-        print(f"✅ [DEBUG] Session extended to 3 hours for long operation")
-
-        try:
-            # الحصول على البيانات
-            uploaded_file = request.FILES.get('backup_file')
-            database_id = request.POST.get('database_id', database_id)
-            clear_data = request.POST.get('clear_existing') == '1'  # تصحيح اسم الحقل
-            session_id = request.POST.get('session_id')
-
-            print(f"🔍 [DEBUG] Session ID: {session_id}")
-            print(f"🔍 [DEBUG] Clear data: {clear_data}")
-            print(f"🔍 [DEBUG] Database ID: {database_id}")
-
-            if not uploaded_file:
-                return JsonResponse({'success': False, 'message': 'يرجى اختيار ملف النسخة الاحتياطية'})
-
-            if not database_id:
-                return JsonResponse({'success': False, 'message': 'يرجى اختيار قاعدة البيانات'})
-
-            # الحصول على قاعدة البيانات
-            database = get_object_or_404(Database, pk=database_id)
-
-            # إنشاء session_id إذا لم يكن موجوداً
-            if not session_id:
-                session_id = f'restore_{int(time.time() * 1000)}_{secrets.token_urlsafe(8)}'
-                print(f"🔍 [DEBUG] Generated new session ID: {session_id}")
-
-            # إنشاء رمز مؤقت للتتبع
-            temp_token = secrets.token_urlsafe(32)
-            cache.set(f'temp_token_{temp_token}', request.user.id, 10800)  # 3 ساعات
-            cache.set(f'session_token_{session_id}', temp_token, 10800)  # ربط الجلسة بالرمز
-
-            print(f"✅ [DEBUG] Created temp token: {temp_token[:10]}...")
-            print(f"✅ [DEBUG] Linked session {session_id} to token")
-
-            # إنشاء سجل التقدم
-            progress = RestoreProgress.objects.create(
-                session_id=session_id,
-                user=request.user,
-                database=database,
-                filename=uploaded_file.name,  # إضافة اسم الملف
-                status='starting',
-                progress_percentage=0,
-                current_step='بدء العملية...',
-                total_items=0,
-                processed_items=0,
-                success_count=0,
-                error_count=0
-            )
-
-            print(f"✅ [DEBUG] Created progress record: {progress.id}")
-
-            # دالة لتحديث التقدم
-            def update_progress(status=None, progress_percentage=None, current_step=None,
-                              total_items=None, processed_items=None, success_count=None,
-                              error_count=None, error_message=None, result_data=None):
-                """تحديث تقدم عملية الاستعادة"""
-                try:
-                    progress = RestoreProgress.objects.get(session_id=session_id)
-
-                    if status is not None:
-                        progress.status = status
-                    if progress_percentage is not None:
-                        progress.progress_percentage = progress_percentage
-                    if current_step is not None:
-                        progress.current_step = current_step
-                    if total_items is not None:
-                        progress.total_items = total_items
-                    if processed_items is not None:
-                        progress.processed_items = processed_items
-                    if success_count is not None:
-                        progress.success_count = success_count
-                    if error_count is not None:
-                        progress.error_count = error_count
-                    if error_message is not None:
-                        progress.error_message = error_message
-                    if result_data is not None:
-                        progress.result_data = result_data
-
-                    progress.save()
-
-                    # حفظ نسخة احتياطية في الـ cache
-                    cache_key = f"restore_progress_backup_{session_id}"
-                    cache_data = {
-                        'status': progress.status,
-                        'progress_percentage': progress.progress_percentage,
-                        'current_step': progress.current_step,
-                        'total_items': progress.total_items,
-                        'processed_items': progress.processed_items,
-                        'success_count': progress.success_count,
-                        'error_count': progress.error_count,
-                        'error_message': progress.error_message,
-                        'result_data': progress.result_data,
-                        'updated_at': timezone.now().isoformat()
-                    }
-                    cache.set(cache_key, cache_data, timeout=10800)  # 3 hours
-
-                    print(f"✅ [DEBUG] Progress updated: {progress.status} - {progress.progress_percentage}%")
-                except RestoreProgress.DoesNotExist:
-                    print(f"⚠️ [DEBUG] Progress record not found for session {session_id} - may have been deleted during cleanup")
-
-                    # محاولة إعادة إنشاء السجل من الـ cache
-                    cache_key = f"restore_progress_backup_{session_id}"
-                    cache_data = cache.get(cache_key)
-                    if cache_data:
-                        try:
-                            # إعادة إنشاء السجل مع جميع الحقول المطلوبة
-                            progress = RestoreProgress.objects.create(
-                                session_id=session_id,
-                                user=request.user,
-                                database=database,  # إضافة حقل database المطلوب
-                                filename=uploaded_file.name,  # إضافة اسم الملف
-                                status=status or cache_data.get('status', 'processing'),
-                                progress_percentage=progress_percentage or cache_data.get('progress_percentage', 0),
-                                current_step=current_step or cache_data.get('current_step', ''),
-                                total_items=total_items or cache_data.get('total_items', 0),
-                                processed_items=processed_items or cache_data.get('processed_items', 0),
-                                success_count=success_count or cache_data.get('success_count', 0),
-                                error_count=error_count or cache_data.get('error_count', 0),
-                                error_message=error_message or cache_data.get('error_message', ''),
-                                result_data=result_data or cache_data.get('result_data', None)
-                            )
-                            print(f"✅ [DEBUG] Progress record recreated from cache: {progress.id}")
-                        except Exception as recreate_error:
-                            print(f"❌ [DEBUG] Failed to recreate progress record: {str(recreate_error)}")
-                    else:
-                        # إذا لم تكن هناك نسخة احتياطية في الـ cache، ننشئ سجل جديد
-                        try:
-                            progress = RestoreProgress.objects.create(
-                                session_id=session_id,
-                                user=request.user,
-                                database=database,
-                                filename=uploaded_file.name,
-                                status=status or 'processing',
-                                progress_percentage=progress_percentage or 0,
-                                current_step=current_step or 'استعادة البيانات...',
-                                total_items=total_items or 0,
-                                processed_items=processed_items or 0,
-                                success_count=success_count or 0,
-                                error_count=error_count or 0,
-                                error_message=error_message or '',
-                                result_data=result_data or None
-                            )
-                            print(f"✅ [DEBUG] New progress record created: {progress.id}")
-                        except Exception as create_error:
-                            print(f"❌ [DEBUG] Failed to create new progress record: {str(create_error)}")
-                except Exception as e:
-                    print(f"❌ [DEBUG] Error updating progress: {str(e)}")
-
-            # بدء العملية
-            print(f"\033[92m✅ بدء عملية الاستعادة - الملف: {uploaded_file.name}\033[0m")
-            print(f"\033[94m🚀 بدء استعادة الملف: {uploaded_file.name}\033[0m")
-
-            # حفظ الملف
-            file_path = os.path.join(settings.MEDIA_ROOT, 'backups', uploaded_file.name)
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-            with open(file_path, 'wb+') as destination:
-                for chunk in uploaded_file.chunks():
-                    destination.write(chunk)
-
-            print(f"\033[92m📁 تم حفظ الملف بنجاح\033[0m")
-
-            if clear_data:
-                print(f"\033[92m✅ تم تفعيل خيار حذف البيانات القديمة\033[0m")
-            else:
-                print(f"\033[93m⚠️ لم يتم تفعيل خيار حذف البيانات القديمة\033[0m")
-
-            update_progress(status='processing', current_step='معالجة الملف...')
-
-            # تشغيل عملية الاستعادة في thread منفصل
-            import threading
-
-            def run_restore():
-                try:
-                    # استعادة النسخة الاحتياطية
-                    result = None
-                    if uploaded_file.name.lower().endswith('.json'):
-                        result = _restore_json_simple_with_progress(file_path, clear_existing=clear_data,
-                                                    progress_callback=update_progress, session_id=session_id)
-                    elif uploaded_file.name.lower().endswith('.gz'):
-                        # التعامل مع الملفات المضغوطة
-                        import gzip
-                        import tempfile
-
-                        update_progress(current_step='فك ضغط الملف...')
-
-                        with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as temp_file:
-                            temp_path = temp_file.name
-
-                        try:
-                            with gzip.open(file_path, 'rt', encoding='utf-8') as gz_file:
-                                content = gz_file.read()
-
-                            with open(temp_path, 'w', encoding='utf-8') as json_file:
-                                json_file.write(content)
-
-                            update_progress(current_step='استعادة البيانات من الملف المفكوك...')
-                            result = _restore_json_simple_with_progress(temp_path, clear_existing=clear_data,
-                                                        progress_callback=update_progress, session_id=session_id)
-                        finally:
-                            if os.path.exists(temp_path):
-                                os.unlink(temp_path)
-                    else:
-                        raise ValueError("نوع ملف غير مدعوم. يرجى استخدام ملفات JSON أو JSON.GZ.")
-
-                    # تحديث حالة قاعدة البيانات
-                    database.status = True  # تغيير من 'connected' إلى True
-                    database.error_message = None
-                    database.save()
-
-                    print(f"\033[92mتم تحديث قاعدة البيانات: {database.name}\033[0m")
-                    print(f"\033[92mتم تنشيط قاعدة البيانات: {database.name}\033[0m")
-
-                    # تحديث التقدم النهائي
-                    if result:
-                        update_progress(
-                            status='completed',
-                            progress_percentage=100,
-                            current_step='اكتملت العملية بنجاح',
-                            result_data=result
-                        )
-
-                        print(f"\033[92m🎉 تمت الاستعادة بنجاح!\033[0m")
-                        print("=" * 50)
-                        print(f"\033[92m✨ عملية الاستعادة اكتملت بنجاح! ✨\033[0m")
-                        print("=" * 50)
-                    else:
-                        update_progress(
-                            status='failed',
-                            current_step='فشلت العملية',
-                            error_message='لم يتم إرجاع نتيجة من عملية الاستعادة'
-                        )
-
-                except Exception as e:
-                    error_msg = str(e)
-                    print(f"\033[91m❌ خطأ في الاستعادة: {error_msg}\033[0m")
-                    update_progress(
-                        status='failed',
-                        current_step='فشلت العملية',
-                        error_message=error_msg
-                    )
-                finally:
-                    # حذف الملف المؤقت
-                    if os.path.exists(file_path):
-                        try:
-                            os.unlink(file_path)
-                        except:
-                            pass
-
-                    # تأخير تنظيف الكاش لمدة 30 ثانية للسماح للواجهة بالحصول على النتيجة النهائية
-                    def delayed_cleanup():
-                        import time
-                        time.sleep(30)  # انتظار 30 ثانية
-                        try:
-                            cache.delete(f'temp_token_{temp_token}')
-                            cache.delete(f'session_token_{session_id}')
-                            print(f"✅ [DEBUG] Cleaned up cache for session {session_id} after 30 seconds")
-                        except:
-                            pass
-
-                    # تشغيل التنظيف في thread منفصل
-                    cleanup_thread = threading.Thread(target=delayed_cleanup, daemon=True)
-                    cleanup_thread.start()
-
-            # بدء Thread
-            restore_thread = threading.Thread(target=run_restore, daemon=True)
-            restore_thread.start()
-
-            return JsonResponse({
-                'success': True,
-                'session_id': session_id,
-                'temp_token': temp_token
-            })
-
-        except Exception as e:
-            print(f"❌ [DEBUG] Main upload view error: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'message': f'حدث خطأ: {str(e)}'
-            })
-
-    context = {
-        'databases': databases,
-        'database': database,
-        'title': 'رفع نسخة احتياطية',
-    }
-
-    return render(request, 'odoo_db_manager/backup_upload.html', context)
 
 @login_required
 @user_passes_test(is_staff_or_superuser)
@@ -1334,12 +536,8 @@ def schedule_detail(request, pk):
     # الحصول على جدولة النسخة الاحتياطية
     schedule = get_object_or_404(BackupSchedule, pk=pk)
 
-    # الحصول على النسخ الاحتياطية المرتبطة بهذه الجدولة
-    backups = Backup.objects.filter(
-        database=schedule.database,
-        backup_type=schedule.backup_type,
-        is_scheduled=True
-    ).order_by('-created_at')
+    # تم حذف النسخ الاحتياطية القديمة - استخدم backup_system بدلاً من ذلك
+    backups = []
 
     context = {
         'schedule': schedule,
@@ -1437,19 +635,8 @@ def schedule_delete(request, pk):
         delete_backups = request.POST.get('delete_backups') == 'on'
 
         try:
-            # حذف النسخ الاحتياطية المرتبطة إذا طلب المستخدم ذلك
-            if delete_backups:
-                backups = Backup.objects.filter(
-                    database=schedule.database,
-                    backup_type=schedule.backup_type,
-                    is_scheduled=True
-                )
-                for backup in backups:
-                    # حذف ملف النسخة الاحتياطية
-                    if os.path.exists(backup.file_path):
-                        os.unlink(backup.file_path)
-                    # حذف سجل النسخة الاحتياطية
-                    backup.delete()
+            # تم حذف النسخ الاحتياطية القديمة - لا حاجة لحذفها
+            # استخدم backup_system بدلاً من ذلك
 
             # حذف الجدولة من المجدول
             job_id = f"backup_{schedule.id}"
@@ -1542,11 +729,8 @@ def scheduler_status(request):
         context['active_schedules_count'] = active_schedules.count()
         context['active_schedules'] = active_schedules
 
-        # فحص النسخ الاحتياطية الأخيرة
-        recent_backups = Backup.objects.filter(
-            is_scheduled=True
-        ).order_by('-created_at')[:5]
-        context['recent_scheduled_backups'] = recent_backups
+        # تم حذف النسخ الاحتياطية القديمة - استخدم backup_system بدلاً من ذلك
+        context['recent_scheduled_backups'] = []
 
     except Exception as e:
         context['error'] = str(e)
@@ -1662,7 +846,6 @@ def _restore_json_simple(file_path, clear_existing=False):
             'installations.installationschedule',
             'reports.report',
             'odoo_db_manager.database',
-            'odoo_db_manager.backup',
             'odoo_db_manager.backupschedule',
             'odoo_db_manager.importlog',
             'inventory.stocktransaction',

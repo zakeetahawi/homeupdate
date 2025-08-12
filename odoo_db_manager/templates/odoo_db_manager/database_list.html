@@ -91,9 +91,6 @@
                             <a href="{% url 'odoo_db_manager:database_detail' db.id %}" class="btn btn-link text-info p-1" title="عرض التفاصيل">
                                 <i class="fas fa-eye fa-lg"></i>
                             </a>
-                            <a href="{% url 'odoo_db_manager:backup_create_for_database' db.id %}" class="btn btn-link text-success p-1" title="إنشاء نسخة احتياطية">
-                                <i class="fas fa-download fa-lg"></i>
-                            </a>
                             {% if not db.is_active %}
                             <a href="#" onclick="confirmActivateDatabase('{% url 'odoo_db_manager:activate_database' db.id %}', '{{ db.name }}')" class="btn btn-link text-warning p-1" title="تنشيط قاعدة البيانات">
                                 <i class="fas fa-power-off fa-lg"></i>

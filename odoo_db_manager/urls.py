@@ -24,15 +24,7 @@ urlpatterns = [
     path('databases/<int:pk>/activate/', views.database_activate, name='activate_database'),
     path('databases/<int:pk>/delete/', views.database_delete, name='delete_database'),
 
-    # Backups
-    path('backups/create/', views.backup_create, name='backup_create'),
-    path('backups/create/<int:database_id>/', views.backup_create, name='backup_create_for_database'),
-    path('backups/<int:pk>/', views.backup_detail, name='backup_detail'),
-    path('backups/<int:pk>/restore/', views.backup_restore, name='backup_restore'),
-    path('backups/<int:pk>/delete/', views.backup_delete, name='backup_delete'),
-    path('backups/<int:pk>/download/', views.backup_download, name='backup_download'),
-    path('backups/upload/', views.backup_upload, name='backup_upload'),
-    path('backups/upload/<int:database_id>/', views.backup_upload, name='backup_upload_for_database'),
+    # تم حذف URLs النسخ الاحتياطي القديمة - استخدم backup_system بدلاً من ذلك
 
     # Schedules
     path('schedules/', views.schedule_list, name='schedule_list'),
