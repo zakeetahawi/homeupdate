@@ -333,57 +333,139 @@
                             <div class="mb-2 text-muted" style="font-size: 0.95em;">
                                 إذا اخترت أي جدول منفصل بالأسفل سيتم إلغاء المزامنة الشاملة.
                             </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="databases" id="sync_databases">
-                                        <label class="form-check-label" for="sync_databases">
-                                            <i class="fas fa-database me-1"></i> قواعد البيانات
-                                        </label>
+
+                            <!-- المزامنة الشاملة -->
+                            <div class="mb-3">
+                                <h6 class="text-primary mb-2"><i class="fas fa-layer-group me-1"></i> المزامنة الشاملة</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="comprehensive_customers" id="sync_comprehensive_customers">
+                                            <label class="form-check-label fw-bold text-success" for="sync_comprehensive_customers">
+                                                <i class="fas fa-users-cog me-1"></i> العملاء الشامل
+                                            </label>
+                                            <small class="d-block text-muted">العملاء + طلباتهم + معايناتهم + أوامر التصنيع</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="comprehensive_users" id="sync_comprehensive_users">
+                                            <label class="form-check-label fw-bold text-success" for="sync_comprehensive_users">
+                                                <i class="fas fa-user-shield me-1"></i> المستخدمين الشامل
+                                            </label>
+                                            <small class="d-block text-muted">المستخدمين + البائعين + الموظفين</small>
+                                        </div>
                                     </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="users" id="sync_users">
-                                        <label class="form-check-label" for="sync_users">
-                                            <i class="fas fa-users me-1"></i> المستخدمين
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="customers" id="sync_customers">
-                                        <label class="form-check-label" for="sync_customers">
-                                            <i class="fas fa-user-tie me-1"></i> العملاء
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="inspections" id="sync_inspections">
-                                        <label class="form-check-label" for="sync_inspections">
-                                            <i class="fas fa-search me-1"></i> المعاينات
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="branches" id="sync_branches">
-                                        <label class="form-check-label" for="sync_branches">
-                                            <i class="fas fa-code-branch me-1"></i> الفروع
-                                        </label>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="comprehensive_inventory" id="sync_comprehensive_inventory">
+                                            <label class="form-check-label fw-bold text-success" for="sync_comprehensive_inventory">
+                                                <i class="fas fa-boxes me-1"></i> المنتجات والمخزون الشامل
+                                            </label>
+                                            <small class="d-block text-muted">المنتجات + الكميات + قيمة المخزون</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="comprehensive_system" id="sync_comprehensive_system">
+                                            <label class="form-check-label fw-bold text-success" for="sync_comprehensive_system">
+                                                <i class="fas fa-cogs me-1"></i> إعدادات النظام الشامل
+                                            </label>
+                                            <small class="d-block text-muted">الفروع + الموردين + الفنيين + فرق التركيب</small>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="orders" id="sync_orders">
-                                        <label class="form-check-label" for="sync_orders">
-                                            <i class="fas fa-shopping-cart me-1"></i> الطلبات
-                                        </label>
+                            </div>
+
+                            <!-- الجداول الأساسية -->
+                            <div class="mb-3">
+                                <h6 class="text-secondary mb-2"><i class="fas fa-table me-1"></i> الجداول الأساسية</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="databases" id="sync_databases">
+                                            <label class="form-check-label" for="sync_databases">
+                                                <i class="fas fa-database me-1"></i> قواعد البيانات
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="users" id="sync_users">
+                                            <label class="form-check-label" for="sync_users">
+                                                <i class="fas fa-users me-1"></i> المستخدمين
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="customers" id="sync_customers">
+                                            <label class="form-check-label" for="sync_customers">
+                                                <i class="fas fa-user-tie me-1"></i> العملاء
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="inspections" id="sync_inspections">
+                                            <label class="form-check-label" for="sync_inspections">
+                                                <i class="fas fa-search me-1"></i> المعاينات
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="branches" id="sync_branches">
+                                            <label class="form-check-label" for="sync_branches">
+                                                <i class="fas fa-code-branch me-1"></i> الفروع
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="products" id="sync_products">
-                                        <label class="form-check-label" for="sync_products">
-                                            <i class="fas fa-box me-1"></i> المنتجات
-                                        </label>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="orders" id="sync_orders">
+                                            <label class="form-check-label" for="sync_orders">
+                                                <i class="fas fa-shopping-cart me-1"></i> الطلبات
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="products" id="sync_products">
+                                            <label class="form-check-label" for="sync_products">
+                                                <i class="fas fa-box me-1"></i> المنتجات
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="settings" id="sync_settings">
+                                            <label class="form-check-label" for="sync_settings">
+                                                <i class="fas fa-cogs me-1"></i> الإعدادات
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="manufacturing_orders" id="sync_manufacturing_orders">
+                                            <label class="form-check-label" for="sync_manufacturing_orders">
+                                                <i class="fas fa-industry me-1"></i> أوامر التصنيع
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="technicians" id="sync_technicians">
+                                            <label class="form-check-label" for="sync_technicians">
+                                                <i class="fas fa-tools me-1"></i> الفنيين
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="settings" id="sync_settings">
-                                        <label class="form-check-label" for="sync_settings">
-                                            <i class="fas fa-cogs me-1"></i> الإعدادات
-                                        </label>
+                                </div>
+
+                                <!-- صف إضافي للجداول الجديدة -->
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="installation_teams" id="sync_installation_teams">
+                                            <label class="form-check-label" for="sync_installation_teams">
+                                                <i class="fas fa-users-cog me-1"></i> فرق التركيب
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="suppliers" id="sync_suppliers">
+                                            <label class="form-check-label" for="sync_suppliers">
+                                                <i class="fas fa-truck me-1"></i> الموردين
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="salespersons" id="sync_salespersons">
+                                            <label class="form-check-label" for="sync_salespersons">
+                                                <i class="fas fa-user-tag me-1"></i> البائعين
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

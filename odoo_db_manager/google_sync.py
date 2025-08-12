@@ -29,7 +29,7 @@ class GoogleSyncConfig(models.Model):
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
     
-    # إعدادات المزامنة
+    # إعدادات المزامنة الأساسية
     sync_databases = models.BooleanField(_('مزامنة قواعد البيانات'), default=True)
     sync_users = models.BooleanField(_('مزامنة المستخدمين'), default=True)
     sync_customers = models.BooleanField(_('مزامنة العملاء'), default=True)
@@ -37,6 +37,19 @@ class GoogleSyncConfig(models.Model):
     sync_products = models.BooleanField(_('مزامنة المنتجات'), default=True)
     sync_settings = models.BooleanField(_('مزامنة الإعدادات'), default=True)
     sync_inspections = models.BooleanField(_('مزامنة المعاينات'), default=True)
+
+    # إعدادات المزامنة الجديدة
+    sync_manufacturing_orders = models.BooleanField(_('مزامنة أوامر التصنيع'), default=True)
+    sync_technicians = models.BooleanField(_('مزامنة الفنيين'), default=True)
+    sync_installation_teams = models.BooleanField(_('مزامنة فرق التركيب'), default=True)
+    sync_suppliers = models.BooleanField(_('مزامنة الموردين'), default=True)
+    sync_salespersons = models.BooleanField(_('مزامنة البائعين'), default=True)
+
+    # إعدادات المزامنة الشاملة
+    sync_comprehensive_customers = models.BooleanField(_('مزامنة العملاء الشاملة'), default=False)
+    sync_comprehensive_users = models.BooleanField(_('مزامنة المستخدمين الشاملة'), default=False)
+    sync_comprehensive_inventory = models.BooleanField(_('مزامنة المنتجات والمخزون الشاملة'), default=False)
+    sync_comprehensive_system = models.BooleanField(_('مزامنة إعدادات النظام الشاملة'), default=False)
     
     class Meta:
         verbose_name = _('إعداد مزامنة غوغل')
@@ -242,9 +255,39 @@ def sync_with_google_sheets(config_id=None, manual=False, full_backup=False, sel
             if 'branches' in selected_tables:
                 branches_result = sync_branches(sheets_service, config.spreadsheet_id)
                 sync_results['branches'] = branches_result
+            # الدوال الجديدة للمزامنة الشاملة
+            if 'manufacturing_orders' in selected_tables:
+                manufacturing_result = sync_manufacturing_orders(sheets_service, config.spreadsheet_id)
+                sync_results['manufacturing_orders'] = manufacturing_result
+            if 'technicians' in selected_tables:
+                technicians_result = sync_technicians(sheets_service, config.spreadsheet_id)
+                sync_results['technicians'] = technicians_result
+            if 'installation_teams' in selected_tables:
+                teams_result = sync_installation_teams(sheets_service, config.spreadsheet_id)
+                sync_results['installation_teams'] = teams_result
+            if 'suppliers' in selected_tables:
+                suppliers_result = sync_suppliers(sheets_service, config.spreadsheet_id)
+                sync_results['suppliers'] = suppliers_result
+            if 'salespersons' in selected_tables:
+                salespersons_result = sync_salespersons(sheets_service, config.spreadsheet_id)
+                sync_results['salespersons'] = salespersons_result
+            # المزامنة الشاملة
+            if 'comprehensive_customers' in selected_tables:
+                comp_customers_result = sync_comprehensive_customers(sheets_service, config.spreadsheet_id)
+                sync_results['comprehensive_customers'] = comp_customers_result
+            if 'comprehensive_users' in selected_tables:
+                comp_users_result = sync_comprehensive_users(sheets_service, config.spreadsheet_id)
+                sync_results['comprehensive_users'] = comp_users_result
+            if 'comprehensive_inventory' in selected_tables:
+                comp_inventory_result = sync_comprehensive_inventory(sheets_service, config.spreadsheet_id)
+                sync_results['comprehensive_inventory'] = comp_inventory_result
+            if 'comprehensive_system' in selected_tables:
+                comp_system_result = sync_comprehensive_system_settings(sheets_service, config.spreadsheet_id)
+                sync_results['comprehensive_system'] = comp_system_result
 
         # إذا لم يتم تحديد جداول، أو تم اختيار full_backup=True، مزامنة كل الجداول دفعة واحدة
         else:
+            # الجداول الأساسية
             db_result = sync_databases(sheets_service, config.spreadsheet_id)
             sync_results['databases'] = db_result
             users_result = sync_users(sheets_service, config.spreadsheet_id)
@@ -261,6 +304,32 @@ def sync_with_google_sheets(config_id=None, manual=False, full_backup=False, sel
             sync_results['settings'] = settings_result
             branches_result = sync_branches(sheets_service, config.spreadsheet_id)
             sync_results['branches'] = branches_result
+
+            # الجداول الجديدة للمزامنة الشاملة
+            manufacturing_result = sync_manufacturing_orders(sheets_service, config.spreadsheet_id)
+            sync_results['manufacturing_orders'] = manufacturing_result
+            technicians_result = sync_technicians(sheets_service, config.spreadsheet_id)
+            sync_results['technicians'] = technicians_result
+            teams_result = sync_installation_teams(sheets_service, config.spreadsheet_id)
+            sync_results['installation_teams'] = teams_result
+            suppliers_result = sync_suppliers(sheets_service, config.spreadsheet_id)
+            sync_results['suppliers'] = suppliers_result
+            salespersons_result = sync_salespersons(sheets_service, config.spreadsheet_id)
+            sync_results['salespersons'] = salespersons_result
+
+            # المزامنة الشاملة (اختيارية)
+            if config.sync_comprehensive_customers:
+                comp_customers_result = sync_comprehensive_customers(sheets_service, config.spreadsheet_id)
+                sync_results['comprehensive_customers'] = comp_customers_result
+            if config.sync_comprehensive_users:
+                comp_users_result = sync_comprehensive_users(sheets_service, config.spreadsheet_id)
+                sync_results['comprehensive_users'] = comp_users_result
+            if config.sync_comprehensive_inventory:
+                comp_inventory_result = sync_comprehensive_inventory(sheets_service, config.spreadsheet_id)
+                sync_results['comprehensive_inventory'] = comp_inventory_result
+            if config.sync_comprehensive_system:
+                comp_system_result = sync_comprehensive_system_settings(sheets_service, config.spreadsheet_id)
+                sync_results['comprehensive_system'] = comp_system_result
 
         # تحديث وقت آخر مزامنة
         config.update_last_sync()
@@ -596,43 +665,58 @@ def sync_inspections(service, spreadsheet_id):
 
 def sync_orders(service, spreadsheet_id):
     """
-    مزامنة الطلبات مع Google Sheets مع جميع الحقول (حتى غير المعروضة في لوحة الإدارة)
+    مزامنة الطلبات مع Google Sheets مع ربطها بالعملاء وضمان عدم فقدان أي سجل
     """
     try:
         Order = apps.get_model('orders', 'Order')
-        orders = Order.objects.all()
-        fields = [f.name for f in Order._meta.get_fields() if not f.many_to_many and not f.one_to_many]
-        header = []
-        for f in fields:
-            field_obj = Order._meta.get_field(f)
-            if field_obj.is_relation and hasattr(field_obj, 'related_model') and not field_obj.many_to_one and not field_obj.one_to_one:
-                continue
-            if field_obj.is_relation and hasattr(field_obj, 'related_model'):
-                header.append(f"{f}_display")
-            else:
-                header.append(f)
+        orders = Order.objects.select_related('customer', 'branch', 'salesperson').all()
+
+        # تحديد العناوين المخصصة للطلبات مع ربط العملاء
+        header = [
+            'معرف الطلب', 'رقم الطلب', 'اسم العميل', 'رقم هاتف العميل', 'عنوان العميل',
+            'نوع الطلب', 'حالة التتبع', 'حالة الطلب', 'الأولوية', 'الفرع', 'البائع',
+            'المبلغ الإجمالي', 'المبلغ المدفوع', 'المبلغ المتبقي', 'تاريخ الطلب', 'تاريخ التسليم المتوقع',
+            'نوع التسليم', 'عنوان التسليم', 'ملاحظات', 'تاريخ الإنشاء', 'تاريخ التحديث'
+        ]
+
         data = [header]
         for order in orders:
-            row = []
-            for f in fields:
-                field_obj = Order._meta.get_field(f)
-                value = getattr(order, f, '')
-                if field_obj.is_relation and hasattr(field_obj, 'related_model'):
-                    if value:
-                        if hasattr(value, 'name'):
-                            row.append(str(value.name))
-                        elif hasattr(value, 'get_full_name'):
-                            row.append(str(value.get_full_name()))
-                        else:
-                            row.append(str(value))
-                    else:
-                        row.append('')
-                else:
-                    row.append(str(value) if value is not None else '')
+            # التأكد من وجود العميل وعدم فقدان أي بيانات
+            customer_name = order.customer.name if order.customer else 'عميل غير محدد'
+            customer_phone = order.customer.phone if order.customer else ''
+            customer_address = order.customer.address if order.customer else ''
+
+            # حساب المبلغ المتبقي
+            remaining_amount = (order.total_amount or 0) - (order.paid_amount or 0)
+
+            row = [
+                str(order.id),
+                order.order_number or '',
+                customer_name,
+                customer_phone,
+                customer_address,
+                order.get_order_type_display() if order.order_type else '',
+                order.get_tracking_status_display() if order.tracking_status else '',
+                order.get_status_display() if hasattr(order, 'status') and order.status else '',
+                order.get_priority_display() if hasattr(order, 'priority') and order.priority else '',
+                order.branch.name if order.branch else '',
+                order.salesperson.name if order.salesperson else '',
+                str(order.total_amount) if order.total_amount else '0',
+                str(order.paid_amount) if order.paid_amount else '0',
+                str(remaining_amount),
+                order.order_date.strftime('%Y-%m-%d') if order.order_date else '',
+                order.expected_delivery_date.strftime('%Y-%m-%d') if hasattr(order, 'expected_delivery_date') and order.expected_delivery_date else '',
+                order.get_delivery_type_display() if hasattr(order, 'delivery_type') and order.delivery_type else '',
+                order.delivery_address if hasattr(order, 'delivery_address') and order.delivery_address else '',
+                order.notes if hasattr(order, 'notes') and order.notes else '',
+                order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '',
+                order.modified_at.strftime('%Y-%m-%d %H:%M') if hasattr(order, 'modified_at') and order.modified_at else ''
+            ]
             data.append(row)
+
         sheet_name = 'الطلبات'
         result = update_sheet(service, spreadsheet_id, sheet_name, data)
-        return {'status': 'success', 'message': f"تمت مزامنة {len(orders)} طلب"}
+        return {'status': 'success', 'message': f"تمت مزامنة {len(orders)} طلب مع ربطها بالعملاء"}
     except Exception as e:
         logger.error(f"حدث خطأ أثناء مزامنة الطلبات: {str(e)}")
         return {'status': 'error', 'message': str(e)}
@@ -740,16 +824,221 @@ def sync_settings(service, spreadsheet_id):
         return {'status': 'error', 'message': message}
 
 
+def sync_manufacturing_orders(service, spreadsheet_id):
+    """
+    مزامنة أوامر التصنيع مع Google Sheets مع ربطها بالطلبات والعملاء
+    """
+    try:
+        ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+        manufacturing_orders = ManufacturingOrder.objects.select_related('order', 'order__customer').all()
+
+        # تحديد العناوين المخصصة لأوامر التصنيع
+        header = [
+            'معرف أمر التصنيع', 'رقم أمر التصنيع', 'رقم الطلب', 'اسم العميل', 'رقم هاتف العميل',
+            'رقم العقد', 'نوع الطلب', 'الحالة', 'الأولوية', 'تاريخ البدء المتوقع', 'تاريخ الانتهاء المتوقع',
+            'تاريخ الإكمال الفعلي', 'ملاحظات التصنيع', 'تاريخ الإنشاء', 'تاريخ التحديث'
+        ]
+
+        data = [header]
+        for manufacturing_order in manufacturing_orders:
+            # جلب بيانات العميل من خلال الطلب
+            customer_name = manufacturing_order.order.customer.name if manufacturing_order.order and manufacturing_order.order.customer else ''
+            customer_phone = manufacturing_order.order.customer.phone if manufacturing_order.order and manufacturing_order.order.customer else ''
+            order_number = manufacturing_order.order.order_number if manufacturing_order.order else ''
+
+            row = [
+                str(manufacturing_order.id),
+                manufacturing_order.manufacturing_code,
+                order_number,
+                customer_name,
+                customer_phone,
+                manufacturing_order.contract_number or '',
+                manufacturing_order.get_order_type_display() if manufacturing_order.order_type else '',
+                manufacturing_order.get_status_display(),
+                manufacturing_order.get_priority_display() if hasattr(manufacturing_order, 'priority') else '',
+                manufacturing_order.expected_start_date.strftime('%Y-%m-%d') if manufacturing_order.expected_start_date else '',
+                manufacturing_order.expected_completion_date.strftime('%Y-%m-%d') if manufacturing_order.expected_completion_date else '',
+                manufacturing_order.completion_date.strftime('%Y-%m-%d') if manufacturing_order.completion_date else '',
+                manufacturing_order.manufacturing_notes or '',
+                manufacturing_order.created_at.strftime('%Y-%m-%d %H:%M') if manufacturing_order.created_at else '',
+                manufacturing_order.updated_at.strftime('%Y-%m-%d %H:%M') if manufacturing_order.updated_at else ''
+            ]
+            data.append(row)
+
+        sheet_name = 'أوامر التصنيع'
+        result = update_sheet(service, spreadsheet_id, sheet_name, data)
+        return {'status': 'success', 'message': f"تمت مزامنة {len(manufacturing_orders)} أمر تصنيع"}
+    except Exception as e:
+        message = f"حدث خطأ أثناء مزامنة أوامر التصنيع: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}
+
+
+def sync_technicians(service, spreadsheet_id):
+    """
+    مزامنة الفنيين مع Google Sheets
+    """
+    try:
+        Technician = apps.get_model('installations', 'Technician')
+        technicians = Technician.objects.all()
+
+        header = [
+            'معرف الفني', 'اسم الفني', 'رقم الهاتف', 'التخصص', 'القسم', 'الراتب',
+            'تاريخ التوظيف', 'نشط', 'ملاحظات', 'تاريخ الإنشاء', 'تاريخ التحديث'
+        ]
+
+        data = [header]
+        for technician in technicians:
+            row = [
+                str(technician.id),
+                technician.name,
+                technician.phone or '',
+                technician.specialization or '',
+                technician.get_department_display() if technician.department else '',
+                str(technician.salary) if hasattr(technician, 'salary') and technician.salary else '',
+                technician.hire_date.strftime('%Y-%m-%d') if hasattr(technician, 'hire_date') and technician.hire_date else '',
+                'نعم' if technician.is_active else 'لا',
+                technician.notes or '',
+                technician.created_at.strftime('%Y-%m-%d %H:%M') if technician.created_at else '',
+                technician.updated_at.strftime('%Y-%m-%d %H:%M') if technician.updated_at else ''
+            ]
+            data.append(row)
+
+        sheet_name = 'الفنيين'
+        result = update_sheet(service, spreadsheet_id, sheet_name, data)
+        return {'status': 'success', 'message': f"تمت مزامنة {len(technicians)} فني"}
+    except Exception as e:
+        message = f"حدث خطأ أثناء مزامنة الفنيين: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}
+
+
+def sync_installation_teams(service, spreadsheet_id):
+    """
+    مزامنة فرق التركيب مع Google Sheets
+    """
+    try:
+        InstallationTeam = apps.get_model('installations', 'InstallationTeam')
+        teams = InstallationTeam.objects.prefetch_related('technicians', 'drivers').all()
+
+        header = [
+            'معرف الفريق', 'اسم الفريق', 'الفنيين', 'السائقين', 'نشط',
+            'ملاحظات', 'تاريخ الإنشاء', 'تاريخ التحديث'
+        ]
+
+        data = [header]
+        for team in teams:
+            # جمع أسماء الفنيين
+            technician_names = ', '.join([tech.name for tech in team.technicians.all()])
+            # جمع أسماء السائقين
+            driver_names = ', '.join([driver.name for driver in team.drivers.all()])
+
+            row = [
+                str(team.id),
+                team.name,
+                technician_names,
+                driver_names,
+                'نعم' if team.is_active else 'لا',
+                team.notes or '',
+                team.created_at.strftime('%Y-%m-%d %H:%M') if team.created_at else '',
+                team.updated_at.strftime('%Y-%m-%d %H:%M') if team.updated_at else ''
+            ]
+            data.append(row)
+
+        sheet_name = 'فرق التركيب'
+        result = update_sheet(service, spreadsheet_id, sheet_name, data)
+        return {'status': 'success', 'message': f"تمت مزامنة {len(teams)} فريق تركيب"}
+    except Exception as e:
+        message = f"حدث خطأ أثناء مزامنة فرق التركيب: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}
+
+
+def sync_suppliers(service, spreadsheet_id):
+    """
+    مزامنة الموردين مع Google Sheets
+    """
+    try:
+        Supplier = apps.get_model('inventory', 'Supplier')
+        suppliers = Supplier.objects.all()
+
+        header = [
+            'معرف المورد', 'اسم المورد', 'جهة الاتصال', 'رقم الهاتف', 'البريد الإلكتروني',
+            'العنوان', 'الرقم الضريبي', 'ملاحظات'
+        ]
+
+        data = [header]
+        for supplier in suppliers:
+            row = [
+                str(supplier.id),
+                supplier.name,
+                supplier.contact_person or '',
+                supplier.phone or '',
+                supplier.email or '',
+                supplier.address or '',
+                supplier.tax_number or '',
+                supplier.notes or ''
+            ]
+            data.append(row)
+
+        sheet_name = 'الموردين'
+        result = update_sheet(service, spreadsheet_id, sheet_name, data)
+        return {'status': 'success', 'message': f"تمت مزامنة {len(suppliers)} مورد"}
+    except Exception as e:
+        message = f"حدث خطأ أثناء مزامنة الموردين: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}
+
+
+def sync_salespersons(service, spreadsheet_id):
+    """
+    مزامنة البائعين مع Google Sheets
+    """
+    try:
+        Salesperson = apps.get_model('accounts', 'Salesperson')
+        salespersons = Salesperson.objects.select_related('branch').all()
+
+        header = [
+            'معرف البائع', 'اسم البائع', 'الرقم الوظيفي', 'الفرع', 'رقم الهاتف',
+            'البريد الإلكتروني', 'العنوان', 'نشط', 'ملاحظات', 'تاريخ الإنشاء', 'تاريخ التحديث'
+        ]
+
+        data = [header]
+        for salesperson in salespersons:
+            row = [
+                str(salesperson.id),
+                salesperson.name,
+                salesperson.employee_number or '',
+                salesperson.branch.name if salesperson.branch else '',
+                salesperson.phone or '',
+                salesperson.email or '',
+                salesperson.address or '',
+                'نعم' if salesperson.is_active else 'لا',
+                salesperson.notes or '',
+                salesperson.created_at.strftime('%Y-%m-%d %H:%M') if salesperson.created_at else '',
+                salesperson.updated_at.strftime('%Y-%m-%d %H:%M') if salesperson.updated_at else ''
+            ]
+            data.append(row)
+
+        sheet_name = 'البائعين'
+        result = update_sheet(service, spreadsheet_id, sheet_name, data)
+        return {'status': 'success', 'message': f"تمت مزامنة {len(salespersons)} بائع"}
+    except Exception as e:
+        message = f"حدث خطأ أثناء مزامنة البائعين: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}
+
+
 def update_sheet(service, spreadsheet_id, sheet_name, data):
     """
     تحديث ورقة عمل في Google Sheets
-    
+
     Args:
         service: خدمة Google Sheets
         spreadsheet_id: معرف جدول البيانات
         sheet_name: اسم ورقة العمل
         data: البيانات
-    
+
     Returns:
         dict: نتيجة التحديث
     """
@@ -872,8 +1161,269 @@ def update_sheet(service, spreadsheet_id, sheet_name, data):
         if updated_rows == 0:
             # إذا لم يتم إرجاع عدد الصفوف المحدثة، استخدم عدد الصفوف في البيانات كبديل
             updated_rows = len(data) - 1  # خصم صف العناوين
-        
+
         return updated_rows
     except Exception as e:
         logger.error(f"حدث خطأ أثناء تحديث ورقة: {sheet_name} - {str(e)}")
         return 0
+
+
+# ========== دوال المزامنة المجمعة للصفحات الشاملة ==========
+
+def sync_comprehensive_customers(service, spreadsheet_id):
+    """
+    مزامنة شاملة للعملاء مع طلباتهم ومعايناتهم وأوامر التصنيع
+    """
+    try:
+        Customer = apps.get_model('customers', 'Customer')
+        Order = apps.get_model('orders', 'Order')
+        Inspection = apps.get_model('inspections', 'Inspection')
+        ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+
+        customers = Customer.objects.prefetch_related(
+            'customer_orders',
+            'inspections',
+            'customer_orders__manufacturing_order'
+        ).all()
+
+        header = [
+            'معرف العميل', 'كود العميل', 'اسم العميل', 'رقم الهاتف', 'رقم الهاتف الثاني',
+            'البريد الإلكتروني', 'العنوان', 'نوع المكان', 'الفرع', 'تصنيف العميل',
+            'عدد الطلبات', 'عدد المعاينات', 'عدد أوامر التصنيع', 'إجمالي قيمة الطلبات',
+            'آخر طلب', 'آخر معاينة', 'الحالة', 'تاريخ الإنشاء'
+        ]
+
+        data = [header]
+        for customer in customers:
+            # حساب الإحصائيات
+            orders_count = customer.customer_orders.count()
+            inspections_count = customer.inspections.count()
+            manufacturing_orders_count = customer.customer_orders.filter(manufacturing_order__isnull=False).count()
+
+            # حساب إجمالي قيمة الطلبات
+            total_orders_value = sum([order.total_amount or 0 for order in customer.customer_orders.all()])
+
+            # آخر طلب ومعاينة
+            last_order = customer.customer_orders.order_by('-created_at').first()
+            last_inspection = customer.inspections.order_by('-request_date').first()
+
+            row = [
+                str(customer.id),
+                customer.code or '',
+                customer.name,
+                customer.phone or '',
+                customer.phone2 or '',
+                customer.email or '',
+                customer.address or '',
+                customer.get_location_type_display() if customer.location_type else '',
+                customer.branch.name if customer.branch else '',
+                customer.category.name if customer.category else '',
+                str(orders_count),
+                str(inspections_count),
+                str(manufacturing_orders_count),
+                str(total_orders_value),
+                last_order.order_number if last_order else '',
+                last_inspection.contract_number if last_inspection else '',
+                customer.get_status_display(),
+                customer.created_at.strftime('%Y-%m-%d') if customer.created_at else ''
+            ]
+            data.append(row)
+
+        sheet_name = 'العملاء الشامل'
+        result = update_sheet(service, spreadsheet_id, sheet_name, data)
+        return {'status': 'success', 'message': f"تمت مزامنة {len(customers)} عميل مع بياناتهم الشاملة"}
+    except Exception as e:
+        message = f"حدث خطأ أثناء المزامنة الشاملة للعملاء: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}
+
+
+def sync_comprehensive_users(service, spreadsheet_id):
+    """
+    مزامنة شاملة للمستخدمين والبائعين والموظفين
+    """
+    try:
+        User = apps.get_model('accounts', 'User')
+        Salesperson = apps.get_model('accounts', 'Salesperson')
+        Employee = apps.get_model('accounts', 'Employee')
+
+        # جمع جميع المستخدمين مع بياناتهم
+        users = User.objects.select_related('branch').all()
+
+        header = [
+            'معرف المستخدم', 'اسم المستخدم', 'الاسم الأول', 'الاسم الأخير', 'البريد الإلكتروني',
+            'الفرع', 'نشط', 'موظف', 'مدير', 'فني معاينة', 'بائع', 'مدير فرع',
+            'مدير منطقة', 'مدير عام', 'مسؤول مصنع', 'آخر دخول', 'تاريخ الانضمام'
+        ]
+
+        data = [header]
+        for user in users:
+            row = [
+                str(user.id),
+                user.username,
+                user.first_name or '',
+                user.last_name or '',
+                user.email or '',
+                user.branch.name if user.branch else '',
+                'نعم' if user.is_active else 'لا',
+                'نعم' if user.is_staff else 'لا',
+                'نعم' if user.is_superuser else 'لا',
+                'نعم' if user.is_inspection_technician else 'لا',
+                'نعم' if user.is_salesperson else 'لا',
+                'نعم' if user.is_branch_manager else 'لا',
+                'نعم' if user.is_region_manager else 'لا',
+                'نعم' if user.is_general_manager else 'لا',
+                'نعم' if user.is_factory_manager else 'لا',
+                user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '',
+                user.date_joined.strftime('%Y-%m-%d') if user.date_joined else ''
+            ]
+            data.append(row)
+
+        sheet_name = 'المستخدمين الشامل'
+        result = update_sheet(service, spreadsheet_id, sheet_name, data)
+        return {'status': 'success', 'message': f"تمت مزامنة {len(users)} مستخدم مع بياناتهم الشاملة"}
+    except Exception as e:
+        message = f"حدث خطأ أثناء المزامنة الشاملة للمستخدمين: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}
+
+
+def sync_comprehensive_inventory(service, spreadsheet_id):
+    """
+    مزامنة شاملة للمنتجات والمخزون والمستودعات
+    """
+    try:
+        Product = apps.get_model('inventory', 'Product')
+        Category = apps.get_model('inventory', 'Category')
+        Warehouse = apps.get_model('inventory', 'Warehouse')
+        StockTransaction = apps.get_model('inventory', 'StockTransaction')
+
+        products = Product.objects.select_related('category').all()
+
+        header = [
+            'معرف المنتج', 'كود المنتج', 'اسم المنتج', 'الفئة', 'السعر', 'العملة',
+            'الوحدة', 'الوصف', 'الحد الأدنى للمخزون', 'الكمية المتوفرة', 'قيمة المخزون',
+            'تاريخ الإنشاء', 'تاريخ التحديث'
+        ]
+
+        data = [header]
+        for product in products:
+            # حساب الكمية المتوفرة من المعاملات المخزنية
+            try:
+                stock_transactions = StockTransaction.objects.filter(product=product)
+                available_quantity = sum([
+                    trans.quantity if trans.transaction_type == 'in' else -trans.quantity
+                    for trans in stock_transactions
+                ])
+            except:
+                available_quantity = 0
+
+            # حساب قيمة المخزون
+            stock_value = available_quantity * (product.price or 0)
+
+            row = [
+                str(product.id),
+                product.code or '',
+                product.name,
+                product.category.name if product.category else '',
+                str(product.price) if product.price else '0',
+                product.currency or 'EGP',
+                product.get_unit_display() if product.unit else '',
+                product.description or '',
+                str(product.minimum_stock),
+                str(available_quantity),
+                str(stock_value),
+                product.created_at.strftime('%Y-%m-%d') if product.created_at else '',
+                product.updated_at.strftime('%Y-%m-%d') if product.updated_at else ''
+            ]
+            data.append(row)
+
+        sheet_name = 'المنتجات والمخزون الشامل'
+        result = update_sheet(service, spreadsheet_id, sheet_name, data)
+        return {'status': 'success', 'message': f"تمت مزامنة {len(products)} منتج مع بيانات المخزون الشاملة"}
+    except Exception as e:
+        message = f"حدث خطأ أثناء المزامنة الشاملة للمنتجات والمخزون: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}
+
+
+def sync_comprehensive_system_settings(service, spreadsheet_id):
+    """
+    مزامنة شاملة لإعدادات النظام والفروع والموردين والفنيين
+    """
+    try:
+        Branch = apps.get_model('accounts', 'Branch')
+        Supplier = apps.get_model('inventory', 'Supplier')
+        Technician = apps.get_model('installations', 'Technician')
+        InstallationTeam = apps.get_model('installations', 'InstallationTeam')
+        Driver = apps.get_model('installations', 'Driver')
+
+        # جمع إحصائيات شاملة
+        branches_count = Branch.objects.count()
+        suppliers_count = Supplier.objects.count()
+        technicians_count = Technician.objects.count()
+        teams_count = InstallationTeam.objects.count()
+        drivers_count = Driver.objects.count()
+
+        header = [
+            'نوع البيانات', 'العدد الإجمالي', 'النشط', 'غير النشط', 'ملاحظات'
+        ]
+
+        data = [header]
+
+        # إحصائيات الفروع
+        active_branches = Branch.objects.filter(is_active=True).count()
+        data.append([
+            'الفروع',
+            str(branches_count),
+            str(active_branches),
+            str(branches_count - active_branches),
+            'إجمالي الفروع في النظام'
+        ])
+
+        # إحصائيات الموردين
+        data.append([
+            'الموردين',
+            str(suppliers_count),
+            str(suppliers_count),  # لا يوجد حقل is_active للموردين
+            '0',
+            'إجمالي الموردين في النظام'
+        ])
+
+        # إحصائيات الفنيين
+        active_technicians = Technician.objects.filter(is_active=True).count()
+        data.append([
+            'الفنيين',
+            str(technicians_count),
+            str(active_technicians),
+            str(technicians_count - active_technicians),
+            'إجمالي الفنيين في النظام'
+        ])
+
+        # إحصائيات فرق التركيب
+        active_teams = InstallationTeam.objects.filter(is_active=True).count()
+        data.append([
+            'فرق التركيب',
+            str(teams_count),
+            str(active_teams),
+            str(teams_count - active_teams),
+            'إجمالي فرق التركيب في النظام'
+        ])
+
+        # إحصائيات السائقين
+        active_drivers = Driver.objects.filter(is_active=True).count()
+        data.append([
+            'السائقين',
+            str(drivers_count),
+            str(active_drivers),
+            str(drivers_count - active_drivers),
+            'إجمالي السائقين في النظام'
+        ])
+
+        sheet_name = 'إعدادات النظام الشامل'
+        result = update_sheet(service, spreadsheet_id, sheet_name, data)
+        return {'status': 'success', 'message': f"تمت مزامنة إعدادات النظام الشاملة"}
+    except Exception as e:
+        message = f"حدث خطأ أثناء المزامنة الشاملة لإعدادات النظام: {str(e)}"
+        logger.error(message)
+        return {'status': 'error', 'message': message}

@@ -10,25 +10,14 @@ from django.utils import timezone
 from django.conf import settings
 from django.apps import apps
 
-from .models import Database, Backup
+from .models import Database
 from .services.database_service import DatabaseService
 
 logger = logging.getLogger(__name__)
 
 # تم نقل مزامنة قواعد البيانات إلى ملف apps.py
 
-@receiver(post_delete, sender=Backup)
-def handle_backup_delete(sender, instance, **kwargs):
-    """معالجة حذف النسخة الاحتياطية"""
-    # حذف ملف النسخة الاحتياطية
-    if instance.file_path and os.path.exists(instance.file_path):
-        try:
-            os.remove(instance.file_path)
-            logger.info(f"تم حذف ملف النسخة الاحتياطية: {instance.file_path}")
-        except Exception as e:
-            logger.error(f"حدث خطأ أثناء حذف ملف النسخة الاحتياطية: {str(e)}")
-
-    logger.info(f"تم حذف سجل النسخة الاحتياطية: {instance.name}")
+# تم حذف معالج Backup لأنه تم نقله إلى backup_system
 
 @receiver(post_save, sender=Database)
 def handle_database_save(sender, instance, created, **kwargs):
