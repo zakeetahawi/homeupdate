@@ -10,6 +10,8 @@ from .models import (
 )
 
 
+
+
 @admin.register(ComplaintType)
 class ComplaintTypeAdmin(admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي

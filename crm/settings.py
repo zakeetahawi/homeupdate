@@ -74,7 +74,8 @@ ALLOWED_HOSTS.extend([
 
 # Application definition
 INSTALLED_APPS = [
-    'jazzmin',  # Django Jazzmin - قالب لوحة التحكم الحديث
+    'admin_interface',
+    'colorfield',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -91,7 +92,7 @@ INSTALLED_APPS = [
     'manufacturing',
     'reports',
     'installations',
-    'complaints',  # نظام إدارة الشكاوى
+    'complaints.apps.ComplaintsConfig',  # نظام إدارة الشكاوى
     'odoo_db_manager.apps.OdooDbManagerConfig',
     'backup_system.apps.BackupSystemConfig',  # نظام النسخ الاحتياطي والاستعادة الجديد
     'corsheaders',
@@ -778,7 +779,7 @@ ADMIN_INDEX_TITLE = "مرحباً بك في نظام إدارة الخواجة"
 JAZZMIN_SETTINGS = {
     # العناوين الأساسية
     "site_title": "نظام إدارة الخواجة",
-    "site_header": "شركة الخواجة للنوافذ والأبواب",
+    "site_header": "نظام إدارة الخواجة",
     "site_brand": "الخواجة",
     "site_logo": "img/logo.png",
     "login_logo": "img/logo.png",
@@ -786,7 +787,7 @@ JAZZMIN_SETTINGS = {
     "site_logo_classes": "img-circle",
     "site_icon": "img/logo.png",
     "welcome_sign": "مرحباً بك في نظام إدارة الخواجة",
-    "copyright": "شركة الخواجة للنوافذ والأبواب © 2024",
+    "copyright": "نظام إدارة الخواجة",
     "search_model": ["auth.User", "customers.Customer", "orders.Order"],
     "user_avatar": "accounts.User.image",
 
@@ -853,7 +854,7 @@ JAZZMIN_SETTINGS = {
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",
     "related_modal_active": False,
-    "custom_css": "admin/css/jazzmin_custom.css",
+    "custom_css": "admin/css/sidebar_left.css",
     "custom_js": "admin/js/custom_admin.js",
     "use_google_fonts_cdn": True,
     "show_ui_builder": False,
@@ -929,3 +930,9 @@ JAZZMIN_UI_TWEAKS = {
     },
     "actions_sticky_top": False
 }
+
+# ======================================
+# Django Admin Interface Configuration
+# ======================================
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+SILENCED_SYSTEM_CHECKS = ['security.W019']
