@@ -60,12 +60,20 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
         branch = self.request.GET.get('branch')
+        order_types = self.request.GET.getlist('order_types')  # للحصول على قائمة الأنواع
 
         if status:
             queryset = queryset.filter(status=status)
 
         if branch:
             queryset = queryset.filter(order__branch__id=branch)
+
+        if order_types:
+            # فلترة حسب أنواع الطلبات المختارة
+            type_filter = Q()
+            for order_type in order_types:
+                type_filter |= Q(order__selected_types__contains=[order_type])
+            queryset = queryset.filter(type_filter)
             
         if search:
             # بحث شامل في كل الأعمدة المهمة
@@ -138,11 +146,20 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
             'date_to': self.request.GET.get('date_to', ''),
             'branch_filter': self.request.GET.get('branch', ''),
             'sales_person_filter': self.request.GET.get('sales_person', ''),
+            'selected_order_types': self.request.GET.getlist('order_types'),
         })
         
         # Add branches for filter dropdown
         from accounts.models import Branch
         context['branches'] = Branch.objects.all().order_by('name')
+
+        # Add order types for filter dropdown
+        context['order_types'] = [
+            ('inspection', 'معاينة'),
+            ('installation', 'تركيب'),
+            ('accessory', 'إكسسوار'),
+            ('tailoring', 'تسليم'),
+        ]
         
         # Add current date for date picker max date
         from datetime import date
@@ -1287,6 +1304,7 @@ class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
         # تطبيق فلاتر إضافية
         search = self.request.GET.get('search')
         branch = self.request.GET.get('branch')
+        order_types = self.request.GET.getlist('order_types')
 
         if search:
             queryset = queryset.filter(
@@ -1300,11 +1318,18 @@ class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
         if branch:
             queryset = queryset.filter(order__branch__id=branch)
 
+        if order_types:
+            # فلترة حسب أنواع الطلبات المختارة
+            type_filter = Q()
+            for order_type in order_types:
+                type_filter |= Q(order__selected_types__contains=[order_type])
+            queryset = queryset.filter(type_filter)
+
         # فلترة الطلبات المتأخرة فقط
         today = timezone.now().date()
         overdue_queryset = queryset.filter(
             expected_delivery_date__lt=today,
-            status__in=['pending', 'in_progress', 'ready_install']
+            status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
         ).order_by('expected_delivery_date')
 
         return overdue_queryset
@@ -1339,8 +1364,6 @@ class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
 
         context.update({
             'total_overdue': overdue_orders.count(),
-            'pending_overdue': status_data.get('pending', 0),
-            'in_progress_overdue': status_data.get('in_progress', 0),
             'ready_install_overdue': status_data.get('ready_install', 0),
             'avg_delay_days': avg_delay_days,
             'default_year': default_year,
@@ -1349,5 +1372,16 @@ class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
         # Add branches for filter dropdown
         from accounts.models import Branch
         context['branches'] = Branch.objects.all().order_by('name')
+
+        # Add order types for filter dropdown
+        context['order_types'] = [
+            ('inspection', 'معاينة'),
+            ('installation', 'تركيب'),
+            ('accessory', 'إكسسوار'),
+            ('tailoring', 'تسليم'),
+        ]
+
+        # Add selected order types for form persistence
+        context['selected_order_types'] = self.request.GET.getlist('order_types')
 
         return context

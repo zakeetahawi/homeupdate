@@ -16,25 +16,79 @@
 
 /* البطاقات الإحصائية */
 .stats-card {
-    border: 1px solid var(--neutral);
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     margin-bottom: 1rem;
+    overflow: hidden;
+    position: relative;
 }
 
 .stats-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
 }
 
 .stats-card .card-body {
     padding: 1.5rem;
+    position: relative;
 }
 
 .stats-card .icon {
-    font-size: 2rem;
-    opacity: 0.8;
+    font-size: 2.5rem;
+    opacity: 0.9;
+    margin-bottom: 0.5rem;
+}
+
+/* تحسين البطاقات حسب النوع */
+.stats-card.border-danger {
+    border-left: 4px solid #dc3545;
+    background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+}
+
+.stats-card.border-warning {
+    border-left: 4px solid #ffc107;
+    background: linear-gradient(135deg, #fff 0%, #fffbf0 100%);
+}
+
+.stats-card.border-info {
+    border-left: 4px solid #17a2b8;
+    background: linear-gradient(135deg, #fff 0%, #f0f9ff 100%);
+}
+
+.stats-card.border-success {
+    border-left: 4px solid #28a745;
+    background: linear-gradient(135deg, #fff 0%, #f0fff4 100%);
+}
+
+.stats-card.border-secondary {
+    border-left: 4px solid #6c757d;
+    background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+}
+
+.stats-card.border-dark {
+    border-left: 4px solid #343a40;
+    background: linear-gradient(135deg, #fff 0%, #f1f3f4 100%);
+}
+
+/* تأثير نبض للبطاقات المهمة */
+.stats-card.border-danger .icon {
+    animation: pulse-danger 2s infinite;
+}
+
+@keyframes pulse-danger {
+    0% {
+        transform: scale(1);
+        opacity: 0.9;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.9;
+    }
 }
 
 /* تصميم الجدول الرئيسي */
@@ -196,7 +250,55 @@
     font-size: 0.8rem;
     font-weight: bold;
 }
+
+/* تحسين dropdown الأنواع */
+.dropdown-menu {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.dropdown-menu label {
+    cursor: pointer;
+    margin-bottom: 0;
+    padding: 0.25rem 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-menu label input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+.dropdown-menu label:hover {
+    background-color: var(--bs-gray-100);
+}
 </style>
+
+<script>
+// تحديث نص الأنواع المختارة لصفحة الطلبات المتأخرة
+function updateSelectedTypesTextOverdue() {
+    const checkboxes = document.querySelectorAll('input[name="order_types"]:checked');
+    const selectedText = document.getElementById('selectedTypesTextOverdue');
+
+    if (checkboxes.length === 0) {
+        selectedText.textContent = 'جميع الأنواع';
+    } else if (checkboxes.length === 1) {
+        selectedText.textContent = checkboxes[0].parentElement.textContent.trim();
+    } else {
+        selectedText.textContent = checkboxes.length + ' نوع محدد';
+    }
+}
+
+// منع إغلاق القائمة عند النقر على checkbox
+document.addEventListener('DOMContentLoaded', function() {
+    const dropdownItems = document.querySelectorAll('.dropdown-menu label');
+    dropdownItems.forEach(function(item) {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+});
+</script>
 {% endblock %}
 
 {% block content %}
@@ -231,7 +333,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="branch" class="form-label">الفرع:</label>
                     <select name="branch" id="branch" class="form-select">
                         <option value="">جميع الفروع</option>
@@ -241,6 +343,32 @@
                         </option>
                         {% endfor %}
                     </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="order_types" class="form-label">نوع الطلب:</label>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="orderTypesDropdownOverdue" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span id="selectedTypesTextOverdue">
+                                {% if selected_order_types %}
+                                    {{ selected_order_types|length }} نوع محدد
+                                {% else %}
+                                    جميع الأنواع
+                                {% endif %}
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu w-100" aria-labelledby="orderTypesDropdownOverdue">
+                            {% for type_code, type_name in order_types %}
+                            <li>
+                                <label class="dropdown-item">
+                                    <input type="checkbox" name="order_types" value="{{ type_code }}"
+                                           {% if type_code in selected_order_types %}checked{% endif %}
+                                           onchange="updateSelectedTypesTextOverdue()">
+                                    {{ type_name }}
+                                </label>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
                 </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-primary">
@@ -258,47 +386,43 @@
 
     <!-- إحصائيات الطلبات المتأخرة -->
     <div class="row mb-4 overdue-stats">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card stats-card">
+        <div class="col-lg-6 col-md-6 mb-3">
+            <div class="card stats-card border-danger">
                 <div class="card-body text-center">
                     <div class="text-danger mb-2">
                         <i class="fas fa-exclamation-triangle icon"></i>
                     </div>
-                    <h4 class="mb-1 text-danger">{{ total_overdue }}</h4>
-                    <p class="text-muted mb-0">إجمالي الطلبات المتأخرة</p>
+                    <h4 class="mb-1 text-danger fw-bold">{{ total_overdue|default:0 }}</h4>
+                    <p class="text-muted mb-0 fw-semibold">إجمالي الطلبات المتأخرة</p>
+                    <small class="text-danger">تحتاج متابعة فورية</small>
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="text-warning mb-2">
-                        <i class="fas fa-clock icon"></i>
-                    </div>
-                    <h4 class="mb-1 text-warning">{{ pending_overdue }}</h4>
-                    <p class="text-muted mb-0">قيد الانتظار</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="text-info mb-2">
-                        <i class="fas fa-cogs icon"></i>
-                    </div>
-                    <h4 class="mb-1 text-info">{{ in_progress_overdue }}</h4>
-                    <p class="text-muted mb-0">قيد التنفيذ</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card stats-card">
+        <div class="col-lg-6 col-md-6 mb-3">
+            <div class="card stats-card border-success">
                 <div class="card-body text-center">
                     <div class="text-success mb-2">
-                        <i class="fas fa-calendar-check icon"></i>
+                        <i class="fas fa-tools icon"></i>
                     </div>
-                    <h4 class="mb-1 text-success">{{ avg_delay_days }}</h4>
-                    <p class="text-muted mb-0">متوسط التأخير (يوم)</p>
+                    <h4 class="mb-1 text-success fw-bold">{{ ready_install_overdue|default:0 }}</h4>
+                    <p class="text-muted mb-0 fw-semibold">جاهز للتركيب</p>
+                    <small class="text-success">متأخر في التركيب</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقة إضافية لمتوسط التأخير -->
+    <div class="row mb-4">
+        <div class="col-lg-4 col-md-6 mx-auto">
+            <div class="card stats-card border-dark">
+                <div class="card-body text-center">
+                    <div class="text-dark mb-2">
+                        <i class="fas fa-calendar-times icon"></i>
+                    </div>
+                    <h4 class="mb-1 text-dark fw-bold">{{ avg_delay_days|default:0 }}</h4>
+                    <p class="text-muted mb-0 fw-semibold">متوسط التأخير</p>
+                    <small class="text-dark">بالأيام</small>
                 </div>
             </div>
         </div>

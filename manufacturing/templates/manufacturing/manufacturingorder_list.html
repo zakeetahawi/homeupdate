@@ -705,6 +705,34 @@ body:not(.modal-open) .modal-backdrop {
         font-size: 0.8rem;
     }
 }
+
+/* تحسين dropdown الأنواع */
+.dropdown-menu {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.dropdown-menu label {
+    cursor: pointer;
+    margin-bottom: 0;
+    padding: 0.25rem 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-menu label input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+.dropdown-menu label:hover {
+    background-color: var(--bs-gray-100);
+}
+
+/* badge للأنواع */
+.bg-purple {
+    background-color: #6f42c1 !important;
+    color: white;
+}
 </style>
 {% endblock %}
 
@@ -827,6 +855,32 @@ body:not(.modal-open) .modal-backdrop {
                         </select>
                     </div>
                     <div class="col-md-2">
+                        <label for="order_types" class="form-label">نوع الطلب:</label>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="orderTypesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="selectedTypesText">
+                                    {% if selected_order_types %}
+                                        {{ selected_order_types|length }} نوع محدد
+                                    {% else %}
+                                        جميع الأنواع
+                                    {% endif %}
+                                </span>
+                            </button>
+                            <ul class="dropdown-menu w-100" aria-labelledby="orderTypesDropdown">
+                                {% for type_code, type_name in order_types %}
+                                <li>
+                                    <label class="dropdown-item">
+                                        <input type="checkbox" name="order_types" value="{{ type_code }}"
+                                               {% if type_code in selected_order_types %}checked{% endif %}
+                                               onchange="updateSelectedTypesText()">
+                                        {{ type_name }}
+                                    </label>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         <label for="date_from" class="form-label">من تاريخ:</label>
                         <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from }}">
                     </div>
@@ -887,7 +941,7 @@ body:not(.modal-open) .modal-backdrop {
         </div>
         <div class="card-body">
             <!-- معلومات الفلاتر المطبقة -->
-            {% if status_filter or search_query or date_from or date_to or branch_filter %}
+            {% if status_filter or search_query or date_from or date_to or branch_filter or selected_order_types %}
             <div class="alert alert-info mb-3" role="alert">
                 <i class="fas fa-filter me-2"></i>
                 <strong>الفلاتر المطبقة:</strong>
@@ -915,6 +969,18 @@ body:not(.modal-open) .modal-backdrop {
                             <span class="badge bg-warning text-dark me-1">الفرع: {{ branch.name }}</span>
                         {% endif %}
                     {% endfor %}
+                {% endif %}
+                {% if selected_order_types %}
+                    <span class="badge bg-purple me-1">
+                        الأنواع:
+                        {% for type_code in selected_order_types %}
+                            {% for order_type_code, order_type_name in order_types %}
+                                {% if type_code == order_type_code %}
+                                    {{ order_type_name }}{% if not forloop.last %}, {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    </span>
                 {% endif %}
                 {% if date_from %}
                     <span class="badge bg-info me-1">من تاريخ: {{ date_from }}</span>
@@ -2222,5 +2288,29 @@ function confirmDelete(orderId) {
         }
     });
 }
+
+// تحديث نص الأنواع المختارة
+function updateSelectedTypesText() {
+    const checkboxes = document.querySelectorAll('input[name="order_types"]:checked');
+    const selectedText = document.getElementById('selectedTypesText');
+
+    if (checkboxes.length === 0) {
+        selectedText.textContent = 'جميع الأنواع';
+    } else if (checkboxes.length === 1) {
+        selectedText.textContent = checkboxes[0].parentElement.textContent.trim();
+    } else {
+        selectedText.textContent = checkboxes.length + ' نوع محدد';
+    }
+}
+
+// منع إغلاق القائمة عند النقر على checkbox
+document.addEventListener('DOMContentLoaded', function() {
+    const dropdownItems = document.querySelectorAll('.dropdown-menu label');
+    dropdownItems.forEach(function(item) {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+});
 </script>
 {% endblock %}
