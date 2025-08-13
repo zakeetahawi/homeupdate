@@ -12,6 +12,11 @@ urlpatterns = [
         name='order_list'
     ),
     path(
+        'orders/overdue/',
+        views.OverdueOrdersListView.as_view(),
+        name='overdue_orders'
+    ),
+    path(
         'orders/create/',
         views.ManufacturingOrderCreateView.as_view(),
         name='order_create'

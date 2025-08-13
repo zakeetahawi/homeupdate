@@ -125,7 +125,7 @@ def order_list(request):
         )
 
     if status_filter:
-        orders = orders.filter(status=status_filter)
+        orders = orders.filter(order_status=status_filter)
 
     order_type_filter = request.GET.get('order_type', '')
     if order_type_filter:

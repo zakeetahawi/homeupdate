@@ -200,13 +200,91 @@ class ManufacturingOrder(models.Model):
         from django.urls import reverse
         return reverse('manufacturing:order_delete', kwargs={'pk': self.pk})
     
+    @property
+    def is_delivery_delayed(self):
+        """التحقق من تأخر موعد التسليم"""
+        if not self.expected_delivery_date:
+            return False
+
+        # إذا كان الطلب مكتمل أو تم تسليمه، لا يعتبر متأخر
+        if self.status in ['completed', 'delivered']:
+            return False
+
+        # مقارنة تاريخ التسليم المتوقع مع التاريخ الحالي
+        today = timezone.now().date()
+        return self.expected_delivery_date < today
+
+    @property
+    def days_remaining(self):
+        """حساب الأيام المتبقية للتسليم"""
+        if not self.expected_delivery_date:
+            return None
+
+        # إذا كان الطلب مكتمل أو تم تسليمه، لا توجد أيام متبقية
+        if self.status in ['completed', 'delivered']:
+            return 0
+
+        today = timezone.now().date()
+        delta = self.expected_delivery_date - today
+        return delta.days
+
+    @property
+    def delivery_status_indicator(self):
+        """إرجاع مؤشر حالة التسليم (دائرة ملونة مع رقم أو رمز)"""
+        if self.is_delivery_delayed:
+            return {
+                'type': 'overdue',
+                'color': 'red',
+                'icon': 'fas fa-exclamation-triangle',
+                'text': 'متأخر',
+                'class': 'delivery-indicator overdue'
+            }
+
+        days_left = self.days_remaining
+        if days_left is None:
+            return {
+                'type': 'unknown',
+                'color': 'gray',
+                'icon': 'fas fa-question',
+                'text': '؟',
+                'class': 'delivery-indicator unknown'
+            }
+
+        if days_left <= 0:
+            return {
+                'type': 'completed',
+                'color': 'green',
+                'icon': 'fas fa-check',
+                'text': 'مكتمل',
+                'class': 'delivery-indicator completed'
+            }
+
+        # تحديد لون الدائرة بناءً على الأيام المتبقية
+        if days_left <= 3:
+            color = 'orange'
+            urgency_class = 'urgent'
+        elif days_left <= 7:
+            color = 'yellow'
+            urgency_class = 'warning'
+        else:
+            color = 'green'
+            urgency_class = 'normal'
+
+        return {
+            'type': 'countdown',
+            'color': color,
+            'days': days_left,
+            'text': str(days_left),
+            'class': f'delivery-indicator countdown {urgency_class}'
+        }
+
     def update_order_status(self):
         """تحديث حالة الطلب الأصلي بناءً على حالة أمر التصنيع"""
         from django.apps import apps
         from django.utils import timezone
-        
+
         Order = apps.get_model('orders', 'Order')
-        
+
         # تحديث تاريخ الإكمال عند الوصول لحالة مكتمل أو جاهز للتركيب
         if self.status in ['completed', 'ready_install'] and not self.completion_date:
             self.completion_date = timezone.now()
@@ -214,7 +292,7 @@ class ManufacturingOrder(models.Model):
             ManufacturingOrder.objects.filter(pk=self.pk).update(
                 completion_date=self.completion_date
             )
-        
+
         # تحديث حالة الطلب لتتطابق مع حالة التصنيع
         # تطابق مباشر بين الحالات
         order_status_mapping = {
@@ -227,7 +305,7 @@ class ManufacturingOrder(models.Model):
             'rejected': 'rejected',
             'cancelled': 'cancelled',
         }
-        
+
         # تحديث حالة التتبع للطلب
         tracking_status_mapping = {
             'pending_approval': 'factory',
@@ -239,10 +317,10 @@ class ManufacturingOrder(models.Model):
             'rejected': 'factory',
             'cancelled': 'factory',
         }
-        
+
         new_order_status = order_status_mapping.get(self.status, self.status)
         new_tracking_status = tracking_status_mapping.get(self.status, 'factory')
-        
+
         # تحديث بدون إطلاق الإشارات لتجنب الrecursion
         Order.objects.filter(pk=self.order.pk).update(
             order_status=new_order_status,

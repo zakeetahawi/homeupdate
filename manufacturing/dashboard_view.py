@@ -7,6 +7,8 @@ from django.db.models.functions import ExtractMonth, ExtractYear
 import json
 
 from .models import ManufacturingOrder
+from accounts.utils import apply_default_year_filter
+from accounts.models import DashboardYearSettings
 
 
 class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
@@ -15,15 +17,19 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        # Get all manufacturing orders (not limited to 30 days)
+
+        # Get all manufacturing orders and apply default year filter
         all_orders = ManufacturingOrder.objects.all().select_related('order', 'order__customer')
-        
+        all_orders = apply_default_year_filter(all_orders, self.request, 'order_date')
+
+        # Get default year for display
+        default_year = DashboardYearSettings.get_default_year()
+
         # Get date range for charts (last 6 months for better view)
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=180)  # 6 months
-        
-        # Get orders for charts (last 6 months)
+
+        # Get orders for charts (last 6 months) - also apply year filter
         chart_orders = all_orders.filter(order_date__range=(start_date, end_date))
         
         # Calculate status counts for all orders
@@ -139,7 +145,7 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
             'monthly_data': json.dumps(monthly_data),
             'recent_orders': recent_orders,
             'orders_by_type': orders_by_type,
-            
+
             # Main statistics (all orders)
             'total_orders': all_orders.count(),
             'pending_approval_orders': all_status_data.get('pending_approval', 0),
@@ -150,7 +156,7 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
             'delivered_orders': all_status_data.get('delivered', 0),
             'rejected_orders': all_status_data.get('rejected', 0),
             'cancelled_orders': all_status_data.get('cancelled', 0),
-            
+
             # Additional metrics
             'this_month_orders': this_month_orders,
             'last_month_orders': last_month_orders,
@@ -158,7 +164,10 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
             'pending_approval_count': pending_approval_count,
             'overdue_orders': overdue_orders,
             'avg_completion_days': avg_completion_days,
-            
+
+            # Year filter information
+            'default_year': default_year,
+
             # Date ranges
             'start_date': start_date,
             'end_date': end_date,

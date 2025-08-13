@@ -20,6 +20,7 @@ from django.db import transaction
 from .models import ManufacturingOrder, ManufacturingOrderItem
 from orders.models import Order
 from accounts.models import Department
+from accounts.utils import apply_default_year_filter
 
 logger = logging.getLogger(__name__)
 
@@ -58,9 +59,13 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         search = self.request.GET.get('search')
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
-        
+        branch = self.request.GET.get('branch')
+
         if status:
             queryset = queryset.filter(status=status)
+
+        if branch:
+            queryset = queryset.filter(order__branch__id=branch)
             
         if search:
             # بحث شامل في كل الأعمدة المهمة
@@ -148,7 +153,11 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         
         # Add page_size to context
         context['page_size'] = self.get_paginate_by(self.get_queryset())
-        
+
+        # Add default year to context
+        from accounts.models import DashboardYearSettings
+        context['default_year'] = DashboardYearSettings.get_default_year()
+
         return context
     
     def _get_available_statuses(self, user, current_status, order_type=None):
@@ -1255,3 +1264,90 @@ def manufacturing_order_detail_redirect(request, pk):
     """إعادة توجيه من ID إلى كود التصنيع"""
     manufacturing_order = get_object_or_404(ManufacturingOrder, pk=pk)
     return redirect('manufacturing:order_detail_by_code', manufacturing_code=manufacturing_order.manufacturing_code)
+
+
+class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """عرض أوامر التصنيع المتأخرة"""
+    model = ManufacturingOrder
+    template_name = 'manufacturing/overdue_orders.html'
+    context_object_name = 'overdue_orders'
+    paginate_by = 25
+    permission_required = 'manufacturing.view_manufacturingorder'
+
+    def get_queryset(self):
+        """الحصول على أوامر التصنيع المتأخرة فقط"""
+        # الحصول على جميع أوامر التصنيع
+        queryset = ManufacturingOrder.objects.select_related(
+            'order', 'order__customer'
+        ).all()
+
+        # تطبيق فلتر السنة الافتراضية
+        queryset = apply_default_year_filter(queryset, self.request, 'order_date')
+
+        # تطبيق فلاتر إضافية
+        search = self.request.GET.get('search')
+        branch = self.request.GET.get('branch')
+
+        if search:
+            queryset = queryset.filter(
+                Q(order__id__icontains=search) |
+                Q(order__order_number__icontains=search) |
+                Q(contract_number__icontains=search) |
+                Q(order__customer__name__icontains=search) |
+                Q(order__customer__phone__icontains=search)
+            )
+
+        if branch:
+            queryset = queryset.filter(order__branch__id=branch)
+
+        # فلترة الطلبات المتأخرة فقط
+        today = timezone.now().date()
+        overdue_queryset = queryset.filter(
+            expected_delivery_date__lt=today,
+            status__in=['pending', 'in_progress', 'ready_install']
+        ).order_by('expected_delivery_date')
+
+        return overdue_queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # إحصائيات الطلبات المتأخرة
+        overdue_orders = self.get_queryset()
+
+        # تجميع حسب الحالة
+        status_counts = overdue_orders.values('status').annotate(
+            count=Count('status')
+        )
+        status_data = {item['status']: item['count'] for item in status_counts}
+
+        # حساب متوسط التأخير
+        today = timezone.now().date()
+        total_delay_days = 0
+        count = 0
+        for order in overdue_orders:
+            if order.expected_delivery_date:
+                delay_days = (today - order.expected_delivery_date).days
+                total_delay_days += delay_days
+                count += 1
+
+        avg_delay_days = round(total_delay_days / count, 1) if count > 0 else 0
+
+        # الحصول على السنة الافتراضية
+        from accounts.models import DashboardYearSettings
+        default_year = DashboardYearSettings.get_default_year()
+
+        context.update({
+            'total_overdue': overdue_orders.count(),
+            'pending_overdue': status_data.get('pending', 0),
+            'in_progress_overdue': status_data.get('in_progress', 0),
+            'ready_install_overdue': status_data.get('ready_install', 0),
+            'avg_delay_days': avg_delay_days,
+            'default_year': default_year,
+        })
+
+        # Add branches for filter dropdown
+        from accounts.models import Branch
+        context['branches'] = Branch.objects.all().order_by('name')
+
+        return context

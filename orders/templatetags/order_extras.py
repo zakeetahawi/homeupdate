@@ -291,3 +291,35 @@ def get_selected_type_display(order):
         return order.get_selected_type_display()
     except Exception:
         return order.get_order_type_display()
+
+@register.filter
+def timesince_days(date):
+    """حساب عدد الأيام منذ تاريخ معين"""
+    from django.utils import timezone
+    from datetime import datetime
+
+    if not date:
+        return 0
+
+    today = timezone.now().date()
+    if isinstance(date, datetime):
+        date = date.date()
+
+    delta = today - date
+    return delta.days
+
+@register.filter
+def days_until(date):
+    """حساب عدد الأيام حتى تاريخ معين"""
+    from django.utils import timezone
+    from datetime import datetime
+
+    if not date:
+        return 0
+
+    today = timezone.now().date()
+    if isinstance(date, datetime):
+        date = date.date()
+
+    delta = date - today
+    return delta.days

@@ -253,11 +253,66 @@
         <div class="card-header bg-light">
             <div class="row align-items-center">
                 <div class="col">
-                    <h5 class="mb-0">قائمة الطلبات ({{ total_orders }})</h5>
+                    <h5 class="mb-0">
+                        قائمة الطلبات
+                        <span class="badge bg-primary ms-2">
+                            <i class="fas fa-list-ol me-1"></i>
+                            عدد النتائج: {{ page_obj.paginator.count }}
+                        </span>
+                    </h5>
                 </div>
+                {% if page_obj.paginator.num_pages > 1 %}
+                <div class="col-auto">
+                    <small class="text-muted">
+                        صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                    </small>
+                </div>
+                {% endif %}
             </div>
         </div>
         <div class="card-body p-0">
+            <!-- معلومات الفلاتر المطبقة -->
+            {% if status_filter or search_query or date_from or date_to or branch_filter %}
+            <div class="alert alert-info mb-0 rounded-0" role="alert">
+                <i class="fas fa-filter me-2"></i>
+                <strong>الفلاتر المطبقة:</strong>
+                {% if status_filter %}
+                    <span class="badge bg-primary me-1">
+                        الحالة:
+                        {% if status_filter == 'pending_approval' %}قيد الموافقة
+                        {% elif status_filter == 'pending' %}قيد الانتظار
+                        {% elif status_filter == 'in_progress' %}قيد التنفيذ
+                        {% elif status_filter == 'ready_install' %}جاهز للتركيب
+                        {% elif status_filter == 'completed' %}مكتمل
+                        {% elif status_filter == 'delivered' %}تم التسليم
+                        {% elif status_filter == 'rejected' %}مرفوض
+                        {% elif status_filter == 'cancelled' %}ملغي
+                        {% else %}{{ status_filter }}
+                        {% endif %}
+                    </span>
+                {% endif %}
+                {% if search_query %}
+                    <span class="badge bg-success me-1">البحث: "{{ search_query }}"</span>
+                {% endif %}
+                {% if branch_filter %}
+                    {% for branch in branches %}
+                        {% if branch.id|stringformat:'s' == branch_filter %}
+                            <span class="badge bg-warning text-dark me-1">الفرع: {{ branch.name }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if date_from %}
+                    <span class="badge bg-info me-1">من تاريخ: {{ date_from }}</span>
+                {% endif %}
+                {% if date_to %}
+                    <span class="badge bg-info me-1">إلى تاريخ: {{ date_to }}</span>
+                {% endif %}
+                <a href="{% url 'orders:order_list' %}" class="btn btn-sm btn-outline-secondary ms-2">
+                    <i class="fas fa-times me-1"></i>إزالة جميع الفلاتر
+                </a>
+            </div>
+            {% endif %}
+
             {% if page_obj %}
             <div class="table-responsive">
                 <table class="table table-hover table-striped mb-0 orders-table">

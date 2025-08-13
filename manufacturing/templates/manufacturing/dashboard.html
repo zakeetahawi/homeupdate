@@ -141,6 +141,22 @@
     border-radius: 10px;
     padding: 1rem;
     margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.clickable-card {
+    cursor: pointer;
+    transform: scale(1);
+}
+
+.clickable-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+    background: linear-gradient(135deg, #ff5252 0%, #e53935 100%);
+}
+
+.clickable-card:active {
+    transform: scale(0.98);
 }
 
 .info-card {
@@ -204,15 +220,20 @@
         
         {% if overdue_orders > 0 %}
         <div class="col-md-6">
-            <div class="alert-card">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-clock fa-2x me-3"></i>
-                    <div>
-                        <h5 class="mb-1">{{ overdue_orders }} طلب متأخر</h5>
-                        <small>تجاوز موعد التسليم المتوقع</small>
+            <a href="{% url 'manufacturing:overdue_orders' %}" class="text-decoration-none">
+                <div class="alert-card clickable-card">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-clock fa-2x me-3"></i>
+                        <div>
+                            <h5 class="mb-1">{{ overdue_orders }} طلب متأخر</h5>
+                            <small>تجاوز موعد التسليم المتوقع</small>
+                        </div>
+                        <div class="ms-auto">
+                            <i class="fas fa-arrow-left fa-lg"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         {% endif %}
     </div>
