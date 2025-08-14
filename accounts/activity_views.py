@@ -17,6 +17,7 @@ from accounts.models import User
 from user_activity.models import OnlineUser, UserActivityLog, UserSession, UserLoginHistory
 
 
+@login_required
 @require_http_methods(["GET"])
 def online_users_api(request):
     """API لجلب المستخدمين النشطين حالياً"""

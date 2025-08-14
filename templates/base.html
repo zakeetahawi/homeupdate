@@ -1732,6 +1732,8 @@
     {% block extra_js %}{% endblock %}
 
     <!-- القائمة الجانبية للمستخدمين النشطين -->
-    {% include 'includes/online_users_sidebar.html' %}
+    {% if user.is_authenticated %}
+        {% include 'includes/online_users_sidebar.html' %}
+    {% endif %}
 </body>
 </html>
