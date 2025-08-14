@@ -4,6 +4,8 @@
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 WHITE='\033[1;37m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
 PROJECT_DIR="/home/zakee/homeupdate"
@@ -11,6 +13,38 @@ PROJECT_DIR="/home/zakee/homeupdate"
 print_status() { echo -e "${GREEN}$1${NC}"; }
 print_error() { echo -e "${RED}$1${NC}"; }
 print_info() { echo -e "${WHITE}$1${NC}"; }
+print_warning() { echo -e "${YELLOW}$1${NC}"; }
+print_tunnel() { echo -e "${BLUE}$1${NC}"; }
+
+# متغيرات لمراقبة التانل
+TUNNEL_STATUS="unknown"
+TUNNEL_CHECK_INTERVAL=30
+
+# دالة فحص حالة التانل
+check_tunnel_status() {
+    if [ ! -z "$TUNNEL_PID" ] && kill -0 $TUNNEL_PID 2>/dev/null; then
+        # فحص الاتصال بالموقع
+        if curl -s --max-time 10 https://elkhawaga.uk > /dev/null 2>&1; then
+            if [ "$TUNNEL_STATUS" != "connected" ]; then
+                TUNNEL_STATUS="connected"
+                print_tunnel "🌐 الجسر متصل - الموقع متاح على: https://elkhawaga.uk"
+            fi
+            return 0
+        else
+            if [ "$TUNNEL_STATUS" != "disconnected" ]; then
+                TUNNEL_STATUS="disconnected"
+                print_warning "⚠️ الجسر منقطع - الموقع غير متاح حالياً"
+            fi
+            return 1
+        fi
+    else
+        if [ "$TUNNEL_STATUS" != "stopped" ]; then
+            TUNNEL_STATUS="stopped"
+            print_error "❌ عملية الجسر متوقفة"
+        fi
+        return 1
+    fi
+}
 
 if [ ! -d "$PROJECT_DIR" ]; then print_error "مجلد المشروع غير موجود: $PROJECT_DIR"; exit 1; fi
 cd "$PROJECT_DIR"
@@ -75,9 +109,23 @@ GUNICORN_PID=$!
 print_status "خادم الإنتاج يعمل (PID: $GUNICORN_PID)"
 
 while true; do
-    sleep 60
-    if ! kill -0 $GUNICORN_PID 2>/dev/null; then print_error "❌ خادم الويب توقف!"; break; fi
-    print_status "✅ النظام يعمل بشكل طبيعي"
+    sleep 30
+
+    # فحص خادم الويب
+    if ! kill -0 $GUNICORN_PID 2>/dev/null; then
+        print_error "❌ خادم الويب توقف!"
+        break
+    fi
+
+    # فحص حالة التانل
+    check_tunnel_status
+    tunnel_ok=$?
+
+    if [ $tunnel_ok -eq 0 ]; then
+        print_status "✅ النظام يعمل بشكل طبيعي - الجسر متصل"
+    else
+        print_warning "⚠️ النظام يعمل محلياً - الجسر منقطع"
+    fi
 done
 
 cleanup
