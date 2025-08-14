@@ -577,11 +577,24 @@ LOGGING = {
             '()': 'django.utils.log.RequireDebugFalse',
         },
     },
+    'filters': {
+        'exclude_unwanted_requests': {
+            '()': 'django.utils.log.CallbackFilter',
+            'callback': lambda record: not any(path in record.getMessage() for path in [
+                '/accounts/notifications/data/',
+                '/accounts/api/online-users/',
+                '/media/users/',
+                '/static/',
+                'favicon.ico'
+            ])
+        },
+    },
     'handlers': {
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'colored',
+            'filters': ['exclude_unwanted_requests'],
         },
         'file': {
             'level': 'WARNING',
