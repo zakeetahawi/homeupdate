@@ -139,7 +139,41 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
                         count += 1
             if count > 0:
                 avg_completion_days = round(total_days / count, 1)
-        
+
+        # إحصائيات طلبات VIP
+        vip_orders_count = all_orders.filter(order__status='vip').count()
+        vip_pending_count = all_orders.filter(
+            order__status='vip',
+            status__in=['pending_approval', 'pending', 'in_progress']
+        ).count()
+        vip_completed_count = all_orders.filter(
+            order__status='vip',
+            status__in=['completed', 'delivered']
+        ).count()
+
+        # Production lines statistics
+        from .models import ProductionLine
+        production_lines = ProductionLine.objects.filter(is_active=True).order_by('-priority', 'name')
+        production_lines_stats = []
+
+        for line in production_lines:
+            line_orders = all_orders.filter(production_line=line)
+            line_stats = {
+                'line': line,
+                'total_orders': line_orders.count(),
+                'active_orders': line_orders.filter(
+                    status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+                ).count(),
+                'completed_orders': line_orders.filter(
+                    status__in=['completed', 'delivered']
+                ).count(),
+                'overdue_orders': line_orders.filter(
+                    expected_delivery_date__lt=today,
+                    status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+                ).count()
+            }
+            production_lines_stats.append(line_stats)
+
         context.update({
             'status_data': json.dumps(status_data),
             'monthly_data': json.dumps(monthly_data),
@@ -164,6 +198,14 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
             'pending_approval_count': pending_approval_count,
             'overdue_orders': overdue_orders,
             'avg_completion_days': avg_completion_days,
+
+            # VIP orders statistics
+            'vip_orders_count': vip_orders_count,
+            'vip_pending_count': vip_pending_count,
+            'vip_completed_count': vip_completed_count,
+
+            # Production lines statistics
+            'production_lines_stats': production_lines_stats,
 
             # Year filter information
             'default_year': default_year,

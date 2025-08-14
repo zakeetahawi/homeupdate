@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, View
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
@@ -47,8 +47,12 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         # Optimize the query by selecting related fields that exist
         queryset = ManufacturingOrder.objects.select_related(
             'order',  # This is the only direct foreign key in the model
-            'order__customer'  # Access customer through order
+            'order__customer',  # Access customer through order
+            'production_line'  # Production line information
         ).order_by('expected_delivery_date', 'order_date')
+
+        # تطبيق إعدادات العرض للمستخدم الحالي
+        queryset = self.apply_display_settings_filter(queryset)
 
         # تطبيق فلتر السنة الافتراضية
         from accounts.utils import apply_default_year_filter
@@ -102,13 +106,78 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
             import datetime
             end_date = datetime.datetime.strptime(date_to, '%Y-%m-%d') + datetime.timedelta(days=1)
             queryset = queryset.filter(order_date__lt=end_date)
-            
+
+        # فلترة حسب الفرع
+        branch_filter = self.request.GET.get('branch')
+        if branch_filter:
+            queryset = queryset.filter(order__branch_id=branch_filter)
+
+        # فلترة حسب خط الإنتاج
+        production_line_filter = self.request.GET.get('production_line')
+        if production_line_filter:
+            queryset = queryset.filter(production_line_id=production_line_filter)
+
         return queryset
-    
+
+    def apply_display_settings_filter(self, queryset):
+        """تطبيق فلترة بناءً على إعدادات العرض للمستخدم الحالي"""
+        try:
+            from .models import ManufacturingDisplaySettings
+
+            # التحقق من وجود فلاتر يدوية في الطلب
+            manual_filters = self.has_manual_filters()
+
+            # إذا كان هناك فلاتر يدوية، لا نطبق إعدادات العرض التلقائية
+            if manual_filters:
+                return queryset
+
+            # الحصول على إعدادات العرض للمستخدم الحالي
+            display_settings = ManufacturingDisplaySettings.get_user_settings(self.request.user)
+
+            if display_settings:
+                # تطبيق فلترة الحالات
+                if display_settings.allowed_statuses:
+                    queryset = queryset.filter(status__in=display_settings.allowed_statuses)
+
+                # تطبيق فلترة أنواع الطلبات
+                if display_settings.allowed_order_types:
+                    queryset = queryset.filter(order_type__in=display_settings.allowed_order_types)
+
+            return queryset
+        except Exception as e:
+            # في حالة حدوث خطأ، إرجاع الـ queryset الأصلي
+            logger.warning(f"خطأ في تطبيق إعدادات العرض: {e}")
+            return queryset
+
+    def has_manual_filters(self):
+        """التحقق من وجود فلاتر يدوية في الطلب"""
+        # قائمة بمعاملات الفلترة اليدوية
+        filter_params = [
+            'status',           # فلتر الحالة
+            'order_type',       # فلتر نوع الطلب
+            'search',           # البحث
+            'date_from',        # تاريخ من
+            'date_to',          # تاريخ إلى
+            'customer',         # فلتر العميل
+            'salesperson',      # فلتر البائع
+            'branch',           # فلتر الفرع
+            'production_line',  # فلتر خط الإنتاج
+            'contract_number',  # رقم العقد
+            'invoice_number',   # رقم الفاتورة
+        ]
+
+        # التحقق من وجود أي من هذه المعاملات في الطلب
+        for param in filter_params:
+            if self.request.GET.get(param):
+                return True
+
+        return False
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from django.db.models import Count, Q
         from django.contrib.auth import get_user_model
+        from .models import ManufacturingDisplaySettings
         
         # Get manufacturing orders for statistics (مفلترة بالسنة الافتراضية)
         # استخدام نفس الفلتر المطبق على القائمة
@@ -145,13 +214,27 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
             'date_from': self.request.GET.get('date_from', ''),
             'date_to': self.request.GET.get('date_to', ''),
             'branch_filter': self.request.GET.get('branch', ''),
+            'production_line_filter': self.request.GET.get('production_line', ''),
             'sales_person_filter': self.request.GET.get('sales_person', ''),
             'selected_order_types': self.request.GET.getlist('order_types'),
+            'display_setting_filter': self.request.GET.get('display_setting', ''),
         })
         
         # Add branches for filter dropdown
         from accounts.models import Branch
         context['branches'] = Branch.objects.all().order_by('name')
+
+        # Add available display settings for filter dropdown
+        try:
+            context['available_display_settings'] = ManufacturingDisplaySettings.objects.filter(
+                is_active=True
+            ).order_by('-priority', 'name')
+        except Exception:
+            context['available_display_settings'] = []
+
+        # Add production lines for filter dropdown
+        from .models import ProductionLine
+        context['production_lines'] = ProductionLine.objects.filter(is_active=True).order_by('-priority', 'name')
 
         # Add order types for filter dropdown
         context['order_types'] = [
@@ -174,6 +257,20 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         # Add default year to context
         from accounts.models import DashboardYearSettings
         context['default_year'] = DashboardYearSettings.get_default_year()
+
+        # معلومات حالة الفلترة
+        has_manual_filters = self.has_manual_filters()
+        active_display_settings = None
+
+        if not has_manual_filters:
+            # الحصول على إعدادات العرض النشطة
+            active_display_settings = ManufacturingDisplaySettings.get_user_settings(self.request.user)
+
+        context.update({
+            'has_manual_filters': has_manual_filters,
+            'active_display_settings': active_display_settings,
+            'display_settings_applied': not has_manual_filters and active_display_settings is not None,
+        })
 
         return context
     
@@ -265,6 +362,117 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         return available_statuses
 
 
+class VIPOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """عرض طلبات VIP فقط"""
+    model = ManufacturingOrder
+    template_name = 'manufacturing/vip_orders_list.html'
+    context_object_name = 'vip_orders'
+    paginate_by = 25
+    permission_required = 'manufacturing.view_manufacturingorder'
+
+    def get_queryset(self):
+        """الحصول على طلبات VIP فقط"""
+        queryset = ManufacturingOrder.objects.select_related(
+            'order', 'order__customer'
+        ).filter(
+            order__status='vip'  # فلترة طلبات VIP فقط
+        ).order_by('-created_at', 'expected_delivery_date')
+
+        # تطبيق فلترة السنة الافتراضية
+        queryset = apply_default_year_filter(queryset, self.request, 'order_date')
+
+        # تطبيق فلاتر البحث إذا وجدت
+        search_query = self.request.GET.get('search', '').strip()
+        if search_query:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(order__order_number__icontains=search_query) |
+                Q(order__customer__name__icontains=search_query) |
+                Q(contract_number__icontains=search_query) |
+                Q(invoice_number__icontains=search_query)
+            )
+
+        # فلترة حسب الحالة
+        status_filter = self.request.GET.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        # فلترة حسب نوع الطلب
+        order_type_filter = self.request.GET.get('order_type')
+        if order_type_filter:
+            queryset = queryset.filter(order_type=order_type_filter)
+
+        # فلترة حسب إعداد العرض المحدد يدوياً
+        display_setting_filter = self.request.GET.get('display_setting')
+        if display_setting_filter:
+            try:
+                from .models import ManufacturingDisplaySettings
+                display_setting = ManufacturingDisplaySettings.objects.get(
+                    id=display_setting_filter,
+                    is_active=True
+                )
+
+                # تطبيق فلترة الحالات
+                if display_setting.allowed_statuses:
+                    queryset = queryset.filter(status__in=display_setting.allowed_statuses)
+
+                # تطبيق فلترة أنواع الطلبات
+                if display_setting.allowed_order_types:
+                    queryset = queryset.filter(order_type__in=display_setting.allowed_order_types)
+
+            except Exception as e:
+                logger.warning(f"خطأ في تطبيق إعداد العرض: {e}")
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # إحصائيات طلبات VIP
+        vip_orders = self.get_queryset()
+
+        # إحصائيات حسب الحالة
+        status_stats = {}
+        for status_code, status_display in ManufacturingOrder.STATUS_CHOICES:
+            count = vip_orders.filter(status=status_code).count()
+            if count > 0:
+                status_stats[status_code] = {
+                    'count': count,
+                    'display': status_display
+                }
+
+        # إحصائيات حسب النوع
+        type_stats = {}
+        for type_code, type_display in ManufacturingOrder.ORDER_TYPE_CHOICES:
+            count = vip_orders.filter(order_type=type_code).count()
+            if count > 0:
+                type_stats[type_code] = {
+                    'count': count,
+                    'display': type_display
+                }
+
+        # الطلبات المتأخرة
+        today = timezone.now().date()
+        overdue_count = vip_orders.filter(
+            expected_delivery_date__lt=today,
+            status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+        ).count()
+
+        context.update({
+            'total_vip_orders': vip_orders.count(),
+            'status_stats': status_stats,
+            'type_stats': type_stats,
+            'overdue_count': overdue_count,
+            'search_query': self.request.GET.get('search', ''),
+            'current_status_filter': self.request.GET.get('status', ''),
+            'current_type_filter': self.request.GET.get('order_type', ''),
+            'status_choices': ManufacturingOrder.STATUS_CHOICES,
+            'order_type_choices': ManufacturingOrder.ORDER_TYPE_CHOICES,
+        })
+
+        return context
+
+
 class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     model = ManufacturingOrder
     template_name = 'manufacturing/manufacturingorder_detail.html'
@@ -292,15 +500,15 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
 class ManufacturingOrderCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = ManufacturingOrder
     template_name = 'manufacturing/manufacturingorder_form.html'
-    fields = ['order', 'order_type', 'contract_number', 'invoice_number', 
-              'order_date', 'expected_delivery_date', 'notes', 
+    fields = ['order', 'order_type', 'contract_number', 'invoice_number',
+              'order_date', 'expected_delivery_date', 'notes',
               'contract_file', 'inspection_file']
     permission_required = 'manufacturing.add_manufacturingorder'
-    
+
     def get_success_url(self):
         messages.success(self.request, 'تم إنشاء أمر التصنيع بنجاح')
         return reverse('manufacturing:order_list')
-    
+
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         return super().form_valid(form)
@@ -309,29 +517,217 @@ class ManufacturingOrderCreateView(LoginRequiredMixin, PermissionRequiredMixin, 
 class ManufacturingOrderUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = ManufacturingOrder
     template_name = 'manufacturing/manufacturingorder_form.html'
-    fields = ['order_type', 'status', 'contract_number', 'invoice_number', 
-              'order_date', 'expected_delivery_date', 'exit_permit_number',
-              'notes', 'contract_file', 'inspection_file']
+    fields = ['order_type', 'contract_number', 'invoice_number',
+              'order_date', 'expected_delivery_date', 'notes',
+              'contract_file', 'inspection_file', 'production_line']
     permission_required = 'manufacturing.change_manufacturingorder'
-    
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields['order_date'].widget.attrs['type'] = 'date'
-        form.fields['expected_delivery_date'].widget.attrs['type'] = 'date'
-        # The 'order' field should not be editable after creation.
-        # It's better to display it as readonly text.
-        # We can remove it from fields list and handle it in the template.
-        return form
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Pass the order instance to the context to display its info
-        context['order'] = self.object.order
-        return context
 
     def get_success_url(self):
         messages.success(self.request, 'تم تحديث أمر التصنيع بنجاح')
-        return reverse('manufacturing:order_list')
+        return reverse('manufacturing:order_detail_by_code',
+                      kwargs={'manufacturing_code': self.object.manufacturing_code})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = f'تعديل أمر التصنيع: {self.object.manufacturing_code}'
+        return context
+
+
+class ChangeProductionLineView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """تبديل خط الإنتاج لأمر تصنيع"""
+    permission_required = 'manufacturing.change_manufacturingorder'
+
+    def post(self, request, pk):
+        """تبديل خط الإنتاج"""
+        try:
+            # الحصول على أمر التصنيع
+            manufacturing_order = get_object_or_404(ManufacturingOrder, pk=pk)
+
+            # الحصول على البيانات من JSON أو POST
+            if request.content_type == 'application/json':
+                import json
+                data = json.loads(request.body)
+                new_production_line_id = data.get('production_line_id')
+                reason = data.get('reason', '')
+            else:
+                new_production_line_id = request.POST.get('production_line_id')
+                reason = request.POST.get('reason', '')
+
+            if not new_production_line_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يجب اختيار خط إنتاج'
+                })
+
+            # التحقق من وجود خط الإنتاج
+            from .models import ProductionLine
+            try:
+                new_production_line = ProductionLine.objects.get(
+                    id=new_production_line_id,
+                    is_active=True
+                )
+            except ProductionLine.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'خط الإنتاج المحدد غير موجود أو غير نشط'
+                })
+
+            # حفظ خط الإنتاج القديم للسجل
+            old_production_line = manufacturing_order.production_line
+            old_line_name = old_production_line.name if old_production_line else 'غير محدد'
+
+            # تحديث خط الإنتاج
+            manufacturing_order.production_line = new_production_line
+            manufacturing_order.save()
+
+            # تسجيل العملية في السجل
+            from django.contrib.admin.models import LogEntry, CHANGE
+            from django.contrib.contenttypes.models import ContentType
+
+            LogEntry.objects.log_action(
+                user_id=request.user.id,
+                content_type_id=ContentType.objects.get_for_model(ManufacturingOrder).pk,
+                object_id=manufacturing_order.pk,
+                object_repr=str(manufacturing_order),
+                action_flag=CHANGE,
+                change_message=f'تم تبديل خط الإنتاج من "{old_line_name}" إلى "{new_production_line.name}"'
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': f'تم تبديل خط الإنتاج بنجاح إلى "{new_production_line.name}"',
+                'new_line_name': new_production_line.name,
+                'old_line_name': old_line_name
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'حدث خطأ: {str(e)}'
+            })
+
+
+@require_http_methods(["GET"])
+def get_production_lines_api(request):
+    """API لجلب خطوط الإنتاج النشطة"""
+    try:
+        from .models import ProductionLine
+
+        lines = ProductionLine.objects.filter(is_active=True).order_by('-priority', 'name')
+
+        lines_data = []
+        for line in lines:
+            lines_data.append({
+                'id': line.id,
+                'name': line.name,
+                'description': line.description or '',
+                'capacity_per_day': line.capacity_per_day,
+                'priority': line.priority
+            })
+
+        return JsonResponse(lines_data, safe=False)
+
+    except Exception as e:
+        return JsonResponse({
+            'error': f'حدث خطأ: {str(e)}'
+        }, status=500)
+
+
+class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """طباعة طلبات خط إنتاج محدد"""
+    permission_required = 'manufacturing.view_manufacturingorder'
+
+    def get(self, request, line_id):
+        """عرض صفحة طباعة خط الإنتاج"""
+        try:
+            from .models import ProductionLine
+
+            # الحصول على خط الإنتاج
+            production_line = get_object_or_404(ProductionLine, id=line_id, is_active=True)
+
+            # الحصول على طلبات خط الإنتاج
+            orders = ManufacturingOrder.objects.select_related(
+                'order', 'order__customer', 'order__branch', 'order__salesperson'
+            ).filter(production_line=production_line).order_by('-created_at')
+
+            # تطبيق فلاتر إضافية إذا وجدت
+            status_filter = request.GET.get('status')
+            if status_filter:
+                orders = orders.filter(status=status_filter)
+
+            date_from = request.GET.get('date_from')
+            if date_from:
+                orders = orders.filter(order_date__gte=date_from)
+
+            date_to = request.GET.get('date_to')
+            if date_to:
+                import datetime
+                end_date = datetime.datetime.strptime(date_to, '%Y-%m-%d') + datetime.timedelta(days=1)
+                orders = orders.filter(order_date__lt=end_date)
+
+            # إحصائيات خط الإنتاج
+            total_orders = orders.count()
+            active_orders = orders.filter(
+                status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+            ).count()
+            completed_orders = orders.filter(
+                status__in=['completed', 'delivered']
+            ).count()
+
+            # تحديد نوع الاستجابة (HTML أو PDF)
+            if request.GET.get('format') == 'pdf':
+                return self.generate_pdf(request, production_line, orders, {
+                    'total_orders': total_orders,
+                    'active_orders': active_orders,
+                    'completed_orders': completed_orders,
+                })
+
+            # عرض HTML عادي
+            context = {
+                'production_line': production_line,
+                'orders': orders,
+                'total_orders': total_orders,
+                'active_orders': active_orders,
+                'completed_orders': completed_orders,
+                'status_filter': status_filter,
+                'date_from': date_from,
+                'date_to': date_to,
+                'print_date': timezone.now(),
+                'status_choices': ManufacturingOrder.STATUS_CHOICES,
+            }
+
+            return render(request, 'manufacturing/production_line_print.html', context)
+
+        except Exception as e:
+            messages.error(request, f'حدث خطأ: {str(e)}')
+            return redirect('manufacturing:dashboard')
+
+    def generate_pdf(self, request, production_line, orders, stats):
+        """إنتاج ملف PDF"""
+        try:
+            from django.template.loader import render_to_string
+            from weasyprint import HTML
+
+            context = {
+                'production_line': production_line,
+                'orders': orders,
+                'stats': stats,
+                'print_date': timezone.now(),
+                'user': request.user,
+            }
+
+            html_string = render_to_string('manufacturing/production_line_print_pdf.html', context)
+            html = HTML(string=html_string)
+            pdf = html.write_pdf()
+
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="production_line_{production_line.name}_{timezone.now().strftime("%Y%m%d")}.pdf"'
+
+            return response
+
+        except Exception as e:
+            messages.error(request, f'حدث خطأ في إنتاج ملف PDF: {str(e)}')
+            return redirect('manufacturing:dashboard')
 
 
 class ManufacturingOrderDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):

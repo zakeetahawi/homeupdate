@@ -121,7 +121,18 @@ class ManufacturingOrder(models.Model):
         null=True,
         verbose_name='ملاحظات'
     )
-    
+
+    # خط الإنتاج المرتبط بالطلب
+    production_line = models.ForeignKey(
+        'ProductionLine',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='manufacturing_orders',
+        verbose_name='خط الإنتاج',
+        help_text='خط الإنتاج المسؤول عن هذا الطلب'
+    )
+
     rejection_reason = models.TextField(
         blank=True,
         null=True,
@@ -327,6 +338,21 @@ class ManufacturingOrder(models.Model):
             tracking_status=new_tracking_status
         )
 
+    def assign_production_line(self):
+        """تحديد خط الإنتاج تلقائياً بناءً على فرع العميل"""
+        if self.production_line:
+            return  # إذا كان خط الإنتاج محدد مسبقاً، لا نغيره
+
+        # الحصول على فرع العميل
+        customer_branch = None
+        if self.order and self.order.customer and hasattr(self.order.customer, 'branch'):
+            customer_branch = self.order.customer.branch
+        elif self.order and hasattr(self.order, 'branch'):
+            customer_branch = self.order.branch
+
+        # تحديد خط الإنتاج المناسب
+        self.production_line = ProductionLine.get_default_line_for_branch(customer_branch)
+
 
 class ManufacturingOrderItem(models.Model):
     """نموذج يمثل عناصر أمر التصنيع"""
@@ -369,7 +395,363 @@ class ManufacturingOrderItem(models.Model):
         return f'{self.product_name} - {self.quantity}'
 
 
+class ProductionLine(models.Model):
+    """نموذج خطوط الإنتاج مع دعم أنواع الطلبات"""
+
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        verbose_name='اسم خط الإنتاج',
+        help_text='اسم مميز لخط الإنتاج'
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='الوصف',
+        help_text='وصف تفصيلي لخط الإنتاج ونوع المنتجات التي ينتجها'
+    )
+
+    # ربط خط الإنتاج بالفروع
+    branches = models.ManyToManyField(
+        'accounts.Branch',
+        blank=True,
+        related_name='production_lines',
+        verbose_name='الفروع المرتبطة',
+        help_text='الفروع التي يخدمها هذا الخط'
+    )
+
+    # أنواع الطلبات المدعومة
+    ORDER_TYPE_CHOICES = [
+        ('installation', 'تركيب'),
+        ('custom', 'تفصيل'),
+        ('accessory', 'اكسسوار'),
+        ('delivery', 'تسليم'),
+        ('inspection', 'معاينة'),
+    ]
+
+    supported_order_types = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='أنواع الطلبات المدعومة',
+        help_text='أنواع الطلبات التي يمكن لهذا الخط التعامل معها'
+    )
+
+    # إعدادات خط الإنتاج
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='نشط',
+        help_text='تحديد ما إذا كان خط الإنتاج نشطاً أم لا'
+    )
+
+    capacity_per_day = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='الطاقة الإنتاجية اليومية',
+        help_text='عدد الطلبات التي يمكن إنتاجها يومياً (اختياري)'
+    )
+
+    priority = models.PositiveIntegerField(
+        default=1,
+        verbose_name='الأولوية',
+        help_text='أولوية خط الإنتاج (الرقم الأعلى له أولوية أكبر)'
+    )
+
+    # معلومات التتبع
+    created_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_production_lines',
+        verbose_name='تم الإنشاء بواسطة'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء'
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='تاريخ التحديث'
+    )
+
+    class Meta:
+        verbose_name = 'خط إنتاج'
+        verbose_name_plural = 'خطوط الإنتاج'
+        ordering = ['-priority', 'name']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def orders_count(self):
+        """عدد أوامر التصنيع المرتبطة بهذا الخط"""
+        return self.manufacturing_orders.count()
+
+    @property
+    def active_orders_count(self):
+        """عدد أوامر التصنيع النشطة المرتبطة بهذا الخط"""
+        return self.manufacturing_orders.filter(
+            status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+        ).count()
+
+    @property
+    def completed_orders_count(self):
+        """عدد أوامر التصنيع المكتملة المرتبطة بهذا الخط"""
+        return self.manufacturing_orders.filter(
+            status__in=['completed', 'delivered']
+        ).count()
+
+    def get_branches_display(self):
+        """عرض الفروع المرتبطة بشكل مقروء"""
+        branches = self.branches.all()
+        if not branches.exists():
+            return 'لا توجد فروع مرتبطة'
+
+        return ', '.join([branch.name for branch in branches[:3]]) + \
+               (f' و {branches.count() - 3} فروع أخرى' if branches.count() > 3 else '')
+
+    def get_supported_order_types_display(self):
+        """عرض أنواع الطلبات المدعومة بشكل مقروء"""
+        if not self.supported_order_types:
+            return 'جميع الأنواع'
+
+        type_names = []
+        for order_type in self.supported_order_types:
+            for choice_value, choice_display in self.ORDER_TYPE_CHOICES:
+                if choice_value == order_type:
+                    type_names.append(choice_display)
+                    break
+
+        return ', '.join(type_names) if type_names else 'جميع الأنواع'
+
+    def supports_order_type(self, order_type):
+        """التحقق من دعم نوع طلب معين"""
+        if not self.supported_order_types:
+            return True  # إذا لم يتم تحديد أنواع، فهو يدعم جميع الأنواع
+
+        return order_type in self.supported_order_types
+
+    @classmethod
+    def get_default_line_for_branch(cls, branch):
+        """الحصول على خط الإنتاج الافتراضي للفرع"""
+        if not branch:
+            return cls.objects.filter(is_active=True).order_by('-priority').first()
+
+        # البحث عن خط إنتاج مرتبط بالفرع
+        line = cls.objects.filter(
+            is_active=True,
+            branches=branch
+        ).order_by('-priority').first()
+
+        if line:
+            return line
+
+        # إذا لم يوجد خط مرتبط بالفرع، إرجاع الخط الافتراضي
+        return cls.objects.filter(is_active=True).order_by('-priority').first()
+
+
+class ManufacturingDisplaySettings(models.Model):
+    """إعدادات عرض طلبات التصنيع"""
+
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        verbose_name='اسم الإعداد',
+        help_text='اسم مميز لإعداد العرض'
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='الوصف',
+        help_text='وصف تفصيلي لإعداد العرض'
+    )
+
+    # فلاتر العرض
+    allowed_statuses = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='الحالات المسموحة',
+        help_text='حدد الحالات التي ستظهر في هذا العرض'
+    )
+
+    allowed_order_types = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='أنواع الطلبات المسموحة',
+        help_text='حدد أنواع الطلبات التي ستظهر في هذا العرض'
+    )
+
+    # المستخدمون المستهدفون
+    target_users = models.ManyToManyField(
+        'accounts.User',
+        blank=True,
+        related_name='display_settings',
+        verbose_name='المستخدمون المستهدفون',
+        help_text='المستخدمون الذين ينطبق عليهم هذا الإعداد'
+    )
+
+    apply_to_all_users = models.BooleanField(
+        default=False,
+        verbose_name='تطبيق على جميع المستخدمين',
+        help_text='تطبيق هذا الإعداد على جميع المستخدمين'
+    )
+
+    # خيارات العرض
+    show_customer_info = models.BooleanField(
+        default=True,
+        verbose_name='إظهار معلومات العميل',
+        help_text='إظهار معلومات العميل في الجدول'
+    )
+
+    show_order_details = models.BooleanField(
+        default=True,
+        verbose_name='إظهار تفاصيل الطلب',
+        help_text='إظهار تفاصيل الطلب في الجدول'
+    )
+
+    show_dates = models.BooleanField(
+        default=True,
+        verbose_name='إظهار التواريخ',
+        help_text='إظهار التواريخ في الجدول'
+    )
+
+    show_files = models.BooleanField(
+        default=True,
+        verbose_name='إظهار الملفات',
+        help_text='إظهار الملفات المرفقة في الجدول'
+    )
+
+    # إعدادات الإعداد
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='نشط',
+        help_text='تحديد ما إذا كان هذا الإعداد نشطاً'
+    )
+
+    is_default = models.BooleanField(
+        default=False,
+        verbose_name='افتراضي',
+        help_text='تحديد ما إذا كان هذا الإعداد افتراضياً'
+    )
+
+    priority = models.PositiveIntegerField(
+        default=1,
+        verbose_name='الأولوية',
+        help_text='أولوية الإعداد (الرقم الأعلى له أولوية أكبر)'
+    )
+
+    # معلومات التتبع
+    created_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_display_settings',
+        verbose_name='تم الإنشاء بواسطة'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء'
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='تاريخ التحديث'
+    )
+
+    class Meta:
+        verbose_name = 'إعداد عرض التصنيع'
+        verbose_name_plural = 'إعدادات عرض التصنيع'
+        ordering = ['-priority', '-created_at']
+
+    def __str__(self):
+        return self.name
+
+    def get_allowed_statuses_display(self):
+        """عرض الحالات المسموحة بشكل مقروء"""
+        if not self.allowed_statuses:
+            return 'جميع الحالات'
+
+        status_names = []
+        for status in self.allowed_statuses:
+            for choice_value, choice_display in ManufacturingOrder.STATUS_CHOICES:
+                if choice_value == status:
+                    status_names.append(choice_display)
+                    break
+
+        return ', '.join(status_names) if status_names else 'جميع الحالات'
+
+    def get_allowed_order_types_display(self):
+        """عرض أنواع الطلبات المسموحة بشكل مقروء"""
+        if not self.allowed_order_types:
+            return 'جميع الأنواع'
+
+        type_names = []
+        for order_type in self.allowed_order_types:
+            for choice_value, choice_display in ManufacturingOrder.ORDER_TYPE_CHOICES:
+                if choice_value == order_type:
+                    type_names.append(choice_display)
+                    break
+
+        return ', '.join(type_names) if type_names else 'جميع الأنواع'
+
+    def get_target_users_display(self):
+        """عرض المستخدمين المستهدفين بشكل مقروء"""
+        if self.apply_to_all_users:
+            return 'جميع المستخدمين'
+
+        users = self.target_users.all()
+        if not users.exists():
+            return 'لا يوجد مستخدمون محددون'
+
+        return ', '.join([user.get_full_name() or user.username for user in users[:3]]) + \
+               (f' و {users.count() - 3} مستخدمين آخرين' if users.count() > 3 else '')
+
+    @classmethod
+    def get_user_settings(cls, user):
+        """الحصول على إعدادات العرض للمستخدم"""
+        # البحث عن إعداد مخصص للمستخدم
+        user_setting = cls.objects.filter(
+            is_active=True,
+            target_users=user
+        ).order_by('-priority').first()
+
+        if user_setting:
+            return user_setting
+
+        # البحث عن إعداد عام
+        general_setting = cls.objects.filter(
+            is_active=True,
+            apply_to_all_users=True
+        ).order_by('-priority').first()
+
+        if general_setting:
+            return general_setting
+
+        # البحث عن الإعداد الافتراضي
+        default_setting = cls.objects.filter(
+            is_active=True,
+            is_default=True
+        ).first()
+
+        return default_setting
+
+
 @receiver(post_save, sender=ManufacturingOrder)
-def update_related_models(sender, instance, **kwargs):
+def update_related_models(sender, instance, created, **kwargs):
     """تحديث النماذج المرتبطة عند تحديث أمر التصنيع"""
+    # تحديد خط الإنتاج تلقائياً للطلبات الجديدة
+    if created:
+        instance.assign_production_line()
+        if instance.production_line:
+            # حفظ بدون إطلاق signal مرة أخرى
+            ManufacturingOrder.objects.filter(pk=instance.pk).update(
+                production_line=instance.production_line
+            )
+
     instance.update_order_status()

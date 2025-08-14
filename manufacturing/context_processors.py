@@ -17,6 +17,7 @@ def manufacturing_nav_links(request):
     active_links = {
         'dashboard': request.path == reverse('manufacturing:dashboard'),
         'order_list': request.path == reverse('manufacturing:order_list'),
+        'vip_orders': request.path == reverse('manufacturing:vip_orders'),
         'reports': '/reports/' in request.path,
     }
     
@@ -33,6 +34,14 @@ def manufacturing_nav_links(request):
                 'url': reverse('manufacturing:order_list'),
                 'is_active': active_links['order_list'],
                 'icon': 'fas fa-industry',
+            },
+            {
+                'name': 'طلبات VIP',
+                'url': reverse('manufacturing:vip_orders'),
+                'is_active': active_links['vip_orders'],
+                'icon': 'fas fa-crown',
+                'badge': 'VIP',
+                'badge_class': 'bg-warning text-dark'
             },
             {
                 'name': 'التقارير',

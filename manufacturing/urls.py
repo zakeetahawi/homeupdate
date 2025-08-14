@@ -17,6 +17,11 @@ urlpatterns = [
         name='overdue_orders'
     ),
     path(
+        'orders/vip/',
+        views.VIPOrdersListView.as_view(),
+        name='vip_orders'
+    ),
+    path(
         'orders/create/',
         views.ManufacturingOrderCreateView.as_view(),
         name='order_create'
@@ -51,6 +56,11 @@ urlpatterns = [
         name='order_print'
     ),
     path(
+        'production-line/<int:line_id>/print/',
+        views.ProductionLinePrintView.as_view(),
+        name='production_line_print'
+    ),
+    path(
         'api/update_status/<int:pk>/',
         views.update_order_status,
         name='update_order_status_api'
@@ -79,5 +89,15 @@ urlpatterns = [
         're_approve/<int:pk>/',
         views.re_approve_after_reply,
         name='re_approve_after_reply'
+    ),
+    path(
+        'api/change-production-line/<int:pk>/',
+        views.ChangeProductionLineView.as_view(),
+        name='change_production_line_api'
+    ),
+    path(
+        'api/production-lines/',
+        views.get_production_lines_api,
+        name='production_lines_api'
     ),
 ]

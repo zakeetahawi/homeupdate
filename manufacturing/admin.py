@@ -3,10 +3,41 @@ from django.utils.html import format_html
 from django.urls import reverse, path
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
+from django import forms
 
 from .models import (
-    ManufacturingOrder, ManufacturingOrderItem
+    ManufacturingOrder, ManufacturingOrderItem, ProductionLine, ManufacturingDisplaySettings
 )
+
+
+class ProductionLineForm(forms.ModelForm):
+    """نموذج مخصص لخط الإنتاج مع widget لأنواع الطلبات"""
+
+    supported_order_types = forms.MultipleChoiceField(
+        choices=ProductionLine.ORDER_TYPE_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='أنواع الطلبات المدعومة',
+        help_text='حدد أنواع الطلبات التي يمكن لهذا الخط التعامل معها (اتركه فارغاً لدعم جميع الأنواع)'
+    )
+
+    class Meta:
+        model = ProductionLine
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.supported_order_types:
+            self.fields['supported_order_types'].initial = self.instance.supported_order_types
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # تحويل القائمة إلى JSON
+        instance.supported_order_types = self.cleaned_data.get('supported_order_types', [])
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
 
 class ManufacturingOrderItemInline(admin.TabularInline):
@@ -28,6 +59,7 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
         'contract_number',
         'order_type_display',
         'customer_name',
+        'production_line_display',
         'status_display',
         'rejection_reply_status',
         'order_date',
@@ -48,6 +80,7 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
         'contract_number',
         'order_type',
         'order__customer__name',  # للترتيب حسب اسم العميل
+        'production_line__name',  # للترتيب حسب خط الإنتاج
         'status',  # تمكين ترتيب الحالة
         'has_rejection_reply',
         'order_date',
@@ -78,6 +111,7 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     list_filter = [
         'status',
         'order_type',
+        'production_line',
         'order_date',
         'expected_delivery_date',
         'delivery_date',
@@ -199,14 +233,28 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
         # استخدام البيانات المحملة مسبقاً أولاً
         if hasattr(obj, '_customer_name') and obj._customer_name:
             return obj._customer_name
-        
+
         # الطريقة التقليدية كـ fallback
         if obj.order and obj.order.customer:
             return obj.order.customer.name
-        
+
         return "-"
     customer_name.short_description = 'العميل'
-    customer_name.admin_order_field = 'order__customer__name'  # تمكين الترتيب
+    customer_name.admin_order_field = 'order__customer__name'
+
+    def production_line_display(self, obj):
+        """عرض خط الإنتاج"""
+        if obj.production_line:
+            return format_html(
+                '<span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 0.85em;">'
+                '<i class="fas fa-industry me-1"></i>{}</span>',
+                obj.production_line.name
+            )
+        return format_html(
+            '<span style="color: #999; font-style: italic;">غير محدد</span>'
+        )
+    production_line_display.short_description = 'خط الإنتاج'
+    production_line_display.admin_order_field = 'production_line__name'  # تمكين الترتيب
 
     def contract_number(self, obj):
         """عرض رقم العقد"""
@@ -438,3 +486,228 @@ class ManufacturingOrderItemAdmin(admin.ModelAdmin):
     search_fields = ('manufacturing_order__id', 'product_name')
 
 # The user management code has been moved to accounts/admin.py
+
+
+@admin.register(ProductionLine)
+class ProductionLineAdmin(admin.ModelAdmin):
+    """إدارة خطوط الإنتاج"""
+
+    form = ProductionLineForm
+    list_per_page = 20
+
+    list_display = [
+        'name',
+        'is_active',
+        'priority',
+        'get_branches_display',
+        'get_supported_order_types_display',
+        'orders_count',
+        'active_orders_count',
+        'capacity_per_day',
+        'created_by',
+        'created_at'
+    ]
+
+    list_filter = [
+        'is_active',
+        'priority',
+        'branches',
+        'created_at',
+        'created_by'
+    ]
+
+    search_fields = [
+        'name',
+        'description',
+        'branches__name'
+    ]
+
+    ordering = ['-priority', 'name']
+
+    fieldsets = (
+        ('معلومات أساسية', {
+            'fields': ('name', 'description', 'is_active', 'priority')
+        }),
+        ('الفروع المرتبطة', {
+            'fields': ('branches',),
+            'description': 'حدد الفروع التي يخدمها هذا الخط'
+        }),
+        ('أنواع الطلبات المدعومة', {
+            'fields': ('supported_order_types',),
+            'description': 'حدد أنواع الطلبات التي يمكن لهذا الخط التعامل معها (اتركه فارغاً لدعم جميع الأنواع)'
+        }),
+        ('إعدادات الإنتاج', {
+            'fields': ('capacity_per_day',),
+            'description': 'إعدادات الطاقة الإنتاجية (اختياري)'
+        }),
+    )
+
+    filter_horizontal = ['branches']
+
+    def save_model(self, request, obj, form, change):
+        """حفظ النموذج مع تسجيل المستخدم المنشئ"""
+        if not change:  # إذا كان إنشاء جديد
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+    def get_branches_display(self, obj):
+        """عرض الفروع المرتبطة"""
+        return obj.get_branches_display()
+    get_branches_display.short_description = 'الفروع المرتبطة'
+
+    def get_supported_order_types_display(self, obj):
+        """عرض أنواع الطلبات المدعومة"""
+        return obj.get_supported_order_types_display()
+    get_supported_order_types_display.short_description = 'أنواع الطلبات المدعومة'
+
+
+class ManufacturingDisplaySettingsForm(forms.ModelForm):
+    """نموذج مخصص لإعدادات عرض التصنيع"""
+
+    class Meta:
+        model = ManufacturingDisplaySettings
+        fields = '__all__'
+        widgets = {
+            'allowed_statuses': forms.CheckboxSelectMultiple(
+                choices=ManufacturingOrder.STATUS_CHOICES
+            ),
+            'allowed_order_types': forms.CheckboxSelectMultiple(
+                choices=ManufacturingOrder.ORDER_TYPE_CHOICES
+            ),
+            'target_users': forms.CheckboxSelectMultiple(),
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # تخصيص عرض الحقول
+        self.fields['name'].widget.attrs.update({'class': 'form-control'})
+        self.fields['description'].widget.attrs.update({'class': 'form-control'})
+        self.fields['priority'].widget.attrs.update({'class': 'form-control'})
+
+        # إضافة تلميحات مفيدة
+        self.fields['allowed_statuses'].help_text = 'اختر الحالات التي تريد عرضها. إذا لم تختر أي حالة، ستُعرض جميع الحالات.'
+        self.fields['allowed_order_types'].help_text = 'اختر أنواع الطلبات التي تريد عرضها. إذا لم تختر أي نوع، ستُعرض جميع الأنواع.'
+        self.fields['target_users'].help_text = 'اختر المستخدمين الذين ينطبق عليهم هذا الإعداد. يمكنك أيضاً اختيار "تطبيق على جميع المستخدمين".'
+
+        # تحديد المستخدمين النشطين فقط
+        from accounts.models import User
+        self.fields['target_users'].queryset = User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        apply_to_all = cleaned_data.get('apply_to_all_users')
+        target_users = cleaned_data.get('target_users')
+
+        # التحقق من أن المستخدم اختار إما "جميع المستخدمين" أو مستخدمين محددين
+        if not apply_to_all and not target_users:
+            raise forms.ValidationError(
+                'يجب اختيار إما "تطبيق على جميع المستخدمين" أو تحديد مستخدمين محددين.'
+            )
+
+        return cleaned_data
+
+
+@admin.register(ManufacturingDisplaySettings)
+class ManufacturingDisplaySettingsAdmin(admin.ModelAdmin):
+    """إدارة إعدادات عرض طلبات التصنيع"""
+
+    form = ManufacturingDisplaySettingsForm
+    list_per_page = 20
+
+    list_display = [
+        'name',
+        'is_active',
+        'priority',
+        'get_allowed_statuses_display',
+        'get_allowed_order_types_display',
+        'get_target_users_display',
+        'created_by',
+        'created_at'
+    ]
+
+    list_filter = [
+        'is_active',
+        'apply_to_all_users',
+        'priority',
+        'created_at',
+        'created_by'
+    ]
+
+    search_fields = [
+        'name',
+        'description',
+        'target_users__username',
+        'target_users__first_name',
+        'target_users__last_name'
+    ]
+
+    ordering = ['-priority', '-created_at']
+
+    fieldsets = (
+        ('معلومات أساسية', {
+            'fields': ('name', 'description', 'is_active', 'priority')
+        }),
+        ('إعدادات الفلترة', {
+            'fields': ('allowed_statuses', 'allowed_order_types'),
+            'description': 'حدد الحالات وأنواع الطلبات التي تريد عرضها. إذا تركت الحقل فارغاً، ستُعرض جميع الخيارات.'
+        }),
+        ('المستخدمون المستهدفون', {
+            'fields': ('apply_to_all_users', 'target_users'),
+            'description': 'حدد المستخدمين الذين ينطبق عليهم هذا الإعداد.'
+        }),
+    )
+
+    filter_horizontal = ['target_users']
+
+    def has_module_permission(self, request):
+        """التحقق من صلاحية الوصول للوحدة - للمديرين فقط"""
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        """التحقق من صلاحية العرض - للمديرين فقط"""
+        return request.user.is_superuser
+
+    def has_add_permission(self, request):
+        """التحقق من صلاحية الإضافة - للمديرين فقط"""
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        """التحقق من صلاحية التعديل - للمديرين فقط"""
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        """التحقق من صلاحية الحذف - للمديرين فقط"""
+        return request.user.is_superuser
+
+    def save_model(self, request, obj, form, change):
+        """حفظ النموذج مع تسجيل المستخدم المنشئ"""
+        if not change:  # إذا كان إنشاء جديد
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+    def get_allowed_statuses_display(self, obj):
+        """عرض الحالات المسموحة"""
+        return obj.get_allowed_statuses_display()
+    get_allowed_statuses_display.short_description = 'الحالات المسموحة'
+
+    def get_allowed_order_types_display(self, obj):
+        """عرض أنواع الطلبات المسموحة"""
+        return obj.get_allowed_order_types_display()
+    get_allowed_order_types_display.short_description = 'أنواع الطلبات المسموحة'
+
+    def get_target_users_display(self, obj):
+        """عرض المستخدمين المستهدفين"""
+        return obj.get_target_users_display()
+    get_target_users_display.short_description = 'المستخدمون المستهدفون'
+
+    def orders_count(self, obj):
+        """عرض عدد الطلبات الإجمالي"""
+        return obj.orders_count
+    orders_count.short_description = 'إجمالي الطلبات'
+
+    def active_orders_count(self, obj):
+        """عرض عدد الطلبات النشطة"""
+        return obj.active_orders_count
+    active_orders_count.short_description = 'الطلبات النشطة'
