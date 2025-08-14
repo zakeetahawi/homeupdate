@@ -209,7 +209,11 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
                 <i class="fas fa-star me-2" style="color: #ffd700;"></i>
-                طلبات VIP ({{ total_vip_orders }} طلب)
+                طلبات VIP
+                <span class="badge bg-warning text-dark ms-2">
+                    <i class="fas fa-list-ol me-1"></i>
+                    {{ vip_orders|length }} نتيجة
+                </span>
             </h5>
             <div>
                 <a href="{% url 'manufacturing:order_list' %}" class="btn btn-outline-secondary btn-sm">
@@ -291,15 +295,19 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'manufacturing:order_detail_by_code' order.manufacturing_code %}" 
+                                    <a href="{% url 'manufacturing:order_detail_by_code' order.manufacturing_code %}"
                                        class="btn btn-outline-primary btn-sm" title="عرض التفاصيل">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     {% if perms.manufacturing.change_manufacturingorder %}
-                                    <a href="{% url 'manufacturing:order_update' order.pk %}" 
-                                       class="btn btn-outline-warning btn-sm" title="تعديل">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
+                                        <button type="button" class="btn btn-outline-warning btn-sm change-production-line-btn"
+                                                title="تبديل خط الإنتاج"
+                                                data-order-id="{{ order.id }}"
+                                                data-order-code="{{ order.manufacturing_code }}"
+                                                data-current-line="{{ order.production_line.name|default:'غير محدد' }}"
+                                                data-current-line-id="{{ order.production_line.id|default:'' }}">
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </button>
                                     {% endif %}
                                 </div>
                             </td>
@@ -353,4 +361,271 @@
         </div>
     </div>
 </div>
+
+<!-- نافذة تبديل خط الإنتاج -->
+<div class="modal fade" id="changeProductionLineModal" tabindex="-1" aria-labelledby="changeProductionLineModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border-radius: 15px 15px 0 0;">
+                <h5 class="modal-title" id="changeProductionLineModalLabel">
+                    <i class="fas fa-exchange-alt me-2"></i>تبديل خط الإنتاج
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body" style="padding: 2rem;">
+                <div class="text-center mb-4">
+                    <div class="order-info-card" style="background: #f8f9fa; border-radius: 10px; padding: 1.5rem; border-left: 4px solid #007bff;">
+                        <h6 class="mb-2" style="color: #007bff; font-weight: bold;">
+                            <i class="fas fa-industry me-2"></i>طلب التصنيع
+                        </h6>
+                        <div id="orderCodeDisplay" class="h5 mb-2" style="color: #333;"></div>
+                        <div class="current-line-info">
+                            <small class="text-muted">خط الإنتاج الحالي:</small>
+                            <div id="currentLineDisplay" class="badge bg-info text-white mt-1" style="font-size: 0.9rem; padding: 0.5rem 1rem;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="changeProductionLineForm">
+                    <div class="mb-4">
+                        <label for="newProductionLine" class="form-label" style="font-weight: 600; color: #333;">
+                            <i class="fas fa-cogs me-2"></i>اختر خط الإنتاج الجديد
+                        </label>
+                        <select class="form-select" id="newProductionLine" name="production_line_id" required
+                                style="border-radius: 10px; border: 2px solid #e9ecef; padding: 0.75rem; font-size: 1rem;">
+                            <option value="">-- اختر خط الإنتاج --</option>
+                        </select>
+                        <div class="form-text mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            سيتم تبديل خط الإنتاج فوراً بعد التأكيد
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="changeReason" class="form-label" style="font-weight: 600; color: #333;">
+                            <i class="fas fa-comment me-2"></i>سبب التبديل (اختياري)
+                        </label>
+                        <textarea class="form-control" id="changeReason" name="reason" rows="3"
+                                  placeholder="اكتب سبب تبديل خط الإنتاج..."
+                                  style="border-radius: 10px; border: 2px solid #e9ecef; resize: none;"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e9ecef; padding: 1.5rem;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 0.5rem 1.5rem;">
+                    <i class="fas fa-times me-2"></i>إلغاء
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmChangeBtn" style="border-radius: 8px; padding: 0.5rem 1.5rem; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border: none;">
+                    <i class="fas fa-check me-2"></i>تأكيد التبديل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// متغيرات عامة لتبديل خط الإنتاج
+let currentOrderId = null;
+let productionLines = [];
+
+// تحميل خطوط الإنتاج عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    loadProductionLines();
+
+    // إضافة مستمع للأزرار
+    document.querySelectorAll('.change-production-line-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            openChangeProductionLineModal(this);
+        });
+    });
+
+    // مستمع زر التأكيد
+    const confirmBtn = document.getElementById('confirmChangeBtn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            changeProductionLine();
+        });
+    }
+});
+
+// تحميل خطوط الإنتاج من الخادم
+async function loadProductionLines() {
+    try {
+        console.log('بدء تحميل خطوط الإنتاج...');
+        const response = await fetch('/manufacturing/api/production-lines/');
+        console.log('استجابة API:', response.status, response.statusText);
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('البيانات المستلمة:', data);
+
+            if (Array.isArray(data)) {
+                productionLines = data;
+                console.log('تم تحميل خطوط الإنتاج بنجاح:', productionLines.length, 'خط');
+            } else if (data.error) {
+                console.error('خطأ من الخادم:', data.error);
+                productionLines = [];
+            } else {
+                console.error('تنسيق البيانات غير متوقع:', data);
+                productionLines = [];
+            }
+        } else {
+            console.error('فشل في تحميل خطوط الإنتاج:', response.status, response.statusText);
+            // استخدام بيانات افتراضية كبديل
+            productionLines = [
+                {id: 1, name: 'هاني رمسيس', description: ''},
+                {id: 2, name: 'ايهاب يوسف', description: ''},
+                {id: 3, name: 'ريمون فوزي', description: ''},
+                {id: 4, name: 'هاني رمسيس تسليم فروع', description: ''}
+            ];
+            console.log('استخدام بيانات افتراضية:', productionLines);
+        }
+    } catch (error) {
+        console.error('خطأ في تحميل خطوط الإنتاج:', error);
+        // استخدام بيانات افتراضية كبديل
+        productionLines = [
+            {id: 1, name: 'هاني رمسيس', description: ''},
+            {id: 2, name: 'ايهاب يوسف', description: ''},
+            {id: 3, name: 'ريمون فوزي', description: ''},
+            {id: 4, name: 'هاني رمسيس تسليم فروع', description: ''}
+        ];
+        console.log('استخدام بيانات افتراضية بسبب خطأ:', productionLines);
+    }
+}
+
+// فتح نافذة تبديل خط الإنتاج
+async function openChangeProductionLineModal(button) {
+    currentOrderId = button.dataset.orderId;
+    const orderCode = button.dataset.orderCode;
+    const currentLine = button.dataset.currentLine;
+    const currentLineId = button.dataset.currentLineId;
+
+    console.log('فتح نافذة تبديل خط الإنتاج:', {currentOrderId, orderCode, currentLine, currentLineId});
+
+    // إذا لم تكن خطوط الإنتاج محملة، نحملها الآن
+    if (!productionLines || productionLines.length === 0) {
+        console.log('إعادة تحميل خطوط الإنتاج...');
+        await loadProductionLines();
+    }
+
+    console.log('خطوط الإنتاج المتاحة:', productionLines);
+
+    // تحديث معلومات الطلب
+    document.getElementById('orderCodeDisplay').textContent = orderCode;
+    document.getElementById('currentLineDisplay').textContent = currentLine;
+
+    // تحديث قائمة خطوط الإنتاج
+    const select = document.getElementById('newProductionLine');
+    select.innerHTML = '<option value="">-- اختر خط الإنتاج --</option>';
+
+    if (productionLines && productionLines.length > 0) {
+        console.log('إضافة خطوط الإنتاج للقائمة... العدد:', productionLines.length);
+        productionLines.forEach((line, index) => {
+            console.log(`معالجة خط الإنتاج ${index + 1}:`, line.name, 'ID:', line.id, 'الحالي:', currentLineId);
+            const option = document.createElement('option');
+            option.value = line.id;
+
+            // إذا كان هذا هو خط الإنتاج الحالي، نضع علامة عليه
+            if (line.id == currentLineId) {
+                option.textContent = line.name + ' (الحالي)';
+                option.style.fontWeight = 'bold';
+                option.style.color = '#007bff';
+            } else {
+                option.textContent = line.name;
+            }
+
+            if (line.description) {
+                option.title = line.description;
+            }
+            select.appendChild(option);
+            console.log('تم إضافة خط الإنتاج:', line.name);
+        });
+    } else {
+        console.warn('لا توجد خطوط إنتاج متاحة، إضافة رسالة...');
+        // إضافة خيار يوضح عدم وجود خطوط إنتاج
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'لا توجد خطوط إنتاج متاحة - يرجى إضافة خطوط إنتاج من لوحة الإدارة';
+        option.disabled = true;
+        select.appendChild(option);
+    }
+
+    console.log('عدد الخيارات النهائي في القائمة:', select.options.length);
+
+    // إعادة تعيين النموذج
+    document.getElementById('changeProductionLineForm').reset();
+
+    // فتح النافذة
+    const modal = new bootstrap.Modal(document.getElementById('changeProductionLineModal'));
+    modal.show();
+}
+
+// تبديل خط الإنتاج
+async function changeProductionLine() {
+    const newLineId = document.getElementById('newProductionLine').value;
+    const reason = document.getElementById('changeReason').value;
+
+    if (!newLineId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'تحذير',
+            text: 'يرجى اختيار خط الإنتاج الجديد',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+
+    // إظهار مؤشر التحميل
+    const confirmBtn = document.getElementById('confirmChangeBtn');
+    const originalText = confirmBtn.innerHTML;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التبديل...';
+    confirmBtn.disabled = true;
+
+    try {
+        const response = await fetch(`/manufacturing/api/change-production-line/${currentOrderId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                production_line_id: newLineId,
+                reason: reason
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // إغلاق النافذة
+            bootstrap.Modal.getInstance(document.getElementById('changeProductionLineModal')).hide();
+
+            // إظهار رسالة نجاح
+            Swal.fire({
+                icon: 'success',
+                title: 'تم بنجاح!',
+                text: result.message,
+                confirmButtonText: 'حسناً'
+            }).then(() => {
+                // إعادة تحميل الصفحة لإظهار التغييرات
+                location.reload();
+            });
+        } else {
+            throw new Error(result.message || 'حدث خطأ غير متوقع');
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: error.message || 'حدث خطأ أثناء تبديل خط الإنتاج',
+            confirmButtonText: 'حسناً'
+        });
+    } finally {
+        // إعادة تعيين الزر
+        confirmBtn.innerHTML = originalText;
+        confirmBtn.disabled = false;
+    }
+}
+</script>
+
 {% endblock %}

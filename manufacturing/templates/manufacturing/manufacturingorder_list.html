@@ -916,6 +916,50 @@ body:not(.modal-open) .modal-backdrop {
         </div>
     </div>
 
+    <!-- رسالة الفلتر التلقائي -->
+    {% if display_settings_applied and active_display_settings %}
+    <div class="alert alert-info alert-dismissible fade show" style="border-radius: 12px; border-left: 4px solid #17a2b8; background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); margin-bottom: 1rem;">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="fas fa-filter text-info" style="font-size: 1.5rem;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-1" style="color: #0c5460; font-weight: 600;">
+                    <i class="fas fa-magic me-2"></i>تم تطبيق فلتر عرض تلقائي
+                </h6>
+                <p class="mb-2" style="color: #0c5460; font-size: 0.95rem;">
+                    يتم عرض النتائج حسب إعداد العرض:
+                    <strong>"{{ active_display_settings.name }}"</strong>
+                </p>
+                <div class="filter-details" style="font-size: 0.85rem; color: #0c5460;">
+                    {% if active_display_settings.allowed_statuses %}
+                    <span class="me-3">
+                        <i class="fas fa-check-circle me-1"></i>
+                        <strong>الحالات:</strong> {{ active_display_settings.get_allowed_statuses_display }}
+                    </span>
+                    {% endif %}
+                    {% if active_display_settings.allowed_order_types %}
+                    <span class="me-3">
+                        <i class="fas fa-tags me-1"></i>
+                        <strong>الأنواع:</strong> {{ active_display_settings.get_allowed_order_types_display }}
+                    </span>
+                    {% endif %}
+                </div>
+                <small class="text-muted d-block mt-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    لعرض جميع النتائج، يمكنك استخدام الفلاتر اليدوية أعلاه أو تغيير إعدادات العرض من لوحة الإدارة.
+                </small>
+            </div>
+            <div class="ms-3">
+                <span class="badge bg-info text-white" style="font-size: 0.9rem; padding: 0.5rem 0.8rem;">
+                    <i class="fas fa-eye me-1"></i>{{ page_obj.paginator.count }} نتيجة
+                </span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
+    </div>
+    {% endif %}
+
     <!-- الجدول الرئيسي -->
     <div class="card" style="border-color: var(--neutral);">
         <div class="card-header" style="background-color: var(--primary); color: white;">
@@ -925,11 +969,19 @@ body:not(.modal-open) .modal-backdrop {
                     <small class="ms-2 opacity-75">
                         <i class="fas fa-calendar-alt"></i> السنة: {{ default_year }}
                     </small>
+                    {% if display_settings_applied and active_display_settings %}
+                    <span class="badge bg-warning text-dark ms-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-filter me-1"></i>مفلتر
+                    </span>
+                    {% endif %}
                 </h5>
                 <div class="text-end">
                     <span class="badge bg-light text-dark fs-6">
                         <i class="fas fa-list-ol me-1"></i>
                         عدد النتائج: {{ page_obj.paginator.count }}
+                        {% if display_settings_applied and active_display_settings %}
+                        <small class="text-muted ms-1">(مفلتر)</small>
+                        {% endif %}
                     </span>
                     {% if page_obj.paginator.num_pages > 1 %}
                     <small class="d-block mt-1 opacity-75">
