@@ -143,7 +143,6 @@
     padding: 12px 20px;
     border-bottom: 1px solid #f1f3f4;
     transition: background 0.3s ease;
-    cursor: pointer;
 }
 
 .user-item:hover {
@@ -601,7 +600,7 @@ function refreshOnlineUsersList() {
                     // للمديرين - عرض تفاصيل المستخدمين
                     if (data.users.length > 0) {
                         usersList.innerHTML = data.users.map(user => `
-                            <div class="user-item" onclick="viewUserActivity(${user.id})">
+                            <div class="user-item">
                                 <div class="user-info">
                                     ${user.avatar_url ?
                                         `<img src="${user.avatar_url}" alt="${user.username}" class="user-avatar">` :
@@ -714,10 +713,7 @@ function refreshOnlineUsersList() {
         });
 }
 
-// عرض نشاط المستخدم
-function viewUserActivity(userId) {
-    window.open(`/accounts/activity/user/${userId}/`, '_blank');
-}
+
 
 // بدء التحديث التلقائي
 function startAutoRefresh() {
