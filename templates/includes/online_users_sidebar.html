@@ -234,6 +234,16 @@
     color: #6c757d;
 }
 
+.user-ip {
+    font-size: 0.7rem;
+    margin-top: 4px;
+    padding: 2px 0;
+}
+
+.user-ip small {
+    color: #6c757d !important;
+}
+
 /* الزر العائم للمستخدمين النشطين */
 .online-users-trigger {
     position: fixed;
@@ -301,6 +311,162 @@
     color: #6c757d;
 }
 
+/* رسالة للمستخدمين العاديين */
+.admin-only-message {
+    padding: 15px;
+}
+
+.admin-only-message .alert {
+    border: none;
+    background: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+}
+
+.admin-only-message h5 {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #0d6efd;
+}
+
+.admin-only-message .btn {
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.admin-only-message .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+}
+
+/* عرض المستخدمين للمستخدمين العاديين */
+.regular-users-view {
+    padding: 15px;
+}
+
+.users-header h6 {
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.users-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.user-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+    position: relative;
+    overflow: hidden;
+}
+
+.user-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+.user-card-avatar {
+    position: relative;
+    margin-left: 12px;
+    flex-shrink: 0;
+}
+
+.avatar-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.online-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background: #28a745;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    animation: pulse 2s infinite;
+}
+
+.user-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-card-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #2c3e50;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-card-branch {
+    font-size: 0.8rem;
+    color: #667eea;
+    margin-bottom: 3px;
+    font-weight: 500;
+}
+
+.user-card-role {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 3px;
+}
+
+.user-card-duration {
+    font-size: 0.75rem;
+    color: #28a745;
+    font-weight: 500;
+}
+
+.users-footer {
+    text-align: center;
+    padding-top: 10px;
+    border-top: 1px solid #e9ecef;
+}
+
+.users-footer small {
+    color: #6c757d;
+    font-style: italic;
+}
+
 /* تأثير النبض */
 @keyframes pulse {
     0% { opacity: 1; }
@@ -321,6 +487,27 @@
         width: 45px;
         height: 45px;
         font-size: 1rem;
+    }
+
+    .user-card {
+        padding: 10px;
+    }
+
+    .avatar-img, .avatar-placeholder {
+        width: 35px;
+        height: 35px;
+    }
+
+    .avatar-placeholder {
+        font-size: 1rem;
+    }
+
+    .user-card-name {
+        font-size: 0.85rem;
+    }
+
+    .user-card-branch, .user-card-role, .user-card-duration {
+        font-size: 0.7rem;
     }
 }
 
@@ -409,38 +596,98 @@ function refreshOnlineUsersList() {
                 // تحديث وقت آخر تحديث
                 lastUpdateTime.textContent = `آخر تحديث: ${data.timestamp}`;
                 
-                // تحديث قائمة المستخدمين
-                if (data.users.length > 0) {
-                    usersList.innerHTML = data.users.map(user => `
-                        <div class="user-item" onclick="viewUserActivity(${user.id})">
-                            <div class="user-info">
-                                ${user.avatar_url ? 
-                                    `<img src="${user.avatar_url}" alt="${user.username}" class="user-avatar">` :
-                                    `<div class="user-avatar placeholder">${user.username.charAt(0).toUpperCase()}</div>`
-                                }
-                                <div class="user-details">
-                                    <div class="user-name">${user.full_name}</div>
-                                    <div class="user-role">${user.role}</div>
-                                    <div class="user-status">
-                                        <i class="fas fa-circle"></i>
-                                        متصل منذ ${user.online_duration}
-                                    </div>
-                                    ${user.current_page ? `<div class="user-page"><i class="fas fa-eye me-1"></i>${user.current_page}</div>` : ''}
-                                    <div class="user-stats">
-                                        <span class="stat-item">${user.pages_visited} صفحة</span>
-                                        <span class="stat-item">${user.actions_performed} عملية</span>
+                // تحديث قائمة المستخدمين حسب صلاحيات المستخدم
+                if (data.user_is_admin) {
+                    // للمديرين - عرض تفاصيل المستخدمين
+                    if (data.users.length > 0) {
+                        usersList.innerHTML = data.users.map(user => `
+                            <div class="user-item" onclick="viewUserActivity(${user.id})">
+                                <div class="user-info">
+                                    ${user.avatar_url ?
+                                        `<img src="${user.avatar_url}" alt="${user.username}" class="user-avatar">` :
+                                        `<div class="user-avatar placeholder">${user.username.charAt(0).toUpperCase()}</div>`
+                                    }
+                                    <div class="user-details">
+                                        <div class="user-name">${user.full_name}</div>
+                                        <div class="user-role">${user.role}</div>
+                                        <div class="user-status">
+                                            <i class="fas fa-circle text-success"></i>
+                                            متصل منذ ${user.online_duration}
+                                        </div>
+                                        ${user.current_page ? `<div class="user-page"><i class="fas fa-eye me-1"></i>${user.current_page}</div>` : ''}
+                                        <div class="user-stats">
+                                            <span class="stat-item"><i class="fas fa-eye me-1"></i>${user.pages_visited} صفحة</span>
+                                            <span class="stat-item"><i class="fas fa-mouse-pointer me-1"></i>${user.actions_performed} عملية</span>
+                                        </div>
+                                        <div class="user-ip">
+                                            <small class="text-muted">
+                                                <i class="fas fa-globe me-1"></i>${user.ip_address}
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    `).join('');
+                        `).join('');
+                    } else {
+                        usersList.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-users"></i>
+                                <p>لا يوجد مستخدمون متصلون حالياً</p>
+                            </div>
+                        `;
+                    }
                 } else {
-                    usersList.innerHTML = `
-                        <div class="empty-state">
-                            <i class="fas fa-users"></i>
-                            <p>لا يوجد مستخدمون متصلون حالياً</p>
-                        </div>
-                    `;
+                    // للمستخدمين العاديين - عرض معلومات أساسية
+                    if (data.users.length > 0) {
+                        usersList.innerHTML = `
+                            <div class="regular-users-view">
+                                <div class="users-header">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-users me-2"></i>
+                                        ${data.total_online} مستخدم نشط
+                                    </h6>
+                                </div>
+                                <div class="users-grid">
+                                    ${data.users.map(user => `
+                                        <div class="user-card">
+                                            <div class="user-card-avatar">
+                                                ${user.avatar_url ?
+                                                    `<img src="${user.avatar_url}" alt="${user.username}" class="avatar-img">` :
+                                                    `<div class="avatar-placeholder">${user.full_name.charAt(0).toUpperCase()}</div>`
+                                                }
+                                                <div class="online-indicator"></div>
+                                            </div>
+                                            <div class="user-card-info">
+                                                <div class="user-card-name">${user.full_name}</div>
+                                                <div class="user-card-branch">
+                                                    <i class="fas fa-building me-1"></i>
+                                                    ${user.branch}
+                                                </div>
+                                                <div class="user-card-role">${user.role}</div>
+                                                <div class="user-card-duration">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    ${user.online_duration}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="users-footer">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        معلومات إضافية متاحة للمديرين
+                                    </small>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        usersList.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-users"></i>
+                                <p>لا يوجد مستخدمون متصلون حالياً</p>
+                            </div>
+                        `;
+                    }
                 }
             } else {
                 usersList.innerHTML = `

@@ -17,7 +17,6 @@ from accounts.models import User
 from user_activity.models import OnlineUser, UserActivityLog, UserSession, UserLoginHistory
 
 
-@login_required
 @require_http_methods(["GET"])
 def online_users_api(request):
     """API لجلب المستخدمين النشطين حالياً"""
@@ -27,28 +26,68 @@ def online_users_api(request):
         
         # جلب المستخدمين النشطين
         online_users = OnlineUser.get_online_users().select_related('user')
-        
+        total_online = online_users.count()
+
+        # التحقق من صلاحيات المستخدم
+        user_is_admin = False
+        if request.user.is_authenticated:
+            user_is_admin = (
+                request.user.is_superuser or
+                request.user.is_staff or
+                request.user.groups.filter(name__in=['مدير النظام', 'Admin', 'Administrators']).exists()
+            )
+
         users_data = []
+
+        # عرض المستخدمين حسب الصلاحيات
         for online_user in online_users:
+            # تحديد دور المستخدم
+            user_role = 'مستخدم عادي'
+            if online_user.user.is_superuser:
+                user_role = '👑 مدير عام'
+            elif online_user.user.is_staff:
+                user_role = '⚙️ موظف'
+            elif hasattr(online_user.user, 'get_user_role_display'):
+                user_role = online_user.user.get_user_role_display()
+            elif online_user.user.groups.exists():
+                user_role = f"👥 {online_user.user.groups.first().name}"
+
+            # تحديد الفرع
+            user_branch = 'غير محدد'
+            if hasattr(online_user.user, 'branch') and online_user.user.branch:
+                user_branch = online_user.user.branch.name
+            elif hasattr(online_user.user, 'salesperson') and online_user.user.salesperson and online_user.user.salesperson.branch:
+                user_branch = online_user.user.salesperson.branch.name
+
+            # معلومات أساسية للجميع
             user_data = {
                 'id': online_user.user.id,
                 'username': online_user.user.username,
                 'full_name': online_user.user.get_full_name() or online_user.user.username,
-                'role': online_user.user.get_user_role_display(),
-                'current_page': online_user.current_page_title or 'غير محدد',
+                'role': user_role,
+                'branch': user_branch,
                 'online_duration': online_user.online_duration_formatted,
                 'last_seen': online_user.last_seen.strftime('%H:%M'),
-                'pages_visited': online_user.pages_visited,
-                'actions_performed': online_user.actions_performed,
-                'device_info': online_user.device_info,
-                'avatar_url': online_user.user.image.url if online_user.user.image else None,
+                'avatar_url': getattr(online_user.user, 'image', None).url if hasattr(online_user.user, 'image') and online_user.user.image else None,
             }
+
+            # معلومات إضافية للمديرين فقط
+            if user_is_admin:
+                user_data.update({
+                    'current_page': online_user.current_page_title or 'غير محدد',
+                    'pages_visited': online_user.pages_visited,
+                    'actions_performed': online_user.actions_performed,
+                    'device_info': online_user.device_info,
+                    'ip_address': online_user.ip_address,
+                })
+
             users_data.append(user_data)
         
         return JsonResponse({
             'success': True,
             'users': users_data,
-            'total_online': len(users_data),
+            'total_online': total_online,
+            'user_is_admin': user_is_admin,
             'timestamp': timezone.now().strftime('%H:%M:%S')
         })
         
