@@ -595,6 +595,13 @@ class ManufacturingDisplaySettingsForm(forms.ModelForm):
         from accounts.models import User
         self.fields['target_users'].queryset = User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
 
+        # التأكد من أن القوائم ليست None
+        if self.instance and self.instance.pk:
+            if self.instance.allowed_statuses is None:
+                self.instance.allowed_statuses = []
+            if self.instance.allowed_order_types is None:
+                self.instance.allowed_order_types = []
+
     def clean(self):
         cleaned_data = super().clean()
         apply_to_all = cleaned_data.get('apply_to_all_users')
@@ -605,6 +612,13 @@ class ManufacturingDisplaySettingsForm(forms.ModelForm):
             raise forms.ValidationError(
                 'يجب اختيار إما "تطبيق على جميع المستخدمين" أو تحديد مستخدمين محددين.'
             )
+
+        # التأكد من أن القوائم ليست None
+        if cleaned_data.get('allowed_statuses') is None:
+            cleaned_data['allowed_statuses'] = []
+
+        if cleaned_data.get('allowed_order_types') is None:
+            cleaned_data['allowed_order_types'] = []
 
         return cleaned_data
 
