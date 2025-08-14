@@ -104,7 +104,7 @@ gunicorn crm.wsgi:application \
     --access-logfile - \
     --error-logfile - \
     --log-level info \
-    --access-logformat '[%(t)s] "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' &
+    --access-logformat '[%(t)s] "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' 2>&1 | ./لينكس/filter-logs.sh &
 GUNICORN_PID=$!
 print_status "خادم الإنتاج يعمل (PID: $GUNICORN_PID)"
 
