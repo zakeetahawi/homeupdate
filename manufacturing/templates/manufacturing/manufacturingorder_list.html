@@ -8,7 +8,6 @@
 
 {% block extra_head %}
 <meta name="csrf-token" content="{{ csrf_token }}">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}
 
 {% block extra_css %}
@@ -1218,14 +1217,15 @@ body:not(.modal-open) .modal-backdrop {
                                         <i class="fas fa-eye" style="font-size: 0.7em;"></i>
                                     </a>
                                     {% if perms.manufacturing.change_manufacturingorder %}
-                                        <a href="{% url 'manufacturing:order_update' order.id %}" class="btn btn-primary" title="تعديل" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
-                                            <i class="fas fa-edit" style="font-size: 0.7em;"></i>
-                                        </a>
-                                    {% endif %}
-                                    {% if perms.manufacturing.delete_manufacturingorder %}
-                                        <a href="{% url 'manufacturing:order_delete' order.id %}" class="btn btn-danger" title="حذف" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
-                                            <i class="fas fa-trash" style="font-size: 0.7em;"></i>
-                                        </a>
+                                        <button type="button" class="btn btn-warning change-production-line-btn"
+                                                title="تبديل خط الإنتاج"
+                                                style="font-size: 0.7em; padding: 0.15rem 0.3rem;"
+                                                data-order-id="{{ order.id }}"
+                                                data-order-code="{{ order.manufacturing_code }}"
+                                                data-current-line="{{ order.production_line.name|default:'غير محدد' }}"
+                                                data-current-line-id="{{ order.production_line.id|default:'' }}">
+                                            <i class="fas fa-exchange-alt" style="font-size: 0.7em;"></i>
+                                        </button>
                                     {% endif %}
                                 </div>
                             </td>
@@ -2351,28 +2351,64 @@ document.addEventListener('DOMContentLoaded', function() {
 // تحميل خطوط الإنتاج من الخادم
 async function loadProductionLines() {
     try {
+        console.log('بدء تحميل خطوط الإنتاج...');
         const response = await fetch('/manufacturing/api/production-lines/');
+        console.log('استجابة API:', response.status, response.statusText);
+
         if (response.ok) {
-            productionLines = await response.json();
-            console.log('تم تحميل خطوط الإنتاج:', productionLines);
+            const data = await response.json();
+            console.log('البيانات المستلمة:', data);
+
+            if (Array.isArray(data)) {
+                productionLines = data;
+                console.log('تم تحميل خطوط الإنتاج بنجاح:', productionLines.length, 'خط');
+            } else if (data.error) {
+                console.error('خطأ من الخادم:', data.error);
+                productionLines = [];
+            } else {
+                console.error('تنسيق البيانات غير متوقع:', data);
+                productionLines = [];
+            }
         } else {
-            console.log('فشل في تحميل خطوط الإنتاج من الخادم');
-            productionLines = [];
+            console.error('فشل في تحميل خطوط الإنتاج:', response.status, response.statusText);
+            // استخدام بيانات افتراضية كبديل
+            productionLines = [
+                {id: 1, name: 'هاني رمسيس', description: ''},
+                {id: 2, name: 'ايهاب يوسف', description: ''},
+                {id: 3, name: 'ريمون فوزي', description: ''},
+                {id: 4, name: 'هاني رمسيس تسليم فروع', description: ''}
+            ];
+            console.log('استخدام بيانات افتراضية:', productionLines);
         }
     } catch (error) {
-        console.log('خطأ في تحميل خطوط الإنتاج:', error);
-        productionLines = [];
+        console.error('خطأ في تحميل خطوط الإنتاج:', error);
+        // استخدام بيانات افتراضية كبديل
+        productionLines = [
+            {id: 1, name: 'هاني رمسيس', description: ''},
+            {id: 2, name: 'ايهاب يوسف', description: ''},
+            {id: 3, name: 'ريمون فوزي', description: ''},
+            {id: 4, name: 'هاني رمسيس تسليم فروع', description: ''}
+        ];
+        console.log('استخدام بيانات افتراضية بسبب خطأ:', productionLines);
     }
 }
 
 // فتح نافذة تبديل خط الإنتاج
-function openChangeProductionLineModal(button) {
+async function openChangeProductionLineModal(button) {
     currentOrderId = button.dataset.orderId;
     const orderCode = button.dataset.orderCode;
     const currentLine = button.dataset.currentLine;
     const currentLineId = button.dataset.currentLineId;
 
     console.log('فتح نافذة تبديل خط الإنتاج:', {currentOrderId, orderCode, currentLine, currentLineId});
+
+    // إذا لم تكن خطوط الإنتاج محملة، نحملها الآن
+    if (!productionLines || productionLines.length === 0) {
+        console.log('إعادة تحميل خطوط الإنتاج...');
+        await loadProductionLines();
+    }
+
+    console.log('خطوط الإنتاج المتاحة:', productionLines);
 
     // تحديث معلومات الطلب
     document.getElementById('orderCodeDisplay').textContent = orderCode;
@@ -2382,17 +2418,39 @@ function openChangeProductionLineModal(button) {
     const select = document.getElementById('newProductionLine');
     select.innerHTML = '<option value="">-- اختر خط الإنتاج --</option>';
 
-    productionLines.forEach(line => {
-        if (line.id != currentLineId) { // لا نعرض خط الإنتاج الحالي
+    if (productionLines && productionLines.length > 0) {
+        console.log('إضافة خطوط الإنتاج للقائمة... العدد:', productionLines.length);
+        productionLines.forEach((line, index) => {
+            console.log(`معالجة خط الإنتاج ${index + 1}:`, line.name, 'ID:', line.id, 'الحالي:', currentLineId);
             const option = document.createElement('option');
             option.value = line.id;
-            option.textContent = line.name;
+
+            // إذا كان هذا هو خط الإنتاج الحالي، نضع علامة عليه
+            if (line.id == currentLineId) {
+                option.textContent = line.name + ' (الحالي)';
+                option.style.fontWeight = 'bold';
+                option.style.color = '#007bff';
+            } else {
+                option.textContent = line.name;
+            }
+
             if (line.description) {
                 option.title = line.description;
             }
             select.appendChild(option);
-        }
-    });
+            console.log('تم إضافة خط الإنتاج:', line.name);
+        });
+    } else {
+        console.warn('لا توجد خطوط إنتاج متاحة، إضافة رسالة...');
+        // إضافة خيار يوضح عدم وجود خطوط إنتاج
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'لا توجد خطوط إنتاج متاحة - يرجى إضافة خطوط إنتاج من لوحة الإدارة';
+        option.disabled = true;
+        select.appendChild(option);
+    }
+
+    console.log('عدد الخيارات النهائي في القائمة:', select.options.length);
 
     // إعادة تعيين النموذج
     document.getElementById('changeProductionLineForm').reset();

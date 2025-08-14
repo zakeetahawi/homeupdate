@@ -514,24 +514,6 @@ class ManufacturingOrderCreateView(LoginRequiredMixin, PermissionRequiredMixin, 
         return super().form_valid(form)
 
 
-class ManufacturingOrderUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
-    model = ManufacturingOrder
-    template_name = 'manufacturing/manufacturingorder_form.html'
-    fields = ['order_type', 'contract_number', 'invoice_number',
-              'order_date', 'expected_delivery_date', 'notes',
-              'contract_file', 'inspection_file', 'production_line']
-    permission_required = 'manufacturing.change_manufacturingorder'
-
-    def get_success_url(self):
-        messages.success(self.request, 'تم تحديث أمر التصنيع بنجاح')
-        return reverse('manufacturing:order_detail_by_code',
-                      kwargs={'manufacturing_code': self.object.manufacturing_code})
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['title'] = f'تعديل أمر التصنيع: {self.object.manufacturing_code}'
-        return context
-
 
 class ChangeProductionLineView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """تبديل خط الإنتاج لأمر تصنيع"""

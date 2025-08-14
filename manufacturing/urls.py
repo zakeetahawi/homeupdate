@@ -40,11 +40,7 @@ urlpatterns = [
         views.manufacturing_order_detail_redirect,
         name='order_detail'
     ),
-    path(
-        'orders/<int:pk>/update/',
-        views.ManufacturingOrderUpdateView.as_view(),
-        name='order_update'
-    ),
+
     path(
         'orders/<int:pk>/delete/',
         views.ManufacturingOrderDeleteView.as_view(),
@@ -54,11 +50,6 @@ urlpatterns = [
         'orders/<int:pk>/print/',
         views.print_manufacturing_order,
         name='order_print'
-    ),
-    path(
-        'production-line/<int:line_id>/print/',
-        views.ProductionLinePrintView.as_view(),
-        name='production_line_print'
     ),
     path(
         'api/update_status/<int:pk>/',
@@ -89,6 +80,11 @@ urlpatterns = [
         're_approve/<int:pk>/',
         views.re_approve_after_reply,
         name='re_approve_after_reply'
+    ),
+    path(
+        'production-line/<int:line_id>/print/',
+        views.ProductionLinePrintView.as_view(),
+        name='production_line_print'
     ),
     path(
         'api/change-production-line/<int:pk>/',
