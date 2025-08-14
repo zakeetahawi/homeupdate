@@ -20,6 +20,7 @@ print_login() { echo -e "${BOLD_BLUE}$1${NC}"; }
 
 # متغيرات لمراقبة التانل
 TUNNEL_STATUS="unknown"
+TUNNEL_CHECK_INTERVAL=30
 
 # دالة فحص حالة التانل
 check_tunnel_status() {
@@ -105,23 +106,33 @@ gunicorn crm.wsgi:application \
     --access-logfile - \
     --error-logfile - \
     --log-level info \
-    --access-logformat '[%(t)s] "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' 2>&1 | ./لينكس/filter-logs.sh | while read line; do
+    --access-logformat '[%(t)s] "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' 2>&1 | while read line; do
+        # تطبيق فلتر logs أولاً
+        if [[ "$line" == *"/accounts/notifications/data/"* ]] || \
+           [[ "$line" == *"/accounts/api/online-users/"* ]] || \
+           [[ "$line" == *"/media/users/"* ]] || \
+           [[ "$line" == *"/media/"* ]] || \
+           [[ "$line" == *"/static/"* ]] || \
+           [[ "$line" == *"favicon.ico"* ]]; then
+            continue
+        fi
+
         # معالجة رسائل تسجيل الدخول والخروج
-        if [[ "$line" == *"login"* ]]; then
+        if [[ "$line" == *"�"* && "$line" == *"login"* ]]; then
             # استخراج اسم المستخدم من رسالة تسجيل الدخول
-            username=$(echo "$line" | sed -n 's/.*\] \([^ ]*\) - login.*/\1/p')
+            username=$(echo "$line" | sed -n 's/.*� \([^ ]*\) -.*/\1/p')
             if [ -n "$username" ]; then
                 print_login "🔐 قام المستخدم $username بتسجيل الدخول"
             fi
-        elif [[ "$line" == *"logout"* ]]; then
+        elif [[ "$line" == *"🚪"* && "$line" == *"logout"* ]]; then
             # استخراج اسم المستخدم من رسالة تسجيل الخروج
-            username=$(echo "$line" | sed -n 's/.*\] \([^ ]*\) - logout.*/\1/p')
+            username=$(echo "$line" | sed -n 's/.*🚪 \([^ ]*\) -.*/\1/p')
             if [ -n "$username" ]; then
                 print_login "🚪 قام المستخدم $username بتسجيل الخروج"
             fi
-        elif [[ "$line" == *"page_view"* ]]; then
+        elif [[ "$line" == *"👁️"* && "$line" == *"page_view"* ]]; then
             # استخراج اسم المستخدم من رسالة عرض الصفحة
-            username=$(echo "$line" | sed -n 's/.*\] \([^ ]*\) - page_view.*/\1/p')
+            username=$(echo "$line" | sed -n 's/.*👁️ \([^ ]*\) -.*/\1/p')
             if [ -n "$username" ]; then
                 # عرض نشاط المستخدم المسجل
                 page=$(echo "$line" | sed -n 's/.*page_view - \([^ ]*\).*/\1/p')
@@ -143,17 +154,17 @@ print_status "خادم الإنتاج يعمل (PID: $GUNICORN_PID)"
 
 while true; do
     sleep 30
-    
+
     # فحص خادم الويب
-    if ! kill -0 $GUNICORN_PID 2>/dev/null; then 
+    if ! kill -0 $GUNICORN_PID 2>/dev/null; then
         print_error "❌ خادم الويب توقف!"
         break
     fi
-    
+
     # فحص حالة التانل
     check_tunnel_status
     tunnel_ok=$?
-    
+
     if [ $tunnel_ok -eq 0 ]; then
         print_status "✅ النظام يعمل بشكل طبيعي - الجسر متصل"
     else
