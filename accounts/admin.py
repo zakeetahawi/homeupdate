@@ -15,6 +15,8 @@ from .models import (
     ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings,
     SimpleNotification, ComplaintNotification, GroupNotification
 )
+
+
 from .forms import THEME_CHOICES
 from .widgets import ColorPickerWidget, IconPickerWidget, DurationRangeWidget
 from manufacturing.models import ManufacturingOrder
@@ -1274,3 +1276,22 @@ class GroupNotificationAdmin(admin.ModelAdmin):
             'target_users',
             'created_by'
         )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ==================== تسجيل النماذج في الموقع المخصص ====================
+

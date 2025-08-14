@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'crm.apps.CrmConfig',
     'accounts',
+    'user_activity.apps.UserActivityConfig',  # تطبيق نشاط المستخدمين
     'customers',
     'inspections',
     'inventory',
@@ -123,7 +124,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'accounts.middleware.log_terminal_activity.TerminalActivityLoggerMiddleware',
+    'accounts.middleware.log_terminal_activity.AdvancedActivityLoggerMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'crm.middleware.permission_handler.PermissionDeniedMiddleware',
@@ -495,6 +496,18 @@ SESSION_CLEANUP_SCHEDULE = {
 # إعدادات تحسين الأداء
 # تقليل عدد الاستعلامات المسموح بها في صفحة واحدة
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
+
+# إعدادات نظام تتبع النشاط
+ACTIVITY_TRACKING = {
+    'ENABLED': True,
+    'LOG_ANONYMOUS_USERS': False,
+    'LOG_STATIC_FILES': False,
+    'LOG_MEDIA_FILES': False,
+    'CLEANUP_DAYS': 30,  # حذف السجلات الأقدم من 30 يوم
+    'ONLINE_TIMEOUT_MINUTES': 5,  # اعتبار المستخدم غير متصل بعد 5 دقائق من عدم النشاط
+    'AUTO_CLEANUP_ENABLED': True,
+    'MAX_ACTIVITY_LOGS_PER_USER': 1000,  # الحد الأقصى لسجلات النشاط لكل مستخدم
+}
 
 # تعطيل التسجيل المفصل في الإنتاج
 # if not DEBUG:

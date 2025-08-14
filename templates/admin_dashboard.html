@@ -48,6 +48,8 @@
         background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
         color: #333;
     }
+
+
     
     .stat-number {
         font-size: 2.5rem;
@@ -466,53 +468,7 @@
 
     <!-- Main Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
-            <div class="card dashboard-card customers h-100">
-                <div class="card-body text-center">
-                    <div class="stat-icon mb-3">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-number">{{ customers_stats.total|default:0 }}</div>
-                    <div class="stat-label">إجمالي العملاء</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
-            <div class="card dashboard-card orders h-100">
-                <div class="card-body text-center">
-                    <div class="stat-icon mb-3">
-                        <i class="fas fa-shopping-cart"></i>
-                    </div>
-                    <div class="stat-number">{{ orders_stats.total|default:0 }}</div>
-                    <div class="stat-label">إجمالي الطلبات</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
-            <div class="card dashboard-card manufacturing h-100">
-                <div class="card-body text-center">
-                    <div class="stat-icon mb-3">
-                        <i class="fas fa-industry"></i>
-                    </div>
-                    <div class="stat-number">{{ manufacturing_stats.total|default:0 }}</div>
-                    <div class="stat-label">أوامر التصنيع</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
-            <div class="card dashboard-card inspections h-100">
-                <div class="card-body text-center">
-                    <div class="stat-icon mb-3">
-                        <i class="fas fa-clipboard-check"></i>
-                    </div>
-                    <div class="stat-number">{{ inspections_stats.total|default:0 }}</div>
-                    <div class="stat-label">المعاينات</div>
-                </div>
-            </div>
-        </div>
+
         
         <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
             <div class="card dashboard-card installations h-100">
@@ -539,6 +495,8 @@
         </div>
     </div>
 
+
+
     <!-- Dashboard Summary -->
     {% if dashboard_summary %}
     <div class="row mb-4">
@@ -553,14 +511,7 @@
                         <div class="metric-value text-success">{{ dashboard_summary.total_revenue|floatformat:0|intcomma }}</div>
                         <div class="metric-label">إجمالي الإيرادات (ج.م)</div>
                     </div>
-                    <div class="metric-item">
-                        <div class="metric-value text-primary">{{ dashboard_summary.total_orders }}</div>
-                        <div class="metric-label">إجمالي الطلبات</div>
-                    </div>
-                    <div class="metric-item">
-                        <div class="metric-value text-info">{{ dashboard_summary.total_customers }}</div>
-                        <div class="metric-label">إجمالي العملاء</div>
-                    </div>
+
                     <div class="metric-item">
                         <div class="metric-value text-warning">{{ dashboard_summary.avg_order_value|floatformat:0|intcomma }}</div>
                         <div class="metric-label">متوسط قيمة الطلب (ج.م)</div>
@@ -941,6 +892,8 @@
         </div>
     </div>
     {% endif %}
+
+
 </div>
 
 <script>
@@ -1105,5 +1058,7 @@ document.addEventListener('DOMContentLoaded', function() {
         comparison_type: document.getElementById('comparison-type-select')?.value
     });
 });
+
+
 </script>
 {% endblock %}

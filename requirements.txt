@@ -123,6 +123,7 @@ ipython==8.25.0
 # ======================================
 psutil==7.0.0
 python-json-logger==2.0.7
+user-agents==2.2.0
 
 # ======================================
 # Dependencies & Utilities

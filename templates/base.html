@@ -463,6 +463,8 @@
                 left: 2.5%;
             }
         }
+
+
     </style>
 </head>
 <body id="main-body" data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
@@ -1333,8 +1335,14 @@
             if (userDropdown) userDropdown.style.display = 'none';
         });
         if (userDropdown) userDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+
+
     });
+
+
     </script>
+
+
 
     <!-- Main Content -->
     <main class="container-fluid mt-4 flex-grow" id="main-content">
@@ -1722,5 +1730,10 @@
     </script>
 
     {% block extra_js %}{% endblock %}
+
+    <!-- القائمة الجانبية للمستخدمين النشطين -->
+    {% if user.is_authenticated and user.is_staff %}
+        {% include 'includes/online_users_sidebar.html' %}
+    {% endif %}
 </body>
 </html>

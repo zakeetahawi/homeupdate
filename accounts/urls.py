@@ -1,6 +1,10 @@
 from django.urls import path
 from . import views, api_views
 from .auth_compat import auth_compat_view
+from .activity_views import (
+    user_activity_dashboard, user_activity_detail, activity_logs_list,
+    login_history_list, online_users_api, update_current_page
+)
 
 app_name = 'accounts'
 
@@ -86,4 +90,14 @@ urlpatterns = [
     path('notifications/<str:notification_type>/<int:notification_id>/', views.notification_detail, name='notification_detail'),
     path('notifications/', views.notifications_list, name='notifications_list'),
     path('complaints/', views.complaints_list, name='complaints_list'),
+
+    # 📊 نظام تتبع النشاط والمستخدمين النشطين
+    path('activity/dashboard/', user_activity_dashboard, name='activity_dashboard'),
+    path('activity/user/<int:user_id>/', user_activity_detail, name='user_activity_detail'),
+    path('activity/logs/', activity_logs_list, name='activity_logs_list'),
+    path('activity/logins/', login_history_list, name='login_history_list'),
+
+    # APIs للمستخدمين النشطين
+    path('api/online-users/', online_users_api, name='online_users_api'),
+    path('api/update-current-page/', update_current_page, name='update_current_page'),
 ]
