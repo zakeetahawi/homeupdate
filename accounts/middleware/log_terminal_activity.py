@@ -330,6 +330,10 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
 
     def _print_terminal_log(self, user, action_type, path, method, status_code):
         """طباعة السجل في Terminal"""
+        # إخفاء طباعة طلبات الإشعارات لتجنب الإزعاج
+        if '/accounts/notifications/data/' in path:
+            return
+
         time_str = now().strftime('%H:%M:%S')
 
         # تحديد اللون حسب نوع العملية
