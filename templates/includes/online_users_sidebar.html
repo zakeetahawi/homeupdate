@@ -159,12 +159,19 @@
 }
 
 .user-avatar {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     object-fit: cover;
     margin-left: 12px;
-    border: 2px solid #e9ecef;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .user-avatar.placeholder {
@@ -174,7 +181,17 @@
     justify-content: center;
     color: white;
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 1.1rem;
+    width: 40px;
+    height: 40px;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.user-avatar.placeholder:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .user-details {
@@ -190,6 +207,21 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.user-name.clickable {
+    color: #0d6efd;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px 2px -4px;
+}
+
+.user-name.clickable:hover {
+    color: #0a58ca;
+    background-color: rgba(13, 110, 253, 0.1);
+    transform: translateX(-2px);
 }
 
 .user-role {
@@ -386,17 +418,23 @@
 }
 
 .avatar-img {
-    width: 40px;
-    height: 40px;
+    width: 45px;
+    height: 45px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 3px solid #fff;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.avatar-img:hover {
+    transform: scale(1.1);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
 }
 
 .avatar-placeholder {
-    width: 40px;
-    height: 40px;
+    width: 45px;
+    height: 45px;
     border-radius: 50%;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -404,9 +442,15 @@
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 1.1rem;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-size: 1.2rem;
+    border: 3px solid #fff;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.avatar-placeholder:hover {
+    transform: scale(1.1);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
 }
 
 .online-indicator {
@@ -434,6 +478,21 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.user-card-name.clickable {
+    color: #0d6efd;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px 4px -4px;
+}
+
+.user-card-name.clickable:hover {
+    color: #0a58ca;
+    background-color: rgba(13, 110, 253, 0.1);
+    transform: translateX(-2px);
 }
 
 .user-card-branch {
@@ -607,7 +666,7 @@ function refreshOnlineUsersList() {
                                         `<div class="user-avatar placeholder">${user.username.charAt(0).toUpperCase()}</div>`
                                     }
                                     <div class="user-details">
-                                        <div class="user-name">${user.full_name}</div>
+                                        <div class="user-name clickable" onclick="openUserProfile('${user.username}')">${user.full_name}</div>
                                         <div class="user-role">${user.role}</div>
                                         <div class="user-status">
                                             <i class="fas fa-circle text-success"></i>
@@ -657,7 +716,7 @@ function refreshOnlineUsersList() {
                                                 <div class="online-indicator"></div>
                                             </div>
                                             <div class="user-card-info">
-                                                <div class="user-card-name">${user.full_name}</div>
+                                                <div class="user-card-name clickable" onclick="openUserProfile('${user.username}')">${user.full_name}</div>
                                                 <div class="user-card-branch">
                                                     <i class="fas fa-building me-1"></i>
                                                     ${user.branch}
@@ -714,6 +773,11 @@ function refreshOnlineUsersList() {
 }
 
 
+
+// فتح صفحة المستخدم الشخصية
+function openUserProfile(username) {
+    window.open(`/accounts/profile/?user=${username}`, '_blank');
+}
 
 // بدء التحديث التلقائي
 function startAutoRefresh() {

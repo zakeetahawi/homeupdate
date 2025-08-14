@@ -113,6 +113,17 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
             # إنشاء وصف العملية
             description = self._create_description(path, method, action_type, entity_type)
 
+            # تجنب تسجيل طلبات الإشعارات والصور في سجل النشاط
+            if (
+                '/accounts/notifications/data/' in path or
+                '/media/users/' in path or
+                path.startswith('/media/') or
+                path.endswith(('.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico')) or
+                '/accounts/api/online-users/' in path
+            ):
+                # لا تسجيل في قاعدة البيانات ولا طباعة في Terminal
+                return
+
             # الحصول على الجلسة
             session = self._get_or_create_session(request, user)
 
@@ -330,8 +341,14 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
 
     def _print_terminal_log(self, user, action_type, path, method, status_code):
         """طباعة السجل في Terminal"""
-        # إخفاء طباعة طلبات الإشعارات لتجنب الإزعاج
-        if '/accounts/notifications/data/' in path:
+        # إخفاء طباعة طلبات الإشعارات والصور والـ API لتجنب الإزعاج
+        if (
+            '/accounts/notifications/data/' in path or
+            '/media/users/' in path or
+            path.startswith('/media/') or
+            path.endswith(('.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico')) or
+            '/accounts/api/online-users/' in path
+        ):
             return
 
         time_str = now().strftime('%H:%M:%S')
