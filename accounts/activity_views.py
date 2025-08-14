@@ -162,8 +162,17 @@ def user_activity_detail(request, user_id):
         start_date = None
         end_date = None
     
-    # جلب الأنشطة
-    activities = UserActivityLog.objects.filter(user=user)
+    # جلب الأنشطة مع استبعاد الطلبات غير المرغوب فيها
+    activities = UserActivityLog.objects.filter(user=user).exclude(
+        url_path__contains='/accounts/notifications/data/'
+    ).exclude(
+        url_path__contains='/media/users/'
+    ).exclude(
+        url_path__startswith='/media/'
+    ).exclude(
+        url_path__contains='/accounts/api/online-users/'
+    )
+
     if start_date and end_date:
         activities = activities.filter(
             timestamp__date__gte=start_date,
@@ -186,7 +195,7 @@ def user_activity_detail(request, user_id):
         'total_activities': activities.count(),
         'login_count': UserLoginHistory.objects.filter(user=user).count(),
         'last_login': UserLoginHistory.objects.filter(user=user).order_by('-login_time').first(),
-        'is_online': hasattr(user, 'online_status') and user.online_status.is_online,
+        'is_online': hasattr(user, 'activity_online_status') and user.activity_online_status.is_online,
     }
     
     # أنواع الأنشطة المتاحة للفلترة

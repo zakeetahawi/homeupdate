@@ -48,7 +48,7 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         queryset = ManufacturingOrder.objects.select_related(
             'order',  # This is the only direct foreign key in the model
             'order__customer'  # Access customer through order
-        ).order_by('-order_date')
+        ).order_by('expected_delivery_date', 'order_date')
 
         # تطبيق فلتر السنة الافتراضية
         from accounts.utils import apply_default_year_filter
