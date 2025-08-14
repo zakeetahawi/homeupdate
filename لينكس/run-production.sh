@@ -151,17 +151,29 @@ gunicorn crm.wsgi:application \
             fi
         elif [[ "$line" == *"🔄"* ]]; then
             # عرض عمليات تبديل الحالة والتحديثات
-            username=$(echo "$line" | sed -n 's/.*\] \([^ ]*\) -.*/\1/p')
+            username=$(echo "$line" | sed -n 's/.*🔄 \([^ ]*\) -.*/\1/p')
             if [ -n "$username" ]; then
                 action=$(echo "$line" | sed -n 's/.*🔄 [^ ]* - \([^(]*\).*/\1/p')
-                echo -e "${YELLOW}🔄 المستخدم $username قام بـ: $action${NC}"
+                # استخراج كود الطلب إذا كان موجوداً
+                order_code=$(echo "$line" | grep -oE 'ORD-[0-9]+' | head -1)
+                if [ -n "$order_code" ]; then
+                    echo -e "${YELLOW}🔄 المستخدم $username قام بـ: $action - الطلب: $order_code${NC}"
+                else
+                    echo -e "${YELLOW}🔄 المستخدم $username قام بـ: $action${NC}"
+                fi
             fi
         elif [[ "$line" == *"✅"* || "$line" == *"❌"* || "$line" == *"⚠️"* ]]; then
             # عرض العمليات المهمة الأخرى
-            username=$(echo "$line" | sed -n 's/.*\] \([^ ]*\) -.*/\1/p')
+            username=$(echo "$line" | sed -n 's/.*[✅❌⚠️] \([^ ]*\) -.*/\1/p')
             if [ -n "$username" ]; then
                 action=$(echo "$line" | sed -n 's/.*[✅❌⚠️] [^ ]* - \([^(]*\).*/\1/p')
-                echo -e "${GREEN}المستخدم $username: $action${NC}"
+                # استخراج كود الطلب إذا كان موجوداً
+                order_code=$(echo "$line" | grep -oE 'ORD-[0-9]+' | head -1)
+                if [ -n "$order_code" ]; then
+                    echo -e "${GREEN}المستخدم $username: $action - الطلب: $order_code${NC}"
+                else
+                    echo -e "${GREEN}المستخدم $username: $action${NC}"
+                fi
             fi
         else
             # عرض الرسائل الأخرى المهمة
