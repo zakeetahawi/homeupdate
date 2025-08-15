@@ -305,6 +305,7 @@ def installation_list(request):
     """قائمة التركيبات - محسّنة مع فلاتر ذكية"""
     from django.db.models import Q
     from manufacturing.models import ManufacturingOrder
+    from accounts.utils import apply_default_year_filter
     
     # معالجة الفلاتر
     filter_form = InstallationFilterForm(request.GET)
