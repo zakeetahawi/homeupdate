@@ -180,3 +180,9 @@ iniconfig==2.1.0
 pluggy==1.6.0
 pytz==2025.2
 PyYAML==6.0.2
+# متطلبات إضافية لتحويل PDF
+weasyprint>=60.0
+# مكتبات مساعدة لـ weasyprint
+cffi>=1.15.0
+cairocffi>=1.4.0
+Pillow>=9.0.0

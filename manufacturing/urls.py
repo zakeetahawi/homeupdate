@@ -87,6 +87,16 @@ urlpatterns = [
         name='production_line_print'
     ),
     path(
+        'production-line/<int:line_id>/print-template/',
+        views.ProductionLinePrintTemplateView.as_view(),
+        name='production_line_print_template'
+    ),
+    path(
+        'production-line/<int:line_id>/pdf/',
+        views.ProductionLinePDFView.as_view(),
+        name='production_line_pdf'
+    ),
+    path(
         'api/change-production-line/<int:pk>/',
         views.ChangeProductionLineView.as_view(),
         name='change_production_line_api'

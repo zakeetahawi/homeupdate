@@ -434,18 +434,18 @@
 
 /* ضمان ظهور القوائم المنسدلة في الثيم الأسود فوق كل شيء */
 [data-theme="modern-black"] .dropdown-menu {
-    z-index: 99999999 !important; 
+    z-index: 1050 !important;
     position: absolute !important;
 }
 
 [data-theme="modern-black"] .dropdown {
     position: relative !important;
-    z-index: 99999999 !important;
+    z-index: 1050 !important;
 }
 
 [data-theme="modern-black"] .navbar .dropdown {
     position: relative !important;
-    z-index: 99999999 !important;
+    z-index: 1050 !important;
 }
 
 [data-theme="modern-black"] .navbar .dropdown-menu {
@@ -468,7 +468,7 @@
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
     border: 1px solid var(--neutral);
     padding: 8px 0;
-    z-index: 999999999 !important;
+    z-index: 1050 !important;
     position: absolute !important;
 }
 
@@ -812,12 +812,12 @@ body,
 
 /* ضمان ظهور الهيدر والقوائم المنسدلة فوق كل شيء */
 .navbar {
-    z-index: 999999999 !important;
+    z-index: 1030 !important;
     position: relative;
 }
 
 .dropdown-menu,
 .navbar .dropdown-menu {
-    z-index: 999999999 !important;
+    z-index: 1050 !important;
     position: absolute !important;
 }

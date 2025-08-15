@@ -7,6 +7,8 @@
 {% block title %}أوامر التصنيع المتأخرة{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'manufacturing/css/manufacturing.css' %}">
+<link rel="stylesheet" href="{% static 'manufacturing/css/dropdown-fix.css' %}">
 <style>
 /* استخدام متغيرات الألوان من النظام */
 .container {
@@ -251,8 +253,11 @@
     font-weight: bold;
 }
 
-/* تحسين dropdown الأنواع */
+/* استخدام CSS المشترك من ملف manufacturing.css */
+
+/* إصلاح القوائم المنسدلة العادية كبديل احتياطي */
 .dropdown-menu {
+    z-index: 2147483647 !important;
     max-height: 200px;
     overflow-y: auto;
 }
@@ -274,6 +279,7 @@
 }
 </style>
 
+<script src="{% static 'manufacturing/js/custom-dropdowns.js' %}"></script>
 <script>
 // تحديث نص الأنواع المختارة لصفحة الطلبات المتأخرة
 function updateSelectedTypesTextOverdue() {
@@ -289,14 +295,19 @@ function updateSelectedTypesTextOverdue() {
     }
 }
 
-// منع إغلاق القائمة عند النقر على checkbox
+// القوائم المنسدلة المحسنة باستخدام المكتبة المشتركة
 document.addEventListener('DOMContentLoaded', function() {
-    const dropdownItems = document.querySelectorAll('.dropdown-menu label');
-    dropdownItems.forEach(function(item) {
-        item.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-    });
+    // إعداد القائمة المنسدلة المحسنة
+    const commonConfigs = ManufacturingDropdowns.getCommonConfigs();
+    const dropdowns = [
+        { btnId: 'orderTypesDropdownBtnOverdue', menuId: 'orderTypesDropdownOverdue', inputName: 'order_types', defaultText: 'جميع الأنواع' }
+    ];
+
+    // تهيئة القوائم المنسدلة باستخدام المكتبة المشتركة
+    ManufacturingDropdowns.init(dropdowns);
+
+    // تحديث النص عند تحميل الصفحة
+    updateSelectedTypesTextOverdue();
 });
 </script>
 {% endblock %}
@@ -346,28 +357,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="col-md-2">
                     <label for="order_types" class="form-label">نوع الطلب:</label>
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="orderTypesDropdownOverdue" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span id="selectedTypesTextOverdue">
-                                {% if selected_order_types %}
-                                    {{ selected_order_types|length }} نوع محدد
-                                {% else %}
-                                    جميع الأنواع
-                                {% endif %}
-                            </span>
-                        </button>
-                        <ul class="dropdown-menu w-100" aria-labelledby="orderTypesDropdownOverdue">
-                            {% for type_code, type_name in order_types %}
-                            <li>
-                                <label class="dropdown-item">
-                                    <input type="checkbox" name="order_types" value="{{ type_code }}"
-                                           {% if type_code in selected_order_types %}checked{% endif %}
-                                           onchange="updateSelectedTypesTextOverdue()">
-                                    {{ type_name }}
-                                </label>
-                            </li>
-                            {% endfor %}
-                        </ul>
+                    <button class="btn btn-outline-secondary w-100" type="button" id="orderTypesDropdownBtnOverdue">
+                        <span class="selected-text" id="selectedTypesTextOverdue">
+                            {% if selected_order_types %}
+                                {{ selected_order_types|length }} نوع محدد
+                            {% else %}
+                                جميع الأنواع
+                            {% endif %}
+                        </span>
+                        <i class="fas fa-chevron-down float-end mt-1"></i>
+                    </button>
+                    <div id="orderTypesDropdownOverdue" style="display:none; max-height:200px; overflow-y:auto;">
+                        <div class="dropdown-header fw-bold py-2 px-3 border-bottom">اختر أنواع الطلبات</div>
+                        {% for type_code, type_name in order_types %}
+                        <label class="dropdown-item" style="padding:0.5rem 1rem; cursor:pointer; display:flex; align-items:center; border:none; background:none; width:100%; text-align:right; color:#333;">
+                            <input type="checkbox" name="order_types" value="{{ type_code }}"
+                                   {% if type_code in selected_order_types %}checked{% endif %}>
+                            {{ type_name }}
+                        </label>
+                        {% endfor %}
                     </div>
                 </div>
                 <div class="col-md-2">

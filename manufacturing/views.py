@@ -1,6 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
-from weasyprint import HTML
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, View
 from django.urls import reverse_lazy, reverse
@@ -16,6 +15,25 @@ from django.db.models.functions import TruncDay, TruncMonth, ExtractMonth, Extra
 import logging
 import json
 from django.db import transaction
+from django.conf import settings
+
+
+def apply_default_year_filter(queryset, request, date_field='order_date'):
+    """تطبيق فلتر السنة الافتراضية على QuerySet"""
+    from django.utils import timezone
+
+    # إذا لم يتم تحديد فلتر تاريخ، استخدم السنة الحالية
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    if not date_from and not date_to:
+        current_year = timezone.now().year
+        filter_kwargs = {
+            f'{date_field}__year': current_year
+        }
+        queryset = queryset.filter(**filter_kwargs)
+
+    return queryset
 
 from .models import ManufacturingOrder, ManufacturingOrderItem
 from orders.models import Order
@@ -58,27 +76,58 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         from accounts.utils import apply_default_year_filter
         queryset = apply_default_year_filter(queryset, self.request, 'order_date')
 
-        # Apply filters
-        status = self.request.GET.get('status')
+        # Apply filters - دعم الفلاتر المتعددة
+        # فلتر الحالات (اختيار متعدد)
+        status_filters = self.request.GET.getlist('status')
+        if status_filters:
+            queryset = queryset.filter(status__in=status_filters)
+
+        # فلتر الفروع (اختيار متعدد)
+        branch_filters = self.request.GET.getlist('branch')
+        if branch_filters:
+            branch_query = Q()
+            for branch_id in branch_filters:
+                try:
+                    branch_id = int(branch_id)
+                    branch_query |= Q(order__branch_id=branch_id)
+                except (ValueError, TypeError):
+                    continue
+            if branch_query:
+                queryset = queryset.filter(branch_query)
+
+        # فلتر أنواع الطلبات (اختيار متعدد)
+        order_type_filters = self.request.GET.getlist('order_type')
+        if order_type_filters:
+            queryset = queryset.filter(order_type__in=order_type_filters)
+
+        # فلتر خطوط الإنتاج (اختيار متعدد)
+        production_line_filters = self.request.GET.getlist('production_line')
+        if production_line_filters:
+            line_query = Q()
+            for line_id in production_line_filters:
+                if line_id == '':  # غير محدد
+                    line_query |= Q(production_line__isnull=True)
+                else:
+                    try:
+                        line_id = int(line_id)
+                        line_query |= Q(production_line_id=line_id)
+                    except (ValueError, TypeError):
+                        continue
+            if line_query:
+                queryset = queryset.filter(line_query)
+
+        # فلتر الطلبات المتأخرة
+        overdue_filter = self.request.GET.get('overdue')
+        if overdue_filter == 'true':
+            today = timezone.now().date()
+            queryset = queryset.filter(
+                expected_delivery_date__lt=today,
+                status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+            )
+
+        # البحث النصي
         search = self.request.GET.get('search')
-        date_from = self.request.GET.get('date_from')
-        date_to = self.request.GET.get('date_to')
-        branch = self.request.GET.get('branch')
-        order_types = self.request.GET.getlist('order_types')  # للحصول على قائمة الأنواع
 
-        if status:
-            queryset = queryset.filter(status=status)
-
-        if branch:
-            queryset = queryset.filter(order__branch__id=branch)
-
-        if order_types:
-            # فلترة حسب أنواع الطلبات المختارة
-            type_filter = Q()
-            for order_type in order_types:
-                type_filter |= Q(order__selected_types__contains=[order_type])
-            queryset = queryset.filter(type_filter)
-            
         if search:
             # بحث شامل في كل الأعمدة المهمة
             queryset = queryset.filter(
@@ -97,27 +146,58 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
                 Q(order_date__icontains=search) |
                 Q(expected_delivery_date__icontains=search)
             )
-            
+
+        # فلتر التواريخ
+        date_from = self.request.GET.get('date_from')
         if date_from:
-            queryset = queryset.filter(order_date__gte=date_from)
-            
+            try:
+                queryset = queryset.filter(order_date__gte=date_from)
+            except:
+                pass
+
+        date_to = self.request.GET.get('date_to')
         if date_to:
-            # Add one day to include the entire end date
-            import datetime
-            end_date = datetime.datetime.strptime(date_to, '%Y-%m-%d') + datetime.timedelta(days=1)
-            queryset = queryset.filter(order_date__lt=end_date)
+            try:
+                import datetime
+                end_date = datetime.datetime.strptime(date_to, '%Y-%m-%d') + datetime.timedelta(days=1)
+                queryset = queryset.filter(order_date__lt=end_date)
+            except:
+                pass
 
-        # فلترة حسب الفرع
-        branch_filter = self.request.GET.get('branch')
-        if branch_filter:
-            queryset = queryset.filter(order__branch_id=branch_filter)
+        # تطبيق الترتيب
+        sort_column = self.request.GET.get('sort')
+        sort_direction = self.request.GET.get('direction', 'asc')
 
-        # فلترة حسب خط الإنتاج
-        production_line_filter = self.request.GET.get('production_line')
-        if production_line_filter:
-            queryset = queryset.filter(production_line_id=production_line_filter)
+        if sort_column and sort_direction != 'none':
+            sort_field = self.get_sort_field(sort_column)
+            if sort_field:
+                if sort_direction == 'desc':
+                    sort_field = f'-{sort_field}'
+                queryset = queryset.order_by(sort_field)
+            else:
+                queryset = queryset.order_by('expected_delivery_date', 'order_date')
+        else:
+            queryset = queryset.order_by('expected_delivery_date', 'order_date')
 
         return queryset
+
+    def get_sort_field(self, sort_column):
+        """تحديد حقل الترتيب المناسب"""
+        sort_fields = {
+            'id': 'id',
+            'order_number': 'order__order_number',
+            'order_type': 'order_type',
+            'contract_number': 'contract_number',
+            'production_line': 'production_line__name',
+            'invoice_number': 'invoice_number',
+            'customer': 'order__customer__name',
+            'salesperson': 'order__salesperson__name',
+            'branch': 'order__branch__name',
+            'order_date': 'order_date',
+            'expected_delivery_date': 'expected_delivery_date',
+            'status': 'status',
+        }
+        return sort_fields.get(sort_column)
 
     def apply_display_settings_filter(self, queryset):
         """تطبيق فلترة بناءً على إعدادات العرض للمستخدم الحالي"""
@@ -187,42 +267,33 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         from accounts.utils import apply_default_year_filter
         filtered_orders = apply_default_year_filter(filtered_orders, self.request, 'order_date')
 
-        # Prepare status counts for the dashboard
-        status_counts = filtered_orders.values('status').annotate(count=Count('status'))
-        status_data = {item['status']: item['count'] for item in status_counts}
-        
-        # Add dashboard statistics (مفلترة بالسنة الافتراضية)
+        # Add necessary data for the form
         context.update({
-            'total_orders': filtered_orders.count(),
-            'pending_orders': status_data.get('pending', 0),
-            'pending_approval_orders': status_data.get('pending_approval', 0),
-            'in_progress_orders': status_data.get('in_progress', 0),
-            'completed_orders': status_data.get('completed', 0),
-            'delivered_orders': status_data.get('delivered', 0),
-            'cancelled_orders': status_data.get('cancelled', 0),
-            'rejected_orders': status_data.get('rejected', 0),
-            'ready_for_installation_orders': status_data.get('ready_for_installation', 0),
-            'ready_install_orders': status_data.get('ready_install', 0),
             'status_choices': dict(ManufacturingOrder.STATUS_CHOICES),
             'order_types': dict(ManufacturingOrder.ORDER_TYPE_CHOICES),
         })
         
-        # Add filter values to context
+        # Add filter values to context - دعم الفلاتر المتعددة
         context.update({
-            'status_filter': self.request.GET.get('status', ''),
+            'status_filters': self.request.GET.getlist('status'),
+            'branch_filters': self.request.GET.getlist('branch'),
+            'order_type_filters': self.request.GET.getlist('order_type'),
+            'production_line_filters': self.request.GET.getlist('production_line'),
+            'overdue_filter': self.request.GET.get('overdue', ''),
             'search_query': self.request.GET.get('search', ''),
             'date_from': self.request.GET.get('date_from', ''),
             'date_to': self.request.GET.get('date_to', ''),
-            'branch_filter': self.request.GET.get('branch', ''),
-            'production_line_filter': self.request.GET.get('production_line', ''),
-            'sales_person_filter': self.request.GET.get('sales_person', ''),
-            'selected_order_types': self.request.GET.getlist('order_types'),
-            'display_setting_filter': self.request.GET.get('display_setting', ''),
+            'page_size': self.request.GET.get('page_size', 25),
         })
-        
-        # Add branches for filter dropdown
+
+        # Add filter options
         from accounts.models import Branch
-        context['branches'] = Branch.objects.all().order_by('name')
+        from .models import ProductionLine
+        context.update({
+            'branches': Branch.objects.filter(is_active=True).order_by('name'),
+            'production_lines': ProductionLine.objects.filter(is_active=True).order_by('name'),
+            'order_types': ManufacturingOrder.ORDER_TYPE_CHOICES,  # فقط أنواع التصنيع (بدون معاينات)
+        })
 
         # Add available display settings for filter dropdown
         try:
@@ -236,12 +307,12 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         from .models import ProductionLine
         context['production_lines'] = ProductionLine.objects.filter(is_active=True).order_by('-priority', 'name')
 
-        # Add order types for filter dropdown
+        # Add order types for filter dropdown (إخفاء نوع "معاينات" من فلاتر المصنع)
         context['order_types'] = [
-            ('inspection', 'معاينة'),
             ('installation', 'تركيب'),
+            ('custom', 'تفصيل'),
             ('accessory', 'إكسسوار'),
-            ('tailoring', 'تسليم'),
+            ('delivery', 'تسليم'),
         ]
         
         # Add current date for date picker max date
@@ -254,9 +325,7 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         # Add page_size to context
         context['page_size'] = self.get_paginate_by(self.get_queryset())
 
-        # Add default year to context
-        from accounts.models import DashboardYearSettings
-        context['default_year'] = DashboardYearSettings.get_default_year()
+
 
         # معلومات حالة الفلترة
         has_manual_filters = self.has_manual_filters()
@@ -615,100 +684,333 @@ def get_production_lines_api(request):
         }, status=500)
 
 
-class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """طباعة طلبات خط إنتاج محدد"""
+class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """طباعة طلبات خط إنتاج محدد مع فلاتر متقدمة وصفحات"""
+    model = ManufacturingOrder
+    template_name = 'manufacturing/production_line_print.html'
+    context_object_name = 'orders'
+    paginate_by = 100  # عرض 100 طلب في كل صفحة
     permission_required = 'manufacturing.view_manufacturingorder'
 
-    def get(self, request, line_id):
-        """عرض صفحة طباعة خط الإنتاج"""
-        try:
-            from .models import ProductionLine
+    def get_queryset(self):
+        """الحصول على طلبات خط الإنتاج مع تطبيق الفلاتر"""
+        from .models import ProductionLine
+        from accounts.models import Branch
+        from django.db.models import Q
+        import datetime
 
-            # الحصول على خط الإنتاج
-            production_line = get_object_or_404(ProductionLine, id=line_id, is_active=True)
+        # الحصول على خط الإنتاج
+        line_id = self.kwargs.get('line_id')
+        self.production_line = get_object_or_404(ProductionLine, id=line_id, is_active=True)
 
-            # الحصول على طلبات خط الإنتاج
-            orders = ManufacturingOrder.objects.select_related(
-                'order', 'order__customer', 'order__branch', 'order__salesperson'
-            ).filter(production_line=production_line).order_by('-created_at')
+        # الحصول على طلبات خط الإنتاج
+        queryset = ManufacturingOrder.objects.select_related(
+            'order', 'order__customer', 'order__branch', 'order__salesperson'
+        ).filter(production_line=self.production_line)
 
-            # تطبيق فلاتر إضافية إذا وجدت
-            status_filter = request.GET.get('status')
-            if status_filter:
-                orders = orders.filter(status=status_filter)
+        # تطبيق الترتيب
+        sort_column = self.request.GET.get('sort')
+        sort_direction = self.request.GET.get('direction', 'asc')
 
-            date_from = request.GET.get('date_from')
-            if date_from:
-                orders = orders.filter(order_date__gte=date_from)
+        if sort_column and sort_direction != 'none':
+            # تحديد حقل الترتيب
+            sort_field = self.get_sort_field(sort_column)
+            if sort_field:
+                if sort_direction == 'desc':
+                    sort_field = f'-{sort_field}'
+                queryset = queryset.order_by(sort_field)
+            else:
+                queryset = queryset.order_by('-created_at')
+        else:
+            queryset = queryset.order_by('-created_at')
 
-            date_to = request.GET.get('date_to')
-            if date_to:
-                import datetime
-                end_date = datetime.datetime.strptime(date_to, '%Y-%m-%d') + datetime.timedelta(days=1)
-                orders = orders.filter(order_date__lt=end_date)
+        # فلتر الحالات (اختيار متعدد)
+        status_filters = self.request.GET.getlist('status')
+        if status_filters:
+            queryset = queryset.filter(status__in=status_filters)
 
-            # إحصائيات خط الإنتاج
-            total_orders = orders.count()
-            active_orders = orders.filter(
+        # فلتر الفروع (اختيار متعدد)
+        branch_filters = self.request.GET.getlist('branch')
+        if branch_filters:
+            branch_query = Q()
+            for branch_id in branch_filters:
+                try:
+                    branch_id = int(branch_id)
+                    branch_query |= Q(order__branch_id=branch_id) | Q(order__customer__branch_id=branch_id)
+                except (ValueError, TypeError):
+                    continue
+            if branch_query:
+                queryset = queryset.filter(branch_query)
+
+        # فلتر نوع الطلب (اختيار متعدد)
+        order_type_filters = self.request.GET.getlist('order_type')
+        if order_type_filters:
+            queryset = queryset.filter(order_type__in=order_type_filters)
+
+        # فلتر الطلبات المتأخرة
+        overdue_filter = self.request.GET.get('overdue')
+        if overdue_filter == 'true':
+            today = timezone.now().date()
+            queryset = queryset.filter(
+                expected_delivery_date__lt=today,
                 status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
-            ).count()
-            completed_orders = orders.filter(
-                status__in=['completed', 'delivered']
-            ).count()
+            )
 
+        # فلتر التواريخ
+        date_from = self.request.GET.get('date_from')
+        if date_from:
+            try:
+                queryset = queryset.filter(order_date__gte=date_from)
+            except:
+                pass
+
+        date_to = self.request.GET.get('date_to')
+        if date_to:
+            try:
+                end_date = datetime.datetime.strptime(date_to, '%Y-%m-%d') + datetime.timedelta(days=1)
+                queryset = queryset.filter(order_date__lt=end_date)
+            except:
+                pass
+
+        return queryset
+
+    def get_sort_field(self, sort_column):
+        """تحديد حقل الترتيب المناسب"""
+        sort_fields = {
+            'id': 'id',
+            'manufacturing_code': 'manufacturing_code',
+            'contract_number': 'contract_number',
+            'invoice_number': 'invoice_number',
+            'customer': 'order__customer__name',
+            'order_type': 'order_type',
+            'status': 'status',
+            'order_date': 'order_date',
+            'expected_delivery_date': 'expected_delivery_date',
+            'branch': 'order__branch__name',
+            'salesperson': 'order__salesperson__name',
+        }
+        return sort_fields.get(sort_column)
+
+    def get_context_data(self, **kwargs):
+        """إضافة البيانات الإضافية للسياق"""
+        context = super().get_context_data(**kwargs)
+        from accounts.models import Branch
+
+        # إحصائيات خط الإنتاج
+        all_orders = self.get_queryset()
+        total_orders = all_orders.count()
+        active_orders = all_orders.filter(
+            status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+        ).count()
+        completed_orders = all_orders.filter(
+            status__in=['completed', 'delivered']
+        ).count()
+        overdue_orders = all_orders.filter(
+            expected_delivery_date__lt=timezone.now().date(),
+            status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+        ).count()
+
+        # الفلاتر المطبقة
+        applied_filters = {
+            'status_filters': self.request.GET.getlist('status'),
+            'branch_filters': self.request.GET.getlist('branch'),
+            'order_type_filters': self.request.GET.getlist('order_type'),
+            'overdue_filter': self.request.GET.get('overdue'),
+            'date_from': self.request.GET.get('date_from'),
+            'date_to': self.request.GET.get('date_to'),
+        }
+
+        # خيارات الفلاتر
+        # الحصول على أنواع الطلبات المدعومة في هذا الخط
+        supported_order_types = []
+        if hasattr(self.production_line, 'supported_order_types') and self.production_line.supported_order_types:
+            for order_type in self.production_line.supported_order_types:
+                for choice_code, choice_name in ManufacturingOrder.ORDER_TYPE_CHOICES:
+                    if choice_code == order_type:
+                        supported_order_types.append((choice_code, choice_name))
+        else:
+            # إذا لم تكن محددة، عرض جميع الأنواع
+            supported_order_types = ManufacturingOrder.ORDER_TYPE_CHOICES
+
+        filter_options = {
+            'status_choices': ManufacturingOrder.STATUS_CHOICES,
+            'order_type_choices': supported_order_types,
+            'branches': Branch.objects.filter(is_active=True).order_by('name'),
+        }
+
+        context.update({
+            'production_line': self.production_line,
+            'total_orders': total_orders,
+            'active_orders': active_orders,
+            'completed_orders': completed_orders,
+            'overdue_orders': overdue_orders,
+            'applied_filters': applied_filters,
+            'filter_options': filter_options,
+            'print_date': timezone.now(),
+            'filtered_count': context['orders'].count() if context.get('orders') else 0,
+        })
+
+        return context
+
+
+class ProductionLinePrintTemplateView(ProductionLinePrintView):
+    """طباعة تقرير خط الإنتاج بقالب بسيط"""
+    template_name = 'manufacturing/production_line_print_template.html'
+    paginate_by = None  # إزالة pagination للطباعة
+
+    def get_context_data(self, **kwargs):
+        # الحصول على جميع الطلبات المفلترة بدون pagination
+        queryset = self.get_queryset()
+
+        context = {
+            'orders': queryset,
+            'production_line': self.production_line,
+            'total_orders': queryset.count(),
+            'now': timezone.now(),
+        }
+
+        # إضافة معلومات الفلاتر المطبقة للعرض
+        applied_filters = {}
+
+        # فلاتر الحالة
+        status_filters = self.request.GET.getlist('status')
+        if status_filters:
+            applied_filters['status'] = status_filters
+
+        # فلاتر الفروع
+        branch_filters = self.request.GET.getlist('branch')
+        if branch_filters:
+            applied_filters['branch'] = branch_filters
+
+        # فلاتر نوع الطلب
+        order_type_filters = self.request.GET.getlist('order_type')
+        if order_type_filters:
+            applied_filters['order_type'] = order_type_filters
+
+        # فلتر التواريخ
+        date_from = self.request.GET.get('date_from')
+        if date_from:
+            applied_filters['date_from'] = date_from
+
+        date_to = self.request.GET.get('date_to')
+        if date_to:
+            applied_filters['date_to'] = date_to
+
+        # فلتر الطلبات المتأخرة
+        overdue_filter = self.request.GET.get('overdue')
+        if overdue_filter == 'true':
+            applied_filters['overdue'] = True
+
+        context['applied_filters'] = applied_filters
+        context['has_filters'] = bool(applied_filters)
+
+        return context
+
+
+class ProductionLinePDFView(ProductionLinePrintTemplateView):
+    """تحميل تقرير خط الإنتاج كملف PDF"""
+
+    def setup(self, request, *args, **kwargs):
+        """إعداد المتغيرات المطلوبة"""
+        super().setup(request, *args, **kwargs)
+        # تهيئة production_line من get_queryset
+        self.get_queryset()
+
+    def get(self, request, *args, **kwargs):
+        try:
+            from django.http import HttpResponse
+            from weasyprint import HTML, CSS
+            from django.template.loader import render_to_string
+            import io
+
+            # الحصول على البيانات
+            context = self.get_context_data()
+
+            # رندر HTML
+            html_string = render_to_string(self.template_name, context, request=request)
+
+            # تحويل إلى PDF
+            html = HTML(string=html_string, base_url=request.build_absolute_uri())
+
+            # CSS إضافي للطباعة
+            css = CSS(string='''
+                @page {
+                    size: A4;
+                    margin: 1.5cm;
+                }
+                body {
+                    font-family: 'Arial', sans-serif;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+            ''')
+
+            # إنشاء PDF
+            pdf_file = html.write_pdf(stylesheets=[css])
+
+            # إنشاء الاستجابة
+            response = HttpResponse(pdf_file, content_type='application/pdf')
+            filename = f"production_line_{self.production_line.name}_{timezone.now().strftime('%Y%m%d_%H%M')}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+            return response
+
+        except ImportError:
+            # إذا لم تكن weasyprint مثبتة، استخدم طريقة بديلة
+            from django.http import JsonResponse
+            return JsonResponse({
+                'error': 'مكتبة PDF غير متوفرة. يرجى استخدام خيار الطباعة العادي.',
+                'message': 'PDF library not available. Please use regular print option.'
+            }, status=500)
+
+        except Exception as e:
+            from django.http import JsonResponse
+            return JsonResponse({
+                'error': f'خطأ في إنشاء PDF: {str(e)}',
+                'message': 'Error generating PDF'
+            }, status=500)
+
+    def get(self, request, *args, **kwargs):
+        """معالجة طلبات GET مع دعم تصدير PDF"""
+        try:
             # تحديد نوع الاستجابة (HTML أو PDF)
             if request.GET.get('format') == 'pdf':
-                return self.generate_pdf(request, production_line, orders, {
-                    'total_orders': total_orders,
-                    'active_orders': active_orders,
-                    'completed_orders': completed_orders,
-                })
+                return self.generate_pdf()
 
-            # عرض HTML عادي
-            context = {
-                'production_line': production_line,
-                'orders': orders,
-                'total_orders': total_orders,
-                'active_orders': active_orders,
-                'completed_orders': completed_orders,
-                'status_filter': status_filter,
-                'date_from': date_from,
-                'date_to': date_to,
-                'print_date': timezone.now(),
-                'status_choices': ManufacturingOrder.STATUS_CHOICES,
-            }
-
-            return render(request, 'manufacturing/production_line_print.html', context)
+            return super().get(request, *args, **kwargs)
 
         except Exception as e:
             messages.error(request, f'حدث خطأ: {str(e)}')
             return redirect('manufacturing:dashboard')
 
-    def generate_pdf(self, request, production_line, orders, stats):
-        """إنتاج ملف PDF"""
+    def generate_pdf(self):
+        """إنتاج ملف PDF للطلبات المفلترة"""
         try:
             from django.template.loader import render_to_string
             from weasyprint import HTML
 
-            context = {
-                'production_line': production_line,
-                'orders': orders,
-                'stats': stats,
-                'print_date': timezone.now(),
-                'user': request.user,
-            }
+            # الحصول على جميع الطلبات المفلترة (بدون صفحات للـ PDF)
+            all_filtered_orders = self.get_queryset()
+
+            context = self.get_context_data()
+            context.update({
+                'orders': all_filtered_orders,  # جميع الطلبات المفلترة للـ PDF
+                'is_pdf': True,
+                'user': self.request.user,
+            })
 
             html_string = render_to_string('manufacturing/production_line_print_pdf.html', context)
             html = HTML(string=html_string)
             pdf = html.write_pdf()
 
             response = HttpResponse(pdf, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="production_line_{production_line.name}_{timezone.now().strftime("%Y%m%d")}.pdf"'
+            filename = f"production_line_{self.production_line.name}_{timezone.now().strftime('%Y%m%d_%H%M')}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
             return response
 
         except Exception as e:
-            messages.error(request, f'حدث خطأ في إنتاج ملف PDF: {str(e)}')
+            messages.error(self.request, f'خطأ في إنتاج PDF: {str(e)}')
             return redirect('manufacturing:dashboard')
 
 

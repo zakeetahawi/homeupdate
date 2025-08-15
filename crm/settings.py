@@ -962,3 +962,8 @@ JAZZMIN_UI_TWEAKS = {
 # ======================================
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 SILENCED_SYSTEM_CHECKS = ['security.W019']
+
+# ======================================
+# Company Settings
+# ======================================
+COMPANY_NAME = "شركة الخواجة للألمنيوم والزجاج"

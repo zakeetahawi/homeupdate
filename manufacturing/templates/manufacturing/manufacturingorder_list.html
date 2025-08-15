@@ -11,12 +11,97 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'manufacturing/css/manufacturing.css' %}">
+<link rel="stylesheet" href="{% static 'manufacturing/css/dropdown-fix.css' %}">
 <meta name="csrf-token" content="{{ csrf_token }}">
 <style>
 /* استخدام متغيرات الألوان من النظام */
 .container {
     max-width: 100%;
     padding: 1rem;
+}
+
+/* القوائم المنسدلة المحسنة - استخدام نفس منطق قائمة المستخدم */
+.custom-manufacturing-dropdown {
+    position: fixed !important;
+    z-index: 2147483647 !important;
+    min-width: 200px;
+    max-width: 95vw;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    border: 1px solid #eee;
+    display: none;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.custom-manufacturing-dropdown.show {
+    display: block !important;
+}
+
+.custom-manufacturing-dropdown .dropdown-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: right;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+
+.custom-manufacturing-dropdown .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.custom-manufacturing-dropdown .dropdown-item input[type="checkbox"] {
+    margin-left: 0.5rem;
+    margin-right: 0;
+}
+
+.custom-manufacturing-dropdown .dropdown-header {
+    font-weight: bold;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #eee;
+    background-color: #f8f9fa;
+    border-radius: 12px 12px 0 0;
+}
+
+/* تحسين أزرار الترتيب */
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.sortable-header:hover {
+    background-color: #e9ecef !important;
+}
+
+.sortable-header .sort-icon {
+    margin-right: 5px;
+    opacity: 0.5;
+    transition: opacity 0.15s ease-in-out;
+}
+
+.sortable-header.active .sort-icon {
+    opacity: 1;
+}
+
+.sortable-header .sort-icon.asc::before {
+    content: "▲";
+}
+
+.sortable-header .sort-icon.desc::before {
+    content: "▼";
+}
+
+.sortable-header .sort-icon.none::before {
+    content: "⇅";
 }
 
 /* البطاقات الإحصائية */
@@ -511,6 +596,18 @@ body:not(.modal-open) .modal-backdrop {
         border-radius: 0.375rem;
         min-width: 100px;
     }
+
+    /* تحسين مظهر select متعدد الاختيار */
+    .form-select[multiple] {
+        min-height: 80px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+
+    .form-select[multiple]:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
     .filter-card .btn, .filter-card .btn-group .btn {
         font-size: 1rem;
         padding: 0.375rem 1rem;
@@ -740,89 +837,7 @@ body:not(.modal-open) .modal-backdrop {
 {% csrf_token %}
 <div class="container-fluid">
     <!-- ملاحظة توضيحية -->
-    <div class="alert alert-info mb-4" role="alert">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>ملاحظة:</strong> جميع الإحصائيات والبيانات المعروضة مفلترة حسب السنة الافتراضية: <strong>{{ default_year }}</strong>
-        <small class="d-block mt-1">يمكن تغيير السنة الافتراضية من لوحة إدارة النظام</small>
-    </div>
 
-    <!-- البطاقات الإحصائية -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card stats-card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase mb-1">إجمالي الطلبات</h6>
-                            <h2 class="mb-0">{{ total_orders|default:0|intcomma }}</h2>
-                        </div>
-                        <div class="icon">
-                            <i class="fas fa-clipboard-list"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3 small">
-                        <span class="text-white-50">
-                            إجمالي أوامر التصنيع - {{ default_year }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase mb-1">مكتمل</h6>
-                            <h2 class="mb-0">{{ completed_orders|default:0|intcomma }}</h2>
-                        </div>
-                        <div class="icon">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3 small">
-                        <span class="text-white-50">تم الانتهاء من التصنيع</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card bg-warning text-dark">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase mb-1">قيد التنفيذ</h6>
-                            <h2 class="mb-0">{{ in_progress_orders|default:0|intcomma }}</h2>
-                        </div>
-                        <div class="icon">
-                            <i class="fas fa-cog fa-spin"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3 small">
-                        <span class="text-muted">قيد التصنيع حالياً</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase mb-1">قيد الانتظار</h6>
-                            <h2 class="mb-0">{{ pending_orders|default:0|intcomma }}</h2>
-                        </div>
-                        <div class="icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3 small">
-                        <span class="text-white-50">في انتظار المعالجة</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- قسم البحث والتصفية -->
     <div class="card filter-card">
@@ -830,55 +845,46 @@ body:not(.modal-open) .modal-backdrop {
             <form id="filterForm" method="get">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-2">
-                        <label for="status" class="form-label">حالة الطلب:</label>
-                        <select name="status" id="status" class="form-select">
-                            <option value="">الكل</option>
-                            <option value="pending_approval" {% if status_filter == 'pending_approval' %}selected{% endif %}>قيد الموافقة</option>
-                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>قيد الانتظار</option>
-                            <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
-                            <option value="ready_install" {% if status_filter == 'ready_install' %}selected{% endif %}>جاهز للتركيب</option>
-                            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>مكتمل</option>
-                            <option value="delivered" {% if status_filter == 'delivered' %}selected{% endif %}>تم التسليم</option>
-                            <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>مرفوض</option>
-                            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>ملغي</option>
+                        <label class="form-label">حالة الطلب:</label>
+                        <select class="form-select" name="status" multiple size="3">
+                            <option value="pending_approval" {% if 'pending_approval' in status_filters %}selected{% endif %}>قيد الموافقة</option>
+                            <option value="pending" {% if 'pending' in status_filters %}selected{% endif %}>قيد الانتظار</option>
+                            <option value="in_progress" {% if 'in_progress' in status_filters %}selected{% endif %}>قيد التنفيذ</option>
+                            <option value="ready_install" {% if 'ready_install' in status_filters %}selected{% endif %}>جاهز للتركيب</option>
+                            <option value="completed" {% if 'completed' in status_filters %}selected{% endif %}>مكتمل</option>
+                            <option value="delivered" {% if 'delivered' in status_filters %}selected{% endif %}>تم التسليم</option>
+                            <option value="cancelled" {% if 'cancelled' in status_filters %}selected{% endif %}>ملغي</option>
+                            <option value="rejected" {% if 'rejected' in status_filters %}selected{% endif %}>مرفوض</option>
                         </select>
+                        <small class="text-muted">اضغط Ctrl لاختيار متعدد</small>
                     </div>
                     <div class="col-md-2">
-                        <label for="branch" class="form-label">الفرع:</label>
-                        <select name="branch" id="branch" class="form-select">
-                            <option value="">الكل</option>
+                        <label class="form-label">الفرع:</label>
+                        <select class="form-select" name="branch" multiple size="3">
                             {% for branch in branches %}
-                            <option value="{{ branch.id }}" {% if branch_filter == branch.id|stringformat:'s' %}selected{% endif %}>
-                                {{ branch.name }}
-                            </option>
+                            <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" in branch_filters %}selected{% endif %}>{{ branch.name }}</option>
                             {% endfor %}
                         </select>
+                        <small class="text-muted">اضغط Ctrl لاختيار متعدد</small>
                     </div>
                     <div class="col-md-2">
-                        <label for="order_types" class="form-label">نوع الطلب:</label>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="orderTypesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span id="selectedTypesText">
-                                    {% if selected_order_types %}
-                                        {{ selected_order_types|length }} نوع محدد
-                                    {% else %}
-                                        جميع الأنواع
-                                    {% endif %}
-                                </span>
-                            </button>
-                            <ul class="dropdown-menu w-100" aria-labelledby="orderTypesDropdown">
-                                {% for type_code, type_name in order_types %}
-                                <li>
-                                    <label class="dropdown-item">
-                                        <input type="checkbox" name="order_types" value="{{ type_code }}"
-                                               {% if type_code in selected_order_types %}checked{% endif %}
-                                               onchange="updateSelectedTypesText()">
-                                        {{ type_name }}
-                                    </label>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                        </div>
+                        <label class="form-label">نوع الطلب:</label>
+                        <select class="form-select" name="order_type" multiple size="3">
+                            {% for type_code, type_name in order_types %}
+                            <option value="{{ type_code }}" {% if type_code in order_type_filters %}selected{% endif %}>{{ type_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">اضغط Ctrl لاختيار متعدد</small>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">خط الإنتاج:</label>
+                        <select class="form-select" name="production_line" multiple size="3">
+                            <option value="" {% if '' in production_line_filters %}selected{% endif %}>غير محدد</option>
+                            {% for line in production_lines %}
+                            <option value="{{ line.id }}" {% if line.id|stringformat:"s" in production_line_filters %}selected{% endif %}>{{ line.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">اضغط Ctrl لاختيار متعدد</small>
                     </div>
                     <div class="col-md-2">
                         <label for="date_from" class="form-label">من تاريخ:</label>
@@ -887,6 +893,16 @@ body:not(.modal-open) .modal-backdrop {
                     <div class="col-md-2">
                         <label for="date_to" class="form-label">إلى تاريخ:</label>
                         <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">الطلبات المتأخرة:</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="overdue" value="true"
+                                   id="overdueSwitch" {% if overdue_filter == 'true' %}checked{% endif %}>
+                            <label class="form-check-label" for="overdueSwitch">
+                                عرض المتأخرة فقط
+                            </label>
+                        </div>
                     </div>
                     <div class="col-md-2">
                         <label for="search" class="form-label">بحث:</label>
@@ -903,7 +919,7 @@ body:not(.modal-open) .modal-backdrop {
                     </div>
                     <div class="col-md-1 d-flex align-items-end">
                         <div class="btn-group w-100">
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary" onclick="console.log('تم النقر على زر التصفية');">
                                 <i class="fas fa-filter"></i> تصفية
                             </button>
                             <a href="{% url 'manufacturing:order_list' %}" class="btn btn-outline-secondary">
@@ -966,9 +982,6 @@ body:not(.modal-open) .modal-backdrop {
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-industry"></i> أوامر التصنيع
-                    <small class="ms-2 opacity-75">
-                        <i class="fas fa-calendar-alt"></i> السنة: {{ default_year }}
-                    </small>
                     {% if display_settings_applied and active_display_settings %}
                     <span class="badge bg-warning text-dark ms-2" style="font-size: 0.7rem;">
                         <i class="fas fa-filter me-1"></i>مفلتر
@@ -1051,19 +1064,43 @@ body:not(.modal-open) .modal-backdrop {
                 <table class="table table-striped table-hover manufacturing-table">
                     <thead>
                         <tr>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 40px; word-break: break-word; white-space: normal;">#</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">رقم الطلب</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">النوع</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 80px; word-break: break-word; white-space: normal;">رقم العقد</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">خط الإنتاج</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 80px; word-break: break-word; white-space: normal;">رقم الفاتورة</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">العميل</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 80px; word-break: break-word; white-space: normal;">البائع</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 80px; word-break: break-word; white-space: normal;">الفرع</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">تاريخ الطلب</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">تاريخ التسليم</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 60px; word-break: break-word; white-space: normal;">مؤشر التسليم</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">الحالة</th>
+                            <th class="text-center sortable-header" data-sort="id" style="padding: 0.3rem 0.4rem; min-width: 40px;">
+                                <span class="sort-icon none"></span>#
+                            </th>
+                            <th class="text-center sortable-header" data-sort="order_number" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                                <span class="sort-icon none"></span>رقم الطلب
+                            </th>
+                            <th class="text-center sortable-header" data-sort="order_type" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                                <span class="sort-icon none"></span>النوع
+                            </th>
+                            <th class="text-center sortable-header" data-sort="contract_number" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                                <span class="sort-icon none"></span>رقم العقد
+                            </th>
+                            <th class="text-center sortable-header" data-sort="production_line" style="padding: 0.3rem 0.4rem; min-width: 100px;">
+                                <span class="sort-icon none"></span>خط الإنتاج
+                            </th>
+                            <th class="text-center sortable-header" data-sort="invoice_number" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                                <span class="sort-icon none"></span>رقم الفاتورة
+                            </th>
+                            <th class="text-center sortable-header" data-sort="customer" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                                <span class="sort-icon none"></span>العميل
+                            </th>
+                            <th class="text-center sortable-header" data-sort="salesperson" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                                <span class="sort-icon none"></span>البائع
+                            </th>
+                            <th class="text-center sortable-header" data-sort="branch" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                                <span class="sort-icon none"></span>الفرع
+                            </th>
+                            <th class="text-center sortable-header" data-sort="order_date" style="padding: 0.3rem 0.4rem; min-width: 100px;">
+                                <span class="sort-icon none"></span>تاريخ الطلب
+                            </th>
+                            <th class="text-center sortable-header" data-sort="expected_delivery_date" style="padding: 0.3rem 0.4rem; min-width: 100px;">
+                                <span class="sort-icon none"></span>تاريخ التسليم
+                            </th>
+                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 60px;">مؤشر التسليم</th>
+                            <th class="text-center sortable-header" data-sort="status" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                                <span class="sort-icon none"></span>الحالة
+                            </th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">معلومات التسليم</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">موافقة العقد</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 70px; word-break: break-word; white-space: normal;">الإجراءات</th>
@@ -2640,5 +2677,50 @@ async function changeProductionLine() {
         </div>
     </div>
 </div>
+
+
+
+<script>
+// JavaScript بسيط للفلاتر
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('تحميل الفلاتر البسيطة');
+
+    // تسجيل إرسال النموذج
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            console.log('تم إرسال نموذج الفلاتر');
+
+            // طباعة البيانات المرسلة
+            const formData = new FormData(filterForm);
+            console.log('البيانات المرسلة:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+        });
+    }
+
+    // تحسين تجربة المستخدم مع select متعدد الاختيار
+    const multiSelects = document.querySelectorAll('select[multiple]');
+    multiSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            const selectedCount = this.selectedOptions.length;
+            const label = this.previousElementSibling;
+            if (label && label.tagName === 'LABEL') {
+                const originalText = label.textContent.split(' (')[0];
+                if (selectedCount > 0) {
+                    label.textContent = `${originalText} (${selectedCount} مختار)`;
+                } else {
+                    label.textContent = originalText;
+                }
+            }
+        });
+
+        // تحديث العداد عند التحميل
+        const event = new Event('change');
+        select.dispatchEvent(event);
+    });
+});
+</script>
 
 {% endblock %}
