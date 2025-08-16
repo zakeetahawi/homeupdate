@@ -198,39 +198,58 @@ class OrderForm(forms.ModelForm):
         # حفظ العميل الأولي للاستخدام في clean_customer
         self.initial_customer = customer
         
-        # تقييد البائعين حسب الفرع إذا لم يكن المستخدم مديراً
+        # تقييد البائعين حسب الفرع إذا لم يكن المستخدم مديراً (محسن)
         if user and not user.is_superuser and user.branch:
-            self.fields['salesperson'].queryset = Salesperson.objects.filter(
-                is_active=True,
-                branch=user.branch
-            )
+            from django.core.cache import cache
+            cache_key = f'branch_salespersons_{user.branch.id}'
+            salesperson_queryset = cache.get(cache_key)
+
+            if salesperson_queryset is None:
+                salesperson_queryset = Salesperson.objects.filter(
+                    is_active=True,
+                    branch=user.branch
+                ).select_related('user', 'branch').only('id', 'user__first_name', 'user__last_name', 'branch__name')
+
+                # تخزين مؤقت لمدة 15 دقيقة
+                cache.set(cache_key, salesperson_queryset, 900)
+
+            self.fields['salesperson'].queryset = salesperson_queryset
         
-        # تقييد العملاء حسب دور المستخدم والفرع
+        # تقييد العملاء حسب دور المستخدم والفرع (محسن)
         if user:
             from customers.models import Customer
-            
-            if user.is_superuser:
-                # المدير العام يرى جميع العملاء
-                customer_queryset = Customer.objects.filter(status='active')
-            elif user.is_region_manager:
-                # مدير المنطقة يرى عملاء الفروع التي يديرها
-                managed_branches = user.managed_branches.all()
-                customer_queryset = Customer.objects.filter(
-                    status='active',
-                    branch__in=managed_branches
-                )
-            elif user.is_branch_manager or user.is_salesperson:
-                # مدير الفرع والبائع يرون عملاء فرعهم فقط
-                if user.branch:
+            from django.core.cache import cache
+
+            # إنشاء مفتاح تخزين مؤقت بناءً على المستخدم
+            cache_key = f'user_customers_{user.id}_{user.branch_id if user.branch else "no_branch"}'
+            customer_queryset = cache.get(cache_key)
+
+            if customer_queryset is None:
+                if user.is_superuser:
+                    # المدير العام يرى جميع العملاء
+                    customer_queryset = Customer.objects.filter(status='active').select_related('branch').only('id', 'name', 'code', 'phone', 'branch__name')
+                elif user.is_region_manager:
+                    # مدير المنطقة يرى عملاء الفروع التي يديرها
+                    managed_branches = user.managed_branches.all()
                     customer_queryset = Customer.objects.filter(
                         status='active',
-                        branch=user.branch
-                    )
+                        branch__in=managed_branches
+                    ).select_related('branch').only('id', 'name', 'code', 'phone', 'branch__name')
+                elif user.is_branch_manager or user.is_salesperson:
+                    # مدير الفرع والبائع يرون عملاء فرعهم فقط
+                    if user.branch:
+                        customer_queryset = Customer.objects.filter(
+                            status='active',
+                            branch=user.branch
+                        ).select_related('branch').only('id', 'name', 'code', 'phone', 'branch__name')
+                    else:
+                        customer_queryset = Customer.objects.none()
                 else:
+                    # المستخدمون الآخرون لا يرون أي عملاء
                     customer_queryset = Customer.objects.none()
-            else:
-                # المستخدمون الآخرون لا يرون أي عملاء
-                customer_queryset = Customer.objects.none()
+
+                # تخزين مؤقت لمدة 10 دقائق
+                cache.set(cache_key, customer_queryset, 600)
             
             # إذا تم تمرير عميل محدد (من بطاقة العميل)، إضافته للقائمة حتى لو كان من فرع آخر
             if customer and customer.pk:
@@ -255,19 +274,22 @@ class OrderForm(forms.ModelForm):
                 # ملاحظة: لا نستخدم disabled لأنه يمنع إرسال القيمة
                 self.fields['customer'].widget.attrs['readonly'] = True
         
-        # تعيين خيارات المعاينة المرتبطة للخدمات الأخرى
+        # تعيين خيارات المعاينة المرتبطة للخدمات الأخرى (محسن مع دوال مساعدة)
         if customer:
             # إضافة خيار "طرف العميل" في بداية القائمة
             inspection_choices = [('customer_side', 'طرف العميل')]
-            
+
+            # استخدام دالة التخزين المؤقت المحسنة
+            from .cache_utils import get_cached_customer_inspections
+            cached_inspections = get_cached_customer_inspections(customer.id, limit=10)
+
             # إضافة معاينات العميل كروابط
-            for inspection in Inspection.objects.filter(customer=customer).order_by('-created_at'):
-                # استخدام معرف المعاينة كقيمة
+            for inspection_data in cached_inspections:
                 inspection_choices.append((
-                    str(inspection.id), 
-                    f"{inspection.customer.name if inspection.customer else 'عميل غير محدد'} - {inspection.contract_number or f'معاينة {inspection.id}'} - {inspection.created_at.strftime('%Y-%m-%d')}"
+                    str(inspection_data['id']),
+                    f"{inspection_data['customer_name']} - {inspection_data['contract_number'] or f'معاينة {inspection_data['id']}'} - {inspection_data['created_at']}"
                 ))
-            
+
             self.fields['related_inspection'].choices = inspection_choices
         else:
             # إذا لم يتم تحديد عميل، إظهار رسالة فقط بدون أي معاينات

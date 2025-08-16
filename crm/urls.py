@@ -7,6 +7,7 @@ from . import views
 from .views_health import health_check
 from accounts.views import admin_logout_view
 from inventory.views import dashboard_view
+from .csrf_views import get_csrf_token_view, csrf_debug_view, test_csrf_view
 from accounts.api_views import dashboard_stats
 from customers.views import customer_list, customer_detail
 # تم حذف test_completion_view
@@ -49,6 +50,11 @@ urlpatterns = [
     # مسارات فحص الصحة
     path('health-check/', health_check, name='health_check'),
     path('health/', health_check, name='health'),
+
+    # مسارات CSRF للتشخيص والاختبار
+    path('csrf-token/', get_csrf_token_view, name='csrf_token'),
+    path('csrf-debug/', csrf_debug_view, name='csrf_debug'),
+    path('csrf-test/', test_csrf_view, name='csrf_test'),
     
     # مسار اختبار إشارات الإكمال - تم حذفه مؤقتاً
 

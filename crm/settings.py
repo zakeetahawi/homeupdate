@@ -442,21 +442,28 @@ if DEBUG:
 
     MIDDLEWARE.insert(0, 'crm.settings.DisableCSRFMiddleware')
 
-# Security and Session Settings (تم دمج الإعدادات المكررة)
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS + [
-    # إضافة نطاقات إضافية للـ CSRF
+# Security and Session Settings - CSRF Trusted Origins محسن
+CSRF_TRUSTED_ORIGINS = [
+    # نطاقات التطوير المحلي
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://localhost',
+    'http://127.0.0.1',
+
+    # نطاقات الإنتاج
     'https://elkhawaga.uk',
     'https://www.elkhawaga.uk',
     'https://crm.elkhawaga.uk',
     'https://api.elkhawaga.uk',
     'https://admin.elkhawaga.uk',
-]
+] + CORS_ALLOWED_ORIGINS
 
-# إعدادات CSRF موحدة
+# إعدادات CSRF موحدة ومحسنة
 CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_HTTPONLY = False  # Must be False to allow JavaScript access
-CSRF_COOKIE_SECURE = False  # تعطيل لتجنب مشاكل المصادقة
+CSRF_COOKIE_HTTPONLY = False  # يجب أن يكون False للسماح لـ JavaScript بالوصول
+CSRF_COOKIE_SECURE = False if DEBUG else True  # آمن في الإنتاج فقط
 CSRF_USE_SESSIONS = False
+CSRF_FAILURE_VIEW = 'crm.csrf_views.csrf_failure'  # صفحة خطأ CSRF مخصصة
 
 # إعدادات Session موحدة
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -731,16 +738,7 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 3600  # 1 hour
 
-# CSRF Protection
-CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
-CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'https://elkhawaga.uk',
-    'https://www.elkhawaga.uk',
-]
+# CSRF Protection - تم نقل الإعدادات إلى الأعلى لتجنب التكرار
 
 # Password Security
 AUTH_PASSWORD_VALIDATORS = [

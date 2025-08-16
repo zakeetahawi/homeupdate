@@ -387,12 +387,12 @@ def order_create(request):
         customer = None
         if customer_param:
             try:
-                # محاولة البحث بالـ ID أولاً (في حالة كان رقمي)
+                # محاولة البحث بالـ ID أولاً (في حالة كان رقمي) - محسن
                 if customer_param.isdigit():
-                    customer = Customer.objects.get(id=customer_param)
+                    customer = Customer.objects.select_related('branch', 'category').get(id=customer_param)
                 else:
-                    # البحث بكود العميل إذا لم يكن رقمي
-                    customer = Customer.objects.get(code=customer_param)
+                    # البحث بكود العميل إذا لم يكن رقمي - محسن
+                    customer = Customer.objects.select_related('branch', 'category').get(code=customer_param)
             except Customer.DoesNotExist:
                 customer = None
         
