@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}الإشعارات{% endblock %}
+
+{% block extra_head %}
+<style>
+.notification-item {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.notification-item.unread {
+    background-color: #f8f9fa;
+    border-left-color: #007bff;
+}
+
+.notification-item.priority-urgent {
+    border-left-color: #dc3545;
+}
+
+.notification-item.priority-high {
+    border-left-color: #ffc107;
+}
+
+.notification-item.priority-normal {
+    border-left-color: #17a2b8;
+}
+
+.notification-item.priority-low {
+    border-left-color: #6c757d;
+}
+
+.notification-item:hover {
+    background-color: #f1f3f4;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 15px;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-meta {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.filter-card {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- عنوان الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-bell me-2"></i>
+            الإشعارات
+        </h1>
+        <div class="btn-group">
+            {% if unread_count > 0 %}
+            <a href="{% url 'notifications:mark_all_read' %}" 
+               class="btn btn-outline-primary"
+               onclick="return confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')">
+                <i class="fas fa-check-double"></i>
+                تحديد الكل كمقروء
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="stats-card">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <h4>{{ notifications.paginator.count }}</h4>
+                <small>إجمالي الإشعارات</small>
+            </div>
+            <div class="col-md-3">
+                <h4>{{ unread_count }}</h4>
+                <small>غير مقروءة</small>
+            </div>
+            <div class="col-md-3">
+                <h4>{{ notifications.paginator.count|add:"-"|add:unread_count }}</h4>
+                <small>مقروءة</small>
+            </div>
+            <div class="col-md-3">
+                <h4>{{ notifications|length }}</h4>
+                <small>في هذه الصفحة</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلاتر البحث -->
+    <div class="filter-card">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="type" class="form-label">نوع الإشعار</label>
+                <select name="type" id="type" class="form-select">
+                    <option value="">جميع الأنواع</option>
+                    {% for value, label in notification_types %}
+                    <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="priority" class="form-label">الأولوية</label>
+                <select name="priority" id="priority" class="form-select">
+                    <option value="">جميع الأولويات</option>
+                    {% for value, label in priority_levels %}
+                    <option value="{{ value }}" {% if current_priority == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="read" class="form-label">حالة القراءة</label>
+                <select name="read" id="read" class="form-select">
+                    <option value="">الكل</option>
+                    <option value="unread" {% if current_read == 'unread' %}selected{% endif %}>غير مقروءة</option>
+                    <option value="read" {% if current_read == 'read' %}selected{% endif %}>مقروءة</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label for="search" class="form-label">البحث</label>
+                <div class="input-group">
+                    <input type="text" name="search" id="search" class="form-control" 
+                           placeholder="ابحث في العنوان أو الرسالة..." value="{{ current_search }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- قائمة الإشعارات -->
+    {% if notifications %}
+    <div class="card">
+        <div class="card-body p-0">
+            {% for notification in notifications %}
+            {% with visibility=notification.visibility_records.all|first %}
+            <div class="notification-item p-3 border-bottom d-flex align-items-start 
+                        {% if not visibility.is_read %}unread{% endif %} 
+                        priority-{{ notification.priority }}"
+                 data-notification-id="{{ notification.pk }}">
+                
+                <!-- أيقونة الإشعار -->
+                <div class="notification-icon bg-light">
+                    <i class="{{ notification.get_icon_class }} {{ notification.get_color_class }}"></i>
+                </div>
+                
+                <!-- محتوى الإشعار -->
+                <div class="notification-content">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0">
+                            <a href="{{ notification.get_absolute_url }}" class="text-decoration-none">
+                                {{ notification.title }}
+                            </a>
+                            {% if not visibility.is_read %}
+                            <span class="badge bg-primary ms-2">جديد</span>
+                            {% endif %}
+                        </h6>
+                        <small class="text-muted">{{ notification.created_at|timesince }}</small>
+                    </div>
+                    
+                    <p class="mb-2 text-muted">{{ notification.message|truncatewords:20 }}</p>
+                    
+                    <div class="notification-meta d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-secondary me-2">{{ notification.get_notification_type_display }}</span>
+                            <span class="badge bg-{{ notification.priority }} me-2">{{ notification.get_priority_display }}</span>
+                            {% if notification.created_by %}
+                            <small class="text-muted">
+                                بواسطة {{ notification.created_by.get_full_name|default:notification.created_by.username }}
+                            </small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="btn-group btn-group-sm">
+                            {% if not visibility.is_read %}
+                            <a href="{% url 'notifications:mark_read' notification.pk %}" 
+                               class="btn btn-outline-primary btn-sm"
+                               title="تحديد كمقروء">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            {% endif %}
+                            <a href="{{ notification.get_absolute_url }}" 
+                               class="btn btn-outline-secondary btn-sm"
+                               title="عرض التفاصيل">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ترقيم الصفحات -->
+    {% if notifications.has_other_pages %}
+    <nav aria-label="ترقيم الصفحات" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if notifications.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ notifications.previous_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.read %}&read={{ request.GET.read }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                    السابق
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for num in notifications.paginator.page_range %}
+            {% if num == notifications.number %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > notifications.number|add:'-3' and num < notifications.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.read %}&read={{ request.GET.read }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                    {{ num }}
+                </a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            
+            {% if notifications.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ notifications.next_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.read %}&read={{ request.GET.read }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                    التالي
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <!-- رسالة عدم وجود إشعارات -->
+    <div class="text-center py-5">
+        <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">لا توجد إشعارات</h4>
+        <p class="text-muted">لم يتم العثور على إشعارات تطابق معايير البحث المحددة.</p>
+        <a href="{% url 'notifications:list' %}" class="btn btn-primary">
+            <i class="fas fa-refresh"></i>
+            عرض جميع الإشعارات
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تحديث عداد الإشعارات في الـ navbar
+    updateNotificationCount();
+    
+    // تحديث العداد كل 30 ثانية
+    setInterval(updateNotificationCount, 30000);
+});
+
+function updateNotificationCount() {
+    fetch('{% url "notifications:ajax_count" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const badge = document.querySelector('#notification-count-badge');
+                if (badge) {
+                    if (data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'inline';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            }
+        })
+        .catch(error => console.error('Error updating notification count:', error));
+}
+</script>
+{% endblock %}

@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     'reports',
     'installations',
     'complaints.apps.ComplaintsConfig',  # نظام إدارة الشكاوى
+    'notifications.apps.NotificationsConfig',  # نظام الإشعارات المتكامل
     'odoo_db_manager.apps.OdooDbManagerConfig',
     'backup_system.apps.BackupSystemConfig',  # نظام النسخ الاحتياطي والاستعادة الجديد
     'corsheaders',
@@ -160,6 +161,7 @@ TEMPLATES = [
                 'accounts.context_processors.branch_messages',
                 'accounts.context_processors.notifications_context',
                 'accounts.context_processors.admin_notifications_context',
+                'notifications.context_processors.notifications_context',
                 'crm.context_processors.admin_stats',
                 'crm.context_processors.jazzmin_extras',
             ],

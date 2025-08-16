@@ -251,7 +251,75 @@
                 </ul>
                 <div class="d-flex align-items-center ms-auto">
                     {% if user.is_authenticated %}
-                        <!-- تم إزالة صندوق الإشعارات -->
+                        <!-- أيقونة الإشعارات -->
+                        <div class="dropdown me-3">
+                            <button class="btn btn-outline-light position-relative" type="button" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                {% if notifications_unread_count > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notification-count-badge">
+                                    {{ notifications_unread_count }}
+                                </span>
+                                {% else %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notification-count-badge" style="display: none;">
+                                    0
+                                </span>
+                                {% endif %}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" style="width: 350px; max-height: 400px; overflow-y: auto;">
+                                <li><h6 class="dropdown-header d-flex justify-content-between align-items-center">
+                                    <span>الإشعارات</span>
+                                    {% if notifications_unread_count > 0 %}
+                                    <a href="{% url 'notifications:mark_all_read' %}" class="btn btn-sm btn-outline-primary" onclick="return confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')">
+                                        تحديد الكل كمقروء
+                                    </a>
+                                    {% endif %}
+                                </h6></li>
+                                <li><hr class="dropdown-divider"></li>
+
+                                {% if recent_notifications %}
+                                    {% for notification in recent_notifications %}
+                                    {% with visibility=notification.visibility_records.all|first %}
+                                    <li>
+                                        <a class="dropdown-item {% if not visibility.is_read %}fw-bold{% endif %}" href="{{ notification.get_absolute_url }}">
+                                            <div class="d-flex align-items-start">
+                                                <div class="me-2">
+                                                    <i class="{{ notification.get_icon_class }} {{ notification.get_color_class }}"></i>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-bold">{{ notification.title|truncatechars:30 }}</div>
+                                                    <small class="text-muted">{{ notification.message|truncatechars:50 }}</small>
+                                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                                        <small class="text-muted">{{ notification.created_at|timesince }}</small>
+                                                        {% if not visibility.is_read %}
+                                                        <span class="badge bg-primary">جديد</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    {% if not forloop.last %}<li><hr class="dropdown-divider"></li>{% endif %}
+                                    {% endwith %}
+                                    {% endfor %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-center" href="{% url 'notifications:list' %}">
+                                            <i class="fas fa-eye"></i> عرض جميع الإشعارات
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li>
+                                        <div class="dropdown-item text-center text-muted">
+                                            <i class="fas fa-bell-slash"></i>
+                                            <br>
+                                            لا توجد إشعارات
+                                        </div>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+
+                        <!-- زر المستخدم -->
                         <button class="btn btn-outline-light dropdown-toggle" id="customUserBtn" type="button">
                             <i class="fas fa-user"></i> {{ user.get_full_name|default:user.username }}
                         </button>
@@ -925,6 +993,134 @@
     </script>
 
     {% block extra_js %}{% endblock %}
+
+    <!-- JavaScript للإشعارات -->
+    {% if user.is_authenticated %}
+    <script>
+        // تحديث عداد الإشعارات
+        function updateNotificationCount() {
+            fetch('{% url "notifications:ajax_count" %}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const badge = document.querySelector('#notification-count-badge');
+                        if (badge) {
+                            if (data.count > 0) {
+                                badge.textContent = data.count;
+                                badge.style.display = 'inline';
+                            } else {
+                                badge.style.display = 'none';
+                            }
+                        }
+                    }
+                })
+                .catch(error => console.error('Error updating notification count:', error));
+        }
+
+        // تحديث قائمة الإشعارات الحديثة
+        function updateRecentNotifications() {
+            // التحقق من وجود عنصر الإشعارات أولاً
+            const notificationsDropdown = document.querySelector('#notificationsDropdown');
+            if (!notificationsDropdown) {
+                return; // لا توجد إشعارات في هذه الصفحة
+            }
+
+            fetch('{% url "notifications:ajax_recent" %}?limit=5')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const dropdown = notificationsDropdown.nextElementSibling;
+                        if (!dropdown) {
+                            return; // لا يوجد dropdown
+                        }
+
+                        const notificationsList = dropdown.querySelector('.dropdown-menu');
+                        if (!notificationsList) {
+                            return; // لا توجد قائمة الإشعارات
+                        }
+
+                        // إعادة بناء قائمة الإشعارات
+                        let newContent = `
+                            <li><h6 class="dropdown-header d-flex justify-content-between align-items-center">
+                                <span>الإشعارات</span>
+                                ${data.count > 0 ? `<a href="{% url 'notifications:mark_all_read' %}" class="btn btn-sm btn-outline-primary" onclick="return confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')">تحديد الكل كمقروء</a>` : ''}
+                            </h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                        `;
+
+                        if (data.notifications.length > 0) {
+                            data.notifications.forEach((notification, index) => {
+                                newContent += `
+                                    <li>
+                                        <a class="dropdown-item ${!notification.is_read ? 'fw-bold' : ''}" href="${notification.url}">
+                                            <div class="d-flex align-items-start">
+                                                <div class="me-2">
+                                                    <i class="${notification.icon_class} ${notification.color_class}"></i>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-bold">${notification.title.substring(0, 30)}${notification.title.length > 30 ? '...' : ''}</div>
+                                                    <small class="text-muted">${notification.message.substring(0, 50)}${notification.message.length > 50 ? '...' : ''}</small>
+                                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                                        <small class="text-muted">${timeAgo(notification.created_at)}</small>
+                                                        ${!notification.is_read ? '<span class="badge bg-primary">جديد</span>' : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    ${index < data.notifications.length - 1 ? '<li><hr class="dropdown-divider"></li>' : ''}
+                                `;
+                            });
+                            newContent += `
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-center" href="{% url 'notifications:list' %}">
+                                        <i class="fas fa-eye"></i> عرض جميع الإشعارات
+                                    </a>
+                                </li>
+                            `;
+                        } else {
+                            newContent += `
+                                <li>
+                                    <div class="dropdown-item text-center text-muted">
+                                        <i class="fas fa-bell-slash"></i>
+                                        <br>
+                                        لا توجد إشعارات
+                                    </div>
+                                </li>
+                            `;
+                        }
+
+                        notificationsList.innerHTML = newContent;
+                    }
+                })
+                .catch(error => console.error('Error updating recent notifications:', error));
+        }
+
+        // دالة مساعدة لحساب الوقت المنقضي
+        function timeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+
+            if (diffInSeconds < 60) return 'الآن';
+            if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' دقيقة';
+            if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' ساعة';
+            return Math.floor(diffInSeconds / 86400) + ' يوم';
+        }
+
+        // تحديث الإشعارات عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNotificationCount();
+
+            // تحديث دوري كل 30 ثانية
+            setInterval(function() {
+                updateNotificationCount();
+                updateRecentNotifications();
+            }, 30000);
+        });
+    </script>
+    {% endif %}
 
     <!-- القائمة الجانبية للمستخدمين النشطين -->
     {% if user.is_authenticated %}

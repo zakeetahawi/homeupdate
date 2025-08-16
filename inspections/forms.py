@@ -148,7 +148,7 @@ class InspectionForm(forms.ModelForm):
         fields = [
             'customer', 'contract_number', 'inspector', 'request_date',
             'scheduled_date', 'scheduled_time', 'windows_count', 'notes', 'inspection_file',
-            'branch', 'responsible_employee', 'status', 'result', 'payment_status',
+            'branch', 'responsible_employee', 'status', 'result',
             'expected_delivery_date', 'update_customer_address'
         ]
         widgets = {
@@ -266,13 +266,7 @@ class InspectionForm(forms.ModelForm):
         self.fields['scheduled_date'].label = _('تاريخ التنفيذ')
         self.fields['scheduled_time'].label = _('وقت التنفيذ')
         self.fields['windows_count'].label = _('عدد الشبابيك')
-        self.fields['payment_status'].label = _('حالة المديونية')
 
-        # تعطيل حقل المديونية إذا كان الطلب مدفوع
-        if self.instance and self.instance.order and self.instance.order.is_fully_paid:
-            self.fields['payment_status'].widget.attrs['readonly'] = True
-            self.fields['payment_status'].widget.attrs['disabled'] = True
-            self.fields['payment_status'].help_text = 'لا يمكن تعديل حالة المديونية للطلبات المدفوعة'
         self.fields['inspection_file'].label = _('ملف المعاينة')
         self.fields['notes'].label = _('ملاحظات')
 

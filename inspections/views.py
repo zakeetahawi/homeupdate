@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Q, Count, F
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from datetime import datetime, timedelta
 from .models import Inspection, InspectionReport, InspectionNotification, InspectionEvaluation
 from .forms import InspectionForm, InspectionReportForm, InspectionNotificationForm, InspectionEvaluationForm
@@ -789,10 +789,12 @@ def inspection_detail_by_code(request, inspection_code):
     # البحث بطريقة محسنة للأداء
     if '-I' in inspection_code:
         order_number = inspection_code.replace('-I', '')
-        inspection = get_object_or_404(
-            Inspection.objects.select_related('customer', 'order', 'inspector', 'branch'),
+        # البحث عن أول معاينة للطلب
+        inspection = Inspection.objects.select_related('customer', 'order', 'inspector', 'branch').filter(
             order__order_number=order_number
-        )
+        ).first()
+        if not inspection:
+            raise Http404("المعاينة غير موجودة")
     else:
         # للأكواد القديمة مثل #4489-I
         inspection_id = inspection_code.replace('#', '').replace('-I', '')
@@ -800,7 +802,7 @@ def inspection_detail_by_code(request, inspection_code):
             Inspection.objects.select_related('customer', 'order', 'inspector', 'branch'),
             id=inspection_id
         )
-    
+
     return InspectionDetailView.as_view()(request, pk=inspection.pk)
 
 @login_required
@@ -808,11 +810,17 @@ def inspection_update_by_code(request, inspection_code):
     """تحديث المعاينة باستخدام كود المعاينة"""
     if '-I' in inspection_code:
         order_number = inspection_code.replace('-I', '')
-        inspection = get_object_or_404(Inspection, order__order_number=order_number)
+        # البحث عن أول معاينة للطلب (أو الوحيدة إذا كانت واحدة)
+        try:
+            inspection = Inspection.objects.filter(order__order_number=order_number).first()
+            if not inspection:
+                raise Http404("المعاينة غير موجودة")
+        except Inspection.DoesNotExist:
+            raise Http404("المعاينة غير موجودة")
     else:
         inspection_id = inspection_code.replace('#', '').replace('-I', '')
         inspection = get_object_or_404(Inspection, id=inspection_id)
-    
+
     return InspectionUpdateView.as_view()(request, pk=inspection.pk)
 
 @login_required
@@ -820,11 +828,14 @@ def inspection_delete_by_code(request, inspection_code):
     """حذف المعاينة باستخدام كود المعاينة"""
     if '-I' in inspection_code:
         order_number = inspection_code.replace('-I', '')
-        inspection = get_object_or_404(Inspection, order__order_number=order_number)
+        # البحث عن أول معاينة للطلب
+        inspection = Inspection.objects.filter(order__order_number=order_number).first()
+        if not inspection:
+            raise Http404("المعاينة غير موجودة")
     else:
         inspection_id = inspection_code.replace('#', '').replace('-I', '')
         inspection = get_object_or_404(Inspection, id=inspection_id)
-    
+
     return InspectionDeleteView.as_view()(request, pk=inspection.pk)
 
 # Views للإعادة التوجيه من ID إلى كود
