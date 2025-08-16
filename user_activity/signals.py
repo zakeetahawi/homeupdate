@@ -2,7 +2,7 @@
 إشارات نشاط المستخدمين
 """
 
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_delete
 from django.dispatch import receiver
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.contrib.auth import get_user_model
@@ -96,25 +96,24 @@ def handle_user_update(sender, instance, created, **kwargs):
         print(f"خطأ في تسجيل تحديث المستخدم: {e}")
 
 
-@receiver(post_delete, sender=User)
+@receiver(pre_delete, sender=User)
 def handle_user_deletion(sender, instance, **kwargs):
     """معالجة حذف المستخدم"""
     try:
-        # تنظيف سجلات المستخدم النشط
-        OnlineUser.objects.filter(user=instance).delete()
-        
-        # لا نحذف سجلات النشاط والدخول للاحتفاظ بالسجل التاريخي
-        # ولكن يمكن تسجيل عملية الحذف
-        UserActivityLog.objects.create(
-            user_id=instance.id,  # استخدام ID بدلاً من الكائن المحذوف
+        # تسجيل عملية الحذف قبل حذف المستخدم
+        UserActivityLog.log_activity(
+            user=instance,
             action_type='delete',
             entity_type='user',
             entity_id=instance.id,
             entity_name=instance.username,
             description=f'حذف المستخدم {instance.username}',
             ip_address='127.0.0.1',
-            success=True,
-            timestamp=timezone.now()
+            success=True
         )
+
+        # تنظيف سجلات المستخدم النشط
+        OnlineUser.objects.filter(user=instance).delete()
+
     except Exception as e:
         print(f"خطأ في معالجة حذف المستخدم: {e}")
