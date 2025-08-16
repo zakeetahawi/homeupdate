@@ -65,11 +65,6 @@
                             <a href="{% url 'manufacturing:order_list' %}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> العودة للقائمة
                             </a>
-                            {% if perms.manufacturing.change_manufacturingorder %}
-                                <a href="{% url 'manufacturing:order_update' manufacturing_order.id %}" class="btn btn-primary">
-                                    <i class="fas fa-edit"></i> تعديل
-                                </a>
-                            {% endif %}
                             {% if perms.manufacturing.delete_manufacturingorder %}
                                 <a href="{% url 'manufacturing:order_delete' manufacturing_order.id %}" class="btn btn-danger">
                                     <i class="fas fa-trash"></i> حذف
