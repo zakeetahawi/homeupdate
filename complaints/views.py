@@ -25,7 +25,7 @@ from .forms import (
     ComplaintBulkActionForm
 )
 from .models import (
-    Complaint, ComplaintType, ComplaintUpdate, ComplaintNotification
+    Complaint, ComplaintType, ComplaintUpdate
 )
 
 
@@ -845,21 +845,7 @@ def notification_bulk_action(request):
 
 
 
-@login_required
-def mark_notification_read(request, notification_id):
-    """تحديد إشعار كمقروء"""
-    notification = get_object_or_404(
-        ComplaintNotification,
-        pk=notification_id,
-        recipient=request.user
-    )
-    
-    notification.mark_as_read()
-    
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'success': True})
-    
-    return redirect('complaints:notifications_list')
+
 
 
 def ajax_complaint_stats(request):

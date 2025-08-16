@@ -482,15 +482,8 @@ class Order(models.Model):
                 super().save(update_fields=['final_price'])
 
             # إنشاء الإشعارات المناسبة
-            if is_new:
-                # إشعار طلب جديد
-                self.create_order_notifications()
-            else:
-                # تحقق من تغيير الحالة وإنشاء إشعار إذا لزم الأمر
-                if old_order_status and old_order_status != self.order_status:
-                    self.create_status_change_notification(old_order_status, self.order_status)
-                elif old_tracking_status and old_tracking_status != self.tracking_status:
-                    self.create_status_change_notification(old_tracking_status, self.tracking_status, status_type='tracking')
+            # تم إزالة استدعاءات دوال الإشعارات
+            pass
 
         except Exception as e:
             # تسجيل الخطأ
@@ -498,168 +491,9 @@ class Order(models.Model):
             logger = logging.getLogger(__name__)
             logger.error(f"خطأ في حفظ الطلب {getattr(self, 'order_number', 'غير محدد')}: {str(e)}")
             raise
-    def create_order_notifications(self):
-        """إنشاء إشعار جماعي موحد للطلب الجديد"""
-        try:
-            from accounts.models import GroupNotification, User
+    # تم إزالة دالة create_order_notifications
 
-            # تحديد نوع الطلب
-            selected_types = self.get_selected_types_list()
-            types_display = []
-
-            if 'inspection' in selected_types:
-                types_display.append('معاينة')
-            if 'installation' in selected_types:
-                types_display.append('تركيب')
-            if 'fabric' in selected_types:
-                types_display.append('أقمشة')
-            if 'accessory' in selected_types:
-                types_display.append('إكسسوار')
-            if 'tailoring' in selected_types:
-                types_display.append('تفصيل')
-            if 'transport' in selected_types:
-                types_display.append('نقل')
-
-            types_str = ' + '.join(types_display) if types_display else 'عام'
-
-            # إنشاء عنوان ومحتوى الإشعار
-            title = f"طلب جديد: {types_str}"
-            message = f"تم إنشاء طلب جديد للعميل {self.customer.name} من فرع {self.branch.name if self.branch else 'غير محدد'}"
-
-            # تحديد المستخدمين المستهدفين حسب نوع الطلب
-            target_users = []
-
-            # مدير النظام والمدير العام يرون جميع الإشعارات
-            superusers = User.objects.filter(is_superuser=True, is_active=True)
-            general_managers = User.objects.filter(is_general_manager=True, is_active=True)
-            target_users.extend(superusers)
-            target_users.extend(general_managers)
-
-            # إضافة المستخدمين حسب نوع الطلب
-            if 'inspection' in selected_types:
-                inspection_managers = User.objects.filter(is_inspection_manager=True, is_active=True)
-                target_users.extend(inspection_managers)
-
-            if 'installation' in selected_types:
-                installation_managers = User.objects.filter(is_installation_manager=True, is_active=True)
-                target_users.extend(installation_managers)
-
-            if any(t in selected_types for t in ['fabric', 'accessory', 'tailoring']):
-                factory_managers = User.objects.filter(is_factory_manager=True, is_active=True)
-                target_users.extend(factory_managers)
-
-            # إضافة مدير الفرع
-            if self.branch:
-                branch_manager = getattr(self.branch, 'manager', None)
-                if branch_manager:
-                    target_users.append(branch_manager)
-
-            # إزالة التكرارات
-            target_users = list(set(target_users))
-
-            # إنشاء إشعار جماعي واحد
-            if target_users:
-                group_notification = GroupNotification.objects.create(
-                    title=title,
-                    message=message,
-                    customer_name=self.customer.name,
-                    order_number=self.order_number,
-                    notification_type='order_created',
-                    priority='normal',
-                    created_by=self.created_by,
-                    related_object_id=self.id,
-                    related_object_type='Order'
-                )
-
-                # إضافة المستخدمين المستهدفين
-                group_notification.target_users.set(target_users)
-
-                # تسجيل نجاح العملية
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.info(f"تم إنشاء إشعار جماعي للطلب {self.order_number} لـ {len(target_users)} مستخدم")
-
-        except Exception as e:
-            # تسجيل الخطأ دون إيقاف عملية الحفظ
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"خطأ في إنشاء إشعار الطلب {self.order_number}: {str(e)}")
-
-    def create_status_change_notification(self, old_status, new_status, status_type='order'):
-        """إنشاء إشعار جماعي عند تغيير حالة الطلب"""
-        try:
-            from accounts.models import GroupNotification, User
-
-            # تحديد نوع التغيير
-            status_display = {
-                'pending': 'في الانتظار',
-                'confirmed': 'مؤكد',
-                'in_progress': 'قيد التنفيذ',
-                'completed': 'مكتمل',
-                'cancelled': 'ملغي',
-                'on_hold': 'معلق',
-                'ready_for_delivery': 'جاهز للتسليم',
-                'delivered': 'تم التسليم'
-            }
-
-            old_status_ar = status_display.get(old_status, old_status)
-            new_status_ar = status_display.get(new_status, new_status)
-
-            # إنشاء عنوان ومحتوى الإشعار
-            title = f"تغيير حالة الطلب: {self.order_number}"
-            message = f"تم تغيير حالة الطلب للعميل {self.customer.name} من '{old_status_ar}' إلى '{new_status_ar}'"
-
-            # تحديد المستخدمين المستهدفين
-            target_users = []
-
-            # مدير النظام والمدير العام يرون جميع الإشعارات
-            superusers = User.objects.filter(is_superuser=True, is_active=True)
-            general_managers = User.objects.filter(is_general_manager=True, is_active=True)
-            target_users.extend(superusers)
-            target_users.extend(general_managers)
-
-            # إضافة منشئ الطلب
-            if self.created_by:
-                target_users.append(self.created_by)
-
-            # إضافة البائع إذا كان مختلف عن منشئ الطلب
-            if self.salesperson and self.salesperson.user != self.created_by:
-                target_users.append(self.salesperson.user)
-
-            # إضافة مدير الفرع
-            if self.branch and hasattr(self.branch, 'manager') and self.branch.manager:
-                target_users.append(self.branch.manager)
-
-            # إزالة التكرارات
-            target_users = list(set(target_users))
-
-            # إنشاء إشعار جماعي واحد
-            if target_users:
-                group_notification = GroupNotification.objects.create(
-                    title=title,
-                    message=message,
-                    customer_name=self.customer.name,
-                    order_number=self.order_number,
-                    notification_type='order_status_changed',
-                    priority='normal',
-                    created_by=self.created_by,
-                    related_object_id=self.id,
-                    related_object_type='Order'
-                )
-
-                # إضافة المستخدمين المستهدفين
-                group_notification.target_users.set(target_users)
-
-                # تسجيل نجاح العملية
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.info(f"تم إنشاء إشعار تغيير حالة للطلب {self.order_number} لـ {len(target_users)} مستخدم")
-
-        except Exception as e:
-            # تسجيل الخطأ دون إيقاف عملية الحفظ
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"خطأ في إنشاء إشعار تغيير حالة الطلب {self.order_number}: {str(e)}")
+    # تم إزالة دالة create_status_change_notification
 
     def notify_status_change(self, old_status, new_status, changed_by=None, notes=''):
         """إرسال إشعار عند تغيير حالة تتبع الطلب"""

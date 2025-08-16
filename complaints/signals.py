@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from .models import Complaint, ComplaintUpdate, ComplaintNotification, ComplaintEscalation
+from .models import Complaint, ComplaintUpdate, ComplaintEscalation
 from accounts.models import Department
 
 
@@ -13,13 +13,8 @@ User = get_user_model()
 def complaint_post_save(sender, instance, created, **kwargs):
     """إشارة بعد حفظ الشكوى"""
     if created:
-        try:
-            from accounts.services.simple_notifications import SimpleNotificationService
-            # إنشاء إشعارات للشكوى الجديدة
-            SimpleNotificationService.notify_complaint_created(instance)
-            logger.info(f"تم إنشاء إشعارات للشكوى الجديدة: {instance.complaint_number}")
-        except Exception as e:
-            logger.error(f"خطأ في إنشاء إشعارات الشكوى الجديدة: {str(e)}")
+        # تم إزالة إنشاء إشعارات الشكوى الجديدة
+        pass
 
 
 @receiver(pre_save, sender=Complaint)
@@ -41,15 +36,8 @@ def complaint_status_change(sender, instance, **kwargs):
                     is_visible_to_customer=True
                 )
 
-                # إنشاء إشعار تغيير الحالة
-                try:
-                    from accounts.services.simple_notifications import SimpleNotificationService
-                    SimpleNotificationService.notify_complaint_status_change(
-                        instance, old_instance.status, instance.status
-                    )
-                    logger.info(f"تم إنشاء إشعار تغيير حالة الشكوى {instance.complaint_number}")
-                except Exception as e:
-                    logger.error(f"خطأ في إنشاء إشعار تغيير حالة الشكوى: {str(e)}")
+                # تم إزالة إنشاء إشعار تغيير الحالة
+                pass
 
                 # إشعار المدير في حالة التأخير
                 if instance.status == 'overdue':
@@ -72,15 +60,8 @@ def complaint_status_change(sender, instance, **kwargs):
 
 
 def create_complaint_notification(complaint, notification_type, title, message, recipient):
-    """إنشاء إشعار شكوى"""
-    if recipient:
-        ComplaintNotification.objects.create(
-            complaint=complaint,
-            notification_type=notification_type,
-            title=title,
-            message=message,
-            recipient=recipient
-        )
+    """إنشاء إشعار شكوى - تم تعطيلها"""
+    pass
 
 
 def notify_department_users(complaint, department, title, message):

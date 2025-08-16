@@ -507,14 +507,451 @@
     </div>
 
     <script>
-    // تم إزالة نظام الإشعارات
+    // 🎨 نظام الإشعارات الإبداعي والجميل
     document.addEventListener('DOMContentLoaded', function() {
-        // تم إزالة كود الإشعارات
+        // عناصر الإشعارات
+        const orderBell = document.getElementById('orderNotificationBell');
+        const complaintBell = document.getElementById('complaintNotificationBell');
+        const orderBox = document.getElementById('orderNotificationBox');
+        const complaintBox = document.getElementById('complaintNotificationBox');
 
-        // تم إزالة جميع دوال الإشعارات
+        // إظهار/إخفاء صندوق إشعارات الطلبات
+        if (orderBell && orderBox) {
+            orderBell.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleNotificationBox('order');
+            });
+        }
 
-        // تحديث العدادات عند تحميل الصفحة
-        // document.addEventListener('DOMContentLoaded', function() {
+        // إظهار/إخفاء صندوق إشعارات الشكاوى
+        if (complaintBell && complaintBox) {
+            complaintBell.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleNotificationBox('complaint');
+            });
+        }
+
+        // إغلاق الصناديق عند النقر خارجها
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.notification-box') && !e.target.closest('.notification-bell')) {
+                closeNotificationBox('order');
+            }
+            if (!e.target.closest('.complaint-box') && !e.target.closest('.complaint-bell')) {
+                closeNotificationBox('complaint');
+            }
+        });
+
+        // تأثير النقر على الإشعارات
+        document.querySelectorAll('.notification-item, .complaint-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // تأثير النقر
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+
+                // تحديد كمقروء
+                this.classList.remove('unread', 'urgent');
+
+                // الحصول على معرف الإشعار
+                const notificationId = this.getAttribute('data-notification-id');
+                const isComplaint = this.classList.contains('complaint-item');
+
+                // تحديد الإشعار كمقروء في الخادم
+                if (notificationId) {
+                    markNotificationAsRead(notificationId, isComplaint ? 'complaint' : 'order');
+                }
+
+                // توجيه المستخدم للمكان المناسب
+                redirectToNotificationTarget(this);
+
+                // تحديث العداد
+                updateNotificationCount();
+            });
+        });
+
+        // تحميل الإشعارات فور تحميل الصفحة
+        loadNotificationsFromServer();
+
+        // تحديث العدادات كل 30 ثانية
+        setInterval(function() {
+            loadNotificationsFromServer();
+        }, 30000);
+    });
+
+    // 🎨 الدوال المساعدة للإشعارات الجميلة
+    function toggleNotificationBox(type) {
+        const orderBox = document.getElementById('orderNotificationBox');
+        const complaintBox = document.getElementById('complaintNotificationBox');
+
+        if (type === 'order') {
+            // إغلاق صندوق الشكاوى إذا كان مفتوحاً
+            if (complaintBox) {
+                complaintBox.classList.remove('show');
+            }
+
+            // تبديل صندوق الطلبات
+            if (orderBox) {
+                orderBox.classList.toggle('show');
+
+                // تأثير صوتي لطيف (اختياري)
+                if (orderBox.classList.contains('show')) {
+                    playNotificationSound();
+                }
+            }
+        } else if (type === 'complaint') {
+            // إغلاق صندوق الطلبات إذا كان مفتوحاً
+            if (orderBox) {
+                orderBox.classList.remove('show');
+            }
+
+            // تبديل صندوق الشكاوى
+            if (complaintBox) {
+                complaintBox.classList.toggle('show');
+
+                // تأثير صوتي لطيف (اختياري)
+                if (complaintBox.classList.contains('show')) {
+                    playNotificationSound();
+                }
+            }
+        }
+    }
+
+    function closeNotificationBox(type) {
+        const orderBox = document.getElementById('orderNotificationBox');
+        const complaintBox = document.getElementById('complaintNotificationBox');
+
+        if (type === 'order' && orderBox) {
+            orderBox.classList.remove('show');
+        } else if (type === 'complaint' && complaintBox) {
+            complaintBox.classList.remove('show');
+        }
+    }
+
+    function updateNotificationCount() {
+        // تحديث عداد إشعارات الطلبات
+        const unreadOrders = document.querySelectorAll('.notification-item.unread').length;
+        const orderCountBadge = document.getElementById('orderNotificationCount');
+        if (orderCountBadge) {
+            if (unreadOrders > 0) {
+                orderCountBadge.textContent = unreadOrders;
+                orderCountBadge.style.display = 'flex';
+            } else {
+                orderCountBadge.style.display = 'none';
+            }
+        }
+
+        // تحديث عداد إشعارات الشكاوى
+        const urgentComplaints = document.querySelectorAll('.complaint-item.urgent').length;
+        const complaintCountBadge = document.getElementById('complaintNotificationCount');
+        if (complaintCountBadge) {
+            if (urgentComplaints > 0) {
+                complaintCountBadge.textContent = urgentComplaints;
+                complaintCountBadge.style.display = 'flex';
+            } else {
+                complaintCountBadge.style.display = 'none';
+            }
+        }
+    }
+
+    function playNotificationSound() {
+        // تأثير صوتي لطيف وخفيف
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        } catch (e) {
+            // تجاهل الأخطاء الصوتية
+        }
+    }
+
+    function markNotificationAsRead(notificationId, type) {
+        // إرسال طلب AJAX لتحديد الإشعار كمقروء
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken.value;
+        }
+
+        fetch(`/accounts/notifications/${type}/${notificationId}/mark-read/`, {
+            method: 'POST',
+            headers: headers,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // تحديث الواجهة
+                const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                if (item) {
+                    item.classList.remove('unread', 'urgent');
+                }
+                updateNotificationCount();
+            }
+        })
+        .catch(error => {
+            console.log('تم تحديد الإشعار محلياً');
+        });
+    }
+
+    function markGroupNotificationAsRead(notificationId) {
+        // دالة لتحديد الإشعار الجماعي كمقروء
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken.value;
+        }
+
+        fetch(`/accounts/notifications/group/${notificationId}/mark-read/`, {
+            method: 'POST',
+            headers: headers,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('تم تحديد الإشعار الجماعي كمقروء');
+                // تحديث الواجهة
+                const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                if (item) {
+                    item.classList.remove('unread', 'urgent');
+                }
+                updateNotificationCount();
+            }
+        })
+        .catch(error => {
+            console.log('تم تحديد الإشعار محلياً');
+        });
+    }
+
+    function loadNotificationsFromServer() {
+        // تحميل الإشعارات الحقيقية من الخادم
+        fetch('/accounts/notifications/data/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // تحديث إشعارات الطلبات
+                updateOrderNotifications(data.order_notifications);
+
+                // تحديث إشعارات الشكاوى
+                updateComplaintNotifications(data.complaint_notifications);
+
+                // تحديث العدادات
+                updateNotificationBadges(data.unread_orders_count, data.urgent_complaints_count);
+            } else {
+                // عرض رسالة خطأ
+                const orderContainer = document.querySelector('#orderNotificationBox .notification-content');
+                const complaintContainer = document.querySelector('#complaintNotificationBox .complaint-content');
+
+                if (orderContainer) {
+                    orderContainer.innerHTML = '<div class="no-notifications">❌ خطأ في تحميل الإشعارات</div>';
+                }
+                if (complaintContainer) {
+                    complaintContainer.innerHTML = '<div class="no-notifications">❌ خطأ في تحميل الشكاوى</div>';
+                }
+            }
+        })
+        .catch(error => {
+            console.log('خطأ في تحميل الإشعارات:', error);
+            // عرض رسالة خطأ
+            const orderContainer = document.querySelector('#orderNotificationBox .notification-content');
+            const complaintContainer = document.querySelector('#complaintNotificationBox .complaint-content');
+
+            if (orderContainer) {
+                orderContainer.innerHTML = '<div class="no-notifications">📭 لا توجد إشعارات جديدة</div>';
+            }
+            if (complaintContainer) {
+                complaintContainer.innerHTML = '<div class="no-notifications">📢 لا توجد شكاوى جديدة</div>';
+            }
+        });
+    }
+
+    function updateOrderNotifications(notifications) {
+        const container = document.querySelector('#orderNotificationBox .notification-content');
+        if (!container) return;
+
+        if (notifications.length === 0) {
+            container.innerHTML = '<div class="no-notifications">📭 لا توجد إشعارات جديدة</div>';
+            return;
+        }
+
+        container.innerHTML = notifications.map(notification => `
+            <div class="notification-item ${notification.is_read ? '' : 'unread'}" data-notification-id="${notification.id}" style="cursor: pointer;">
+                <div class="notification-icon ${notification.notification_type}">
+                    ${notification.icon}
+                </div>
+                <div class="notification-details">
+                    <div class="notification-title">${notification.title}</div>
+                    <div class="notification-meta">
+                        <span class="order-number">${notification.order_number}</span>
+                        <span class="status">${notification.status}</span>
+                    </div>
+                    <div class="notification-time">منذ ${notification.time_ago}</div>
+                </div>
+            </div>
+        `).join('');
+
+        // إضافة event listeners للإشعارات الجديدة
+        container.querySelectorAll('.notification-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // تأثير النقر
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+
+                // تحديد كمقروء
+                this.classList.remove('unread');
+
+                // الحصول على معرف الإشعار
+                const notificationId = this.getAttribute('data-notification-id');
+
+                // تحديد الإشعار كمقروء في الخادم
+                if (notificationId) {
+                    markGroupNotificationAsRead(notificationId);
+                }
+
+                // توجيه المستخدم للمكان المناسب
+                redirectToNotificationTarget(this);
+
+                // تحديث العداد
+                updateNotificationCount();
+            });
+        });
+    }
+
+    function updateComplaintNotifications(notifications) {
+        const container = document.querySelector('#complaintNotificationBox .complaint-content');
+        if (!container) return;
+
+        if (notifications.length === 0) {
+            container.innerHTML = '<div class="no-notifications">📢 لا توجد شكاوى جديدة</div>';
+            return;
+        }
+
+        container.innerHTML = notifications.map(notification => `
+            <div class="complaint-item ${notification.is_read ? '' : 'urgent'}" data-notification-id="${notification.id}" style="cursor: pointer;">
+                <div class="complaint-icon ${notification.complaint_type}">
+                    ${notification.icon}
+                </div>
+                <div class="complaint-details">
+                    <div class="complaint-title">${notification.title}</div>
+                    <div class="complaint-meta">
+                        <span class="complaint-number">${notification.complaint_number}</span>
+                        <span class="priority ${notification.priority}">${notification.priority}</span>
+                    </div>
+                    <div class="complaint-time">منذ ${notification.time_ago}</div>
+                </div>
+            </div>
+        `).join('');
+
+        // إضافة event listeners للشكاوى الجديدة
+        container.querySelectorAll('.complaint-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // تأثير النقر
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+
+                // تحديد كمقروء
+                this.classList.remove('urgent');
+
+                // الحصول على معرف الإشعار
+                const notificationId = this.getAttribute('data-notification-id');
+
+                // تحديد الإشعار كمقروء في الخادم
+                if (notificationId) {
+                    markNotificationAsRead(notificationId, 'complaint');
+                }
+
+                // توجيه المستخدم للمكان المناسب
+                redirectToNotificationTarget(this);
+
+                // تحديث العداد
+                updateNotificationCount();
+            });
+        });
+    }
+
+    function updateNotificationBadges(orderCount, complaintCount) {
+        const orderBadge = document.getElementById('orderNotificationCount');
+        const complaintBadge = document.getElementById('complaintNotificationCount');
+
+        if (orderBadge) {
+            if (orderCount > 0) {
+                orderBadge.textContent = orderCount;
+                orderBadge.style.display = 'flex';
+            } else {
+                orderBadge.style.display = 'none';
+            }
+        }
+
+        if (complaintBadge) {
+            if (complaintCount > 0) {
+                complaintBadge.textContent = complaintCount;
+                complaintBadge.style.display = 'flex';
+            } else {
+                complaintBadge.style.display = 'none';
+            }
+        }
+    }
+
+    function redirectToNotificationTarget(notificationElement) {
+        // توجيه المستخدم للمكان المناسب حسب نوع الإشعار
+        const notificationId = notificationElement.getAttribute('data-notification-id');
+
+        if (notificationElement.classList.contains('complaint-item')) {
+            // توجيه لصفحة الشكاوى
+            window.location.href = '/complaints/';
+        } else if (notificationElement.classList.contains('notification-item')) {
+            // للإشعارات الجديدة، توجيه لصفحة تفاصيل الإشعار الجماعي
+            if (notificationId) {
+                console.log('توجيه للإشعار الجماعي:', notificationId);
+                window.location.href = `/accounts/notifications/group/${notificationId}/`;
+                return;
+            }
+
+            // للإشعارات القديمة، استخدام النظام القديم
+            const notificationType = notificationElement.querySelector('.notification-icon').className;
+
+            if (notificationType.includes('inspection')) {
+                // توجيه لصفحة المعاينات
+                window.location.href = '/inspections/';
+            } else if (notificationType.includes('manufacturing')) {
+                // توجيه لصفحة التصنيع
+                window.location.href = '/manufacturing/';
+            } else if (notificationType.includes('installation')) {
+                // توجيه لصفحة التركيبات
+                window.location.href = '/installations/';
+            } else {
+                // توجيه لصفحة الطلبات العامة
+                window.location.href = '/orders/';
+            }
+        }
+    }
+
+    // تحديث العدادات عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+        updateNotificationCount();
+        loadNotificationsFromServer();
 
         var userBtn = document.getElementById('customUserBtn');
         var userDropdown = document.getElementById('customUserDropdown');

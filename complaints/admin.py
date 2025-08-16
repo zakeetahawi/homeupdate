@@ -6,7 +6,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from .models import (
     ComplaintType, Complaint, ComplaintUpdate, ComplaintAttachment,
-    ComplaintNotification, ComplaintEscalation, ComplaintSLA
+    ComplaintEscalation, ComplaintSLA
 )
 
 
@@ -58,11 +58,7 @@ class ComplaintAttachmentInline(admin.TabularInline):
     fields = ('file', 'description', 'uploaded_by', 'uploaded_at', 'file_size')
 
 
-class ComplaintNotificationInline(admin.TabularInline):
-    model = ComplaintNotification
-    extra = 0
-    readonly_fields = ('created_at', 'read_at')
-    fields = ('notification_type', 'title', 'recipient', 'is_read', 'created_at')
+
 
 
 @admin.register(Complaint)
@@ -123,8 +119,7 @@ class ComplaintAdmin(admin.ModelAdmin):
     )
     
     inlines = [
-        ComplaintUpdateInline, ComplaintAttachmentInline,
-        ComplaintNotificationInline
+        ComplaintUpdateInline, ComplaintAttachmentInline
     ]
     
     def customer_name(self, obj):
@@ -258,29 +253,7 @@ class ComplaintAttachmentAdmin(admin.ModelAdmin):
     file_size_display.short_description = 'حجم الملف'
 
 
-@admin.register(ComplaintNotification)
-class ComplaintNotificationAdmin(admin.ModelAdmin):
-    list_per_page = 50  # عرض 50 صف كافتراضي
-    list_display = [
-        'complaint', 'notification_type', 'title', 'recipient',
-        'is_read', 'created_at'
-    ]
-    list_filter = ['notification_type', 'is_read', 'created_at']
-    search_fields = ['complaint__complaint_number', 'title', 'message']
-    readonly_fields = ['created_at', 'read_at']
-    
-    actions = ['mark_as_read']
-    
-    def mark_as_read(self, request, queryset):
-        updated = queryset.filter(is_read=False).update(
-            is_read=True,
-            read_at=timezone.now()
-        )
-        self.message_user(
-            request,
-            f'تم تحديد {updated} إشعار كمقروء.'
-        )
-    mark_as_read.short_description = 'تحديد كمقروء'
+
 
 
 @admin.register(ComplaintEscalation)

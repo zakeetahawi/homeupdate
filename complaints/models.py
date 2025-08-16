@@ -493,68 +493,7 @@ class ComplaintAttachment(models.Model):
         return f"{self.complaint.complaint_number} - {self.filename}"
 
 
-class ComplaintNotification(models.Model):
-    """إشعارات الشكاوى"""
-    NOTIFICATION_TYPES = [
-        ('new_complaint', 'شكوى جديدة'),
-        ('status_change', 'تغيير الحالة'),
-        ('assignment', 'تعيين مسؤول'),
-        ('deadline_reminder', 'تذكير الموعد النهائي'),
-        ('overdue', 'تجاوز الموعد النهائي'),
-        ('escalation', 'تصعيد'),
-        ('resolution', 'حل'),
-        ('customer_rating', 'تقييم العميل'),
-    ]
-    
-    complaint = models.ForeignKey(
-        Complaint,
-        on_delete=models.CASCADE,
-        related_name='notifications',
-        verbose_name='الشكوى'
-    )
-    notification_type = models.CharField(
-        max_length=20,
-        choices=NOTIFICATION_TYPES,
-        verbose_name='نوع الإشعار'
-    )
-    title = models.CharField(
-        max_length=200,
-        verbose_name='عنوان الإشعار'
-    )
-    message = models.TextField(
-        verbose_name='نص الإشعار'
-    )
-    recipient = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name='المستلم'
-    )
-    is_read = models.BooleanField(
-        default=False,
-        verbose_name='تم القراءة'
-    )
-    read_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='تاريخ القراءة'
-    )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='تاريخ الإرسال'
-    )
-    
-    class Meta:
-        verbose_name = 'إشعار شكوى'
-        verbose_name_plural = 'إشعارات الشكاوى'
-        ordering = ['-created_at']
-    
-    def mark_as_read(self):
-        self.is_read = True
-        self.read_at = timezone.now()
-        self.save()
-    
-    def __str__(self):
-        return f"{self.complaint.complaint_number} - {self.title}"
+
 
 
 class ComplaintEscalation(models.Model):

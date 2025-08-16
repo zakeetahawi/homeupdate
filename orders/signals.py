@@ -295,27 +295,6 @@ def log_manufacturing_order_deletion(sender, instance, **kwargs):
 # تم إزالة الكود المتبقي من signal تغيير الحالة المحذوف
 
 
-@receiver(post_save, sender=ManufacturingOrder)
-def manufacturing_order_notification(sender, instance, created, **kwargs):
-    """إنشاء إشعارات عند إنشاء أو تحديث أمر تصنيع"""
-    try:
-        from accounts.services.simple_notifications import SimpleNotificationService
-
-        if created:
-            # إشعار بدء التصنيع
-            if instance.order and instance.order.created_by:
-                SimpleNotificationService.create_order_notification(
-                    customer_name=instance.order.customer.name,
-                    order_number=instance.order.order_number,
-                    status='دخل مرحلة التصنيع',
-                    notification_type='manufacturing_started',
-                    priority='normal',
-                    recipient=instance.order.created_by,
-                    related_object=instance.order
-                )
-                logger.info(f"تم إنشاء إشعار بدء التصنيع للطلب: {instance.order.order_number}")
-
-    except Exception as e:
-        logger.error(f"خطأ في إنشاء إشعار التصنيع: {str(e)}")
+# تم إزالة دالة manufacturing_order_notification
 
 

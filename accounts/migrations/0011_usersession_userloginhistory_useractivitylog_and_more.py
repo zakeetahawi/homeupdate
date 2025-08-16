@@ -8,7 +8,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0010_groupnotification_groupnotificationread_and_more'),
+        ('accounts', '0008_initial_fixed'),
     ]
 
     operations = [
