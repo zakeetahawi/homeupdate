@@ -333,7 +333,13 @@ class Inspection(models.Model):
             self.order_notes = self.order.notes
 
         # تحديد حالة المديونية تلقائياً بناءً على حالة الدفع في الطلب
-        if self.order:
+        # فقط عند الإنشاء الأول أو إذا لم تكن محددة
+        if self.order and not self.pk:  # فقط عند الإنشاء الجديد
+            if self.order.is_fully_paid:
+                self.payment_status = 'paid'
+            else:
+                self.payment_status = 'collect_on_visit'
+        elif self.order and not self.payment_status:  # إذا لم تكن محددة
             if self.order.is_fully_paid:
                 self.payment_status = 'paid'
             else:

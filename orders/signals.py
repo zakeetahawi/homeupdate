@@ -95,7 +95,9 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
     """
     if created:
         order_types = instance.get_selected_types_list()
+        print(f"🔍 تم إنشاء طلب جديد {instance.order_number} - الأنواع: {order_types}")
         if 'inspection' in order_types:
+            print(f"📋 الطلب {instance.order_number} من نوع معاينة - سيتم إنشاء معاينة تلقائية")
             try:
                 from django.db import transaction
                 with transaction.atomic():
@@ -104,9 +106,10 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                     request_date = instance.order_date.date() if instance.order_date else timezone.now().date()
                     # حاول استخراج تاريخ تنفيذ محدد من notes أو من بيانات الطلب إذا كان ذلك ممكناً (يمكنك تطوير هذا لاحقاً)
                     scheduled_date = request_date + timedelta(days=2)
-                    Inspection.objects.create(
+                    inspection = Inspection.objects.create(
                         customer=instance.customer,
                         branch=instance.branch,
+                        inspector=instance.created_by,  # استخدام منشئ الطلب كمعاين افتراضي
                         responsible_employee=instance.salesperson,
                         order=instance,
                         is_from_orders=True,
@@ -115,14 +118,18 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                         status='pending',
                         notes=f'معاينة تلقائية للطلب رقم {instance.order_number}',
                         order_notes=instance.notes,
-                        created_by=instance.created_by
+                        created_by=instance.created_by,
+                        windows_count=1  # قيمة افتراضية
                     )
+                    print(f"✅ تم إنشاء معاينة تلقائية للطلب {instance.order_number} - معرف المعاينة: {inspection.id}")
                     Order.objects.filter(pk=instance.pk).update(
                         tracking_status='processing',
                         order_status='pending'
                     )
             except Exception as e:
                 import traceback
+                error_msg = f"❌ خطأ في إنشاء معاينة تلقائية للطلب {instance.order_number}: {str(e)}"
+                print(f"\033[31m{error_msg}\033[0m")
                 traceback.print_exc()
         else:
             pass

@@ -16,6 +16,36 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="{% static 'inspections/css/google_drive.css' %}">
+
+<style>
+.form-section {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.form-section h5 {
+    color: #495057;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.payment-status-display {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+}
+
+.badge-large {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -44,203 +74,272 @@
                         </div>
                         {% endif %}
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.customer.id_for_label }}" class="form-label">{% trans 'العميل' %}</label>
-                                    {% if form.fields.customer.disabled %}
-                                    <input type="text" class="form-control" value="{{ customer.name|default:'' }}" readonly>
-                                    <input type="hidden" name="customer" value="{{ customer.pk }}">
-                                    {% else %}
-                                    {% render_field form.customer class="form-control select2" %}
-                                    {% endif %}
-                                    {% if form.customer.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.customer.errors %}
-                                            {{ error }}
-                                        {% endfor %}
+                        <!-- معلومات العميل والمعاين -->
+                        <div class="form-section">
+                            <h5>
+                                <i class="fas fa-users text-primary"></i> {% trans 'معلومات العميل والمعاين' %}
+                            </h5>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.customer.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-user text-primary me-2"></i>{% trans 'العميل' %} <span class="text-danger">*</span>
+                                        </label>
+                                        {% if form.fields.customer.disabled %}
+                                        <input type="text" class="form-control" value="{{ customer.name|default:'' }}" readonly>
+                                        <input type="hidden" name="customer" value="{{ customer.pk }}">
+                                        {% else %}
+                                        {% render_field form.customer class="form-control select2" id="customer-select" %}
+                                        {% endif %}
+                                        {% if form.customer.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.customer.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.inspector.id_for_label }}" class="form-label">{% trans 'المعاين' %}</label>
-                                    {% render_field form.inspector class="form-control select2" %}
-                                    {% if form.inspector.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.inspector.errors %}
-                                            {{ error }}
-                                        {% endfor %}
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.inspector.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-user-tie text-info me-2"></i>{% trans 'المعاين' %} <span class="text-danger">*</span>
+                                        </label>
+                                        {% render_field form.inspector class="form-control select2" %}
+                                        {% if form.inspector.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.inspector.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
                                 </div>
                             </div>
                         </div>
 
-                        <div class="form-group mb-3" id="customer-address-container" style="display: none;">
-                            <label class="form-label">{% trans 'عنوان العميل' %}</label>
-                            <div class="form-control bg-light" id="customer-address" style="height: auto; min-height: 60px;"></div>
+                            <!-- عنوان العميل -->
+                            <div class="form-group mb-3" id="customer-address-container" style="display: none;">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-map-marker-alt text-warning me-2"></i>{% trans 'عنوان العميل' %}
+                                </label>
+                                <div class="form-control bg-light" id="customer-address" style="height: auto; min-height: 60px;"></div>
+                            </div>
                         </div>
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.request_date.id_for_label }}" class="form-label">{% trans 'تاريخ الطلب' %}</label>
-                                    {% render_field form.request_date class="form-control" %}
-                                    {% if form.request_date.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.request_date.errors %}
-                                            {{ error }}
-                                        {% endfor %}
+                        <!-- معلومات العقد والتواريخ -->
+                        <div class="form-section">
+                            <h5>
+                                <i class="fas fa-calendar-alt text-success"></i> {% trans 'معلومات العقد والتواريخ' %}
+                            </h5>
+
+                            <!-- تم إزالة حقل رقم العقد -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.windows_count.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-th-large text-info me-2"></i>{% trans 'عدد الشبابيك' %}
+                                        </label>
+                                        {% render_field form.windows_count class="form-control" %}
+                                        {% if form.windows_count.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.windows_count.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
                                 </div>
                             </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.request_date.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-calendar text-primary me-2"></i>{% trans 'تاريخ الطلب' %}
+                                        </label>
+                                        {% render_field form.request_date class="form-control" %}
+                                        {% if form.request_date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.request_date.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.scheduled_date.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-calendar-check text-warning me-2"></i>{% trans 'تاريخ التنفيذ' %}
+                                        </label>
+                                        {% render_field form.scheduled_date class="form-control" %}
+                                        {% if form.scheduled_date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.scheduled_date.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.scheduled_time.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-clock text-warning me-2"></i>{% trans 'وقت التنفيذ' %}
+                                        </label>
+                                        {% render_field form.scheduled_time class="form-control" %}
+                                        {% if form.scheduled_time.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.scheduled_time.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <small class="form-text text-muted">اختياري - مثال: 14:30</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- تاريخ التسليم المتوقع -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label fw-bold">
+                                            <i class="fas fa-truck text-success me-2"></i>{% trans 'تاريخ التسليم المتوقع' %}
+                                        </label>
+                                        <div class="payment-status-display">
+                                            {% if inspection.expected_delivery_date %}
+                                                <span class="badge bg-info badge-large">
+                                                    <i class="fas fa-calendar-day me-1"></i> {{ inspection.expected_delivery_date|date:"Y-m-d" }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary badge-large">
+                                                    <i class="fas fa-question me-1"></i> سيتم حسابه تلقائياً
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <small class="form-text text-muted mt-2 d-block">
+                                            <i class="fas fa-info-circle me-1"></i> يتم حسابه تلقائياً: 48 ساعة من تاريخ الطلب
+                                        </small>
+                                        <!-- إزالة الحقل المخفي المسبب للمشكلة -->
+                                        {% comment %}
+                                        <input type="hidden" name="expected_delivery_date" value="{{ inspection.expected_delivery_date|default:'' }}">
+                                        {% endcomment %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- الحالة والنتيجة والمديونية -->
+                        <div class="form-section">
+                            <h5>
+                                <i class="fas fa-tasks text-warning"></i> {% trans 'الحالة والنتيجة والمديونية' %}
+                            </h5>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.status.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-flag text-primary me-2"></i>{% trans 'الحالة' %} <span class="text-danger">*</span>
+                                        </label>
+                                        {% render_field form.status class="form-control" %}
+                                        {% if form.status.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.status.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="{{ form.scheduled_date.id_for_label }}" class="form-label">
-                                        <i class="fas fa-calendar me-2"></i>{% trans 'تاريخ التنفيذ' %}
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-money-bill text-success me-2"></i>{% trans 'حالة المديونية' %}
                                     </label>
-                                    {% render_field form.scheduled_date class="form-control" %}
-                                    {% if form.scheduled_date.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.scheduled_date.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label for="{{ form.scheduled_time.id_for_label }}" class="form-label">
-                                        <i class="fas fa-clock me-2"></i>{% trans 'وقت التنفيذ' %}
-                                    </label>
-                                    {% render_field form.scheduled_time class="form-control" %}
-                                    {% if form.scheduled_time.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.scheduled_time.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                    <small class="form-text text-muted">اختياري - مثال: 14:30</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Expected Delivery Date -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.expected_delivery_date.id_for_label }}" class="form-label">
-                                        <i class="fas fa-clock text-primary"></i> {% trans 'تاريخ التسليم المتوقع' %}
-                                    </label>
-                                    {% render_field form.expected_delivery_date class="form-control" readonly="readonly" %}
-                                    <small class="text-muted">
-                                        <i class="fas fa-info-circle"></i> 
-                                        يتم حسابه تلقائياً: 48 ساعة من تاريخ الطلب
-                                    </small>
-                                    {% if form.expected_delivery_date.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.expected_delivery_date.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="{{ form.status.id_for_label }}" class="form-label">{% trans 'الحالة' %}</label>
-                                    {% render_field form.status class="form-control" %}
-                                    {% if form.status.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.status.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label class="form-label">
-                                        <i class="fas fa-money-bill me-2"></i>{% trans 'حالة المديونية' %}
-                                    </label>
-                                    <div class="form-control-plaintext border rounded p-2 bg-light">
+                                    <div class="payment-status-display">
                                         {% if inspection.payment_status == 'paid' %}
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-check-circle"></i> مكتمل السداد
+                                            <span class="badge bg-success badge-large">
+                                                <i class="fas fa-check-circle me-1"></i> مكتمل السداد
                                             </span>
                                         {% elif inspection.payment_status == 'collect_on_visit' %}
-                                            <span class="badge bg-warning text-dark">
-                                                <i class="fas fa-clock"></i> تحصيل عند العميل
+                                            <span class="badge bg-warning text-dark badge-large">
+                                                <i class="fas fa-clock me-1"></i> تحصيل عند العميل
                                             </span>
                                         {% else %}
-                                            <span class="badge bg-secondary">
-                                                <i class="fas fa-question"></i> غير محدد
+                                            <span class="badge bg-secondary badge-large">
+                                                <i class="fas fa-question me-1"></i> غير محدد
                                             </span>
                                         {% endif %}
                                     </div>
-                                    <small class="form-text text-muted">
-                                        <i class="fas fa-info-circle"></i> يتم تحديد حالة المديونية تلقائياً بناءً على حالة الدفع في الطلب
+                                    <small class="form-text text-muted mt-2 d-block">
+                                        <i class="fas fa-info-circle me-1"></i> يتم تحديد حالة المديونية تلقائياً بناءً على حالة الدفع في الطلب
                                     </small>
-                                    <!-- حقل مخفي للقيمة -->
-                                    <input type="hidden" name="payment_status" value="{{ inspection.payment_status|default:'paid' }}">
+                                    <!-- لا نرسل payment_status في النموذج - يتم تحديدها تلقائياً -->
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group" id="result-group">
-                                    <label for="{{ form.result.id_for_label }}" class="form-label">{% trans 'النتيجة' %}</label>
-                                    {% render_field form.result class="form-control" %}
-                                    {% if form.result.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.result.errors %}
-                                            {{ error }}
-                                        {% endfor %}
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.result.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-clipboard-check text-success me-2"></i>{% trans 'النتيجة' %}
+                                        </label>
+                                        {% render_field form.result class="form-control" %}
+                                        {% if form.result.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.result.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
                                 </div>
                             </div>
                         </div>
 
-                        {% if not user.is_superuser %}
-                            {{ form.branch.as_hidden }}
-                        {% else %}
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.branch.id_for_label }}" class="form-label">{% trans 'الفرع' %}</label>
-                                    {% render_field form.branch class="form-control select2" %}
-                                    {% if form.branch.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.branch.errors %}
-                                            {{ error }}
-                                        {% endfor %}
+                        <!-- معلومات الفرع والموظف -->
+                        <div class="form-section">
+                            <h5>
+                                <i class="fas fa-building text-info"></i> {% trans 'معلومات الفرع والموظف' %}
+                            </h5>
+
+                            <div class="row mb-3">
+                                {% if not user.is_superuser %}
+                                    {{ form.branch.as_hidden }}
+                                {% else %}
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.branch.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-store text-info me-2"></i>{% trans 'الفرع' %} <span class="text-danger">*</span>
+                                        </label>
+                                        {% render_field form.branch class="form-control select2" %}
+                                        {% if form.branch.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.branch.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.responsible_employee.id_for_label }}" class="form-label">{% trans 'البائع' %}</label>
-                                    {% render_field form.responsible_employee class="form-control select2" %}
-                                    {% if form.responsible_employee.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.responsible_employee.errors %}
-                                            {{ error }}
-                                        {% endfor %}
+                                {% endif %}
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.responsible_employee.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-user-cog text-secondary me-2"></i>{% trans 'الموظف المسؤول' %}
+                                        </label>
+                                        {% render_field form.responsible_employee class="form-control select2" %}
+                                        {% if form.responsible_employee.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.responsible_employee.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
                                 </div>
                             </div>
                         </div>
-                        {% endif %}
 
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -405,72 +504,71 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{% static 'inspections/js/google_drive_upload.js' %}"></script>
+<!-- تم إزالة ملف الإصلاح المعقد - المشكلة كانت في إعادة التحميل التلقائي -->
 <script>
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     // تهيئة Select2 للقوائم المنسدلة فقط
-    $('.select2').select2({
-        theme: 'bootstrap-5',
-        dir: 'rtl',
-        width: '100%',
-        placeholder: 'اختر...',
-        allowClear: true
-    });
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+        $('.select2').select2({
+            theme: 'bootstrap-5',
+            dir: 'rtl',
+            width: '100%',
+            placeholder: 'اختر...',
+            allowClear: true
+        });
+    }
 
-    // التحكم في إظهار حقل النتيجة حسب الحالة
-    $('#{{ form.status.id_for_label }}').on('change', function() {
-        var status = $(this).val();
-        var resultGroup = $('#result-group');
-        var resultField = $('#{{ form.result.id_for_label }}');
-
-        if (status === 'completed') {
-            resultGroup.show();
-            resultField.prop('required', true);
-        } else {
-            resultGroup.hide();
-            resultField.prop('required', false);
-            resultField.val('');
-        }
-    }).trigger('change');
+    // إزالة الشرط من حقل النتيجة - سيظهر دائماً
+    // لا حاجة لكود خاص هنا
 
     // عرض عنوان العميل فقط
-    $('#customer-select').on('change', function() {
-        var customerId = $(this).val();
-        if (customerId) {
-            $.ajax({
-                url: '/customers/api/customer/' + customerId + '/',
-                type: 'GET',
-                dataType: 'json',
-                success: function(data) {
-                    if (data.address) {
-                        $('#customer-address').text(data.address);
-                        $('#customer-address-container').show();
-                    } else {
-                        $('#customer-address').text('لا يوجد عنوان مسجل');
-                        $('#customer-address-container').show();
-                    }
-                },
-                error: function() {
-                    $('#customer-address').text('حدث خطأ أثناء جلب بيانات العميل');
-                    $('#customer-address-container').show();
-                }
-            });
-        } else {
-            $('#customer-address-container').hide();
-        }
-    });
+    const customerSelect = document.getElementById('customer-select');
+    const customerAddressContainer = document.getElementById('customer-address-container');
+    const customerAddress = document.getElementById('customer-address');
+
+    if (customerSelect && customerAddressContainer && customerAddress) {
+        customerSelect.addEventListener('change', function() {
+            const customerId = this.value;
+            if (customerId) {
+                fetch('/customers/api/customer/' + customerId + '/')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.address) {
+                            customerAddress.textContent = data.address;
+                            customerAddressContainer.style.display = 'block';
+                        } else {
+                            customerAddress.textContent = 'لا يوجد عنوان مسجل';
+                            customerAddressContainer.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('خطأ في جلب بيانات العميل:', error);
+                        customerAddress.textContent = 'حدث خطأ أثناء جلب بيانات العميل';
+                        customerAddressContainer.style.display = 'block';
+                    });
+            } else {
+                customerAddressContainer.style.display = 'none';
+            }
+        });
+    }
 
     // تنفيذ تغيير العميل عند التحميل إذا كان هناك عميل محدد
-    if ($('#customer-select').val()) {
-        $('#customer-select').trigger('change');
+    const customerSelectElement = document.getElementById('customer-select');
+    if (customerSelectElement && customerSelectElement.value) {
+        customerSelectElement.dispatchEvent(new Event('change'));
     }
 
     // تعيين معرف المعاينة للـ JavaScript (في حالة التعديل)
     {% if inspection %}
-        setCurrentInspectionId({{ inspection.inspection_code }});
+        if (typeof setCurrentInspectionId === 'function') {
+            setCurrentInspectionId('{{ inspection.inspection_code }}');
+        }
 
         // تحقق من حالة الرفع كل 3 ثوان إذا كان الملف لم يتم رفعه بعد
         {% if inspection.inspection_file and not inspection.is_uploaded_to_drive %}
-        checkUploadStatus({{ inspection.inspection_code }});
+        if (typeof checkUploadStatus === 'function') {
+            checkUploadStatus('{{ inspection.inspection_code }}');
+        }
         {% endif %}
     {% endif %}
 });

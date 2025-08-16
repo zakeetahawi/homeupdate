@@ -216,7 +216,7 @@ def inspection_created_notification(sender, instance, created, **kwargs):
         message = f"تم إنشاء معاينة جديدة للعميل {instance.customer.name if instance.customer else 'غير محدد'}"
         
         if instance.responsible_employee:
-            message += f" بواسطة {instance.responsible_employee.user.get_full_name() or instance.responsible_employee.user.username}"
+            message += f" بواسطة {instance.responsible_employee.name}"
         
         create_notification(
             title=title,

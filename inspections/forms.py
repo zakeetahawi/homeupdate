@@ -146,10 +146,10 @@ class InspectionForm(forms.ModelForm):
     class Meta:
         model = Inspection
         fields = [
-            'customer', 'contract_number', 'inspector', 'request_date',
+            'customer', 'inspector', 'request_date',
             'scheduled_date', 'scheduled_time', 'windows_count', 'notes', 'inspection_file',
             'branch', 'responsible_employee', 'status', 'result',
-            'expected_delivery_date', 'update_customer_address'
+            'update_customer_address'
         ]
         widgets = {
             'request_date': forms.DateInput(attrs={'type': 'date'}),
@@ -173,7 +173,7 @@ class InspectionForm(forms.ModelForm):
     def __init__(self, *args, user=None, order=None, customer=None, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Set inspector queryset
+        # Set inspector queryset - فنيو المعاينة النشطين فقط
         self.fields['inspector'].queryset = User.objects.filter(
             is_active=True,
             is_inspection_technician=True
@@ -254,11 +254,9 @@ class InspectionForm(forms.ModelForm):
         # Make fields optional as needed
         self.fields['notes'].required = False
         self.fields['customer'].required = False
-        self.fields['contract_number'].required = False
         self.fields['inspector'].required = True
 
         # Custom labels
-        self.fields['contract_number'].label = _('رقم العقد')
         self.fields['customer'].label = _('العميل')
         self.fields['inspector'].label = _('المعاين')
         self.fields['branch'].label = _('الفرع')
@@ -277,9 +275,8 @@ class InspectionForm(forms.ModelForm):
         scheduled_date = cleaned_data.get('scheduled_date')
         request_date = cleaned_data.get('request_date')
 
-        # إذا كانت الحالة مكتملة، يجب تحديد النتيجة
-        if status == 'completed' and not result:
-            self.add_error('result', _('يجب تحديد النتيجة عند اكتمال المعاينة'))
+        # إزالة شرط وجوب تحديد النتيجة عند اكتمال المعاينة
+        # يمكن الآن حفظ المعاينة بأي حالة بدون تحديد النتيجة
 
         # تاريخ التنفيذ يجب أن يكون بعد أو يساوي تاريخ الطلب
         if request_date and scheduled_date and scheduled_date < request_date:

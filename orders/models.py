@@ -487,8 +487,6 @@ class Order(models.Model):
 
         except Exception as e:
             # تسجيل الخطأ
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"خطأ في حفظ الطلب {getattr(self, 'order_number', 'غير محدد')}: {str(e)}")
             raise
     # تم إزالة دالة create_order_notifications

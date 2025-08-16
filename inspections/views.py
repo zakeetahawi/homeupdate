@@ -317,9 +317,25 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
     def test_func(self):
         inspection = self.get_object()
-        return (self.request.user.is_superuser or
-                inspection.created_by == self.request.user or
-                inspection.inspector == self.request.user)
+        user = self.request.user
+
+        # السماح للمديرين والمستخدمين المخولين
+        if user.is_superuser or user.is_staff:
+            return True
+
+        # السماح لمنشئ المعاينة أو المعاين المُعيَّن
+        if inspection.created_by == user or inspection.inspector == user:
+            return True
+
+        # السماح لفنيي المعاينة
+        if hasattr(user, 'is_inspection_technician') and user.is_inspection_technician:
+            return True
+
+        # السماح لمديري الفروع
+        if hasattr(user, 'is_branch_manager') and user.is_branch_manager:
+            return True
+
+        return False
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
