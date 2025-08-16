@@ -305,3 +305,88 @@ def log_manufacturing_order_deletion(sender, instance, **kwargs):
 # تم إزالة دالة manufacturing_order_notification
 
 
+# ===== إشارات التخزين المؤقت =====
+
+@receiver(post_save, sender=Order)
+def invalidate_order_cache_on_save(sender, instance, created, **kwargs):
+    """إلغاء التخزين المؤقت عند حفظ طلب"""
+    try:
+        from .cache import OrderCache
+
+        # إلغاء إحصائيات الطلبات
+        OrderCache.invalidate_order_stats_cache()
+
+        # إلغاء بيانات العميل إذا تم تحديثها
+        if instance.customer_id:
+            OrderCache.invalidate_customer_cache(instance.customer_id)
+
+        logger.debug(f"تم إلغاء التخزين المؤقت للطلب {instance.pk}")
+
+    except Exception as e:
+        logger.error(f"خطأ في إلغاء التخزين المؤقت للطلب {instance.pk}: {str(e)}")
+
+
+@receiver(post_delete, sender=Order)
+def invalidate_order_cache_on_delete(sender, instance, **kwargs):
+    """إلغاء التخزين المؤقت عند حذف طلب"""
+    try:
+        from .cache import OrderCache
+
+        # إلغاء إحصائيات الطلبات
+        OrderCache.invalidate_order_stats_cache()
+
+        logger.debug(f"تم إلغاء التخزين المؤقت بعد حذف الطلب {instance.pk}")
+
+    except Exception as e:
+        logger.error(f"خطأ في إلغاء التخزين المؤقت بعد حذف الطلب {instance.pk}: {str(e)}")
+
+
+@receiver(post_save, sender='orders.DeliveryTimeSettings')
+def invalidate_delivery_settings_cache_on_save(sender, instance, **kwargs):
+    """إلغاء التخزين المؤقت لإعدادات التسليم عند التحديث"""
+    try:
+        from .cache import OrderCache
+        OrderCache.invalidate_delivery_settings_cache()
+        logger.debug("تم إلغاء التخزين المؤقت لإعدادات التسليم")
+
+    except Exception as e:
+        logger.error(f"خطأ في إلغاء التخزين المؤقت لإعدادات التسليم: {str(e)}")
+
+
+@receiver(post_save, sender='customers.Customer')
+def invalidate_customer_cache_on_save(sender, instance, **kwargs):
+    """إلغاء التخزين المؤقت لبيانات العميل عند التحديث"""
+    try:
+        from .cache import OrderCache
+        OrderCache.invalidate_customer_cache(instance.pk)
+        logger.debug(f"تم إلغاء التخزين المؤقت للعميل {instance.pk}")
+
+    except Exception as e:
+        logger.error(f"خطأ في إلغاء التخزين المؤقت للعميل {instance.pk}: {str(e)}")
+
+
+@receiver(post_save, sender='inventory.Product')
+def invalidate_product_cache_on_save(sender, instance, **kwargs):
+    """إلغاء التخزين المؤقت للمنتجات عند التحديث"""
+    try:
+        from .cache import OrderCache
+        OrderCache.invalidate_product_search_cache()
+        logger.debug(f"تم إلغاء التخزين المؤقت للمنتجات بعد تحديث المنتج {instance.pk}")
+
+    except Exception as e:
+        logger.error(f"خطأ في إلغاء التخزين المؤقت للمنتجات: {str(e)}")
+
+
+@receiver(post_delete, sender='inventory.Product')
+def invalidate_product_cache_on_delete(sender, instance, **kwargs):
+    """إلغاء التخزين المؤقت للمنتجات عند الحذف"""
+    try:
+        from .cache import OrderCache
+        OrderCache.invalidate_product_search_cache()
+        logger.debug(f"تم إلغاء التخزين المؤقت للمنتجات بعد حذف المنتج {instance.pk}")
+
+    except Exception as e:
+        logger.error(f"خطأ في إلغاء التخزين المؤقت للمنتجات بعد الحذف: {str(e)}")
+
+
+logger.info("تم تحميل إشارات التخزين المؤقت للطلبات")

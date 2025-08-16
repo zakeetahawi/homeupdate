@@ -1512,40 +1512,25 @@ def ajax_upload_contract_to_google_drive(request):
                     'message': 'تم رفع هذا الملف مسبقاً إلى Google Drive'
                 })
 
-            # رفع الملف إلى Google Drive
-            from orders.services.google_drive_service import get_contract_google_drive_service
-
-            drive_service = get_contract_google_drive_service()
-            if not drive_service:
+            # جدولة رفع الملف إلى Google Drive بشكل غير متزامن
+            from .tasks import upload_contract_to_drive_async
+            try:
+                upload_contract_to_drive_async.delay(order.pk)
+                success_message = 'تم جدولة رفع الملف إلى Google Drive. سيتم الرفع في الخلفية.'
+                status = 'scheduled'
+            except Exception as e:
                 return JsonResponse({
                     'success': False,
-                    'message': 'خدمة Google Drive غير متوفرة. يرجى التحقق من الإعدادات.'
+                    'message': f'فشل في جدولة رفع الملف: {str(e)}'
                 })
-
-            # رفع الملف
-            result = drive_service.upload_contract_file(
-                order.contract_file.path,
-                order
-            )
-
-            # تحديث بيانات الطلب
-            order.contract_google_drive_file_id = result['file_id']
-            order.contract_google_drive_file_url = result['view_url']
-            order.contract_google_drive_file_name = result['filename']
-            order.is_contract_uploaded_to_drive = True
-            order.save(update_fields=[
-                'contract_google_drive_file_id', 'contract_google_drive_file_url',
-                'contract_google_drive_file_name', 'is_contract_uploaded_to_drive'
-            ])
 
             return JsonResponse({
                 'success': True,
-                'message': 'تم رفع الملف بنجاح إلى Google Drive',
+                'message': success_message,
                 'data': {
-                    'filename': result['filename'],
-                    'view_url': result['view_url'],
-                    'customer_name': result['customer_name'],
-                    'branch_name': result['branch_name']
+                    'order_id': order.pk,
+                    'status': status,
+                    'message': 'جاري الرفع في الخلفية...'
                 }
             })
 

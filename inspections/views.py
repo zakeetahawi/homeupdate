@@ -749,40 +749,22 @@ def ajax_upload_to_google_drive(request):
                     'message': 'تم رفع هذا الملف مسبقاً إلى Google Drive'
                 })
 
-            # رفع الملف إلى Google Drive
-            from .services.google_drive_service import get_google_drive_service
+            # جدولة رفع الملف إلى Google Drive بشكل غير متزامن
+            success = inspection.schedule_upload_to_google_drive()
 
-            drive_service = get_google_drive_service()
-            if not drive_service:
+            if not success:
                 return JsonResponse({
                     'success': False,
-                    'message': 'خدمة Google Drive غير متوفرة. يرجى التحقق من الإعدادات.'
+                    'message': 'فشل في جدولة رفع الملف. يرجى المحاولة مرة أخرى.'
                 })
-
-            # رفع الملف
-            result = drive_service.upload_inspection_file(
-                inspection.inspection_file.path,
-                inspection
-            )
-
-            # تحديث بيانات المعاينة
-            inspection.google_drive_file_id = result['file_id']
-            inspection.google_drive_file_url = result['view_url']
-            inspection.google_drive_file_name = result['filename']
-            inspection.is_uploaded_to_drive = True
-            inspection.save(update_fields=[
-                'google_drive_file_id', 'google_drive_file_url',
-                'google_drive_file_name', 'is_uploaded_to_drive'
-            ])
 
             return JsonResponse({
                 'success': True,
-                'message': 'تم رفع الملف بنجاح إلى Google Drive',
+                'message': 'تم جدولة رفع الملف إلى Google Drive. سيتم الرفع في الخلفية.',
                 'data': {
-                    'filename': result['filename'],
-                    'view_url': result['view_url'],
-                    'customer_name': result['customer_name'],
-                    'branch_name': result['branch_name']
+                    'inspection_id': inspection.id,
+                    'status': 'scheduled',
+                    'message': 'جاري الرفع في الخلفية...'
                 }
             })
 

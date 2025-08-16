@@ -71,19 +71,80 @@ else
   print_status "عدد المستخدمين الحالي: $USER_COUNT (لن يتم إنشاء مستخدم جديد)"
 fi
 
+# تشغيل Redis (إذا لم يكن يعمل)
+print_info "فحص وتشغيل Redis..."
+if ! pgrep -x "redis-server" > /dev/null; then
+    redis-server --daemonize yes --port 6379 --dir /tmp
+    print_status "✔️ تم تشغيل Redis"
+else
+    print_status "✔️ Redis يعمل بالفعل"
+fi
+
+# تشغيل Celery Worker
+print_info "تشغيل Celery Worker..."
+celery -A crm worker --loglevel=info --detach --pidfile=/tmp/celery_worker.pid --logfile=/tmp/celery_worker.log
+if [ $? -eq 0 ]; then
+    CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid 2>/dev/null)
+    print_status "✔️ تم تشغيل Celery Worker (PID: $CELERY_WORKER_PID)"
+else
+    print_error "❌ فشل في تشغيل Celery Worker"
+fi
+
+# تشغيل Celery Beat (للمهام الدورية)
+print_info "تشغيل Celery Beat..."
+celery -A crm beat --loglevel=info --detach --pidfile=/tmp/celery_beat.pid --logfile=/tmp/celery_beat.log --schedule=/tmp/celerybeat-schedule
+if [ $? -eq 0 ]; then
+    CELERY_BEAT_PID=$(cat /tmp/celery_beat.pid 2>/dev/null)
+    print_status "✔️ تم تشغيل Celery Beat (PID: $CELERY_BEAT_PID)"
+else
+    print_error "❌ فشل في تشغيل Celery Beat"
+fi
+
 print_info "تشغيل Cloudflare Tunnel..."
 if [ -f "cloudflared" ]; then
     ./cloudflared tunnel --config cloudflared.yml run > /dev/null 2>&1 &
     TUNNEL_PID=$!
-    print_status "تم تشغيل Cloudflare Tunnel (PID: $TUNNEL_PID)"
+    print_status "✔️ تم تشغيل Cloudflare Tunnel (PID: $TUNNEL_PID)"
 else
     print_error "ملف cloudflared غير موجود"
 fi
 
 cleanup() {
     print_info "إيقاف العمليات..."
-    if [ ! -z "$TUNNEL_PID" ]; then kill $TUNNEL_PID 2>/dev/null; print_status "تم إيقاف Cloudflare Tunnel"; fi
-    if [ ! -z "$GUNICORN_PID" ]; then kill $GUNICORN_PID 2>/dev/null; print_status "تم إيقاف خادم الويب"; fi
+
+    # إيقاف Celery Worker
+    if [ -f "/tmp/celery_worker.pid" ]; then
+        CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid 2>/dev/null)
+        if [ ! -z "$CELERY_WORKER_PID" ]; then
+            kill $CELERY_WORKER_PID 2>/dev/null
+            print_status "تم إيقاف Celery Worker"
+        fi
+        rm -f /tmp/celery_worker.pid
+    fi
+
+    # إيقاف Celery Beat
+    if [ -f "/tmp/celery_beat.pid" ]; then
+        CELERY_BEAT_PID=$(cat /tmp/celery_beat.pid 2>/dev/null)
+        if [ ! -z "$CELERY_BEAT_PID" ]; then
+            kill $CELERY_BEAT_PID 2>/dev/null
+            print_status "تم إيقاف Celery Beat"
+        fi
+        rm -f /tmp/celery_beat.pid
+        rm -f /tmp/celerybeat-schedule*
+    fi
+
+    # إيقاف Cloudflare Tunnel
+    if [ ! -z "$TUNNEL_PID" ]; then
+        kill $TUNNEL_PID 2>/dev/null
+        print_status "تم إيقاف Cloudflare Tunnel"
+    fi
+
+    # إيقاف خادم الويب
+    if [ ! -z "$GUNICORN_PID" ]; then
+        kill $GUNICORN_PID 2>/dev/null
+        print_status "تم إيقاف خادم الويب"
+    fi
+
     exit 0
 }
 trap cleanup INT TERM
@@ -91,6 +152,8 @@ trap cleanup INT TERM
 print_status "🚀 بدء خادم الإنتاج..."
 print_info "الموقع: https://elkhawaga.uk"
 print_info "المستخدم: admin | كلمة المرور: admin123"
+print_info "📊 مراقبة Celery: tail -f /tmp/celery_worker.log"
+print_info "⏰ مراقبة المهام الدورية: tail -f /tmp/celery_beat.log"
 print_info "Ctrl+C للإيقاف"
 
 gunicorn crm.wsgi:application \
@@ -190,6 +253,34 @@ while true; do
     if ! kill -0 $GUNICORN_PID 2>/dev/null; then
         print_error "❌ خادم الويب توقف!"
         break
+    fi
+
+    # فحص Celery Worker
+    if [ -f "/tmp/celery_worker.pid" ]; then
+        CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid 2>/dev/null)
+        if [ ! -z "$CELERY_WORKER_PID" ] && ! kill -0 $CELERY_WORKER_PID 2>/dev/null; then
+            print_warning "⚠️ Celery Worker توقف - إعادة تشغيل..."
+            celery -A crm worker --loglevel=info --detach --pidfile=/tmp/celery_worker.pid --logfile=/tmp/celery_worker.log
+            if [ $? -eq 0 ]; then
+                print_status "✔️ تم إعادة تشغيل Celery Worker"
+            else
+                print_error "❌ فشل في إعادة تشغيل Celery Worker"
+            fi
+        fi
+    fi
+
+    # فحص Celery Beat
+    if [ -f "/tmp/celery_beat.pid" ]; then
+        CELERY_BEAT_PID=$(cat /tmp/celery_beat.pid 2>/dev/null)
+        if [ ! -z "$CELERY_BEAT_PID" ] && ! kill -0 $CELERY_BEAT_PID 2>/dev/null; then
+            print_warning "⚠️ Celery Beat توقف - إعادة تشغيل..."
+            celery -A crm beat --loglevel=info --detach --pidfile=/tmp/celery_beat.pid --logfile=/tmp/celery_beat.log --schedule=/tmp/celerybeat-schedule
+            if [ $? -eq 0 ]; then
+                print_status "✔️ تم إعادة تشغيل Celery Beat"
+            else
+                print_error "❌ فشل في إعادة تشغيل Celery Beat"
+            fi
+        fi
     fi
 
     # فحص حالة التانل

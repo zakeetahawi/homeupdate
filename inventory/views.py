@@ -556,25 +556,57 @@ def product_api_list(request):
 
 def product_api_autocomplete(request):
     """
-    API للبحث السريع عن المنتجات (autocomplete)
+    API للبحث السريع عن المنتجات (autocomplete) مع التخزين المؤقت
     يقبل باراميتر ?query= ويعيد قائمة مختصرة (id, name, code, price, current_stock)
     """
     query = request.GET.get('query', '').strip()
-    results = []
-    if query:
-        products = Product.objects.filter(
-            Q(name__icontains=query) | Q(code__icontains=query)
-        )[:10]
+
+    # إذا كان هناك استعلام، استخدم التخزين المؤقت
+    if query and len(query) >= 2:
+        try:
+            from orders.cache import search_products_cached
+            results = search_products_cached(query)
+
+            # تحديد النتائج إلى 10 عناصر فقط
+            results = results[:10]
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في البحث المؤقت عن المنتجات: {str(e)}")
+
+            # العودة للطريقة التقليدية في حالة الخطأ
+            results = []
+            products = Product.objects.filter(
+                Q(name__icontains=query) | Q(code__icontains=query)
+            ).select_related('category')[:10]
+
+            for p in products:
+                results.append({
+                    'id': p.id,
+                    'name': p.name,
+                    'code': p.code,
+                    'price': float(p.price),
+                    'current_stock': p.current_stock,
+                    'category': p.category.name if p.category else None,
+                    'description': p.description
+                })
     else:
-        products = Product.objects.all()[:10]
-    for p in products:
-        results.append({
-            'id': p.id,
-            'name': p.name,
-            'code': p.code,
-            'price': float(p.price),
-            'current_stock': p.current_stock,
-        })
+        # للاستعلامات الفارغة أو القصيرة، عرض المنتجات الأكثر شيوعاً
+        results = []
+        products = Product.objects.select_related('category').order_by('-id')[:10]
+
+        for p in products:
+            results.append({
+                'id': p.id,
+                'name': p.name,
+                'code': p.code,
+                'price': float(p.price),
+                'current_stock': p.current_stock,
+                'category': p.category.name if p.category else None,
+                'description': p.description
+            })
+
     return JsonResponse(results, safe=False)
 
 # New API View

@@ -511,5 +511,21 @@ class Inspection(models.Model):
             logger.error(f"خطأ في رفع ملف المعاينة {self.id} إلى Google Drive: {str(e)}")
             return False
 
+    def schedule_upload_to_google_drive(self):
+        """جدولة رفع الملف إلى Google Drive بشكل غير متزامن"""
+        try:
+            from orders.tasks import upload_inspection_to_drive_async
+            upload_inspection_to_drive_async.delay(self.pk)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"تم جدولة رفع ملف المعاينة {self.id} إلى Google Drive")
+            return True
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في جدولة رفع ملف المعاينة {self.id}: {str(e)}")
+            # في حالة فشل الجدولة، نحاول الرفع المباشر كبديل
+            return self.upload_to_google_drive_async()
+
 
 # Signal handlers moved to inspections/signals.py to avoid circular imports

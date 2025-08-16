@@ -969,3 +969,53 @@ SILENCED_SYSTEM_CHECKS = ['security.W019']
 # Company Settings
 # ======================================
 COMPANY_NAME = "شركة الخواجة للألمنيوم والزجاج"
+
+# ======================================
+# Celery Configuration
+# ======================================
+
+# إعدادات Celery الأساسية
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# إعدادات التسلسل
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_RESULT_SERIALIZER = 'json'
+
+# إعدادات المنطقة الزمنية
+CELERY_TIMEZONE = 'Africa/Cairo'
+CELERY_ENABLE_UTC = True
+
+# إعدادات الأداء
+CELERY_TASK_COMPRESSION = 'gzip'
+CELERY_RESULT_COMPRESSION = 'gzip'
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+# إعدادات انتهاء الصلاحية
+CELERY_TASK_SOFT_TIME_LIMIT = 300  # 5 دقائق
+CELERY_TASK_TIME_LIMIT = 600       # 10 دقائق
+CELERY_RESULT_EXPIRES = 3600       # ساعة واحدة
+
+# إعدادات المراقبة
+CELERY_WORKER_SEND_TASK_EVENTS = True
+CELERY_TASK_SEND_SENT_EVENT = True
+
+# إعدادات الأمان والشبكة
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_CONNECTION_RETRY = True
+CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
+
+# إعدادات الذاكرة
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 200000  # 200MB
+
+# إعدادات التسجيل
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False
+CELERY_WORKER_LOG_COLOR = False
+
+# تخصيص إعدادات للبيئة الإنتاجية
+if not DEBUG:
+    CELERY_TASK_SOFT_TIME_LIMIT = 180  # 3 دقائق
+    CELERY_TASK_TIME_LIMIT = 300       # 5 دقائق
+    CELERY_WORKER_MAX_MEMORY_PER_CHILD = 150000  # 150MB

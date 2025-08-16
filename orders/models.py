@@ -364,17 +364,24 @@ class Order(models.Model):
         ]
     def calculate_final_price(self):
         """حساب السعر النهائي للطلب"""
+        # التحقق من وجود مفتاح أساسي أولاً
+        if not self.pk:
+            return 0
+
         # حساب السعر الأساسي من عناصر الطلب باستخدام استعلام أكثر كفاءة
         from django.db.models import F, Sum, ExpressionWrapper, DecimalField
-        # استخدام استعلام مُحسّن لحساب السعر النهائي
-        total = self.items.aggregate(
+
+        # استخدام استعلام مُحسّن مع تحسينات إضافية
+        total = self.items.select_related('product').aggregate(
             total=Sum(
                 ExpressionWrapper(
                     F('quantity') * F('unit_price'),
-                    output_field=DecimalField()
+                    output_field=DecimalField(max_digits=10, decimal_places=2)
                 )
             )
         )['total'] or 0
+
+        # تحديث القيمة في الذاكرة فقط (بدون حفظ)
         self.final_price = total
         return self.final_price
     def save(self, *args, **kwargs):
@@ -456,30 +463,41 @@ class Order(models.Model):
             if not self.pk:
                 raise models.ValidationError('فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي')
 
-            # رفع ملف العقد إلى Google Drive إذا كان موجوداً ولم يتم رفعه مسبقاً
+            # جدولة رفع ملف العقد إلى Google Drive بشكل غير متزامن
             if self.contract_file and not self.is_contract_uploaded_to_drive:
                 try:
-                    success, message = self.upload_contract_to_google_drive()
-                    if success:
-                        logger.info(f"تم رفع ملف العقد للطلب {self.order_number} بنجاح")
-                    else:
-                        logger.warning(f"فشل في رفع ملف العقد للطلب {self.order_number}: {message}")
+                    # استخدام مهمة خلفية لرفع الملف
+                    from .tasks import upload_contract_to_drive_async
+                    upload_contract_to_drive_async.delay(self.pk)
+                    logger.info(f"تم جدولة رفع ملف العقد للطلب {self.order_number}")
                 except Exception as e:
-                    logger.error(f"خطأ في رفع ملف العقد للطلب {self.order_number}: {str(e)}")
-            # حساب السعر النهائي بعد الحفظ (بعد وجود pk)
-            try:
-                final_price = self.calculate_final_price()
-                if self.final_price != final_price:
-                    self.final_price = final_price
-                    # حفظ التغيير في السعر النهائي فقط إذا تغير
-                    super().save(update_fields=['final_price'])
-                    # تحديث المبلغ الإجمالي ليطابق السعر النهائي
-                    self.total_amount = self.final_price
-                    super().save(update_fields=['total_amount'])
-            except Exception as e:
-                pass
-                self.final_price = 0
-                super().save(update_fields=['final_price'])
+                    logger.error(f"خطأ في جدولة رفع ملف العقد للطلب {self.order_number}: {str(e)}")
+                    # في حالة فشل الجدولة، نحاول الرفع المباشر كبديل
+                    try:
+                        success, message = self.upload_contract_to_google_drive()
+                        if success:
+                            logger.info(f"تم رفع ملف العقد للطلب {self.order_number} بنجاح (مباشر)")
+                        else:
+                            logger.warning(f"فشل في رفع ملف العقد للطلب {self.order_number}: {message}")
+                    except Exception as e2:
+                        logger.error(f"خطأ في رفع ملف العقد للطلب {self.order_number}: {str(e2)}")
+            # جدولة حساب السعر النهائي بشكل غير متزامن لتجنب البطء
+            if is_new or 'final_price' not in kwargs.get('update_fields', []):
+                try:
+                    from .tasks import calculate_order_totals_async
+                    calculate_order_totals_async.delay(self.pk)
+                except Exception as e:
+                    # في حالة فشل الجدولة، نحسب السعر مباشرة
+                    try:
+                        final_price = self.calculate_final_price()
+                        if self.final_price != final_price:
+                            self.final_price = final_price
+                            self.total_amount = final_price
+                            super().save(update_fields=['final_price', 'total_amount'])
+                    except Exception as calc_error:
+                        logger.error(f"خطأ في حساب السعر النهائي للطلب {self.order_number}: {str(calc_error)}")
+                        self.final_price = 0
+                        super().save(update_fields=['final_price'])
 
             # إنشاء الإشعارات المناسبة
             # تم إزالة استدعاءات دوال الإشعارات
@@ -512,13 +530,26 @@ class Order(models.Model):
 
         # تحديد نوع الطلب للحصول على عدد الأيام المناسب
         order_type = 'vip' if self.status == 'vip' else 'normal'
-        
+
         # التحقق من وجود معاينة في الطلب
         if 'inspection' in self.get_selected_types_list():
             order_type = 'inspection'
-        
-        # الحصول على عدد الأيام من الإعدادات
-        days_to_add = DeliveryTimeSettings.get_delivery_days(order_type)
+
+        # الحصول على عدد الأيام من التخزين المؤقت
+        try:
+            from .cache import get_cached_delivery_settings
+            delivery_settings = get_cached_delivery_settings()
+
+            if order_type in delivery_settings and delivery_settings[order_type]['is_active']:
+                days_to_add = delivery_settings[order_type]['days']
+            else:
+                # القيم الافتراضية في حالة عدم وجود إعدادات
+                default_days = {'normal': 7, 'vip': 3, 'inspection': 14}
+                days_to_add = default_days.get(order_type, 7)
+        except Exception as e:
+            logger.error(f"خطأ في جلب إعدادات التسليم من التخزين المؤقت: {str(e)}")
+            # استخدام الطريقة القديمة كبديل
+            days_to_add = DeliveryTimeSettings.get_delivery_days(order_type)
 
         # حساب التاريخ المتوقع
         expected_date = self.order_date + timedelta(days=days_to_add)
@@ -1308,15 +1339,27 @@ class OrderItem(models.Model):
             # التحقق من أن الطلب له مفتاح أساسي
             if not self.order.pk:
                 raise models.ValidationError('يجب حفظ الطلب أولاً قبل إنشاء عنصر الطلب')
+
             super().save(*args, **kwargs)
-            # تحديث السعر النهائي للطلب
+
+            # جدولة تحديث السعر النهائي للطلب بشكل غير متزامن
             try:
-                self.order.calculate_final_price()
-                self.order.save(update_fields=['final_price'])
+                from .tasks import calculate_order_totals_async
+                calculate_order_totals_async.delay(self.order.pk)
             except Exception as e:
-                pass
+                # في حالة فشل الجدولة، نحدث السعر مباشرة
+                try:
+                    self.order.calculate_final_price()
+                    self.order.save(update_fields=['final_price', 'total_amount'])
+                except Exception as calc_error:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"خطأ في تحديث السعر النهائي للطلب {self.order.pk}: {str(calc_error)}")
+
         except Exception as e:
-            pass
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في حفظ عنصر الطلب: {str(e)}")
             raise
 
 
