@@ -365,7 +365,17 @@ def order_create(request):
                     print("Formset errors:", formset.errors)
 
                 messages.success(request, 'تم إنشاء الطلب بنجاح!')
-                
+
+                # إذا كان الطلب AJAX، أرجع JSON response
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'تم إنشاء الطلب بنجاح!',
+                        'order_id': order.pk,
+                        'order_number': order.order_number,
+                        'redirect_url': f'/orders/{order.pk}/success/' + (f'?show_print=1&paid_amount={paid_amount}' if paid_amount > 0 else '')
+                    })
+
                 # إعادة التوجيه مع معلومة عن الدفع
                 if paid_amount > 0:
                     # إعادة توجيه لصفحة النجاح مع خيار الطباعة
@@ -376,10 +386,28 @@ def order_create(request):
             except Exception as e:
                 print("حدث خطأ أثناء حفظ الطلب:", e)
                 print(traceback.format_exc())
+
+                # إذا كان الطلب AJAX، أرجع JSON response
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'حدث خطأ أثناء حفظ الطلب: {str(e)}',
+                        'error': str(e)
+                    }, status=500)
+
                 messages.error(request, f'حدث خطأ أثناء حفظ الطلب: {e}')
         else:
             print("--- FORM IS INVALID ---")
             print("Validation Errors:", form.errors)
+
+            # إذا كان الطلب AJAX، أرجع JSON response
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors,
+                    'message': 'يرجى تصحيح الأخطاء في النموذج.'
+                }, status=400)
+
             messages.error(request, 'يرجى تصحيح الأخطاء في النموذج.')
     else:
         # GET request - الحصول على معرف العميل من GET إذا كان موجوداً

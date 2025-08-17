@@ -91,8 +91,23 @@ function showProgressIndicator() {
         allowOutsideClick: false,
         allowEscapeKey: false,
         showConfirmButton: false,
+        showCancelButton: true,
+        cancelButtonText: 'إلغاء',
+        cancelButtonColor: '#dc3545',
         didOpen: () => {
             startProgressAnimation();
+        }
+    }).then((result) => {
+        // إذا تم الضغط على إلغاء
+        if (result.dismiss === Swal.DismissReason.cancel) {
+            console.log('⚠️ تم إلغاء العملية من قبل المستخدم');
+            hideProgressIndicator();
+            Swal.fire({
+                icon: 'info',
+                title: 'تم الإلغاء',
+                text: 'تم إلغاء إنشاء الطلب',
+                confirmButtonText: 'موافق'
+            });
         }
     });
 }
@@ -168,7 +183,14 @@ function hideProgressIndicator() {
         clearInterval(window.progressInterval);
         window.progressInterval = null;
     }
+
+    // إغلاق SweetAlert إذا كان مفتوحاً
+    if (Swal.isVisible()) {
+        Swal.close();
+    }
+
     disableFormButtons(); // إعادة تفعيل الأزرار
+    console.log('✅ تم إخفاء مؤشر التقدم وإعادة تعيين الحالة');
     Swal.close();
 }
 
@@ -868,16 +890,45 @@ function showPaymentModal() {
                 setTimeout(() => {
                     const orderForm = document.getElementById('orderForm');
                     if (orderForm) {
-                        // إضافة معالج للنموذج لمنع الإرسال المتعدد
-                        orderForm.addEventListener('submit', function(e) {
-                            if (window.isSubmitting) {
-                                e.preventDefault();
-                                return false;
-                            }
-                        });
+                        try {
+                            // إضافة معالج للنموذج لمنع الإرسال المتعدد
+                            orderForm.addEventListener('submit', function(e) {
+                                if (window.isSubmitting && e.type === 'submit') {
+                                    console.log('⚠️ منع الإرسال المتعدد');
+                                    e.preventDefault();
+                                    return false;
+                                }
+                            });
 
-                        orderForm.submit();
+                            // إضافة timeout للحماية من التعليق
+                            const submitTimeout = setTimeout(() => {
+                                if (window.isSubmitting) {
+                                    console.log('⚠️ انتهت مهلة الإرسال - إعادة تعيين');
+                                    hideProgressIndicator();
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'انتهت مهلة الإرسال',
+                                        text: 'يرجى المحاولة مرة أخرى',
+                                        confirmButtonText: 'موافق'
+                                    });
+                                }
+                            }, 30000); // 30 ثانية
+
+                            console.log('🚀 إرسال النموذج عبر AJAX...');
+                            submitFormViaAjax(orderForm);
+
+                        } catch (error) {
+                            console.error('❌ خطأ في إرسال النموذج:', error);
+                            hideProgressIndicator();
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'خطأ في الإرسال',
+                                text: 'حدث خطأ أثناء إرسال النموذج. يرجى المحاولة مرة أخرى.',
+                                confirmButtonText: 'موافق'
+                            });
+                        }
                     } else {
+                        console.error('❌ لم يتم العثور على النموذج');
                         hideProgressIndicator();
                         Swal.fire('خطأ', 'لم يتم العثور على النموذج', 'error');
                     }
@@ -1084,6 +1135,111 @@ function disableFormButtons() {
 }
 
 // تهيئة النظام عند تحميل الصفحة
+// دالة لإرسال النموذج عبر AJAX
+function submitFormViaAjax(form) {
+    const formData = new FormData(form);
+
+    // إضافة header للـ AJAX
+    fetch(form.action || window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.message || 'حدث خطأ في الخادم');
+            });
+        }
+    })
+    .then(data => {
+        console.log('✅ تم إرسال النموذج بنجاح:', data);
+        hideProgressIndicator();
+
+        if (data.success) {
+            // نجح الإرسال
+            Swal.fire({
+                icon: 'success',
+                title: 'تم بنجاح!',
+                text: data.message,
+                confirmButtonText: 'موافق'
+            }).then(() => {
+                // إعادة توجيه للصفحة المحددة
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.reload();
+                }
+            });
+        } else {
+            // فشل الإرسال
+            let errorMessage = data.message || 'حدث خطأ غير معروف';
+
+            // إضافة تفاصيل الأخطاء إذا وجدت
+            if (data.errors) {
+                errorMessage += '\n\nتفاصيل الأخطاء:\n';
+                for (const [field, errors] of Object.entries(data.errors)) {
+                    errorMessage += `- ${field}: ${errors.join(', ')}\n`;
+                }
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'خطأ في النموذج',
+                text: errorMessage,
+                confirmButtonText: 'موافق'
+            });
+        }
+    })
+    .catch(error => {
+        console.error('❌ خطأ في إرسال النموذج:', error);
+        hideProgressIndicator();
+
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ في الإرسال',
+            text: error.message || 'حدث خطأ أثناء إرسال النموذج. يرجى المحاولة مرة أخرى.',
+            confirmButtonText: 'موافق'
+        });
+    });
+}
+
+// معالج أخطاء JavaScript العامة
+window.addEventListener('error', function(e) {
+    if (window.isSubmitting) {
+        console.error('❌ خطأ JavaScript أثناء الإرسال:', e.error);
+        hideProgressIndicator();
+        Swal.fire({
+            icon: 'error',
+            title: 'حدث خطأ',
+            text: 'حدث خطأ غير متوقع. يرجى إعادة تحميل الصفحة والمحاولة مرة أخرى.',
+            confirmButtonText: 'إعادة تحميل',
+            allowOutsideClick: false
+        }).then(() => {
+            window.location.reload();
+        });
+    }
+});
+
+// معالج لأخطاء الشبكة
+window.addEventListener('unhandledrejection', function(e) {
+    if (window.isSubmitting) {
+        console.error('❌ خطأ شبكة أثناء الإرسال:', e.reason);
+        hideProgressIndicator();
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ في الاتصال',
+            text: 'حدث خطأ في الاتصال. يرجى التحقق من الإنترنت والمحاولة مرة أخرى.',
+            confirmButtonText: 'موافق'
+        });
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('تهيئة نموذج الطلب المبسط...');
 
