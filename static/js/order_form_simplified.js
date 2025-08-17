@@ -388,14 +388,17 @@ function initializeSelect2OnOriginalField(field) {
 
 // إدارة حقول النموذج بناءً على نوع الطلب
 function updateFormFields() {
-    const selectedRadio = document.querySelector('.styled-radio:checked');
+    const selectedRadio = document.querySelector('input[name="order_type_selector"]:checked');
     const selectedType = selectedRadio ? selectedRadio.value : 'none';
 
-    // مزامنة الراديو الأصلي
+    // مزامنة الراديو الأصلي من Django
     const realRadios = document.querySelectorAll('input[name="selected_types"]');
     realRadios.forEach(radio => {
         radio.checked = (radio.value === selectedType);
     });
+
+    console.log('✅ تم تحديث نوع الطلب:', selectedType);
+    console.log('✅ عدد الراديو الأصلي:', realRadios.length);
 
     const showForContract = ['installation', 'tailoring', 'accessory'].includes(selectedType);
     const showRelatedInspection = ['installation', 'tailoring', 'accessory'].includes(selectedType);
@@ -999,7 +1002,25 @@ function setupFormEvents() {
     // أحداث الراديو
     const styledRadios = document.querySelectorAll('.styled-radio');
     styledRadios.forEach(radio => {
-        radio.addEventListener('change', updateFormFields);
+        radio.addEventListener('change', function() {
+            updateFormFields();
+
+            // تحديث فوري للراديو الأصلي
+            const selectedType = this.value;
+            const realRadios = document.querySelectorAll('input[name="selected_types"]');
+            realRadios.forEach(realRadio => {
+                realRadio.checked = (realRadio.value === selectedType);
+
+                // إطلاق حدث change على الراديو الأصلي
+                if (realRadio.checked) {
+                    const changeEvent = new Event('change', { bubbles: true });
+                    realRadio.dispatchEvent(changeEvent);
+                }
+            });
+
+            console.log('✅ تم تحديث selected_types إلى:', selectedType);
+            console.log('✅ عدد الراديو المحدث:', realRadios.length);
+        });
     });
     
     // زر إضافة العناصر

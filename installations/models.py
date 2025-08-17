@@ -738,7 +738,7 @@ class InstallationSchedulingSettings(models.Model):
         
         # بيانات البائع والفرع
         if order.salesperson:
-            self.salesperson_name = order.salesperson.user.get_full_name() or order.salesperson.user.username
+            self.salesperson_name = order.salesperson.get_display_name()
         
         if order.branch:
             self.branch_name = order.branch.name

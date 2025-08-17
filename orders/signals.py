@@ -95,7 +95,11 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
     """
     if created:
         order_types = instance.get_selected_types_list()
-        print(f"🔍 تم إنشاء طلب جديد {instance.order_number} - الأنواع: {order_types}")
+        print(f"🔍 تم إنشاء طلب جديد {instance.order_number}")
+        print(f"📋 selected_types (raw): {instance.selected_types}")
+        print(f"📋 الأنواع المستخرجة: {order_types}")
+        print(f"📋 نوع البيانات: {type(order_types)}")
+
         if 'inspection' in order_types:
             print(f"📋 الطلب {instance.order_number} من نوع معاينة - سيتم إنشاء معاينة تلقائية")
             try:
@@ -106,11 +110,27 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                     request_date = instance.order_date.date() if instance.order_date else timezone.now().date()
                     # حاول استخراج تاريخ تنفيذ محدد من notes أو من بيانات الطلب إذا كان ذلك ممكناً (يمكنك تطوير هذا لاحقاً)
                     scheduled_date = request_date + timedelta(days=2)
+                    # التحقق من البائع وإعداد المعاين
+                    inspector = instance.created_by
+                    responsible_employee = None
+
+                    # إذا كان البائع له حساب مستخدم، استخدمه كمعاين
+                    if instance.salesperson and instance.salesperson.user:
+                        inspector = instance.salesperson.user
+                        responsible_employee = instance.salesperson
+                    elif instance.salesperson:
+                        # البائع موجود لكن بدون حساب مستخدم
+                        responsible_employee = instance.salesperson
+                        inspector = instance.created_by  # استخدم منشئ الطلب كمعاين
+
+                    print(f"📋 المعاين: {inspector}")
+                    print(f"📋 الموظف المسؤول: {responsible_employee}")
+
                     inspection = Inspection.objects.create(
                         customer=instance.customer,
                         branch=instance.branch,
-                        inspector=instance.created_by,  # استخدام منشئ الطلب كمعاين افتراضي
-                        responsible_employee=instance.salesperson,
+                        inspector=inspector,
+                        responsible_employee=responsible_employee,
                         order=instance,
                         is_from_orders=True,
                         request_date=request_date,

@@ -282,6 +282,15 @@ class Employee(models.Model):
         return f'{self.name} ({self.employee_id})'
 class Salesperson(models.Model):
     name = models.CharField(max_length=100, verbose_name=_('اسم البائع'))
+    user = models.OneToOneField(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='salesperson_profile',
+        verbose_name=_('حساب المستخدم'),
+        help_text=_('ربط البائع بحساب مستخدم (اختياري)')
+    )
     employee_number = models.CharField(max_length=50, verbose_name=_('الرقم الوظيفي'), blank=True, null=True)
     branch = models.ForeignKey('Branch', on_delete=models.CASCADE, related_name='salespersons', verbose_name=_('الفرع'))
     phone = models.CharField(max_length=20, blank=True, verbose_name=_('رقم الهاتف'))
@@ -296,7 +305,15 @@ class Salesperson(models.Model):
         verbose_name_plural = _('البائعون')
         ordering = ['name']
     def __str__(self):
+        if self.user:
+            return f'{self.name} ({self.user.username})'
         return f'{self.name} ({self.employee_number})' if self.employee_number else self.name
+
+    def get_display_name(self):
+        """الحصول على الاسم المناسب للعرض"""
+        if self.user:
+            return self.user.get_full_name() or self.user.username
+        return self.name
     def clean(self):
         if self.branch and not self.branch.is_active:
             raise ValidationError(_('لا يمكن إضافة بائع لفرع غير نشط'))

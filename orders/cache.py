@@ -213,13 +213,16 @@ class OrderCache:
         if salesperson_data is None:
             try:
                 from accounts.models import Salesperson
-                salesperson = Salesperson.objects.select_related('user').get(id=salesperson_id)
-                
+                salesperson = Salesperson.objects.select_related('user', 'branch').get(id=salesperson_id)
+
                 salesperson_data = {
                     'id': salesperson.id,
                     'name': salesperson.name,
+                    'display_name': salesperson.get_display_name(),
+                    'employee_number': salesperson.employee_number,
                     'user_id': salesperson.user.id if salesperson.user else None,
                     'username': salesperson.user.username if salesperson.user else None,
+                    'branch_name': salesperson.branch.name if salesperson.branch else None,
                     'is_active': salesperson.is_active
                 }
                 

@@ -419,8 +419,8 @@ class Order(models.Model):
                         st.strip() for st in selected_types.split(',') if st.strip()
                     ]
             if not selected_types:
-                selected_types = ['inspection']  # Default to inspection if no types are selected
-                self.selected_types = selected_types
+                # لا تعيين افتراضي - يجب أن يكون النوع محدد صراحة
+                raise ValidationError('يجب تحديد نوع الطلب')
 
             # Contract number validation
             if 'tailoring' in selected_types and not self.contract_number:

@@ -158,7 +158,7 @@ def get_inspection_notification_recipients(inspection, created_by, notification_
         
         # البائع المسؤول
         if hasattr(inspection, 'responsible_employee') and inspection.responsible_employee:
-            if hasattr(inspection.responsible_employee, 'user'):
+            if hasattr(inspection.responsible_employee, 'user') and inspection.responsible_employee.user:
                 recipients = recipients.union(User.objects.filter(pk=inspection.responsible_employee.user.pk))
         
         # المعاين المكلف

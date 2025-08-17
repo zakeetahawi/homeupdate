@@ -57,8 +57,15 @@ def online_users_api(request):
             user_branch = 'غير محدد'
             if hasattr(online_user.user, 'branch') and online_user.user.branch:
                 user_branch = online_user.user.branch.name
-            elif hasattr(online_user.user, 'salesperson') and online_user.user.salesperson and online_user.user.salesperson.branch:
-                user_branch = online_user.user.salesperson.branch.name
+            # إذا كان المستخدم بائع، نحاول العثور على فرعه من خلال نموذج Salesperson
+            elif online_user.user.is_salesperson:
+                try:
+                    from accounts.models import Salesperson
+                    salesperson = Salesperson.objects.filter(name=online_user.user.get_full_name()).first()
+                    if salesperson and salesperson.branch:
+                        user_branch = salesperson.branch.name
+                except Exception:
+                    pass
 
             # معلومات أساسية للجميع
             user_data = {

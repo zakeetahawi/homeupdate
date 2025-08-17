@@ -208,7 +208,7 @@ class OrderForm(forms.ModelForm):
                 salesperson_queryset = Salesperson.objects.filter(
                     is_active=True,
                     branch=user.branch
-                ).select_related('user', 'branch').only('id', 'user__first_name', 'user__last_name', 'branch__name')
+                ).select_related('user', 'branch').only('id', 'name', 'employee_number', 'user__first_name', 'user__last_name', 'user__username', 'branch__name')
 
                 # تخزين مؤقت لمدة 15 دقيقة
                 cache.set(cache_key, salesperson_queryset, 900)
@@ -373,10 +373,10 @@ class OrderForm(forms.ModelForm):
         cleaned_data = super().clean()
         selected_type = cleaned_data.get('selected_types')
 
-        # إضافة رسائل تصحيح
-        print(f"DEBUG: selected_type = {selected_type}")
-        print(f"DEBUG: selected_type type = {type(selected_type)}")
-        print(f"DEBUG: all cleaned_data keys = {list(cleaned_data.keys())}")
+        # رسائل تصحيح (يمكن إزالتها في الإنتاج)
+        # print(f"🔍 DEBUG: selected_type = {selected_type}")
+        # print(f"🔍 DEBUG: selected_type type = {type(selected_type)}")
+        # print(f"🔍 DEBUG: all cleaned_data keys = {list(cleaned_data.keys())}")
 
         # Required fields validation
         required_fields = ['customer', 'salesperson', 'branch']
@@ -388,13 +388,12 @@ class OrderForm(forms.ModelForm):
             self.add_error('selected_types', 'يجب اختيار نوع للطلب')
             return cleaned_data # Return early if no type is selected
 
-        # التحقق من رقم الفاتورة لجميع أنواع الطلبات
-        print(f"DEBUG: checking invoice_number for type: {selected_type}")
+        # التحقق من رقم الفاتورة (مطلوب لجميع الأنواع عدا المعاينة)
         invoice_number = cleaned_data.get('invoice_number')
-        print(f"DEBUG: invoice_number = {invoice_number}")
-        if not invoice_number or not invoice_number.strip():
-            print(f"DEBUG: invoice_number validation failed")
-            self.add_error('invoice_number', 'رقم الفاتورة مطلوب لجميع أنواع الطلبات')
+
+        if selected_type != 'inspection':  # رقم الفاتورة غير مطلوب للمعاينة
+            if not invoice_number or not invoice_number.strip():
+                self.add_error('invoice_number', 'رقم الفاتورة مطلوب لهذا النوع من الطلبات')
 
         # التحقق من رقم العقد وملف العقد للتركيب والتفصيل والإكسسوار
         contract_required_types = ['installation', 'tailoring', 'accessory']
@@ -410,21 +409,16 @@ class OrderForm(forms.ModelForm):
         # التحقق من المعاينة المرتبطة للخدمات الأخرى (غير المعاينة) فقط
         if selected_type != 'inspection':
             related_inspection_value = cleaned_data.get('related_inspection')
-            print(f"DEBUG: related_inspection_value = {related_inspection_value}")
             if related_inspection_value and related_inspection_value != 'customer_side':
                 try:
                     # التحقق من أن القيمة رقم صحيح
                     inspection_id = int(related_inspection_value)
                     inspection = Inspection.objects.get(id=inspection_id)
-                    print(f"DEBUG: Found inspection with ID {inspection_id}")
                 except (ValueError, Inspection.DoesNotExist):
-                    print(f"DEBUG: Invalid inspection ID: {related_inspection_value}")
                     self.add_error('related_inspection', 'معاينة غير صحيحة')
         else:
             # للمعاينات: إفراغ قيمة المعاينة المرتبطة
             cleaned_data['related_inspection'] = ''
-
-        print(f"DEBUG: form validation completed")
         return cleaned_data
 
     def save(self, commit=True):
