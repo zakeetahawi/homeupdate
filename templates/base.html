@@ -271,13 +271,20 @@
                                 </span>
                                 {% endif %}
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" style="width: 350px; max-height: 400px; overflow-y: auto;">
-                                <li><h6 class="dropdown-header d-flex justify-content-between align-items-center">
-                                    <span>الإشعارات</span>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg" aria-labelledby="notificationsDropdown" style="width: 500px; max-height: 600px; overflow-y: auto; overflow-x: hidden;">
+                                <li><h6 class="dropdown-header d-flex justify-content-between align-items-center py-3 px-4 bg-light border-bottom">
+                                    <span class="fw-bold text-dark">
+                                        <i class="fas fa-bell me-2 text-primary"></i>
+                                        الإشعارات
+                                        {% if notifications_unread_count > 0 %}
+                                        <span class="badge bg-primary ms-2">{{ notifications_unread_count }}</span>
+                                        {% endif %}
+                                    </span>
                                     {% if notifications_unread_count > 0 %}
-                                    <a href="{% url 'notifications:mark_all_read' %}" class="btn btn-sm btn-outline-primary" onclick="return confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')">
-                                        تحديد الكل كمقروء
-                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="markAllNotificationsRead()" title="تحديد جميع الإشعارات كمقروءة">
+                                        <i class="fas fa-check-double"></i>
+                                        تحديد الكل
+                                    </button>
                                     {% endif %}
                                 </h6></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -286,19 +293,65 @@
                                     {% for notification in recent_notifications %}
                                     {% with visibility=notification.visibility_records.all|first %}
                                     <li>
-                                        <a class="dropdown-item {% if not visibility.is_read %}fw-bold{% endif %}" href="{{ notification.get_absolute_url }}">
+                                        <a class="dropdown-item py-3 px-3 {% if not visibility.is_read %}bg-light border-start border-primary border-3{% endif %}"
+                                           href="{{ notification.get_absolute_url }}"
+                                           style="border-radius: 8px; margin: 2px 8px; white-space: normal; word-wrap: break-word;">
                                             <div class="d-flex align-items-start">
-                                                <div class="me-2">
-                                                    <i class="{{ notification.get_icon_class }} {{ notification.get_color_class }}"></i>
+                                                <div class="me-3 flex-shrink-0">
+                                                    <div class="notification-icon-wrapper d-flex align-items-center justify-content-center"
+                                                         style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(45deg, {{ notification.get_color_class|slice:'5:' }}, {{ notification.get_color_class|slice:'5:' }}20);">
+                                                        <i class="{{ notification.get_icon_class }} text-white fs-5"></i>
+                                                    </div>
                                                 </div>
-                                                <div class="flex-grow-1">
-                                                    <div class="fw-bold">{{ notification.title|truncatechars:30 }}</div>
-                                                    <small class="text-muted">{{ notification.message|truncatechars:50 }}</small>
-                                                    <div class="d-flex justify-content-between align-items-center mt-1">
-                                                        <small class="text-muted">{{ notification.created_at|timesince }}</small>
+                                                <div class="flex-grow-1 min-width-0">
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <h6 class="mb-0 {% if not visibility.is_read %}fw-bold text-dark{% else %}text-muted{% endif %}"
+                                                            style="line-height: 1.3; word-break: break-word;">
+                                                            {{ notification.title }}
+                                                        </h6>
                                                         {% if not visibility.is_read %}
-                                                        <span class="badge bg-primary">جديد</span>
+                                                        <span class="badge bg-primary rounded-pill ms-2 flex-shrink-0">جديد</span>
                                                         {% endif %}
+                                                    </div>
+
+                                                    <!-- معلومات مفصلة -->
+                                                    <div class="notification-details mb-2">
+                                                        {% if notification.extra_data.order_number %}
+                                                        <div class="small text-primary fw-semibold">
+                                                            <i class="fas fa-hashtag me-1"></i>
+                                                            رقم الطلب: {{ notification.extra_data.order_number }}
+                                                        </div>
+                                                        {% endif %}
+
+                                                        {% if notification.extra_data.customer_name %}
+                                                        <div class="small text-info">
+                                                            <i class="fas fa-user me-1"></i>
+                                                            العميل: {{ notification.extra_data.customer_name }}
+                                                        </div>
+                                                        {% endif %}
+
+                                                        {% if notification.created_by %}
+                                                        <div class="small text-secondary">
+                                                            <i class="fas fa-user-tie me-1"></i>
+                                                            المنشئ: {{ notification.created_by.get_full_name|default:notification.created_by.username }}
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <!-- الرسالة مختصرة على سطرين -->
+                                                    <p class="mb-2 text-muted small"
+                                                       style="line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;">
+                                                        {{ notification.message }}
+                                                    </p>
+
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            {{ notification.created_at|timesince }}
+                                                        </small>
+                                                        <small class="text-muted">
+                                                            {{ notification.get_notification_type_display }}
+                                                        </small>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1031,7 +1084,7 @@
                 return; // لا توجد إشعارات في هذه الصفحة
             }
 
-            fetch('{% url "notifications:ajax_recent" %}?limit=5')
+            fetch('{% url "notifications:ajax_recent" %}?limit=10')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1047,34 +1100,79 @@
 
                         // إعادة بناء قائمة الإشعارات
                         let newContent = `
-                            <li><h6 class="dropdown-header d-flex justify-content-between align-items-center">
-                                <span>الإشعارات</span>
-                                ${data.count > 0 ? `<a href="{% url 'notifications:mark_all_read' %}" class="btn btn-sm btn-outline-primary" onclick="return confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')">تحديد الكل كمقروء</a>` : ''}
+                            <li><h6 class="dropdown-header d-flex justify-content-between align-items-center py-3 px-4 bg-light border-bottom">
+                                <span class="fw-bold text-dark">
+                                    <i class="fas fa-bell me-2 text-primary"></i>
+                                    الإشعارات
+                                    ${data.count > 0 ? `<span class="badge bg-primary ms-2">${data.count}</span>` : ''}
+                                </span>
+                                ${data.count > 0 ? `<button type="button" class="btn btn-sm btn-outline-primary" onclick="markAllNotificationsRead()" title="تحديد جميع الإشعارات كمقروءة"><i class="fas fa-check-double"></i> تحديد الكل</button>` : ''}
                             </h6></li>
-                            <li><hr class="dropdown-divider"></li>
                         `;
 
                         if (data.notifications.length > 0) {
                             data.notifications.forEach((notification, index) => {
+                                const extraData = notification.extra_data || {};
                                 newContent += `
                                     <li>
-                                        <a class="dropdown-item ${!notification.is_read ? 'fw-bold' : ''}" href="${notification.url}">
+                                        <a class="dropdown-item py-3 px-3 ${!notification.is_read ? 'bg-light border-start border-primary border-3' : ''}"
+                                           href="${notification.url}"
+                                           style="border-radius: 8px; margin: 2px 8px; white-space: normal; word-wrap: break-word;">
                                             <div class="d-flex align-items-start">
-                                                <div class="me-2">
-                                                    <i class="${notification.icon_class} ${notification.color_class}"></i>
+                                                <div class="me-3 flex-shrink-0">
+                                                    <div class="notification-icon-wrapper d-flex align-items-center justify-content-center"
+                                                         style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(45deg, ${notification.color_class.slice(5)}, ${notification.color_class.slice(5)}20);">
+                                                        <i class="${notification.icon_class} text-white fs-5"></i>
+                                                    </div>
                                                 </div>
-                                                <div class="flex-grow-1">
-                                                    <div class="fw-bold">${notification.title.substring(0, 30)}${notification.title.length > 30 ? '...' : ''}</div>
-                                                    <small class="text-muted">${notification.message.substring(0, 50)}${notification.message.length > 50 ? '...' : ''}</small>
-                                                    <div class="d-flex justify-content-between align-items-center mt-1">
-                                                        <small class="text-muted">${timeAgo(notification.created_at)}</small>
-                                                        ${!notification.is_read ? '<span class="badge bg-primary">جديد</span>' : ''}
+                                                <div class="flex-grow-1 min-width-0">
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <h6 class="mb-0 ${!notification.is_read ? 'fw-bold text-dark' : 'text-muted'}"
+                                                            style="line-height: 1.3; word-break: break-word;">
+                                                            ${notification.title}
+                                                        </h6>
+                                                        ${!notification.is_read ? '<span class="badge bg-primary rounded-pill ms-2 flex-shrink-0">جديد</span>' : ''}
+                                                    </div>
+
+                                                    <div class="notification-details mb-2">
+                                                        ${extraData.order_number ? `
+                                                        <div class="small text-primary fw-semibold">
+                                                            <i class="fas fa-hashtag me-1"></i>
+                                                            رقم الطلب: ${extraData.order_number}
+                                                        </div>` : ''}
+
+                                                        ${extraData.customer_name ? `
+                                                        <div class="small text-info">
+                                                            <i class="fas fa-user me-1"></i>
+                                                            العميل: ${extraData.customer_name}
+                                                        </div>` : ''}
+
+                                                        ${notification.created_by_name ? `
+                                                        <div class="small text-secondary">
+                                                            <i class="fas fa-user-tie me-1"></i>
+                                                            المنشئ: ${notification.created_by_name}
+                                                        </div>` : ''}
+                                                    </div>
+
+                                                    <p class="mb-2 text-muted small"
+                                                       style="line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;">
+                                                        ${notification.message}
+                                                    </p>
+
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            ${timeAgo(notification.created_at)}
+                                                        </small>
+                                                        <small class="text-muted">
+                                                            ${notification.notification_type_display}
+                                                        </small>
                                                     </div>
                                                 </div>
                                             </div>
                                         </a>
                                     </li>
-                                    ${index < data.notifications.length - 1 ? '<li><hr class="dropdown-divider"></li>' : ''}
+                                    ${index < data.notifications.length - 1 ? '<li><hr class="dropdown-divider" style="margin: 0.5rem 1rem; opacity: 0.3;"></li>' : ''}
                                 `;
                             });
                             newContent += `
@@ -1113,6 +1211,63 @@
             if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' دقيقة';
             if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' ساعة';
             return Math.floor(diffInSeconds / 86400) + ' يوم';
+        }
+
+        // دالة لتحديد جميع الإشعارات كمقروءة
+        function markAllNotificationsRead() {
+            if (!confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')) {
+                return;
+            }
+
+            fetch('{% url "notifications:mark_all_read" %}', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // تحديث العداد والقائمة
+                    updateNotificationCount();
+                    updateRecentNotifications();
+
+                    // إظهار رسالة نجاح
+                    showNotificationMessage('تم تحديد جميع الإشعارات كمقروءة', 'success');
+                } else {
+                    showNotificationMessage('حدث خطأ أثناء تحديث الإشعارات', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotificationMessage('حدث خطأ أثناء تحديث الإشعارات', 'error');
+            });
+        }
+
+        // دالة لإظهار رسائل التنبيه
+        function showNotificationMessage(message, type) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                <i class="fas ${iconClass} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(alertDiv);
+
+            // إزالة الرسالة تلقائياً بعد 5 ثوان
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
         }
 
         // تحديث الإشعارات عند تحميل الصفحة

@@ -135,7 +135,8 @@ def customer_list(request):
         'page_obj': page_obj,
         'form': form,
         'total_customers': total_customers,
-        'search_query': search_value,
+        'search_query': search_value,  # للتوافق مع template
+        'search_value': search_value,  # للتوافق مع form
         'category_value': category_value,
         'customer_type_value': customer_type_value,
         'status_value': status_value,

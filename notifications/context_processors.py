@@ -14,7 +14,7 @@ def notifications_context(request):
         
         # آخر الإشعارات (للعرض في القائمة المنسدلة)
         recent_notifications = Notification.objects.recent_for_user(
-            request.user, limit=5
+            request.user, limit=10
         ).select_related('created_by', 'content_type')
         
         context.update({

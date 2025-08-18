@@ -130,17 +130,65 @@ def mark_notification_read(request, pk):
 
 
 @login_required
-@require_POST
 def mark_all_notifications_read(request):
     """تحديد جميع الإشعارات كمقروءة"""
-    count = mark_all_notifications_as_read(request.user)
 
-    messages.success(
-        request,
-        _('تم تحديد {} إشعار كمقروء').format(count)
-    )
+    # إذا كان GET request، اعرض صفحة تأكيد
+    if request.method == 'GET':
+        # عدد الإشعارات غير المقروءة
+        from .utils import get_user_notification_count
+        unread_count = get_user_notification_count(request.user)
 
-    return redirect('notifications:list')
+        if unread_count == 0:
+            messages.info(request, _('لا توجد إشعارات غير مقروءة'))
+            return redirect('notifications:list')
+
+        # عرض صفحة تأكيد
+        context = {
+            'unread_count': unread_count,
+            'title': _('تحديد جميع الإشعارات كمقروءة')
+        }
+        return render(request, 'notifications/confirm_mark_all_read.html', context)
+
+    # إذا كان POST request، قم بالتحديث
+    elif request.method == 'POST':
+        try:
+            count = mark_all_notifications_as_read(request.user)
+
+            message = _('تم تحديد {} إشعار كمقروء').format(count)
+
+            # إذا كان الطلب AJAX، أرجع JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'count': count,
+                    'message': message
+                })
+
+            # إذا كان طلب عادي، أضف رسالة وأعد التوجيه
+            messages.success(request, message)
+            return redirect('notifications:list')
+
+        except Exception as e:
+            error_message = _('حدث خطأ أثناء تحديث الإشعارات: {}').format(str(e))
+
+            # إذا كان الطلب AJAX، أرجع JSON للخطأ
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': error_message
+                }, status=500)
+
+            # إذا كان طلب عادي، أضف رسالة خطأ وأعد التوجيه
+            messages.error(request, error_message)
+            return redirect('notifications:list')
+
+    # إذا كان method آخر، أرجع خطأ
+    else:
+        return JsonResponse({
+            'success': False,
+            'message': _('طريقة الطلب غير مدعومة')
+        }, status=405)
 
 
 @login_required
@@ -178,9 +226,9 @@ def recent_notifications_ajax(request):
         notifications_data.append({
             'id': notification.pk,
             'title': notification.title,
-            'message': notification.message[:100] + '...' if len(notification.message) > 100 else notification.message,
+            'message': notification.message,
             'type': notification.notification_type,
-            'type_display': notification.get_notification_type_display(),
+            'notification_type_display': notification.get_notification_type_display(),
             'priority': notification.priority,
             'priority_display': notification.get_priority_display(),
             'icon_class': notification.get_icon_class(),
@@ -188,6 +236,8 @@ def recent_notifications_ajax(request):
             'is_read': is_read,
             'created_at': notification.created_at.isoformat(),
             'url': notification.get_absolute_url(),
+            'created_by_name': notification.created_by.get_full_name() if notification.created_by else None,
+            'extra_data': notification.extra_data,
         })
 
     return JsonResponse({

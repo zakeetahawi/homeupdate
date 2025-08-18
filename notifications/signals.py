@@ -212,12 +212,22 @@ def order_status_changed_notification(sender, instance, **kwargs):
 def inspection_created_notification(sender, instance, created, **kwargs):
     """إشعار عند إنشاء معاينة جديدة"""
     if created:
-        title = f"معاينة جديدة: {instance.contract_number or 'غير محدد'}"
+        # استخدام كود الطلب فقط
+        order_number = None
+        if hasattr(instance, 'order') and instance.order:
+            order_number = instance.order.order_number
+        else:
+            order_number = f"معاينة-{instance.pk}"
+
+        title = f"معاينة جديدة: {order_number}"
         message = f"تم إنشاء معاينة جديدة للعميل {instance.customer.name if instance.customer else 'غير محدد'}"
-        
+
+        if hasattr(instance, 'order') and instance.order:
+            message += f" للطلب {instance.order.order_number}"
+
         if instance.responsible_employee:
             message += f" بواسطة {instance.responsible_employee.name}"
-        
+
         create_notification(
             title=title,
             message=message,
@@ -226,9 +236,10 @@ def inspection_created_notification(sender, instance, created, **kwargs):
             created_by=getattr(instance, 'created_by', None),
             priority='normal',
             extra_data={
-                'contract_number': instance.contract_number,
+                'order_number': order_number,
                 'customer_name': instance.customer.name if instance.customer else None,
                 'branch_name': instance.branch.name if instance.branch else None,
+                'responsible_employee': instance.responsible_employee.name if instance.responsible_employee else None,
             }
         )
 

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% csrf_token %}
 
 {% block title %}الإشعارات{% endblock %}
 
@@ -84,10 +85,20 @@
         </h1>
         <div class="btn-group">
             {% if unread_count > 0 %}
-            <a href="{% url 'notifications:mark_all_read' %}" 
-               class="btn btn-outline-primary"
-               onclick="return confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')">
+            <!-- زر سريع مع AJAX -->
+            <button type="button"
+                    class="btn btn-outline-primary me-2"
+                    id="mark-all-read-ajax-btn"
+                    title="تحديد سريع بدون إعادة تحميل">
                 <i class="fas fa-check-double"></i>
+                تحديد سريع
+            </button>
+
+            <!-- رابط لصفحة التأكيد -->
+            <a href="{% url 'notifications:mark_all_read' %}"
+               class="btn btn-primary"
+               title="تحديد مع صفحة تأكيد">
+                <i class="fas fa-check-circle"></i>
                 تحديد الكل كمقروء
             </a>
             {% endif %}
@@ -285,9 +296,71 @@
 document.addEventListener('DOMContentLoaded', function() {
     // تحديث عداد الإشعارات في الـ navbar
     updateNotificationCount();
-    
+
     // تحديث العداد كل 30 ثانية
     setInterval(updateNotificationCount, 30000);
+
+    // معالجة الزر السريع لتحديد جميع الإشعارات كمقروءة
+    const markAllAjaxBtn = document.getElementById('mark-all-read-ajax-btn');
+    if (markAllAjaxBtn) {
+        markAllAjaxBtn.addEventListener('click', function() {
+            if (!confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟\n\nسيتم التحديث فوراً بدون إعادة تحميل الصفحة.')) {
+                return;
+            }
+
+            const originalText = markAllAjaxBtn.innerHTML;
+
+            // إظهار مؤشر التحميل
+            markAllAjaxBtn.disabled = true;
+            markAllAjaxBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+
+            // إرسال الطلب
+            fetch('{% url "notifications:mark_all_read" %}', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('فشل في تحديث الإشعارات');
+                }
+            })
+            .then(data => {
+                if (data.success) {
+                    // إظهار رسالة نجاح
+                    showSuccessMessage(data.message);
+
+                    // تحديث الواجهة فوراً
+                    updateNotificationsUI();
+
+                    // تحديث العداد
+                    updateNotificationCount();
+
+                    // إخفاء الزر إذا لم تعد هناك إشعارات غير مقروءة
+                    if (data.count === 0) {
+                        markAllAjaxBtn.style.display = 'none';
+                        document.querySelector('a[href*="mark-all-read"]').style.display = 'none';
+                    }
+                } else {
+                    throw new Error(data.message || 'فشل في تحديث الإشعارات');
+                }
+            })
+            .catch(error => {
+                console.error('خطأ:', error);
+                showErrorMessage('حدث خطأ أثناء تحديث الإشعارات. يرجى المحاولة مرة أخرى.');
+            })
+            .finally(() => {
+                // إعادة تفعيل الزر
+                markAllAjaxBtn.disabled = false;
+                markAllAjaxBtn.innerHTML = originalText;
+            });
+        });
+    }
 });
 
 function updateNotificationCount() {
@@ -307,6 +380,51 @@ function updateNotificationCount() {
             }
         })
         .catch(error => console.error('Error updating notification count:', error));
+}
+
+// دالة لإظهار رسالة نجاح
+function showSuccessMessage(message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+    alertDiv.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+
+    setTimeout(() => alertDiv.remove(), 5000);
+}
+
+// دالة لإظهار رسالة خطأ
+function showErrorMessage(message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+    alertDiv.innerHTML = `
+        <i class="fas fa-exclamation-circle me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+
+    setTimeout(() => alertDiv.remove(), 8000);
+}
+
+// دالة لتحديث واجهة الإشعارات
+function updateNotificationsUI() {
+    const unreadNotifications = document.querySelectorAll('.notification-item.unread');
+    unreadNotifications.forEach(notification => {
+        notification.classList.remove('unread');
+        notification.classList.add('read');
+    });
+
+    // إخفاء أزرار "تحديد الكل" إذا لم تعد هناك إشعارات غير مقروءة
+    const markAllBtns = document.querySelectorAll('#mark-all-read-ajax-btn, a[href*="mark-all-read"]');
+    markAllBtns.forEach(btn => btn.style.display = 'none');
 }
 </script>
 {% endblock %}

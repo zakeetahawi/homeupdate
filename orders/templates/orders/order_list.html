@@ -546,12 +546,12 @@
                 <ul class="pagination justify-content-center mb-0">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}">
                             <i class="fas fa-angle-double-right"></i>
                         </a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}">
                             <i class="fas fa-angle-right"></i>
                         </a>
                     </li>
@@ -564,7 +564,7 @@
                         </li>
                         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}">
                                 {{ num }}
                             </a>
                         </li>
@@ -573,12 +573,12 @@
                     
                     {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}">
                             <i class="fas fa-angle-left"></i>
                         </a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}">
                             <i class="fas fa-angle-double-left"></i>
                         </a>
                     </li>
