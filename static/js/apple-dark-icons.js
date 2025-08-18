@@ -397,19 +397,22 @@ function applyFormAppleIcons() {
 }
 
 function applyNotificationIcons() {
-    // تطبيق أيقونات خاصة لزر الإشعارات وعناصر الهيدر
-    const notificationButton = document.querySelector('[data-bs-toggle="dropdown"][aria-expanded]');
-    if (notificationButton && !notificationButton.querySelector('.apple-icon')) {
-        const icon = notificationButton.querySelector('i');
-        if (icon) {
-            icon.setAttribute('data-original-icon', icon.className);
-            icon.className = 'apple-icon';
-            icon.innerHTML = '🔔';
-            icon.style.fontSize = '16px';
-            icon.style.color = '#ff9500';
-            icon.style.transition = 'all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
-        }
-    }
+    // تم تعطيل تدخل Apple Icons في أيقونات الإشعارات
+    // لتجنب التضارب مع نظام الإشعارات المخصص
+
+    // تطبيق أيقونات خاصة لزر الإشعارات وعناصر الهيدر - معطل
+    // const notificationButton = document.querySelector('[data-bs-toggle="dropdown"][aria-expanded]');
+    // if (notificationButton && !notificationButton.querySelector('.apple-icon')) {
+    //     const icon = notificationButton.querySelector('i');
+    //     if (icon) {
+    //         icon.setAttribute('data-original-icon', icon.className);
+    //         icon.className = 'apple-icon';
+    //         icon.innerHTML = '🔔';
+    //         icon.style.fontSize = '16px';
+    //         icon.style.color = '#ff9500';
+    //         icon.style.transition = 'all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
+    //     }
+    // }
 
     // أيقونات القائمة المنسدلة للمستخدم
     const userDropdownItems = document.querySelectorAll('.dropdown-item');

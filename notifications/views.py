@@ -107,13 +107,35 @@ class NotificationDetailView(LoginRequiredMixin, DetailView):
 @login_required
 def mark_notification_read(request, pk):
     """تحديد إشعار كمقروء"""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"🔔 محاولة تحديد الإشعار {pk} كمقروء للمستخدم {request.user.username}")
+
     notification = get_object_or_404(
         Notification.objects.for_user(request.user),
         pk=pk
     )
 
     success = mark_notification_as_read(notification, request.user)
+    logger.info(f"📖 نتيجة تحديد الإشعار {pk}: {success}")
 
+    # إذا كان AJAX request، إرجاع JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        if success:
+            return JsonResponse({
+                'success': True,
+                'message': 'تم تحديد الإشعار كمقروء',
+                'notification_id': notification.pk,
+                'user': request.user.get_full_name() or request.user.username
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'حدث خطأ أثناء تحديث الإشعار'
+            }, status=400)
+
+    # للطلبات العادية
     if request.method == 'POST':
         if success:
             messages.success(request, _('تم تحديد الإشعار كمقروء'))
@@ -209,19 +231,18 @@ def recent_notifications_ajax(request):
 
     notifications = Notification.objects.recent_for_user(
         request.user, limit=limit
-    ).select_related('created_by', 'content_type')
+    ).select_related('created_by', 'content_type').prefetch_related(
+        'visibility_records'
+    )
 
     notifications_data = []
     for notification in notifications:
-        # الحصول على حالة القراءة
-        try:
-            visibility = NotificationVisibility.objects.get(
-                notification=notification,
-                user=request.user
-            )
-            is_read = visibility.is_read
-        except NotificationVisibility.DoesNotExist:
-            is_read = False
+        # الحصول على حالة القراءة من الـ prefetch
+        visibility_records = [v for v in notification.visibility_records.all() if v.user == request.user]
+        is_read = visibility_records[0].is_read if visibility_records else False
+
+        # الحصول على بيانات الأيقونة واللون
+        icon_data = notification.get_icon_and_color()
 
         notifications_data.append({
             'id': notification.pk,
@@ -231,8 +252,9 @@ def recent_notifications_ajax(request):
             'notification_type_display': notification.get_notification_type_display(),
             'priority': notification.priority,
             'priority_display': notification.get_priority_display(),
-            'icon_class': notification.get_icon_class(),
-            'color_class': notification.get_color_class(),
+            'icon_class': icon_data['icon'],
+            'color_class': icon_data['color'],
+            'bg_color': icon_data['bg'],
             'is_read': is_read,
             'created_at': notification.created_at.isoformat(),
             'url': notification.get_absolute_url(),

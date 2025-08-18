@@ -293,24 +293,31 @@
                                     {% for notification in recent_notifications %}
                                     {% with visibility=notification.visibility_records.all|first %}
                                     <li>
-                                        <a class="dropdown-item py-3 px-3 {% if not visibility.is_read %}bg-light border-start border-primary border-3{% endif %}"
+                                        <a class="dropdown-item py-3 px-3 notification-dropdown-item {% if not visibility.is_read %}bg-light border-start border-primary border-3{% endif %}"
                                            href="{{ notification.get_absolute_url }}"
-                                           style="border-radius: 8px; margin: 2px 8px; white-space: normal; word-wrap: break-word;">
+                                           data-notification-id="{{ notification.pk }}"
+                                           data-is-read="{% if visibility.is_read %}true{% else %}false{% endif %}"
+                                           style="border-radius: 8px; margin: 2px 8px; white-space: normal; word-wrap: break-word; transition: all 0.3s ease;"
+                                           onmouseover="this.style.backgroundColor='#f8f9fa'"
+                                           onmouseout="this.style.backgroundColor='{% if not visibility.is_read %}#f8f9fa{% else %}transparent{% endif %}'">
                                             <div class="d-flex align-items-start">
                                                 <div class="me-3 flex-shrink-0">
+                                                    {% with icon_data=notification.get_icon_and_color %}
                                                     <div class="notification-icon-wrapper d-flex align-items-center justify-content-center"
-                                                         style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(45deg, {{ notification.get_color_class|slice:'5:' }}, {{ notification.get_color_class|slice:'5:' }}20);">
-                                                        <i class="{{ notification.get_icon_class }} text-white fs-5"></i>
+                                                         style="width: 45px; height: 45px; border-radius: 50%; background-color: {{ icon_data.bg }}; border: 2px solid {{ icon_data.color }};">
+                                                        <i class="{{ icon_data.icon }}" style="color: {{ icon_data.color }}; font-size: 18px;"></i>
                                                     </div>
+                                                    {% endwith %}
                                                 </div>
                                                 <div class="flex-grow-1 min-width-0">
                                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                                         <h6 class="mb-0 {% if not visibility.is_read %}fw-bold text-dark{% else %}text-muted{% endif %}"
                                                             style="line-height: 1.3; word-break: break-word;">
+                                                            {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 6px;"></i>{% endif %}
                                                             {{ notification.title }}
                                                         </h6>
                                                         {% if not visibility.is_read %}
-                                                        <span class="badge bg-primary rounded-pill ms-2 flex-shrink-0">جديد</span>
+                                                        <span class="badge bg-primary rounded-pill ms-2 flex-shrink-0 pulse-badge">جديد</span>
                                                         {% endif %}
                                                     </div>
 
@@ -935,6 +942,26 @@
             text-align: right !important;
         }
 
+        /* تحسين القائمة المنسدلة للإشعارات */
+        .notification-dropdown-item {
+            transition: all 0.3s ease !important;
+        }
+
+        .notification-dropdown-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .pulse-badge {
+            animation: pulse-glow 1.5s infinite;
+        }
+
+        @keyframes pulse-glow {
+            0% { transform: scale(1); box-shadow: 0 0 5px rgba(33, 150, 243, 0.5); }
+            50% { transform: scale(1.05); box-shadow: 0 0 15px rgba(33, 150, 243, 0.8); }
+            100% { transform: scale(1); box-shadow: 0 0 5px rgba(33, 150, 243, 0.5); }
+        }
+
         .rtl-title {
             direction: rtl !important;
             text-align: center !important;
@@ -1058,9 +1085,11 @@
     <script>
         // تحديث عداد الإشعارات
         function updateNotificationCount() {
-            fetch('{% url "notifications:ajax_count" %}')
+            fetch('{% url "notifications:ajax_count" %}?_=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
+                    console.log('📊 تحديث العداد:', data);
+
                     if (data.success) {
                         const badge = document.querySelector('#notification-count-badge');
                         if (badge) {
@@ -1073,18 +1102,119 @@
                         }
                     }
                 })
-                .catch(error => console.error('Error updating notification count:', error));
+                .catch(error => console.error('❌ خطأ في تحديث العداد:', error));
+        }
+
+        // دالة تحديد إشعار من القائمة المنسدلة كمقروء
+        function markDropdownNotificationAsRead(notificationId, targetUrl) {
+            console.log('📝 محاولة تحديد الإشعار كمقروء:', notificationId, 'والانتقال إلى:', targetUrl);
+
+            // البحث عن CSRF token
+            const csrfToken = getCsrfToken();
+            console.log('🔐 CSRF Token للإشعار:', csrfToken ? 'موجود' : 'مفقود');
+
+            if (!csrfToken) {
+                console.error('❌ لا يمكن العثور على CSRF token، انتقال مباشر');
+                window.location.href = targetUrl;
+                return;
+            }
+
+            // إرسال طلب تحديد كمقروء
+            fetch(`/notifications/mark-read/${notificationId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => {
+                console.log('📡 استجابة الخادم:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('📊 بيانات الاستجابة:', data);
+
+                if (data.success) {
+                    console.log('✅ تم تحديث الإشعار بنجاح');
+
+                    console.log('✅ تم تحديث الإشعار بنجاح، تحديث القائمة المنسدلة...');
+
+                    // تحديث العداد فوراً
+                    updateNotificationCount();
+
+                    // تحديث القائمة المنسدلة بالكامل لإزالة "جديد"
+                    updateRecentNotifications();
+
+                    // الانتقال للرابط بعد تحديث القائمة
+                    setTimeout(() => {
+                        console.log('🔗 انتقال للرابط:', targetUrl);
+                        window.location.href = targetUrl;
+                    }, 500);
+                } else {
+                    console.error('❌ فشل في تحديث الإشعار:', data);
+                    // الانتقال للرابط حتى لو فشل التحديث
+                    window.location.href = targetUrl;
+                }
+            })
+            .catch(error => {
+                console.error('❌ خطأ في تحديث الإشعار:', error);
+                // الانتقال للرابط حتى لو حدث خطأ
+                window.location.href = targetUrl;
+            });
+        }
+
+        // ملاحظة: تم إزالة دالة updateNotificationAppearanceInDropdown
+        // لأن القائمة المنسدلة الأصلية تستخدم Django templates ولا تتأثر بـ JavaScript
+        // بدلاً من ذلك، نعتمد على updateRecentNotifications() لتحديث القائمة بالكامل
+
+        // إعداد event listeners للقائمة المنسدلة
+        function setupDropdownNotificationListeners() {
+            // البحث في القائمة الأصلية والديناميكية
+            const dropdownItems = document.querySelectorAll('.notification-dropdown-item, .dropdown-item[data-notification-id]');
+            console.log('🔧 إعداد listeners لـ', dropdownItems.length, 'إشعار');
+
+            dropdownItems.forEach((item, index) => {
+                console.log(`🔗 إعداد listener للإشعار ${index + 1}:`, item.getAttribute('data-notification-id'));
+
+                // إزالة listeners السابقة لتجنب التكرار
+                item.removeEventListener('click', handleNotificationClick);
+
+                // إضافة listener جديد
+                item.addEventListener('click', handleNotificationClick);
+            });
+        }
+
+        // دالة منفصلة لمعالجة النقر
+        function handleNotificationClick(event) {
+            const notificationId = this.getAttribute('data-notification-id');
+            const isRead = this.getAttribute('data-is-read') === 'true';
+            const url = this.getAttribute('href');
+
+            console.log('🔔 نقر على إشعار:', notificationId, 'مقروء:', isRead, 'URL:', url);
+
+            if (!isRead) {
+                // منع الانتقال المباشر فقط للإشعارات غير المقروءة
+                event.preventDefault();
+
+                // تحديد كمقروء ثم الانتقال
+                markDropdownNotificationAsRead(notificationId, url);
+            }
+            // إذا كان مقروءاً، اتركه ينتقل للرابط عادي
         }
 
         // تحديث قائمة الإشعارات الحديثة
         function updateRecentNotifications() {
+            console.log('🔄 بدء تحديث قائمة الإشعارات الحديثة...');
+
             // التحقق من وجود عنصر الإشعارات أولاً
             const notificationsDropdown = document.querySelector('#notificationsDropdown');
             if (!notificationsDropdown) {
+                console.log('❌ لم يتم العثور على عنصر الإشعارات');
                 return; // لا توجد إشعارات في هذه الصفحة
             }
 
-            fetch('{% url "notifications:ajax_recent" %}?limit=10')
+            fetch('{% url "notifications:ajax_recent" %}?limit=10&_=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1115,23 +1245,29 @@
                                 const extraData = notification.extra_data || {};
                                 newContent += `
                                     <li>
-                                        <a class="dropdown-item py-3 px-3 ${!notification.is_read ? 'bg-light border-start border-primary border-3' : ''}"
+                                        <a class="dropdown-item py-3 px-3 notification-dropdown-item ${!notification.is_read ? 'bg-light border-start border-primary border-3' : ''}"
                                            href="${notification.url}"
-                                           style="border-radius: 8px; margin: 2px 8px; white-space: normal; word-wrap: break-word;">
+                                           data-notification-id="${notification.id}"
+                                           data-is-read="${notification.is_read}"
+                                           style="border-radius: 8px; margin: 2px 8px; white-space: normal; word-wrap: break-word; transition: all 0.3s ease;"
+                                           onmouseover="this.style.backgroundColor='#f8f9fa'"
+                                           onmouseout="this.style.backgroundColor='${!notification.is_read ? '#f8f9fa' : 'transparent'}'"
+
                                             <div class="d-flex align-items-start">
                                                 <div class="me-3 flex-shrink-0">
                                                     <div class="notification-icon-wrapper d-flex align-items-center justify-content-center"
-                                                         style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(45deg, ${notification.color_class.slice(5)}, ${notification.color_class.slice(5)}20);">
-                                                        <i class="${notification.icon_class} text-white fs-5"></i>
+                                                         style="width: 45px; height: 45px; border-radius: 50%; background-color: ${notification.bg_color}; border: 2px solid ${notification.color_class};">
+                                                        <i class="${notification.icon_class}" style="color: ${notification.color_class}; font-size: 18px;"></i>
                                                     </div>
                                                 </div>
                                                 <div class="flex-grow-1 min-width-0">
                                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                                         <h6 class="mb-0 ${!notification.is_read ? 'fw-bold text-dark' : 'text-muted'}"
                                                             style="line-height: 1.3; word-break: break-word;">
+                                                            ${!notification.is_read ? '<i class="fas fa-circle text-primary me-1" style="font-size: 6px;"></i>' : ''}
                                                             ${notification.title}
                                                         </h6>
-                                                        ${!notification.is_read ? '<span class="badge bg-primary rounded-pill ms-2 flex-shrink-0">جديد</span>' : ''}
+                                                        ${!notification.is_read ? '<span class="badge bg-primary rounded-pill ms-2 flex-shrink-0 pulse-badge">جديد</span>' : ''}
                                                     </div>
 
                                                     <div class="notification-details mb-2">
@@ -1196,6 +1332,14 @@
                         }
 
                         notificationsList.innerHTML = newContent;
+
+                        console.log('✅ تم تحديث قائمة الإشعارات بنجاح');
+                        console.log('📊 عدد الإشعارات المحدثة:', data.notifications.length);
+
+                        // إضافة event listeners للنقر على الإشعارات
+                        setTimeout(() => {
+                            setupDropdownNotificationListeners();
+                        }, 100);
                     }
                 })
                 .catch(error => console.error('Error updating recent notifications:', error));
@@ -1215,7 +1359,20 @@
 
         // دالة لتحديد جميع الإشعارات كمقروءة
         function markAllNotificationsRead() {
+            console.log('🔄 محاولة تحديد جميع الإشعارات كمقروءة');
+
             if (!confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')) {
+                console.log('❌ تم إلغاء العملية من قبل المستخدم');
+                return;
+            }
+
+            // البحث عن CSRF token
+            const csrfToken = getCsrfToken();
+            console.log('🔐 CSRF Token:', csrfToken ? 'موجود' : 'مفقود');
+
+            if (!csrfToken) {
+                console.error('❌ لا يمكن العثور على CSRF token');
+                showNotificationMessage('خطأ في الأمان - لا يمكن تنفيذ العملية', 'error');
                 return;
             }
 
@@ -1223,13 +1380,23 @@
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-CSRFToken': csrfToken,
                     'Content-Type': 'application/x-www-form-urlencoded'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('📡 استجابة تحديد الكل:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('📊 بيانات تحديد الكل:', data);
+
                 if (data.success) {
+                    console.log('✅ تم تحديد جميع الإشعارات بنجاح');
+
+                    // إزالة جميع badges "جديد" من القائمة المنسدلة فوراً
+                    removeAllNewBadgesFromDropdown();
+
                     // تحديث العداد والقائمة
                     updateNotificationCount();
                     updateRecentNotifications();
@@ -1237,13 +1404,91 @@
                     // إظهار رسالة نجاح
                     showNotificationMessage('تم تحديد جميع الإشعارات كمقروءة', 'success');
                 } else {
+                    console.error('❌ فشل في تحديد الإشعارات:', data);
                     showNotificationMessage('حدث خطأ أثناء تحديث الإشعارات', 'error');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('❌ خطأ في تحديد جميع الإشعارات:', error);
                 showNotificationMessage('حدث خطأ أثناء تحديث الإشعارات', 'error');
             });
+        }
+
+        // دالة لإزالة جميع badges "جديد" من القائمة المنسدلة
+        function removeAllNewBadgesFromDropdown() {
+            console.log('🧹 إزالة جميع badges "جديد" من القائمة المنسدلة');
+
+            // البحث عن جميع badges في القائمة المنسدلة
+            const dropdownMenu = document.querySelector('#notificationsDropdown').nextElementSibling;
+            if (dropdownMenu) {
+                const badges = dropdownMenu.querySelectorAll('.badge');
+                let removedCount = 0;
+
+                badges.forEach(badge => {
+                    if (badge.textContent.includes('جديد')) {
+                        badge.remove();
+                        removedCount++;
+                    }
+                });
+
+                // إزالة النقاط الزرقاء أيضاً
+                const dots = dropdownMenu.querySelectorAll('.fa-circle');
+                dots.forEach(dot => {
+                    if (dot.classList.contains('text-primary')) {
+                        dot.remove();
+                    }
+                });
+
+                // إزالة التمييز البصري
+                const unreadItems = dropdownMenu.querySelectorAll('.bg-light.border-start.border-primary');
+                unreadItems.forEach(item => {
+                    item.classList.remove('bg-light', 'border-start', 'border-primary', 'border-3');
+                    item.setAttribute('data-is-read', 'true');
+
+                    // تحديث العنوان
+                    const title = item.querySelector('h6');
+                    if (title) {
+                        title.classList.remove('fw-bold', 'text-dark');
+                        title.classList.add('text-muted');
+                    }
+                });
+
+                console.log(`✅ تم إزالة ${removedCount} badge "جديد"`);
+            }
+        }
+
+        // دالة موحدة للحصول على CSRF token
+        function getCsrfToken() {
+            // البحث في input hidden
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfInput && csrfInput.value) {
+                return csrfInput.value;
+            }
+
+            // البحث في meta tag
+            const csrfMeta = document.querySelector('meta[name=csrf-token]');
+            if (csrfMeta) {
+                return csrfMeta.getAttribute('content');
+            }
+
+            // البحث في cookies
+            return getCookie('csrftoken');
+        }
+
+        // دالة للحصول على cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
         }
 
         // دالة لإظهار رسائل التنبيه
@@ -1272,7 +1517,24 @@
 
         // تحديث الإشعارات عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 تحميل صفحة الإشعارات');
+
+            // فحص CSRF token
+            const csrfToken = getCsrfToken();
+            console.log('🔐 CSRF Token متوفر:', csrfToken ? 'نعم' : 'لا');
+
             updateNotificationCount();
+            updateRecentNotifications(); // تحديث فوري للقائمة المنسدلة
+
+            // إعداد event listeners للقائمة الموجودة (الأصلية والديناميكية)
+            setTimeout(() => {
+                setupDropdownNotificationListeners();
+            }, 500);
+
+            // إعادة إعداد listeners بعد كل تحديث AJAX
+            setTimeout(() => {
+                setupDropdownNotificationListeners();
+            }, 2000);
 
             // تحديث دوري كل 30 ثانية
             setInterval(function() {
@@ -1287,6 +1549,9 @@
     {% if user.is_authenticated %}
         {% include 'includes/online_users_sidebar.html' %}
     {% endif %}
+
+    <!-- CSRF Token للإشعارات -->
+    {% csrf_token %}
 
     <!-- معالج CSRF التلقائي -->
     <script src="{% static 'js/csrf-handler.js' %}"></script>

@@ -29,13 +29,17 @@ def update_order_status_on_inspection_change(sender, instance, created,
             # تحديث حالة الطلب باستخدام update لتجنب التكرار الذاتي
             from django.utils import timezone
             from orders.models import Order
-            
+
             update_fields = {'order_status': new_order_status}
-            
+
             # إذا كانت المعاينة مكتملة، تحديث تاريخ التسليم
             if new_order_status == 'completed':
                 update_fields['expected_delivery_date'] = timezone.now().date()
-            
+
+            # إضافة علامة لتجنب إشعار الطلب
+            order = instance.order
+            setattr(order, '_skip_order_notification', True)
+
             # تحديث الطلب مباشرة في قاعدة البيانات
             Order.objects.filter(pk=instance.order.pk).update(**update_fields)
             

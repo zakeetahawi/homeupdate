@@ -21,8 +21,10 @@ class NotificationManager(models.Manager):
         return self.filter(visible_to=user, read_by__user=user, read_by__is_read=False).distinct()
 
     def recent_for_user(self, user, limit=10):
-        """الحصول على آخر الإشعارات للمستخدم"""
-        return self.for_user(user).order_by('-created_at')[:limit]
+        """الحصول على آخر الإشعارات للمستخدم مع معلومات القراءة"""
+        return self.for_user(user).prefetch_related(
+            'visibility_records'
+        ).order_by('-created_at')[:limit]
 
 
 class Notification(models.Model):
@@ -140,6 +142,24 @@ class Notification(models.Model):
 
     def get_absolute_url(self):
         """الحصول على رابط الإشعار"""
+        # للإشعارات المرتبطة بالأقسام، توجيه لتفاصيل الطلب إذا كان متوفراً
+        if self.notification_type in ['inspection_status_changed', 'manufacturing_status_changed', 'installation_completed', 'installation_scheduled']:
+            # البحث عن رقم الطلب في extra_data
+            if self.extra_data and 'order_number' in self.extra_data:
+                try:
+                    from orders.models import Order
+                    order = Order.objects.get(order_number=self.extra_data['order_number'])
+                    return order.get_absolute_url()
+                except Order.DoesNotExist:
+                    pass
+
+            # إذا كان الكائن المرتبط له طلب
+            if (self.related_object and
+                hasattr(self.related_object, 'order') and
+                self.related_object.order):
+                return self.related_object.order.get_absolute_url()
+
+        # للإشعارات الأخرى، استخدم الكائن المرتبط
         if self.related_object:
             # محاولة الحصول على رابط الكائن المرتبط
             if hasattr(self.related_object, 'get_absolute_url'):
@@ -149,6 +169,49 @@ class Notification(models.Model):
 
         # رابط افتراضي لصفحة تفاصيل الإشعار
         return reverse('notifications:detail', kwargs={'pk': self.pk})
+
+    def get_icon_and_color(self):
+        """الحصول على أيقونة ولون الإشعار حسب النوع"""
+        icon_map = {
+            # إشعارات الطلبات
+            'order_created': {'icon': 'fas fa-shopping-cart', 'color': '#2196f3', 'bg': '#e3f2fd'},
+            'order_status_changed': {'icon': 'fas fa-exchange-alt', 'color': '#ff9800', 'bg': '#fff3e0'},
+            'order_completed': {'icon': 'fas fa-check-circle', 'color': '#4caf50', 'bg': '#e8f5e8'},
+            'order_delivered': {'icon': 'fas fa-truck', 'color': '#4caf50', 'bg': '#e8f5e8'},
+
+            # إشعارات المعاينات
+            'inspection_created': {'icon': 'fas fa-search', 'color': '#9c27b0', 'bg': '#f3e5f5'},
+            'inspection_status_changed': {'icon': 'fas fa-clipboard-check', 'color': '#9c27b0', 'bg': '#f3e5f5'},
+            'inspection_scheduled': {'icon': 'fas fa-calendar-check', 'color': '#9c27b0', 'bg': '#f3e5f5'},
+
+            # إشعارات التصنيع
+            'manufacturing_created': {'icon': 'fas fa-industry', 'color': '#607d8b', 'bg': '#eceff1'},
+            'manufacturing_status_changed': {'icon': 'fas fa-cogs', 'color': '#607d8b', 'bg': '#eceff1'},
+            'manufacturing_completed': {'icon': 'fas fa-check-double', 'color': '#607d8b', 'bg': '#eceff1'},
+
+            # إشعارات التركيب
+            'installation_scheduled': {'icon': 'fas fa-tools', 'color': '#795548', 'bg': '#efebe9'},
+            'installation_completed': {'icon': 'fas fa-home', 'color': '#795548', 'bg': '#efebe9'},
+            'installation_updated': {'icon': 'fas fa-wrench', 'color': '#795548', 'bg': '#efebe9'},
+
+            # إشعارات العملاء
+            'customer_created': {'icon': 'fas fa-user-plus', 'color': '#00bcd4', 'bg': '#e0f2f1'},
+            'customer_updated': {'icon': 'fas fa-user-edit', 'color': '#00bcd4', 'bg': '#e0f2f1'},
+
+            # إشعارات المدفوعات
+            'payment_received': {'icon': 'fas fa-credit-card', 'color': '#4caf50', 'bg': '#e8f5e8'},
+            'payment_pending': {'icon': 'fas fa-clock', 'color': '#ff9800', 'bg': '#fff3e0'},
+
+            # إشعارات النظام
+            'system_notification': {'icon': 'fas fa-bell', 'color': '#757575', 'bg': '#f5f5f5'},
+            'user_notification': {'icon': 'fas fa-user', 'color': '#3f51b5', 'bg': '#e8eaf6'},
+        }
+
+        return icon_map.get(self.notification_type, {
+            'icon': 'fas fa-info-circle',
+            'color': '#757575',
+            'bg': '#f5f5f5'
+        })
 
     def get_icon_class(self):
         """الحصول على فئة الأيقونة حسب نوع الإشعار"""

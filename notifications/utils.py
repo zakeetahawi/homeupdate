@@ -279,13 +279,25 @@ def get_user_notification_count(user):
 def mark_notification_as_read(notification, user):
     """تحديد إشعار كمقروء لمستخدم معين"""
     from .models import NotificationVisibility
-    
+    from django.utils import timezone
+
     try:
         visibility = NotificationVisibility.objects.get(
             notification=notification,
             user=user
         )
-        visibility.mark_as_read()
+
+        # تسجيل المستخدم الذي قرأ الإشعار ووقت القراءة
+        if not visibility.is_read:
+            visibility.is_read = True
+            visibility.read_at = timezone.now()
+            visibility.save()
+
+            # تسجيل في الـ logs للمراجعة
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"📖 الإشعار {notification.pk} تم قراءته بواسطة {user.username} في {timezone.now()}")
+
         return True
     except NotificationVisibility.DoesNotExist:
         return False

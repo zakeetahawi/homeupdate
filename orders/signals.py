@@ -132,6 +132,7 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                         inspector=inspector,
                         responsible_employee=responsible_employee,
                         order=instance,
+                        contract_number=instance.contract_number,  # إضافة رقم العقد
                         is_from_orders=True,
                         request_date=request_date,
                         scheduled_date=scheduled_date,

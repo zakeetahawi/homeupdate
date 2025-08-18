@@ -4,11 +4,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+import logging
 
 from .models import Notification, NotificationVisibility
 from .utils import get_notification_recipients
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def clean_extra_data(data):
@@ -163,75 +165,20 @@ def order_created_notification(sender, instance, created, **kwargs):
         )
 
 
-@receiver(pre_save, sender='orders.Order')
-def order_status_changed_notification(sender, instance, **kwargs):
-    """إشعار عند تغيير حالة الطلب"""
-    if instance.pk:  # التأكد من أن الطلب موجود مسبقاً
-        try:
-            old_instance = sender.objects.get(pk=instance.pk)
-
-            # التحقق من تغيير حالة الطلب
-            if hasattr(instance, 'order_status') and hasattr(old_instance, 'order_status'):
-                if old_instance.order_status != instance.order_status:
-                    # تجاهل التغييرات التلقائية عند الإنشاء
-                    if old_instance.order_status == 'pending_approval' and instance.order_status == 'pending':
-                        return  # تجاهل هذا التغيير التلقائي
-                    old_status_display = str(dict(instance.ORDER_STATUS_CHOICES).get(old_instance.order_status, old_instance.order_status))
-                    new_status_display = str(dict(instance.ORDER_STATUS_CHOICES).get(instance.order_status, instance.order_status))
-                    
-                    title = f"تغيير حالة الطلب: {instance.order_number}"
-                    message = f"تم تغيير حالة الطلب {instance.order_number} من '{old_status_display}' إلى '{new_status_display}'"
-                    
-                    # تحديد الأولوية حسب نوع التغيير
-                    priority = 'normal'
-                    if instance.order_status in ['delivered', 'completed']:
-                        priority = 'high'
-                    elif instance.order_status in ['cancelled', 'rejected']:
-                        priority = 'urgent'
-                    
-                    create_notification(
-                        title=title,
-                        message=message,
-                        notification_type='order_status_changed',
-                        related_object=instance,
-                        created_by=None,  # سيتم تحديده من السياق
-                        priority=priority,
-                        extra_data={
-                            'order_number': instance.order_number,
-                            'old_status': old_instance.order_status,
-                            'new_status': instance.order_status,
-                            'old_status_display': old_status_display,
-                            'new_status_display': new_status_display,
-                        }
-                    )
-            
-            # التحقق من تغيير حالة التسليم
-            if hasattr(instance, 'delivery_status') and hasattr(old_instance, 'delivery_status'):
-                if (old_instance.delivery_status != instance.delivery_status and 
-                    instance.delivery_status == 'delivered'):
-                    
-                    title = f"تم تسليم الطلب: {instance.order_number}"
-                    message = f"تم تسليم الطلب {instance.order_number} للعميل {instance.customer.name}"
-                    
-                    if hasattr(instance, 'delivery_receipt_number') and instance.delivery_receipt_number:
-                        message += f" برقم إذن التسليم: {instance.delivery_receipt_number}"
-                    
-                    create_notification(
-                        title=title,
-                        message=message,
-                        notification_type='order_delivered',
-                        related_object=instance,
-                        created_by=None,
-                        priority='high',
-                        extra_data={
-                            'order_number': instance.order_number,
-                            'customer_name': instance.customer.name,
-                            'delivery_receipt_number': getattr(instance, 'delivery_receipt_number', None),
-                        }
-                    )
-                    
-        except sender.DoesNotExist:
-            pass
+# ===== إشعارات الطلبات معطلة =====
+# تم تعطيل إشعارات الطلبات نهائياً لتجنب التكرار
+# الأقسام (معاينة، تصنيع، تركيب) تتولى إرسال الإشعارات
+# وتوجه المستخدم لتفاصيل الطلب مباشرة
+#
+# @receiver(pre_save, sender='orders.Order')
+# def order_status_changed_notification(sender, instance, **kwargs):
+#     """إشعار عند تغيير حالة الطلب - معطل لأن الأقسام تتولى الإشعارات"""
+#     pass
+# الكود المعطل - تم نقل المسؤولية للأقسام
+# تم تعطيل جميع إشعارات الطلبات - الأقسام تتولى الإشعارات
+#
+# ملاحظة: إذا احتجت لإشعارات الطلبات المباشرة لاحقاً،
+# يمكن إضافة فحص للتأكد أن التحديث ليس من الأقسام
 
 
 # ===== إشعارات المعاينات =====
@@ -275,10 +222,13 @@ def inspection_created_notification(sender, instance, created, **kwargs):
 @receiver(pre_save, sender='inspections.Inspection')
 def inspection_status_changed_notification(sender, instance, **kwargs):
     """إشعار عند تغيير حالة المعاينة"""
+    logger.info(f"🔍 فحص تغيير حالة المعاينة: {instance.pk}")
+
     if instance.pk:
         try:
             old_instance = sender.objects.get(pk=instance.pk)
-            
+            logger.info(f"📊 الحالة القديمة: {old_instance.status}, الحالة الجديدة: {instance.status}")
+
             if old_instance.status != instance.status:
                 old_status_display = str(dict(instance.STATUS_CHOICES).get(old_instance.status, old_instance.status))
                 new_status_display = str(dict(instance.STATUS_CHOICES).get(instance.status, instance.status))
@@ -288,15 +238,20 @@ def inspection_status_changed_notification(sender, instance, **kwargs):
                 if hasattr(instance, 'order') and instance.order:
                     contract_info = instance.order.order_number
 
-                title = f"تغيير حالة المعاينة: {contract_info}"
-                message = f"تم تغيير حالة المعاينة {contract_info} من '{old_status_display}' إلى '{new_status_display}'"
+                title = f"تحديث المعاينة: {contract_info}"
+                message = f"تم تغيير حالة المعاينة للطلب {contract_info} من '{old_status_display}' إلى '{new_status_display}'"
 
                 # إضافة معلومات العميل إذا كانت متوفرة
                 if hasattr(instance, 'customer') and instance.customer:
-                    message += f" للعميل {instance.customer.name}"
+                    message += f" - العميل: {instance.customer.name}"
+
+                # إضافة ملاحظة أن النقر سيوجه لتفاصيل الطلب
+                message += f" (انقر لعرض تفاصيل الطلب)"
                 
                 priority = 'high' if instance.status == 'completed' else 'normal'
                 
+                logger.info(f"✅ إنشاء إشعار تغيير المعاينة: {title}")
+
                 create_notification(
                     title=title,
                     message=message,
@@ -312,9 +267,16 @@ def inspection_status_changed_notification(sender, instance, **kwargs):
                         'new_status_display': new_status_display,
                     }
                 )
+
+                logger.info(f"🎉 تم إنشاء إشعار المعاينة بنجاح")
+            else:
+                logger.info(f"⚠️ لا يوجد تغيير في حالة المعاينة")
                 
         except sender.DoesNotExist:
+            logger.info(f"⚠️ لم يتم العثور على المعاينة القديمة: {instance.pk}")
             pass
+    else:
+        logger.info(f"ℹ️ معاينة جديدة، لا حاجة لإشعار تغيير الحالة")
 
 
 # ===== إشعارات التركيبات =====
@@ -393,8 +355,8 @@ def manufacturing_order_status_changed_notification(sender, instance, **kwargs):
                 old_status_display = str(dict(instance.STATUS_CHOICES).get(old_instance.status, old_instance.status))
                 new_status_display = str(dict(instance.STATUS_CHOICES).get(instance.status, instance.status))
 
-                title = f"تغيير حالة أمر التصنيع: {instance.order.order_number}"
-                message = f"تم تغيير حالة أمر التصنيع للطلب {instance.order.order_number} من '{old_status_display}' إلى '{new_status_display}'"
+                title = f"تحديث التصنيع: {instance.order.order_number}"
+                message = f"تم تغيير حالة التصنيع للطلب {instance.order.order_number} من '{old_status_display}' إلى '{new_status_display}' (انقر لعرض تفاصيل الطلب)"
 
                 # تحديد الأولوية حسب نوع التغيير
                 priority = 'normal'

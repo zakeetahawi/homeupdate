@@ -14,45 +14,135 @@
 
 /* الإشعارات غير المقروءة - تمييز واضح */
 .notification-item.unread {
-    background-color: #e3f2fd !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
     border-left-color: #2196f3 !important;
     border-left-width: 6px !important;
-    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+    border-radius: 8px;
+    margin-bottom: 8px;
 }
 
 .notification-item.unread::before {
     content: '';
     position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 12px;
-    height: 12px;
+    top: 15px;
+    right: 15px;
+    width: 10px;
+    height: 10px;
     background-color: #2196f3;
     border-radius: 50%;
     animation: pulse 2s infinite;
+    z-index: 10;
 }
 
 @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
 }
 
 /* الإشعارات المقروءة - مظهر هادئ */
 .notification-item.read {
-    background-color: #ffffff;
+    background-color: #fafafa;
     border-left-color: #e0e0e0;
-    opacity: 0.8;
+    border-left-width: 3px;
+    opacity: 0.85;
+    border-radius: 6px;
+    margin-bottom: 6px;
 }
 
-.notification-item.unread .notification-content h6 {
-    font-weight: 700 !important;
-    color: #1976d2 !important;
+/* تحسين badges الإشعارات */
+.notification-item.unread .badge {
+    animation: badge-glow 2s infinite;
 }
 
-.notification-item.read .notification-content h6 {
-    font-weight: 400;
-    color: #666;
+@keyframes badge-glow {
+    0% { box-shadow: 0 0 5px rgba(33, 150, 243, 0.5); }
+    50% { box-shadow: 0 0 15px rgba(33, 150, 243, 0.8); }
+    100% { box-shadow: 0 0 5px rgba(33, 150, 243, 0.5); }
+}
+
+/* أيقونات الإشعارات حسب النوع */
+/* إشعارات الطلبات */
+.notification-icon-order_created, .notification-icon-order_status_changed {
+    background-color: #fff3e0 !important; border: 2px solid #ff9800 !important;
+}
+.notification-icon-order_created .notification-icon-i::before {
+    content: "\f07a"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #ff9800; font-size: 18px;
+}
+.notification-icon-order_status_changed .notification-icon-i::before {
+    content: "\f362"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #ff9800; font-size: 18px;
+}
+
+.notification-icon-order_completed, .notification-icon-order_delivered {
+    background-color: #e8f5e8 !important; border: 2px solid #4caf50 !important;
+}
+.notification-icon-order_completed .notification-icon-i::before {
+    content: "\f058"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #4caf50; font-size: 18px;
+}
+.notification-icon-order_delivered .notification-icon-i::before {
+    content: "\f0d1"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #4caf50; font-size: 18px;
+}
+
+/* إشعارات المعاينات */
+.notification-icon-inspection_created, .notification-icon-inspection_status_changed, .notification-icon-inspection_scheduled {
+    background-color: #f3e5f5 !important; border: 2px solid #9c27b0 !important;
+}
+.notification-icon-inspection_created .notification-icon-i::before {
+    content: "\f002"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #9c27b0; font-size: 18px;
+}
+.notification-icon-inspection_status_changed .notification-icon-i::before {
+    content: "\f46c"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #9c27b0; font-size: 18px;
+}
+.notification-icon-inspection_scheduled .notification-icon-i::before {
+    content: "\f274"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #9c27b0; font-size: 18px;
+}
+
+/* إشعارات التصنيع */
+.notification-icon-manufacturing_created, .notification-icon-manufacturing_status_changed, .notification-icon-manufacturing_completed {
+    background-color: #eceff1 !important; border: 2px solid #607d8b !important;
+}
+.notification-icon-manufacturing_created .notification-icon-i::before {
+    content: "\f275"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #607d8b; font-size: 18px;
+}
+.notification-icon-manufacturing_status_changed .notification-icon-i::before {
+    content: "\f085"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #607d8b; font-size: 18px;
+}
+.notification-icon-manufacturing_completed .notification-icon-i::before {
+    content: "\f560"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #607d8b; font-size: 18px;
+}
+
+/* إشعارات التركيب */
+.notification-icon-installation_scheduled, .notification-icon-installation_completed, .notification-icon-installation_updated {
+    background-color: #efebe9 !important; border: 2px solid #795548 !important;
+}
+.notification-icon-installation_scheduled .notification-icon-i::before {
+    content: "\f0ad"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #795548; font-size: 18px;
+}
+.notification-icon-installation_completed .notification-icon-i::before {
+    content: "\f015"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #795548; font-size: 18px;
+}
+.notification-icon-installation_updated .notification-icon-i::before {
+    content: "\f0ad"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #795548; font-size: 18px;
+}
+
+/* إشعارات العملاء */
+.notification-icon-customer_created, .notification-icon-customer_updated {
+    background-color: #e0f2f1 !important; border: 2px solid #00bcd4 !important;
+}
+.notification-icon-customer_created .notification-icon-i::before {
+    content: "\f234"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #00bcd4; font-size: 18px;
+}
+.notification-icon-customer_updated .notification-icon-i::before {
+    content: "\f4ff"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #00bcd4; font-size: 18px;
+}
+
+/* إشعارات افتراضية */
+.notification-icon {
+    background-color: #f5f5f5 !important; border: 2px solid #757575 !important;
+}
+.notification-icon .notification-icon-i::before {
+    content: "\f05a"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #757575; font-size: 18px;
 }
 
 /* تحريك badge الجديد */
@@ -66,19 +156,24 @@
     100% { transform: scale(1); }
 }
 
-/* تحسين الأيقونات */
-.notification-icon {
-    transition: all 0.3s ease;
+/* تحسين العناوين والنصوص */
+.notification-item.unread .notification-content h6 {
+    font-weight: 700 !important;
+    color: #1565c0 !important;
 }
 
-.notification-item.unread .notification-icon {
-    background-color: #e3f2fd !important;
-    border: 2px solid #2196f3;
+.notification-item.read .notification-content h6 {
+    font-weight: 500;
+    color: #757575;
 }
 
-.notification-item.read .notification-icon {
-    background-color: #f5f5f5;
-    border: 1px solid #e0e0e0;
+.notification-item.unread .notification-content p {
+    color: #424242 !important;
+    font-weight: 500;
+}
+
+.notification-item.read .notification-content p {
+    color: #9e9e9e;
 }
 
 .notification-item.priority-urgent {
@@ -104,13 +199,25 @@
 }
 
 .notification-icon {
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-left: 15px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.notification-item.unread .notification-icon {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.notification-item.read .notification-icon {
+    opacity: 0.7;
+    transform: scale(0.95);
 }
 
 .notification-content {
@@ -254,8 +361,9 @@
                  data-is-read="{{ visibility.is_read|yesno:'true,false' }}">
                 
                 <!-- أيقونة الإشعار -->
-                <div class="notification-icon bg-light">
-                    <i class="{{ notification.get_icon_class }} {{ notification.get_color_class }}"></i>
+                <div class="notification-icon notification-icon-{{ notification.notification_type }}"
+                     data-notification-type="{{ notification.notification_type }}">
+                    <i class="notification-icon-i" data-notification-type="{{ notification.notification_type }}"></i>
                 </div>
                 
                 <!-- محتوى الإشعار -->
@@ -375,6 +483,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // تحديث العداد كل 30 ثانية
     setInterval(updateNotificationCount, 30000);
+
+    // إضافة مستمع للنقر على الإشعارات لتحديدها كمقروءة تلقائياً
+    setupNotificationClickHandlers();
 
     // معالجة الزر السريع لتحديد جميع الإشعارات كمقروءة
     const markAllAjaxBtn = document.getElementById('mark-all-read-ajax-btn');
@@ -531,6 +642,13 @@ function updateNotificationsUI() {
             message.classList.remove('text-dark');
             message.classList.add('text-muted');
         }
+
+        // تحديث الأيقونة
+        const iconContainer = notification.querySelector('.notification-icon');
+        if (iconContainer) {
+            iconContainer.style.opacity = '0.7';
+            iconContainer.style.transform = 'scale(0.95)';
+        }
     });
 
     // إخفاء أزرار "تحديد الكل" إذا لم تعد هناك إشعارات غير مقروءة
@@ -541,6 +659,128 @@ function updateNotificationsUI() {
     const unreadCountElement = document.querySelector('.stats-card h4:nth-child(1)');
     if (unreadCountElement) {
         unreadCountElement.textContent = '0';
+    }
+}
+
+// دالة إعداد مستمعي النقر على الإشعارات
+function setupNotificationClickHandlers() {
+    const notificationItems = document.querySelectorAll('.notification-item');
+
+    notificationItems.forEach(item => {
+        // إضافة مستمع للنقر على الإشعار بالكامل
+        item.addEventListener('click', function(e) {
+            // تجاهل النقر على الأزرار
+            if (e.target.closest('.btn-group')) {
+                return;
+            }
+
+            const notificationId = item.getAttribute('data-notification-id');
+            const isRead = item.getAttribute('data-is-read') === 'true';
+
+            // إذا كان الإشعار غير مقروء، قم بتحديده كمقروء
+            if (!isRead && notificationId) {
+                markNotificationAsRead(notificationId, item);
+            }
+
+            // الانتقال إلى رابط الإشعار
+            const link = item.querySelector('a[href]');
+            if (link && !e.target.closest('.btn-group')) {
+                window.location.href = link.href;
+            }
+        });
+
+        // إضافة مؤشر اليد للإشعارات غير المقروءة
+        if (item.classList.contains('unread')) {
+            item.style.cursor = 'pointer';
+            item.title = 'انقر لتحديد كمقروء والانتقال للتفاصيل';
+        } else {
+            item.style.cursor = 'pointer';
+            item.title = 'انقر لعرض التفاصيل';
+        }
+    });
+}
+
+// دالة تحديد إشعار واحد كمقروء
+function markNotificationAsRead(notificationId, itemElement) {
+    fetch(`{% url 'notifications:mark_read' 0 %}`.replace('0', notificationId), {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error('فشل في تحديث الإشعار');
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            // تحديث الواجهة فوراً
+            updateSingleNotificationUI(itemElement);
+
+            // تحديث العداد
+            updateNotificationCount();
+
+            console.log('✅ تم تحديد الإشعار كمقروء');
+        } else {
+            console.error('❌ فشل في تحديث الإشعار:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('❌ خطأ في تحديث الإشعار:', error);
+    });
+}
+
+// دالة تحديث واجهة إشعار واحد
+function updateSingleNotificationUI(itemElement) {
+    // تغيير الكلاسات
+    itemElement.classList.remove('unread');
+    itemElement.classList.add('read');
+    itemElement.setAttribute('data-is-read', 'true');
+    itemElement.style.cursor = 'default';
+
+    // تحديث العنوان
+    const title = itemElement.querySelector('h6 a');
+    if (title) {
+        title.classList.remove('text-primary', 'fw-bold');
+        title.classList.add('text-muted');
+    }
+
+    // إزالة النقطة الزرقاء
+    const dot = itemElement.querySelector('.fas.fa-circle');
+    if (dot) dot.remove();
+
+    // تحديث badge
+    const badge = itemElement.querySelector('.badge');
+    if (badge) {
+        badge.classList.remove('bg-primary', 'pulse-badge');
+        badge.classList.add('bg-secondary');
+        badge.textContent = 'مقروء';
+    }
+
+    // تحديث الوقت
+    const timeElement = itemElement.querySelector('small');
+    if (timeElement) {
+        timeElement.classList.remove('text-primary', 'fw-bold');
+        timeElement.classList.add('text-muted');
+    }
+
+    // تحديث النص
+    const message = itemElement.querySelector('p');
+    if (message) {
+        message.classList.remove('text-dark');
+        message.classList.add('text-muted');
+    }
+
+    // تحديث الأيقونة
+    const iconContainer = itemElement.querySelector('.notification-icon');
+    if (iconContainer) {
+        iconContainer.style.opacity = '0.7';
+        iconContainer.style.transform = 'scale(0.95)';
     }
 }
 </script>
