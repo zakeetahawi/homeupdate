@@ -217,8 +217,8 @@ class ManufacturingOrder(models.Model):
         if not self.expected_delivery_date:
             return False
 
-        # إذا كان الطلب مكتمل أو تم تسليمه، لا يعتبر متأخر
-        if self.status in ['completed', 'delivered']:
+        # إذا كان الطلب مكتمل أو جاهز للتركيب أو تم تسليمه، لا يعتبر متأخر
+        if self.status in ['completed', 'ready_install', 'delivered']:
             return False
 
         # مقارنة تاريخ التسليم المتوقع مع التاريخ الحالي
@@ -231,8 +231,8 @@ class ManufacturingOrder(models.Model):
         if not self.expected_delivery_date:
             return None
 
-        # إذا كان الطلب مكتمل أو تم تسليمه، لا توجد أيام متبقية
-        if self.status in ['completed', 'delivered']:
+        # إذا كان الطلب مكتمل أو جاهز للتركيب أو تم تسليمه، لا توجد أيام متبقية
+        if self.status in ['completed', 'ready_install', 'delivered']:
             return 0
 
         today = timezone.now().date()

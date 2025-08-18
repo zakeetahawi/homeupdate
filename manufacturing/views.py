@@ -132,7 +132,7 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
             today = timezone.now().date()
             queryset = queryset.filter(
                 expected_delivery_date__lt=today,
-                status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+                status__in=['pending_approval', 'pending', 'in_progress']
             )
 
         # البحث النصي
@@ -763,7 +763,7 @@ class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, ListV
             today = timezone.now().date()
             queryset = queryset.filter(
                 expected_delivery_date__lt=today,
-                status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+                status__in=['pending_approval', 'pending', 'in_progress']
             )
 
         # فلتر التواريخ
@@ -2019,7 +2019,7 @@ class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
         today = timezone.now().date()
         overdue_queryset = queryset.filter(
             expected_delivery_date__lt=today,
-            status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+            status__in=['pending_approval', 'pending', 'in_progress']
         ).order_by('expected_delivery_date')
 
         return overdue_queryset
