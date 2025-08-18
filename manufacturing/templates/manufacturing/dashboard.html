@@ -300,22 +300,22 @@
         {% endif %}
         
         {% if overdue_orders > 0 %}
-        <div class="col-md-6">
-            <a href="{% url 'manufacturing:overdue_orders' %}" class="text-decoration-none">
-                <div class="alert-card clickable-card">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-clock fa-2x me-3"></i>
-                        <div>
-                            <h5 class="mb-1">{{ overdue_orders }} طلب متأخر</h5>
-                            <small>تجاوز موعد التسليم المتوقع</small>
-                        </div>
-                        <div class="ms-auto">
-                            <i class="fas fa-arrow-left fa-lg"></i>
+            <div class="col-md-6">
+                <a href="{% url 'manufacturing:overdue_orders' %}" class="text-decoration-none">
+                    <div class="alert-card clickable-card">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-clock fa-2x me-3"></i>
+                            <div>
+                                <h5 class="mb-1">{{ overdue_orders }} طلب متأخر</h5>
+                                <small>تجاوز موعد التسليم المتوقع (لا يشمل الطلبات الجاهزة للتركيب)</small>
+                            </div>
+                            <div class="ms-auto">
+                                <i class="fas fa-arrow-left fa-lg"></i>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </a>
-        </div>
+                </a>
+            </div>
         {% endif %}
     </div>
 

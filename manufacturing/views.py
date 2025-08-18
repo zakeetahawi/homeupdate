@@ -532,9 +532,10 @@ class VIPOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         # الطلبات المتأخرة
         today = timezone.now().date()
+        # الطلبات المتأخرة هي التي لم تصل إلى "جاهز للتركيب" أو "مكتملة" أو "تم التسليم"
         overdue_count = vip_orders.filter(
             expected_delivery_date__lt=today,
-            status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+            status__in=['pending_approval', 'pending', 'in_progress']  # فقط هذه الحالات تعتبر متأخرة
         ).count()
 
         context.update({
@@ -817,7 +818,7 @@ class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         ).count()
         overdue_orders = all_orders.filter(
             expected_delivery_date__lt=timezone.now().date(),
-            status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+            status__in=['pending_approval', 'pending', 'in_progress']  # فقط هذه الحالات تعتبر متأخرة
         ).count()
 
         # الفلاتر المطبقة
@@ -2054,7 +2055,8 @@ class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
 
         context.update({
             'total_overdue': overdue_orders.count(),
-            'ready_install_overdue': status_data.get('ready_install', 0),
+            # الطلبات الجاهزة للتركيب لا تعتبر متأخرة أبداً
+            'ready_install_overdue': 0,
             'avg_delay_days': avg_delay_days,
             'default_year': default_year,
         })

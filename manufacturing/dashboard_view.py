@@ -117,7 +117,7 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
         pending_approval_count = all_orders.filter(status='pending_approval').count()
         overdue_orders = all_orders.filter(
             expected_delivery_date__lt=today,
-            status__in=['pending', 'in_progress', 'ready_install']
+            status__in=['pending_approval', 'pending', 'in_progress']  # فقط هذه الحالات تعتبر متأخرة
         ).count()
         
         # Average completion time (for completed orders)
