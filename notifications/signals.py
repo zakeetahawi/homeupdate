@@ -27,12 +27,12 @@ def clean_extra_data(data):
 
 
 def create_notification(
-    title, message, notification_type, related_object=None, 
+    title, message, notification_type, related_object=None,
     created_by=None, priority='normal', extra_data=None, recipients=None
 ):
     """
     إنشاء إشعار جديد مع تحديد المستخدمين المصرح لهم برؤيته
-    
+
     Args:
         title: عنوان الإشعار
         message: نص الإشعار
@@ -42,10 +42,27 @@ def create_notification(
         priority: أولوية الإشعار (افتراضي: normal)
         extra_data: بيانات إضافية (اختياري)
         recipients: قائمة المستخدمين المستهدفين (اختياري)
-    
+
     Returns:
         Notification: الإشعار المنشأ
     """
+    from django.utils import timezone
+    from datetime import timedelta
+
+    # فحص الإشعارات المكررة (نفس النوع والكائن المرتبط في آخر 5 دقائق)
+    if related_object:
+        recent_time = timezone.now() - timedelta(minutes=5)
+        existing_notification = Notification.objects.filter(
+            notification_type=notification_type,
+            content_type=ContentType.objects.get_for_model(related_object),
+            object_id=related_object.pk,
+            created_at__gte=recent_time
+        ).first()
+
+        if existing_notification:
+            print(f"⚠️ تم تجاهل إشعار مكرر: {title}")
+            return existing_notification
+
     # إنشاء الإشعار
     notification = Notification.objects.create(
         title=title,
@@ -369,7 +386,7 @@ def manufacturing_order_status_changed_notification(sender, instance, **kwargs):
                 create_notification(
                     title=title,
                     message=message,
-                    notification_type='order_status_changed',
+                    notification_type='manufacturing_status_changed',
                     related_object=instance.order,  # ربط بالطلب الأصلي
                     created_by=None,  # سيتم تحديده من السياق
                     priority=priority,

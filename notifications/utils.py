@@ -31,7 +31,7 @@ def get_notification_recipients(notification_type, related_object=None, created_
         customer_recipients = get_customer_notification_recipients(related_object, created_by).values_list('id', flat=True)
         recipient_ids.update(customer_recipients)
 
-    elif notification_type in ['order_created', 'order_updated', 'order_status_changed', 'order_delivered']:
+    elif notification_type in ['order_created', 'order_updated', 'order_status_changed', 'order_delivered', 'manufacturing_status_changed']:
         order_recipients = get_order_notification_recipients(related_object, created_by, notification_type).values_list('id', flat=True)
         recipient_ids.update(order_recipients)
 
