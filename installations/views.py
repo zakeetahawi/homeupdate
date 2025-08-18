@@ -172,6 +172,7 @@ def dashboard(request):
 
     context = {
         'total_installations': total_installation_orders,
+        'total_scheduled_installations': installation_stats['completed'] + installation_stats['pending'] + installation_stats['in_progress'] + installation_stats['in_installation'] + installation_stats['scheduled'] + installation_stats['modification_required'],
         'completed_installations': installation_stats['completed'],
         'pending_installations': installation_stats['pending'],
         'in_progress_installations': installation_stats['in_progress'],
@@ -187,6 +188,7 @@ def dashboard(request):
         'recent_orders': recent_orders,
         'orders_needing_scheduling': orders_needing_scheduling,
         'teams_stats': teams_stats,
+        'default_year': default_year,
     }
 
     return render(request, 'installations/dashboard.html', context)
@@ -1738,17 +1740,31 @@ def archive_list(request):
 
 @login_required
 def installation_stats_api(request):
-    """API لإحصائيات التركيبات"""
-    total = InstallationSchedule.objects.count()
-    completed = InstallationSchedule.objects.filter(status='completed').count()
-    pending = InstallationSchedule.objects.filter(status='pending').count()
-    in_progress = InstallationSchedule.objects.filter(status='in_progress').count()
+    """API لإحصائيات التركيبات مع فلتر السنة الافتراضية"""
+    from accounts.utils import apply_default_year_filter
+    from accounts.models import DashboardYearSettings
+
+    # تطبيق فلتر السنة الافتراضية
+    installation_schedules_queryset = InstallationSchedule.objects.all()
+    installation_schedules_filtered = apply_default_year_filter(installation_schedules_queryset, request, 'scheduled_date')
+
+    total = installation_schedules_filtered.count()
+    completed = installation_schedules_filtered.filter(status='completed').count()
+    pending = installation_schedules_filtered.filter(status='pending').count()
+    in_progress = installation_schedules_filtered.filter(status='in_progress').count()
+
+    # إحصائيات طلبات التركيب
+    installation_orders_queryset = Order.objects.filter(selected_types__icontains='installation')
+    installation_orders_filtered = apply_default_year_filter(installation_orders_queryset, request, 'order_date')
+    total_orders = installation_orders_filtered.count()
 
     return JsonResponse({
         'total': total,
+        'total_orders': total_orders,
         'completed': completed,
         'pending': pending,
-        'in_progress': in_progress
+        'in_progress': in_progress,
+        'default_year': DashboardYearSettings.get_default_year()
     })
 
 

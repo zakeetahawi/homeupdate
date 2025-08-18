@@ -594,8 +594,8 @@ a.text-decoration-none:hover {
                                 معدل الإنجاز
                             </div>
                             <div class="h6 mb-1 font-weight-bold text-gray-800">
-                                {% if total_installations %}
-                                    {{ completed_installations|floatformat:0 }}/{{ total_installations }}
+                                {% if total_scheduled_installations %}
+                                    {{ completed_installations|floatformat:0 }}/{{ total_scheduled_installations }}
                                 {% else %}
                                     0/0
                                 {% endif %}
@@ -1111,8 +1111,26 @@ setInterval(function() {
     fetch('{% url "installations:installation_stats_api" %}')
         .then(response => response.json())
         .then(data => {
-            // تحديث الأرقام في الصفحة
-            document.querySelector('.text-gray-800').textContent = data.total;
+            // تحديث إجمالي طلبات التركيب (البطاقة الأولى)
+            const totalInstallationsCard = document.querySelector('.card.border-primary .text-gray-800');
+            if (totalInstallationsCard) {
+                totalInstallationsCard.textContent = data.total_orders;
+            }
+
+            // تحديث التركيبات المكتملة (البطاقة الثانية)
+            const completedInstallationsCard = document.querySelector('.card.border-success .text-gray-800');
+            if (completedInstallationsCard) {
+                completedInstallationsCard.textContent = data.completed;
+            }
+
+            // تحديث معدل الإنجاز (البطاقة الخامسة)
+            const completionRateCard = document.querySelector('.card.border-orange .text-gray-800');
+            if (completionRateCard && data.total > 0) {
+                completionRateCard.textContent = data.completed + '/' + data.total;
+            }
+        })
+        .catch(error => {
+            console.log('خطأ في تحديث الإحصائيات:', error);
         });
 }, 30000);
 

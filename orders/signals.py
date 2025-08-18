@@ -55,16 +55,26 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
 
         if order_types.intersection(MANUFACTURING_TYPES):
             # print(f"MATCH FOUND: Order types {order_types} intersect with {MANUFACTURING_TYPES}. Creating manufacturing order...")
-            
+
+            # Determine the appropriate order_type for manufacturing
+            manufacturing_order_type = ''
+            if 'installation' in order_types:
+                manufacturing_order_type = 'installation'
+            elif 'tailoring' in order_types:
+                manufacturing_order_type = 'custom'
+            elif 'accessory' in order_types:
+                manufacturing_order_type = 'accessory'
+
             # Use a transaction to ensure both creations happen or neither.
             from django.db import transaction
             with transaction.atomic():
                 from datetime import timedelta
                 expected_date = instance.expected_delivery_date or (instance.created_at + timedelta(days=15)).date()
-                
+
                 mfg_order, created_mfg = ManufacturingOrder.objects.get_or_create(
                     order=instance,
                     defaults={
+                        'order_type': manufacturing_order_type,
                         'status': 'pending_approval',
                         'notes': instance.notes,
                         'order_date': instance.created_at.date(),
