@@ -58,9 +58,10 @@ def dashboard(request):
     installation_orders_queryset = apply_default_year_filter(installation_orders_queryset, request, 'order_date')
     total_installation_orders = installation_orders_queryset.count()
 
-    # 2. إحصائيات التركيبات المجدولة - استعلام واحد فقط (مفلترة بالسنة الافتراضية)
+    # 2. إحصائيات التركيبات المجدولة - استعلام واحد فقط (مفلترة بسنة الطلب للتطابق)
     installation_schedules_queryset = InstallationSchedule.objects.all()
-    installation_schedules_queryset = apply_default_year_filter(installation_schedules_queryset, request, 'scheduled_date')
+    # استخدام سنة الطلب بدلاً من سنة الجدولة للتطابق مع باقي الإحصائيات
+    installation_schedules_queryset = apply_default_year_filter(installation_schedules_queryset, request, 'order__order_date')
     installation_stats = installation_schedules_queryset.aggregate(
         completed=Count('id', filter=Q(status='completed')),
         in_installation=Count('id', filter=Q(status='in_installation')),
