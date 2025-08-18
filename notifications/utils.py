@@ -183,14 +183,19 @@ def get_inspection_notification_recipients(inspection, created_by, notification_
         
         # للإشعارات الخاصة بتغيير الحالة، إضافة المديرين المباشرين
         if notification_type == 'inspection_status_changed':
-            if hasattr(inspection, 'responsible_employee') and inspection.responsible_employee:
-                if hasattr(inspection.responsible_employee, 'user') and inspection.responsible_employee.user.branch:
-                    direct_managers = User.objects.filter(
-                        Q(is_branch_manager=True) | Q(is_region_manager=True),
-                        branch=inspection.responsible_employee.user.branch,
-                        is_active=True
-                    )
-                    recipients = recipients.union(direct_managers)
+            if (hasattr(inspection, 'responsible_employee') and
+                inspection.responsible_employee and
+                hasattr(inspection.responsible_employee, 'user') and
+                inspection.responsible_employee.user and
+                hasattr(inspection.responsible_employee.user, 'branch') and
+                inspection.responsible_employee.user.branch):
+
+                direct_managers = User.objects.filter(
+                    Q(is_branch_manager=True) | Q(is_region_manager=True),
+                    branch=inspection.responsible_employee.user.branch,
+                    is_active=True
+                )
+                recipients = recipients.union(direct_managers)
     
     return recipients
 

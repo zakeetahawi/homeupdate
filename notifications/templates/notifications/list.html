@@ -9,11 +9,76 @@
 .notification-item {
     transition: all 0.3s ease;
     border-left: 4px solid transparent;
+    position: relative;
 }
 
+/* الإشعارات غير المقروءة - تمييز واضح */
 .notification-item.unread {
-    background-color: #f8f9fa;
-    border-left-color: #007bff;
+    background-color: #e3f2fd !important;
+    border-left-color: #2196f3 !important;
+    border-left-width: 6px !important;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+}
+
+.notification-item.unread::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 12px;
+    height: 12px;
+    background-color: #2196f3;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* الإشعارات المقروءة - مظهر هادئ */
+.notification-item.read {
+    background-color: #ffffff;
+    border-left-color: #e0e0e0;
+    opacity: 0.8;
+}
+
+.notification-item.unread .notification-content h6 {
+    font-weight: 700 !important;
+    color: #1976d2 !important;
+}
+
+.notification-item.read .notification-content h6 {
+    font-weight: 400;
+    color: #666;
+}
+
+/* تحريك badge الجديد */
+.pulse-badge {
+    animation: badge-pulse 1.5s infinite;
+}
+
+@keyframes badge-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* تحسين الأيقونات */
+.notification-icon {
+    transition: all 0.3s ease;
+}
+
+.notification-item.unread .notification-icon {
+    background-color: #e3f2fd !important;
+    border: 2px solid #2196f3;
+}
+
+.notification-item.read .notification-icon {
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
 }
 
 .notification-item.priority-urgent {
@@ -182,10 +247,11 @@
         <div class="card-body p-0">
             {% for notification in notifications %}
             {% with visibility=notification.visibility_records.all|first %}
-            <div class="notification-item p-3 border-bottom d-flex align-items-start 
-                        {% if not visibility.is_read %}unread{% endif %} 
+            <div class="notification-item p-3 border-bottom d-flex align-items-start
+                        {% if not visibility.is_read %}unread{% else %}read{% endif %}
                         priority-{{ notification.priority }}"
-                 data-notification-id="{{ notification.pk }}">
+                 data-notification-id="{{ notification.pk }}"
+                 data-is-read="{{ visibility.is_read|yesno:'true,false' }}">
                 
                 <!-- أيقونة الإشعار -->
                 <div class="notification-icon bg-light">
@@ -195,18 +261,28 @@
                 <!-- محتوى الإشعار -->
                 <div class="notification-content">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="mb-0">
-                            <a href="{{ notification.get_absolute_url }}" class="text-decoration-none">
+                        <h6 class="mb-0 {% if not visibility.is_read %}fw-bold text-primary{% else %}text-muted{% endif %}">
+                            <a href="{{ notification.get_absolute_url }}"
+                               class="text-decoration-none {% if not visibility.is_read %}text-primary fw-bold{% else %}text-muted{% endif %}">
+                                {% if not visibility.is_read %}
+                                <i class="fas fa-circle text-primary me-1" style="font-size: 8px;"></i>
+                                {% endif %}
                                 {{ notification.title }}
                             </a>
                             {% if not visibility.is_read %}
-                            <span class="badge bg-primary ms-2">جديد</span>
+                            <span class="badge bg-primary ms-2 pulse-badge">جديد</span>
+                            {% else %}
+                            <span class="badge bg-secondary ms-2">مقروء</span>
                             {% endif %}
                         </h6>
-                        <small class="text-muted">{{ notification.created_at|timesince }}</small>
+                        <small class="{% if not visibility.is_read %}text-primary fw-bold{% else %}text-muted{% endif %}">
+                            {{ notification.created_at|timesince }}
+                        </small>
                     </div>
-                    
-                    <p class="mb-2 text-muted">{{ notification.message|truncatewords:20 }}</p>
+
+                    <p class="mb-2 {% if not visibility.is_read %}text-dark{% else %}text-muted{% endif %}">
+                        {{ notification.message|truncatewords:20 }}
+                    </p>
                     
                     <div class="notification-meta d-flex justify-content-between align-items-center">
                         <div>
@@ -418,13 +494,54 @@ function showErrorMessage(message) {
 function updateNotificationsUI() {
     const unreadNotifications = document.querySelectorAll('.notification-item.unread');
     unreadNotifications.forEach(notification => {
+        // تغيير الكلاسات
         notification.classList.remove('unread');
         notification.classList.add('read');
+        notification.setAttribute('data-is-read', 'true');
+
+        // تحديث العنوان
+        const title = notification.querySelector('h6 a');
+        if (title) {
+            title.classList.remove('text-primary', 'fw-bold');
+            title.classList.add('text-muted');
+        }
+
+        // إزالة النقطة الزرقاء
+        const dot = notification.querySelector('.fas.fa-circle');
+        if (dot) dot.remove();
+
+        // تحديث badge
+        const badge = notification.querySelector('.badge');
+        if (badge) {
+            badge.classList.remove('bg-primary', 'pulse-badge');
+            badge.classList.add('bg-secondary');
+            badge.textContent = 'مقروء';
+        }
+
+        // تحديث الوقت
+        const timeElement = notification.querySelector('small');
+        if (timeElement) {
+            timeElement.classList.remove('text-primary', 'fw-bold');
+            timeElement.classList.add('text-muted');
+        }
+
+        // تحديث النص
+        const message = notification.querySelector('p');
+        if (message) {
+            message.classList.remove('text-dark');
+            message.classList.add('text-muted');
+        }
     });
 
     // إخفاء أزرار "تحديد الكل" إذا لم تعد هناك إشعارات غير مقروءة
     const markAllBtns = document.querySelectorAll('#mark-all-read-ajax-btn, a[href*="mark-all-read"]');
     markAllBtns.forEach(btn => btn.style.display = 'none');
+
+    // تحديث الإحصائيات
+    const unreadCountElement = document.querySelector('.stats-card h4:nth-child(1)');
+    if (unreadCountElement) {
+        unreadCountElement.textContent = '0';
+    }
 }
 </script>
 {% endblock %}

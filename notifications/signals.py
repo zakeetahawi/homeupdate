@@ -49,9 +49,9 @@ def create_notification(
     from django.utils import timezone
     from datetime import timedelta
 
-    # فحص الإشعارات المكررة (نفس النوع والكائن المرتبط في آخر 5 دقائق)
+    # فحص الإشعارات المكررة (نفس النوع والكائن المرتبط في آخر دقيقة)
     if related_object:
-        recent_time = timezone.now() - timedelta(minutes=5)
+        recent_time = timezone.now() - timedelta(minutes=1)
         existing_notification = Notification.objects.filter(
             notification_type=notification_type,
             content_type=ContentType.objects.get_for_model(related_object),
@@ -59,7 +59,15 @@ def create_notification(
             created_at__gte=recent_time
         ).first()
 
-        if existing_notification:
+        # للإشعارات الحساسة، فحص أكثر دقة
+        if existing_notification and notification_type in ['order_status_changed', 'manufacturing_status_changed']:
+            # فحص إذا كان نفس التغيير بالضبط
+            if (extra_data and existing_notification.extra_data and
+                extra_data.get('old_status') == existing_notification.extra_data.get('old_status') and
+                extra_data.get('new_status') == existing_notification.extra_data.get('new_status')):
+                print(f"⚠️ تم تجاهل إشعار مكرر: {title}")
+                return existing_notification
+        elif existing_notification:
             print(f"⚠️ تم تجاهل إشعار مكرر: {title}")
             return existing_notification
 
@@ -274,9 +282,18 @@ def inspection_status_changed_notification(sender, instance, **kwargs):
             if old_instance.status != instance.status:
                 old_status_display = str(dict(instance.STATUS_CHOICES).get(old_instance.status, old_instance.status))
                 new_status_display = str(dict(instance.STATUS_CHOICES).get(instance.status, instance.status))
-                
-                title = f"تغيير حالة المعاينة: {instance.contract_number or 'غير محدد'}"
-                message = f"تم تغيير حالة المعاينة من '{old_status_display}' إلى '{new_status_display}'"
+
+                # تحسين العنوان والرسالة
+                contract_info = instance.contract_number or f"معاينة-{instance.pk}"
+                if hasattr(instance, 'order') and instance.order:
+                    contract_info = instance.order.order_number
+
+                title = f"تغيير حالة المعاينة: {contract_info}"
+                message = f"تم تغيير حالة المعاينة {contract_info} من '{old_status_display}' إلى '{new_status_display}'"
+
+                # إضافة معلومات العميل إذا كانت متوفرة
+                if hasattr(instance, 'customer') and instance.customer:
+                    message += f" للعميل {instance.customer.name}"
                 
                 priority = 'high' if instance.status == 'completed' else 'normal'
                 
