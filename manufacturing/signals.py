@@ -92,36 +92,75 @@ def delete_related_installation(sender, instance, **kwargs):
         instance.installation.delete()
 
 
+# تم تعطيل هذا signal لتجنب التضارب مع signal التحديث في orders/signals.py
+# @receiver(post_save, sender='orders.Order')
+# def sync_order_updates(sender, instance, created, **kwargs):
+#     """
+#     مزامنة تحديثات الطلب مع أمر التصنيع المرتبط - معطل لتجنب التضارب
+#     """
+#     if created:
+#         return  # تم التعامل مع الحالات الجديدة في إشارة أخرى
+#
+#     ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+#
+#     try:
+#         manufacturing_order = ManufacturingOrder.objects.get(order=instance)
+#
+#         # تحديث حقول أمر التصنيع عند تغييرها في الطلب
+#         update_fields = []
+#
+#         if manufacturing_order.contract_number != instance.contract_number:
+#             manufacturing_order.contract_number = instance.contract_number
+#             update_fields.append('contract_number')
+#
+#         if manufacturing_order.order_date != instance.order_date:
+#             manufacturing_order.order_date = instance.order_date
+#             update_fields.append('order_date')
+#
+#         if manufacturing_order.expected_delivery_date != instance.expected_delivery_date:
+#             manufacturing_order.expected_delivery_date = instance.expected_delivery_date
+#             update_fields.append('expected_delivery_date')
+#
+#         if update_fields:
+#             manufacturing_order.save(update_fields=update_fields)
+#
+#     except ManufacturingOrder.DoesNotExist:
+#         pass  # لا يوجد أمر تصنيع مرتبط بهذا الطلب
+
+
 @receiver(post_save, sender='orders.Order')
-def sync_order_updates(sender, instance, created, **kwargs):
+def sync_order_to_manufacturing(sender, instance, created, **kwargs):
     """
-    مزامنة تحديثات الطلب مع أمر التصنيع المرتبط
+    مزامنة تحديثات الطلب مع أمر التصنيع (اتجاه واحد: من الطلب إلى التصنيع)
     """
     if created:
         return  # تم التعامل مع الحالات الجديدة في إشارة أخرى
-    
+
     ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
-    
+
     try:
         manufacturing_order = ManufacturingOrder.objects.get(order=instance)
-        
-        # تحديث حقول أمر التصنيع عند تغييرها في الطلب
+
+        # تحديث حقول أمر التصنيع عند تغييرها في الطلب (بدون تحديث الحالة)
         update_fields = []
-        
+
         if manufacturing_order.contract_number != instance.contract_number:
             manufacturing_order.contract_number = instance.contract_number
             update_fields.append('contract_number')
-        
+
         if manufacturing_order.order_date != instance.order_date:
             manufacturing_order.order_date = instance.order_date
             update_fields.append('order_date')
-        
+
         if manufacturing_order.expected_delivery_date != instance.expected_delivery_date:
             manufacturing_order.expected_delivery_date = instance.expected_delivery_date
             update_fields.append('expected_delivery_date')
-        
+
+        # تحديث فقط الحقول المتغيرة بدون إطلاق signals
         if update_fields:
-            manufacturing_order.save(update_fields=update_fields)
-            
+            ManufacturingOrder.objects.filter(pk=manufacturing_order.pk).update(
+                **{field: getattr(manufacturing_order, field) for field in update_fields}
+            )
+
     except ManufacturingOrder.DoesNotExist:
         pass  # لا يوجد أمر تصنيع مرتبط بهذا الطلب

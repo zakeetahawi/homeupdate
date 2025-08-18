@@ -161,10 +161,13 @@ def order_status_changed_notification(sender, instance, **kwargs):
     if instance.pk:  # التأكد من أن الطلب موجود مسبقاً
         try:
             old_instance = sender.objects.get(pk=instance.pk)
-            
+
             # التحقق من تغيير حالة الطلب
             if hasattr(instance, 'order_status') and hasattr(old_instance, 'order_status'):
                 if old_instance.order_status != instance.order_status:
+                    # تجاهل التغييرات التلقائية عند الإنشاء
+                    if old_instance.order_status == 'pending_approval' and instance.order_status == 'pending':
+                        return  # تجاهل هذا التغيير التلقائي
                     old_status_display = str(dict(instance.ORDER_STATUS_CHOICES).get(old_instance.order_status, old_instance.order_status))
                     new_status_display = str(dict(instance.ORDER_STATUS_CHOICES).get(instance.order_status, instance.order_status))
                     

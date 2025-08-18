@@ -253,13 +253,25 @@ def update_order_manufacturing_status(sender, instance, created, **kwargs):
     """تحديث حالة الطلب عند تغيير حالة التصنيع"""
     try:
         order = instance.order
-        # تحديث حالة الطلب بناءً على حالة التصنيع
-        new_status = None
-        if instance.status in ['completed', 'ready_install']:
-            new_status = instance.status
-        elif instance.status == 'delivered':
-            new_status = 'delivered'
-        
+
+        # تجاهل التحديث إذا كان إنشاء جديد لتجنب التضارب
+        if created:
+            return
+
+        # مطابقة مباشرة بين حالات التصنيع والطلب
+        status_mapping = {
+            'pending_approval': 'pending_approval',
+            'pending': 'pending',
+            'in_progress': 'in_progress',
+            'ready_install': 'ready_install',
+            'completed': 'completed',
+            'delivered': 'delivered',
+            'rejected': 'rejected',
+            'cancelled': 'cancelled',
+        }
+
+        new_status = status_mapping.get(instance.status)
+
         # تحديث الحالة فقط إذا تغيرت لتجنب التكرار الذاتي
         if new_status and new_status != order.order_status:
             Order.objects.filter(pk=order.pk).update(order_status=new_status)

@@ -141,7 +141,7 @@ class Order(models.Model):
     order_status = models.CharField(
         max_length=30,
         choices=ORDER_STATUS_CHOICES,
-        default='pending',
+        default='pending_approval',
         verbose_name='حالة الطلب'
     )
     
