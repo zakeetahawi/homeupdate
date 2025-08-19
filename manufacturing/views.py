@@ -811,10 +811,10 @@ class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         all_orders = self.get_queryset()
         total_orders = all_orders.count()
         active_orders = all_orders.filter(
-            status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+            status__in=['pending_approval', 'pending', 'in_progress']
         ).count()
         completed_orders = all_orders.filter(
-            status__in=['completed', 'delivered']
+            status__in=['ready_install', 'completed', 'delivered']
         ).count()
         overdue_orders = all_orders.filter(
             expected_delivery_date__lt=timezone.now().date(),
@@ -1493,7 +1493,7 @@ class DashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
             'total_orders': orders.count(),
             'pending_orders': orders.filter(status='pending').count(),
             'in_progress_orders': orders.filter(status='in_progress').count(),
-            'completed_orders': orders.filter(status='completed').count(),
+            'completed_orders': orders.filter(status__in=['ready_install', 'completed']).count(),
             'delivered_orders': orders.filter(status='delivered').count(),
             'cancelled_orders': orders.filter(status='cancelled').count(),
             'total_revenue': sum(order.order.total_amount for order in orders if order.order and order.order.total_amount),
@@ -1531,7 +1531,7 @@ def dashboard_data(request):
         'total_orders': orders.count(),
         'pending_orders': orders.filter(status='pending').count(),
         'in_progress_orders': orders.filter(status='in_progress').count(),
-        'completed_orders': orders.filter(status='completed').count(),
+        'completed_orders': orders.filter(status__in=['ready_install', 'completed']).count(),
         'delivered_orders': orders.filter(status='delivered').count(),
         'cancelled_orders': orders.filter(status='cancelled').count(),
         'status_data': {item['status']: item['count'] for item in status_counts},

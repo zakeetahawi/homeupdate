@@ -494,14 +494,14 @@ class ProductionLine(models.Model):
     def active_orders_count(self):
         """عدد أوامر التصنيع النشطة المرتبطة بهذا الخط"""
         return self.manufacturing_orders.filter(
-            status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+            status__in=['pending_approval', 'pending', 'in_progress']
         ).count()
 
     @property
     def completed_orders_count(self):
         """عدد أوامر التصنيع المكتملة المرتبطة بهذا الخط"""
         return self.manufacturing_orders.filter(
-            status__in=['completed', 'delivered']
+            status__in=['ready_install', 'completed', 'delivered']
         ).count()
 
     def get_branches_display(self):

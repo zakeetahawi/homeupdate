@@ -122,7 +122,7 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
         
         # Average completion time (for completed orders)
         completed_orders_with_dates = all_orders.filter(
-            status__in=['completed', 'delivered'],
+            status__in=['ready_install', 'completed', 'delivered'],
             completion_date__isnull=False,
             order_date__isnull=False
         )
@@ -148,7 +148,7 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
         ).count()
         vip_completed_count = all_orders.filter(
             order__status='vip',
-            status__in=['completed', 'delivered']
+            status__in=['ready_install', 'completed', 'delivered']
         ).count()
 
         # Production lines statistics
@@ -162,10 +162,10 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
                 'line': line,
                 'total_orders': line_orders.count(),
                 'active_orders': line_orders.filter(
-                    status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+                    status__in=['pending_approval', 'pending', 'in_progress']
                 ).count(),
                 'completed_orders': line_orders.filter(
-                    status__in=['completed', 'delivered']
+                    status__in=['ready_install', 'completed', 'delivered']
                 ).count(),
                 'overdue_orders': line_orders.filter(
                     expected_delivery_date__lt=today,
