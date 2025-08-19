@@ -2017,10 +2017,11 @@ class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
             queryset = queryset.filter(type_filter)
 
         # فلترة الطلبات المتأخرة فقط
+        # الطلبات المتأخرة هي التي لم تصل إلى "جاهز للتركيب" أو "مكتملة" أو "تم التسليم"
         today = timezone.now().date()
         overdue_queryset = queryset.filter(
             expected_delivery_date__lt=today,
-            status__in=['pending_approval', 'pending', 'in_progress']
+            status__in=['pending_approval', 'pending', 'in_progress']  # فقط هذه الحالات تعتبر متأخرة
         ).order_by('expected_delivery_date')
 
         return overdue_queryset

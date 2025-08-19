@@ -169,7 +169,7 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
                 ).count(),
                 'overdue_orders': line_orders.filter(
                     expected_delivery_date__lt=today,
-                    status__in=['pending_approval', 'pending', 'in_progress', 'ready_install']
+                    status__in=['pending_approval', 'pending', 'in_progress']  # فقط هذه الحالات تعتبر متأخرة
                 ).count()
             }
             production_lines_stats.append(line_stats)

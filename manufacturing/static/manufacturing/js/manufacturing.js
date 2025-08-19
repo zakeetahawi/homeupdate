@@ -56,8 +56,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Show success message
                     showToast('تم تحديث الحالة بنجاح', 'success');
                     
-                    // If status is completed, reload the page to update other elements
-                    if (newStatus === 'completed') {
+                    // If status is completed or ready for installation, reload the page to update other elements
+                    if (newStatus === 'completed' || newStatus === 'ready_install') {
                         setTimeout(() => {
                             window.location.reload();
                         }, 1000);
