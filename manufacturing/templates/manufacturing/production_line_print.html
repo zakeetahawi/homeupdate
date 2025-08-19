@@ -729,7 +729,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 {% if order.expected_delivery_date %}
                                     {{ order.expected_delivery_date|date:"Y-m-d" }}
                                     {% now "Y-m-d" as today %}
-                                    {% if order.expected_delivery_date|date:"Y-m-d" < today and order.status != 'delivered' %}
+                                    {% if order.expected_delivery_date|date:"Y-m-d" < today and order.status not in 'completed,ready_install,delivered' %}
                                         <br><small class="text-danger">متأخر</small>
                                     {% endif %}
                                 {% else %}
