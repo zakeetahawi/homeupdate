@@ -19,6 +19,47 @@ from .cache_utils import invalidate_product_cache
 
 logger = logging.getLogger(__name__)
 
+def get_or_create_warehouse(warehouse_name, user):
+    """
+    الحصول على المستودع أو إنشاؤه إذا لم يكن موجوداً
+    """
+    if not warehouse_name or str(warehouse_name).strip().lower() in ['', 'nan', 'none']:
+        return None
+
+    warehouse_name = str(warehouse_name).strip()
+
+    # البحث عن المستودع بالاسم أولاً
+    warehouse = Warehouse.objects.filter(name__iexact=warehouse_name).first()
+
+    if warehouse:
+        return warehouse
+
+    # إنشاء كود تلقائي للمستودع
+    import re
+    # إزالة المسافات والرموز الخاصة لإنشاء الكود
+    code_base = re.sub(r'[^\w\u0600-\u06FF]', '', warehouse_name)[:10]
+    if not code_base:
+        code_base = 'WH'
+
+    # التأكد من عدم تكرار الكود
+    counter = 1
+    code = f"{code_base}{counter:03d}"
+    while Warehouse.objects.filter(code=code).exists():
+        counter += 1
+        code = f"{code_base}{counter:03d}"
+
+    # إنشاء المستودع الجديد
+    warehouse = Warehouse.objects.create(
+        name=warehouse_name,
+        code=code,
+        is_active=True,
+        notes=f'تم إنشاؤه تلقائياً من رفع المنتجات بالجملة',
+        created_by=user
+    )
+
+    print(f"✅ تم إنشاء مستودع جديد: {warehouse.name} ({warehouse.code})")
+    return warehouse
+
 def safe_read_excel(file_data):
     """
     قراءة ملف إكسل بطريقة آمنة تتجنب أخطاء extLst و PatternFill
@@ -199,14 +240,18 @@ def product_bulk_upload(request):
                     request.user
                 )
                 if result['success']:
-                    messages.success(
-                        request, 
-                        _('تم رفع {} منتج بنجاح. {} منتج محدث، {} منتج جديد').format(
-                            result['total_processed'],
-                            result['updated_count'],
-                            result['created_count']
-                        )
+                    success_message = _('تم رفع {} منتج بنجاح. {} منتج محدث، {} منتج جديد').format(
+                        result['total_processed'],
+                        result['updated_count'],
+                        result['created_count']
                     )
+
+                    # إضافة معلومات المستودعات المُنشأة
+                    if result.get('created_warehouses'):
+                        warehouses_list = ', '.join(result['created_warehouses'])
+                        success_message += f'. تم إنشاء المستودعات التالية: {warehouses_list}'
+
+                    messages.success(request, success_message)
                     if result['errors']:
                         for error in result['errors'][:5]:
                             messages.warning(request, error)
@@ -260,27 +305,28 @@ def bulk_stock_update(request):
         form = BulkStockUpdateForm()
     return render(request, 'inventory/bulk_stock_update.html', {'form': form})
 
-def process_excel_upload(excel_file, warehouse, overwrite_existing, user):
+def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user):
     """
     معالجة ملف الإكسل وإضافة المنتجات
     """
     try:
         print(f"📁 بدء معالجة ملف: {excel_file.name}")
-        print(f"🏢 المستودع: {warehouse}")
+        print(f"🏢 المستودع الافتراضي: {default_warehouse}")
         print(f"♻️ الكتابة فوق الموجود: {overwrite_existing}")
-        
+
         file_data = excel_file.read()
         print(f"📊 تم قراءة الملف، الحجم: {len(file_data)} بايت")
-        
+
         df = safe_read_excel(file_data)
         print(f"📋 تم تحليل الملف، عدد الصفوف: {len(df)}")
         print(f"📝 أعمدة الملف: {list(df.columns)}")
-        
+
         result = {
             'success': True,
             'total_processed': 0,
             'created_count': 0,
             'updated_count': 0,
+            'created_warehouses': [],
             'errors': [],
             'message': ''
         }
@@ -292,6 +338,7 @@ def process_excel_upload(excel_file, warehouse, overwrite_existing, user):
                     name = str(row['اسم المنتج']).strip()
                     code = str(row['الكود']).strip() if pd.notna(row['الكود']) else None
                     category_name = str(row['الفئة']).strip()
+                    warehouse_name = str(row.get('المستودع', '')).strip() if pd.notna(row.get('المستودع')) else ''
                     
                     # معالجة السعر بشكل آمن
                     try:
@@ -395,37 +442,51 @@ def process_excel_upload(excel_file, warehouse, overwrite_existing, user):
                         created = True
                         result['created_count'] += 1
                     if quantity > 0 and product:
+                        # تحديد المستودع المناسب
+                        target_warehouse = default_warehouse  # المستودع الافتراضي
+
+                        # إذا كان هناك مستودع محدد في الملف، استخدمه
+                        if warehouse_name:
+                            target_warehouse = get_or_create_warehouse(warehouse_name, user)
+                            if target_warehouse and target_warehouse.name not in result['created_warehouses']:
+                                result['created_warehouses'].append(target_warehouse.name)
+
+                        # التأكد من وجود مستودع صالح
+                        if not target_warehouse:
+                            result['errors'].append(f'الصف {index + 2}: لا يمكن تحديد المستودع')
+                            continue
+
                         StockTransaction.objects.create(
                             product=product,
-                            warehouse=warehouse,  # إضافة المستودع المحدد
+                            warehouse=target_warehouse,
                             transaction_type='in',
                             reason='purchase',
                             quantity=quantity,
                             reference='رفع من ملف إكسل',
-                            notes='تم إضافة الكمية تلقائياً عند رفع المنتج',
+                            notes=f'تم إضافة الكمية تلقائياً عند رفع المنتج - المستودع: {target_warehouse.name}',
                             created_by=user,
                             transaction_date=timezone.now()
                         )
                         # حساب الرصيد المتحرك بناءً على المنتج والمستودع
                         previous_transactions = StockTransaction.objects.filter(
                             product=product,
-                            warehouse=warehouse,
+                            warehouse=target_warehouse,
                             transaction_date__lt=timezone.now()
                         ).order_by('-transaction_date')
-                        
+
                         previous_balance = 0
                         if previous_transactions.exists():
                             previous_balance = previous_transactions.first().running_balance
-                        
+
                         # تحويل الكمية إلى Decimal لتجنب مشاكل الجمع
                         from decimal import Decimal
                         quantity_decimal = Decimal(str(quantity))
                         new_balance = previous_balance + quantity_decimal
-                        
+
                         # تحديث الحركة الحالية بالرصيد الجديد
                         transaction_obj = StockTransaction.objects.filter(
                             product=product,
-                            warehouse=warehouse
+                            warehouse=target_warehouse
                         ).order_by('-transaction_date').first()
                         
                         if transaction_obj:
@@ -556,6 +617,7 @@ def download_excel_template(request):
             'الفئة': ['أجهزة كمبيوتر', 'طابعات', 'ملحقات'],
             'السعر': [15000, 2500, 150],
             'الكمية': [10, 5, 20],
+            'المستودع': ['المستودع الرئيسي', 'مستودع الطابعات', 'مستودع الملحقات'],
             'الوصف': ['لابتوب HP بروسيسور i5', 'طابعة ليزر ملونة', 'ماوس لاسلكي عالي الجودة'],
             'الحد الأدنى': [5, 2, 10],
             'العملة': ['EGP', 'EGP', 'EGP'],
@@ -569,6 +631,7 @@ def download_excel_template(request):
         stock_data = {
             'كود المنتج': ['LAP001', 'PRN001', 'MOU001'],
             'الكمية': [25, 15, 30],
+            'المستودع': ['المستودع الرئيسي', 'مستودع الطابعات', 'مستودع الملحقات'],
             'ملاحظات': ['تحديث بعد الجرد', 'إضافة مخزون جديد', 'تحديث الكمية']
         }
         

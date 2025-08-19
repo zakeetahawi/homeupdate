@@ -22,10 +22,11 @@ class ProductExcelUploadForm(forms.Form):
     
     warehouse = forms.ModelChoiceField(
         queryset=Warehouse.objects.filter(is_active=True),
-        label=_('المستودع'),
-        required=True,
-        empty_label=_('اختر المستودع'),
-        widget=forms.Select(attrs={'class': 'form-select'})
+        label=_('المستودع الافتراضي'),
+        required=False,
+        empty_label=_('سيتم إنشاء المستودعات تلقائياً من الملف'),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text=_('اختياري - إذا لم تحدد مستودع، سيتم إنشاء المستودعات تلقائياً من عمود "المستودع" في الملف')
     )
     
     overwrite_existing = forms.BooleanField(
@@ -238,6 +239,30 @@ class ProductForm(forms.ModelForm):
     """
     نموذج لإضافة/تعديل منتج واحد
     """
+    # إضافة حقول إضافية غير موجودة في النموذج
+    warehouse = forms.ModelChoiceField(
+        queryset=Warehouse.objects.filter(is_active=True),
+        label=_('المستودع'),
+        required=True,
+        empty_label=_('اختر المستودع'),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text=_('المستودع الذي سيتم إضافة المنتج إليه')
+    )
+
+    initial_quantity = forms.DecimalField(
+        label=_('الكمية الحالية'),
+        required=False,
+        initial=0,
+        min_value=0,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': '0.00'
+        }),
+        help_text=_('الكمية الحالية في المخزون (اختياري)')
+    )
+
     class Meta:
         model = Product
         fields = ['name', 'code', 'category', 'description', 'price', 'currency', 'unit', 'minimum_stock']
@@ -256,10 +281,17 @@ class ProductForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['category'].queryset = Category.objects.all()
         self.fields['category'].empty_label = _('اختر الفئة')
-        
-        # إضافة خيارات العملة
-        self.fields['currency'].choices = [
-            ('EGP', _('جنيه مصري')),
-            ('USD', _('دولار أمريكي')),
-            ('EUR', _('يورو')),
-        ]
+
+        # إضافة خيارات العملة من النموذج
+        self.fields['currency'].choices = Product.CURRENCY_CHOICES
+
+        # إضافة خيارات الوحدات من النموذج
+        self.fields['unit'].choices = Product.UNIT_CHOICES
+
+        # إذا كان هذا تعديل منتج موجود، إخفاء حقول المستودع والكمية
+        if self.instance and self.instance.pk:
+            # في حالة التعديل، إزالة الحقول الإضافية
+            if 'warehouse' in self.fields:
+                del self.fields['warehouse']
+            if 'initial_quantity' in self.fields:
+                del self.fields['initial_quantity']

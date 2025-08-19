@@ -8,6 +8,7 @@ from django.db.models import Q, F, Sum
 from django.utils import timezone
 from datetime import datetime, timedelta
 from .models import Product, Category, PurchaseOrder, StockTransaction, StockAlert
+from .forms import ProductForm
 from .inventory_utils import (
     get_cached_stock_level,
     get_cached_product_list,
@@ -210,74 +211,70 @@ def product_list(request):
 @login_required
 def product_create(request):
     if request.method == 'POST':
-        try:
-            name = request.POST.get('name')
-            code = request.POST.get('code')
-            category_id = request.POST.get('category')
-            description = request.POST.get('description')
-            price = request.POST.get('price')
-            minimum_stock = request.POST.get('minimum_stock')
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            try:
+                # حفظ المنتج
+                product = form.save()
 
-            if not all([name, category_id, price, minimum_stock]):
-                raise ValueError("جميع الحقول المطلوبة يجب ملؤها")
+                # إضافة الكمية الحالية إذا تم تحديدها
+                initial_quantity = form.cleaned_data.get('initial_quantity', 0)
+                warehouse = form.cleaned_data.get('warehouse')
 
-            category = get_object_or_404(Category, id=category_id)
+                if initial_quantity > 0 and warehouse:
+                    StockTransaction.objects.create(
+                        product=product,
+                        warehouse=warehouse,
+                        transaction_type='in',
+                        reason='initial_stock',
+                        quantity=initial_quantity,
+                        reference='إضافة منتج جديد',
+                        notes='الكمية الابتدائية عند إضافة المنتج',
+                        created_by=request.user,
+                        transaction_date=timezone.now()
+                    )
 
-            product = Product.objects.create(
-                name=name,
-                code=code,
-                category=category,
-                description=description,
-                price=price,
-                minimum_stock=minimum_stock
-            )
+                # إعادة تحميل الذاكرة المؤقتة للمنتجات
+                invalidate_product_cache(product.id)
 
-            # إعادة تحميل الذاكرة المؤقتة للمنتجات
-            invalidate_product_cache(product.id)
-            messages.success(request, 'تم إضافة المنتج بنجاح.')
-            return redirect('inventory:product_list')
+                success_msg = 'تم إضافة المنتج بنجاح.'
+                if initial_quantity > 0:
+                    success_msg += f' تم إضافة {initial_quantity} وحدة إلى مستودع {warehouse.name}.'
 
-        except ValueError as e:
-            messages.error(request, str(e))
-        except Exception as e:
-            messages.error(request, 'حدث خطأ أثناء إضافة المنتج.')
+                messages.success(request, success_msg)
+                return redirect('inventory:product_list')
 
-    categories = Category.objects.all()
-    return render(request, 'inventory/product_form.html', {'categories': categories})
+            except Exception as e:
+                messages.error(request, f'حدث خطأ أثناء إضافة المنتج: {str(e)}')
+    else:
+        form = ProductForm()
+
+    return render(request, 'inventory/product_form.html', {'form': form})
 
 @login_required
 def product_update(request, pk):
     product = get_object_or_404(Product, pk=pk)
     if request.method == 'POST':
-        try:
-            product.name = request.POST.get('name')
-            product.code = request.POST.get('code')
-            category_id = request.POST.get('category')
-            product.category = get_object_or_404(Category, id=category_id)
-            product.description = request.POST.get('description')
-            product.price = request.POST.get('price')
-            product.minimum_stock = request.POST.get('minimum_stock')
+        form = ProductForm(request.POST, instance=product)
+        if form.is_valid():
+            try:
+                # حفظ المنتج
+                product = form.save()
 
-            # Validation
-            if not all([product.name, product.category, product.price, product.minimum_stock]):
-                raise ValueError("جميع الحقول المطلوبة يجب ملؤها")
+                # ملاحظة: في التعديل، لا نضيف كمية جديدة تلقائياً
+                # يمكن للمستخدم إضافة كمية من خلال صفحة حركات المخزون
 
-            product.save()
-            # إعادة تحميل الذاكرة المؤقتة للمنتجات
-            invalidate_product_cache(product.id)
-            messages.success(request, 'تم تحديث المنتج بنجاح.')
-            return redirect('inventory:product_list')
+                # إعادة تحميل الذاكرة المؤقتة للمنتجات
+                invalidate_product_cache(product.id)
+                messages.success(request, 'تم تحديث المنتج بنجاح.')
+                return redirect('inventory:product_list')
 
-        except ValueError as e:
-            messages.error(request, str(e))
-        except Exception as e:
-            messages.error(request, 'حدث خطأ أثناء تحديث المنتج.')
+            except Exception as e:
+                messages.error(request, f'حدث خطأ أثناء تحديث المنتج: {str(e)}')
+    else:
+        form = ProductForm(instance=product)
 
-    categories = Category.objects.all()
-    return render(request, 'inventory/product_form.html', {
-        'product': product,
-        'categories': categories
-    })
+    return render(request, 'inventory/product_form.html', {'form': form, 'product': product})
 
 @login_required
 def product_delete(request, pk):

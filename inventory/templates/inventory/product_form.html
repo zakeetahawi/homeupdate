@@ -19,71 +19,163 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="name" class="form-label">اسم المنتج*</label>
-                                <input type="text" id="name" name="name" class="form-control" required
-                                    value="{{ product.name|default:'' }}">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    {{ form.name.label }}*
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.name.errors %}
+                                            <small>{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <label for="code" class="form-label">كود المنتج</label>
-                                <input type="text" id="code" name="code" class="form-control"
-                                    value="{{ product.code|default:'' }}">
+                                <label for="{{ form.code.id_for_label }}" class="form-label">
+                                    {{ form.code.label }}
+                                </label>
+                                {{ form.code }}
+                                {% if form.code.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.code.errors %}
+                                            <small>{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="category" class="form-label">الصنف*</label>
-                                <select id="category" name="category" class="form-select" required>
-                                    <option value="">اختر الصنف...</option>
-                                    {% for category in categories %}
-                                        <option value="{{ category.id }}" {% if product.category_id == category.id %}selected{% endif %}>
-                                            {{ category.name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
+                                <label for="{{ form.category.id_for_label }}" class="form-label">
+                                    {{ form.category.label }}*
+                                </label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.category.errors %}
+                                            <small>{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <label for="price" class="form-label">السعر*</label>
-                                <input type="number" id="price" name="price" class="form-control" required
-                                    min="0" step="0.01" value="{{ product.price|default:'' }}">
+                                <label for="{{ form.price.id_for_label }}" class="form-label">
+                                    {{ form.price.label }}*
+                                </label>
+                                {{ form.price }}
+                                {% if form.price.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.price.errors %}
+                                            <small>{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="description" class="form-label">الوصف</label>
-                            <textarea id="description" name="description" class="form-control" rows="3">{{ product.description|default:'' }}</textarea>
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                {{ form.description.label }}
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.description.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label for="minimum_stock" class="form-label">الحد الأدنى للمخزون*</label>
-                                <input type="number" id="minimum_stock" name="minimum_stock" class="form-control" required
-                                    min="0" value="{{ product.minimum_stock|default:'' }}">
+                                <label for="{{ form.minimum_stock.id_for_label }}" class="form-label">
+                                    {{ form.minimum_stock.label }}*
+                                </label>
+                                {{ form.minimum_stock }}
+                                {% if form.minimum_stock.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.minimum_stock.errors %}
+                                            <small>{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div class="col-md-4">
-                                <label for="currency" class="form-label">العملة</label>
-                                <select id="currency" name="currency" class="form-select">
-                                    <option value="EGP" {% if product.currency == "EGP" %}selected{% endif %}>جنيه مصري</option>
-                                    <option value="USD" {% if product.currency == "USD" %}selected{% endif %}>دولار أمريكي</option>
-                                    <option value="EUR" {% if product.currency == "EUR" %}selected{% endif %}>يورو</option>
-                                </select>
+                                <label for="{{ form.currency.id_for_label }}" class="form-label">
+                                    {{ form.currency.label }}
+                                </label>
+                                {{ form.currency }}
+                                {% if form.currency.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.currency.errors %}
+                                            <small>{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             <div class="col-md-4">
-                                <label for="unit" class="form-label">الوحدة</label>
-                                <select id="unit" name="unit" class="form-select">
-                                    <option value="piece" {% if product.unit == "piece" %}selected{% endif %}>قطعة</option>
-                                    <option value="kg" {% if product.unit == "kg" %}selected{% endif %}>كيلوجرام</option>
-                                    <option value="gram" {% if product.unit == "gram" %}selected{% endif %}>جرام</option>
-                                    <option value="liter" {% if product.unit == "liter" %}selected{% endif %}>لتر</option>
-                                    <option value="meter" {% if product.unit == "meter" %}selected{% endif %}>متر</option>
-                                    <option value="box" {% if product.unit == "box" %}selected{% endif %}>علبة</option>
-                                    <option value="pack" {% if product.unit == "pack" %}selected{% endif %}>عبوة</option>
-                                    <option value="dozen" {% if product.unit == "dozen" %}selected{% endif %}>دستة</option>
-                                    <option value="roll" {% if product.unit == "roll" %}selected{% endif %}>لفة</option>
-                                    <option value="sheet" {% if product.unit == "sheet" %}selected{% endif %}>ورقة</option>
-                                </select>
+                                <label for="{{ form.unit.id_for_label }}" class="form-label">
+                                    {{ form.unit.label }}*
+                                </label>
+                                {{ form.unit }}
+                                {% if form.unit.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.unit.errors %}
+                                            <small>{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
+
+                        <!-- الحقول الجديدة: المستودع والكمية الحالية (فقط عند الإضافة) -->
+                        {% if not product %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.warehouse.id_for_label }}" class="form-label">
+                                    {{ form.warehouse.label }}*
+                                </label>
+                                {{ form.warehouse }}
+                                {% if form.warehouse.help_text %}
+                                    <div class="form-text">{{ form.warehouse.help_text }}</div>
+                                {% endif %}
+                                {% if form.warehouse.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.warehouse.errors %}
+                                            <small>{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.initial_quantity.id_for_label }}" class="form-label">
+                                    {{ form.initial_quantity.label }}
+                                    <span class="text-muted">(اختياري)</span>
+                                </label>
+                                {{ form.initial_quantity }}
+                                {% if form.initial_quantity.help_text %}
+                                    <div class="form-text">{{ form.initial_quantity.help_text }}</div>
+                                {% endif %}
+                                {% if form.initial_quantity.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.initial_quantity.errors %}
+                                            <small>{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <!-- رسالة توضيحية في حالة التعديل -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>ملاحظة:</strong> لإضافة أو تعديل كميات المخزون، يرجى استخدام صفحة
+                            <a href="{% url 'inventory:stock_transaction_create' %}" class="alert-link">حركات المخزون</a>.
+                        </div>
+                        {% endif %}
 
                         <div class="d-flex justify-content-between">
                             <button type="submit" class="btn btn-primary">
