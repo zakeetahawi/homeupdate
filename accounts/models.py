@@ -481,6 +481,8 @@ class SystemSettings(models.Model):
     currency = models.CharField(_('العملة'), max_length=3, choices=CURRENCY_CHOICES, default='SAR')
     version = models.CharField(_('إصدار النظام'), max_length=20, default='1.0.0')
 
+    enable_notifications = models.BooleanField(_('تفعيل الإشعارات'), default=True)
+    enable_email_notifications = models.BooleanField(_('تفعيل إشعارات البريد الإلكتروني'), default=False)
     items_per_page = models.PositiveIntegerField(_('عدد العناصر في الصفحة'), default=20)
     low_stock_threshold = models.PositiveIntegerField(_('حد المخزون المنخفض (%)'), default=20)
     enable_analytics = models.BooleanField(_('تفعيل التحليلات'), default=True)

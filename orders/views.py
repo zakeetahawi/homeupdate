@@ -657,16 +657,33 @@ def payment_delete(request, pk):
 @login_required
 def salesperson_list(request):
     """
-    View for listing salespersons and their orders
+    View for listing salespersons and their orders - Optimized to fix N+1 query problem
     """
-    salespersons = Salesperson.objects.all()
-
-    # Add order statistics for each salesperson
-    for sp in salespersons:
-        sp.total_orders = Order.objects.filter(salesperson=sp).count()
-        sp.completed_orders = Order.objects.filter(salesperson=sp, status='completed').count()
-        sp.pending_orders = Order.objects.filter(salesperson=sp, status='pending').count()
-        sp.total_sales = Order.objects.filter(salesperson=sp, status='completed').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    # استخدام annotate لحساب الإحصائيات في استعلام واحد بدلاً من N+1
+    from django.db.models import Case, When, IntegerField
+    
+    salespersons = Salesperson.objects.select_related('branch').annotate(
+        total_orders=Count('order'),
+        completed_orders=Count(
+            Case(
+                When(order__status='completed', then=1),
+                output_field=IntegerField()
+            )
+        ),
+        pending_orders=Count(
+            Case(
+                When(order__status='pending', then=1),
+                output_field=IntegerField()
+            )
+        ),
+        total_sales=Sum(
+            Case(
+                When(order__status='completed', then='order__total_amount'),
+                default=0,
+                output_field=models.DecimalField(max_digits=10, decimal_places=2)
+            )
+        )
+    ).prefetch_related('order_set')
 
     context = {
         'salespersons': salespersons,

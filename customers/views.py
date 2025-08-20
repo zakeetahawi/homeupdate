@@ -121,15 +121,16 @@ def customer_list(request):
     status_value = request.GET.get('status', '')
     branch_value = request.GET.get('branch', '')
 
-    # إضافة معلومات إضافية للعملاء من الفروع الأخرى
+    # إضافة معلومات إضافية للعملاء من الفروع الأخرى - محسن لتجنب N+1
     cross_branch_customers = []
-    if search_term:
-        for customer in page_obj:
-            # للمستخدم admin أو المستخدمين بدون فرع، اعتبر جميع العملاء من نفس الفرع
-            if hasattr(request.user, 'branch') and request.user.branch:
-                if is_customer_cross_branch(request.user, customer):
-                    cross_branch_customers.append(customer.pk)
-            # إذا كان المستخدم admin أو بدون فرع، لا نعتبر أي عميل من فرع آخر
+    if search_term and hasattr(request.user, 'branch') and request.user.branch:
+        # جمع معرفات العملاء في قائمة واحدة بدلاً من استعلام منفصل لكل عميل
+        customer_ids = [customer.pk for customer in page_obj]
+        # استعلام واحد للتحقق من ال��ملاء من فروع أخرى
+        cross_branch_customer_ids = Customer.objects.filter(
+            pk__in=customer_ids
+        ).exclude(branch=request.user.branch).values_list('pk', flat=True)
+        cross_branch_customers = list(cross_branch_customer_ids)
 
     context = {
         'page_obj': page_obj,

@@ -16,7 +16,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_per_page = 50
+    list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
+    show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
     list_display = ('name', 'code', 'category', 'price', 'get_current_stock', 'get_stock_status')
     list_filter = ('category', 'created_at')
     search_fields = ('name', 'code', 'description')
@@ -36,9 +37,8 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
     def get_current_stock(self, obj):
-        stock = obj.transactions.filter(transaction_type='in').aggregate(Sum('quantity'))['quantity__sum'] or 0
-        stock -= obj.transactions.filter(transaction_type='out').aggregate(Sum('quantity'))['quantity__sum'] or 0
-        return stock
+        # استخدام خاصية current_stock المحسنة من النموذج
+        return obj.current_stock
     get_current_stock.short_description = _('المخزون الحالي')
 
     def get_stock_status(self, obj):
@@ -49,6 +49,16 @@ class ProductAdmin(admin.ModelAdmin):
             return _('مخزون منخفض')
         return _('متوفر')
     get_stock_status.short_description = _('حالة المخزون')
+
+    def get_queryset(self, request):
+        """استعلام محسن للمنتجات مع تحسين حساب المخزون"""
+        return super().get_queryset(request).select_related(
+            'category'
+        ).only(
+            'id', 'name', 'code', 'description', 'unit', 'price', 'minimum_stock',
+            'created_at', 'updated_at',
+            'category__id', 'category__name'
+        )
 
 @admin.register(StockTransaction)
 class StockTransactionAdmin(admin.ModelAdmin):

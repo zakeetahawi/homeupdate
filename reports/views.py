@@ -222,18 +222,50 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
         }
 
     def generate_inventory_report(self, report):
-        """Generate inventory report data"""
-        products = Product.objects.all()
+        """Generate inventory report data - محسن لتجنب N+1"""
+        # استخدام select_related لتحسين الأداء
+        products = Product.objects.select_related('category').all()
 
-        # Get all products first
-        all_products = list(products)
+        # حساب الإحصائيات باستخدام استعلامات قاعدة البيانات بدلاً من Python loops
+        from django.db.models import Sum, Count, Case, When, IntegerField
+        
+        # حساب الإحصائيات الأساسية أولاً
+        basic_stats = products.aggregate(
+            total_items=Count('id')
+        )
+
+        # حساب الإحصائيات بطريقة محسنة باستخدام Subquery
+        from django.db.models import OuterRef, Subquery
+        from inventory.models import StockTransaction
+        
+        # الحصول على آخر رصيد لكل منتج
+        latest_balance = StockTransaction.objects.filter(
+            product=OuterRef('pk')
+        ).order_by('-transaction_date').values('running_balance')[:1]
+        
+        # إضافة الرصيد الحالي للمنتجات
+        products_with_stock = products.annotate(
+            current_stock_level=Subquery(latest_balance)
+        )
+        
+        # جلب المنتجات منخفضة المخزون والمنتجات ال��افدة باستعلامات منفصلة
+        low_stock_items = products_with_stock.filter(
+            current_stock_level__lte=F('minimum_stock'),
+            current_stock_level__gt=0
+        )[:20]  # تحديد العدد لتحسين الأداء
+        
+        out_of_stock_items = products_with_stock.filter(
+            current_stock_level=0
+        )[:20]
 
         data = {
-            'total_items': len(all_products),
-            'total_value': sum(product.current_stock * product.price for product in all_products),
-            'low_stock_items': [product for product in all_products if product.needs_restock],
-            'out_of_stock_items': [product for product in all_products if product.current_stock == 0],
-            'items': all_products
+            'total_items': stats['total_items'] or 0,
+            'total_value': stats['total_value'] or 0,
+            'low_stock_items': list(low_stock_items),
+            'out_of_stock_items': list(out_of_stock_items),
+            'low_stock_count': stats['low_stock_count'] or 0,
+            'out_of_stock_count': stats['out_of_stock_count'] or 0,
+            'items': products[:50]  # تحديد العدد لتحسين الأداء
         }
         return data
 

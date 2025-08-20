@@ -41,90 +41,154 @@ def admin_dashboard(request):
     from .dashboard_utils import (
         get_customers_statistics, get_orders_statistics, get_manufacturing_statistics,
         get_inspections_statistics, get_installation_orders_statistics, 
-        get_installations_statistics, get_inventory_statistics,
-        get_enhanced_chart_data, get_dashboard_summary
+        get_inventory_statistics, get_enhanced_chart_data
     )
-    from accounts.utils import get_dashboard_year_context
-    from accounts.models import DashboardYearSettings
+    from accounts.models import CompanyInfo, Branch, DashboardYearSettings
     
     # الحصول على المعاملات من الطلب
     selected_branch = request.GET.get('branch', 'all')
-    selected_month = request.GET.get('month', 'year')
-    selected_year = request.GET.get('year', '')
+    selected_month = request.GET.get('month', 'year')  # الافتراضي هو السنة الكاملة
+    selected_year = request.GET.get('year', timezone.now().year)
     comparison_month = request.GET.get('comparison_month', '')
     comparison_year = request.GET.get('comparison_year', '')
-    comparison_type = request.GET.get('comparison_type', 'month')
-    show_all_years = request.GET.get('show_all_years', 'false') == 'true'
-    
-    # إذا لم يتم تحديد سنة، استخدم السنة الافتراضية من الإعدادات
-    if not selected_year:
-        if show_all_years:
-            selected_year = 'all'
-        else:
-            selected_year = DashboardYearSettings.get_default_year()
+    comparison_type = request.GET.get('comparison_type', 'month')  # 'month' or 'year'
     
     # تحويل المعاملات إلى أرقام
     try:
         if selected_month != 'year':
             selected_month = int(selected_month)
-        if selected_year != 'all':
-            selected_year = int(selected_year)
+        selected_year = int(selected_year)
         if comparison_month:
             comparison_month = int(comparison_month)
         if comparison_year:
             comparison_year = int(comparison_year)
     except (ValueError, TypeError):
-        selected_month = 'year'
-        if not show_all_years:
-            selected_year = DashboardYearSettings.get_default_year()
+        selected_month = 'year'  # الافتراضي هو السنة الكاملة
+        selected_year = timezone.now().year
         comparison_month = ''
         comparison_year = ''
     
-    # تحديد الفترة الزمنية
-    start_date, end_date = get_date_range(selected_year, selected_month, show_all_years)
+    # تحديد الفترة الزمنية مع timezone awareness
+    if selected_month == 'year':  # إذا تم اختيار سنة كاملة
+        start_date = timezone.make_aware(datetime(selected_year, 1, 1))
+        end_date = timezone.make_aware(datetime(selected_year, 12, 31, 23, 59, 59))
+    else:  # إذا تم اختيار شهر محدد
+        start_date = timezone.make_aware(datetime(selected_year, selected_month, 1))
+        if selected_month == 12:
+            end_date = timezone.make_aware(datetime(selected_year + 1, 1, 1)) - timedelta(seconds=1)
+        else:
+            end_date = timezone.make_aware(datetime(selected_year, selected_month + 1, 1)) - timedelta(seconds=1)
     
-    # إحصائيات شاملة
-    stats = get_comprehensive_statistics(selected_branch, start_date, end_date, show_all_years)
+    # فلترة البيانات حسب الفرع
+    branch_filter = {}
+    if selected_branch != 'all':
+        branch_filter = {'branch_id': selected_branch}
     
-    # مقارنة مع الفترة المحددة
-    comparison_data = get_comparison_data(
-        selected_branch, comparison_year, comparison_month, comparison_type
-    )
+    # إحصائيات العملاء - تطبيق الفلتر الزمني
+    customers_stats = get_customers_statistics(selected_branch, start_date, end_date)
+    
+    # إحصائيات الطلبات
+    orders_stats = get_orders_statistics(selected_branch, start_date, end_date)
+    
+    # إحصائيات التصنيع
+    manufacturing_stats = get_manufacturing_statistics(selected_branch, start_date, end_date)
+    
+    # إحصائيات المعاينات
+    inspections_stats = get_inspections_statistics(selected_branch, start_date, end_date)
+    
+    # إحصائيات طلبات التركيب (جميع الطلبات من نوع تركيب بناءً على تاريخ الطلب)
+    installation_orders_stats = get_installation_orders_statistics(selected_branch, start_date, end_date)
+    
+    # إحصائيات المخزون
+    inventory_stats = get_inventory_statistics(selected_branch)
+    
+    # مقارنة مع الفترة المحددة إذا تم تحديدها
+    comparison_data = {}
+    if comparison_year:
+        if comparison_type == 'year':  # مقارنة سنة كاملة
+            comp_start_date = timezone.make_aware(datetime(comparison_year, 1, 1))
+            comp_end_date = timezone.make_aware(datetime(comparison_year, 12, 31, 23, 59, 59))
+        elif comparison_month and comparison_month != 'year':  # مقارنة شهر محدد
+            comp_start_date = timezone.make_aware(datetime(comparison_year, comparison_month, 1))
+            if comparison_month == 12:
+                comp_end_date = timezone.make_aware(datetime(comparison_year + 1, 1, 1)) - timedelta(seconds=1)
+            else:
+                comp_end_date = timezone.make_aware(datetime(comparison_year, comparison_month + 1, 1)) - timedelta(seconds=1)
+        else:
+            comp_start_date = None
+            comp_end_date = None
+        
+        if comp_start_date and comp_end_date:
+            comparison_data = {
+                'customers': get_customers_statistics(selected_branch, comp_start_date, comp_end_date),
+                'orders': get_orders_statistics(selected_branch, comp_start_date, comp_end_date),
+                'manufacturing': get_manufacturing_statistics(selected_branch, comp_start_date, comp_end_date),
+                'inspections': get_inspections_statistics(selected_branch, comp_start_date, comp_end_date),
+                'installations': get_installation_orders_statistics(selected_branch, comp_start_date, comp_end_date),
+            }
     
     # البيانات للرسوم البيانية
-    chart_data = get_enhanced_chart_data(selected_branch, selected_year, show_all_years)
+    chart_data = get_enhanced_chart_data(selected_branch, selected_year)
     
     # معلومات الشركة
-    company_info = get_or_create_company_info()
+    company_info = CompanyInfo.objects.first()
+    if not company_info:
+        company_info = CompanyInfo.objects.create(
+            name='LATARA',
+            version='1.0.0',
+            release_date='2025-04-30',
+            developer='zakee tahawi'
+        )
     
-    # قوائم الفلاتر
-    filter_data = get_filter_data()
+    # قائمة الفروع للفلتر
+    branches = Branch.objects.filter(is_active=True).order_by('name')
     
-    # معلومات السنة
-    year_context = get_dashboard_year_context(request)
+    # قائمة الأشهر
+    months = [
+        {'value': 'year', 'label': 'السنة الكاملة'},
+        {'value': 1, 'label': 'يناير'},
+        {'value': 2, 'label': 'فبراير'},
+        {'value': 3, 'label': 'مارس'},
+        {'value': 4, 'label': 'أبريل'},
+        {'value': 5, 'label': 'مايو'},
+        {'value': 6, 'label': 'يونيو'},
+        {'value': 7, 'label': 'يوليو'},
+        {'value': 8, 'label': 'أغسطس'},
+        {'value': 9, 'label': 'سبتمبر'},
+        {'value': 10, 'label': 'أكتوبر'},
+        {'value': 11, 'label': 'نوفمبر'},
+        {'value': 12, 'label': 'ديسمبر'},
+    ]
     
-    # ملخص الداشبورد
-    dashboard_summary = get_dashboard_summary(stats)
-
+    # قائمة السنوات
+    current_year = timezone.now().year
+    years = list(range(current_year - 5, current_year + 1))
+    
+    if selected_branch != 'all':
+        selected_branch = str(selected_branch)
+    
     context = {
-        **stats,
+        'customers_stats': customers_stats,
+        'orders_stats': orders_stats,
+        'manufacturing_stats': manufacturing_stats,
+        'inspections_stats': inspections_stats,
+        'installation_orders_stats': installation_orders_stats,
+        'inventory_stats': inventory_stats,
         'comparison_data': comparison_data,
         'chart_data': chart_data,
         'company_info': company_info,
-        'dashboard_summary': dashboard_summary,
-        **filter_data,
-        **year_context,
-        'selected_branch': str(selected_branch) if selected_branch != 'all' else 'all',
+        'branches': branches,
+        'months': months,
+        'years': years,
+        'selected_branch': selected_branch,
         'selected_month': selected_month,
         'selected_year': selected_year,
         'comparison_month': comparison_month,
         'comparison_year': comparison_year,
         'comparison_type': comparison_type,
-        'show_all_years': show_all_years,
         'start_date': start_date,
         'end_date': end_date,
         'timezone': timezone,
-        'performance_metrics': get_performance_metrics(stats),
     }
     
     return render(request, 'admin_dashboard.html', context)
@@ -309,11 +373,25 @@ def home(request):
         status__in=['completed', 'cancelled']
     ).order_by('expected_delivery_date')[:5]
     
-    # Get low stock products
-    low_stock_products = [
-        product for product in Product.objects.all()
-        if product.current_stock > 0 and product.current_stock <= product.minimum_stock
-    ][:10]
+    # Get low stock products - محسن لتجنب N+1
+    # نظراً لأن current_stock هو property، نحتاج لاستخدام طريقة مختلفة
+    from django.db.models import OuterRef, Subquery
+    from inventory.models import StockTransaction
+    
+    # الحصول على آخر رصيد لكل منتج
+    latest_balance = StockTransaction.objects.filter(
+        product=OuterRef('pk')
+    ).order_by('-transaction_date').values('running_balance')[:1]
+    
+    # جلب المنتجات مع الرصيد الحالي
+    products_with_stock = Product.objects.annotate(
+        current_stock_level=Subquery(latest_balance)
+    ).filter(
+        current_stock_level__gt=0,
+        current_stock_level__lte=F('minimum_stock')
+    ).select_related('category')[:10]
+    
+    low_stock_products = list(products_with_stock)
 
     # Get company info for logo
     company_info = CompanyInfo.objects.first()
@@ -463,7 +541,7 @@ def dashboard_api(request):
         },
         'inventory': {
             'total_products': Product.objects.count(),
-            'low_stock': Product.objects.filter(current_stock__lte=F('minimum_stock')).count()
+            'low_stock': 0  # سنحسب هذا لاحقاً بطريقة صحيحة
         },
         'production': {
             'active_orders': ManufacturingOrder.objects.exclude(status__in=['completed', 'cancelled']).count(),

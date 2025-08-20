@@ -1,4 +1,63 @@
 import os
+# ======================================
+# Slow Query & Performance Logging
+# ======================================
+import logging
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'slow_queries_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': '/tmp/slow_queries.log',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['slow_queries_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'performance': {
+            'handlers': ['slow_queries_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# تسجيل الاستعلامات البطيئة فقط (أكبر من 500ms)
+import time
+from django.db import connection
+from django.utils.deprecation import MiddlewareMixin
+
+class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        request._start_time = time.time()
+
+    def process_response(self, request, response):
+        total_time = (time.time() - getattr(request, '_start_time', time.time())) * 1000
+        if total_time > 500:
+            logger = logging.getLogger('performance')
+            logger.info(f"SLOW PAGE: {request.path} | {int(total_time)}ms | user={getattr(request, 'user', None)}")
+        for q in getattr(connection, 'queries', []):
+            duration = float(q.get('time', 0)) * 1000
+            if duration > 500:
+                logger = logging.getLogger('performance')
+                logger.info(f"SLOW QUERY: {q['sql']} | {duration:.0f}ms | path={getattr(request, 'path', '')}")
+        return response
+
+# أضف هذا الميدل وير في أعلى قائمة MIDDLEWARE
+import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
@@ -112,9 +171,6 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-# Debug toolbar معطل مؤقتاً لتحسين الأداء
-
-AUTH_USER_MODEL = 'accounts.User'
 
 # قائمة الوسطاء الأساسية (تم تعطيل الوسطاء المخصصة مؤقتاً)
 MIDDLEWARE = [
@@ -133,6 +189,25 @@ MIDDLEWARE = [
     # 'crm.middleware.PerformanceMiddleware',  # تم تعطيل مؤقتاً
     # 'crm.middleware.LazyLoadMiddleware',  # تم تعطيل مؤقتاً
 ]
+
+# Debug toolbar configuration for performance monitoring
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
+    # Debug Toolbar Middleware
+    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    # Debug Toolbar Settings
+    import socket
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + ["127.0.0.1", "10.0.2.2"]
+    DEBUG_TOOLBAR_CONFIG = {
+        'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
+        'SHOW_COLLAPSED': True,
+        'SQL_WARNING_THRESHOLD': 20,  # تحذير عند تجاوز 20 استعلام
+        'ENABLE_STACKTRACES': True,
+        'SHOW_TEMPLATE_CONTEXT': True,
+    }
+
+AUTH_USER_MODEL = 'accounts.User'
 
 # تم تعطيل middleware إضافي مؤقتاً لحل مشكلة التحميل
 # if DEBUG:
