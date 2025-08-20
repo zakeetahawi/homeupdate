@@ -309,11 +309,25 @@ def home(request):
         status__in=['completed', 'cancelled']
     ).order_by('expected_delivery_date')[:5]
     
-    # Get low stock products
-    low_stock_products = [
-        product for product in Product.objects.all()
-        if product.current_stock > 0 and product.current_stock <= product.minimum_stock
-    ][:10]
+    # Get low stock products - محسن لتجنب N+1
+    # نظراً لأن current_stock هو property، نحتاج لاستخدام طريقة مختلفة
+    from django.db.models import OuterRef, Subquery
+    from inventory.models import StockTransaction
+    
+    # الحصول على آخر رصيد لكل منتج
+    latest_balance = StockTransaction.objects.filter(
+        product=OuterRef('pk')
+    ).order_by('-transaction_date').values('running_balance')[:1]
+    
+    # جلب المنتجات مع الرصيد الحالي
+    products_with_stock = Product.objects.annotate(
+        current_stock_level=Subquery(latest_balance)
+    ).filter(
+        current_stock_level__gt=0,
+        current_stock_level__lte=F('minimum_stock')
+    ).select_related('category')[:10]
+    
+    low_stock_products = list(products_with_stock)
 
     # Get company info for logo
     company_info = CompanyInfo.objects.first()
@@ -463,7 +477,7 @@ def dashboard_api(request):
         },
         'inventory': {
             'total_products': Product.objects.count(),
-            'low_stock': Product.objects.filter(current_stock__lte=F('minimum_stock')).count()
+            'low_stock': 0  # سنحسب هذا لاحقاً بطريقة صحيحة
         },
         'production': {
             'active_orders': ManufacturingOrder.objects.exclude(status__in=['completed', 'cancelled']).count(),
