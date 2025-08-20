@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('orders', '0021_fix_order_status_default'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('accounts', '0015_remove_systemsettings_enable_email_notifications_and_more'),
+        ('accounts', '0014_add_user_to_salesperson'),
         ('contenttypes', '0002_remove_content_type_name'),
         ('customers', '0006_alter_customer_branch'),
     ]
