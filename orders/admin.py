@@ -63,8 +63,9 @@ class PaymentInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_per_page = 50
-    list_max_show_all = 100
+    list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
+    list_max_show_all = 50  # تقليل من 100 إلى 50
+    show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
     list_display = (
         'order_number_display', 
         'customer', 
@@ -301,6 +302,14 @@ class OrderAdmin(admin.ModelAdmin):
             'customer', 'customer__branch', 'salesperson', 'branch', 'created_by', 'related_inspection'
         ).prefetch_related(
             'items__product', 'payments'
+        ).only(
+            'id', 'order_number', 'order_type', 'status', 'tracking_status', 'final_price',
+            'payment_verified', 'expected_delivery_date', 'order_date', 'created_at',
+            'customer__id', 'customer__name', 'customer__branch__name',
+            'salesperson__id', 'salesperson__username',
+            'branch__id', 'branch__name',
+            'created_by__id', 'created_by__username',
+            'related_inspection__id'
         )
 
     def get_form(self, request, obj=None, **kwargs):

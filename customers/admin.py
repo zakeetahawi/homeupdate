@@ -86,8 +86,9 @@ class CustomerTypeAdmin(admin.ModelAdmin):
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     form = CustomerAdminForm
-    list_per_page = 50  # زيادة العدد إلى 50
-    list_max_show_all = 100
+    list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
+    list_max_show_all = 50  # تقليل من 100 إلى 50
+    show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
     
     list_display = [
         'customer_code_display', 'customer_image', 'name', 'customer_type_display',
@@ -167,6 +168,11 @@ class CustomerAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         qs = qs.select_related(
             'category', 'branch', 'created_by'
+        ).only(
+            'id', 'code', 'name', 'customer_type', 'phone', 'phone2', 'birth_date', 'status',
+            'category__id', 'category__name',
+            'branch__id', 'branch__name',
+            'created_by__id', 'created_by__username'
         )
         
         if request.user.is_superuser:

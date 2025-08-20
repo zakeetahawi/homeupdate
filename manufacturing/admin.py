@@ -49,8 +49,8 @@ class ManufacturingOrderItemInline(admin.TabularInline):
 
 @admin.register(ManufacturingOrder)
 class ManufacturingOrderAdmin(admin.ModelAdmin):
-    list_per_page = 25  # عرض 50 صف كافتراضي
-    list_max_show_all = 100  # السماح بعرض حتى 100 صف عند اختيار "عرض الكل"
+    list_per_page = 15  # تقليل من 25 إلى 15 لتحسين الأداء
+    list_max_show_all = 50  # تقليل من 100 إلى 50
     show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
     list_display = [
         'manufacturing_code',
@@ -441,6 +441,14 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
             'order__customer', 
             'production_line',
             'created_by'
+        ).only(
+            'id', 'contract_number', 'invoice_number', 'order_type', 'order_date',
+            'expected_delivery_date', 'status', 'exit_permit_number', 'delivery_permit_number',
+            'delivery_recipient_name', 'delivery_date', 'created_at', 'updated_at',
+            'completion_date', 'rejection_reply_date', 'has_rejection_reply',
+            'order__id', 'order__order_number', 'order__customer__name',
+            'production_line__id', 'production_line__name',
+            'created_by__id', 'created_by__username'
         ).defer(
             'notes', 'rejection_reason', 'rejection_reply'
         )
