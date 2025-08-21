@@ -9,7 +9,7 @@ from inspections.models import Inspection
 
 
 class ProductSelectWidget(forms.Select):
-    """Widget مخصص لإضافة data-price للمنتجات"""
+    """Widget مخصص لإضافة data-price للمنتجات مع تحسين الأداء"""
 
     def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
         option = super().create_option(name, value, label, selected, index, subindex, attrs)
@@ -17,9 +17,18 @@ class ProductSelectWidget(forms.Select):
         if value:
             try:
                 from inventory.models import Product
-                product = Product.objects.get(pk=value)
-                option['attrs']['data-price'] = str(product.price)
-            except:
+                # استخدام cache لتجنب استعلامات متكررة
+                cache_key = f'product_price_{value}'
+                from django.core.cache import cache
+                cached_price = cache.get(cache_key)
+                
+                if cached_price is None:
+                    product = Product.objects.only('price').get(pk=value)
+                    cached_price = str(product.price)
+                    cache.set(cache_key, cached_price, 300)  # cache for 5 minutes
+                
+                option['attrs']['data-price'] = cached_price
+            except Product.DoesNotExist:
                 pass
 
         return option
@@ -30,8 +39,14 @@ class OrderItemForm(forms.ModelForm):
         model = OrderItem
         fields = ['product', 'quantity', 'unit_price', 'notes']
         widgets = {
-            'product': ProductSelectWidget(attrs={'class': 'form-control product-select'}),
-            'quantity': forms.NumberInput(attrs={'class': 'form-control item-quantity', 'min': '1'}),
+            'product': forms.Select(attrs={'class': 'form-control product-select'}),
+            'quantity': forms.TextInput(attrs={
+                'class': 'form-control item-quantity', 
+                'type': 'number',
+                'min': '0.001', 
+                'step': '0.001',
+                'placeholder': 'مثال: 4.25'
+            }),
             'unit_price': forms.NumberInput(attrs={'class': 'form-control item-price', 'min': '0', 'step': '0.01'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
@@ -39,17 +54,40 @@ class OrderItemForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # إضافة data-price للمنتجات
+        # تحسين: لا نقوم بتحميل جميع المنتجات هنا لتجنب N+1 queries
+        # سيتم التعامل مع هذا في الـ widget المخصص
         if 'product' in self.fields:
+            # استخدام ModelChoiceField بدلاً من تحميل جميع المنتجات
             from inventory.models import Product
-            products = Product.objects.all()
+            self.fields['product'].queryset = Product.objects.select_related('category').only(
+                'id', 'name', 'price', 'category__name'
+            )
+            
+            # إصلاح مشكلة ModelChoiceIteratorValue
+            if hasattr(self.fields['product'], 'widget') and hasattr(self.fields['product'].widget, 'choices'):
+                # تأكد من أن الخيارات صحيحة
+                try:
+                    self.fields['product'].widget.choices = self.fields['product'].choices
+                except Exception:
+                    # إذا فشل، استخدم queryset مباشرة
+                    pass
 
-            # إنشاء widget مخصص مع data attributes
-            choices = [('', 'اختر المنتج')]
-            for product in products:
-                choices.append((product.id, f"{product.name} - {product.price} ج.م"))
+    def clean_quantity(self):
+        """تنظيف وتأكد من صحة الكمية"""
+        quantity = self.cleaned_data.get('quantity')
+        if quantity is not None:
+            try:
+                # تحويل إلى Decimal للتأكد من الدقة
+                from decimal import Decimal
+                quantity = Decimal(str(quantity))
+                if quantity < 0:
+                    raise forms.ValidationError('الكمية لا يمكن أن تكون سالبة')
+                return quantity
+            except (ValueError, TypeError):
+                raise forms.ValidationError('يرجى إدخال قيمة صحيحة للكمية')
+        return quantity
 
-            self.fields['product'].widget.choices = choices
+
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -512,6 +550,7 @@ class OrderEditForm(forms.ModelForm):
         model = Order
         fields = [
             'customer', 'branch', 'salesperson', 'selected_types',
+            'invoice_number', 'contract_number', 'invoice_number_2', 'contract_number_2',
             'notes', 'total_amount', 'paid_amount'
         ]
         widgets = {
@@ -521,6 +560,22 @@ class OrderEditForm(forms.ModelForm):
             'selected_types': forms.TextInput(attrs={
                 'class': 'form-control',
                 'readonly': True,
+            }),
+            'invoice_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم الفاتورة'
+            }),
+            'contract_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم العقد'
+            }),
+            'invoice_number_2': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم الفاتورة 2'
+            }),
+            'contract_number_2': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم العقد 2'
             }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -544,6 +599,10 @@ class OrderEditForm(forms.ModelForm):
             'branch': 'الفرع',
             'salesperson': 'البائع',
             'selected_types': 'نوع الطلب',
+            'invoice_number': 'رقم الفاتورة',
+            'contract_number': 'رقم العقد',
+            'invoice_number_2': 'رقم الفاتورة 2',
+            'contract_number_2': 'رقم العقد 2',
             'notes': 'ملاحظات الطلب',
             'total_amount': 'إجمالي المبلغ',
             'paid_amount': 'المبلغ المدفوع',
@@ -599,11 +658,32 @@ class OrderEditForm(forms.ModelForm):
         return cleaned_data
 
 
+class OrderItemEditForm(OrderItemForm):
+    """نموذج مخصص لتعديل عناصر الطلب"""
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # تحسين queryset للمنتجات في التعديل
+        if 'product' in self.fields:
+            from inventory.models import Product
+            self.fields['product'].queryset = Product.objects.select_related('category').only(
+                'id', 'name', 'price', 'category__name'
+            )
+            
+            # إصلاح القيمة الأولية للمنتج
+            if self.instance and self.instance.pk and self.instance.product:
+                self.fields['product'].initial = self.instance.product.id
+            
+            # إصلاح القيمة الأولية للكمية
+            if self.instance and self.instance.pk and self.instance.quantity:
+                self.fields['quantity'].initial = self.instance.get_clean_quantity_display()
+
 # تحديث OrderItemFormSet للتعديل
 OrderItemEditFormSet = forms.inlineformset_factory(
     Order,
     OrderItem,
-    form=OrderItemForm,
+    form=OrderItemEditForm,
     extra=0,  # لا نريد عناصر إضافية فارغة في التعديل
     can_delete=True,
     min_num=0,  # السماح بحذف جميع العناصر مؤقتاً

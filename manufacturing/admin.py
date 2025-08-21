@@ -45,6 +45,18 @@ class ManufacturingOrderItemInline(admin.TabularInline):
     extra = 1
     fields = ('product_name', 'quantity', 'specifications', 'status')
     readonly_fields = ('status',)
+    
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        
+        # تخصيص widgets لدعم القيم العشرية
+        formset.form.base_fields['quantity'].widget.attrs.update({
+            'min': '0.001',
+            'step': '0.001',
+            'placeholder': 'مثال: 4.25'
+        })
+        
+        return formset
 
 
 @admin.register(ManufacturingOrder)
@@ -143,6 +155,14 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
 
     actions = ['bulk_update_status']
+    
+    def get_queryset(self, request):
+        """تحسين الاستعلامات باستخدام select_related و prefetch_related"""
+        return super().get_queryset(request).select_related(
+            'order__customer', 'order__salesperson', 'production_line'
+        ).prefetch_related(
+            'items'
+        )
 
     def bulk_update_status(self, request, queryset):
         from django import forms

@@ -369,9 +369,12 @@ class ManufacturingOrderItem(models.Model):
         verbose_name='اسم المنتج'
     )
     
-    quantity = models.PositiveIntegerField(
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
         default=1,
-        verbose_name='الكمية'
+        verbose_name='الكمية',
+        help_text='يمكن إدخال قيم عشرية مثل 4.25 متر'
     )
     
     specifications = models.TextField(
@@ -392,7 +395,19 @@ class ManufacturingOrderItem(models.Model):
         verbose_name_plural = 'عناصر أوامر التصنيع'
     
     def __str__(self):
-        return f'{self.product_name} - {self.quantity}'
+        return f'{self.product_name} - {self.get_clean_quantity_display()}'
+    
+    def get_clean_quantity_display(self):
+        """إرجاع الكمية بدون أصفار زائدة"""
+        if self.quantity is None:
+            return '0'
+        
+        str_value = str(self.quantity)
+        if '.' in str_value:
+            str_value = str_value.rstrip('0')
+            if str_value.endswith('.'):
+                str_value = str_value[:-1]
+        return str_value
 
 
 class ProductionLine(models.Model):

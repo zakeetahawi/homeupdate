@@ -123,6 +123,45 @@
                 </div>
                 
                 <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.invoice_number.id_for_label }}" class="form-label">رقم الفاتورة</label>
+                            {% render_field form.invoice_number class="form-control" %}
+                            {% if form.invoice_number.errors %}
+                                <div class="text-danger">{{ form.invoice_number.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.contract_number.id_for_label }}" class="form-label">رقم العقد</label>
+                            {% render_field form.contract_number class="form-control" %}
+                            {% if form.contract_number.errors %}
+                                <div class="text-danger">{{ form.contract_number.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.invoice_number_2.id_for_label }}" class="form-label">رقم الفاتورة 2</label>
+                            {% render_field form.invoice_number_2 class="form-control" %}
+                            {% if form.invoice_number_2.errors %}
+                                <div class="text-danger">{{ form.invoice_number_2.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.contract_number_2.id_for_label }}" class="form-label">رقم العقد 2</label>
+                            {% render_field form.contract_number_2 class="form-control" %}
+                            {% if form.contract_number_2.errors %}
+                                <div class="text-danger">{{ form.contract_number_2.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="{{ form.selected_types.id_for_label }}" class="form-label">نوع الطلب</label>

@@ -20,6 +20,7 @@ from inspections.models import Inspection
 from datetime import datetime, timedelta
 from django.db import models
 import traceback
+from django.utils.translation import gettext_lazy as _
 
 class OrdersDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'orders/dashboard.html'
@@ -125,11 +126,22 @@ def order_list(request):
         )
 
     if status_filter:
-        orders = orders.filter(order_status=status_filter)
+        orders = orders.filter(status=status_filter)
 
     order_type_filter = request.GET.get('order_type', '')
     if order_type_filter:
-        orders = orders.filter(selected_types__icontains=order_type_filter)
+        # البحث الدقيق في selected_types
+        orders = orders.filter(selected_types__contains=order_type_filter)
+
+    # فلتر التاريخ
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    if date_from:
+        orders = orders.filter(order_date__gte=date_from)
+    
+    if date_to:
+        orders = orders.filter(order_date__lte=date_to)
 
     # Order by created_at
     orders = orders.order_by('-created_at')
@@ -167,6 +179,8 @@ def order_list(request):
         'show_branch_filter': show_branch_filter,
         'branches': branches,
         'branch_filter': branch_filter,
+        'date_from': date_from,
+        'date_to': date_to,
     }
 
     return render(request, 'orders/order_list.html', context)
@@ -317,15 +331,20 @@ def order_create(request):
                                 product_id=product_data['product_id'],
                                 quantity=product_data['quantity'],
                                 unit_price=product_data['unit_price'],
+                                discount_percentage=product_data.get('discount_percentage', 0),
                                 item_type=product_data.get('item_type', 'product'),
                                 notes=product_data.get('notes', '')
                             )
                             print("تم إنشاء عنصر:", item)
-                            total += item.quantity * item.unit_price
+                            # حساب الإجمالي مع الخصم
+                            item_total = item.quantity * item.unit_price
+                            item_discount = item_total * (item.discount_percentage / 100) if item.discount_percentage else 0
+                            total += item_total - item_discount
                             print("total حتى الآن:", total)
                     except Exception as e:
                         print(f"Error creating order items: {e}")
                 order.final_price = total
+                order._is_auto_update = True  # تمييز التحديث التلقائي
                 order.save(update_fields=['final_price'])
                 print("order.final_price بعد الحفظ:", order.final_price)
                 # تحديث المبلغ الإجمالي ليعكس السعر النهائي
@@ -376,9 +395,8 @@ def order_create(request):
                         'redirect_url': f'/orders/{order.pk}/success/' + (f'?show_print=1&paid_amount={paid_amount}' if paid_amount > 0 else '')
                     })
 
-                # إعادة التوجيه مع معلومة عن الدفع
+                # إعادة توجيه لصفحة النجاح مع خيار الطباعة
                 if paid_amount > 0:
-                    # إعادة توجيه لصفحة النجاح مع خيار الطباعة
                     return redirect(f'/orders/{order.pk}/success/?show_print=1&paid_amount={paid_amount}')
                 else:
                     return redirect('orders:order_success', pk=order.pk)
@@ -1081,8 +1099,12 @@ def order_update_by_number(request, order_number):
             # حفظ الطلب
             updated_order = form.save()
 
-            # حفظ عناصر الطلب
+            # حفظ عناصر الطلب مع تمرير المستخدم الحالي
             formset.instance = updated_order
+            # تمرير المستخدم الحالي إلى كل عنصر طلب
+            for form_item in formset:
+                if form_item.instance:
+                    form_item.instance._modified_by = request.user
             formset.save()
 
             # إعادة حساب المبلغ الإجمالي
@@ -1608,3 +1630,64 @@ def check_contract_upload_status(request, pk):
             'is_uploaded': False,
             'error': str(e)
         })
+
+@login_required
+def order_status_history(request, order_id):
+    """عرض سجل تفصيلي لتغييرات حالة الطلب"""
+    order = get_object_or_404(Order, id=order_id)
+    
+    # التحقق من الصلاحيات
+    if not request.user.has_perm('orders.view_order'):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("ليس لديك صلاحية لعرض تفاصيل الطلب")
+    
+    # الحصول على سجلات تغيير الحالة
+    status_logs = order.status_logs.all().order_by('-created_at')
+    
+    # البحث والفلترة
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    user_filter = request.GET.get('user', '')
+    
+    if search_query:
+        status_logs = status_logs.filter(
+            Q(notes__icontains=search_query) |
+            Q(changed_by__first_name__icontains=search_query) |
+            Q(changed_by__last_name__icontains=search_query) |
+            Q(changed_by__username__icontains=search_query)
+        )
+    
+    if status_filter:
+        status_logs = status_logs.filter(new_status=status_filter)
+    
+    if user_filter:
+        status_logs = status_logs.filter(changed_by__id=user_filter)
+    
+    # الترقيم
+    paginator = Paginator(status_logs, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # الحصول على قائمة الحالات للمفلتر
+    status_choices = Order.TRACKING_STATUS_CHOICES
+    
+    # الحصول على قائمة المستخدمين للمفلتر
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    users = User.objects.filter(
+        id__in=status_logs.values_list('changed_by', flat=True).distinct()
+    ).order_by('first_name', 'last_name')
+    
+    context = {
+        'order': order,
+        'page_obj': page_obj,
+        'status_logs': page_obj,
+        'status_choices': status_choices,
+        'users': users,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'user_filter': user_filter,
+        'total_logs': status_logs.count(),
+    }
+    
+    return render(request, 'orders/status_history.html', context)

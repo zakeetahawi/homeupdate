@@ -72,12 +72,18 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# إعدادات المطورين لعرض الأخطاء
+ADMINS = [
+    ('Admin', 'admin@localhost'),
+]
+MANAGERS = ADMINS
+
 # --- إعدادات الأمان ---
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-development-key-for-jazzmin-testing-only-change-in-production-123456789')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 # قراءة ALLOWED_HOSTS من متغيرات البيئة. يجب أن تكون سلسلة نصية مفصولة بفاصلة.
 # مثال: ALLOWED_HOSTS="localhost,127.0.0.1,mydomain.com"
@@ -191,22 +197,21 @@ MIDDLEWARE = [
 ]
 
 # Debug toolbar configuration for performance monitoring
-# تم تعطيل Debug Toolbar لتحسين الأداء
-# if DEBUG:
-#     INSTALLED_APPS.append('debug_toolbar')
-#     # Debug Toolbar Middleware
-#     MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
-#     # Debug Toolbar Settings
-#     import socket
-#     hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-#     INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + ["127.0.0.1", "10.0.2.2"]
-#     DEBUG_TOOLBAR_CONFIG = {
-#         'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
-#         'SHOW_COLLAPSED': True,
-#         'SQL_WARNING_THRESHOLD': 20,  # تحذير عند تجاوز 20 استعلام
-#         'ENABLE_STACKTRACES': True,
-#         'SHOW_TEMPLATE_CONTEXT': True,
-#     }
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
+    # Debug Toolbar Middleware
+    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    # Debug Toolbar Settings
+    import socket
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + ["127.0.0.1", "10.0.2.2", "localhost"]
+    DEBUG_TOOLBAR_CONFIG = {
+        'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
+        'SHOW_COLLAPSED': True,
+        'SQL_WARNING_THRESHOLD': 20,  # تحذير عند تجاوز 20 استعلام
+        'ENABLE_STACKTRACES': True,
+        'SHOW_TEMPLATE_CONTEXT': True,
+    }
 
 AUTH_USER_MODEL = 'accounts.User'
 

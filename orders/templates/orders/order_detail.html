@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load decimal_filters %}
 
 {% block title %}تفاصيل الطلب - نظام الخواجه{% endblock %}
 
@@ -368,6 +369,13 @@
                                             <i class="fas fa-user me-1"></i>المستلم: {{ order.delivery_recipient_name }}
                                         </small>
                                     {% endif %}
+                                    
+                                    <!-- رابط سجل الحالة -->
+                                    <br><small>
+                                        <a href="{% url 'orders:status_history' order.id %}" class="text-info">
+                                            <i class="fas fa-history me-1"></i>عرض سجل الحالة
+                                        </a>
+                                    </small>
                                 {% endwith %}
                             </td>
                         </tr>
@@ -680,8 +688,8 @@
                 </div>
             </div>
 
-            <!-- Order Modification Notes -->
-            {% if order.order_notes.exists %}
+            <!-- Order Modification Logs -->
+            {% if order.modification_logs.exists and order.modification_logs.count > 0 %}
             <div class="card mb-4">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0">
@@ -689,27 +697,56 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% for note in order.order_notes.all %}
-                    {% if note.note_type == 'modification' %}
+                    {% for log in order.modification_logs.all %}
                     <div class="alert alert-info mb-3">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <h6 class="alert-heading mb-0">
-                                <i class="fas fa-pencil-alt me-2"></i>{{ note.title }}
+                                <i class="fas fa-pencil-alt me-2"></i>{{ log.modification_type }}
                             </h6>
                             <small class="text-muted">
-                                {{ note.created_at|date:"Y-m-d H:i" }}
+                                {{ log.modified_at|date:"Y-m-d H:i" }}
                             </small>
                         </div>
+                        
+                        <!-- تفاصيل التعديل -->
                         <div class="modification-content">
-                            {{ note.content|linebreaks }}
+                            {% if log.details %}
+                            <p class="mb-2"><strong>{{ log.details }}</strong></p>
+                            {% endif %}
+                            
+                            <!-- المبالغ -->
+                            {% if log.old_total_amount or log.new_total_amount %}
+                            <div class="row mb-2">
+                                <div class="col-md-6">
+                                    <i class="fas fa-money-bill-wave text-success me-1"></i>
+                                    <strong>المبلغ السابق:</strong> {{ log.get_clean_old_total }}
+                                </div>
+                                <div class="col-md-6">
+                                    <i class="fas fa-money-bill-wave text-primary me-1"></i>
+                                    <strong>المبلغ الجديد:</strong> {{ log.get_clean_new_total }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- ملاحظات -->
+                            {% if log.notes %}
+                            <p class="mb-2"><em><i class="fas fa-sticky-note me-1"></i>{{ log.notes }}</em></p>
+                            {% endif %}
                         </div>
+                        
+                        <!-- المستخدم والتاريخ -->
                         <hr class="my-2">
-                        <small class="text-muted">
-                            <i class="fas fa-user me-1"></i>
-                            بواسطة: {{ note.created_by.get_full_name|default:note.created_by.username }}
-                        </small>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>
+                                بواسطة: {% if log.modified_by %}{{ log.modified_by.get_full_name|default:log.modified_by.username }}{% else %}مدير النظام{% endif %}
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ log.modified_at|date:"Y-m-d H:i" }}
+                            </small>
+                        </div>
                     </div>
-                    {% endif %}
                     {% endfor %}
                 </div>
             </div>
@@ -1074,7 +1111,9 @@
                             <th>المنتج</th>
                             <th>الكمية</th>
                             <th>سعر الوحدة</th>
-                            <th>السعر الإجمالي</th>
+                            <th>نسبة الخصم</th>
+                            <th>مبلغ الخصم</th>
+                            <th>السعر بعد الخصم</th>
                             <th>ملاحظات</th>
                         </tr>
                     </thead>
@@ -1083,21 +1122,45 @@
                         <tr>
                             <td>{{ forloop.counter }}</td>
                             <td>{{ item.product.name }}</td>
-                            <td>{{ item.quantity }}</td>
-                            <td>{{ item.unit_price }} {{ currency_symbol }}</td>
-                            <td>{{ item.total_price }} {{ currency_symbol }}</td>
+                            <td>{{ item.quantity|clean_decimal }}</td>
+                            <td>{{ item.unit_price|clean_decimal_currency:currency_symbol }}</td>
+                            <td>
+                                {% if item.discount_percentage and item.discount_percentage > 0 %}
+                                    <span class="badge bg-warning text-dark">{{ item.get_clean_discount_display }}%</span>
+                                {% else %}
+                                    <span class="text-muted">0%</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.discount_amount and item.discount_amount > 0 %}
+                                    <span class="text-danger">-{{ item.discount_amount|clean_decimal_currency:currency_symbol }}</span>
+                                {% else %}
+                                    <span class="text-muted">0.00 {{ currency_symbol }}</span>
+                                {% endif %}
+                            </td>
+                            <td><strong class="text-success">{{ item.total_after_discount|clean_decimal_currency:currency_symbol }}</strong></td>
                             <td>{{ item.notes|default:"-" }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center py-3">لا توجد عناصر في هذا الطلب</td>
+                            <td colspan="8" class="text-center py-3">لا توجد عناصر في هذا الطلب</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr class="table-light">
-                            <th colspan="4" class="text-start">المجموع</th>
-                            <th>{{ order.total_amount }} {{ currency_symbol }}</th>
+                            <th colspan="4" class="text-start">المجموع قبل الخصم</th>
+                            <th colspan="2">{{ order.total_amount|clean_decimal_currency:currency_symbol }}</th>
+                            <td></td>
+                        </tr>
+                        <tr class="table-warning">
+                            <th colspan="4" class="text-start">إجمالي الخصم</th>
+                            <th colspan="2">{{ order.total_discount_amount|clean_decimal_currency:currency_symbol }}</th>
+                            <td></td>
+                        </tr>
+                        <tr class="table-success">
+                            <th colspan="4" class="text-start">الإجمالي النهائي بعد الخصم</th>
+                            <th colspan="2">{{ order.final_price_after_discount|clean_decimal_currency:currency_symbol }}</th>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -1327,7 +1390,7 @@
                         {% for payment in payments %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td>{{ payment.amount }} {{ currency_symbol }}</td>
+                            <td>{{ payment.amount|clean_decimal_currency:currency_symbol }}</td>
                             <td>{{ payment.get_payment_method_display }}</td>
                             <td>{{ payment.payment_date|date:"Y-m-d H:i" }}</td>
                             <td>{{ payment.order.invoice_number|default:"-" }}</td>
@@ -1354,11 +1417,11 @@
                     <tfoot>
                         <tr class="table-light">
                             <th colspan="7" class="text-start">المجموع المدفوع</th>
-                            <th>{{ order.paid_amount }} {{ currency_symbol }}</th>
+                            <th>{{ order.paid_amount|clean_decimal_currency:currency_symbol }}</th>
                         </tr>
                         <tr class="table-light">
                             <th colspan="7" class="text-start">المبلغ المتبقي</th>
-                            <th>{{ order.remaining_amount }} {{ currency_symbol }}</th>
+                            <th>{{ order.remaining_amount|clean_decimal_currency:currency_symbol }}</th>
                         </tr>
                     </tfoot>
                 </table>
@@ -1366,80 +1429,7 @@
         </div>
     </div>
 
-    <!-- سجل تغييرات الحالة - آخر بطاقة في الصفحة -->
-    {% with types_list=order.get_selected_types_list %}
-    {% if 'inspection' not in types_list and 'inspection' not in order.selected_types %}
-    <div class="card mt-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-history me-2"></i>
-                سجل تحديث حالة الطلب
-            </h5>
-            <small>تفاصيل جميع تغييرات الحالة مع التاريخ والوقت والمستخدم</small>
-        </div>
-        <div class="card-body">
-            {% if order.status_logs.all %}
-                <div class="timeline">
-                    {% for log in order.status_logs.all %}
-                    <div class="timeline-item">
-                        <div class="timeline-marker"></div>
-                        <div class="timeline-content">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <i class="fas fa-exchange-alt me-1 text-primary"></i>
-                                        تغيير الحالة: 
-                                        {% if log.old_status %}
-                                            <span class="badge bg-secondary">{{ log.get_old_status_display }}</span>
-                                            <i class="fas fa-arrow-right mx-2 text-muted"></i>
-                                        {% endif %}
-                                        <span class="badge bg-primary">{{ log.get_new_status_display }}</span>
-                                    </h6>
-                                    <div class="row mt-2">
-                                        <div class="col-md-6">
-                                            <small class="text-muted">
-                                                <i class="fas fa-calendar me-1"></i>
-                                                التاريخ والوقت: {{ log.created_at|date:"Y-m-d H:i" }}
-                                            </small>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <small class="text-muted">
-                                                <i class="fas fa-user me-1"></i>
-                                                تم التغيير بواسطة: 
-                                                {% if log.changed_by %}
-                                                    <span class="badge bg-info">{{ log.changed_by.get_full_name|default:log.changed_by.username }}</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">نظام</span>
-                                                {% endif %}
-                                            </small>
-                                        </div>
-                                    </div>
-                                    {% if log.notes %}
-                                    <div class="mt-2 p-2 bg-light rounded">
-                                        <small class="text-muted">
-                                            <i class="fas fa-sticky-note me-1"></i>
-                                            ملاحظات:
-                                        </small>
-                                        <p class="mb-0 mt-1">{{ log.notes }}</p>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
-                    <h6 class="text-muted">لا يوجد سجل لتغييرات الحالة</h6>
-                    <p class="text-muted">لم يتم تسجيل أي تغييرات في حالة هذا الطلب بعد</p>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
-    {% endwith %}
+
 </div>
 
 <!-- Modal for Reply to Rejection -->

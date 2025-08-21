@@ -363,27 +363,39 @@ class Order(models.Model):
             models.Index(fields=['created_at'], name='order_created_at_idx'),
         ]
     def calculate_final_price(self):
-        """حساب السعر النهائي للطلب"""
+        """حساب السعر النهائي للطلب مع الخصم"""
         # التحقق من وجود مفتاح أساسي أولاً
         if not self.pk:
             return 0
 
-        # حساب السعر الأساسي من عناصر الطلب باستخدام استعلام أكثر كفاءة
-        from django.db.models import F, Sum, ExpressionWrapper, DecimalField
+        # حساب السعر الأساسي من عناصر الطلب مع الخصم
+        total = 0
+        total_discount = 0
+        
+        for item in self.items.select_related('product').all():
+            item_total = item.quantity * item.unit_price
+            item_discount = item_total * (item.discount_percentage / 100) if item.discount_percentage else 0
+            total += item_total
+            total_discount += item_discount
 
-        # استخدام استعلام مُحسّن مع تحسينات إضافية
-        total = self.items.select_related('product').aggregate(
-            total=Sum(
-                ExpressionWrapper(
-                    F('quantity') * F('unit_price'),
-                    output_field=DecimalField(max_digits=10, decimal_places=2)
-                )
-            )
-        )['total'] or 0
-
-        # تحديث القيمة في الذاكرة فقط (بدون حفظ)
+        # تحديث القيم في الذاكرة فقط (بدون حفظ)
         self.final_price = total
-        return self.final_price
+        self.total_amount = total
+        
+        return total - total_discount
+    
+    @property
+    def total_discount_amount(self):
+        """إجمالي مبلغ الخصم"""
+        total_discount = 0
+        for item in self.items.all():
+            total_discount += item.discount_amount
+        return total_discount
+    
+    @property
+    def final_price_after_discount(self):
+        """السعر النهائي بعد الخصم"""
+        return self.final_price - self.total_discount_amount
     def save(self, *args, **kwargs):
         try:
             # تحقق مما إذا كان هذا كائن جديد (ليس له مفتاح أساسي)
@@ -1301,8 +1313,20 @@ class OrderItem(models.Model):
         related_name='order_items',
         verbose_name='المنتج'
     )
-    quantity = models.PositiveIntegerField(verbose_name='الكمية')
+    quantity = models.DecimalField(
+        max_digits=10, 
+        decimal_places=3, 
+        verbose_name='الكمية',
+        help_text='يمكن إدخال قيم عشرية مثل 4.25 متر'
+    )
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='سعر الوحدة')
+    discount_percentage = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=0,
+        verbose_name='نسبة الخصم %',
+        help_text='نسبة الخصم من 0% إلى 15%'
+    )
     item_type = models.CharField(
         max_length=10,
         choices=Order.ITEM_TYPE_CHOICES,
@@ -1316,6 +1340,10 @@ class OrderItem(models.Model):
         verbose_name='حالة المعالجة'
     )
     notes = models.TextField(blank=True, verbose_name='ملاحظات')
+    
+    # إضافة tracker لتتبع التغييرات
+    tracker = FieldTracker(fields=['quantity', 'unit_price', 'product', 'discount_percentage'])
+    
     class Meta:
         verbose_name = 'عنصر الطلب'
         verbose_name_plural = 'عناصر الطلب'
@@ -1326,13 +1354,50 @@ class OrderItem(models.Model):
             models.Index(fields=['item_type'], name='order_item_type_idx'),
         ]
     def __str__(self):
-        return f'{self.product.name} ({self.quantity})'
+        return f'{self.product.name} ({self.get_clean_quantity_display()})'
+    
+    def get_clean_quantity_display(self):
+        """إرجاع الكمية بدون أصفار زائدة"""
+        if self.quantity is None:
+            return '0'
+        
+        str_value = str(self.quantity)
+        if '.' in str_value:
+            str_value = str_value.rstrip('0')
+            if str_value.endswith('.'):
+                str_value = str_value[:-1]
+        return str_value
     @property
     def total_price(self):
-        """Calculate total price for this item"""
+        """Calculate total price for this item before discount"""
         if self.quantity is None or self.unit_price is None:
             return 0
         return self.quantity * self.unit_price
+    
+    @property
+    def discount_amount(self):
+        """مبلغ الخصم"""
+        if self.discount_percentage is None or self.discount_percentage == 0:
+            return 0
+        from decimal import Decimal
+        return self.total_price * (Decimal(str(self.discount_percentage)) / Decimal('100'))
+    
+    @property
+    def total_after_discount(self):
+        """الإجمالي بعد الخصم"""
+        return self.total_price - self.discount_amount
+    
+    def get_clean_discount_display(self):
+        """إرجاع نسبة الخصم بدون أصفار زائدة"""
+        if self.discount_percentage is None or self.discount_percentage == 0:
+            return '0'
+        
+        str_value = str(self.discount_percentage)
+        if '.' in str_value:
+            str_value = str_value.rstrip('0')
+            if str_value.endswith('.'):
+                str_value = str_value[:-1]
+        return str_value
     def save(self, *args, **kwargs):
         """Save order item with validation"""
         try:
@@ -1474,8 +1539,8 @@ class OrderNote(models.Model):
 
 class OrderStatusLog(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_logs', verbose_name=_('الطلب'))
-    old_status = models.CharField(max_length=20, choices=Order.TRACKING_STATUS_CHOICES, verbose_name=_('الحالة السابقة'))
-    new_status = models.CharField(max_length=20, choices=Order.TRACKING_STATUS_CHOICES, verbose_name=_('الحالة الجديدة'))
+    old_status = models.CharField(max_length=25, choices=Order.ORDER_STATUS_CHOICES, verbose_name=_('الحالة السابقة'))
+    new_status = models.CharField(max_length=25, choices=Order.ORDER_STATUS_CHOICES, verbose_name=_('الحالة الجديدة'))
     changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name=_('تم التغيير بواسطة'))
     notes = models.TextField(blank=True, verbose_name=_('ملاحظات'))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('تاريخ التغيير'))
@@ -1628,3 +1693,132 @@ class DeliveryTimeSettings(models.Model):
 
 # استيراد نماذج الفواتير
 from .invoice_models import InvoiceTemplate, InvoicePrintLog
+
+
+class OrderItemModificationLog(models.Model):
+    """سجل تعديلات عناصر الطلب"""
+    order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='modification_logs', verbose_name='عنصر الطلب')
+    field_name = models.CharField(max_length=50, verbose_name='اسم الحقل')
+    old_value = models.TextField(verbose_name='القيمة السابقة')
+    new_value = models.TextField(verbose_name='القيمة الجديدة')
+    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='تم التعديل بواسطة')
+    modified_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ التعديل')
+    notes = models.TextField(blank=True, verbose_name='ملاحظات')
+
+    class Meta:
+        verbose_name = 'سجل تعديل عنصر الطلب'
+        verbose_name_plural = 'سجلات تعديل عناصر الطلب'
+        ordering = ['-modified_at']
+        indexes = [
+            models.Index(fields=['order_item'], name='item_mod_log_item_idx'),
+            models.Index(fields=['modified_at'], name='item_mod_log_date_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.order_item.product.name} - {self.field_name} ({self.modified_at.strftime("%Y-%m-%d %H:%M")})'
+
+    def get_field_display_name(self):
+        """إرجاع اسم الحقل بالعربية"""
+        field_names = {
+            'quantity': 'الكمية',
+            'unit_price': 'سعر الوحدة',
+            'product': 'المنتج',
+            'notes': 'الملاحظات',
+        }
+        return field_names.get(self.field_name, self.field_name)
+
+    def get_clean_old_value(self):
+        """إرجاع القيمة السابقة منسقة"""
+        if self.field_name == 'quantity':
+            try:
+                from decimal import Decimal
+                value = Decimal(self.old_value)
+                str_value = str(value)
+                if '.' in str_value:
+                    str_value = str_value.rstrip('0')
+                    if str_value.endswith('.'):
+                        str_value = str_value[:-1]
+                return str_value
+            except:
+                return self.old_value
+        elif self.field_name == 'unit_price':
+            try:
+                from decimal import Decimal
+                value = Decimal(self.old_value)
+                return f"{value} ج.م"
+            except:
+                return self.old_value
+        elif self.field_name == 'product':
+            try:
+                from inventory.models import Product
+                product = Product.objects.get(id=self.old_value)
+                return product.name
+            except:
+                return self.old_value
+        return self.old_value
+
+    def get_clean_new_value(self):
+        """إرجاع القيمة الجديدة منسقة"""
+        if self.field_name == 'quantity':
+            try:
+                from decimal import Decimal
+                value = Decimal(self.new_value)
+                str_value = str(value)
+                if '.' in str_value:
+                    str_value = str_value.rstrip('0')
+                    if str_value.endswith('.'):
+                        str_value = str_value[:-1]
+                return str_value
+            except:
+                return self.new_value
+        elif self.field_name == 'unit_price':
+            try:
+                from decimal import Decimal
+                value = Decimal(self.new_value)
+                return f"{value} ج.م"
+            except:
+                return self.new_value
+        elif self.field_name == 'product':
+            try:
+                from inventory.models import Product
+                product = Product.objects.get(id=self.new_value)
+                return product.name
+            except:
+                return self.new_value
+        return self.new_value
+
+
+class OrderModificationLog(models.Model):
+    """سجل تعديلات الطلب الشامل"""
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='modification_logs', verbose_name='الطلب')
+    modification_type = models.CharField(max_length=50, verbose_name='نوع التعديل')
+    old_total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='المبلغ الإجمالي السابق')
+    new_total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='المبلغ الإجمالي الجديد')
+    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='تم التعديل بواسطة')
+    modified_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ التعديل')
+    details = models.TextField(verbose_name='تفاصيل التعديل')
+    notes = models.TextField(blank=True, verbose_name='ملاحظات')
+
+    class Meta:
+        verbose_name = 'سجل تعديل الطلب'
+        verbose_name_plural = 'سجلات تعديل الطلبات'
+        ordering = ['-modified_at']
+        indexes = [
+            models.Index(fields=['order'], name='order_mod_log_order_idx'),
+            models.Index(fields=['modified_at'], name='order_mod_log_date_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.order.order_number} - {self.modification_type} ({self.modified_at.strftime("%Y-%m-%d %H:%M")})'
+
+    def get_clean_old_total(self):
+        """إرجاع المبلغ السابق منسق"""
+        if self.old_total_amount is not None:
+            return f"{self.old_total_amount} ج.م"
+        return "غير محدد"
+
+    def get_clean_new_total(self):
+        """إرجاع المبلغ الجديد منسق"""
+        if self.new_total_amount is not None:
+            return f"{self.new_total_amount} ج.م"
+        return "غير محدد"

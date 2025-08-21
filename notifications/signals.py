@@ -365,12 +365,54 @@ def manufacturing_order_status_changed_notification(sender, instance, **kwargs):
                 elif instance.status in ['rejected', 'cancelled']:
                     priority = 'urgent'
 
+                # محاولة الحصول على المستخدم الذي قام بالتغيير
+                changed_by = None
+                try:
+                    # أولاً: البحث في سجل حالة الطلب
+                    from orders.models import OrderStatusLog
+                    from django.utils import timezone
+                    
+                    # البحث عن آخر سجل حالة للطلب المرتبط
+                    recent_status_log = OrderStatusLog.objects.filter(
+                        order=instance.order,
+                        new_status=instance.status
+                    ).order_by('-created_at').first()
+                    
+                    if recent_status_log and (timezone.now() - recent_status_log.created_at).seconds < 120:
+                        changed_by = recent_status_log.changed_by
+                        logger.info(f"Found user from status log: {changed_by}")
+                    
+                    # إذا لم نجد في سجل الحالة، نبحث في admin log
+                    if not changed_by:
+                        from django.contrib.admin.models import LogEntry, CHANGE
+                        from django.contrib.contenttypes.models import ContentType
+                        
+                        recent_log = LogEntry.objects.filter(
+                            content_type=ContentType.objects.get_for_model(instance),
+                            object_id=instance.id,
+                            action_flag=CHANGE
+                        ).order_by('-action_time').first()
+                        
+                        if recent_log and (timezone.now() - recent_log.action_time).seconds < 60:
+                            changed_by = recent_log.user
+                            logger.info(f"Found user from admin log: {changed_by}")
+                            
+                except Exception as e:
+                    logger.warning(f"Could not determine user who changed manufacturing status: {e}")
+                
+                # تحسين الرسالة لتشمل اسم المستخدم
+                if changed_by:
+                    message += f" بواسطة {changed_by.get_full_name() or changed_by.username}"
+                else:
+                    # إذا لم نتمكن من تحديد المستخدم، نضيف رسالة عامة
+                    message += " (تم التغيير من قبل المستخدم)"
+                
                 create_notification(
                     title=title,
                     message=message,
                     notification_type='manufacturing_status_changed',
                     related_object=instance.order,  # ربط بالطلب الأصلي
-                    created_by=None,  # سيتم تحديده من السياق
+                    created_by=changed_by,  # المستخدم الذي قام بالتغيير
                     priority=priority,
                     extra_data={
                         'order_number': instance.order.order_number,
@@ -380,6 +422,8 @@ def manufacturing_order_status_changed_notification(sender, instance, **kwargs):
                         'old_status_display': old_status_display,
                         'new_status_display': new_status_display,
                         'order_type': instance.order_type,
+                        'changed_by': changed_by.get_full_name() if changed_by else 'مستخدم النظام',
+                        'changed_by_username': changed_by.username if changed_by else 'system',
                     }
                 )
 

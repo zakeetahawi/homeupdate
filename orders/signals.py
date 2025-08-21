@@ -22,8 +22,12 @@ def track_price_changes(sender, instance, **kwargs):
             Order = instance.__class__
             old_instance = Order.objects.get(pk=instance.pk)
             if old_instance.final_price != instance.final_price:
-                instance.price_changed = True
-                instance.modified_at = timezone.now()
+                # لا نسجل التعديلات إذا كان هذا تحديث تلقائي (غير من قبل المستخدم)
+                if not hasattr(instance, '_is_auto_update'):
+                    instance.price_changed = True
+                    instance.modified_at = timezone.now()
+                    # حفظ القيمة القديمة للتتبع
+                    instance._old_total_amount = old_instance.final_price
         except Order.DoesNotExist:
             pass  # حالة الإنشاء الجديد
 
@@ -215,11 +219,30 @@ def order_post_save(sender, instance, created, **kwargs):
     else:
         # التحقق من تغيير الحالة
         if hasattr(instance, '_tracking_status_changed') and instance._tracking_status_changed:
+            # الحصول على الحالة السابقة من tracker
+            old_status = instance.tracker.previous('tracking_status')
+            if old_status is None:
+                old_status = 'pending'  # قيمة افتراضية إذا لم تكن موجودة
+            
             OrderStatusLog.objects.create(
                 order=instance,
-                old_status=instance.tracker.previous('tracking_status'),
+                old_status=old_status,
                 new_status=instance.tracking_status,
                 notes='تم تغيير حالة الطلب'
+            )
+        
+        # تتبع التغييرات في المبلغ الإجمالي
+        from .models import OrderModificationLog
+        
+        if hasattr(instance, '_old_total_amount') and instance._old_total_amount != instance.final_price:
+            OrderModificationLog.objects.create(
+                order=instance,
+                modification_type='تعديلات البيانات الأساسية',
+                old_total_amount=instance._old_total_amount,
+                new_total_amount=instance.final_price,
+                modified_by=getattr(instance, '_modified_by', None),
+                details=f'تم تغيير إجمالي المبلغ من {instance._old_total_amount} إلى {instance.final_price}',
+                notes='تعديل في المبلغ الإجمالي للطلب'
             )
 
 @receiver(post_save, sender=OrderItem)
@@ -229,9 +252,140 @@ def order_item_post_save(sender, instance, created, **kwargs):
         # تحديث المبلغ الإجمالي للطلب
         instance.order.calculate_final_price()
         # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
+        instance.order._is_auto_update = True  # تمييز التحديث التلقائي
         Order.objects.filter(pk=instance.order.pk).update(
             final_price=instance.order.final_price
         )
+        # لا نسجل تعديلات عند الإنشاء الأولي
+        return
+    else:
+        # تتبع التغييرات في عنصر الطلب
+        from .models import OrderItemModificationLog, OrderModificationLog
+        
+        # التحقق من التغييرات في الكمية
+        if instance.tracker.has_changed('quantity'):
+            old_quantity = instance.tracker.previous('quantity')
+            new_quantity = instance.quantity
+            
+            OrderItemModificationLog.objects.create(
+                order_item=instance,
+                field_name='quantity',
+                old_value=str(old_quantity) if old_quantity is not None else '',
+                new_value=str(new_quantity) if new_quantity is not None else '',
+                modified_by=getattr(instance, '_modified_by', None),
+                notes=f'تم تغيير كمية المنتج {instance.product.name}'
+            )
+        
+        # التحقق من التغييرات في سعر الوحدة
+        if instance.tracker.has_changed('unit_price'):
+            old_price = instance.tracker.previous('unit_price')
+            new_price = instance.unit_price
+            
+            OrderItemModificationLog.objects.create(
+                order_item=instance,
+                field_name='unit_price',
+                old_value=str(old_price) if old_price is not None else '',
+                new_value=str(new_price) if new_price is not None else '',
+                modified_by=getattr(instance, '_modified_by', None),
+                notes=f'تم تغيير سعر الوحدة للمنتج {instance.product.name}'
+            )
+        
+        # التحقق من التغييرات في المنتج
+        if instance.tracker.has_changed('product'):
+            old_product_id = instance.tracker.previous('product')
+            new_product_id = instance.product.id
+            
+            try:
+                from inventory.models import Product
+                old_product = Product.objects.get(id=old_product_id) if old_product_id else None
+                new_product = instance.product
+                
+                OrderItemModificationLog.objects.create(
+                    order_item=instance,
+                    field_name='product',
+                    old_value=old_product.name if old_product else '',
+                    new_value=new_product.name,
+                    modified_by=getattr(instance, '_modified_by', None),
+                    notes=f'تم تغيير المنتج من {old_product.name if old_product else "غير محدد"} إلى {new_product.name}'
+                )
+            except Product.DoesNotExist:
+                pass
+        
+        # التحقق من التغييرات في نسبة الخصم
+        if instance.tracker.has_changed('discount_percentage'):
+            old_discount = instance.tracker.previous('discount_percentage')
+            new_discount = instance.discount_percentage
+            
+            OrderItemModificationLog.objects.create(
+                order_item=instance,
+                field_name='discount_percentage',
+                old_value=f"{old_discount}%" if old_discount is not None else "0%",
+                new_value=f"{new_discount}%" if new_discount is not None else "0%",
+                modified_by=getattr(instance, '_modified_by', None),
+                notes=f'تم تغيير نسبة الخصم للمنتج {instance.product.name}'
+            )
+        
+        # إنشاء سجل تعديل شامل للطلب
+        # لا نسجل التعديلات إذا لم يكن هناك مستخدم محدد (إنشاء أولي)
+        if getattr(instance, '_modified_by', None) is None:
+            return
+            
+        if any([
+            instance.tracker.has_changed('quantity'),
+            instance.tracker.has_changed('unit_price'),
+            instance.tracker.has_changed('product'),
+            instance.tracker.has_changed('discount_percentage')
+        ]):
+            # الحصول على المبلغ القديم قبل التعديل
+            old_total = instance.order.final_price
+            
+            # حساب المبلغ الجديد بعد التعديل
+            # نحتاج إلى حساب المبلغ الجديد يدوياً بناءً على التغييرات
+            total_change = 0
+            modification_details = []
+            
+            if instance.tracker.has_changed('quantity'):
+                old_quantity = instance.tracker.previous('quantity')
+                new_quantity = instance.quantity
+                current_price = instance.unit_price
+                quantity_change = (new_quantity - old_quantity) * current_price
+                total_change += quantity_change
+                modification_details.append(f"الكمية: {old_quantity} → {new_quantity}")
+            
+            if instance.tracker.has_changed('unit_price'):
+                old_price = instance.tracker.previous('unit_price')
+                new_price = instance.unit_price
+                current_quantity = instance.quantity
+                price_change = (new_price - old_price) * current_quantity
+                total_change += price_change
+                modification_details.append(f"السعر: {old_price} → {new_price} ج.م")
+            
+            if instance.tracker.has_changed('product'):
+                old_product_id = instance.tracker.previous('product')
+                try:
+                    from inventory.models import Product
+                    old_product = Product.objects.get(id=old_product_id) if old_product_id else None
+                    modification_details.append(f"المنتج: {old_product.name if old_product else 'غير محدد'} → {instance.product.name}")
+                except Product.DoesNotExist:
+                    modification_details.append(f"المنتج: غير محدد → {instance.product.name}")
+            
+            if instance.tracker.has_changed('discount_percentage'):
+                old_discount = instance.tracker.previous('discount_percentage')
+                new_discount = instance.discount_percentage
+                modification_details.append(f"الخصم: {old_discount}% → {new_discount}%")
+            
+            new_total = old_total + total_change
+            
+            # إنشاء سجل تعديل شامل مع تفاصيل العناصر
+            OrderModificationLog.objects.create(
+                order=instance.order,
+                modification_type='تعديل الأصناف الموجودة',
+                old_total_amount=old_total,
+                new_total_amount=new_total,
+                modified_by=getattr(instance, '_modified_by', None),
+                details=f"تعديل {instance.product.name}: {' | '.join(modification_details)}",
+                notes='تعديل في عناصر الطلب'
+            )
 
 @receiver(post_save, sender=Payment)
 def payment_post_save(sender, instance, created, **kwargs):
@@ -350,6 +504,22 @@ def log_manufacturing_order_deletion(sender, instance, **kwargs):
 
 
 # ===== إشارات التخزين المؤقت =====
+
+@receiver(pre_save, sender='orders.OrderItem')
+def track_order_item_changes(sender, instance, **kwargs):
+    """تتبع تغييرات عناصر الطلب"""
+    if instance.pk:  # تحقق من أن هذا تحديث وليس إنشاء جديد
+        try:
+            OrderItem = instance.__class__
+            old_instance = OrderItem.objects.get(pk=instance.pk)
+            # حفظ القيم القديمة للتتبع
+            instance._old_quantity = old_instance.quantity
+            instance._old_unit_price = old_instance.unit_price
+            instance._old_product_id = old_instance.product.id
+            instance._old_discount_percentage = old_instance.discount_percentage
+        except OrderItem.DoesNotExist:
+            pass  # حالة الإنشاء الجديد
+
 
 @receiver(post_save, sender=Order)
 def invalidate_order_cache_on_save(sender, instance, created, **kwargs):

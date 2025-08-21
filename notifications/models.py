@@ -40,6 +40,7 @@ class Notification(models.Model):
         ('installation_completed', _('إكمال تركيب')),
         ('inspection_created', _('معاينة جديدة')),
         ('inspection_status_changed', _('تغيير حالة معاينة')),
+        ('manufacturing_status_changed', _('تغيير حالة أمر التصنيع')),
         ('complaint_created', _('شكوى جديدة')),
     ]
 

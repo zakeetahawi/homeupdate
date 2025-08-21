@@ -1243,6 +1243,24 @@ def update_order_status(request, pk):
         order.status = new_status
         order.updated_at = timezone.now()
         
+        # إنشاء سجل تغيير الحالة
+        try:
+            from orders.models import OrderStatusLog
+            # الحصول على الحالة السابقة للطلب الأساسي
+            original_order_old_status = order.order.tracking_status if order.order else 'pending'
+            
+            OrderStatusLog.objects.create(
+                order=order.order,
+                old_status=original_order_old_status,
+                new_status=new_status,
+                changed_by=request.user,
+                notes=f'تم تغيير حالة أمر التصنيع من {dict(ManufacturingOrder.STATUS_CHOICES).get(old_status, "")} إلى {dict(ManufacturingOrder.STATUS_CHOICES).get(new_status, "")}'
+            )
+            logger.debug(f"[update_order_status] Created status log for order {pk}")
+        except Exception as e:
+            logger.error(f"[update_order_status] Error creating status log: {str(e)}", exc_info=True)
+            # Continue even if status logging fails
+        
         # Handle delivery fields
         if new_status == 'delivered':
             order.delivery_permit_number = request.POST.get('delivery_permit_number', '').strip()

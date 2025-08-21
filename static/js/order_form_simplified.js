@@ -466,13 +466,18 @@ function updateLiveOrderItemsTable() {
             return;
         }
 
-        // حساب الإجمالي مرة واحدة
+        // حساب الإجمالي مع الخصم
         const totalAmount = document.orderItems.reduce((sum, item) => sum + item.total, 0);
+        const totalDiscount = document.orderItems.reduce((sum, item) => {
+            const discountPercentage = item.discount_percentage || 0;
+            return sum + (item.total * discountPercentage / 100);
+        }, 0);
+        const totalAfterDiscount = totalAmount - totalDiscount;
 
         // إنشاء العناصر باستخدام template literals محسنة
         const headerHtml = `
             <div class="card">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header text-white" style="background-color: #198754; font-weight: bold;">
                     <h6 class="mb-0">
                         <i class="fas fa-list me-2"></i>
                         العناصر المختارة (${document.orderItems.length})
@@ -487,7 +492,9 @@ function updateLiveOrderItemsTable() {
                                     <th>المنتج</th>
                                     <th>الكمية</th>
                                     <th>سعر الوحدة</th>
-                                    <th>الإجمالي</th>
+                                    <th>الخصم %</th>
+                                    <th>مبلغ الخصم</th>
+                                    <th>الإجمالي بعد الخصم</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
@@ -495,16 +502,50 @@ function updateLiveOrderItemsTable() {
         `;
 
         // إنشاء صفوف الجدول بكفاءة أكبر
-        const rowsHtml = document.orderItems.map((item, idx) => `
+        const rowsHtml = document.orderItems.map((item, idx) => {
+            const discountPercentage = item.discount_percentage || 0;
+            const discountAmount = (item.total * discountPercentage / 100);
+            const totalAfterDiscount = item.total - discountAmount;
+            
+            return `
             <tr>
                 <td><span class="badge bg-primary">${idx+1}</span></td>
                 <td>
                     <strong>${item.name}</strong>
                     ${item.code ? `<br><small class="text-muted">كود: ${item.code}</small>` : ''}
+                    ${item.notes ? `<br><small class="text-info"><i class="fas fa-sticky-note me-1"></i>${item.notes}</small>` : ''}
                 </td>
-                <td><span class="badge bg-info">${item.quantity}</span></td>
+                <td><span class="badge bg-info">${parseFloat(item.quantity).toFixed(3).replace(/\.?0+$/, '')}</span></td>
                 <td>${item.unit_price} ج.م</td>
-                <td><strong class="text-success">${item.total.toFixed(2)} ج.م</strong></td>
+                <td>
+                    <select class="form-select form-select-sm discount-select" 
+                            onchange="updateItemDiscount(${idx}, this.value)" 
+                            style="width: 80px; font-size: 0.875rem;">
+                        <option value="0" ${discountPercentage == 0 ? 'selected' : ''}>0%</option>
+                        <option value="1" ${discountPercentage == 1 ? 'selected' : ''}>1%</option>
+                        <option value="2" ${discountPercentage == 2 ? 'selected' : ''}>2%</option>
+                        <option value="3" ${discountPercentage == 3 ? 'selected' : ''}>3%</option>
+                        <option value="4" ${discountPercentage == 4 ? 'selected' : ''}>4%</option>
+                        <option value="5" ${discountPercentage == 5 ? 'selected' : ''}>5%</option>
+                        <option value="6" ${discountPercentage == 6 ? 'selected' : ''}>6%</option>
+                        <option value="7" ${discountPercentage == 7 ? 'selected' : ''}>7%</option>
+                        <option value="8" ${discountPercentage == 8 ? 'selected' : ''}>8%</option>
+                        <option value="9" ${discountPercentage == 9 ? 'selected' : ''}>9%</option>
+                        <option value="10" ${discountPercentage == 10 ? 'selected' : ''}>10%</option>
+                        <option value="11" ${discountPercentage == 11 ? 'selected' : ''}>11%</option>
+                        <option value="12" ${discountPercentage == 12 ? 'selected' : ''}>12%</option>
+                        <option value="13" ${discountPercentage == 13 ? 'selected' : ''}>13%</option>
+                        <option value="14" ${discountPercentage == 14 ? 'selected' : ''}>14%</option>
+                        <option value="15" ${discountPercentage == 15 ? 'selected' : ''}>15%</option>
+                    </select>
+                </td>
+                <td>
+                    ${discountAmount > 0 ? 
+                        `<span class="text-danger">-${discountAmount.toFixed(2)} ج.م</span>` : 
+                        '<span class="text-muted">0.00 ج.م</span>'
+                    }
+                </td>
+                <td><strong class="text-success">${totalAfterDiscount.toFixed(2)} ج.م</strong></td>
                 <td>
                     <button type="button" class="btn btn-sm btn-danger"
                             onclick="removeOrderItem(${idx})" title="حذف العنصر">
@@ -512,7 +553,8 @@ function updateLiveOrderItemsTable() {
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
 
         const footerHtml = `
                             </tbody>
@@ -520,10 +562,26 @@ function updateLiveOrderItemsTable() {
                     </div>
                 </div>
                 <div class="card-footer text-center bg-success text-white">
-                    <strong style="font-size: 1.1rem;">
-                        <i class="fas fa-calculator me-2"></i>
-                        الإجمالي: ${totalAmount.toFixed(2)} ج.م
-                    </strong>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong class="fs-6">
+                                <i class="fas fa-calculator me-2"></i>
+                                الإجمالي: ${totalAmount.toFixed(2)} ج.م
+                            </strong>
+                        </div>
+                        <div class="col-md-4">
+                            <strong class="fs-6">
+                                <i class="fas fa-percentage me-2"></i>
+                                إجمالي الخصم: ${totalDiscount.toFixed(2)} ج.م
+                            </strong>
+                        </div>
+                        <div class="col-md-4">
+                            <strong class="fs-5">
+                                <i class="fas fa-money-bill-wave me-2"></i>
+                                الإجمالي النهائي: ${totalAfterDiscount.toFixed(2)} ج.م
+                            </strong>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -564,6 +622,14 @@ function removeOrderItem(idx) {
     }
 }
 
+// تحديث خصم العنصر
+function updateItemDiscount(idx, discountPercentage) {
+    if (document.orderItems[idx]) {
+        document.orderItems[idx].discount_percentage = parseFloat(discountPercentage);
+        updateLiveOrderItemsTable();
+    }
+}
+
 // إضافة عنصر للطلب باستخدام SweetAlert
 function showAddItemModal() {
     Swal.fire({
@@ -595,7 +661,7 @@ function showAddItemModal() {
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">الكمية:</label>
-                            <input type="number" id="selected-quantity" class="form-control" min="1" value="1">
+                            <input type="number" id="selected-quantity" class="form-control" min="0.001" step="0.001" value="1" placeholder="مثال: 4.25">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">الإجمالي:</label>
@@ -616,7 +682,7 @@ function showAddItemModal() {
         width: '600px',
         preConfirm: () => {
             const selectedProduct = Swal.getPopup().selectedProduct;
-            const quantity = parseInt(document.getElementById('selected-quantity').value) || 1;
+            const quantity = parseFloat(document.getElementById('selected-quantity').value) || 1;
             const notes = document.getElementById('selected-notes').value || '';
             
             if (!selectedProduct) {
@@ -643,6 +709,7 @@ function showAddItemModal() {
                 code: selectedProduct.code || '',
                 unit_price: selectedProduct.price,
                 quantity: quantity,
+                discount_percentage: 0, // خصم افتراضي 0%
                 total: (selectedProduct.price * quantity),
                 notes: notes
             });
@@ -748,13 +815,30 @@ function setupProductSearch() {
     
     // تحديث الإجمالي عند تغيير الكمية
     quantityInput.addEventListener('input', function() {
-        const selectedProduct = Swal.getPopup().selectedProduct;
-        if (selectedProduct) {
-            const quantity = parseInt(this.value) || 1;
-            const total = selectedProduct.price * quantity;
-            totalInput.value = total.toFixed(2) + ' ج.م';
-        }
+        updateTotalWithDiscount();
     });
+}
+
+// دالة لحساب الإجمالي
+function setupTotalCalculation() {
+    const quantityInput = document.getElementById('selected-quantity');
+    
+    if (quantityInput) {
+        quantityInput.addEventListener('input', updateTotal);
+    }
+}
+
+// دالة تحديث الإجمالي
+function updateTotal() {
+    const selectedProduct = Swal.getPopup().selectedProduct;
+    const totalInput = document.getElementById('selected-total');
+    
+    if (selectedProduct && totalInput) {
+        const quantity = parseFloat(document.getElementById('selected-quantity').value) || 1;
+        const total = selectedProduct.price * quantity;
+        
+        totalInput.value = total.toFixed(2) + ' ج.م';
+    }
 }
 
 // اختيار منتج من نتائج البحث
@@ -774,6 +858,9 @@ function selectProduct(item) {
     document.getElementById('product-details').style.display = 'block';
     document.getElementById('search-results').innerHTML = '';
     document.getElementById('product-search').value = item.name;
+    
+    // إضافة مستمعي الأحداث لحساب الإجمالي
+    setupTotalCalculation();
 }
 
 // عرض نافذة الدفع والفوترة

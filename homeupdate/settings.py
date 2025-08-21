@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'inventory',  # إدارة المخزون
     'reports',  # التقارير
     'backup_system',  # نظام النسخ الاحتياطي والاستعادة الجديد
+    'notifications',  # نظام الإشعارات
 
 ]
 
