@@ -232,8 +232,11 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="m-0">{{ page_title }}</h3>
     <div class="actions d-flex gap-2 align-items-center">
-      <select id="template_style" class="form-select form-select-sm" style="width: 220px;" disabled>
-        <option value="pro" selected>القالب الاحترافي</option>
+      <select id="template_style" class="form-select form-select-sm" style="width: 220px;">
+        <option value="classic">القالب الكلاسيكي</option>
+        <option value="modern">القالب الحديث</option>
+        <option value="pro">القالب الاحترافي</option>
+        <option value="custom">قالب محفوظ</option>
       </select>
       <button id="set-default" class="btn btn-outline-primary btn-sm" {% if not template_id %}disabled{% endif %}>تعيين كافتراضي</button>
       <button id="save-template" class="btn btn-success">حفظ القالب</button>
@@ -570,6 +573,362 @@
     const thPrice = document.getElementById('th_price').value || 'السعر';
     const thTotal = document.getElementById('th_total').value || 'المجموع';
 
+    const styleSel = document.getElementById('template_style');
+    const style = styleSel ? styleSel.value : 'classic';
+
+    const classic = `
+    <style>
+      :root { --primary-color:${primary}; --accent-color:${accent}; }
+      body { font-family:${font}; }
+      .items-table{ width:100%; border-collapse: collapse; table-layout: fixed; }
+      .items-table th, .items-table td{ padding:10px; border:1px solid #ddd; }
+      .items-table th{ background: var(--primary-color); color:#fff; }
+      .items-table td:first-child{ text-align:right; word-break: break-word; }
+      .items-table td:nth-child(2), .items-table td:nth-child(3), .items-table td:nth-child(4){ text-align:center; }
+      .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; }
+      .bg-logo img{ max-width:60%; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); }
+      .content{ position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column; }
+      .main-content{ flex:1; }
+      .totals{ background:#f8f9fa; padding:12px; border-radius:8px; margin-top:16px; }
+      .totals .row{ display:flex; justify-content:space-between; margin-bottom:6px; }
+      .footer{ 
+        margin-top: auto; 
+        padding: 20px; 
+        background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+        border-radius: 0 0 15px 15px; 
+        text-align: center; 
+        border: none;
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+        page-break-inside: avoid;
+        color: white;
+        position: relative;
+      }
+      
+      .footer::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        pointer-events: none;
+      }
+      
+      .footer .phone-section{ 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        margin-bottom: 15px; 
+        font-size: 16px; 
+        font-weight: 600;
+        color: white;
+        position: relative;
+        z-index: 2;
+      }
+      
+      .footer .phone-icon{ 
+        display: inline-block;
+        margin-left: 8px; 
+      }
+      
+
+      
+      .footer .phone-icon::before{ 
+        content: '📞';
+        font-size: 18px;
+      }
+      
+      .footer .note-section{ 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 14px; 
+        color: rgba(255, 255, 255, 0.9);
+        position: relative;
+        z-index: 2;
+      }
+      
+      .footer .note-icon{ 
+        width: 40px; 
+        height: 40px; 
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        border-radius: 50%; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        margin-left: 12px; 
+        box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+        backdrop-filter: blur(8px);
+        transition: all 0.3s ease;
+      }
+      
+      .footer .note-icon:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+      }
+      
+      .footer .note-icon::before{ 
+        content: '📝';
+        font-size: 18px;
+        filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
+      }
+      @media print { 
+        .bg-logo{ 
+          display:${bg?'block':'none'} !important; 
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          opacity: ${bgOpacity/100} !important;
+          z-index: -1 !important;
+          pointer-events: none !important;
+          width: 100% !important;
+          height: 100% !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .bg-logo img{ 
+          max-width: 60% !important; 
+          position: absolute !important; 
+          top: 40% !important; 
+          left: 50% !important; 
+          transform: translate(-50%,-50%) !important;
+          width: auto !important;
+          height: auto !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    </style>
+    <div class="bg-logo">
+      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+    </div>
+    <div class="content">
+      <div class="main-content">
+        <div style="text-align:center; border-bottom: 2px solid var(--primary-color); padding-bottom:10px; margin-bottom:18px;">
+          ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;"/>` : ''}
+          <h1 style="color:var(--primary-color); margin:0;">${title}</h1>
+          <div>${labelInvoice}: ${'${order.invoice_number}'} — ${labelDate}: ${'${order.order_date}'}</div>
+        </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:16px; margin-bottom:16px;">
+        ${showCustomer ? `
+        <div style=\"background:#f8f9fa; padding:12px; border-right:4px solid var(--accent-color);\">
+          <div style=\"font-weight:600; margin-bottom:8px;\">${labelCustomerSec}</div>
+          <div>الاسم: ${'${customer.name}'} </div>
+          <div>الهاتف: ${'${customer.phone}'} </div>
+          <div>العنوان: ${'${customer.address}'} </div>
+        </div>` : ''}
+        ${showOrderInfo ? `
+        <div style=\"background:#fff3cd; padding:12px; border-right:4px solid var(--accent-color);\">
+          <div style=\"font-weight:600; margin-bottom:8px;\">بيانات الطلب</div>
+          <div>الفرع: ${'${branch.name}'} </div>
+          <div>اسم البائع: ${'${salesperson.name}'} </div>
+          <div>رقم الطلب: ${'${order.order_number}'} </div>
+          <div>نوع الطلب: ${'${order.type}'} </div>
+          <div>تسليم متوقع: ${'${order.expected_delivery_date}'} </div>
+        </div>` : ''}
+        ${showCompany ? `
+        <div style=\"background:#f8f9fa; padding:12px; border-right:4px solid var(--accent-color);\">
+          <div style=\"font-weight:600; margin-bottom:8px;\">${labelCompanySec}</div>
+          <div>${cname}</div>
+          <div>${cphone}</div>
+          <div>${caddr}</div>
+        </div>` : ''}
+      </div>
+      ${showTable ? `
+      <table class=\"items-table\">
+        <thead>
+          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thTotal}</th></tr>
+        </thead>
+        <tbody>${'${order.items_table}'} </tbody>
+      </table>` : ''}
+      ${showTotals ? `
+      <div class=\"totals\">
+        <div class=\"row\"><span>المجموع قبل الخصم:</span><span><strong>${'${order.total_amount}'} ${'${systemSettings.currency_symbol}'}</strong></span></div>
+        ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"row\"><span>إجمالي الخصم:</span><span style=\"color:#dc3545;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>` : ''}
+        <div class=\"row\"><span>الإجمالي النهائي:</span><span style=\"color:#198754;\"><strong>${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></span></div>
+        <div class=\"row\"><span>المبلغ المدفوع:</span><span style=\"color:#198754;\">${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>
+                 <div class=\"row\"><span>المبلغ المتبقي:</span><span style=\"color:#dc3545;\">${'${order.final_price_after_discount - order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>
+      </div>` : ''}
+        ${notes ? `<div style=\"margin-top:14px; color:#6c757d;\">${notes}</div>` : ''}
+        ${terms ? `<div style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
+      </div>
+      ${showFooter ? `
+      <div class=\"footer\">
+        ${hotlineNumber ? `<div class=\"phone-section\"><div class=\"phone-icon\" style=\"color:${phoneIconColor}; font-size:${phoneIconSize};\"></div><span style=\"color:${phoneTextColor}\">${hotlineNumber}</span></div>` : ''}
+        ${footerNote ? `<div class=\"note-section\"><div class=\"note-icon\" style=\"color:${noteIconColor}; font-size:${noteIconSize};\"></div><span style=\"color:${noteTextColor}\">${footerNote}</span></div>` : ''}
+      </div>` : ''}
+    </div>`;
+
+    const modern = `
+    <style>
+      :root { --primary-color:${primary}; --accent-color:${accent}; }
+      body { font-family:${font}; }
+      .hero{ 
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); 
+        color: #fff; 
+        padding: 25px; 
+        border-radius: 15px 15px 0 0; 
+        text-align: center; 
+        position: relative;
+        overflow: hidden;
+      }
+      .hero::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+        pointer-events: none;
+      }
+      .card{ background:#fff; border:1px solid #eee; border-radius:10px; padding:12px; }
+      .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+      .items-table{ width:100%; border-collapse: collapse; margin-top:10px; }
+      .items-table th{ background:#f1f3f5; }
+      .items-table th,.items-table td{ padding:10px; border-bottom:1px solid #eee; }
+      .items-table td:first-child{ text-align:right; word-break:break-word; }
+      .items-table td:nth-child(2), .items-table td:nth-child(3), .items-table td:nth-child(4){ text-align:center; }
+      .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; }
+      .bg-logo img{ max-width:60%; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); }
+      .totals{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-top:12px; }
+      .totals .t{ background:#f8f9fa; border:1px solid #eee; border-radius:10px; padding:12px; text-align:center; }
+      .content{ position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column; }
+      .main-content{ flex:1; }
+      .footer{ 
+        margin-top: auto; 
+        padding: 25px 30px; 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px; 
+        text-align: center; 
+        border: none;
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        page-break-inside: avoid;
+        position: relative;
+        overflow: hidden;
+      }
+      .footer::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        pointer-events: none;
+      }
+      .footer .phone-section{ 
+        display: flex; align-items: center; justify-content: center; 
+        margin-bottom: 15px; font-size: 16px; font-weight: 600;
+        color: white; position: relative; z-index: 2;
+      }
+      .footer .phone-icon{ 
+        display: inline-block;
+        margin-left: 8px; 
+      }
+      .footer .phone-icon::before{ content: '📞'; font-size: 20px; }
+      .footer .note-section{ 
+        display: flex; align-items: center; justify-content: center; 
+        font-size: 14px; color: rgba(255, 255, 255, 0.9);
+        position: relative; z-index: 2;
+      }
+      .footer .note-icon{ 
+        width: 40px; height: 40px; 
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+        margin-left: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+        backdrop-filter: blur(8px); transition: all 0.3s ease;
+      }
+      .footer .note-icon::before{ content: '📝'; font-size: 18px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3)); }
+      @media print { 
+        .bg-logo{ 
+          display:${bg?'block':'none'} !important; 
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          opacity: ${bgOpacity/100} !important;
+          z-index: -1 !important;
+          pointer-events: none !important;
+          width: 100% !important;
+          height: 100% !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .bg-logo img{ 
+          max-width: 60% !important; 
+          position: absolute !important; 
+          top: 40% !important; 
+          left: 50% !important; 
+          transform: translate(-50%,-50%) !important;
+          width: auto !important;
+          height: auto !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    </style>
+    <div class="bg-logo">
+      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+    </div>
+    <div class="main-content">
+      <div class="hero">
+        ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto; border-radius: 8px;"/>` : ''}
+        <h2 style="margin:0;">${title}</h2>
+        <div class="small">${labelInvoice}: ${'${order.invoice_number}'} — ${labelDate}: ${'${order.order_date}'}</div>
+      </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:12px; margin-top:12px;">
+      ${showCustomer ? `
+      <div class=\"card\">
+        <div style=\"font-weight:600; margin-bottom:6px;\">${labelCustomerSec}</div>
+        <div>الاسم: ${'${customer.name}'} </div>
+        <div>الهاتف: ${'${customer.phone}'} </div>
+        <div>العنوان: ${'${customer.address}'} </div>
+      </div>`: ''}
+      ${showOrderInfo ? `
+      <div class=\"card\" style=\"background:#fff3cd;\">
+        <div style=\"font-weight:600; margin-bottom:6px;\">بيانات الطلب</div>
+        <div>الفرع: ${'${branch.name}'} </div>
+        <div>اسم البائع: ${'${salesperson.name}'} </div>
+        <div>رقم الطلب: ${'${order.order_number}'} </div>
+        <div>نوع الطلب: ${'${order.type}'} </div>
+        <div>تسليم متوقع: ${'${order.expected_delivery_date}'} </div>
+      </div>`: ''}
+      ${showCompany ? `
+      <div class=\"card\">
+        <div style=\"font-weight:600; margin-bottom:6px;\">${labelCompanySec}</div>
+        <div>${cname}</div>
+        <div>${cphone}</div>
+        <div>${caddr}</div>
+      </div>`: ''}
+    </div>
+    ${showTable ? `
+    <div class=\"card\" style=\"margin-top:12px;\">
+      <table class=\"items-table\">
+        <thead>
+          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thTotal}</th></tr>
+        </thead>
+        <tbody>${'${order.items_table}'} </tbody>
+      </table>
+    </div>`: ''}
+    ${showTotals ? `
+    <div class=\"totals\">
+      <div class=\"t\"><div style=\"color:#666;\">المجموع قبل الخصم</div><strong>${'${order.total_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
+      ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"t\"><div style=\"color:#dc3545;\">إجمالي الخصم</div><strong style=\"color:#dc3545;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>` : ''}
+      <div class=\"t\"><div style=\"color:#198754;\">الإجمالي النهائي</div><strong style=\"color:#198754;\">${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
+      <div class=\"t\"><div style=\"color:#198754;\">المبلغ المدفوع</div><strong>${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
+             <div class=\"t\"><div style=\"color:#dc3545;\">المبلغ المتبقي</div><strong>${'${order.final_price_after_discount - order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
+    </div>`: ''}
+      ${notes ? `<div class=\"card\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''}
+      ${terms ? `<div class=\"card\" style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
+    </div>
+    ${showFooter ? `
+    <div class=\"footer\">
+      ${hotlineNumber ? `<div class=\"phone-section\"><div class=\"phone-icon\" style=\"color:${phoneIconColor}; font-size:${phoneIconSize};\"></div><span style=\"color:${phoneTextColor}\">${hotlineNumber}</span></div>` : ''}
+      ${footerNote ? `<div class=\"note-section\"><div class=\"note-icon\" style=\"color:${noteIconColor}; font-size:${noteIconSize};\"></div><span style=\"color:${noteTextColor}\">${footerNote}</span></div>` : ''}
+    </div>` : ''}
+    `;
+
     const pro = `
     <style>
       :root { --primary-color:${primary}; --accent-color:${accent}; }
@@ -580,10 +939,10 @@
       .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
       .box{ background:#fff; border:1px solid #e9ecef; border-radius:10px; padding:12px; }
       .box h4{ margin:0 0 8px; color:var(--primary-color); font-size:16px; }
-      .items-table{ width:100%; border-collapse: collapse; margin-top:14px; table-layout: fixed; font-size: 12px; }
-      .items-table thead th{ background:#fafbfc; border-bottom:2px solid var(--primary-color); padding: 8px; font-size: 11px; }
-      .items-table th,.items-table td{ padding:8px; border-bottom:1px solid #eee; }
-      .items-table td{ font-size: 11px; }
+      .items-table{ width:100%; border-collapse: collapse; margin-top:14px; table-layout: fixed; font-size: 11px; }
+      .items-table thead th{ background:#fafbfc; border-bottom:2px solid var(--primary-color); padding: 8px; font-size: 10px; }
+      .items-table th,.items-table td{ padding:6px; border-bottom:1px solid #eee; }
+      .items-table td{ font-size: 10px; }
       .totals{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-top:14px; }
       .totals .t{ background:#f8f9fa; border:1px solid #eee; border-radius:10px; padding:12px; text-align:center; }
       .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; }
@@ -729,8 +1088,11 @@
     </div>` : ''}
     `;
 
-    // إرجاع القالب الاحترافي فقط
-    return pro;
+    if (style === 'pro') return pro;
+    if (style === 'modern') return modern;
+    if (style === 'classic') return classic;
+    if (SAVED_HTML && SAVED_HTML.length > 0) return SAVED_HTML;
+    return classic;
   }
 
   function updatePreview() {
