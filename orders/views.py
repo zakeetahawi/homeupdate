@@ -126,11 +126,22 @@ def order_list(request):
         )
 
     if status_filter:
-        orders = orders.filter(order_status=status_filter)
+        orders = orders.filter(status=status_filter)
 
     order_type_filter = request.GET.get('order_type', '')
     if order_type_filter:
-        orders = orders.filter(selected_types__icontains=order_type_filter)
+        # البحث الدقيق في selected_types
+        orders = orders.filter(selected_types__contains=order_type_filter)
+
+    # فلتر التاريخ
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    if date_from:
+        orders = orders.filter(order_date__gte=date_from)
+    
+    if date_to:
+        orders = orders.filter(order_date__lte=date_to)
 
     # Order by created_at
     orders = orders.order_by('-created_at')
@@ -168,6 +179,8 @@ def order_list(request):
         'show_branch_filter': show_branch_filter,
         'branches': branches,
         'branch_filter': branch_filter,
+        'date_from': date_from,
+        'date_to': date_to,
     }
 
     return render(request, 'orders/order_list.html', context)
