@@ -189,6 +189,11 @@
                             <strong>تم الإنشاء بواسطة:</strong>
                             <span>{{ notification.created_by.get_full_name|default:notification.created_by.username }}</span>
                         </div>
+                        {% elif notification.extra_data.changed_by %}
+                        <div class="meta-item">
+                            <strong>تم التغيير بواسطة:</strong>
+                            <span>{{ notification.extra_data.changed_by }}</span>
+                        </div>
                         {% endif %}
                     </div>
                 </div>

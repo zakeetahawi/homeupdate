@@ -400,6 +400,10 @@
                             <small class="text-muted">
                                 بواسطة {{ notification.created_by.get_full_name|default:notification.created_by.username }}
                             </small>
+                            {% elif notification.extra_data.changed_by %}
+                            <small class="text-muted">
+                                تم التغيير بواسطة: {{ notification.extra_data.changed_by }}
+                            </small>
                             {% endif %}
                         </div>
                         
