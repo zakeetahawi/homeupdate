@@ -197,21 +197,7 @@ MIDDLEWARE = [
 ]
 
 # Debug toolbar configuration for performance monitoring
-if DEBUG:
-    INSTALLED_APPS.append('debug_toolbar')
-    # Debug Toolbar Middleware
-    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
-    # Debug Toolbar Settings
-    import socket
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + ["127.0.0.1", "10.0.2.2", "localhost"]
-    DEBUG_TOOLBAR_CONFIG = {
-        'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
-        'SHOW_COLLAPSED': True,
-        'SQL_WARNING_THRESHOLD': 20,  # تحذير عند تجاوز 20 استعلام
-        'ENABLE_STACKTRACES': True,
-        'SHOW_TEMPLATE_CONTEXT': True,
-    }
+# تم تعطيل Debug Toolbar نهائياً بناءً على طلب المستخدم
 
 AUTH_USER_MODEL = 'accounts.User'
 
