@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("customers", "0006_alter_customer_branch"),
         ("orders", "0021_fix_order_status_default"),
-        ("accounts", "0015_delete_notification"),
+        ("accounts", "0014_add_user_to_salesperson"),
     ]
 
     operations = [
