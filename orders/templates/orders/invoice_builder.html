@@ -751,7 +751,7 @@
         ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"row\"><span>إجمالي الخصم:</span><span style=\"color:#dc3545;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>` : ''}
         <div class=\"row\"><span>الإجمالي النهائي:</span><span style=\"color:#198754;\"><strong>${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></span></div>
         <div class=\"row\"><span>المبلغ المدفوع:</span><span style=\"color:#198754;\">${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>
-        <div class=\"row\"><span>المبلغ المتبقي:</span><span style=\"color:#dc3545;\">${'${order.final_price_after_discount - order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>
+        <div class=\"row\"><span>المبلغ المتبقي:</span><span style=\"color:#dc3545;\">${'${(parseFloat(order.final_price_after_discount) - parseFloat(order.paid_amount)).toFixed(2)}'} ${'${systemSettings.currency_symbol}'}</span></div>
       </div>` : ''}
         ${notes ? `<div style=\"margin-top:14px; color:#6c757d;\">${notes}</div>` : ''}
         ${terms ? `<div style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
@@ -917,7 +917,7 @@
       ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"t\"><div style=\"color:#dc3545;\">إجمالي الخصم</div><strong style=\"color:#dc3545;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>` : ''}
       <div class=\"t\"><div style=\"color:#198754;\">الإجمالي النهائي</div><strong style=\"color:#198754;\">${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
       <div class=\"t\"><div style=\"color:#198754;\">المبلغ المدفوع</div><strong>${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
-      <div class=\"t\"><div style=\"color:#dc3545;\">المبلغ المتبقي</div><strong>${'${order.final_price_after_discount - order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
+      <div class=\"t\"><div style=\"color:#dc3545;\">المبلغ المتبقي</div><strong>${'${(parseFloat(order.final_price_after_discount) - parseFloat(order.paid_amount)).toFixed(2)}'} ${'${systemSettings.currency_symbol}'}</strong></div>
     </div>`: ''}
       ${notes ? `<div class=\"card\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''}
       ${terms ? `<div class=\"card\" style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
@@ -1057,7 +1057,7 @@
       ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">إجمالي الخصم</div><strong style=\"color:#dc3545; font-size:18px;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>` : ''}
       <div class=\"t\"><div style=\"color:#198754; font-size:12px;\">الإجمالي النهائي</div><strong style=\"color:#198754; font-size:18px;\">${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
       <div class=\"t\"><div style=\"color:#198754; font-size:12px;\">المبلغ المدفوع</div><strong style=\"color:#198754; font-size:18px;\">${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
-      <div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">المبلغ المتبقي</div><strong style=\"color:#dc3545; font-size:18px;\">${'${order.final_price_after_discount - order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
+      <div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">المبلغ المتبقي</div><strong style=\"color:#dc3545; font-size:18px;\">${'${(parseFloat(order.final_price_after_discount) - parseFloat(order.paid_amount)).toFixed(2)}'} ${'${systemSettings.currency_symbol}'}</strong></div>
     </div>`: ''}
       ${notes ? `<div class=\"box\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''}
       ${terms ? `<div class=\"box\" style=\"margin-top:12px; color:#6c757d;\">${terms}</div>` : ''}
