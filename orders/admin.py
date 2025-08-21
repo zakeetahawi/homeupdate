@@ -41,13 +41,35 @@ class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 1
     readonly_fields = ('total_price',)
-
+    
     def get_formset(self, request, obj=None, **kwargs):
         if obj is None:
             self.extra = 0
         else:
             self.extra = 1
-        return super().get_formset(request, obj, **kwargs)
+        formset = super().get_formset(request, obj, **kwargs)
+        
+        # تخصيص widgets لدعم القيم العشرية
+        formset.form.base_fields['quantity'].widget.attrs.update({
+            'type': 'number',
+            'min': '0.001',
+            'step': '0.001',
+            'placeholder': 'مثال: 4.25'
+        })
+        formset.form.base_fields['unit_price'].widget.attrs.update({
+            'type': 'number',
+            'min': '0',
+            'step': '0.01',
+            'placeholder': 'مثال: 150.50'
+        })
+        
+        # تحسين: استخدام queryset محسن للمنتجات
+        from inventory.models import Product
+        formset.form.base_fields['product'].queryset = Product.objects.select_related('category').only(
+            'id', 'name', 'price', 'category__name'
+        )
+        
+        return formset
 
 class PaymentInline(admin.TabularInline):
     model = Payment
@@ -132,6 +154,14 @@ class OrderAdmin(admin.ModelAdmin):
     )
     date_hierarchy = 'order_date'
     actions = ['mark_as_paid', 'create_manufacturing_order', 'export_orders']
+    
+    def get_queryset(self, request):
+        """تحسين الاستعلامات باستخدام select_related و prefetch_related"""
+        return super().get_queryset(request).select_related(
+            'customer', 'salesperson', 'branch'
+        ).prefetch_related(
+            'items__product', 'payments'
+        )
 
     def mark_as_paid(self, request, queryset):
         updated = 0
@@ -374,9 +404,32 @@ class OrderAdmin(admin.ModelAdmin):
 @admin.register(OrderStatusLog)
 class OrderStatusLogAdmin(admin.ModelAdmin):
     list_per_page = 50
-    list_display = ('order', 'old_status', 'new_status', 'changed_by', 'created_at')
-    list_filter = ('old_status', 'new_status', 'changed_by')
-    search_fields = ('order__order_number',)
+    list_display = ('order', 'old_status_display', 'new_status_display', 'changed_by', 'notes', 'created_at')
+    list_filter = ('old_status', 'new_status', 'changed_by', 'created_at')
+    search_fields = ('order__order_number', 'notes')
+    readonly_fields = ('order', 'old_status', 'new_status', 'changed_by', 'created_at')
+    date_hierarchy = 'created_at'
+    
+    def old_status_display(self, obj):
+        if obj.old_status:
+            return obj.get_old_status_display()
+        return '-'
+    old_status_display.short_description = 'الحالة السابقة'
+    old_status_display.admin_order_field = 'old_status'
+    
+    def new_status_display(self, obj):
+        if obj.new_status:
+            return obj.get_new_status_display()
+        return '-'
+    new_status_display.short_description = 'الحالة الجديدة'
+    new_status_display.admin_order_field = 'new_status'
+    
+    def quantity_display(self, obj):
+        """عرض الكمية بدون أصفار زائدة"""
+        if hasattr(obj, 'get_clean_quantity_display'):
+            return obj.get_clean_quantity_display()
+        return str(obj.quantity) if obj.quantity else '0'
+    quantity_display.short_description = 'الكمية'
 
 @admin.register(DeliveryTimeSettings)
 class DeliveryTimeSettingsAdmin(admin.ModelAdmin):

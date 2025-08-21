@@ -20,6 +20,7 @@ from inspections.models import Inspection
 from datetime import datetime, timedelta
 from django.db import models
 import traceback
+from django.utils.translation import gettext_lazy as _
 
 class OrdersDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'orders/dashboard.html'
@@ -376,9 +377,8 @@ def order_create(request):
                         'redirect_url': f'/orders/{order.pk}/success/' + (f'?show_print=1&paid_amount={paid_amount}' if paid_amount > 0 else '')
                     })
 
-                # إعادة التوجيه مع معلومة عن الدفع
+                # إعادة توجيه لصفحة النجاح مع خيار الطباعة
                 if paid_amount > 0:
-                    # إعادة توجيه لصفحة النجاح مع خيار الطباعة
                     return redirect(f'/orders/{order.pk}/success/?show_print=1&paid_amount={paid_amount}')
                 else:
                     return redirect('orders:order_success', pk=order.pk)
@@ -1081,8 +1081,12 @@ def order_update_by_number(request, order_number):
             # حفظ الطلب
             updated_order = form.save()
 
-            # حفظ عناصر الطلب
+            # حفظ عناصر الطلب مع تمرير المستخدم الحالي
             formset.instance = updated_order
+            # تمرير المستخدم الحالي إلى كل عنصر طلب
+            for form_item in formset:
+                if form_item.instance:
+                    form_item.instance._modified_by = request.user
             formset.save()
 
             # إعادة حساب المبلغ الإجمالي
@@ -1608,3 +1612,64 @@ def check_contract_upload_status(request, pk):
             'is_uploaded': False,
             'error': str(e)
         })
+
+@login_required
+def order_status_history(request, order_id):
+    """عرض سجل تفصيلي لتغييرات حالة الطلب"""
+    order = get_object_or_404(Order, id=order_id)
+    
+    # التحقق من الصلاحيات
+    if not request.user.has_perm('orders.view_order'):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("ليس لديك صلاحية لعرض تفاصيل الطلب")
+    
+    # الحصول على سجلات تغيير الحالة
+    status_logs = order.status_logs.all().order_by('-created_at')
+    
+    # البحث والفلترة
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    user_filter = request.GET.get('user', '')
+    
+    if search_query:
+        status_logs = status_logs.filter(
+            Q(notes__icontains=search_query) |
+            Q(changed_by__first_name__icontains=search_query) |
+            Q(changed_by__last_name__icontains=search_query) |
+            Q(changed_by__username__icontains=search_query)
+        )
+    
+    if status_filter:
+        status_logs = status_logs.filter(new_status=status_filter)
+    
+    if user_filter:
+        status_logs = status_logs.filter(changed_by__id=user_filter)
+    
+    # الترقيم
+    paginator = Paginator(status_logs, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # الحصول على قائمة الحالات للمفلتر
+    status_choices = Order.TRACKING_STATUS_CHOICES
+    
+    # الحصول على قائمة المستخدمين للمفلتر
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    users = User.objects.filter(
+        id__in=status_logs.values_list('changed_by', flat=True).distinct()
+    ).order_by('first_name', 'last_name')
+    
+    context = {
+        'order': order,
+        'page_obj': page_obj,
+        'status_logs': page_obj,
+        'status_choices': status_choices,
+        'users': users,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'user_filter': user_filter,
+        'total_logs': status_logs.count(),
+    }
+    
+    return render(request, 'orders/status_history.html', context)

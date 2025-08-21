@@ -595,7 +595,7 @@ function showAddItemModal() {
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">الكمية:</label>
-                            <input type="number" id="selected-quantity" class="form-control" min="1" value="1">
+                            <input type="number" id="selected-quantity" class="form-control" min="0.001" step="0.001" value="1" placeholder="مثال: 4.25">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">الإجمالي:</label>
@@ -616,7 +616,7 @@ function showAddItemModal() {
         width: '600px',
         preConfirm: () => {
             const selectedProduct = Swal.getPopup().selectedProduct;
-            const quantity = parseInt(document.getElementById('selected-quantity').value) || 1;
+            const quantity = parseFloat(document.getElementById('selected-quantity').value) || 1;
             const notes = document.getElementById('selected-notes').value || '';
             
             if (!selectedProduct) {

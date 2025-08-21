@@ -54,7 +54,7 @@ window.updateLiveOrderItemsTable = function() {
                     ${item.code ? `<br><small class="text-muted">كود: ${item.code}</small>` : ''}
                     ${item.notes ? `<br><small class="text-info"><i class="fas fa-sticky-note me-1"></i>${item.notes}</small>` : ''}
                 </td>
-                <td><span class="badge bg-info">${item.quantity}</span></td>
+                <td><span class="badge bg-info">${parseFloat(item.quantity).toFixed(3).replace(/\.?0+$/, '')}</span></td>
                 <td>${item.unit_price} ج.م</td>
                 <td><strong class="text-success">${item.total.toFixed(2)} ج.م</strong></td>
                 <td>

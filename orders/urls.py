@@ -48,6 +48,9 @@ urlpatterns = [
 
     # Update Order Status
     path('order/<int:order_id>/update-status/', views.update_order_status, name='update_status'),
+    
+    # Order Status History
+    path('order/<int:order_id>/status-history/', views.order_status_history, name='status_history'),
 
     # API endpoints
     path('api/order-details/<int:order_id>/', views.get_order_details_api, name='order_details_api'),
