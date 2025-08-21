@@ -87,6 +87,8 @@ class OrderItemForm(forms.ModelForm):
                 raise forms.ValidationError('يرجى إدخال قيمة صحيحة للكمية')
         return quantity
 
+
+
     def save(self, commit=True):
         instance = super().save(commit=False)
 
@@ -548,6 +550,7 @@ class OrderEditForm(forms.ModelForm):
         model = Order
         fields = [
             'customer', 'branch', 'salesperson', 'selected_types',
+            'invoice_number', 'contract_number', 'invoice_number_2', 'contract_number_2',
             'notes', 'total_amount', 'paid_amount'
         ]
         widgets = {
@@ -557,6 +560,22 @@ class OrderEditForm(forms.ModelForm):
             'selected_types': forms.TextInput(attrs={
                 'class': 'form-control',
                 'readonly': True,
+            }),
+            'invoice_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم الفاتورة'
+            }),
+            'contract_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم العقد'
+            }),
+            'invoice_number_2': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم الفاتورة 2'
+            }),
+            'contract_number_2': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'رقم العقد 2'
             }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -580,6 +599,10 @@ class OrderEditForm(forms.ModelForm):
             'branch': 'الفرع',
             'salesperson': 'البائع',
             'selected_types': 'نوع الطلب',
+            'invoice_number': 'رقم الفاتورة',
+            'contract_number': 'رقم العقد',
+            'invoice_number_2': 'رقم الفاتورة 2',
+            'contract_number_2': 'رقم العقد 2',
             'notes': 'ملاحظات الطلب',
             'total_amount': 'إجمالي المبلغ',
             'paid_amount': 'المبلغ المدفوع',

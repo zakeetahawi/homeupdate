@@ -751,7 +751,7 @@
         ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"row\"><span>إجمالي الخصم:</span><span style=\"color:#dc3545;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>` : ''}
         <div class=\"row\"><span>الإجمالي النهائي:</span><span style=\"color:#198754;\"><strong>${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></span></div>
         <div class=\"row\"><span>المبلغ المدفوع:</span><span style=\"color:#198754;\">${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>
-                 <div class=\"row\"><span>المبلغ المتبقي:</span><span style=\"color:#dc3545;\">${'${order.final_price_after_discount - order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>
+        <div class=\"row\"><span>المبلغ المتبقي:</span><span style=\"color:#dc3545;\">${'${order.remaining_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>
       </div>` : ''}
         ${notes ? `<div style=\"margin-top:14px; color:#6c757d;\">${notes}</div>` : ''}
         ${terms ? `<div style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
@@ -917,7 +917,7 @@
       ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"t\"><div style=\"color:#dc3545;\">إجمالي الخصم</div><strong style=\"color:#dc3545;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>` : ''}
       <div class=\"t\"><div style=\"color:#198754;\">الإجمالي النهائي</div><strong style=\"color:#198754;\">${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
       <div class=\"t\"><div style=\"color:#198754;\">المبلغ المدفوع</div><strong>${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
-             <div class=\"t\"><div style=\"color:#dc3545;\">المبلغ المتبقي</div><strong>${'${order.final_price_after_discount - order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
+      <div class=\"t\"><div style=\"color:#dc3545;\">المبلغ المتبقي</div><strong>${'${order.remaining_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
     </div>`: ''}
       ${notes ? `<div class=\"card\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''}
       ${terms ? `<div class=\"card\" style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
@@ -939,10 +939,9 @@
       .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
       .box{ background:#fff; border:1px solid #e9ecef; border-radius:10px; padding:12px; }
       .box h4{ margin:0 0 8px; color:var(--primary-color); font-size:16px; }
-      .items-table{ width:100%; border-collapse: collapse; margin-top:14px; table-layout: fixed; font-size: 11px; }
-      .items-table thead th{ background:#fafbfc; border-bottom:2px solid var(--primary-color); padding: 8px; font-size: 10px; }
-      .items-table th,.items-table td{ padding:6px; border-bottom:1px solid #eee; }
-      .items-table td{ font-size: 10px; }
+      .items-table{ width:100%; border-collapse: collapse; margin-top:14px; table-layout: fixed; }
+      .items-table thead th{ background:#fafbfc; border-bottom:2px solid var(--primary-color); }
+      .items-table th,.items-table td{ padding:10px; border-bottom:1px solid #eee; }
       .totals{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-top:14px; }
       .totals .t{ background:#f8f9fa; border:1px solid #eee; border-radius:10px; padding:12px; text-align:center; }
       .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; }
@@ -1047,27 +1046,9 @@
     <div class=\"box\" style=\"margin-top:12px;\">
       <table class=\"items-table\">
         <thead>
-          <tr>
-            <th>${thDesc}</th>
-            <th>${thQty}</th>
-            <th>${thPrice}</th>
-            <th>نسبة الخصم</th>
-            <th>سعر بعد الخصم</th>
-            <th>${thTotal}</th>
-          </tr>
+          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thTotal}</th></tr>
         </thead>
-        <tbody>
-          ${'${order.items.all().map(item => `
-            <tr>
-              <td>${item.product.name}</td>
-              <td style="text-align:center;">${item.get_clean_quantity_display()}</td>
-              <td style="text-align:center;">${item.unit_price} ${'${systemSettings.currency_symbol}'}</td>
-              <td style="text-align:center;">${item.get_clean_discount_display()}%</td>
-              <td style="text-align:center;">${item.total_after_discount} ${'${systemSettings.currency_symbol}'}</td>
-              <td style="text-align:center; font-weight:bold;">${item.total_after_discount} ${'${systemSettings.currency_symbol}'}</td>
-            </tr>
-          `).join('')}'}
-        </tbody>
+        <tbody>${'${order.items_table}'} </tbody>
       </table>
     </div>`: ''}
     ${showTotals ? `
@@ -1076,7 +1057,7 @@
       ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">إجمالي الخصم</div><strong style=\"color:#dc3545; font-size:18px;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>` : ''}
       <div class=\"t\"><div style=\"color:#198754; font-size:12px;\">الإجمالي النهائي</div><strong style=\"color:#198754; font-size:18px;\">${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
       <div class=\"t\"><div style=\"color:#198754; font-size:12px;\">المبلغ المدفوع</div><strong style=\"color:#198754; font-size:18px;\">${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
-      <div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">المبلغ المتبقي</div><strong style=\"color:#dc3545; font-size:18px;\">${'${order.final_price_after_discount - order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
+      <div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">المبلغ المتبقي</div><strong style=\"color:#dc3545; font-size:18px;\">${'${order.remaining_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
     </div>`: ''}
       ${notes ? `<div class=\"box\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''}
       ${terms ? `<div class=\"box\" style=\"margin-top:12px; color:#6c757d;\">${terms}</div>` : ''}

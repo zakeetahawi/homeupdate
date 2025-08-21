@@ -689,7 +689,7 @@
             </div>
 
             <!-- Order Modification Logs -->
-            {% if order.modification_logs.exists %}
+            {% if order.modification_logs.exists and order.modification_logs.count > 0 %}
             <div class="card mb-4">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0">
@@ -739,7 +739,7 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <small class="text-muted">
                                 <i class="fas fa-user me-1"></i>
-                                بواسطة: {{ log.modified_by.get_full_name|default:log.modified_by.username|default:"مدير النظام" }}
+                                بواسطة: {% if log.modified_by %}{{ log.modified_by.get_full_name|default:log.modified_by.username }}{% else %}مدير النظام{% endif %}
                             </small>
                             <small class="text-muted">
                                 <i class="fas fa-clock me-1"></i>
@@ -1111,7 +1111,9 @@
                             <th>المنتج</th>
                             <th>الكمية</th>
                             <th>سعر الوحدة</th>
-                            <th>السعر الإجمالي</th>
+                            <th>نسبة الخصم</th>
+                            <th>مبلغ الخصم</th>
+                            <th>السعر بعد الخصم</th>
                             <th>ملاحظات</th>
                         </tr>
                     </thead>
@@ -1122,19 +1124,43 @@
                             <td>{{ item.product.name }}</td>
                             <td>{{ item.quantity|clean_decimal }}</td>
                             <td>{{ item.unit_price|clean_decimal_currency:currency_symbol }}</td>
-                            <td>{{ item.total_price|clean_decimal_currency:currency_symbol }}</td>
+                            <td>
+                                {% if item.discount_percentage and item.discount_percentage > 0 %}
+                                    <span class="badge bg-warning text-dark">{{ item.get_clean_discount_display }}%</span>
+                                {% else %}
+                                    <span class="text-muted">0%</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.discount_amount and item.discount_amount > 0 %}
+                                    <span class="text-danger">-{{ item.discount_amount|clean_decimal_currency:currency_symbol }}</span>
+                                {% else %}
+                                    <span class="text-muted">0.00 {{ currency_symbol }}</span>
+                                {% endif %}
+                            </td>
+                            <td><strong class="text-success">{{ item.total_after_discount|clean_decimal_currency:currency_symbol }}</strong></td>
                             <td>{{ item.notes|default:"-" }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center py-3">لا توجد عناصر في هذا الطلب</td>
+                            <td colspan="8" class="text-center py-3">لا توجد عناصر في هذا الطلب</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr class="table-light">
-                            <th colspan="4" class="text-start">المجموع</th>
-                            <th>{{ order.total_amount|clean_decimal_currency:currency_symbol }}</th>
+                            <th colspan="4" class="text-start">المجموع قبل الخصم</th>
+                            <th colspan="2">{{ order.total_amount|clean_decimal_currency:currency_symbol }}</th>
+                            <td></td>
+                        </tr>
+                        <tr class="table-warning">
+                            <th colspan="4" class="text-start">إجمالي الخصم</th>
+                            <th colspan="2">{{ order.total_discount_amount|clean_decimal_currency:currency_symbol }}</th>
+                            <td></td>
+                        </tr>
+                        <tr class="table-success">
+                            <th colspan="4" class="text-start">الإجمالي النهائي بعد الخصم</th>
+                            <th colspan="2">{{ order.final_price_after_discount|clean_decimal_currency:currency_symbol }}</th>
                             <td></td>
                         </tr>
                     </tfoot>

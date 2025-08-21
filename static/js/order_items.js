@@ -21,10 +21,15 @@ window.updateLiveOrderItemsTable = function() {
     }
     
     const totalAmount = window.orderItems.reduce((sum, item) => sum + item.total, 0);
+    const totalDiscount = window.orderItems.reduce((sum, item) => {
+        const discountPercentage = item.discount_percentage || 0;
+        return sum + (item.total * discountPercentage / 100);
+    }, 0);
+    const totalAfterDiscount = totalAmount - totalDiscount;
     
     let html = `
         <div class="card border-success">
-            <div class="card-header bg-success text-white">
+            <div class="card-header text-white" style="background-color: #198754; font-weight: bold;">
                 <h6 class="mb-0">
                     <i class="fas fa-list me-2"></i>العناصر المختارة (${window.orderItems.length})
                 </h6>
@@ -38,7 +43,9 @@ window.updateLiveOrderItemsTable = function() {
                                 <th>المنتج</th>
                                 <th width="80">الكمية</th>
                                 <th width="100">سعر الوحدة</th>
-                                <th width="120">الإجمالي</th>
+                                <th width="100">الخصم %</th>
+                                <th width="100">مبلغ الخصم</th>
+                                <th width="120">الإجمالي بعد الخصم</th>
                                 <th width="80">إجراءات</th>
                             </tr>
                         </thead>
@@ -46,6 +53,10 @@ window.updateLiveOrderItemsTable = function() {
     `;
     
     window.orderItems.forEach((item, idx) => {
+        const discountPercentage = item.discount_percentage || 0;
+        const discountAmount = (item.total * discountPercentage / 100);
+        const totalAfterDiscount = item.total - discountAmount;
+        
         html += `
             <tr>
                 <td><span class="badge bg-primary">${idx+1}</span></td>
@@ -56,7 +67,35 @@ window.updateLiveOrderItemsTable = function() {
                 </td>
                 <td><span class="badge bg-info">${parseFloat(item.quantity).toFixed(3).replace(/\.?0+$/, '')}</span></td>
                 <td>${item.unit_price} ج.م</td>
-                <td><strong class="text-success">${item.total.toFixed(2)} ج.م</strong></td>
+                <td>
+                    <select class="form-select form-select-sm discount-select" 
+                            onchange="updateItemDiscount(${idx}, this.value)" 
+                            style="width: 80px; font-size: 0.875rem;">
+                        <option value="0" ${discountPercentage == 0 ? 'selected' : ''}>0%</option>
+                        <option value="1" ${discountPercentage == 1 ? 'selected' : ''}>1%</option>
+                        <option value="2" ${discountPercentage == 2 ? 'selected' : ''}>2%</option>
+                        <option value="3" ${discountPercentage == 3 ? 'selected' : ''}>3%</option>
+                        <option value="4" ${discountPercentage == 4 ? 'selected' : ''}>4%</option>
+                        <option value="5" ${discountPercentage == 5 ? 'selected' : ''}>5%</option>
+                        <option value="6" ${discountPercentage == 6 ? 'selected' : ''}>6%</option>
+                        <option value="7" ${discountPercentage == 7 ? 'selected' : ''}>7%</option>
+                        <option value="8" ${discountPercentage == 8 ? 'selected' : ''}>8%</option>
+                        <option value="9" ${discountPercentage == 9 ? 'selected' : ''}>9%</option>
+                        <option value="10" ${discountPercentage == 10 ? 'selected' : ''}>10%</option>
+                        <option value="11" ${discountPercentage == 11 ? 'selected' : ''}>11%</option>
+                        <option value="12" ${discountPercentage == 12 ? 'selected' : ''}>12%</option>
+                        <option value="13" ${discountPercentage == 13 ? 'selected' : ''}>13%</option>
+                        <option value="14" ${discountPercentage == 14 ? 'selected' : ''}>14%</option>
+                        <option value="15" ${discountPercentage == 15 ? 'selected' : ''}>15%</option>
+                    </select>
+                </td>
+                <td>
+                    ${discountAmount > 0 ? 
+                        `<span class="text-danger">-${discountAmount.toFixed(2)} ج.م</span>` : 
+                        '<span class="text-muted">0.00 ج.م</span>'
+                    }
+                </td>
+                <td><strong class="text-success">${totalAfterDiscount.toFixed(2)} ج.م</strong></td>
                 <td>
                     <button type="button" class="btn btn-sm btn-danger" 
                             onclick="removeOrderItem(${idx})" 
@@ -74,15 +113,49 @@ window.updateLiveOrderItemsTable = function() {
                 </div>
             </div>
             <div class="card-footer text-center bg-success text-white">
-                <strong class="fs-5">
-                    <i class="fas fa-calculator me-2"></i>
-                    الإجمالي: ${totalAmount.toFixed(2)} ج.م
-                </strong>
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong class="fs-6">
+                            <i class="fas fa-calculator me-2"></i>
+                            الإجمالي: ${totalAmount.toFixed(2)} ج.م
+                        </strong>
+                    </div>
+                    <div class="col-md-4">
+                        <strong class="fs-6">
+                            <i class="fas fa-percentage me-2"></i>
+                            إجمالي الخصم: ${totalDiscount.toFixed(2)} ج.م
+                        </strong>
+                    </div>
+                    <div class="col-md-4">
+                        <strong class="fs-5">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            الإجمالي النهائي: ${totalAfterDiscount.toFixed(2)} ج.م
+                        </strong>
+                    </div>
+                </div>
             </div>
         </div>
     `;
     
     tableDiv.innerHTML = html;
+};
+
+// تحديث خصم العنصر
+window.updateItemDiscount = function(idx, discountPercentage) {
+    if (window.orderItems[idx]) {
+        window.orderItems[idx].discount_percentage = parseFloat(discountPercentage);
+        window.updateLiveOrderItemsTable();
+        
+        // تحديث الحقول المخفية إذا كانت متوفرة
+        if (typeof syncOrderItemsToFormFields === 'function') {
+            syncOrderItemsToFormFields();
+        }
+        
+        // تحديث التحقق من النموذج إذا كانت متوفرة
+        if (typeof validateFormRealTime === 'function') {
+            validateFormRealTime();
+        }
+    }
 };
 
 // حذف عنصر من القائمة

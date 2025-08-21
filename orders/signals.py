@@ -22,10 +22,12 @@ def track_price_changes(sender, instance, **kwargs):
             Order = instance.__class__
             old_instance = Order.objects.get(pk=instance.pk)
             if old_instance.final_price != instance.final_price:
-                instance.price_changed = True
-                instance.modified_at = timezone.now()
-                # حفظ القيمة القديمة للتتبع
-                instance._old_total_amount = old_instance.final_price
+                # لا نسجل التعديلات إذا كان هذا تحديث تلقائي (غير من قبل المستخدم)
+                if not hasattr(instance, '_is_auto_update'):
+                    instance.price_changed = True
+                    instance.modified_at = timezone.now()
+                    # حفظ القيمة القديمة للتتبع
+                    instance._old_total_amount = old_instance.final_price
         except Order.DoesNotExist:
             pass  # حالة الإنشاء الجديد
 
@@ -250,9 +252,12 @@ def order_item_post_save(sender, instance, created, **kwargs):
         # تحديث المبلغ الإجمالي للطلب
         instance.order.calculate_final_price()
         # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
+        instance.order._is_auto_update = True  # تمييز التحديث التلقائي
         Order.objects.filter(pk=instance.order.pk).update(
             final_price=instance.order.final_price
         )
+        # لا نسجل تعديلات عند الإنشاء الأولي
+        return
     else:
         # تتبع التغييرات في عنصر الطلب
         from .models import OrderItemModificationLog, OrderModificationLog
@@ -306,11 +311,30 @@ def order_item_post_save(sender, instance, created, **kwargs):
             except Product.DoesNotExist:
                 pass
         
+        # التحقق من التغييرات في نسبة الخصم
+        if instance.tracker.has_changed('discount_percentage'):
+            old_discount = instance.tracker.previous('discount_percentage')
+            new_discount = instance.discount_percentage
+            
+            OrderItemModificationLog.objects.create(
+                order_item=instance,
+                field_name='discount_percentage',
+                old_value=f"{old_discount}%" if old_discount is not None else "0%",
+                new_value=f"{new_discount}%" if new_discount is not None else "0%",
+                modified_by=getattr(instance, '_modified_by', None),
+                notes=f'تم تغيير نسبة الخصم للمنتج {instance.product.name}'
+            )
+        
         # إنشاء سجل تعديل شامل للطلب
+        # لا نسجل التعديلات إذا لم يكن هناك مستخدم محدد (إنشاء أولي)
+        if getattr(instance, '_modified_by', None) is None:
+            return
+            
         if any([
             instance.tracker.has_changed('quantity'),
             instance.tracker.has_changed('unit_price'),
-            instance.tracker.has_changed('product')
+            instance.tracker.has_changed('product'),
+            instance.tracker.has_changed('discount_percentage')
         ]):
             # الحصول على المبلغ القديم قبل التعديل
             old_total = instance.order.final_price
@@ -344,6 +368,11 @@ def order_item_post_save(sender, instance, created, **kwargs):
                     modification_details.append(f"المنتج: {old_product.name if old_product else 'غير محدد'} → {instance.product.name}")
                 except Product.DoesNotExist:
                     modification_details.append(f"المنتج: غير محدد → {instance.product.name}")
+            
+            if instance.tracker.has_changed('discount_percentage'):
+                old_discount = instance.tracker.previous('discount_percentage')
+                new_discount = instance.discount_percentage
+                modification_details.append(f"الخصم: {old_discount}% → {new_discount}%")
             
             new_total = old_total + total_change
             
@@ -487,6 +516,7 @@ def track_order_item_changes(sender, instance, **kwargs):
             instance._old_quantity = old_instance.quantity
             instance._old_unit_price = old_instance.unit_price
             instance._old_product_id = old_instance.product.id
+            instance._old_discount_percentage = old_instance.discount_percentage
         except OrderItem.DoesNotExist:
             pass  # حالة الإنشاء الجديد
 

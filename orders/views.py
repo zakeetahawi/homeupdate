@@ -318,15 +318,20 @@ def order_create(request):
                                 product_id=product_data['product_id'],
                                 quantity=product_data['quantity'],
                                 unit_price=product_data['unit_price'],
+                                discount_percentage=product_data.get('discount_percentage', 0),
                                 item_type=product_data.get('item_type', 'product'),
                                 notes=product_data.get('notes', '')
                             )
                             print("تم إنشاء عنصر:", item)
-                            total += item.quantity * item.unit_price
+                            # حساب الإجمالي مع الخصم
+                            item_total = item.quantity * item.unit_price
+                            item_discount = item_total * (item.discount_percentage / 100) if item.discount_percentage else 0
+                            total += item_total - item_discount
                             print("total حتى الآن:", total)
                     except Exception as e:
                         print(f"Error creating order items: {e}")
                 order.final_price = total
+                order._is_auto_update = True  # تمييز التحديث التلقائي
                 order.save(update_fields=['final_price'])
                 print("order.final_price بعد الحفظ:", order.final_price)
                 # تحديث المبلغ الإجمالي ليعكس السعر النهائي
