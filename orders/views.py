@@ -21,7 +21,6 @@ from datetime import datetime, timedelta
 from django.db import models
 import traceback
 from django.utils.translation import gettext_lazy as _
-
 class OrdersDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'orders/dashboard.html'
 
@@ -252,7 +251,34 @@ def order_detail(request, pk):
         'order_items': order_items,
         'inspections': inspections,
         'currency_symbol': currency_symbol,  # Add currency symbol to context
+        # computed totals to avoid relying on possibly-stale stored fields
+        'computed_total_amount': None,
+        'computed_total_discount_amount': None,
+        'computed_final_price_after_discount': None,
+        'computed_remaining_amount': None,
     }
+
+    # Compute totals from items (use on-the-fly values to avoid inconsistencies)
+    try:
+        from decimal import Decimal
+        subtotal = Decimal('0')
+        total_discount = Decimal('0')
+        for it in order_items:
+            # use model properties which return Decimal
+            subtotal += Decimal(str(it.total_price))
+            total_discount += Decimal(str(it.discount_amount))
+
+        final_after = subtotal - total_discount
+
+        context['computed_total_amount'] = subtotal
+        context['computed_total_discount_amount'] = total_discount
+        context['computed_final_price_after_discount'] = final_after
+        # remaining amount should be what remains to pay from the final after-discount total
+        paid = Decimal(str(order.paid_amount or 0))
+        context['computed_remaining_amount'] = final_after - paid
+    except Exception:
+        # if anything goes wrong, leave computed values as None so template falls back
+        pass
 
     return render(request, 'orders/order_detail.html', context)
 
@@ -320,7 +346,8 @@ def order_create(request):
                 # 5. معالجة المنتجات المحددة إن وجدت
                 selected_products_json = request.POST.get('selected_products', '')
                 print("selected_products_json:", selected_products_json)
-                total = 0
+                subtotal = 0
+                total_discount_for_items = 0
                 if selected_products_json:
                     try:
                         selected_products = json.loads(selected_products_json)
@@ -336,18 +363,20 @@ def order_create(request):
                                 notes=product_data.get('notes', '')
                             )
                             print("تم إنشاء عنصر:", item)
-                            # حساب الإجمالي مع الخصم
+                            # حساب المجموع قبل الخصم ومبلغ الخصم لكل عنصر بشكل منفصل
                             item_total = item.quantity * item.unit_price
                             item_discount = item_total * (item.discount_percentage / 100) if item.discount_percentage else 0
-                            total += item_total - item_discount
-                            print("total حتى الآن:", total)
+                            subtotal += item_total
+                            total_discount_for_items += item_discount
+                            print("subtotal حتى الآن:", subtotal)
                     except Exception as e:
                         print(f"Error creating order items: {e}")
-                order.final_price = total
+                # final_price should be the pre-discount subtotal
+                order.final_price = subtotal
                 order._is_auto_update = True  # تمييز التحديث التلقائي
                 order.save(update_fields=['final_price'])
                 print("order.final_price بعد الحفظ:", order.final_price)
-                # تحديث المبلغ الإجمالي ليعكس السعر النهائي
+                # اجعل المبلغ الإجمالي يساوي السعر النهائي قبل الخصم (مسمى total_amount يستخدم للـ pre-discount subtotal)
                 order.total_amount = order.final_price
                 order.save(update_fields=['total_amount'])
 
@@ -1261,31 +1290,38 @@ def invoice_print(request, order_number):
     company_info = CompanyInfo.objects.first()
     currency_symbol = system_settings.currency_symbol if system_settings else 'ريال'
 
-    # إنشاء جدول العناصر مرة واحدة للاستخدام في كلا الفرعين
+    # إنشاء جدول العناصر مرة واحدة للاستخدام في كلا الفرعين (يشمل عمود الخصم وحساب الإجمالي بعد الخصم)
     items_html_rows = []
     for item in order.items.all():
-        # تنسيق الأسعار لإزالة الأصفار الزائدة
+        # تنسيق الأرقام وإجراء حسابات الخصم لكل سطر
         try:
             unit_price = float(item.unit_price or 0)
-            total_price = float(item.total_price or 0)
-            quantity = int(item.quantity or 0)
-            
-            # تنسيق الأسعار بحيث تظهر بشكل صحيح
+            line_total = float(item.total_price or 0)
+            quantity = float(item.quantity or 0)
+            discount_pct = float(item.discount_percentage or 0)
+            discount_amount = float(getattr(item, 'discount_amount', 0) or 0)
+            line_total_after_discount = float(getattr(item, 'total_after_discount', line_total) or 0)
+
             unit_price_formatted = f"{unit_price:.2f}".rstrip('0').rstrip('.')
-            total_price_formatted = f"{total_price:.2f}".rstrip('0').rstrip('.')
-            
+            line_total_formatted = f"{line_total:.2f}".rstrip('0').rstrip('.')
+            discount_pct_formatted = f"{discount_pct:.2f}".rstrip('0').rstrip('.')
+            line_after_discount_formatted = f"{line_total_after_discount:.2f}".rstrip('0').rstrip('.')
         except (ValueError, TypeError):
             unit_price_formatted = "0"
-            total_price_formatted = "0"
+            line_total_formatted = "0"
+            discount_pct_formatted = "0"
+            line_after_discount_formatted = "0"
             quantity = 0
-            
+
+        # Append a row with: description | qty | unit price | discount% | total after discount
         items_html_rows.append(
             f"""
             <tr>
                 <td style=\"padding:10px;border:1px solid #ddd;text-align:right;word-break:break-word;\">{item.product.name if getattr(item, 'product', None) else 'منتج'}</td>
-                <td style=\"padding:10px;border:1px solid #ddd;text-align:center;\">{quantity}</td>
+                <td style=\"padding:10px;border:1px solid #ddd;text-align:center;\">{int(quantity) if float(quantity).is_integer() else (str(quantity).rstrip('0').rstrip('.'))}</td>
                 <td style=\"padding:10px;border:1px solid #ddd;text-align:center;\">{unit_price_formatted} {currency_symbol}</td>
-                <td style=\"padding:10px;border:1px solid #ddd;text-align:center;\">{total_price_formatted} {currency_symbol}</td>
+                <td style=\"padding:10px;border:1px solid #ddd;text-align:center;\">{discount_pct_formatted}%</td>
+                <td style=\"padding:10px;border:1px solid #ddd;text-align:center;\">{line_after_discount_formatted} {currency_symbol}</td>
             </tr>
             """
         )
@@ -1346,13 +1382,18 @@ def invoice_print(request, order_number):
             # أولوية للـ final_price ثم total_amount
             total_amount = float(order.final_price or order.total_amount or 0)
             paid_amount = float(order.paid_amount or 0)
-            remaining_amount = max(0, total_amount - paid_amount)  # تجنب القيم السالبة
-            
+            # حساب المبلغ النهائي بعد الخصم (افضل استخدام الخاصية إذا كانت متاحة)
+            try:
+                final_after = float(getattr(order, 'final_price_after_discount', None))
+            except Exception:
+                final_after = float(total_amount) - float(getattr(order, 'total_discount_amount', 0) or 0)
+            remaining_amount = max(0, final_after - paid_amount)  # تجنب القيم السالبة
+
             # تنسيق الأسعار لإزالة الأصفار الزائدة
             total_formatted = f"{total_amount:.2f}".rstrip('0').rstrip('.')
             paid_formatted = f"{paid_amount:.2f}".rstrip('0').rstrip('.')
             remaining_formatted = f"{remaining_amount:.2f}".rstrip('0').rstrip('.')
-            
+
             html_content = html_content.replace('${order.total_amount}', total_formatted)
             html_content = html_content.replace('${order.paid_amount}', paid_formatted)
             html_content = html_content.replace('${order.remaining_amount}', remaining_formatted)
@@ -1396,11 +1437,34 @@ def invoice_print(request, order_number):
         else:
             html_content = html_content.replace('${order.items_table}', f'<tbody>{items_html}</tbody>')
 
+        # حساب مجاميع الخصم والسعر النهائي بعد الخصم واستبدال العناصر المناسبة
+        try:
+            total_discount_amount_val = float(getattr(order, 'total_discount_amount', 0) or 0)
+        except Exception:
+            total_discount_amount_val = 0
+        try:
+            final_price_after_discount_val = float(getattr(order, 'final_price_after_discount', None) or getattr(order, 'final_price', None) or float(order.total_amount or 0) - total_discount_amount_val)
+        except Exception:
+            final_price_after_discount_val = 0
+
+        total_discount_formatted = f"{total_discount_amount_val:.2f}".rstrip('0').rstrip('.')
+        final_price_after_discount_formatted = f"{final_price_after_discount_val:.2f}".rstrip('0').rstrip('.')
+
+        # استبدال نُسخ القوالب للخصم والسعر النهائي بعد الخصم
+        html_content = html_content.replace('${order.total_discount_amount}', total_discount_formatted)
+        html_content = html_content.replace('${order.final_price_after_discount}', final_price_after_discount_formatted)
+
         # مجاميع أساسية - استبدال الأرقام الثابتة القديمة
         try:
             paid_amount_val = float(order.paid_amount or 0)
             total_amount_val = float(order.final_price or order.total_amount or 0)
-            remaining_amount_val = max(0, total_amount_val - paid_amount_val)
+            # remaining should be calculated from the final after-discount total
+            try:
+                # prefer computed final price if we already calculated it
+                remaining_amount_val = max(0, float(final_price_after_discount_val) - paid_amount_val)
+            except Exception:
+                # fallback to the order property
+                remaining_amount_val = max(0, float(getattr(order, 'final_price_after_discount', None) or getattr(order, 'final_price', None) or total_amount_val) - paid_amount_val)
             
             # تنسيق الأسعار لإزالة الأصفار الزائدة
             total_val_formatted = f"{total_amount_val:.2f}".rstrip('0').rstrip('.')
@@ -1427,7 +1491,13 @@ def invoice_print(request, order_number):
         try:
             total_amount = float(order.final_price or order.total_amount or 0)
             paid_amount = float(order.paid_amount or 0)
-            remaining_amount = max(0, total_amount - paid_amount)
+            # compute final after discount (prefer property if available)
+            try:
+                final_after = float(getattr(order, 'final_price_after_discount', None))
+            except Exception:
+                # compute fallback: subtotal - total_discount_amount
+                final_after = float(total_amount) - float(getattr(order, 'total_discount_amount', 0) or 0)
+            remaining_amount = max(0, final_after - paid_amount)
             
             # تنسيق الأسعار لإزالة الأصفار الزائدة
             total_formatted = f"{total_amount:.2f}".rstrip('0').rstrip('.')

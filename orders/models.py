@@ -379,10 +379,14 @@ class Order(models.Model):
             total_discount += item_discount
 
         # تحديث القيم في الذاكرة فقط (بدون حفظ)
+        # final_price should represent the pre-discount subtotal.
+        # final_price_after_discount is provided by the property that subtracts total_discount_amount.
         self.final_price = total
         self.total_amount = total
-        
-        return total - total_discount
+
+        # return the pre-discount subtotal to avoid callers accidentally treating
+        # the returned value as already-discounted (which would cause double-discounting).
+        return total
     
     @property
     def total_discount_amount(self):

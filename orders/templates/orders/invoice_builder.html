@@ -327,6 +327,10 @@
             <input type="text" id="th_total" class="form-control" value="المجموع">
           </div>
         </div>
+        <div class="mb-2">
+          <label class="form-label">عنوان عمود نسبة الخصم</label>
+          <input type="text" id="th_discount" class="form-control" value="نسبة الخصم">
+        </div>
 
         <div class="rich-editor-container">
           <label class="form-label">ملاحظات أسفل الفاتورة</label>
@@ -456,6 +460,44 @@
   // Rich Text Editors
   let notesEditor, termsEditor, footerNoteEditor;
 
+  // Sample data used only for editor preview / print preview inside the template editor.
+  // These values are not saved to templates; they're for a realistic preview only.
+  const PREVIEW_SAMPLE = {
+    order: {
+      invoice_number: 'INV-1001',
+      order_date: new Date().toISOString().slice(0,10),
+      order_number: 'ORD-1001',
+      type: 'بيع',
+      expected_delivery_date: new Date(Date.now()+3*24*3600*1000).toISOString().slice(0,10),
+  total_amount: '5702.40',
+  // sample: 10% discount on the line
+  total_discount_amount: '570.24',
+  final_price_after_discount: '5132.16',
+  paid_amount: '0',
+  remaining_amount: '5132.16',
+  // items_table contains: desc | qty | price | discount% | line total (after discount)
+  items_table: '<tr><td>منتج تجريبي</td><td style="text-align:center;">1</td><td style="text-align:center;">5702.40</td><td style="text-align:center;">10%</td><td style="text-align:center;">5132.16</td></tr>'
+    },
+    customer: { name: 'أحمد علي', phone: '01001234567', address: 'القاهرة - مصر' },
+    branch: { name: 'الفرع الرئيسي' },
+    salesperson: { name: 'محمد' },
+    systemSettings: { currency_symbol: 'ج.م' }
+  };
+
+  function injectSampleData(html) {
+    if (!html) return html;
+    // Replace order.* placeholders
+    html = html.replace(/\$\{order\.([a-zA-Z0-9_]+)\}/g, function(_, key){
+      return PREVIEW_SAMPLE.order[key] !== undefined ? PREVIEW_SAMPLE.order[key] : '';
+    });
+    // Replace customer, branch, salesperson, systemSettings placeholders
+    html = html.replace(/\$\{customer\.([a-zA-Z0-9_]+)\}/g, function(_, k){ return PREVIEW_SAMPLE.customer[k] || ''; });
+    html = html.replace(/\$\{branch\.([a-zA-Z0-9_]+)\}/g, function(_, k){ return PREVIEW_SAMPLE.branch[k] || ''; });
+    html = html.replace(/\$\{salesperson\.([a-zA-Z0-9_]+)\}/g, function(_, k){ return PREVIEW_SAMPLE.salesperson[k] || ''; });
+    html = html.replace(/\$\{systemSettings\.([a-zA-Z0-9_]+)\}/g, function(_, k){ return PREVIEW_SAMPLE.systemSettings[k] || ''; });
+    return html;
+  }
+
   // Initialize Rich Text Editors
   function initializeEditors() {
     // Register custom fonts
@@ -571,7 +613,8 @@
     const thDesc = document.getElementById('th_desc').value || 'الوصف';
     const thQty = document.getElementById('th_qty').value || 'الكمية';
     const thPrice = document.getElementById('th_price').value || 'السعر';
-    const thTotal = document.getElementById('th_total').value || 'المجموع';
+  const thTotal = document.getElementById('th_total').value || 'المجموع';
+  const thDiscount = document.getElementById('th_discount') ? document.getElementById('th_discount').value || 'نسبة الخصم' : 'نسبة الخصم';
 
     const styleSel = document.getElementById('template_style');
     const style = styleSel ? styleSel.value : 'classic';
@@ -711,24 +754,24 @@
         <div style="text-align:center; border-bottom: 2px solid var(--primary-color); padding-bottom:10px; margin-bottom:18px;">
           ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;"/>` : ''}
           <h1 style="color:var(--primary-color); margin:0;">${title}</h1>
-          <div>${labelInvoice}: ${'${order.invoice_number}'} — ${labelDate}: ${'${order.order_date}'}</div>
+          <div>${labelInvoice}: \${order.invoice_number} — ${labelDate}: \${order.order_date}</div>
         </div>
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:16px; margin-bottom:16px;">
         ${showCustomer ? `
         <div style=\"background:#f8f9fa; padding:12px; border-right:4px solid var(--accent-color);\">
           <div style=\"font-weight:600; margin-bottom:8px;\">${labelCustomerSec}</div>
-          <div>الاسم: ${'${customer.name}'} </div>
-          <div>الهاتف: ${'${customer.phone}'} </div>
-          <div>العنوان: ${'${customer.address}'} </div>
+          <div>الاسم: \${customer.name} </div>
+          <div>الهاتف: \${customer.phone} </div>
+          <div>العنوان: \${customer.address} </div>
         </div>` : ''}
         ${showOrderInfo ? `
         <div style=\"background:#fff3cd; padding:12px; border-right:4px solid var(--accent-color);\">
           <div style=\"font-weight:600; margin-bottom:8px;\">بيانات الطلب</div>
-          <div>الفرع: ${'${branch.name}'} </div>
-          <div>اسم البائع: ${'${salesperson.name}'} </div>
-          <div>رقم الطلب: ${'${order.order_number}'} </div>
-          <div>نوع الطلب: ${'${order.type}'} </div>
-          <div>تسليم متوقع: ${'${order.expected_delivery_date}'} </div>
+          <div>الفرع: \${branch.name} </div>
+          <div>اسم البائع: \${salesperson.name} </div>
+          <div>رقم الطلب: \${order.order_number} </div>
+          <div>نوع الطلب: \${order.type} </div>
+          <div>تسليم متوقع: \${order.expected_delivery_date} </div>
         </div>` : ''}
         ${showCompany ? `
         <div style=\"background:#f8f9fa; padding:12px; border-right:4px solid var(--accent-color);\">
@@ -739,19 +782,19 @@
         </div>` : ''}
       </div>
       ${showTable ? `
-      <table class=\"items-table\">
+      <table class="items-table">
         <thead>
-          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thTotal}</th></tr>
+          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thDiscount}</th><th>${thTotal}</th></tr>
         </thead>
-        <tbody>${'${order.items_table}'} </tbody>
+        <tbody>\${order.items_table} </tbody>
       </table>` : ''}
       ${showTotals ? `
-      <div class=\"totals\">
-        <div class=\"row\"><span>المجموع قبل الخصم:</span><span><strong>${'${order.total_amount}'} ${'${systemSettings.currency_symbol}'}</strong></span></div>
-        ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"row\"><span>إجمالي الخصم:</span><span style=\"color:#dc3545;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>` : ''}
-        <div class=\"row\"><span>الإجمالي النهائي:</span><span style=\"color:#198754;\"><strong>${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></span></div>
-        <div class=\"row\"><span>المبلغ المدفوع:</span><span style=\"color:#198754;\">${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>
-        <div class=\"row\"><span>المبلغ المتبقي:</span><span style=\"color:#dc3545;\">${'${order.remaining_amount}'} ${'${systemSettings.currency_symbol}'}</span></div>
+      <div class="totals">
+        <div class="row"><span>المجموع قبل الخصم:</span><span><strong>\${order.total_amount} \${systemSettings.currency_symbol}</strong></span></div>
+        <div class="row"><span>إجمالي الخصم:</span><span style="color:#dc3545;">-\${order.total_discount_amount} \${systemSettings.currency_symbol}</span></div>
+        <div class="row"><span>الإجمالي النهائي:</span><span style="color:#198754;"><strong>\${order.final_price_after_discount} \${systemSettings.currency_symbol}</strong></span></div>
+        <div class="row"><span>المبلغ المدفوع:</span><span style="color:#198754;">\${order.paid_amount} \${systemSettings.currency_symbol}</span></div>
+        <div class="row"><span>المبلغ المتبقي:</span><span style="color:#dc3545;">\${order.remaining_amount} \${systemSettings.currency_symbol}</span></div>
       </div>` : ''}
         ${notes ? `<div style=\"margin-top:14px; color:#6c757d;\">${notes}</div>` : ''}
         ${terms ? `<div style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
@@ -875,24 +918,24 @@
       <div class="hero">
         ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto; border-radius: 8px;"/>` : ''}
         <h2 style="margin:0;">${title}</h2>
-        <div class="small">${labelInvoice}: ${'${order.invoice_number}'} — ${labelDate}: ${'${order.order_date}'}</div>
+  <div class="small">${labelInvoice}: \${order.invoice_number} — ${labelDate}: \${order.order_date}</div>
       </div>
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:12px; margin-top:12px;">
       ${showCustomer ? `
       <div class=\"card\">
         <div style=\"font-weight:600; margin-bottom:6px;\">${labelCustomerSec}</div>
-        <div>الاسم: ${'${customer.name}'} </div>
-        <div>الهاتف: ${'${customer.phone}'} </div>
-        <div>العنوان: ${'${customer.address}'} </div>
+  <div>الاسم: \${customer.name} </div>
+  <div>الهاتف: \${customer.phone} </div>
+  <div>العنوان: \${customer.address} </div>
       </div>`: ''}
       ${showOrderInfo ? `
       <div class=\"card\" style=\"background:#fff3cd;\">
         <div style=\"font-weight:600; margin-bottom:6px;\">بيانات الطلب</div>
-        <div>الفرع: ${'${branch.name}'} </div>
-        <div>اسم البائع: ${'${salesperson.name}'} </div>
-        <div>رقم الطلب: ${'${order.order_number}'} </div>
-        <div>نوع الطلب: ${'${order.type}'} </div>
-        <div>تسليم متوقع: ${'${order.expected_delivery_date}'} </div>
+  <div>الفرع: \${branch.name} </div>
+  <div>اسم البائع: \${salesperson.name} </div>
+  <div>رقم الطلب: \${order.order_number} </div>
+  <div>نوع الطلب: \${order.type} </div>
+  <div>تسليم متوقع: \${order.expected_delivery_date} </div>
       </div>`: ''}
       ${showCompany ? `
       <div class=\"card\">
@@ -906,18 +949,18 @@
     <div class=\"card\" style=\"margin-top:12px;\">
       <table class=\"items-table\">
         <thead>
-          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thTotal}</th></tr>
+          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thDiscount}</th><th>${thTotal}</th></tr>
         </thead>
-        <tbody>${'${order.items_table}'} </tbody>
+  <tbody>\${order.items_table} </tbody>
       </table>
     </div>`: ''}
     ${showTotals ? `
     <div class=\"totals\">
-      <div class=\"t\"><div style=\"color:#666;\">المجموع قبل الخصم</div><strong>${'${order.total_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
-      ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"t\"><div style=\"color:#dc3545;\">إجمالي الخصم</div><strong style=\"color:#dc3545;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>` : ''}
-      <div class=\"t\"><div style=\"color:#198754;\">الإجمالي النهائي</div><strong style=\"color:#198754;\">${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
-      <div class=\"t\"><div style=\"color:#198754;\">المبلغ المدفوع</div><strong>${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
-      <div class=\"t\"><div style=\"color:#dc3545;\">المبلغ المتبقي</div><strong>${'${order.remaining_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
+  <div class=\"t\"><div style=\"color:#666;\">المجموع قبل الخصم</div><strong>\${order.total_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#dc3545;\">إجمالي الخصم</div><strong style=\"color:#dc3545;\">-\${order.total_discount_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#198754;\">الإجمالي النهائي</div><strong style=\"color:#198754;\">\${order.final_price_after_discount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#198754;\">المبلغ المدفوع</div><strong>\${order.paid_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#dc3545;\">المبلغ المتبقي</div><strong>\${order.remaining_amount} \${systemSettings.currency_symbol}</strong></div>
     </div>`: ''}
       ${notes ? `<div class=\"card\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''}
       ${terms ? `<div class=\"card\" style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
@@ -1015,24 +1058,24 @@
         ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img class=\"logo\" src=\"${COMPANY_LOGO_URL}\" style=\"max-height: ${logoSize}px; max-width: ${logoSize}px;\"/>` : ''}
       </div>
     <div class="small" style="margin-top:6px;">
-      ${labelInvoice}: ${'${order.invoice_number}'} • ${labelDate}: ${'${order.order_date}'}
+      ${labelInvoice}: \${order.invoice_number} • ${labelDate}: \${order.order_date}
     </div>
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:14px;">
       ${showCustomer ? `
       <div class=\"box\">
         <h4>${labelCustomerSec}</h4>
-        <div>الاسم: ${'${customer.name}'} </div>
-        <div>الهاتف: ${'${customer.phone}'} </div>
-        <div>العنوان: ${'${customer.address}'} </div>
+  <div>الاسم: \${customer.name} </div>
+  <div>الهاتف: \${customer.phone} </div>
+  <div>العنوان: \${customer.address} </div>
       </div>`: ''}
       ${showOrderInfo ? `
       <div class=\"box\" style=\"background:#fff3cd;\">
         <h4>بيانات الطلب</h4>
-        <div>الفرع: ${'${branch.name}'} </div>
-        <div>اسم البائع: ${'${salesperson.name}'} </div>
-        <div>رقم الطلب: ${'${order.order_number}'} </div>
-        <div>نوع الطلب: ${'${order.type}'} </div>
-        <div>تسليم متوقع: ${'${order.expected_delivery_date}'} </div>
+  <div>الفرع: \${branch.name} </div>
+  <div>اسم البائع: \${salesperson.name} </div>
+  <div>رقم الطلب: \${order.order_number} </div>
+  <div>نوع الطلب: \${order.type} </div>
+  <div>تسليم متوقع: \${order.expected_delivery_date} </div>
       </div>`: ''}
       ${showCompany ? `
       <div class=\"box\">
@@ -1046,18 +1089,18 @@
     <div class=\"box\" style=\"margin-top:12px;\">
       <table class=\"items-table\">
         <thead>
-          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thTotal}</th></tr>
+          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thDiscount}</th><th>${thTotal}</th></tr>
         </thead>
-        <tbody>${'${order.items_table}'} </tbody>
+  <tbody>\${order.items_table} </tbody>
       </table>
     </div>`: ''}
     ${showTotals ? `
     <div class=\"totals\">
-      <div class=\"t\"><div style=\"color:#666; font-size:12px;\">المجموع قبل الخصم</div><strong style=\"font-size:18px;\">${'${order.total_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
-      ${'${order.total_discount_amount}' && '${order.total_discount_amount}' > 0 ? `<div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">إجمالي الخصم</div><strong style=\"color:#dc3545; font-size:18px;\">-${'${order.total_discount_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>` : ''}
-      <div class=\"t\"><div style=\"color:#198754; font-size:12px;\">الإجمالي النهائي</div><strong style=\"color:#198754; font-size:18px;\">${'${order.final_price_after_discount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
-      <div class=\"t\"><div style=\"color:#198754; font-size:12px;\">المبلغ المدفوع</div><strong style=\"color:#198754; font-size:18px;\">${'${order.paid_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
-      <div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">المبلغ المتبقي</div><strong style=\"color:#dc3545; font-size:18px;\">${'${order.remaining_amount}'} ${'${systemSettings.currency_symbol}'}</strong></div>
+  <div class=\"t\"><div style=\"color:#666; font-size:12px;\">المجموع قبل الخصم</div><strong style=\"font-size:18px;\">\${order.total_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">إجمالي الخصم</div><strong style=\"color:#dc3545; font-size:18px;\">-\${order.total_discount_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#198754; font-size:12px;\">الإجمالي النهائي</div><strong style=\"color:#198754; font-size:18px;\">\${order.final_price_after_discount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#198754; font-size:12px;\">المبلغ المدفوع</div><strong style=\"color:#198754; font-size:18px;\">\${order.paid_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">المبلغ المتبقي</div><strong style=\"color:#dc3545; font-size:18px;\">\${order.remaining_amount} \${systemSettings.currency_symbol}</strong></div>
     </div>`: ''}
       ${notes ? `<div class=\"box\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''}
       ${terms ? `<div class=\"box\" style=\"margin-top:12px; color:#6c757d;\">${terms}</div>` : ''}
@@ -1077,8 +1120,9 @@
   }
 
   function updatePreview() {
-    const html = buildHtml();
-    document.getElementById('preview').innerHTML = html;
+  const html = buildHtml();
+  // inject sample data so the editor preview / print preview shows realistic values
+  document.getElementById('preview').innerHTML = injectSampleData(html);
   }
 
   function loadSaved() {
@@ -1099,7 +1143,8 @@
     if (adv.th_desc) document.getElementById('th_desc').value = adv.th_desc;
     if (adv.th_qty) document.getElementById('th_qty').value = adv.th_qty;
     if (adv.th_price) document.getElementById('th_price').value = adv.th_price;
-    if (adv.th_total) document.getElementById('th_total').value = adv.th_total;
+  if (adv.th_total) document.getElementById('th_total').value = adv.th_total;
+  if (adv.th_discount) document.getElementById('th_discount').value = adv.th_discount;
     if (adv.notes_text) {
       document.getElementById('notes_text').value = adv.notes_text;
       if (notesEditor) notesEditor.root.innerHTML = adv.notes_text;
@@ -1165,8 +1210,23 @@
     loadSaved();
   }, 100);
 
+  // Ensure print dialog shows the injected sample data (in case user prints quickly)
+  window.addEventListener('beforeprint', function() {
+    try {
+      document.getElementById('preview').innerHTML = injectSampleData(buildHtml());
+    } catch (e) {
+      console.error('beforeprint injection failed', e);
+    }
+  });
+
+  // After printing, re-render the interactive preview (keeps editors in sync)
+  window.addEventListener('afterprint', function() {
+    try { updatePreview(); } catch(e) { /* no-op */ }
+  });
+
   document.getElementById('save-template').onclick = async () => {
-    const html_content = document.getElementById('preview').innerHTML;
+    // Save the template source (with placeholders) — do NOT save the preview-injected demo values
+    const html_content = buildHtml();
     const payload = {
       template_id: TEMPLATE_ID,
       template_data: {
@@ -1200,6 +1260,7 @@
           th_qty: document.getElementById('th_qty').value,
           th_price: document.getElementById('th_price').value,
           th_total: document.getElementById('th_total').value,
+          th_discount: document.getElementById('th_discount') ? document.getElementById('th_discount').value : 'نسبة الخصم',
           notes_text: document.getElementById('notes_text').value,
           terms_text: document.getElementById('terms_text').value,
           show_background_logo: document.getElementById('show_bg_logo').checked,
