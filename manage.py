@@ -6,11 +6,16 @@ import subprocess
 import time
 import signal
 import atexit
+import threading
 
 # متغيرات عامة لتتبع العمليات
 redis_process = None
 celery_worker_process = None
 celery_beat_process = None
+db_backup_process = None
+db_backup_log_fh = None
+db_backup_tail_process = None
+db_backup_tail_thread = None
 
 def print_colored(message, color='green'):
     """طباعة رسائل ملونة"""
@@ -199,6 +204,45 @@ def cleanup_processes():
         except Exception:
             pass
 
+    # إيقاف DB Backup process
+    global db_backup_process, db_backup_log_fh
+    try:
+        if db_backup_process is not None:
+            try:
+                db_backup_process.terminate()
+            except Exception:
+                pass
+            db_backup_process = None
+            print_colored("تم إيقاف خدمة النسخ الاحتياطي", 'green')
+    except Exception:
+        pass
+    try:
+        if db_backup_log_fh is not None:
+            try:
+                db_backup_log_fh.close()
+            except Exception:
+                pass
+            db_backup_log_fh = None
+    except Exception:
+        pass
+    # إيقاف tail الخاص بسجل النسخ الاحتياطي
+    try:
+        global db_backup_tail_process, db_backup_tail_thread
+        if db_backup_tail_process is not None:
+            try:
+                db_backup_tail_process.terminate()
+            except Exception:
+                pass
+            db_backup_tail_process = None
+        if db_backup_tail_thread is not None:
+            try:
+                db_backup_tail_thread.join(timeout=1)
+            except Exception:
+                pass
+            db_backup_tail_thread = None
+    except Exception:
+        pass
+
 # تسجيل دالة التنظيف
 atexit.register(cleanup_processes)
 signal.signal(signal.SIGINT, lambda s, f: cleanup_processes())
@@ -240,8 +284,76 @@ def main():
         if not start_celery_beat():
             print_colored("تحذير: فشل في تشغيل Celery Beat. قد لا تعمل المهام الدورية", 'yellow')
 
+        # تشغيل خدمة النسخ الاحتياطي المحلية عند تشغيل الخادم التطويري
+        try:
+            backup_script = os.path.join(os.path.dirname(__file__), 'لينكس', 'db-backup.sh')
+            if os.path.exists(backup_script):
+                log_file = '/tmp/db_backup.log'
+                print_colored(f"تشغيل خدمة النس الاحتياطي: {backup_script} (logs: {log_file})", 'blue')
+                # Kill any existing db-backup.sh processes so we always start fresh
+                try:
+                    subprocess.run(['pkill', '-f', 'db-backup.sh'], check=False)
+                except Exception:
+                    pass
+                # small pause to let previous procs exit
+                time.sleep(1)
+                # start new backup process (always): ensure executable
+                try:
+                    os.chmod(backup_script, 0o755)
+                except Exception:
+                    pass
+                global db_backup_process, db_backup_log_fh
+                # close previous fh if any
+                try:
+                    if db_backup_log_fh is not None:
+                        try:
+                            db_backup_log_fh.close()
+                        except Exception:
+                            pass
+                        db_backup_log_fh = None
+                except Exception:
+                    pass
+                try:
+                    db_backup_log_fh = open(log_file, 'a')
+                    db_backup_process = subprocess.Popen([backup_script], stdout=db_backup_log_fh, stderr=subprocess.STDOUT)
+                    print_colored("خدمة النسخ الاحتياطي بدأت (تمت إعادة التشغيل)", 'green')
+                except Exception as e:
+                    print_colored(f"فشل في تشغيل خدمة النسخ الاحتياطي: {e}", 'red')
+            else:
+                print_colored(f"ملف النسخ الاحتياطي غير موجود: {backup_script}", 'yellow')
+        except Exception as e:
+            print_colored(f"فشل في تهيئة خدمة النسخ الاحتياطي: {e}", 'red')
+
         print_colored("📊 مراقبة Celery: tail -f /tmp/celery_worker_dev.log", 'blue')
         print_colored("⏰ مراقبة المهام الدورية: tail -f /tmp/celery_beat_dev.log", 'blue')
+
+        # Start background tail to forward backup success messages to server stdout
+        try:
+            log_path = '/tmp/db_backup.log'
+            def tail_backup_log():
+                import time
+                try:
+                    # Wait until file exists
+                    while not os.path.exists(log_path):
+                        time.sleep(0.5)
+                    with open(log_path, 'r') as fh:
+                        # seek to end
+                        fh.seek(0, 2)
+                        while True:
+                            line = fh.readline()
+                            if not line:
+                                time.sleep(0.5)
+                                continue
+                            if 'تم إنشاء نسخة احتياطية بنجاح' in line or 'تم إنشاء نسخة احتياطية بنجاح' in line:
+                                print_colored(line.strip(), 'green')
+                except Exception:
+                    pass
+
+            global db_backup_tail_thread
+            db_backup_tail_thread = threading.Thread(target=tail_backup_log, daemon=True)
+            db_backup_tail_thread.start()
+        except Exception:
+            pass
 
     # تنفيذ الترحيلات تلقائياً عند تشغيل الخادم (محسن ومبسط)
     if len(sys.argv) > 1 and sys.argv[1] == 'runserver' and not os.environ.get('AUTO_MIGRATE_EXECUTED'):

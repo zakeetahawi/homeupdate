@@ -109,6 +109,43 @@ else
     print_error "ملف cloudflared غير موجود"
 fi
 
+# تصدير إعدادات قاعدة البيانات إلى البيئة حتى يستخدمها سكريبت النسخ الاحتياطي
+if [ -f "crm/settings.py" ]; then
+    eval $(python - <<'PY'
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE','crm.settings')
+import django
+django.setup()
+from django.conf import settings
+print(f"export DB_NAME='{settings.DATABASES['default'].get('NAME','')}'")
+print(f"export DB_USER='{settings.DATABASES['default'].get('USER','')}'")
+print(f"export DB_HOST='{settings.DATABASES['default'].get('HOST','')}'")
+print(f"export DB_PORT='{settings.DATABASES['default'].get('PORT','')}'")
+print(f"export DB_PASSWORD='{settings.DATABASES['default'].get('PASSWORD','')}'")
+PY
+)
+fi
+
+# تشغيل سكريبت النسخ الاحتياطي في الخلفية (يأخذ نسخة فورية ثم كل ساعة)
+if [ -f "لينكس/db-backup.sh" ]; then
+    chmod +x "لينكس/db-backup.sh"
+    ./لينكس/db-backup.sh > /tmp/db_backup.log 2>&1 &
+    DB_BACKUP_PID=$!
+    print_status "✔️ تم تشغيل خدمة النسخ الاحتياطي (PID: $DB_BACKUP_PID) - ستُحفظ النسخ في /home/zakee/homeupdate/media/backups"
+else
+    print_error "ملف النسخ الاحتياطي لينكس/db-backup.sh غير موجود"
+fi
+
+# Tail backup log and print success messages to console
+if [ -f /tmp/db_backup.log ] || true; then
+    ( tail -n0 -F /tmp/db_backup.log 2>/dev/null | while read line; do
+        if echo "$line" | grep -q "تم إنشاء نسخة احتياطية بنجاح"; then
+            print_status "$line"
+        fi
+    done ) &
+    BACKUP_TAIL_PID=$!
+fi
+
 cleanup() {
     print_info "إيقاف العمليات..."
 
@@ -137,6 +174,16 @@ cleanup() {
     if [ ! -z "$TUNNEL_PID" ]; then
         kill $TUNNEL_PID 2>/dev/null
         print_status "تم إيقاف Cloudflare Tunnel"
+    fi
+
+    # إيقاف خدمة النسخ الاحتياطي
+    if [ ! -z "$DB_BACKUP_PID" ]; then
+        kill $DB_BACKUP_PID 2>/dev/null
+        print_status "تم إيقاف خدمة النسخ الاحتياطي"
+    fi
+    if [ ! -z "$BACKUP_TAIL_PID" ]; then
+        kill $BACKUP_TAIL_PID 2>/dev/null
+        print_status "تم إيقاف tail سجل النسخ الاحتياطي"
     fi
 
     # إيقاف خادم الويب
