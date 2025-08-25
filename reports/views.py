@@ -16,6 +16,77 @@ from customers.models import Customer
 
 from django.contrib.auth.decorators import permission_required
 from django.utils.decorators import method_decorator
+from django.db.models.functions import TruncDate
+from django.http import HttpResponse
+import csv
+from .forms import ReportForm
+
+
+@permission_required('reports.view_report', raise_exception=True)
+def seller_customer_activity_view(request, report_id):
+    report = get_object_or_404(Report, pk=report_id)
+    report_data = ReportDetailView().get_initial_report_data(report)
+    date_list = report_data.get('date_list', [])
+    raw_results = report_data.get('results', {})
+
+    # build presentation results: daily_list aligned with date_list for easy templating
+    view_results = {}
+    for uid, data in raw_results.items():
+        daily_list = [data['daily'].get(d, 0) for d in date_list]
+        view_results[uid] = {
+            'user': data['user'],
+            'daily_list': daily_list,
+            'total': data['total']
+        }
+
+    return render(request, 'reports/seller_customer_activity.html', {
+        'report': report,
+        'date_list': date_list,
+        'results': view_results,
+        'zero_users': report_data.get('zero_users', []),
+        'days': report_data.get('days', 7),
+        'activity': report_data.get('activity', 'customers')
+    })
+
+
+@permission_required('reports.view_report', raise_exception=True)
+def seller_customer_activity_export_csv(request, report_id):
+    report = get_object_or_404(Report, pk=report_id)
+    report_data = ReportDetailView().get_initial_report_data(report)
+    date_list = report_data.get('date_list', [])
+    results = report_data.get('results', {})
+
+    # Build CSV
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="seller_activity_{report_id}.csv"'
+    writer = csv.writer(response)
+
+    header = ['User'] + [d.strftime('%Y-%m-%d') for d in date_list] + ['Total']
+    writer.writerow(header)
+
+    for uid, data in results.items():
+        row = [f"{data['user'].get_full_name() or data['user'].username}"]
+        # data may be presentation-friendly or raw; prefer daily_list if present
+        if isinstance(data.get('daily'), dict):
+            for d in date_list:
+                row.append(data['daily'].get(d, 0))
+        elif isinstance(data.get('daily_list'), list):
+            row.extend(data['daily_list'])
+        else:
+            # fallback: zeros
+            row.extend([0] * len(date_list))
+        row.append(data.get('total', 0))
+        writer.writerow(row)
+
+    return response
+
+
+@permission_required('reports.view_report', raise_exception=True)
+def seller_customer_activity_index(request):
+    # list available reports of this type
+    # support both legacy and new keys for compatibility
+    reports_qs = Report.objects.filter(report_type__in=['seller_activity', 'seller_customer_activity'])
+    return render(request, 'reports/seller_customer_activity_index.html', {'reports': reports_qs})
 
 class ReportDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'reports/dashboard.html'
@@ -65,27 +136,62 @@ class ReportListView(LoginRequiredMixin, ListView):
 
 class ReportCreateView(LoginRequiredMixin, CreateView):
     model = Report
+    form_class = ReportForm
     template_name = 'reports/report_form.html'
-    fields = ['title', 'report_type', 'description', 'parameters']
     success_url = reverse_lazy('reports:report_list')
 
     def form_valid(self, form):
+        # assemble parameters from helper fields when report_type is seller_activity
+        params = {}
+        if form.cleaned_data.get('report_type') in ('seller_activity', 'seller_customer_activity'):
+            params['days'] = int(form.cleaned_data.get('days') or 7)
+            params['activity'] = form.cleaned_data.get('activity') or 'customers'
+            # save selected roles as list of ids
+            roles = form.cleaned_data.get('seller_roles')
+            if roles:
+                params['seller_roles'] = [int(r.pk) for r in roles]
+            else:
+                params['seller_roles'] = []
+
+        form.instance.parameters = params
         form.instance.created_by = self.request.user
         messages.success(self.request, _('تم إنشاء التقرير بنجاح'))
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        # if user clicked 'save and open'
+        if self.request.POST.get('_open'):
+            return redirect('reports:report_detail', pk=self.object.pk)
+        return response
 
 class ReportUpdateView(LoginRequiredMixin, UpdateView):
     model = Report
+    form_class = ReportForm
     template_name = 'reports/report_form.html'
-    fields = ['title', 'report_type', 'description', 'parameters']
     success_url = reverse_lazy('reports:report_list')
 
     def get_queryset(self):
+        # Allow staff users to view any report. Regular users only see reports they created.
+        if getattr(self.request, 'user', None) and self.request.user.is_staff:
+            return Report.objects.all()
         return Report.objects.filter(created_by=self.request.user)
 
     def form_valid(self, form):
+        # update parameters if seller activity
+        params = {}
+        if form.cleaned_data.get('report_type') in ('seller_activity', 'seller_customer_activity'):
+            params['days'] = int(form.cleaned_data.get('days') or 7)
+            params['activity'] = form.cleaned_data.get('activity') or 'customers'
+            roles = form.cleaned_data.get('seller_roles')
+            if roles:
+                params['seller_roles'] = [int(r.pk) for r in roles]
+            else:
+                params['seller_roles'] = []
+
+        form.instance.parameters = params
         messages.success(self.request, _('تم تحديث التقرير بنجاح'))
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        if self.request.POST.get('_open'):
+            return redirect('reports:report_detail', pk=self.object.pk)
+        return response
 
 class ReportDeleteView(LoginRequiredMixin, DeleteView):
     model = Report
@@ -93,6 +199,9 @@ class ReportDeleteView(LoginRequiredMixin, DeleteView):
     success_url = reverse_lazy('reports:report_list')
 
     def get_queryset(self):
+        # Staff users can view any report, regular users see only their own
+        if getattr(self.request, 'user', None) and self.request.user.is_staff:
+            return Report.objects.all()
         return Report.objects.filter(created_by=self.request.user)
 
     def delete(self, request, *args, **kwargs):
@@ -105,6 +214,9 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'report'
 
     def get_queryset(self):
+        # allow staff to view any report
+        if getattr(self.request, 'user', None) and self.request.user.is_staff:
+            return Report.objects.all()
         return Report.objects.filter(created_by=self.request.user)
 
     def get_template_names(self):
@@ -122,7 +234,18 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
         context['saved_results'] = report.saved_results.all()
 
         # Get initial report data
-        context['report_data'] = self.get_initial_report_data(report)
+        report_data = self.get_initial_report_data(report)
+        context['report_data'] = report_data
+
+        # If this is a seller activity report, populate friendly context keys used by the seller template
+        if report.report_type in ('seller_customer_activity', 'seller_activity') and report_data:
+            context.update({
+                'date_list': report_data.get('date_list', []),
+                'results': report_data.get('results', {}),
+                'zero_users': report_data.get('zero_users', []),
+                'days': report_data.get('days', 7),
+                'activity': report_data.get('activity', 'customers'),
+            })
 
         # Add additional context for enhanced analytics
         if report.report_type == 'analytics':
@@ -163,8 +286,84 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
             return self.generate_financial_report(report)
         elif report.report_type == 'analytics':
             return self.generate_analytics_report(report)
+        elif report.report_type in ('seller_customer_activity', 'seller_activity'):
+            return self.generate_seller_customer_activity_report(report)
+
         return None
 
+    def generate_seller_customer_activity_report(self, report):
+        """Generate report: for sellers, how many customers they created per day in the past N days.
+
+        report.parameters expected keys:
+          - days: int (default 7)
+          - activity: 'customers' | 'orders' | 'inspections' | 'all'
+          - seller_group: optional, if true restrict to users with role 'seller'
+        """
+        days = int(report.parameters.get('days', 7))
+        activity = report.parameters.get('activity', 'customers')
+        start_date = timezone.now().date() - timedelta(days=days-1)
+
+        # base user queryset: sellers only if requested
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        users_qs = User.objects.all()
+        if report.parameters.get('seller_group'):
+            users_qs = users_qs.filter(groups__name__icontains='seller')
+
+        # Prepare an ordered list of dates
+        date_list = [start_date + timedelta(days=i) for i in range(days)]
+
+        # Initialize result structure
+        results = {}
+        for u in users_qs.order_by('first_name', 'last_name'):
+            results[u.id] = {
+                'user': u,
+                'daily': {d: 0 for d in date_list},
+                'total': 0
+            }
+
+        # Use DB aggregation (group by created_by and date) for performance
+        if activity in ('customers', 'all'):
+            cust_qs = Customer.objects.filter(created_at__date__gte=start_date)
+            cust_agg = cust_qs.annotate(day=TruncDate('created_at')).values('created_by', 'day').annotate(cnt=Count('id'))
+            for row in cust_agg:
+                uid = row.get('created_by')
+                d = row.get('day')
+                if uid in results and d in results[uid]['daily']:
+                    results[uid]['daily'][d] += row.get('cnt', 0)
+                    results[uid]['total'] += row.get('cnt', 0)
+
+        if activity in ('orders', 'all'):
+            ord_qs = Order.objects.filter(created_at__date__gte=start_date)
+            ord_agg = ord_qs.annotate(day=TruncDate('created_at')).values('created_by', 'day').annotate(cnt=Count('id'))
+            for row in ord_agg:
+                uid = row.get('created_by')
+                d = row.get('day')
+                if uid in results and d in results[uid]['daily']:
+                    results[uid]['daily'][d] += row.get('cnt', 0)
+                    results[uid]['total'] += row.get('cnt', 0)
+
+        if activity in ('inspections', 'all'):
+            from inspections.models import Inspection
+            ins_qs = Inspection.objects.filter(created_at__date__gte=start_date)
+            ins_agg = ins_qs.annotate(day=TruncDate('created_at')).values('created_by', 'day').annotate(cnt=Count('id'))
+            for row in ins_agg:
+                uid = row.get('created_by')
+                d = row.get('day')
+                if uid in results and d in results[uid]['daily']:
+                    results[uid]['daily'][d] += row.get('cnt', 0)
+                    results[uid]['total'] += row.get('cnt', 0)
+
+        # users with zero activity
+        zero_users = [v['user'] for v in results.values() if v['total'] == 0]
+
+        return {
+            'date_list': date_list,
+            'results': results,
+            'zero_users': zero_users,
+            'days': days,
+            'activity': activity,
+        }
     def generate_inspection_report(self, report):
         """تقرير إحصائي للمعاينات"""
         from inspections.models import Inspection
@@ -259,12 +458,12 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
         )[:20]
 
         data = {
-            'total_items': stats['total_items'] or 0,
-            'total_value': stats['total_value'] or 0,
+            'total_items': basic_stats.get('total_items', 0) or 0,
+            'total_value': 0,
             'low_stock_items': list(low_stock_items),
             'out_of_stock_items': list(out_of_stock_items),
-            'low_stock_count': stats['low_stock_count'] or 0,
-            'out_of_stock_count': stats['out_of_stock_count'] or 0,
+            'low_stock_count': low_stock_items.count(),
+            'out_of_stock_count': out_of_stock_items.count(),
             'items': products[:50]  # تحديد العدد لتحسين الأداء
         }
         return data

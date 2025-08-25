@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}تقارير نشاط البائعين{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>تقارير نشاط البائعين</h2>
+    <p>قائمة بالتقارير الجاهزة لعرض نشاط البائعين.</p>
+    <ul>
+        {% for r in reports %}
+        <li>
+            <a href="{% url 'reports:seller_customer_activity' r.id %}">{{ r.title }}</a>
+            &nbsp; — &nbsp;
+            <a href="{% url 'reports:seller_customer_activity_csv' r.id %}">تحميل CSV</a>
+        </li>
+        {% empty %}
+        <li>لا توجد تقارير من هذا النوع. أنشئ تقريراً جديداً من لوحة الإدارة.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

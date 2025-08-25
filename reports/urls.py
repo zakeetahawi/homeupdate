@@ -3,7 +3,13 @@ from . import views, api_views
 
 app_name = 'reports'
 
+# Main urlpatterns for reports app. Include seller-activity routes alongside the standard CRUD/dashboard routes.
 urlpatterns = [
+    # Seller activity report index/detail/csv
+    path('seller-activity/', views.seller_customer_activity_index, name='seller_customer_activity_index'),
+    path('seller-activity/<int:report_id>/', views.seller_customer_activity_view, name='seller_customer_activity'),
+    path('seller-activity/<int:report_id>/export/csv/', views.seller_customer_activity_export_csv, name='seller_customer_activity_csv'),
+
     # Regular views
     path('', views.ReportDashboardView.as_view(), name='dashboard'),
     path('list/', views.ReportListView.as_view(), name='report_list'),
@@ -15,7 +21,7 @@ urlpatterns = [
     path('<int:pk>/schedule/', views.ReportScheduleCreateView.as_view(), name='schedule_create'),
     path('schedule/<int:pk>/update/', views.ReportScheduleUpdateView.as_view(), name='schedule_update'),
     path('schedule/<int:pk>/delete/', views.ReportScheduleDeleteView.as_view(), name='schedule_delete'),
-    
+
     # API endpoints
     path('api/analytics/data/', api_views.get_analytics_data, name='api_analytics_data'),
     path('api/analytics/latest/', api_views.get_latest_analytics, name='api_latest_analytics'),

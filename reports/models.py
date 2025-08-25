@@ -10,7 +10,8 @@ class Report(models.Model):
         ('production', _('تقرير الإنتاج')),
         ('inventory', _('تقرير المخزون')),
         ('financial', _('تقرير مالي')),
-        ('analytics', _('تقرير تحليلي')),
+    ('analytics', _('تقرير تحليلي')),
+    ('seller_activity', _('تقرير نشاط البائعين')),
         ('custom', _('تقرير مخصص')),
     ]
     title = models.CharField(_('عنوان التقرير'), max_length=200)

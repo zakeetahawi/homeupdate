@@ -11,6 +11,8 @@ from .models import (
     Order, OrderItem, Payment, OrderStatusLog, 
     ManufacturingDeletionLog, DeliveryTimeSettings
 )
+from django import forms
+import json
 # from .extended_models import ExtendedOrder, AccessoryItem, FabricOrder # Deletion
 
 
@@ -71,6 +73,46 @@ class OrderItemInline(admin.TabularInline):
         
         return formset
 
+
+class OrderAdminForm(forms.ModelForm):
+    """Admin form to present selected_types as a multiple select instead of raw JSON."""
+    selected_types = forms.MultipleChoiceField(
+        choices=Order.ORDER_TYPES,
+        required=True,
+        widget=forms.SelectMultiple(attrs={'size': '6'})
+    )
+
+    class Meta:
+        model = Order
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initialize selected_types from JSON/list stored in instance
+        try:
+            val = None
+            if self.instance and getattr(self.instance, 'selected_types', None):
+                val = self.instance.selected_types
+                if isinstance(val, str):
+                    try:
+                        parsed = json.loads(val)
+                        if isinstance(parsed, list):
+                            val = parsed
+                        else:
+                            val = [parsed]
+                    except Exception:
+                        # fallback: try to split by comma
+                        val = [v.strip() for v in val.split(',') if v.strip()]
+            if val is not None:
+                self.fields['selected_types'].initial = val
+        except Exception:
+            pass
+
+    def clean_selected_types(self):
+        data = self.cleaned_data.get('selected_types') or []
+        # Ensure JSON-serializable list
+        return list(data)
+
 class PaymentInline(admin.TabularInline):
     model = Payment
     extra = 1
@@ -85,6 +127,7 @@ class PaymentInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
+    form = OrderAdminForm
     list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
     list_max_show_all = 50  # تقليل من 100 إلى 50
     show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
@@ -152,6 +195,8 @@ class OrderAdmin(admin.ModelAdmin):
         'order_number',
         'final_price',
     )
+    # Use raw id fields for large relation lookups to speed up the admin change page
+    raw_id_fields = ('customer', 'salesperson', 'branch', 'related_inspection')
     date_hierarchy = 'order_date'
     actions = ['mark_as_paid', 'create_manufacturing_order', 'export_orders']
     
@@ -234,7 +279,8 @@ class OrderAdmin(admin.ModelAdmin):
             'fields': ('customer', 'order_number', 'salesperson', 'branch')
         }),
         (_('نوع الطلب وحالته'), {
-            'fields': ('selected_types', 'status', 'tracking_status', 'expected_delivery_date')
+            # عرض أنواع الطلب المختارة وحالة التصنيع canonical (order_status)
+            'fields': ('selected_types', 'order_status', 'status', 'tracking_status', 'expected_delivery_date')
         }),
         (_('معلومات الفواتير والعقود'), {
             'fields': (
@@ -327,19 +373,20 @@ class OrderAdmin(admin.ModelAdmin):
     order_year.admin_order_field = 'order_date'
 
     def get_queryset(self, request):
+        # Reduce work done for list/change views: avoid prefetching potentially large related sets
         qs = super().get_queryset(request)
         return qs.select_related(
-            'customer', 'customer__branch', 'salesperson', 'branch', 'created_by', 'related_inspection'
-        ).prefetch_related(
-            'items__product', 'payments'
+            'customer', 'salesperson', 'branch', 'created_by', 'related_inspection'
         ).only(
-            'id', 'order_number', 'order_type', 'status', 'tracking_status', 'final_price',
+            'id', 'order_number', 'status', 'tracking_status', 'final_price',
             'payment_verified', 'expected_delivery_date', 'order_date', 'created_at',
-            'customer__id', 'customer__name', 'customer__branch__name',
+            'customer__id', 'customer__name',
             'salesperson__id',
             'branch__id', 'branch__name',
             'created_by__id',
             'related_inspection__id'
+        ).defer(
+            'notes', 'contract_google_drive_file_name', 'contract_google_drive_file_url', 'contract_google_drive_file_id'
         )
 
     def get_form(self, request, obj=None, **kwargs):
