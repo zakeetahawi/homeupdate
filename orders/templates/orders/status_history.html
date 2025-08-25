@@ -156,7 +156,7 @@
             <div class="stat-label">مستخدمين قاموا بالتغيير</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{{ order.get_tracking_status_display }}</div>
+            <div class="stat-number">{{ order.get_display_status_text }}</div>
             <div class="stat-label">الحالة الحالية</div>
         </div>
     </div>
@@ -217,32 +217,40 @@
     <div class="status-history-container">
         {% if page_obj %}
             {% for log in page_obj %}
-            <div class="status-log-item">
-                <div class="status-change">
-                    <span class="status-from">{{ log.get_old_status_display }}</span>
-                    <i class="fas fa-arrow-right status-arrow"></i>
-                    <span class="status-to">{{ log.get_new_status_display }}</span>
-                </div>
-                
-                {% if log.notes %}
-                <div class="notes">
-                    <i class="fas fa-sticky-note"></i> {{ log.notes }}
+                {# Skip generic manufacturing-sync logs; prefer the explicit manufacturing log created in the manufacturing views #}
+                {% if not log.notes or "مزامنة حالة الطلب" not in log.notes %}
+                <div class="status-log-item">
+                    <div class="status-change">
+                        {% if log.notes and "تم تغيير حالة أمر التصنيع" in log.notes %}
+                            {{ log.notes }}
+                        {% else %}
+                            تم تبديل الحالة من
+                            <strong>{{ log.old_status_pretty }}</strong>
+                            إلى
+                            <strong>{{ log.new_status_pretty }}</strong>
+                        {% endif %}
+                    </div>
+
+                    {% if log.notes %}
+                    <div class="notes">
+                        <i class="fas fa-sticky-note"></i> {{ log.notes }}
+                    </div>
+                    {% endif %}
+
+                    <div class="user-info">
+                        <i class="fas fa-user"></i>
+                        {% if log.changed_by %}
+                            {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+                        {% else %}
+                            مستخدم غير محدد
+                        {% endif %}
+                    </div>
+
+                    <div class="timestamp">
+                        <i class="fas fa-clock"></i> {{ log.created_at|date:"Y-m-d H:i" }}
+                    </div>
                 </div>
                 {% endif %}
-                
-                <div class="user-info">
-                    <i class="fas fa-user"></i> 
-                    {% if log.changed_by %}
-                        {{ log.changed_by.get_full_name|default:log.changed_by.username }}
-                    {% else %}
-                        مستخدم غير محدد
-                    {% endif %}
-                </div>
-                
-                <div class="timestamp">
-                    <i class="fas fa-clock"></i> {{ log.created_at|date:"Y-m-d H:i" }}
-                </div>
-            </div>
             {% endfor %}
             
             <!-- Pagination -->

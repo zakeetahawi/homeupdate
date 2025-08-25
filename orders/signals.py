@@ -144,11 +144,19 @@ def sync_order_from_manufacturing(sender, instance, created, **kwargs):
 
             # Log status change
             try:
+                # حاول الحصول على المستخدم الذي أنشأ أمر التصنيع إذا كان متاحاً
+                mfg_creator = getattr(instance, 'created_by', None)
+                # إن لم يتوفر، استخدم منشئ الطلب كاحتياط لتسجيل من قام بالتغيير
+                if not mfg_creator and order and getattr(order, 'created_by', None):
+                    mfg_creator = order.created_by
+                old_st = order.tracker.previous('order_status') or order.tracker.previous('tracking_status') or ''
+                new_st = getattr(order, 'order_status', order.tracking_status)
                 OrderStatusLog.objects.create(
                     order=order,
-                    old_status=order.tracker.previous('tracking_status') or '',
-                    new_status=order.tracking_status,
-                    notes='مزامنة حالة الطلب من أمر التصنيع'
+                    old_status=old_st,
+                    new_status=new_st,
+                    changed_by=mfg_creator,
+                    notes=f'مزامنة حالة الطلب من أمر التصنيع ({instance.get_status_display()})'
                 )
             except Exception:
                 pass
@@ -268,7 +276,8 @@ def order_post_save(sender, instance, created, **kwargs):
         OrderStatusLog.objects.create(
             order=instance,
             old_status='',
-            new_status=instance.tracking_status,
+            new_status=getattr(instance, 'order_status', instance.tracking_status),
+            changed_by=getattr(instance, 'created_by', None),
             notes='تم إنشاء الطلب'
         )
     else:
@@ -282,7 +291,8 @@ def order_post_save(sender, instance, created, **kwargs):
             OrderStatusLog.objects.create(
                 order=instance,
                 old_status=old_status,
-                new_status=instance.tracking_status,
+                new_status=getattr(instance, 'order_status', instance.tracking_status),
+                changed_by=getattr(instance, '_modified_by', None),
                 notes='تم تغيير حالة الطلب'
             )
         

@@ -571,8 +571,8 @@
                         {% endwith %}
                         {% endif %}
                         
-                        <!-- إضافة تفاصيل الرفض إذا كان الطلب مرفوضاً -->
-                        {% if order.order_status == 'rejected' %}
+                        <!-- إضافة تفاصيل الرفض إذا كان الطلب مرفوضاً (من الطلب أو من مصنع التصنيع) -->
+                        {% if order.order_status == 'rejected' or order.manufacturing_order and order.manufacturing_order.status == 'rejected' %}
                         {% with manufacturing_order=order.manufacturing_order %}
                             {% if manufacturing_order and manufacturing_order.rejection_reason %}
                             <tr>
@@ -593,15 +593,22 @@
                                                 {{ manufacturing_order.rejection_reply_date|date:"Y-m-d H:i" }}
                                             </small>
                                         </div>
-                                    {% else %}
+                                        {% else %}
                                         <!-- زر الرد على الرفض إذا لم يتم الرد بعد -->
-                                        {% if order.created_by == user %}
+                                        {% if order.created_by_id == user.id %}
                                             <div class="mt-2">
                                                 <button class="btn btn-outline-primary btn-sm"
                                                         onclick="showReplyToRejectionModal({{ manufacturing_order.id }})">
                                                     <i class="fas fa-reply me-1"></i>
                                                     الرد على الرفض
                                                 </button>
+                                            </div>
+                                        {% else %}
+                                            <!-- Diagnostic hint for why reply button is hidden -->
+                                            <div class="mt-2 text-muted small">
+                                                الزر مخفي لأنك لست منشئ الطلب.
+                                                <br>معرف منشئ الطلب: <strong>{{ order.created_by_id }}</strong>
+                                                — معرف المستخدم الحالي: <strong>{{ user.id }}</strong>
                                             </div>
                                         {% endif %}
                                     {% endif %}

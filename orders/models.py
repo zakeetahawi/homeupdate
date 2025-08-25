@@ -1558,20 +1558,51 @@ class OrderStatusLog(models.Model):
         ]
     def __str__(self):
         return f'{self.order.order_number} - {self.get_new_status_display()}'
+    def _status_label(self, code):
+        """Return a human-friendly label for a status code.
+        Try canonical ORDER_STATUS_CHOICES first, then TRACKING_STATUS_CHOICES, else return raw code.
+        """
+        try:
+            order_map = dict(self.order.ORDER_STATUS_CHOICES)
+        except Exception:
+            order_map = dict(Order.ORDER_STATUS_CHOICES) if 'Order' in globals() else {}
+        tracking_map = dict(Order.TRACKING_STATUS_CHOICES) if 'Order' in globals() else {}
+        if code in order_map:
+            return order_map[code]
+        if code in tracking_map:
+            return tracking_map[code]
+        return code
+
+    @property
+    def old_status_pretty(self):
+        return self._status_label(self.old_status or '')
+
+    @property
+    def new_status_pretty(self):
+        return self._status_label(self.new_status or '')
     def save(self, *args, **kwargs):
         try:
             # التحقق من أن الطلب له مفتاح أساسي
             if not self.order.pk:
                 raise models.ValidationError('يجب حفظ الطلب أولاً قبل إنشاء سجل حالة')
+            # اختر المصدر Canonical: استخدم order_status إذا كان موجودًا، وإلا التراجع إلى tracking_status
             if not self.old_status and self.order:
-                self.old_status = self.order.tracking_status
+                self.old_status = getattr(self.order, 'order_status', None) or getattr(self.order, 'tracking_status', None)
             super().save(*args, **kwargs)
             # تحديث حالة الطلب
             try:
-                if self.order and self.new_status != self.order.tracking_status:
-                    self.order.tracking_status = self.new_status
-                    self.order.last_notification_date = timezone.now()
-                    self.order.save(update_fields=['tracking_status', 'last_notification_date'])
+                # عندما يتم حفظ سجل الحالة، نحدث الحقل Canonical `order_status` إن كان مناسبًا
+                if self.order and self.new_status != getattr(self.order, 'order_status', None):
+                    # حدّث الحقل canonical
+                    try:
+                        self.order.order_status = self.new_status
+                        self.order.last_notification_date = timezone.now()
+                        self.order.save(update_fields=['order_status', 'last_notification_date'])
+                    except Exception:
+                        # في حالة عدم وجود الحقل، استخدام tracking_status القديم كاحتياط
+                        self.order.tracking_status = self.new_status
+                        self.order.last_notification_date = timezone.now()
+                        self.order.save(update_fields=['tracking_status', 'last_notification_date'])
             except Exception as e:
                 pass
         except Exception as e:
