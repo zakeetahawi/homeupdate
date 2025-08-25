@@ -110,7 +110,7 @@ class OrderAdmin(admin.ModelAdmin):
         'order_type',
         'status',
         'tracking_status',
-        'salesperson__username',
+        'salesperson__user__username',
         'branch__name',
         'final_price',
         'payment_verified',
@@ -336,9 +336,9 @@ class OrderAdmin(admin.ModelAdmin):
             'id', 'order_number', 'order_type', 'status', 'tracking_status', 'final_price',
             'payment_verified', 'expected_delivery_date', 'order_date', 'created_at',
             'customer__id', 'customer__name', 'customer__branch__name',
-            'salesperson__id', 'salesperson__username',
+            'salesperson__id',
             'branch__id', 'branch__name',
-            'created_by__id', 'created_by__username',
+            'created_by__id',
             'related_inspection__id'
         )
 
