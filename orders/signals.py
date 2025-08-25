@@ -2,9 +2,8 @@ import json
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
-from datetime import timedelta
 from .models import Order, OrderItem, Payment, OrderStatusLog, ManufacturingDeletionLog
-from manufacturing.models import ManufacturingOrder
+from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -75,6 +74,9 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
                 from datetime import timedelta
                 expected_date = instance.expected_delivery_date or (instance.created_at + timedelta(days=15)).date()
 
+                # import ManufacturingOrder here to avoid circular import at module load
+                from manufacturing.models import ManufacturingOrder
+
                 mfg_order, created_mfg = ManufacturingOrder.objects.get_or_create(
                     order=instance,
                     defaults={
@@ -87,7 +89,7 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
                         'invoice_number': instance.invoice_number,
                     }
                 )
-                
+
                 # Also update the original order's tracking status
                 if created_mfg:
                     # تحديث بدون إطلاق الإشارات لتجنب الrecursion
@@ -98,9 +100,62 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
                     # print(f"SUCCESS: Created ManufacturingOrder PK: {mfg_order.pk} and updated Order PK: {instance.pk} tracking_status to 'factory'")
                 else:
                     pass  # ManufacturingOrder already existed
-        else:
-            pass
 
+@receiver(post_save, sender='manufacturing.ManufacturingOrder')
+def sync_order_from_manufacturing(sender, instance, created, **kwargs):
+    """Ensure the linked Order has its order_status and tracking_status updated
+    when the ManufacturingOrder changes. This prevents display mismatches where
+    manufacturing is completed but Order still shows an older manufacturing state.
+    """
+    try:
+        order = getattr(instance, 'order', None)
+        if not order:
+            return
+
+        # Map manufacturing status to order.tracking_status (same mapping as management command)
+        status_mapping = {
+            'pending_approval': 'factory',
+            'pending': 'factory',
+            'in_progress': 'factory',
+            'ready_install': 'ready',
+            'completed': 'ready',
+            'delivered': 'delivered',
+            'rejected': 'factory',
+            'cancelled': 'factory',
+        }
+
+        new_order_status = instance.status
+        new_tracking_status = status_mapping.get(instance.status, order.tracking_status)
+
+        # Only update if something changed to avoid recursion/noise
+        update_fields = []
+        if order.order_status != new_order_status:
+            order.order_status = new_order_status
+            update_fields.append('order_status')
+        if order.tracking_status != new_tracking_status:
+            order.tracking_status = new_tracking_status
+            update_fields.append('tracking_status')
+
+        if update_fields:
+            # Use update to avoid triggering heavy save logic where appropriate
+            from django.db import transaction
+            with transaction.atomic():
+                Order.objects.filter(pk=order.pk).update(**{f: getattr(order, f) for f in update_fields})
+
+            # Log status change
+            try:
+                OrderStatusLog.objects.create(
+                    order=order,
+                    old_status=order.tracker.previous('tracking_status') or '',
+                    new_status=order.tracking_status,
+                    notes='مزامنة حالة الطلب من أمر التصنيع'
+                )
+            except Exception:
+                pass
+    except Exception:
+        # avoid letting signal exceptions break the caller
+        import logging
+        logging.getLogger(__name__).exception('خطأ أثناء مزامنة حالة الطلب من ManufacturingOrder')
 
 @receiver(post_save, sender=Order)
 def create_inspection_on_order_creation(sender, instance, created, **kwargs):

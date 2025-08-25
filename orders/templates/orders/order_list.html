@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to }}">
                 </div>
                 <div class="col-md-3">
-                    <select name="status" class="form-select">
+                    <select name="order_status" class="form-select">
                         <option value="">-- جميع الحالات --</option>
                         <option value="pending_approval" {% if status_filter == 'pending_approval' %}selected{% endif %}>قيد الموافقة</option>
                         <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>قيد الانتظار</option>
@@ -326,6 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <option value="manufacturing_deleted" {% if status_filter == 'manufacturing_deleted' %}selected{% endif %}>أمر تصنيع محذوف</option>
                     </select>
                 </div>
+                <!-- tracking_status filter removed as requested -->
                 <div class="col-md-2">
                     <label for="page_size" class="form-label">عدد الصفوف:</label>
                     <select name="page_size" id="page_size" class="form-select">
@@ -505,29 +506,25 @@ document.addEventListener('DOMContentLoaded', function() {
                                 {% endwith %}
                             </td>
                             <td class="text-center">
+                                {# عرض حالة الطلب الحقيقية (order_status) كالمصدر الرئيسي للفلتر #}
+                                <span class="badge bg-secondary" style="font-size: 0.75rem;">
+                                    {{ order.get_order_status_display }}
+                                </span>
+
+                                {# إذا كانت حالة العرض مختلفة (مصادر أخرى مثل المعاينة/التركيب/المصنع)، أعرضها كمعلومة ثانوية #}
                                 {% with display_info=order.get_display_status %}
-                                    <span class="badge {{ order.get_display_status_badge_class }}" style="font-size: 0.75rem;">
-                                        <i class="{{ order.get_display_status_icon }} me-1"></i>
-                                        {{ order.get_display_status_text }}
-                                    </span>
-                                    
-                                    <!-- إظهار مصدر الحالة إذا كان مختلفاً عن الحالة الأساسية -->
-                                    {% if display_info.source != 'order' or order.installation_status != 'not_scheduled' %}
-                                        <br><small class="text-muted" style="font-size: 0.65rem;">
+                                    {% if display_info.source != 'order' %}
+                                        <br>
+                                        <small class="text-muted" style="font-size: 0.65rem;">
                                             {% if display_info.source == 'inspection' %}
-                                                <i class="fas fa-search me-1"></i>معاينة
-                                            {% elif display_info.source == 'installation' and order.installation_status != 'not_scheduled' %}
-                                                <i class="fas fa-tools me-1"></i>تركيب
+                                                <i class="fas fa-search me-1"></i>{{ order.get_display_status_text }} (معاينة)
+                                            {% elif display_info.source == 'installation' %}
+                                                <i class="fas fa-tools me-1"></i>{{ order.get_display_status_text }} (تركيب)
                                             {% elif display_info.source == 'manufacturing' %}
-                                                <i class="fas fa-industry me-1"></i>مصنع
+                                                <i class="fas fa-industry me-1"></i>{{ order.get_display_status_text }} (مصنع)
+                                            {% else %}
+                                                {{ order.get_display_status_text }}
                                             {% endif %}
-                                        </small>
-                                    {% endif %}
-                                    
-                                    <!-- إظهار اسم المستلم تحت حالة تم التسليم -->
-                                    {% if order.get_display_status_text == 'تم التسليم' and order.delivery_recipient_name %}
-                                        <br><small class="text-muted" style="font-size: 0.65rem;">
-                                            <i class="fas fa-user me-1"></i>المستلم: {{ order.delivery_recipient_name }}
                                         </small>
                                     {% endif %}
                                 {% endwith %}
@@ -654,12 +651,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <ul class="pagination justify-content-center mb-0">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
+                        <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&order_status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
                             <i class="fas fa-angle-double-right"></i>
                         </a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&order_status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
                             <i class="fas fa-angle-right"></i>
                         </a>
                     </li>
@@ -672,7 +669,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </li>
                         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
+                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&order_status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
                                 {{ num }}
                             </a>
                         </li>
@@ -681,12 +678,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&order_status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
                             <i class="fas fa-angle-left"></i>
                         </a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&order_status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
                             <i class="fas fa-angle-double-left"></i>
                         </a>
                     </li>

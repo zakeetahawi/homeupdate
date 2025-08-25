@@ -75,10 +75,17 @@ def orders_dashboard(request):
     
     # إحصائيات عامة
     total_orders = orders.count()
-    pending_orders = orders.filter(tracking_status__in=['pending', 'processing']).count()
-    in_progress_orders = orders.filter(tracking_status__in=['warehouse', 'factory', 'cutting']).count()
-    completed_orders = orders.filter(tracking_status__in=['ready', 'delivered']).count()
-    ready_install_orders = orders.filter(tracking_status='ready').count()
+    # Use canonical order_status for dashboard counts
+    # pending card should include these order_status values per spec
+    pending_orders = orders.filter(order_status__in=[
+        'pending_approval', 'pending', 'in_progress', 'ready_install'
+    ]).count()
+    # in progress: currently in manufacturing (kept for breakdown views)
+    in_progress_orders = orders.filter(order_status='in_progress').count()
+    # completed: finished or delivered
+    completed_orders = orders.filter(order_status__in=['completed', 'delivered']).count()
+    # ready for install (ready_install) - kept as separate metric
+    ready_install_orders = orders.filter(order_status='ready_install').count()
     
     # إجمالي الإيرادات - مسؤول المصنع فقط لا يرى الإيرادات
     if hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager and not request.user.is_superuser:

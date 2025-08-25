@@ -23,8 +23,11 @@ import traceback
 from django.utils.translation import gettext_lazy as _
 class OrdersDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'orders/dashboard.html'
-
     def get_context_data(self, **kwargs):
+        """Provide dashboard statistics using manufacturing `order_status` counts.
+
+        Uses get_user_orders_queryset to respect user permissions.
+        """
         context = super().get_context_data(**kwargs)
         today = timezone.now().date()
 
@@ -33,13 +36,15 @@ class OrdersDashboardView(LoginRequiredMixin, TemplateView):
 
         # Basic statistics
         context['total_orders'] = orders.count()
-        context['pending_orders'] = orders.filter(status='pending').count()
-        context['completed_orders'] = orders.filter(status='completed').count()
+        # use order_status (manufacturing state) for dashboard counts
+        # 'pending' here refers to the ORDER_STATUS_CHOICES 'pending'
+        context['pending_orders'] = orders.filter(order_status='pending').count()
+        context['completed_orders'] = orders.filter(order_status__in=['completed', 'delivered']).count()
         context['recent_orders'] = orders.order_by('-created_at')[:10]
 
-        # Sales statistics
-        context['total_sales'] = orders.filter(status='completed').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-        context['monthly_sales'] = orders.filter(created_at__month=today.month).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        # Sales statistics - use order_status to detect completed orders
+        context['total_sales'] = orders.filter(order_status='completed').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        context['monthly_sales'] = orders.filter(order_status='completed', created_at__month=today.month).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
 
         return context
 
@@ -49,7 +54,7 @@ def order_list(request):
     View for displaying the list of orders with search and filtering
     """
     search_query = request.GET.get('search', '')
-    status_filter = request.GET.get('status', '')
+    status_filter = request.GET.get('order_status', '')
     page_size = request.GET.get('page_size', '25')
     try:
         page_size = int(page_size)
@@ -119,13 +124,15 @@ def order_list(request):
             Q(branch__name__icontains=search_query) |
             Q(notes__icontains=search_query) |
             Q(selected_types__icontains=search_query) |
-            Q(status__icontains=search_query) |
+            Q(order_status__icontains=search_query) |
+            Q(tracking_status__icontains=search_query) |
             Q(order_date__icontains=search_query) |
             Q(expected_delivery_date__icontains=search_query)
         )
 
     if status_filter:
-        orders = orders.filter(status=status_filter)
+        # the status filter in the UI corresponds to the manufacturing/order_status
+        orders = orders.filter(order_status=status_filter)
 
     order_type_filter = request.GET.get('order_type', '')
     if order_type_filter:
@@ -165,8 +172,8 @@ def order_list(request):
 
     context = {
         'page_obj': page_obj,
-        'search_query': search_query,
-        'status_filter': status_filter,
+    'search_query': search_query,
+    'status_filter': status_filter,
         'order_type_filter': order_type_filter,
         'year_filter': year_filter,
         'selected_years': selected_years,

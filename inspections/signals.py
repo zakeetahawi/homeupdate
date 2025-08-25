@@ -18,22 +18,32 @@ def update_order_status_on_inspection_change(sender, instance, created,
         order_types = instance.order.get_selected_types_list()
         if 'inspection' not in order_types:
             return
-        
-        # مزامنة الحالة كما هي
-        new_order_status = instance.status
-        
-        # تحديث حالة الطلب فقط إذا تغيرت الحالة
+
+        # Map inspection status/result to canonical order_status
+        from django.utils import timezone
+        from orders.models import Order
+
+        if instance.status == 'completed' and instance.result == 'passed':
+            mapped_status = 'completed'
+        elif instance.status == 'completed' and instance.result == 'failed':
+            mapped_status = 'rejected'
+        elif instance.status == 'scheduled':
+            mapped_status = 'pending'
+        elif instance.status == 'pending':
+            mapped_status = 'pending'
+        elif instance.status == 'cancelled':
+            mapped_status = 'cancelled'
+        else:
+            mapped_status = instance.status
+
+        # تحديث حالة الطلب فقط إذا تغيرت
         current_order_status = instance.order.order_status
-        
-        if (current_order_status != new_order_status):
-            # تحديث حالة الطلب باستخدام update لتجنب التكرار الذاتي
-            from django.utils import timezone
-            from orders.models import Order
 
-            update_fields = {'order_status': new_order_status}
+        if current_order_status != mapped_status:
+            update_fields = {'order_status': mapped_status}
 
-            # إذا كانت المعاينة مكتملة، تحديث تاريخ التسليم
-            if new_order_status == 'completed':
+            # إذا كانت المعاينة مكتملة وناجحة، تحديث تاريخ التسليم المتوقع
+            if mapped_status == 'completed':
                 update_fields['expected_delivery_date'] = timezone.now().date()
 
             # إضافة علامة لتجنب إشعار الطلب
@@ -41,11 +51,19 @@ def update_order_status_on_inspection_change(sender, instance, created,
             setattr(order, '_skip_order_notification', True)
 
             # تحديث الطلب مباشرة في قاعدة البيانات
-            Order.objects.filter(pk=instance.order.pk).update(**update_fields)
-            
+            Order.objects.filter(pk=order.pk).update(**update_fields)
+
+            # إعادة تحميل الكائن ودعوة تحديث الحالات المرتبطة
+            try:
+                order.refresh_from_db()
+                # تحديث الحالات المحسوبة (installation/inspection/completion)
+                order.update_all_statuses()
+            except Exception:
+                pass
+
             # تسجيل التحديث
             success_msg = (
-                f"✅ تم مزامنة حالة الطلب {instance.order.order_number} لتكون مطابقة لحالة المعاينة: {new_order_status}"
+                f"✅ تم مزامنة حالة الطلب {order.order_number} إلى: {mapped_status} (من حالة المعاينة: {instance.status}/{instance.result})"
             )
             print(f"\033[32m{success_msg}\033[0m")
         
