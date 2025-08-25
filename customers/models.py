@@ -49,6 +49,28 @@ class CustomerCategory(models.Model):
         return self.name
 
 
+def get_default_customer_category_id():
+    """Return the PK of the default customer category named 'فرع'.
+
+    If it does not exist create it. This is used as a callable default
+    for the Customer.category ForeignKey so newly created customers get
+    this category by default.
+    """
+    try:
+        from django.apps import apps
+        CustomerCategory = apps.get_model('customers', 'CustomerCategory')
+        obj, created = CustomerCategory.objects.get_or_create(
+            name='فرع',
+            defaults={'description': 'تصنيف افتراضي: فرع'}
+        )
+        return obj.pk
+    except Exception:
+        # In case migrations or app registry aren't ready, return None.
+        # Django will raise a clear error later; returning None avoids
+        # import-time database access problems in some contexts.
+        return None
+
+
 class CustomerNote(models.Model):
     customer = models.ForeignKey(
         'Customer',
@@ -126,8 +148,11 @@ class Customer(models.Model):
         null=True
     )
     category = models.ForeignKey(
-        CustomerCategory,
-        on_delete=models.SET_NULL,        null=True,        blank=True,
+    CustomerCategory,
+    on_delete=models.SET_DEFAULT,
+    default=get_default_customer_category_id,
+    null=False,
+    blank=False,
         related_name='customers',
         verbose_name=_('تصنيف العميل')
     )
