@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Postgres healthcheck every minute for homeupdate
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

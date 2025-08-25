@@ -1,0 +1,17 @@
+[Unit]
+Description=Homeupdate production launcher
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=zakee
+WorkingDirectory=/home/zakee/homeupdate
+ExecStart=/bin/bash /home/zakee/homeupdate/لينكس/run-production.sh
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

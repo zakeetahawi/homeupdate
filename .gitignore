@@ -81,6 +81,7 @@ staticfiles/
 media/backups/
 static/admin/
 static/rest_framework/
+media/
 
 # All compressed and compiled files
 *.gz
