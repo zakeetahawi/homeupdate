@@ -194,8 +194,6 @@ def dashboard(request):
 
     return render(request, 'installations/dashboard.html', context)
 
-    return render(request, 'installations/dashboard.html', context)
-
 
 @login_required
 def change_installation_status(request, installation_id):

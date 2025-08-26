@@ -10,7 +10,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.DeleteModel(
-            name="Notification",
+        # Use raw SQL to drop the Notification table and its m2m table if they exist.
+        # This is safer in environments where the m2m through table might have been
+        # removed or never created (pre-existing inconsistencies).
+        migrations.RunSQL(
+            sql=(
+                "DROP TABLE IF EXISTS accounts_notification_target_users CASCADE;"
+                "DROP TABLE IF EXISTS accounts_notification CASCADE;"
+            ),
+            reverse_sql=migrations.RunSQL.noop,
         ),
     ]
