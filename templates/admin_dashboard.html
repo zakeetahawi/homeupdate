@@ -51,77 +51,221 @@
 
 
     
+    /* Enhanced Main Statistics Cards */
+    .dashboard-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.25);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: none;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .dashboard-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+    }
+    
+    .dashboard-card.customers {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.25);
+    }
+    
+    .dashboard-card.manufacturing {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        box-shadow: 0 10px 40px rgba(118, 75, 162, 0.25);
+    }
+    
+    .dashboard-card.installations {
+        background: linear-gradient(135deg, #667eea 20%, #764ba2 80%);
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+    }
+    
+    .dashboard-card.inventory {
+        background: linear-gradient(135deg, #764ba2 20%, #667eea 80%);
+        box-shadow: 0 10px 40px rgba(118, 75, 162, 0.3);
+    }
+    
     .stat-number {
-        font-size: 2.5rem;
-        font-weight: bold;
+        font-size: 3rem;
+        font-weight: 900;
         margin-bottom: 0.5rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        animation: countUp 1s ease-out;
+    }
+    
+    @keyframes countUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
     }
     
     .stat-label {
-        font-size: 1rem;
-        opacity: 0.9;
+        font-size: 1.1rem;
+        opacity: 0.95;
+        font-weight: 500;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
     
     .stat-icon {
-        font-size: 3rem;
-        opacity: 0.8;
+        font-size: 4rem;
+        opacity: 0.9;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
     }
     
     .chart-container {
-        background: white;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(118, 75, 162, 0.02) 100%);
+        border-radius: 25px;
+        padding: 35px;
+        box-shadow: 0 15px 50px rgba(102, 126, 234, 0.15);
+        margin-bottom: 35px;
+        transition: all 0.4s ease;
+        border: 2px solid rgba(102, 126, 234, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .chart-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        pointer-events: none;
+        z-index: 0;
+    }
+    
+    .chart-container:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 25px 70px rgba(102, 126, 234, 0.25);
+        border-color: rgba(102, 126, 234, 0.3);
+    }
+    
+    .chart-container > * {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .chart-container h5 {
+        color: #667eea;
+        font-weight: 700;
+        font-size: 1.4rem;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        padding: 15px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
         border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
+        margin: -20px -20px 25px -20px;
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
     }
     
     .filter-section {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+        border-radius: 25px;
+        padding: 30px;
+        box-shadow: 0 15px 50px rgba(102, 126, 234, 0.15);
+        margin-bottom: 30px;
+        border: 2px solid rgba(102, 126, 234, 0.15);
     }
     
     .comparison-card {
-        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-        border-radius: 15px;
-        padding: 20px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border-radius: 25px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 15px 50px rgba(102, 126, 234, 0.2);
+        border: 2px solid rgba(102, 126, 234, 0.2);
+    }
+    
+    .comparison-card h4 {
+        color: #667eea;
+        font-weight: 700;
         margin-bottom: 20px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     }
     
     .metric-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 25px;
         margin-bottom: 30px;
     }
     
     .metric-item {
-        background: white;
-        border-radius: 10px;
-        padding: 15px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%);
+        border-radius: 20px;
+        padding: 25px;
         text-align: center;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.15);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: 2px solid rgba(102, 126, 234, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .metric-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
     }
     
     .metric-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 20px 50px rgba(102, 126, 234, 0.25);
+        border-color: rgba(102, 126, 234, 0.3);
+    }
+    
+    .metric-item:hover::before {
+        opacity: 1;
     }
     
     .metric-value {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #333;
-        margin-bottom: 5px;
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 8px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .metric-label {
-        font-size: 0.9rem;
-        color: #666;
+        font-size: 1rem;
+        color: #555;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
     .trend-indicator {
@@ -144,21 +288,158 @@
     .dashboard-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 30px;
-        border-radius: 15px;
-        margin-bottom: 30px;
+        padding: 40px;
+        border-radius: 20px;
+        margin-bottom: 40px;
         text-align: center;
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .dashboard-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none;
     }
     
     .dashboard-title {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin-bottom: 10px;
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 15px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
     
     .dashboard-subtitle {
-        font-size: 1.2rem;
-        opacity: 0.9;
+        font-size: 1.3rem;
+        opacity: 0.95;
+        font-weight: 300;
+    }
+    
+    /* Enhanced Cards */
+    .chart-container {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(102, 126, 234, 0.1);
+    }
+    
+    .chart-container:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Analytics Sections */
+    .analytics-section {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 30px;
+        border: 1px solid rgba(102, 126, 234, 0.1);
+    }
+    
+    .analytics-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 25px;
+        text-align: center;
+    }
+    
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .analytics-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        border-left: 5px solid #667eea;
+        transition: all 0.3s ease;
+    }
+    
+    .analytics-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    }
+    
+    .analytics-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .analytics-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 8px;
+    }
+    
+    .analytics-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .analytics-details {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    .analytics-details-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .analytics-details-item:last-child {
+        border-bottom: none;
+    }
+    
+    .user-performance-section {
+        background: linear-gradient(135deg, rgba(67, 233, 123, 0.05) 0%, rgba(56, 249, 215, 0.05) 100%);
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 30px;
+        border: 1px solid rgba(67, 233, 123, 0.1);
+    }
+    
+    .user-performance-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        border-left: 4px solid #43e97b;
+    }
+    
+    .performance-metrics {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.2);
     }
     
     .filter-form {
@@ -258,7 +539,11 @@
     
     @media (max-width: 768px) {
         .dashboard-title {
-            font-size: 2rem;
+            font-size: 2.5rem;
+        }
+        
+        .dashboard-header {
+            padding: 25px 20px;
         }
         
         .stat-number {
@@ -272,6 +557,106 @@
         .filter-group {
             min-width: 100%;
         }
+        
+        .analytics-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .analytics-card {
+            margin-bottom: 20px;
+        }
+        
+        .analytics-value {
+            font-size: 1.8rem;
+        }
+        
+        .chart-container {
+            padding: 20px 15px;
+        }
+        
+        .user-performance-card {
+            margin-bottom: 15px;
+        }
+        
+        .table-responsive {
+            font-size: 0.9rem;
+        }
+        
+        .analytics-details-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+        
+        .performance-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    /* Print Styles */
+    @media print {
+        .filter-section,
+        .dashboard-header,
+        .navbar {
+            display: none !important;
+        }
+        
+        .analytics-section,
+        .chart-container {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        
+        .analytics-card {
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+        
+        .dashboard-card {
+            background: #f8f9fa !important;
+            color: #333 !important;
+        }
+    }
+    
+    /* Additional Visual Enhancements */
+    .dashboard-card .card-body::after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        z-index: 0;
+    }
+    
+    .stat-icon {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .dashboard-card:hover .stat-icon {
+        animation: bounceIn 0.6s ease;
+    }
+    
+    @keyframes bounceIn {
+        0% { transform: scale(0.3); opacity: 0; }
+        50% { transform: scale(1.05); }
+        70% { transform: scale(0.9); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    
+    /* Gradient text effects */
+    .chart-container h5 {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    /* Loading states */
+    .metric-item.loading {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200px 100%;
+        animation: shimmer 1.5s infinite;
     }
 </style>
 {% endblock %}
@@ -467,29 +852,97 @@
     </div>
 
     <!-- Main Statistics Cards -->
-    <div class="row mb-4">
+    <div class="row mb-5">
+        <!-- Customers Card -->
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+            <div class="card dashboard-card customers h-100">
+                <div class="card-body text-center position-relative">
+                    <div class="stat-icon mb-3">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number">{{ customers_stats.total|default:0 }}</div>
+                    <div class="stat-label">إجمالي العملاء</div>
+                    <div class="mt-3">
+                        <small class="d-block opacity-75">
+                            <i class="fas fa-user-plus me-1"></i>
+                            {{ customers_stats.new_this_month|default:0 }} جديد هذا الشهر
+                        </small>
+                        {% if customers_stats.growth_rate %}
+                        <small class="d-block mt-1 opacity-75">
+                            <i class="fas fa-chart-line me-1"></i>
+                            نمو {{ customers_stats.growth_rate }}%
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Manufacturing Orders Card -->
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+            <div class="card dashboard-card manufacturing h-100">
+                <div class="card-body text-center position-relative">
+                    <div class="stat-icon mb-3">
+                        <i class="fas fa-industry"></i>
+                    </div>
+                    <div class="stat-number">{{ manufacturing_stats.total|default:0 }}</div>
+                    <div class="stat-label">طلبات التصنيع</div>
+                    <div class="mt-3">
+                        <small class="d-block opacity-75">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ manufacturing_stats.pending|default:0 }} قيد الانتظار
+                        </small>
+                        <small class="d-block mt-1 opacity-75">
+                            <i class="fas fa-check-circle me-1"></i>
+                            {{ manufacturing_stats.completed|default:0 }} مكتملة
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
         
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <!-- Installation Orders Card -->
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
             <div class="card dashboard-card installations h-100">
-                <div class="card-body text-center">
+                <div class="card-body text-center position-relative">
                     <div class="stat-icon mb-3">
                         <i class="fas fa-tools"></i>
                     </div>
                     <div class="stat-number">{{ installation_orders_stats.total|default:0 }}</div>
                     <div class="stat-label">طلبات التركيب</div>
+                    <div class="mt-3">
+                        <small class="d-block opacity-75">
+                            <i class="fas fa-wrench me-1"></i>
+                            {{ installation_orders_stats.ready_install|default:0 }} جاهز للتركيب
+                        </small>
+                        <small class="d-block mt-1 opacity-75">
+                            <i class="fas fa-trophy me-1"></i>
+                            {{ installation_orders_stats.completed|default:0 }} مكتملة
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <!-- Products/Inventory Card -->
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
             <div class="card dashboard-card inventory h-100">
-                <div class="card-body text-center">
+                <div class="card-body text-center position-relative">
                     <div class="stat-icon mb-3">
                         <i class="fas fa-boxes"></i>
                     </div>
                     <div class="stat-number">{{ inventory_stats.total_products|default:0 }}</div>
                     <div class="stat-label">المنتجات</div>
+                    <div class="mt-3">
+                        <small class="d-block opacity-75">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            {{ inventory_stats.low_stock|default:0 }} مخزون منخفض
+                        </small>
+                        <small class="d-block mt-1 opacity-75">
+                            <i class="fas fa-ban me-1"></i>
+                            {{ inventory_stats.out_of_stock|default:0 }} نافذة
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -792,6 +1245,563 @@
                 </div>
             </div>
         </div>
+    </div>
+    {% endif %}
+
+    <!-- Advanced Manufacturing Approval Analytics -->
+    {% if manufacturing_approval_analytics %}
+    <div class="analytics-section">
+        <div class="analytics-header">
+            <h3>
+                <i class="fas fa-cogs me-3"></i>
+                تحليلات تفصيلية - أوقات الموافقة على طلبات التصنيع
+            </h3>
+            <p class="mb-0">تحليل شامل لأوقات الموافقة والمستخدمين المسؤولين عن العمليات</p>
+        </div>
+        
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-clock me-2"></i>
+                    إجمالي طلبات التصنيع
+                </div>
+                <div class="analytics-value">{{ manufacturing_approval_analytics.total_orders }}</div>
+                <div class="analytics-label">طلب تصنيع</div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>طلبات معتمدة:</span>
+                        <span class="fw-bold text-success">{{ manufacturing_approval_analytics.approved_orders }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>قيد الانتظار:</span>
+                        <span class="fw-bold text-warning">{{ manufacturing_approval_analytics.pending_approval }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-hourglass-half me-2"></i>
+                    متوسط وقت الموافقة
+                </div>
+                <div class="analytics-value">{{ manufacturing_approval_analytics.avg_approval_time_hours|floatformat:1 }}</div>
+                <div class="analytics-label">ساعة</div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>أسرع موافقة:</span>
+                        <span class="fw-bold text-success">{{ manufacturing_approval_analytics.min_approval_time_hours|floatformat:1 }} ساعة</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>أبطأ موافقة:</span>
+                        <span class="fw-bold text-danger">{{ manufacturing_approval_analytics.max_approval_time_hours|floatformat:1 }} ساعة</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    توزيع سرعة الموافقات
+                </div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>موافقات سريعة (< 24 ساعة):</span>
+                        <span class="fw-bold text-success">{{ manufacturing_approval_analytics.quick_approvals }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>موافقات متوسطة (1-3 أيام):</span>
+                        <span class="fw-bold text-warning">{{ manufacturing_approval_analytics.medium_approvals }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>موافقات بطيئة (> 3 أيام):</span>
+                        <span class="fw-bold text-danger">{{ manufacturing_approval_analytics.slow_approvals }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if manufacturing_approval_analytics.approval_by_user %}
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-users me-2"></i>
+                    أداء المستخدمين - الموافقات
+                </div>
+                <div class="analytics-details">
+                    {% for user_name, user_data in manufacturing_approval_analytics.approval_by_user.items %}
+                    <div class="analytics-details-item">
+                        <div>
+                            <strong>{{ user_name }}</strong><br>
+                            <small class="text-muted">{{ user_data.count }} موافقة</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="fw-bold text-primary">{{ user_data.avg_time|floatformat:1 }}</span><br>
+                            <small class="text-muted">ساعة متوسط</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if manufacturing_approval_analytics.detailed_approvals %}
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="fas fa-list me-2"></i>
+                أحدث الموافقات التفصيلية
+            </h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>رقم الطلب</th>
+                            <th>العميل</th>
+                            <th>وقت الطلب</th>
+                            <th>وقت الموافقة</th>
+                            <th>الوقت المستغرق</th>
+                            <th>الموافق</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for approval in manufacturing_approval_analytics.detailed_approvals %}
+                        <tr>
+                            <td><strong>#{{ approval.order_id }}</strong></td>
+                            <td>{{ approval.customer_name }}</td>
+                            <td><small>{{ approval.created_at|date:"Y-m-d H:i" }}</small></td>
+                            <td><small>{{ approval.approved_at|date:"Y-m-d H:i" }}</small></td>
+                            <td>
+                                <span class="badge {% if approval.approval_time_hours <= 24 %}bg-success{% elif approval.approval_time_hours <= 72 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ approval.approval_time_hours|floatformat:1 }} ساعة
+                                </span>
+                            </td>
+                            <td>{{ approval.approved_by }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ approval.status }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Advanced Inspection Scheduling Analytics -->
+    {% if inspection_scheduling_analytics %}
+    <div class="analytics-section">
+        <div class="analytics-header">
+            <h3>
+                <i class="fas fa-calendar-check me-3"></i>
+                تحليلات تفصيلية - أوقات جدولة المعاينات
+            </h3>
+            <p class="mb-0">تحليل شامل لأوقات جدولة المعاينات والمستخدمين المسؤولين</p>
+        </div>
+        
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-clipboard-list me-2"></i>
+                    إجمالي المعاينات
+                </div>
+                <div class="analytics-value">{{ inspection_scheduling_analytics.total_inspections }}</div>
+                <div class="analytics-label">معاينة</div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>معاينات مجدولة:</span>
+                        <span class="fw-bold text-success">{{ inspection_scheduling_analytics.scheduled_inspections }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>قيد انتظار الجدولة:</span>
+                        <span class="fw-bold text-warning">{{ inspection_scheduling_analytics.pending_scheduling }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-clock me-2"></i>
+                    متوسط وقت الجدولة
+                </div>
+                <div class="analytics-value">{{ inspection_scheduling_analytics.avg_scheduling_time_hours|floatformat:1 }}</div>
+                <div class="analytics-label">ساعة</div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>أسرع جدولة:</span>
+                        <span class="fw-bold text-success">{{ inspection_scheduling_analytics.min_scheduling_time_hours|floatformat:1 }} ساعة</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>أبطأ جدولة:</span>
+                        <span class="fw-bold text-danger">{{ inspection_scheduling_analytics.max_scheduling_time_hours|floatformat:1 }} ساعة</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    توزيع سرعة الجدولة
+                </div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>جدولة سريعة (< 24 ساعة):</span>
+                        <span class="fw-bold text-success">{{ inspection_scheduling_analytics.quick_scheduling }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>جدولة متوسطة (1-3 أيام):</span>
+                        <span class="fw-bold text-warning">{{ inspection_scheduling_analytics.medium_scheduling }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>جدولة بطيئة (> 3 أيام):</span>
+                        <span class="fw-bold text-danger">{{ inspection_scheduling_analytics.slow_scheduling }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if inspection_scheduling_analytics.scheduling_by_user %}
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-users me-2"></i>
+                    أداء المستخدمين - الجدولة
+                </div>
+                <div class="analytics-details">
+                    {% for user_name, user_data in inspection_scheduling_analytics.scheduling_by_user.items %}
+                    <div class="analytics-details-item">
+                        <div>
+                            <strong>{{ user_name }}</strong><br>
+                            <small class="text-muted">{{ user_data.count }} جدولة</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="fw-bold text-primary">{{ user_data.avg_time|floatformat:1 }}</span><br>
+                            <small class="text-muted">ساعة متوسط</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if inspection_scheduling_analytics.detailed_scheduling %}
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="fas fa-list me-2"></i>
+                أحدث الجدولات التفصيلية
+            </h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>رقم المعاينة</th>
+                            <th>العميل</th>
+                            <th>وقت الطلب</th>
+                            <th>وقت الجدولة</th>
+                            <th>الوقت المستغرق</th>
+                            <th>المسؤول</th>
+                            <th>الحالة</th>
+                            <th>الأولوية</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for scheduling in inspection_scheduling_analytics.detailed_scheduling %}
+                        <tr>
+                            <td><strong>#{{ scheduling.inspection_id }}</strong></td>
+                            <td>{{ scheduling.customer_name }}</td>
+                            <td><small>{{ scheduling.created_at|date:"Y-m-d H:i" }}</small></td>
+                            <td><small>{{ scheduling.scheduled_date|date:"Y-m-d H:i" }}</small></td>
+                            <td>
+                                <span class="badge {% if scheduling.scheduling_time_hours <= 24 %}bg-success{% elif scheduling.scheduling_time_hours <= 72 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ scheduling.scheduling_time_hours|floatformat:1 }} ساعة
+                                </span>
+                            </td>
+                            <td>{{ scheduling.assigned_to }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ scheduling.status }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ scheduling.priority }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- User Performance Summary -->
+    {% if user_performance_analytics %}
+    <div class="user-performance-section">
+        <div class="analytics-header">
+            <h3>
+                <i class="fas fa-user-chart me-3"></i>
+                ملخص أداء المستخدمين - التقرير الشامل
+            </h3>
+            <p class="mb-0">تقييم شامل لأداء المستخدمين في جميع العمليات</p>
+        </div>
+        
+        {% if user_performance_analytics.users_performance %}
+        <div class="row">
+            {% for user_name, performance in user_performance_analytics.users_performance.items %}
+            <div class="col-lg-6 col-xl-4 mb-4">
+                <div class="user-performance-card">
+                    <h5 class="mb-3">
+                        <i class="fas fa-user me-2"></i>
+                        {{ user_name }}
+                    </h5>
+                    
+                    <div class="mb-3">
+                        <strong class="text-primary">المهام الإجمالية:</strong> 
+                        <span class="badge bg-primary">{{ performance.total_tasks }}</span>
+                    </div>
+                    
+                    {% if performance.total_tasks > 0 %}
+                    <div class="mb-3">
+                        <strong class="text-success">متوسط الوقت الإجمالي:</strong> 
+                        <span class="badge bg-success">{{ performance.overall_avg_time|floatformat:1 }} ساعة</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center p-2 bg-light rounded">
+                                <strong class="d-block text-muted">موافقات التصنيع</strong>
+                                <span class="h5 text-primary">{{ performance.manufacturing_approvals.count }}</span>
+                                {% if performance.manufacturing_approvals.count > 0 %}
+                                <small class="d-block text-muted">{{ performance.manufacturing_approvals.avg_time|floatformat:1 }}س متوسط</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-2 bg-light rounded">
+                                <strong class="d-block text-muted">جدولة المعاينات</strong>
+                                <span class="h5 text-success">{{ performance.inspection_scheduling.count }}</span>
+                                {% if performance.inspection_scheduling.count > 0 %}
+                                <small class="d-block text-muted">{{ performance.inspection_scheduling.avg_time|floatformat:1 }}س متوسط</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- User Activity Analytics - Last 7 Days -->
+    {% if user_activity_analytics %}
+    <div class="analytics-section">
+        <div class="analytics-header">
+            <h3>
+                <i class="fas fa-user-clock me-3"></i>
+                تحليل نشاط المستخدمين - آخر {{ user_activity_analytics.period_days }} أيام
+            </h3>
+            <p class="mb-0">تحليل شامل لنشاط المستخدمين وإنتاجيتهم</p>
+        </div>
+        
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-users me-2"></i>
+                    إحصائيات المستخدمين
+                </div>
+                <div class="analytics-value">{{ user_activity_analytics.total_users }}</div>
+                <div class="analytics-label">إجمالي المستخدمين</div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>مستخدمين نشطين:</span>
+                        <span class="fw-bold text-success">{{ user_activity_analytics.active_users_count }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>مستخدمين غير فعالين:</span>
+                        <span class="fw-bold text-warning">{{ user_activity_analytics.inactive_users_count }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>معدل النشاط:</span>
+                        <span class="fw-bold text-primary">{{ user_activity_analytics.activity_rate }}%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-chart-line me-2"></i>
+                    إنتاجية المستخدمين النشطين
+                </div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>عملاء جدد:</span>
+                        <span class="fw-bold text-success">{{ user_activity_analytics.total_customers_by_active }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>طلبات جديدة:</span>
+                        <span class="fw-bold text-info">{{ user_activity_analytics.total_orders_by_active }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>معاينات جديدة:</span>
+                        <span class="fw-bold text-warning">{{ user_activity_analytics.total_inspections_by_active }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if user_activity_analytics.active_users %}
+            <div class="analytics-card" style="grid-column: span 2;">
+                <div class="analytics-title">
+                    <i class="fas fa-trophy me-2"></i>
+                    أعلى المستخدمين نشاطاً
+                </div>
+                <div class="analytics-details">
+                    {% for user_data in user_activity_analytics.active_users %}
+                    <div class="analytics-details-item">
+                        <div>
+                            <strong>{{ user_data.user.get_full_name|default:user_data.user.username }}</strong><br>
+                            <small class="text-muted">إجمالي النشاط: {{ user_data.total_activity }}</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="d-flex gap-2 justify-content-end">
+                                {% if user_data.customers_created > 0 %}
+                                    <span class="badge bg-success">{{ user_data.customers_created }} عميل</span>
+                                {% endif %}
+                                {% if user_data.orders_created > 0 %}
+                                    <span class="badge bg-info">{{ user_data.orders_created }} طلب</span>
+                                {% endif %}
+                                {% if user_data.inspections_created > 0 %}
+                                    <span class="badge bg-warning">{{ user_data.inspections_created }} معاينة</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Installation Order Scheduling Analytics -->
+    {% if installation_scheduling_analytics %}
+    <div class="analytics-section">
+        <div class="analytics-header">
+            <h3>
+                <i class="fas fa-tools me-3"></i>
+                تحليل أوقات جدولة طلبات التركيب
+            </h3>
+            <p class="mb-0">تحليل متقدم لأوقات جدولة طلبات التركيب ومعدلات الأداء</p>
+        </div>
+        
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-clipboard-list me-2"></i>
+                    إجمالي طلبات التركيب
+                </div>
+                <div class="analytics-value">{{ installation_scheduling_analytics.total_installation_orders }}</div>
+                <div class="analytics-label">طلب تركيب</div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>طلبات مجدولة:</span>
+                        <span class="fw-bold text-success">{{ installation_scheduling_analytics.scheduled_orders }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>قيد انتظار الجدولة:</span>
+                        <span class="fw-bold text-warning">{{ installation_scheduling_analytics.pending_scheduling }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-hourglass-half me-2"></i>
+                    متوسط وقت الجدولة
+                </div>
+                <div class="analytics-value">{{ installation_scheduling_analytics.avg_scheduling_time_days|floatformat:1 }}</div>
+                <div class="analytics-label">يوم</div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>بالساعات:</span>
+                        <span class="fw-bold text-info">{{ installation_scheduling_analytics.avg_scheduling_time_hours|floatformat:1 }} ساعة</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>أقصر وقت:</span>
+                        <span class="fw-bold text-success">{{ installation_scheduling_analytics.min_scheduling_time_hours|floatformat:1 }} ساعة</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analytics-card">
+                <div class="analytics-title">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    توزيع سرعة الجدولة
+                </div>
+                <div class="analytics-details">
+                    <div class="analytics-details-item">
+                        <span>جدولة سريعة (< 24 ساعة):</span>
+                        <span class="fw-bold text-success">{{ installation_scheduling_analytics.quick_scheduling }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>جدولة متوسطة (1-7 أيام):</span>
+                        <span class="fw-bold text-warning">{{ installation_scheduling_analytics.medium_scheduling }}</span>
+                    </div>
+                    <div class="analytics-details-item">
+                        <span>جدولة بطيئة (> أسبوع):</span>
+                        <span class="fw-bold text-danger">{{ installation_scheduling_analytics.slow_scheduling }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if installation_scheduling_analytics.detailed_scheduling %}
+        <div class="chart-container">
+            <h5 class="mb-3">
+                <i class="fas fa-list-alt me-2"></i>
+                أحدث جدولات التركيب التفصيلية
+            </h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>رقم الطلب</th>
+                            <th>العميل</th>
+                            <th>تاريخ الطلب</th>
+                            <th>تاريخ الجدولة</th>
+                            <th>الوقت المستغرق</th>
+                            <th>المنشئ</th>
+                            <th>الحالة</th>
+                            <th>المبلغ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in installation_scheduling_analytics.detailed_scheduling %}
+                        <tr>
+                            <td><strong>{{ schedule.order_number }}</strong></td>
+                            <td>{{ schedule.customer_name }}</td>
+                            <td><small>{{ schedule.order_date|date:"Y-m-d" }}</small></td>
+                            <td><small>{{ schedule.scheduled_date|date:"Y-m-d" }}</small></td>
+                            <td>
+                                <span class="badge {% if schedule.scheduling_time_hours <= 24 %}bg-success{% elif schedule.scheduling_time_hours <= 168 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ schedule.scheduling_time_hours|floatformat:1 }} ساعة
+                                </span>
+                            </td>
+                            <td>{{ schedule.created_by }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ schedule.status }}</span>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-success">{{ schedule.total_amount|floatformat:0|intcomma }} ج.م</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 
