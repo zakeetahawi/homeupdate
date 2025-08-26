@@ -1508,8 +1508,8 @@
                         <tr>
                             <td><strong>#{{ scheduling.inspection_id }}</strong></td>
                             <td>{{ scheduling.customer_name }}</td>
-                            <td><small>{{ scheduling.created_at|date:"Y-m-d H:i" }}</small></td>
-                            <td><small>{{ scheduling.scheduled_date|date:"Y-m-d H:i" }}</small></td>
+                            <td><small>{% if scheduling.created_at %}{{ scheduling.created_at|date:"Y-m-d H:i" }}{% else %}--{% endif %}</small></td>
+                            <td><small>{% if scheduling.scheduled_date %}{{ scheduling.scheduled_date|date:"Y-m-d" }}{% else %}--{% endif %}</small></td>
                             <td>
                                 <span class="badge {% if scheduling.scheduling_time_hours <= 24 %}bg-success{% elif scheduling.scheduling_time_hours <= 72 %}bg-warning{% else %}bg-danger{% endif %}">
                                     {{ scheduling.scheduling_time_hours|floatformat:1 }} ساعة
