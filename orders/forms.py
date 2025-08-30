@@ -493,7 +493,7 @@ class OrderForm(forms.ModelForm):
             instance.selected_types = json.dumps([selected_type])
 
             # Set order_type for compatibility
-            if selected_type in ['accessory']:
+            if selected_type in ['accessory', 'products']:
                 instance.order_type = 'product'
             else:
                 instance.order_type = 'service'
@@ -506,6 +506,10 @@ class OrderForm(forms.ModelForm):
                 instance.delivery_type = 'home'
                 if not instance.delivery_address:
                     instance.delivery_address = 'سيتم تحديد العنوان لاحقاً'
+            elif selected_type == 'products':
+                # للمنتجات، يمكن التسليم في الفرع أو المنزل حسب الحاجة
+                instance.delivery_type = 'branch'  # افتراضي
+                instance.delivery_address = ''
             else:  # accessory and inspection
                 instance.delivery_type = 'branch'
                 instance.delivery_address = ''

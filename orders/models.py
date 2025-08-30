@@ -37,6 +37,7 @@ class Order(models.Model):
         ('installation', 'تركيب'),
         ('inspection', 'معاينة'),
         ('tailoring', 'تسليم'),
+        ('products', 'منتجات'),
     ]
     TRACKING_STATUS_CHOICES = [
         ('pending', 'قيد الانتظار'),
@@ -438,9 +439,9 @@ class Order(models.Model):
                 # لا تعيين افتراضي - يجب أن يكون النوع محدد صراحة
                 raise ValidationError('يجب تحديد نوع الطلب')
 
-            # Contract number validation
-            if 'tailoring' in selected_types and not self.contract_number:
-                raise ValidationError('رقم العقد مطلوب لخدمة التسليم')
+            # Contract number validation - only for tailoring and installation
+            if ('tailoring' in selected_types or 'installation' in selected_types) and not self.contract_number:
+                raise ValidationError('رقم العقد مطلوب لخدمات التسليم والتركيب')
 
             # Invoice number validation - required for all types except inspection alone
             if not (len(selected_types) == 1 and selected_types[0] == 'inspection'):
@@ -472,6 +473,13 @@ class Order(models.Model):
             # حساب تاريخ التسليم المتوقع إذا لم يكن محدداً
             if not self.expected_delivery_date:
                 self.expected_delivery_date = self.calculate_expected_delivery_date()
+
+            # معالجة حالة طلبات المنتجات
+            if 'products' in selected_types:
+                # طلبات المنتجات تبدأ بحالة "قيد الانتظار"
+                if is_new or not self.order_status:
+                    self.order_status = 'pending'
+                    self.tracking_status = 'pending'
 
             # حفظ الطلب أولاً للحصول على مفتاح أساسي
             super().save(*args, **kwargs)
@@ -545,10 +553,17 @@ class Order(models.Model):
             return None
 
         # تحديد نوع الطلب للحصول على عدد الأيام المناسب
+        selected_types = self.get_selected_types_list()
+
+        # معالجة خاصة للمنتجات (72 ساعة = 3 أيام)
+        if 'products' in selected_types:
+            expected_date = self.order_date + timedelta(days=3)
+            return expected_date
+
         order_type = 'vip' if self.status == 'vip' else 'normal'
 
         # التحقق من وجود معاينة في الطلب
-        if 'inspection' in self.get_selected_types_list():
+        if 'inspection' in selected_types:
             order_type = 'inspection'
 
         # الحصول على عدد الأيام من التخزين المؤقت
@@ -712,10 +727,32 @@ class Order(models.Model):
             'inspection': 'معاينة',
             'installation': 'تركيب',
             'accessory': 'إكسسوار',
-            'tailoring': 'تسليم'
+            'tailoring': 'تسليم',
+            'products': 'منتجات',
+            'fabric': 'أقمشة',
+            'transport': 'نقل'
         }
 
         return type_map.get(types_list[0], types_list[0])
+
+    def get_selected_types_display(self):
+        """Get display names for all selected types"""
+        types_list = self.get_selected_types_list()
+        if not types_list:
+            return "غير محدد"
+
+        type_map = {
+            'inspection': 'معاينة',
+            'installation': 'تركيب',
+            'accessory': 'إكسسوار',
+            'tailoring': 'تسليم',
+            'products': 'منتجات',
+            'fabric': 'أقمشة',
+            'transport': 'نقل'
+        }
+
+        arabic_types = [type_map.get(t, t) for t in types_list]
+        return ', '.join(arabic_types)
 
     @property
     def remaining_amount(self):
@@ -1254,6 +1291,18 @@ class Order(models.Model):
                     'is_inspection_order': False
                 }
         
+        # للمنتجات والأنواع الأخرى
+        elif 'products' in self.get_selected_types_list():
+            return {
+                'status': 'not_applicable',
+                'text': 'لا يوجد',
+                'badge_class': 'bg-secondary',
+                'icon': 'fas fa-minus',
+                'inspection_id': None,
+                'contract_number': None,
+                'created_at': None,
+                'is_inspection_order': False
+            }
         # للأنواع الأخرى
         else:
             return {
@@ -1266,6 +1315,14 @@ class Order(models.Model):
                 'created_at': None,
                 'is_inspection_order': False
             }
+
+    def get_cutting_orders(self):
+        """الحصول على أوامر التقطيع المرتبطة بهذا الطلب"""
+        try:
+            from cutting.models import CuttingOrder
+            return CuttingOrder.objects.filter(order=self)
+        except:
+            return []
 
 @receiver(post_save, sender=Order)
 def order_post_save(sender, instance, created, **kwargs):
@@ -1344,9 +1401,78 @@ class OrderItem(models.Model):
         verbose_name='حالة المعالجة'
     )
     notes = models.TextField(blank=True, verbose_name='ملاحظات')
-    
+
+    # حقول التقطيع الجديدة
+    cutting_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'قيد الانتظار'),
+            ('in_progress', 'قيد التقطيع'),
+            ('completed', 'مكتمل'),
+            ('rejected', 'مرفوض'),
+        ],
+        default='pending',
+        verbose_name='حالة التقطيع'
+    )
+
+    cutter_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='اسم القصاص'
+    )
+
+    permit_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='رقم الإذن'
+    )
+
+    receiver_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='اسم المستلم'
+    )
+
+    cutting_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ التقطيع'
+    )
+
+    delivery_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ التسليم'
+    )
+
+    bag_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='رقم الشنطة'
+    )
+
+    additional_quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        default=0,
+        verbose_name='كمية إضافية'
+    )
+
+    cutting_notes = models.TextField(
+        blank=True,
+        verbose_name='ملاحظات التقطيع'
+    )
+
+    rejection_reason = models.TextField(
+        blank=True,
+        verbose_name='سبب الرفض'
+    )
+
     # إضافة tracker لتتبع التغييرات
-    tracker = FieldTracker(fields=['quantity', 'unit_price', 'product', 'discount_percentage'])
+    tracker = FieldTracker(fields=[
+        'quantity', 'unit_price', 'product', 'discount_percentage',
+        'cutting_status', 'cutter_name', 'permit_number', 'receiver_name'
+    ])
     
     class Meta:
         verbose_name = 'عنصر الطلب'
@@ -1356,6 +1482,10 @@ class OrderItem(models.Model):
             models.Index(fields=['product'], name='order_item_product_idx'),
             models.Index(fields=['processing_status'], name='order_item_status_idx'),
             models.Index(fields=['item_type'], name='order_item_type_idx'),
+            models.Index(fields=['cutting_status'], name='order_item_cutting_status_idx'),
+            models.Index(fields=['cutter_name'], name='order_item_cutter_idx'),
+            models.Index(fields=['receiver_name'], name='order_item_receiver_idx'),
+            models.Index(fields=['cutting_date'], name='order_item_cutting_date_idx'),
         ]
     def __str__(self):
         return f'{self.product.name} ({self.get_clean_quantity_display()})'
@@ -1402,6 +1532,57 @@ class OrderItem(models.Model):
             if str_value.endswith('.'):
                 str_value = str_value[:-1]
         return str_value
+
+    # دوال مساعدة لحقول التقطيع
+    @property
+    def total_quantity_with_additional(self):
+        """الكمية الإجمالية (الأصلية + الإضافية)"""
+        return self.quantity + self.additional_quantity
+
+    def mark_cutting_completed(self, cutter_name, permit_number, receiver_name, user, notes=''):
+        """تعيين عنصر التقطيع كمكتمل"""
+        from django.utils import timezone
+
+        self.cutting_status = 'completed'
+        self.cutter_name = cutter_name
+        self.permit_number = permit_number
+        self.receiver_name = receiver_name
+        self.cutting_date = timezone.now()
+        self.delivery_date = timezone.now()
+        self.cutting_notes = notes
+        self.save()
+
+    def mark_cutting_rejected(self, reason, user):
+        """تعيين عنصر التقطيع كمرفوض"""
+        self.cutting_status = 'rejected'
+        self.rejection_reason = reason
+        self.save()
+
+    def get_cutting_status_display_color(self):
+        """إرجاع لون حالة التقطيع للعرض"""
+        colors = {
+            'pending': 'warning',
+            'in_progress': 'info',
+            'completed': 'success',
+            'rejected': 'danger'
+        }
+        return colors.get(self.cutting_status, 'secondary')
+
+    @property
+    def is_cutting_completed(self):
+        """التحقق من اكتمال التقطيع"""
+        return self.cutting_status == 'completed'
+
+    @property
+    def is_cutting_rejected(self):
+        """التحقق من رفض التقطيع"""
+        return self.cutting_status == 'rejected'
+
+    @property
+    def has_cutting_data(self):
+        """التحقق من وجود بيانات التقطيع"""
+        return bool(self.cutter_name and self.permit_number and self.receiver_name)
+
     def save(self, *args, **kwargs):
         """Save order item with validation"""
         try:

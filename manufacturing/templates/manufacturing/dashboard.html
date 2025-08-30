@@ -272,7 +272,13 @@
             <a href="{% url 'manufacturing:vip_orders' %}" class="btn btn-warning">
                 <i class="fas fa-crown me-2"></i>طلبات VIP
             </a>
-            <a href="{% url 'manufacturing:order_create' %}" class="btn btn-success">
+            <a href="{% url 'manufacturing:fabric_receipt' %}" class="btn btn-info">
+                <i class="fas fa-industry me-2"></i>استلام من المصنع
+            </a>
+            <a href="{% url 'manufacturing:product_receipt' %}" class="btn btn-success">
+                <i class="fas fa-warehouse me-2"></i>استلام من المخازن
+            </a>
+            <a href="{% url 'manufacturing:order_create' %}" class="btn btn-secondary">
                 <i class="fas fa-plus me-2"></i>طلب جديد
             </a>
             {% if user.is_superuser %}
@@ -761,5 +767,5 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 </script>
-<script src="{% static 'manufacturing/js/universal-dropdown-fix.js' %}"></script>
+<!-- <script src="{% static 'manufacturing/js/universal-dropdown-fix.js' %}"></script> -->
 {% endblock %}

@@ -26,6 +26,26 @@ urlpatterns = [
         views.ManufacturingOrderCreateView.as_view(),
         name='order_create'
     ),
+    path(
+        'fabric-receipt/',
+        views.FabricReceiptView.as_view(),
+        name='fabric_receipt'
+    ),
+    path(
+        'receive-item/<int:item_id>/',
+        views.receive_fabric_item,
+        name='receive_fabric_item'
+    ),
+    path(
+        'receive-all-items/<int:order_id>/',
+        views.receive_all_fabric_items,
+        name='receive_all_fabric_items'
+    ),
+    path(
+        'recent-receipts/',
+        views.recent_fabric_receipts,
+        name='recent_fabric_receipts'
+    ),
     
     # URLs باستخدام كود التصنيع
     path(
@@ -105,5 +125,77 @@ urlpatterns = [
         'api/production-lines/',
         views.get_production_lines_api,
         name='production_lines_api'
+    ),
+
+    # نظام استلام الأقمشة
+    path(
+        'fabric-receipt/',
+        views.FabricReceiptView.as_view(),
+        name='fabric_receipt'
+    ),
+    path(
+        'fabric-receipt/item/<int:item_id>/receive/',
+        views.receive_fabric_item,
+        name='receive_fabric_item'
+    ),
+    path(
+        'fabric-receipt/order/<int:order_id>/bulk-receive/',
+        views.bulk_receive_fabric,
+        name='bulk_receive_fabric'
+    ),
+    path(
+        'api/fabric-receipt/order/<int:order_id>/status/',
+        views.fabric_receipt_status_api,
+        name='fabric_receipt_status_api'
+    ),
+    path(
+        'cutting-orders/<int:cutting_order_id>/receive/',
+        views.receive_cutting_order,
+        name='receive_cutting_order'
+    ),
+    path(
+        'fabric-receipt/<int:receipt_id>/detail/',
+        views.FabricReceiptDetailView.as_view(),
+        name='fabric_receipt_detail'
+    ),
+    path(
+        'fabric-receipts/',
+        views.FabricReceiptListView.as_view(),
+        name='fabric_receipt_list'
+    ),
+    path(
+        'fix-manufacturing-items/',
+        views.fix_manufacturing_order_items,
+        name='fix_manufacturing_items'
+    ),
+    path(
+        'cleanup-products-manufacturing/',
+        views.cleanup_products_manufacturing_orders,
+        name='cleanup_products_manufacturing'
+    ),
+    path(
+        'product-receipt/',
+        views.ProductReceiptView.as_view(),
+        name='product_receipt'
+    ),
+    path(
+        'create-product-receipt/',
+        views.create_product_receipt,
+        name='create_product_receipt'
+    ),
+    path(
+        'product-receipts-list/',
+        views.ProductReceiptsListView.as_view(),
+        name='product_receipts_list'
+    ),
+    path(
+        'create-manufacturing-receipt/',
+        views.create_manufacturing_receipt,
+        name='create_manufacturing_receipt'
+    ),
+    path(
+        'get-cutting-data/<int:manufacturing_order_id>/',
+        views.get_cutting_data,
+        name='get_cutting_data'
     ),
 ]

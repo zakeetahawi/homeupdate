@@ -34,6 +34,13 @@ def notification_icon(notification_type):
         'inspection_status_changed': 'fas fa-clipboard-check',
         'manufacturing_status_changed': 'fas fa-industry',
         'complaint_created': 'fas fa-exclamation-triangle',
+        # إشعارات التقطيع الجديدة
+        'cutting_order_created': 'fas fa-cut',
+        'cutting_completed': 'fas fa-check-circle',
+        'cutting_item_rejected': 'fas fa-times-circle',
+        'stock_shortage': 'fas fa-exclamation-triangle',
+        'fabric_received': 'fas fa-industry',
+        'cutting_ready_for_pickup': 'fas fa-hand-holding',
     }
     return icons.get(notification_type, 'fas fa-bell')
 
@@ -55,6 +62,13 @@ def notification_color(notification_type):
         'inspection_status_changed': 'warning',
         'manufacturing_status_changed': 'secondary',
         'complaint_created': 'danger',
+        # إشعارات التقطيع الجديدة
+        'cutting_order_created': 'primary',
+        'cutting_completed': 'success',
+        'cutting_item_rejected': 'danger',
+        'stock_shortage': 'warning',
+        'fabric_received': 'info',
+        'cutting_ready_for_pickup': 'info',
     }
     return colors.get(notification_type, 'secondary')
 

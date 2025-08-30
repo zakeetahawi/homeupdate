@@ -16,6 +16,7 @@ from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
 from django.db.models import Q, Count, Sum, F, Case, When, Value, IntegerField
+from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 from django.views.decorators.http import require_http_methods, require_POST
@@ -562,10 +563,54 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # الحصول على عناصر الطلب الأساسي
+        # الحصول على عناصر الطلب الأساسي مع بيانات التقطيع
         if self.object.order:
             order_items = self.object.order.items.all()
-            context['order_items'] = order_items
+
+            # إنشاء قاموس لبيانات التقطيع والاستلام
+            items_data = []
+
+            for item in order_items:
+                # البحث عن عنصر التقطيع المرتبط
+                cutting_item = None
+                cutting_orders = self.object.order.cutting_orders.all()
+
+                for cutting_order in cutting_orders:
+                    cutting_item = cutting_order.items.filter(order_item=item).first()
+                    if cutting_item:
+                        break
+
+                # البحث عن بيانات الاستلام
+                # أولاً: البحث في FabricReceiptItem
+                from .models import FabricReceiptItem
+                fabric_receipt_item = FabricReceiptItem.objects.filter(
+                    order_item=item,
+                    fabric_receipt__manufacturing_order=self.object
+                ).first()
+
+                fabric_receipt = fabric_receipt_item.fabric_receipt if fabric_receipt_item else None
+
+                # إذا لم نجد في FabricReceiptItem، نبحث مباشرة في FabricReceipt
+                if not fabric_receipt:
+                    fabric_receipt = self.object.fabric_receipts.first()  # أخذ أول استلام مرتبط بأمر التصنيع
+
+                # إنشاء كائن بيانات العنصر
+                item_data = {
+                    'order_item': item,
+                    'cutting_receiver_name': cutting_item.receiver_name if cutting_item else None,
+                    'cutting_permit_number': cutting_item.permit_number if cutting_item else None,
+                    'cutting_date': cutting_item.cutting_date if cutting_item else None,
+                    'cutting_status': cutting_item.status if cutting_item else None,
+                    'has_cutting_data': cutting_item is not None,
+                    'warehouse_name': cutting_item.cutting_order.warehouse.name if cutting_item else None,
+                    'fabric_received': fabric_receipt is not None,  # تغيير هنا: إذا وجد استلام فهو مستلم
+                    'bag_number': fabric_receipt.bag_number if fabric_receipt else None,
+                    'fabric_received_date': fabric_receipt.receipt_date if fabric_receipt else None,
+                    'fabric_receiver_name': fabric_receipt.received_by.get_full_name() if fabric_receipt and fabric_receipt.received_by else None,
+                }
+                items_data.append(item_data)
+
+            context['items_data'] = items_data
 
             # حساب إجمالي الكمية من عناصر الطلب الأساسي
             total_quantity = sum(item.quantity for item in order_items)
@@ -2096,3 +2141,913 @@ class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListVie
         context['selected_order_types'] = self.request.GET.getlist('order_types')
 
         return context
+
+
+# نظام استلام الأقمشة في المصنع
+class FabricReceiptView(LoginRequiredMixin, TemplateView):
+    """صفحة استلام الأقمشة في المصنع"""
+    template_name = 'manufacturing/fabric_receipt.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # الحصول على أوامر التصنيع التي لها عناصر جاهزة للاستلام
+        manufacturing_orders = ManufacturingOrder.objects.filter(
+            items__receiver_name__isnull=False,
+            items__permit_number__isnull=False,
+            items__fabric_received=False
+        ).select_related(
+            'order', 'order__customer'
+        ).prefetch_related(
+            'items'
+        ).distinct().order_by('-order_date')
+
+        # فلترة حسب البحث
+        search = self.request.GET.get('search')
+        if search:
+            manufacturing_orders = manufacturing_orders.filter(
+                Q(order__contract_number__icontains=search) |
+                Q(order__customer__name__icontains=search) |
+                Q(order__customer__phone__icontains=search)
+            )
+
+        context.update({
+            'manufacturing_orders': manufacturing_orders,
+            'search_query': search or '',
+        })
+
+        return context
+
+
+@login_required
+def receive_fabric_item(request, item_id):
+    """استلام قماش عنصر واحد"""
+    if request.method == 'POST':
+        try:
+            item = get_object_or_404(ManufacturingOrderItem, pk=item_id)
+
+            data = json.loads(request.body)
+            bag_number = data.get('bag_number', '').strip()
+            notes = data.get('notes', '').strip()
+
+            if not bag_number:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'رقم الشنطة مطلوب'
+                })
+
+            # تعيين العنصر كمستلم
+            item.mark_fabric_received(
+                bag_number=bag_number,
+                user=request.user,
+                notes=notes
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'تم استلام القماش بنجاح'
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'حدث خطأ: {str(e)}'
+            })
+
+    return JsonResponse({'success': False, 'message': 'طريقة غير مدعومة'})
+
+
+@login_required
+def bulk_receive_fabric(request, order_id):
+    """استلام جميع أقمشة الطلب بنفس رقم الشنطة"""
+    if request.method == 'POST':
+        try:
+            manufacturing_order = get_object_or_404(ManufacturingOrder, pk=order_id)
+
+            data = json.loads(request.body)
+            bag_number = data.get('bag_number', '').strip()
+            notes = data.get('notes', '').strip()
+
+            if not bag_number:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'رقم الشنطة مطلوب'
+                })
+
+            # استلام جميع العناصر الجاهزة للاستلام
+            items_to_receive = manufacturing_order.items.filter(
+                receiver_name__isnull=False,
+                permit_number__isnull=False,
+                fabric_received=False
+            )
+
+            received_count = 0
+            for item in items_to_receive:
+                item.mark_fabric_received(
+                    bag_number=bag_number,
+                    user=request.user,
+                    notes=notes
+                )
+                received_count += 1
+
+            return JsonResponse({
+                'success': True,
+                'message': f'تم استلام {received_count} عنصر بنجاح'
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'حدث خطأ: {str(e)}'
+            })
+
+    return JsonResponse({'success': False, 'message': 'طريقة غير مدعومة'})
+
+
+@login_required
+def fabric_receipt_status_api(request, order_id):
+    """API للحصول على حالة استلام الأقمشة لأمر تصنيع"""
+    try:
+        manufacturing_order = get_object_or_404(ManufacturingOrder, pk=order_id)
+
+        items_data = []
+        for item in manufacturing_order.items.all():
+            items_data.append({
+                'id': item.id,
+                'product_name': item.product_name,
+                'quantity': str(item.quantity),
+                'receiver_name': item.receiver_name,
+                'permit_number': item.permit_number,
+                'cutting_date': item.cutting_date.isoformat() if item.cutting_date else None,
+                'delivery_date': item.delivery_date.isoformat() if item.delivery_date else None,
+                'bag_number': item.bag_number,
+                'fabric_received': item.fabric_received,
+                'fabric_received_date': item.fabric_received_date.isoformat() if item.fabric_received_date else None,
+                'fabric_status': item.get_fabric_status_display(),
+                'fabric_status_color': item.get_fabric_status_color(),
+                'has_cutting_data': item.has_cutting_data,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'order': {
+                'id': manufacturing_order.id,
+                'customer_name': manufacturing_order.order.customer.name if manufacturing_order.order else '',
+                'contract_number': manufacturing_order.order.contract_number if manufacturing_order.order else '',
+                'total_items': manufacturing_order.total_items_count,
+                'received_items': manufacturing_order.received_items_count,
+                'pending_items': manufacturing_order.pending_items_count,
+                'completion_percentage': manufacturing_order.items_completion_percentage,
+                'is_all_received': manufacturing_order.is_all_items_received,
+                'status_display': manufacturing_order.get_items_status_display(),
+                'status_color': manufacturing_order.get_items_status_color(),
+            },
+            'items': items_data
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+
+class FabricReceiptView(LoginRequiredMixin, TemplateView):
+    """صفحة استلام الأقمشة في المصنع"""
+    template_name = 'manufacturing/fabric_receipt.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # الحصول على أوامر التصنيع التي تحتوي على عناصر جاهزة للاستلام
+        manufacturing_orders = ManufacturingOrder.objects.select_related(
+            'order', 'order__customer'
+        ).prefetch_related(
+            'items'
+        ).filter(
+            items__receiver_name__isnull=False,
+            items__permit_number__isnull=False,
+            items__fabric_received=False
+        ).distinct()
+
+        # الحصول على أوامر التقطيع المكتملة والجاهزة للاستلام (استبعاد المنتجات)
+        from cutting.models import CuttingOrder
+        cutting_orders_ready = CuttingOrder.objects.filter(
+            status='completed'
+        ).exclude(
+            fabric_receipts__isnull=False  # استبعاد الأوامر التي تم استلامها بالفعل
+        ).exclude(
+            order__selected_types__contains=['products']  # استبعاد طلبات المنتجات - تذهب لصفحة منفصلة
+        ).select_related(
+            'order', 'order__customer', 'warehouse'
+        ).prefetch_related(
+            'items'
+        ).order_by('-completed_at')
+
+        # الحصول على أوامر التصنيع الجاهزة للاستلام (حل جذري مبسط)
+        from .models import FabricReceipt
+        from cutting.models import CuttingOrder
+
+        # أوامر التصنيع الجاهزة للاستلام (الموجودة فقط - بدون إنشاء تلقائي)
+        from django.db.models import Q
+
+        # البحث عن أوامر التصنيع التي لم يتم استلام أقمشتها بعد
+        received_manufacturing_order_ids = FabricReceipt.objects.values_list('manufacturing_order_id', flat=True)
+
+        # أوامر التصنيع للطلبات من نوع اكسسوار أو تسليم أو تركيب فقط
+        manufacturing_orders_ready = ManufacturingOrder.objects.exclude(
+            id__in=received_manufacturing_order_ids
+        ).filter(
+            Q(order__selected_types__icontains='accessories') |
+            Q(order__selected_types__icontains='delivery') |
+            Q(order__selected_types__icontains='installation')
+        ).select_related(
+            'order', 'order__customer'
+        ).prefetch_related(
+            'items'
+        ).order_by('-created_at')
+
+        # Debug info
+        print(f"DEBUG: أوامر التصنيع المستلمة: {len(received_manufacturing_order_ids)}")
+        print(f"DEBUG: أوامر التصنيع الجاهزة للاستلام: {manufacturing_orders_ready.count()}")
+
+        # Debug: طباعة تفاصيل أوامر التصنيع
+        for mo in manufacturing_orders_ready:
+            print(f"DEBUG: أمر تصنيع: {mo.manufacturing_code} - {mo.order.order_number} - {mo.order.selected_types}")
+
+        # إحصائيات سريعة
+        total_pending_items = ManufacturingOrderItem.objects.filter(
+            receiver_name__isnull=False,
+            permit_number__isnull=False,
+            fabric_received=False
+        ).count()
+
+        from django.utils import timezone
+        received_today = ManufacturingOrderItem.objects.filter(
+            fabric_received=True,
+            fabric_received_date__date=timezone.now().date()
+        ).count()
+
+        # حساب إجمالي الأوامر المتاحة (أوامر التصنيع فقط)
+        total_available_orders = manufacturing_orders_ready.count()
+
+        context.update({
+            'manufacturing_orders': manufacturing_orders,
+            'cutting_orders_ready': cutting_orders_ready,
+            'manufacturing_orders_ready': manufacturing_orders_ready,
+            'total_pending_items': total_pending_items,
+            'received_today': received_today,
+            'total_cutting_ready': cutting_orders_ready.count(),
+            'total_manufacturing_ready': manufacturing_orders_ready.count(),
+            'total_available_orders': total_available_orders
+        })
+
+        return context
+
+
+@require_http_methods(["POST"])
+def receive_fabric_item(request, item_id):
+    """استلام عنصر واحد من الأقمشة"""
+    try:
+        item = get_object_or_404(ManufacturingOrderItem, id=item_id)
+
+        # التحقق من أن العنصر جاهز للاستلام
+        if not item.receiver_name or not item.permit_number:
+            return JsonResponse({
+                'success': False,
+                'message': 'العنصر غير جاهز للاستلام'
+            })
+
+        if item.fabric_received:
+            return JsonResponse({
+                'success': False,
+                'message': 'تم استلام هذا العنصر مسبقاً'
+            })
+
+        # تحديث حالة الاستلام
+        item.fabric_received = True
+        item.fabric_received_date = timezone.now()
+        item.fabric_received_by = request.user
+        item.save()
+
+        # إرسال إشعار
+        try:
+            from notifications.signals import create_notification
+            create_notification(
+                title='تم استلام أقمشة',
+                message=f'تم استلام أقمشة {item.product_name} في المصنع',
+                notification_type='fabric_received',
+                related_object=item,
+                created_by=request.user
+            )
+        except:
+            pass
+
+        return JsonResponse({
+            'success': True,
+            'message': 'تم استلام العنصر بنجاح'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+
+@require_http_methods(["POST"])
+def receive_all_fabric_items(request, order_id):
+    """استلام جميع عناصر أمر التصنيع الجاهزة"""
+    try:
+        order = get_object_or_404(ManufacturingOrder, id=order_id)
+
+        # الحصول على العناصر الجاهزة للاستلام
+        ready_items = order.items.filter(
+            receiver_name__isnull=False,
+            permit_number__isnull=False,
+            fabric_received=False
+        )
+
+        if not ready_items.exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'لا توجد عناصر جاهزة للاستلام'
+            })
+
+        # استلام جميع العناصر
+        received_count = 0
+        for item in ready_items:
+            item.fabric_received = True
+            item.fabric_received_date = timezone.now()
+            item.fabric_received_by = request.user
+            item.save()
+            received_count += 1
+
+        # إرسال إشعار
+        try:
+            from notifications.signals import create_notification
+            create_notification(
+                title='استلام أقمشة جماعي',
+                message=f'تم استلام {received_count} عنصر من أمر التصنيع #{order.id}',
+                notification_type='fabric_received',
+                related_object=order,
+                created_by=request.user
+            )
+        except:
+            pass
+
+        return JsonResponse({
+            'success': True,
+            'message': f'تم استلام {received_count} عنصر بنجاح',
+            'received_count': received_count
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+
+@require_http_methods(["GET"])
+def recent_fabric_receipts(request):
+    """الحصول على آخر عمليات استلام الأقمشة"""
+    try:
+        recent_items = ManufacturingOrderItem.objects.filter(
+            fabric_received=True
+        ).select_related(
+            'fabric_received_by'
+        ).order_by('-fabric_received_date')[:10]
+
+        receipts = []
+        for item in recent_items:
+            receipts.append({
+                'product_name': item.product_name,
+                'receiver_name': item.receiver_name,
+                'permit_number': item.permit_number,
+                'received_date': item.fabric_received_date.strftime('%d/%m/%Y %H:%M') if item.fabric_received_date else '',
+                'received_by': item.fabric_received_by.get_full_name() if item.fabric_received_by else 'غير محدد'
+            })
+
+        return JsonResponse({
+            'success': True,
+            'receipts': receipts
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+
+@require_http_methods(["POST"])
+@login_required
+def receive_cutting_order(request, cutting_order_id):
+    """استلام أمر تقطيع كامل في المصنع"""
+    try:
+        from cutting.models import CuttingOrder
+        cutting_order = get_object_or_404(CuttingOrder, id=cutting_order_id)
+
+        # التحقق من أن أمر التقطيع مكتمل
+        if cutting_order.status != 'completed':
+            return JsonResponse({
+                'success': False,
+                'message': 'أمر التقطيع غير مكتمل بعد'
+            })
+
+        # التحقق من أن الطلب ليس نوع "منتجات"
+        if 'products' in cutting_order.order.get_selected_types_list():
+            return JsonResponse({
+                'success': False,
+                'message': 'طلبات المنتجات لا تحتاج استلام في المصنع - تكتمل تلقائياً بعد التقطيع'
+            })
+
+        data = json.loads(request.body)
+        bag_number = data.get('bag_number', '').strip()
+        notes = data.get('notes', '').strip()
+
+        if not bag_number:
+            return JsonResponse({
+                'success': False,
+                'message': 'رقم الشنطة مطلوب'
+            })
+
+        # إنشاء سجل استلام الأقمشة
+        from .models import FabricReceipt, FabricReceiptItem
+
+        fabric_receipt = FabricReceipt.objects.create(
+            receipt_type='cutting_order',
+            order=cutting_order.order,
+            cutting_order=cutting_order,
+            bag_number=bag_number,
+            received_by=request.user,
+            notes=notes
+        )
+
+        # البحث عن أمر تصنيع موجود أو إنشاء جديد
+        manufacturing_order, created = ManufacturingOrder.objects.get_or_create(
+            order=cutting_order.order,
+            defaults={
+                'order_date': timezone.now().date(),
+                'expected_delivery_date': timezone.now().date() + timedelta(days=7),
+                'notes': f'تم إنشاؤه من أمر التقطيع {cutting_order.cutting_code}. {notes}'.strip()
+            }
+        )
+
+        # ربط استلام الأقمشة بأمر التصنيع
+        fabric_receipt.manufacturing_order = manufacturing_order
+        fabric_receipt.save()
+
+        # إنشاء عناصر التصنيع وعناصر الاستلام
+        created_items = 0
+        for cutting_item in cutting_order.items.all():
+            # إنشاء عنصر التصنيع
+            manufacturing_item = ManufacturingOrderItem.objects.create(
+                manufacturing_order=manufacturing_order,
+                order_item=cutting_item.order_item,
+                product_name=cutting_item.order_item.product.name if cutting_item.order_item.product else 'منتج غير محدد',
+                quantity=cutting_item.order_item.quantity,
+                bag_number=bag_number,
+                fabric_received=True,
+                fabric_received_date=timezone.now(),
+                fabric_received_by=request.user,
+                fabric_notes=f'مستلم من أمر التقطيع {cutting_order.cutting_code}'
+            )
+
+            # إنشاء عنصر الاستلام
+            FabricReceiptItem.objects.create(
+                fabric_receipt=fabric_receipt,
+                order_item=cutting_item.order_item,
+                cutting_item=cutting_item,
+                product_name=cutting_item.order_item.product.name if cutting_item.order_item.product else 'منتج غير محدد',
+                quantity_received=cutting_item.order_item.quantity,
+                item_notes=f'مستلم من عنصر التقطيع'
+            )
+
+            created_items += 1
+
+        # تحديث حالة أمر التقطيع لتجنب الاستلام المكرر
+        cutting_order.notes = f'{cutting_order.notes}\nتم استلامه في المصنع - أمر تصنيع #{manufacturing_order.id}'.strip()
+        cutting_order.save()
+
+        # إرسال إشعار
+        try:
+            from notifications.signals import create_notification
+            create_notification(
+                title='استلام أمر تقطيع',
+                message=f'تم استلام أمر التقطيع {cutting_order.cutting_code} في المصنع وإنشاء أمر تصنيع #{manufacturing_order.id}',
+                notification_type='cutting_received',
+                related_object=manufacturing_order,
+                created_by=request.user
+            )
+        except:
+            pass
+
+        return JsonResponse({
+            'success': True,
+            'message': f'تم استلام أمر التقطيع بنجاح وإنشاء أمر تصنيع #{manufacturing_order.id} مع {created_items} عنصر'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+
+class FabricReceiptDetailView(LoginRequiredMixin, DetailView):
+    """عرض تفاصيل استلام الأقمشة"""
+    model = None  # سيتم تحديده في get_object
+    template_name = 'manufacturing/fabric_receipt_detail.html'
+    context_object_name = 'fabric_receipt'
+
+    def get_object(self, queryset=None):
+        from .models import FabricReceipt
+        receipt_id = self.kwargs.get('receipt_id')
+        return get_object_or_404(FabricReceipt, id=receipt_id)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        fabric_receipt = self.get_object()
+
+        # إضافة العناصر
+        context['receipt_items'] = fabric_receipt.items.all().select_related(
+            'order_item', 'cutting_item'
+        )
+
+        # إضافة معلومات إضافية
+        context['total_items'] = fabric_receipt.items.count()
+        context['total_quantity'] = fabric_receipt.items.aggregate(
+            total=models.Sum('quantity_received')
+        )['total'] or 0
+
+        return context
+
+
+class FabricReceiptListView(LoginRequiredMixin, ListView):
+    """عرض قائمة استلامات الأقمشة"""
+    template_name = 'manufacturing/fabric_receipt_list.html'
+    context_object_name = 'fabric_receipts'
+    paginate_by = 20
+
+    def get_queryset(self):
+        from .models import FabricReceipt
+        return FabricReceipt.objects.select_related(
+            'order', 'order__customer', 'order__customer__branch',
+            'cutting_order', 'manufacturing_order', 'received_by'
+        ).order_by('-receipt_date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # إحصائيات
+        from .models import FabricReceipt
+        context['total_receipts'] = FabricReceipt.objects.count()
+        context['today_receipts'] = FabricReceipt.objects.filter(
+            receipt_date__date=timezone.now().date()
+        ).count()
+        this_week_count = FabricReceipt.objects.filter(
+            receipt_date__gte=timezone.now().date() - timedelta(days=7)
+        ).count()
+        context['this_week_receipts'] = this_week_count
+        context['daily_average'] = round(this_week_count / 7, 1) if this_week_count > 0 else 0
+
+        return context
+
+
+@require_http_methods(["POST"])
+@login_required
+def cleanup_products_manufacturing_orders(request):
+    """حذف أوامر التصنيع الخاطئة لطلبات المنتجات"""
+    try:
+        # البحث عن أوامر التصنيع لطلبات المنتجات
+        products_manufacturing_orders = ManufacturingOrder.objects.filter(
+            order__selected_types__contains=['products']
+        )
+
+        deleted_count = products_manufacturing_orders.count()
+
+        # حذف أوامر التصنيع
+        products_manufacturing_orders.delete()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'تم حذف {deleted_count} أمر تصنيع خاطئ لطلبات المنتجات',
+            'deleted_count': deleted_count
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+
+@require_http_methods(["POST"])
+@login_required
+def fix_manufacturing_order_items(request):
+    """إصلاح العناصر المفقودة في أوامر التصنيع"""
+    try:
+        # البحث عن أوامر التصنيع بدون عناصر
+        orders_without_items = ManufacturingOrder.objects.filter(items__isnull=True).distinct()
+
+        fixed_count = 0
+        for manufacturing_order in orders_without_items:
+            # البحث عن أمر التقطيع المرتبط
+            cutting_orders = manufacturing_order.order.get_cutting_orders()
+
+            if cutting_orders:
+                cutting_order = cutting_orders.first()
+
+                # إنشاء العناصر من أمر التقطيع
+                for cutting_item in cutting_order.items.all():
+                    ManufacturingOrderItem.objects.create(
+                        manufacturing_order=manufacturing_order,
+                        order_item=cutting_item.order_item,
+                        product_name=cutting_item.order_item.product.name if cutting_item.order_item.product else 'منتج غير محدد',
+                        quantity=cutting_item.order_item.quantity,
+                        fabric_received=False,  # لم يتم الاستلام بعد
+                        fabric_notes=f'تم إنشاؤه من أمر التقطيع {cutting_order.cutting_code}'
+                    )
+
+                fixed_count += 1
+
+        return JsonResponse({
+            'success': True,
+            'message': f'تم إصلاح {fixed_count} أمر تصنيع',
+            'fixed_count': fixed_count
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+
+@require_http_methods(["POST"])
+@login_required
+def create_manufacturing_receipt(request):
+    """إنشاء استلام أقمشة من المصنع"""
+    try:
+        manufacturing_order_id = request.POST.get('manufacturing_order_id')
+        bag_number = request.POST.get('bag_number')
+        received_by_name = request.POST.get('received_by_name')
+        notes = request.POST.get('notes', '')
+
+        if not all([manufacturing_order_id, bag_number, received_by_name]):
+            return JsonResponse({
+                'success': False,
+                'message': 'جميع الحقول مطلوبة'
+            })
+
+        # الحصول على أمر التصنيع
+        manufacturing_order = ManufacturingOrder.objects.get(id=manufacturing_order_id)
+
+        # التحقق من عدم وجود استلام سابق
+        from .models import FabricReceipt
+        if FabricReceipt.objects.filter(manufacturing_order=manufacturing_order).exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'تم استلام هذا الأمر من قبل'
+            })
+
+        # الحصول على بيانات التقطيع المرتبطة
+        cutting_orders = manufacturing_order.order.cutting_orders.filter(status='completed')
+        cutting_permit_number = None
+        cutting_receiver_name = None
+
+        if cutting_orders.exists():
+            # أخذ البيانات من أول أمر تقطيع مكتمل
+            cutting_order = cutting_orders.first()
+            cutting_items = cutting_order.items.filter(
+                receiver_name__isnull=False,
+                permit_number__isnull=False
+            )
+
+            if cutting_items.exists():
+                cutting_item = cutting_items.first()
+                cutting_permit_number = cutting_item.permit_number
+                cutting_receiver_name = cutting_item.receiver_name
+
+        # إنشاء استلام الأقمشة
+        fabric_receipt = FabricReceipt.objects.create(
+            order=manufacturing_order.order,
+            manufacturing_order=manufacturing_order,
+            receipt_type='manufacturing_order',
+            permit_number=cutting_permit_number or manufacturing_order.manufacturing_code,
+            bag_number=bag_number,
+            received_by_name=cutting_receiver_name or received_by_name,
+            received_by=request.user,
+            notes=notes
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'تم إنشاء استلام الأقمشة بنجاح',
+            'receipt_id': fabric_receipt.id
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+
+@require_http_methods(["GET"])
+@login_required
+def get_cutting_data(request, manufacturing_order_id):
+    """جلب بيانات التقطيع المرتبطة بأمر التصنيع"""
+    try:
+        manufacturing_order = ManufacturingOrder.objects.get(id=manufacturing_order_id)
+
+        # الحصول على بيانات التقطيع المرتبطة
+        cutting_orders = manufacturing_order.order.cutting_orders.filter(status='completed')
+        cutting_permit_number = None
+        cutting_receiver_name = None
+
+        if cutting_orders.exists():
+            cutting_order = cutting_orders.first()
+            cutting_items = cutting_order.items.filter(
+                receiver_name__isnull=False,
+                permit_number__isnull=False
+            )
+
+            if cutting_items.exists():
+                cutting_item = cutting_items.first()
+                cutting_permit_number = cutting_item.permit_number
+                cutting_receiver_name = cutting_item.receiver_name
+
+        return JsonResponse({
+            'success': True,
+            'cutting_permit_number': cutting_permit_number,
+            'cutting_receiver_name': cutting_receiver_name
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+
+class ProductReceiptView(LoginRequiredMixin, TemplateView):
+    """صفحة استلام المنتجات من المخازن"""
+    template_name = 'manufacturing/product_receipt.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # الحصول على أوامر التقطيع المكتملة لطلبات المنتجات
+        from cutting.models import CuttingOrder
+        # الحصول على أوامر التقطيع المكتملة لطلبات المنتجات (حل جذري مبسط)
+        from .models import ProductReceipt
+
+        # جميع أوامر التقطيع المكتملة للمنتجات (إصلاح JSONField)
+        from django.db.models import Q
+        cutting_orders_ready = CuttingOrder.objects.filter(
+            status='completed'
+        ).filter(
+            Q(order__selected_types__icontains='products')
+        ).select_related(
+            'order', 'order__customer', 'warehouse'
+        ).prefetch_related(
+            'items'
+        ).order_by('-created_at')
+
+        # استبعاد المستلمة بالفعل
+        received_cutting_order_ids = ProductReceipt.objects.values_list('cutting_order_id', flat=True)
+        cutting_orders_ready = cutting_orders_ready.exclude(id__in=received_cutting_order_ids)
+
+        # Debug info
+        print(f"DEBUG: أوامر التقطيع المكتملة للمنتجات: {CuttingOrder.objects.filter(status='completed').filter(Q(order__selected_types__icontains='products')).count()}")
+        print(f"DEBUG: أوامر التقطيع المستلمة: {len(received_cutting_order_ids)}")
+        print(f"DEBUG: أوامر التقطيع الجاهزة للاستلام: {cutting_orders_ready.count()}")
+
+        # إحصائيات
+        total_pending_items = cutting_orders_ready.count()
+        received_today = ProductReceipt.objects.filter(
+            receipt_date__date=timezone.now().date()
+        ).count()
+
+        # آخر الاستلامات
+        recent_receipts = ProductReceipt.objects.select_related(
+            'cutting_order', 'cutting_order__order', 'cutting_order__order__customer', 'cutting_order__warehouse'
+        ).order_by('-receipt_date')[:10]
+
+        context.update({
+            'cutting_orders_ready': cutting_orders_ready,
+            'total_pending_items': total_pending_items,
+            'received_today': received_today,
+            'total_cutting_ready': cutting_orders_ready.count(),
+            'recent_receipts': recent_receipts
+        })
+
+        return context
+
+
+class ProductReceiptsListView(TemplateView):
+    """صفحة قائمة استلامات المنتجات"""
+    template_name = 'manufacturing/product_receipts_list.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # الحصول على جميع الاستلامات مع التفاصيل
+        from .models import ProductReceipt
+        receipts = ProductReceipt.objects.select_related(
+            'cutting_order',
+            'cutting_order__order',
+            'cutting_order__order__customer',
+            'cutting_order__warehouse'
+        ).prefetch_related(
+            'cutting_order__items'
+        ).order_by('-receipt_date')
+
+        # تجميع الاستلامات حسب العميل
+        receipts_by_customer = {}
+        for receipt in receipts:
+            customer_name = receipt.cutting_order.order.customer.name
+            if customer_name not in receipts_by_customer:
+                receipts_by_customer[customer_name] = []
+            receipts_by_customer[customer_name].append(receipt)
+
+        # إحصائيات
+        total_receipts = receipts.count()
+        today_receipts = receipts.filter(receipt_date__date=timezone.now().date()).count()
+
+        context.update({
+            'receipts_by_customer': receipts_by_customer,
+            'total_receipts': total_receipts,
+            'today_receipts': today_receipts,
+        })
+
+        return context
+
+
+@require_http_methods(["POST"])
+@login_required
+def create_product_receipt(request):
+    """إنشاء استلام منتج من المخزن"""
+    try:
+        cutting_order_id = request.POST.get('cutting_order_id')
+        bag_number = request.POST.get('bag_number')
+        received_by_name = request.POST.get('received_by_name')
+        notes = request.POST.get('notes', '')
+
+        if not all([cutting_order_id, bag_number, received_by_name]):
+            return JsonResponse({
+                'success': False,
+                'message': 'جميع الحقول مطلوبة'
+            })
+
+        # الحصول على أمر التقطيع
+        from cutting.models import CuttingOrder
+        cutting_order = CuttingOrder.objects.get(id=cutting_order_id)
+
+        # التحقق من أن الأمر مكتمل
+        if cutting_order.status != 'completed':
+            return JsonResponse({
+                'success': False,
+                'message': 'أمر التقطيع غير مكتمل بعد'
+            })
+
+        # التحقق من أن الطلب نوع "منتجات"
+        if 'products' not in cutting_order.order.get_selected_types_list():
+            return JsonResponse({
+                'success': False,
+                'message': 'هذا الطلب ليس من نوع المنتجات'
+            })
+
+        # التحقق من عدم وجود استلام سابق
+        from .models import ProductReceipt
+        if ProductReceipt.objects.filter(cutting_order=cutting_order).exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'تم استلام هذا الأمر من قبل'
+            })
+
+        # إنشاء استلام المنتج
+        product_receipt = ProductReceipt.objects.create(
+            order=cutting_order.order,
+            cutting_order=cutting_order,
+            permit_number=cutting_order.cutting_code,
+            bag_number=bag_number,
+            received_by_name=received_by_name,
+            received_by_user=request.user,
+            notes=notes
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'تم إنشاء استلام المنتج بنجاح',
+            'receipt_id': product_receipt.id
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })

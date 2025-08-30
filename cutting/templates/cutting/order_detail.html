@@ -1,0 +1,736 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}تفاصيل أمر التقطيع - {{ cutting_order.cutting_code }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
+<style>
+    .cutting-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+    }
+    .item-card {
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        border-left: 4px solid #dee2e6;
+    }
+    .item-card.completed {
+        border-left-color: #28a745;
+        background-color: #f8fff9;
+    }
+    .item-card.rejected {
+        border-left-color: #dc3545;
+        background-color: #fff8f8;
+    }
+    .item-card.pending {
+        border-left-color: #ffc107;
+        background-color: #fffdf5;
+    }
+    .item-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .bulk-actions {
+        background: #f8f9fc;
+        border-radius: 10px;
+        border: 2px dashed #e3e6f0;
+    }
+    .progress-ring {
+        width: 80px;
+        height: 80px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- عنوان الصفحة -->
+    <div class="cutting-header p-4 mb-4 shadow">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h3 mb-2">
+                    <i class="fas fa-cut"></i>
+                    أمر التقطيع: {{ cutting_order.cutting_code }}
+                </h1>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <i class="fas fa-user"></i>
+                            العميل: {{ cutting_order.order.customer.name }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-file-contract"></i>
+                            رقم العقد: {{ cutting_order.order.contract_number|default:"غير محدد" }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-receipt"></i>
+                            رقم الفاتورة:
+                            <span class="badge badge-warning text-dark font-weight-bold">
+                                {{ cutting_order.order.invoice_number|default:"غير محدد" }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <i class="fas fa-warehouse"></i>
+                            المستودع: {{ cutting_order.warehouse.name }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-calendar"></i>
+                            تاريخ الإنشاء: {{ cutting_order.created_at|date:"d/m/Y H:i" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="progress-ring mx-auto mb-2">
+                    <svg width="80" height="80">
+                        <circle cx="40" cy="40" r="35" stroke="#ffffff40" stroke-width="6" fill="none"/>
+                        <circle cx="40" cy="40" r="35" stroke="#ffffff" stroke-width="6" fill="none"
+                                stroke-dasharray="{{ cutting_order.completion_percentage|floatformat:0 }}, 100"
+                                stroke-linecap="round" transform="rotate(-90 40 40)"/>
+                    </svg>
+                    <div class="position-absolute" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                        <h4 class="mb-0">{{ cutting_order.completion_percentage|floatformat:0 }}%</h4>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-center gap-2">
+                    {% if cutting_order.status == 'pending' %}
+                        <span class="badge badge-warning px-3 py-2">قيد الانتظار</span>
+                    {% elif cutting_order.status == 'in_progress' %}
+                        <span class="badge badge-info px-3 py-2">قيد التقطيع</span>
+                    {% elif cutting_order.status == 'completed' %}
+                        <span class="badge badge-success px-3 py-2">مكتمل</span>
+                    {% elif cutting_order.status == 'partially_completed' %}
+                        <span class="badge badge-primary px-3 py-2">مكتمل جزئياً</span>
+                    {% else %}
+                        <span class="badge badge-danger px-3 py-2">ملغي</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">إجمالي العناصر</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cutting_order.total_items }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">مكتملة</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cutting_order.completed_items }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">معلقة</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cutting_order.pending_items }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">مرفوضة</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cutting_order.rejected_items }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- العمليات المجمعة - تظهر فقط إذا لم يكن الأمر مكتملاً -->
+    {% if cutting_order.status != 'completed' %}
+    <div class="card bulk-actions mb-4">
+        <div class="card-body">
+            <h6 class="font-weight-bold text-primary mb-3">
+                <i class="fas fa-tasks"></i>
+                العمليات المجمعة
+            </h6>
+            <form id="bulkForm" class="row align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label">اسم القصاص</label>
+                    <input type="text" id="bulkCutter" class="form-control" placeholder="اسم القصاص">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">رقم الإذن</label>
+                    <input type="text" id="bulkPermit" class="form-control" placeholder="رقم الإذن">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">اسم المستلم</label>
+                    <input type="text" id="bulkReceiver" class="form-control" placeholder="اسم المستلم">
+                </div>
+
+                <div class="col-md-4">
+                    <button type="button" class="btn btn-primary me-2" onclick="bulkUpdate()">
+                        <i class="fas fa-edit"></i> تحديث مجمع
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="bulkComplete()">
+                        <i class="fas fa-check"></i> إكمال مجمع
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- عناصر التقطيع -->
+    <div class="card shadow">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-cut"></i>
+                عناصر التقطيع ({{ cutting_order.items.count }})
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if cutting_order.items.all %}
+                <div class="row">
+                    {% for item in cutting_order.items.all %}
+                    <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="card item-card {{ item.status }} shadow-sm h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 font-weight-bold text-dark">
+                                    {{ item.order_item.product.name|truncatechars:30 }}
+                                </h6>
+                                {% if item.status == 'completed' %}
+                                    <span class="badge badge-success">مكتمل</span>
+                                {% elif item.status == 'rejected' %}
+                                    <span class="badge badge-danger">مرفوض</span>
+                                {% elif item.status == 'in_progress' %}
+                                    <span class="badge badge-info">قيد التقطيع</span>
+                                {% else %}
+                                    <span class="badge badge-warning">معلق</span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                <!-- معلومات المنتج -->
+                                <div class="mb-3">
+                                    <p class="text-muted small mb-1">
+                                        <i class="fas fa-weight"></i>
+                                        الكمية: {{ item.order_item.get_clean_quantity_display }}
+                                        {% if item.additional_quantity > 0 %}
+                                            + {{ item.additional_quantity }} إضافية
+                                        {% endif %}
+                                    </p>
+                                    <p class="text-muted small mb-1">
+                                        <i class="fas fa-tag"></i>
+                                        الكود: {{ item.order_item.product.code|default:"غير محدد" }}
+                                    </p>
+                                </div>
+
+                                <!-- بيانات التقطيع -->
+                                {% if item.status == 'completed' %}
+                                <div class="mb-3">
+                                    <p class="text-success small mb-1">
+                                        <i class="fas fa-user"></i>
+                                        القصاص: {{ item.cutter_name }}
+                                    </p>
+                                    <p class="text-success small mb-1">
+                                        <i class="fas fa-id-card"></i>
+                                        رقم الإذن: {{ item.permit_number }}
+                                    </p>
+                                    <p class="text-success small mb-1">
+                                        <i class="fas fa-hand-holding"></i>
+                                        المستلم: {{ item.receiver_name }}
+                                    </p>
+
+                                    {% if item.cutting_date %}
+                                    <p class="text-muted small mb-1">
+                                        <i class="fas fa-calendar"></i>
+                                        تاريخ التقطيع: {{ item.cutting_date|date:"d/m/Y H:i" }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                {% elif item.status == 'rejected' %}
+                                <div class="mb-3">
+                                    <p class="text-danger small">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        سبب الرفض: {{ item.rejection_reason }}
+                                    </p>
+                                </div>
+                                {% endif %}
+
+                                <!-- ملاحظات -->
+                                {% if item.notes %}
+                                <div class="mb-3">
+                                    <p class="text-info small">
+                                        <i class="fas fa-sticky-note"></i>
+                                        ملاحظات: {{ item.notes }}
+                                    </p>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-footer bg-light">
+                                <div class="action-buttons">
+                                    {% if item.status == 'pending' or item.status == 'in_progress' %}
+                                    <button class="btn btn-success btn-sm" 
+                                            onclick="completeItem({{ item.id }})">
+                                        <i class="fas fa-check"></i> إكمال
+                                    </button>
+                                    <button class="btn btn-warning btn-sm" 
+                                            onclick="editItem({{ item.id }})">
+                                        <i class="fas fa-edit"></i> تعديل
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" 
+                                            onclick="rejectItem({{ item.id }})">
+                                        <i class="fas fa-times"></i> رفض
+                                    </button>
+                                    {% elif item.status == 'completed' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i> مكتمل
+                                    </span>
+                                    {% elif item.status == 'rejected' %}
+                                    <button class="btn btn-secondary btn-sm" 
+                                            onclick="resetItem({{ item.id }})">
+                                        <i class="fas fa-undo"></i> إعادة تعيين
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-cut fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">لا توجد عناصر للتقطيع</h5>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- أزرار العمليات -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'cutting:order_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة للقائمة
+                </a>
+                <div>
+                    <button class="btn btn-info" onclick="printReport()">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                    {% if cutting_order.status != 'completed' %}
+                    <button class="btn btn-primary" onclick="refreshStatus()">
+                        <i class="fas fa-sync"></i> تحديث الحالة
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<script>
+// العمليات المجمعة
+function bulkUpdate() {
+    const cutter = document.getElementById('bulkCutter').value;
+    const permit = document.getElementById('bulkPermit').value;
+    const receiver = document.getElementById('bulkReceiver').value;
+    if (!cutter || !permit || !receiver) {
+        Swal.fire('خطأ!', 'يجب ملء جميع البيانات المطلوبة', 'error');
+        return;
+    }
+
+    Swal.fire({
+        title: 'تحديث مجمع',
+        text: 'هل تريد تطبيق هذه البيانات على جميع العناصر المعلقة؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#007bff',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، طبق',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`{% url 'cutting:bulk_update' cutting_order.pk %}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    cutter_name: cutter,
+                    permit_number: permit,
+                    receiver_name: receiver,
+
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم!', data.message, 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('خطأ!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
+}
+
+function bulkComplete() {
+    const cutter = document.getElementById('bulkCutter').value;
+    const permit = document.getElementById('bulkPermit').value;
+    const receiver = document.getElementById('bulkReceiver').value;
+
+    if (!cutter || !permit || !receiver) {
+        Swal.fire('خطأ!', 'يجب ملء جميع البيانات المطلوبة', 'error');
+        return;
+    }
+
+    Swal.fire({
+        title: 'إكمال مجمع',
+        text: 'هل تريد إكمال جميع العناصر المعلقة؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، أكمل',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`{% url 'cutting:bulk_complete' cutting_order.pk %}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    cutter_name: cutter,
+                    permit_number: permit,
+                    receiver_name: receiver
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم!', data.message, 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('خطأ!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
+}
+
+// إكمال عنصر واحد
+function completeItem(itemId) {
+    Swal.fire({
+        title: 'إكمال العنصر',
+        html: `
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <label class="form-label">اسم القصاص</label>
+                    <input type="text" id="itemCutter" class="form-control" placeholder="اسم القصاص">
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label">رقم الإذن</label>
+                    <input type="text" id="itemPermit" class="form-control" placeholder="رقم الإذن">
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label">اسم المستلم</label>
+                    <input type="text" id="itemReceiver" class="form-control" placeholder="اسم المستلم">
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label">ملاحظات (اختياري)</label>
+                    <textarea id="itemNotes" class="form-control" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'إكمال',
+        cancelButtonText: 'إلغاء',
+        preConfirm: () => {
+            const cutter = document.getElementById('itemCutter').value;
+            const permit = document.getElementById('itemPermit').value;
+            const receiver = document.getElementById('itemReceiver').value;
+            const notes = document.getElementById('itemNotes').value;
+
+            if (!cutter || !permit || !receiver) {
+                Swal.showValidationMessage('يجب ملء جميع البيانات المطلوبة');
+                return false;
+            }
+
+            return {
+                cutter_name: cutter,
+                permit_number: permit,
+                receiver_name: receiver,
+                notes: notes
+            };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`{% url 'cutting:complete_item' 0 %}`.replace('0', itemId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(result.value)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم!', 'تم إكمال العنصر بنجاح', 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('خطأ!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
+}
+
+// رفض عنصر
+function rejectItem(itemId) {
+    Swal.fire({
+        title: 'رفض العنصر',
+        input: 'textarea',
+        inputLabel: 'سبب الرفض',
+        inputPlaceholder: 'اكتب سبب رفض هذا العنصر...',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'يجب كتابة سبب الرفض';
+            }
+        },
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'رفض',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`{% url 'cutting:reject_item' 0 %}`.replace('0', itemId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    reason: result.value
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم!', 'تم رفض العنصر', 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('خطأ!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
+}
+
+// تعديل عنصر
+function editItem(itemId) {
+    // جلب بيانات العنصر الحالية
+    fetch(`{% url 'cutting:item_status_api' 0 %}`.replace('0', itemId))
+    .then(response => response.json())
+    .then(data => {
+        Swal.fire({
+            title: 'تعديل العنصر',
+            html: `
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label class="form-label">اسم القصاص</label>
+                        <input type="text" id="editCutter" class="form-control" value="${data.cutter_name || ''}" placeholder="اسم القصاص">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">رقم الإذن</label>
+                        <input type="text" id="editPermit" class="form-control" value="${data.permit_number || ''}" placeholder="رقم الإذن">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">اسم المستلم</label>
+                        <input type="text" id="editReceiver" class="form-control" value="${data.receiver_name || ''}" placeholder="اسم المستلم">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea id="editNotes" class="form-control" rows="2" placeholder="ملاحظات...">${data.notes || ''}</textarea>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonColor: '#007bff',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'حفظ',
+            cancelButtonText: 'إلغاء',
+            preConfirm: () => {
+                return {
+                    cutter_name: document.getElementById('editCutter').value,
+                    permit_number: document.getElementById('editPermit').value,
+                    receiver_name: document.getElementById('editReceiver').value,
+                    notes: document.getElementById('editNotes').value
+                };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`{% url 'cutting:update_item' 0 %}`.replace('0', itemId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(result.value)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('تم!', 'تم تحديث العنصر بنجاح', 'success')
+                            .then(() => location.reload());
+                    } else {
+                        Swal.fire('خطأ!', data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+                });
+            }
+        });
+    })
+    .catch(error => {
+        Swal.fire('خطأ!', 'حدث خطأ في جلب بيانات العنصر', 'error');
+    });
+}
+
+// عرض تفاصيل عنصر مكتمل
+function viewItem(itemId) {
+    fetch(`{% url 'cutting:item_status_api' 0 %}`.replace('0', itemId))
+    .then(response => response.json())
+    .then(data => {
+        Swal.fire({
+            title: 'تفاصيل العنصر',
+            html: `
+                <div class="text-start">
+                    <p><strong>القصاص:</strong> ${data.cutter_name}</p>
+                    <p><strong>رقم الإذن:</strong> ${data.permit_number}</p>
+                    <p><strong>المستلم:</strong> ${data.receiver_name}</p>
+                    ${data.cutting_date ? `<p><strong>تاريخ التقطيع:</strong> ${new Date(data.cutting_date).toLocaleString('ar-EG')}</p>` : ''}
+                    ${data.delivery_date ? `<p><strong>تاريخ التسليم:</strong> ${new Date(data.delivery_date).toLocaleString('ar-EG')}</p>` : ''}
+                    ${data.notes ? `<p><strong>ملاحظات:</strong> ${data.notes}</p>` : ''}
+                </div>
+            `,
+            confirmButtonText: 'إغلاق'
+        });
+    })
+    .catch(error => {
+        Swal.fire('خطأ!', 'حدث خطأ في جلب بيانات العنصر', 'error');
+    });
+}
+
+// إعادة تعيين عنصر مرفوض
+function resetItem(itemId) {
+    Swal.fire({
+        title: 'إعادة تعيين العنصر',
+        text: 'هل تريد إعادة تعيين هذا العنصر إلى حالة الانتظار؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#6c757d',
+        cancelButtonColor: '#dc3545',
+        confirmButtonText: 'نعم، أعد التعيين',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`{% url 'cutting:update_item' 0 %}`.replace('0', itemId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    status: 'pending',
+                    rejection_reason: ''
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم!', 'تم إعادة تعيين العنصر', 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('خطأ!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
+}
+
+// طباعة التقرير
+function printReport() {
+    window.open(`{% url 'cutting:print_report' 0 %}`.replace('0', '{{ cutting_order.pk }}'), '_blank');
+}
+
+// تحديث الحالة
+function refreshStatus() {
+    location.reload();
+}
+</script>
+{% endblock %}

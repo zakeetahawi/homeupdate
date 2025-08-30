@@ -75,8 +75,11 @@ def get_order_type_badge(order_type, order=None):
     type_colors = {
         'installation': '#CD853F',
         'tailoring': '#D2691E',
-        'accessory': '#A0522D', 
+        'accessory': '#A0522D',
         'inspection': '#8B4513',
+        'products': '#6c757d',
+        'fabric': '#343a40',
+        'transport': '#17a2b8',
     }
     
     type_icons = {
@@ -84,13 +87,19 @@ def get_order_type_badge(order_type, order=None):
         'tailoring': 'fas fa-shipping-fast',
         'accessory': 'fas fa-gem',
         'inspection': 'fas fa-search',
+        'products': 'fas fa-box',
+        'fabric': 'fas fa-tshirt',
+        'transport': 'fas fa-truck',
     }
-    
+
     type_texts = {
         'installation': 'تركيب',
         'tailoring': 'تسليم',
         'accessory': 'إكسسوار',
         'inspection': 'معاينة',
+        'products': 'منتجات',
+        'fabric': 'أقمشة',
+        'transport': 'نقل',
     }
     
     color = type_colors.get(order_type, '#6c757d')

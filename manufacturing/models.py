@@ -5,6 +5,9 @@ from django.utils import timezone
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 # تمت إزالة استيراد Order لتجنب الاعتماد الدائري
 # سيتم استخدام الإشارة النصية 'orders.Order' بدلاً من ذلك
@@ -353,6 +356,53 @@ class ManufacturingOrder(models.Model):
         # تحديد خط الإنتاج المناسب
         self.production_line = ProductionLine.get_default_line_for_branch(customer_branch)
 
+    @property
+    def total_items_count(self):
+        """إجمالي عدد العناصر"""
+        return self.items.count()
+
+    @property
+    def received_items_count(self):
+        """عدد العناصر المستلمة"""
+        return self.items.filter(fabric_received=True).count()
+
+    @property
+    def pending_items_count(self):
+        """عدد العناصر المعلقة"""
+        return self.items.filter(fabric_received=False).count()
+
+    @property
+    def items_completion_percentage(self):
+        """نسبة اكتمال استلام العناصر"""
+        total = self.total_items_count
+        if total == 0:
+            return 0
+        received = self.received_items_count
+        return (received / total) * 100
+
+    @property
+    def is_all_items_received(self):
+        """التحقق من استلام جميع العناصر"""
+        return self.received_items_count == self.total_items_count and self.total_items_count > 0
+
+    def get_items_status_display(self):
+        """إرجاع حالة العناصر للعرض"""
+        if self.is_all_items_received:
+            return 'مكتمل العناصر'
+        elif self.received_items_count > 0:
+            return f'مكتمل جزئياً ({self.received_items_count}/{self.total_items_count})'
+        else:
+            return 'لم يتم الاستلام'
+
+    def get_items_status_color(self):
+        """إرجاع لون حالة العناصر"""
+        if self.is_all_items_received:
+            return 'success'
+        elif self.received_items_count > 0:
+            return 'warning'
+        else:
+            return 'secondary'
+
 
 class ManufacturingOrderItem(models.Model):
     """نموذج يمثل عناصر أمر التصنيع"""
@@ -389,7 +439,65 @@ class ManufacturingOrderItem(models.Model):
         default='pending',
         verbose_name='حالة العنصر'
     )
-    
+
+    # حقول بيانات التقطيع والاستلام الجديدة
+    receiver_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='اسم المستلم'
+    )
+
+    permit_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='رقم الإذن'
+    )
+
+    cutting_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ التقطيع'
+    )
+
+    delivery_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ التسليم'
+    )
+
+    bag_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='رقم الشنطة'
+    )
+
+    # حالة استلام الأقمشة في المصنع
+    fabric_received = models.BooleanField(
+        default=False,
+        verbose_name='تم استلام الأقمشة'
+    )
+
+    fabric_received_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ استلام الأقمشة'
+    )
+
+    fabric_received_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='received_fabric_items',
+        verbose_name='مستلم الأقمشة'
+    )
+
+    # ملاحظات استلام الأقمشة
+    fabric_notes = models.TextField(
+        blank=True,
+        verbose_name='ملاحظات استلام الأقمشة'
+    )
+
     class Meta:
         verbose_name = 'عنصر أمر تصنيع'
         verbose_name_plural = 'عناصر أوامر التصنيع'
@@ -401,13 +509,52 @@ class ManufacturingOrderItem(models.Model):
         """إرجاع الكمية بدون أصفار زائدة"""
         if self.quantity is None:
             return '0'
-        
+
         str_value = str(self.quantity)
         if '.' in str_value:
             str_value = str_value.rstrip('0')
             if str_value.endswith('.'):
                 str_value = str_value[:-1]
         return str_value
+
+    def mark_fabric_received(self, bag_number, user, notes=''):
+        """تعيين الأقمشة كمستلمة"""
+        from django.utils import timezone
+
+        self.fabric_received = True
+        self.bag_number = bag_number
+        self.fabric_received_date = timezone.now()
+        self.fabric_received_by = user
+        self.fabric_notes = notes
+        self.save()
+
+    @property
+    def has_cutting_data(self):
+        """التحقق من وجود بيانات التقطيع"""
+        return bool(self.receiver_name and self.permit_number)
+
+    @property
+    def is_fabric_received(self):
+        """التحقق من استلام الأقمشة"""
+        return self.fabric_received
+
+    def get_fabric_status_display(self):
+        """إرجاع حالة استلام الأقمشة"""
+        if self.fabric_received:
+            return 'تم الاستلام'
+        elif self.has_cutting_data:
+            return 'جاهز للاستلام'
+        else:
+            return 'لم يتم التقطيع'
+
+    def get_fabric_status_color(self):
+        """إرجاع لون حالة استلام الأقمشة"""
+        if self.fabric_received:
+            return 'success'
+        elif self.has_cutting_data:
+            return 'warning'
+        else:
+            return 'secondary'
 
 
 class ProductionLine(models.Model):
@@ -770,3 +917,293 @@ def update_related_models(sender, instance, created, **kwargs):
             )
 
     instance.update_order_status()
+
+
+class FabricReceipt(models.Model):
+    """
+    نموذج استلام الأقمشة من المصنع
+    """
+    RECEIPT_TYPES = [
+        ('cutting_order', 'أمر تقطيع'),
+        ('manufacturing_order', 'أمر تصنيع'),
+        ('direct', 'استلام مباشر'),
+    ]
+
+    # معرف فريد لاستلام الأقمشة
+    receipt_code = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name='كود الاستلام',
+        help_text='كود فريد لاستلام الأقمشة'
+    )
+
+    # نوع الاستلام
+    receipt_type = models.CharField(
+        max_length=20,
+        choices=RECEIPT_TYPES,
+        default='cutting_order',
+        verbose_name='نوع الاستلام'
+    )
+
+    # الطلب الأساسي
+    order = models.ForeignKey(
+        'orders.Order',
+        on_delete=models.CASCADE,
+        related_name='fabric_receipts',
+        verbose_name='الطلب'
+    )
+
+    # أمر التقطيع (إذا كان الاستلام من أمر تقطيع)
+    cutting_order = models.ForeignKey(
+        'cutting.CuttingOrder',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='fabric_receipts',
+        verbose_name='أمر التقطيع'
+    )
+
+    # أمر التصنيع المنشأ
+    manufacturing_order = models.ForeignKey(
+        ManufacturingOrder,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='fabric_receipts',
+        verbose_name='أمر التصنيع'
+    )
+
+    # رقم الإذن
+    permit_number = models.CharField(
+        max_length=100,
+        verbose_name='رقم الإذن',
+        blank=True,
+        null=True
+    )
+
+    # رقم الشنطة
+    bag_number = models.CharField(
+        max_length=50,
+        verbose_name='رقم الشنطة'
+    )
+
+    # تاريخ الاستلام
+    receipt_date = models.DateTimeField(
+        default=timezone.now,
+        verbose_name='تاريخ الاستلام'
+    )
+
+    # اسم المستلم الفعلي
+    received_by_name = models.CharField(
+        max_length=200,
+        verbose_name='اسم المستلم',
+        blank=True,
+        null=True
+    )
+
+    # المستخدم الذي سجل الاستلام
+    received_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='fabric_receipts',
+        verbose_name='المستخدم المسجل'
+    )
+
+    # ملاحظات
+    notes = models.TextField(
+        blank=True,
+        verbose_name='ملاحظات'
+    )
+
+    # تاريخ الإنشاء والتحديث
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+
+    class Meta:
+        verbose_name = 'استلام أقمشة'
+        verbose_name_plural = 'استلام الأقمشة'
+        ordering = ['-receipt_date']
+        indexes = [
+            models.Index(fields=['receipt_code'], name='fabric_receipt_code_idx'),
+            models.Index(fields=['receipt_date'], name='fabric_receipt_date_idx'),
+            models.Index(fields=['bag_number'], name='fabric_receipt_bag_idx'),
+        ]
+
+    def __str__(self):
+        return f"استلام {self.receipt_code} - {self.order.customer.name}"
+
+    def save(self, *args, **kwargs):
+        if not self.receipt_code:
+            import uuid
+            self.receipt_code = f"FR-{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
+
+    @property
+    def customer_name(self):
+        """اسم العميل"""
+        return self.order.customer.name if self.order else ''
+
+    @property
+    def contract_number(self):
+        """رقم العقد"""
+        return self.order.contract_number if self.order else ''
+
+    @property
+    def invoice_number(self):
+        """رقم الفاتورة"""
+        return self.order.invoice_number if self.order else ''
+
+    @property
+    def order_number(self):
+        """رقم الطلب"""
+        return self.order.order_number if self.order else ''
+
+
+class ProductReceipt(models.Model):
+    """
+    نموذج استلام المنتجات من المخازن
+    """
+    # الطلب الأساسي
+    order = models.ForeignKey(
+        'orders.Order',
+        on_delete=models.CASCADE,
+        related_name='product_receipts',
+        verbose_name='الطلب'
+    )
+
+    # أمر التقطيع
+    cutting_order = models.ForeignKey(
+        'cutting.CuttingOrder',
+        on_delete=models.CASCADE,
+        related_name='product_receipts',
+        verbose_name='أمر التقطيع'
+    )
+
+    # رقم الإذن (من أمر التقطيع)
+    permit_number = models.CharField(
+        max_length=100,
+        verbose_name='رقم الإذن'
+    )
+
+    # رقم الشنطة
+    bag_number = models.CharField(
+        max_length=50,
+        verbose_name='رقم الشنطة'
+    )
+
+    # تاريخ الاستلام
+    receipt_date = models.DateTimeField(
+        default=timezone.now,
+        verbose_name='تاريخ الاستلام'
+    )
+
+    # اسم المستلم الفعلي
+    received_by_name = models.CharField(
+        max_length=200,
+        verbose_name='اسم المستلم'
+    )
+
+    # المستخدم الذي سجل الاستلام
+    received_by_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='product_receipts',
+        verbose_name='المستخدم المسجل'
+    )
+
+    # ملاحظات
+    notes = models.TextField(
+        blank=True,
+        verbose_name='ملاحظات'
+    )
+
+    # تاريخ الإنشاء والتحديث
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+
+    class Meta:
+        verbose_name = 'استلام منتج'
+        verbose_name_plural = 'استلام المنتجات'
+        ordering = ['-receipt_date']
+        indexes = [
+            models.Index(fields=['permit_number'], name='product_receipt_permit_idx'),
+            models.Index(fields=['receipt_date'], name='product_receipt_date_idx'),
+            models.Index(fields=['bag_number'], name='product_receipt_bag_idx'),
+        ]
+
+    def __str__(self):
+        return f"استلام منتج {self.permit_number} - {self.order.customer.name}"
+
+    @property
+    def customer_name(self):
+        """اسم العميل"""
+        return self.order.customer.name if self.order and self.order.customer else ''
+
+    @property
+    def order_number(self):
+        """رقم الطلب"""
+        return self.order.order_number if self.order else ''
+
+
+class FabricReceiptItem(models.Model):
+    """
+    عناصر استلام الأقمشة
+    """
+    # استلام الأقمشة
+    fabric_receipt = models.ForeignKey(
+        FabricReceipt,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name='استلام الأقمشة'
+    )
+
+    # عنصر الطلب الأساسي
+    order_item = models.ForeignKey(
+        'orders.OrderItem',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name='عنصر الطلب'
+    )
+
+    # عنصر التقطيع (إذا كان من أمر تقطيع)
+    cutting_item = models.ForeignKey(
+        'cutting.CuttingOrderItem',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name='عنصر التقطيع'
+    )
+
+    # اسم المنتج
+    product_name = models.CharField(
+        max_length=200,
+        verbose_name='اسم المنتج'
+    )
+
+    # الكمية المستلمة
+    quantity_received = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        verbose_name='الكمية المستلمة'
+    )
+
+    # ملاحظات خاصة بالعنصر
+    item_notes = models.TextField(
+        blank=True,
+        verbose_name='ملاحظات العنصر'
+    )
+
+    # تاريخ الإنشاء والتحديث
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+
+    class Meta:
+        verbose_name = 'عنصر استلام أقمشة'
+        verbose_name_plural = 'عناصر استلام الأقمشة'
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.product_name} - {self.quantity_received}"

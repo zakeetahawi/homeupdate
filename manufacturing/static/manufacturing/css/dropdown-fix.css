@@ -3,8 +3,8 @@
  * نفس منطق قوائم خطوط الإنتاج: position: absolute + top: 100% + left: 0
  */
 
-/* قوائم الفلاتر المنسدلة - تستخدم position: fixed مع نقل إلى body */
-[id$="Dropdown"] {
+/* قوائم الفلاتر المنسدلة - فقط للقوائم المخصصة */
+[id$="FilterDropdown"] {
     position: fixed !important;
     z-index: 2147483647 !important; /* أعلى z-index ممكن */
     min-width: 200px;
@@ -48,8 +48,8 @@
 }
 
 /* عناصر القوائم */
-[id$="Dropdown"] .dropdown-item,
-[id$="Dropdown"] label.dropdown-item,
+[id$="FilterDropdown"] .dropdown-item,
+[id$="FilterDropdown"] label.dropdown-item,
 [id^="productionLineMenu_"] .dropdown-item,
 .custom-dropdown-menu .dropdown-item {
     padding: 0.5rem 1rem !important;
@@ -67,14 +67,14 @@
 }
 
 /* تأثير hover */
-[id$="Dropdown"] .dropdown-item:hover,
+[id$="FilterDropdown"] .dropdown-item:hover,
 [id^="productionLineMenu_"] .dropdown-item:hover,
 .custom-dropdown-menu .dropdown-item:hover {
     background-color: #f8f9fa !important;
 }
 
 /* رؤوس القوائم */
-[id$="Dropdown"] .dropdown-header,
+[id$="FilterDropdown"] .dropdown-header,
 [id^="productionLineMenu_"] .dropdown-header,
 .custom-dropdown-menu .dropdown-header {
     font-weight: bold;
@@ -84,7 +84,7 @@
 }
 
 /* فواصل القوائم */
-[id$="Dropdown"] hr,
+[id$="FilterDropdown"] hr,
 [id^="productionLineMenu_"] hr,
 .custom-dropdown-menu hr {
     margin: 0.5rem 0;
@@ -92,7 +92,7 @@
 }
 
 /* checkboxes في القوائم */
-[id$="Dropdown"] input[type="checkbox"],
+[id$="FilterDropdown"] input[type="checkbox"],
 [id^="productionLineMenu_"] input[type="checkbox"],
 .custom-dropdown-menu input[type="checkbox"] {
     margin-left: 0.5rem !important;
@@ -101,7 +101,7 @@
 }
 
 /* تحسين مظهر labels مع checkboxes */
-[id$="Dropdown"] label.dropdown-item {
+[id$="FilterDropdown"] label.dropdown-item {
     cursor: pointer !important;
     user-select: none !important;
 }
@@ -117,31 +117,31 @@
 }
 
 /* ضمان أن الحاويات لها position: relative */
-[id$="DropdownBtn"],
+[id$="FilterDropdownBtn"],
 [id^="productionLineBtn_"] {
     position: relative;
 }
 
-[id$="DropdownBtn"]:not(.position-relative),
+[id$="FilterDropdownBtn"]:not(.position-relative),
 [id^="productionLineBtn_"]:not(.position-relative) {
     position: relative !important;
 }
 
 /* إخفاء القوائم بشكل افتراضي */
-[id$="Dropdown"],
+[id$="FilterDropdown"],
 [id^="productionLineMenu_"] {
     display: none;
 }
 
 /* عرض القوائم عند الحاجة */
-[id$="Dropdown"].show,
+[id$="FilterDropdown"].show,
 [id^="productionLineMenu_"].show {
     display: block !important;
 }
 
 /* تحسينات للشاشات الصغيرة */
 @media (max-width: 768px) {
-    [id$="Dropdown"],
+    [id$="FilterDropdown"],
     [id^="productionLineMenu_"],
     .custom-dropdown-menu {
         max-width: 90vw;
@@ -150,7 +150,7 @@
 }
 
 /* تحسينات للثيم الأسود */
-[data-theme="modern-black"] [id$="Dropdown"],
+[data-theme="modern-black"] [id$="FilterDropdown"],
 [data-theme="modern-black"] [id^="productionLineMenu_"],
 [data-theme="modern-black"] .custom-dropdown-menu {
     background: #2d3748 !important;
@@ -158,19 +158,19 @@
     color: #e2e8f0 !important;
 }
 
-[data-theme="modern-black"] [id$="Dropdown"] .dropdown-item,
+[data-theme="modern-black"] [id$="FilterDropdown"] .dropdown-item,
 [data-theme="modern-black"] [id^="productionLineMenu_"] .dropdown-item,
 [data-theme="modern-black"] .custom-dropdown-menu .dropdown-item {
     color: #e2e8f0 !important;
 }
 
-[data-theme="modern-black"] [id$="Dropdown"] .dropdown-item:hover,
+[data-theme="modern-black"] [id$="FilterDropdown"] .dropdown-item:hover,
 [data-theme="modern-black"] [id^="productionLineMenu_"] .dropdown-item:hover,
 [data-theme="modern-black"] .custom-dropdown-menu .dropdown-item:hover {
     background-color: #4a5568 !important;
 }
 
-[data-theme="modern-black"] [id$="Dropdown"] .dropdown-header,
+[data-theme="modern-black"] [id$="FilterDropdown"] .dropdown-header,
 [data-theme="modern-black"] [id^="productionLineMenu_"] .dropdown-header,
 [data-theme="modern-black"] .custom-dropdown-menu .dropdown-header {
     color: #e2e8f0 !important;

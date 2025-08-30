@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}لوحة تحكم التقطيع{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
+<style>
+    .stats-card {
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    .stats-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+    .warehouse-card {
+        border: 1px solid #e3e6f0;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    .warehouse-card:hover {
+        border-color: #4e73df;
+        box-shadow: 0 0 15px rgba(78, 115, 223, 0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- عنوان الصفحة -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-cut text-primary"></i>
+            لوحة تحكم التقطيع
+        </h1>
+        <div class="btn-group" role="group">
+            <a href="{% url 'cutting:order_list' %}" class="btn btn-primary">
+                <i class="fas fa-list"></i> أوامر التقطيع
+            </a>
+            <a href="{% url 'cutting:reports' %}" class="btn btn-info">
+                <i class="fas fa-chart-bar"></i> التقارير
+            </a>
+        </div>
+    </div>
+
+    <!-- إحصائيات عامة -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                إجمالي الأوامر
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_orders|floatformat:0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list stats-icon text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                قيد الانتظار
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ pending_orders|floatformat:0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock stats-icon text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                قيد التقطيع
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ in_progress_orders|floatformat:0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-cut stats-icon text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                مكتملة
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ completed_orders|floatformat:0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle stats-icon text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- المستودعات -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-warehouse"></i>
+                        المستودعات المتاحة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if user_warehouses %}
+                        <div class="row">
+                            {% for warehouse_data in user_warehouses %}
+                            <div class="col-md-6 mb-3">
+                                <!-- تحديد لون البطاقة حسب حالة التقطيع -->
+                                {% if warehouse_data.completed_orders == warehouse_data.total_orders and warehouse_data.total_orders > 0 %}
+                                    <!-- جميع الأوامر مكتملة - أخضر -->
+                                    <div class="warehouse-card p-3 position-relative border-success bg-light-success" style="border: 2px solid #28a745; background-color: #d4edda;">
+                                {% elif warehouse_data.pending_orders > 0 %}
+                                    <!-- يوجد أوامر غير مكتملة - أحمر -->
+                                    <div class="warehouse-card p-3 position-relative border-danger bg-light-danger" style="border: 2px solid #dc3545; background-color: #f8d7da;">
+                                {% else %}
+                                    <!-- لم يبدأ أي أمر - أزرق -->
+                                    <div class="warehouse-card p-3 position-relative border-primary bg-light-primary" style="border: 2px solid #007bff; background-color: #d1ecf1;">
+                                {% endif %}
+                                    <!-- عداد الأوامر غير المكتملة -->
+                                    {% if warehouse_data.pending_orders > 0 %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                          style="font-size: 0.75rem; z-index: 10;">
+                                        {{ warehouse_data.pending_orders }}
+                                        <span class="visually-hidden">أوامر غير مكتملة</span>
+                                    </span>
+                                    {% endif %}
+
+                                    <h6 class="font-weight-bold text-dark">
+                                        <i class="fas fa-warehouse text-primary"></i>
+                                        {{ warehouse_data.name }}
+                                    </h6>
+                                    <p class="text-muted small mb-2">{{ warehouse_data.description|default:"لا يوجد وصف" }}</p>
+
+                                    <!-- إحصائيات مفصلة -->
+                                    <div class="row text-center mb-2">
+                                        <div class="col-4">
+                                            <small class="text-muted d-block">المجموع</small>
+                                            <span class="badge badge-info">{{ warehouse_data.total_orders }}</span>
+                                        </div>
+                                        <div class="col-4">
+                                            <small class="text-muted d-block">قيد التنفيذ</small>
+                                            <span class="badge badge-warning">{{ warehouse_data.pending_orders }}</span>
+                                        </div>
+                                        <div class="col-4">
+                                            <small class="text-muted d-block">مكتمل</small>
+                                            <span class="badge badge-success">{{ warehouse_data.completed_orders }}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-center">
+                                        <a href="{% url 'cutting:order_list_by_warehouse' warehouse_data.id %}"
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> عرض الأوامر
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-warehouse fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا توجد مستودعات متاحة</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- أحدث أوامر التقطيع -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-clock"></i>
+                        أحدث أوامر التقطيع
+                    </h6>
+                    <a href="{% url 'cutting:order_list' %}" class="btn btn-sm btn-primary">
+                        عرض الكل
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>اسم العميل</th>
+                                        <th>الفرع</th>
+                                        <th>رقم الفاتورة</th>
+                                        <th>الحالة</th>
+                                        <th>التاريخ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in recent_orders %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'cutting:order_detail' order.pk %}"
+                                               class="text-primary font-weight-bold">
+                                                {{ order.order.customer.name|truncatechars:25 }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="text-muted">
+                                                {{ order.order.customer.branch.name|default:"الفرع الرئيسي"|truncatechars:15 }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-warning text-dark font-weight-bold">
+                                                {{ order.order.invoice_number|default:"غير محدد" }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if order.status == 'pending' %}
+                                                <span class="badge badge-secondary">قيد الانتظار</span>
+                                            {% elif order.status == 'in_progress' %}
+                                                <span class="badge badge-primary">قيد التقطيع</span>
+                                            {% elif order.status == 'completed' %}
+                                                <span class="badge badge-success">مكتمل</span>
+                                            {% elif order.status == 'rejected' %}
+                                                <span class="badge badge-danger">مرفوض</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">{{ order.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="small text-muted">
+                                            {{ order.created_at|date:"d/m/Y" }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا توجد أوامر تقطيع حديثة</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<script>
+$(document).ready(function() {
+    // تحديث الإحصائيات كل 30 ثانية
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+});
+</script>
+{% endblock %}

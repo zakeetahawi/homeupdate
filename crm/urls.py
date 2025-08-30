@@ -65,6 +65,10 @@ urlpatterns = [
         include(("manufacturing.urls", "manufacturing"), namespace="manufacturing"),
     ),
     path(
+        "cutting/",
+        include(("cutting.urls", "cutting"), namespace="cutting"),
+    ),
+    path(
         "complaints/", include("complaints.urls", namespace="complaints")
     ),  # نظام إدارة الشكاوى
     path(

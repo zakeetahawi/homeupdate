@@ -245,7 +245,97 @@
                                 </tr>
                                 {% endif %}
                             {% endwith %}
-                            
+
+                            <!-- بطاقة أمر التقطيع -->
+                            {% if order.get_selected_types_list|length > 0 and 'inspection' not in order.get_selected_types_list %}
+                                {% if order.cutting_orders.exists %}
+                                {% for cutting_order in order.cutting_orders.all %}
+                                <tr>
+                                    <th>{% if forloop.first %}أوامر التقطيع{% else %}{% endif %}</th>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge
+                                                {% if cutting_order.status == 'completed' %}bg-success
+                                                {% elif cutting_order.status == 'in_progress' %}bg-info
+                                                {% elif cutting_order.status == 'partially_completed' %}bg-warning text-dark
+                                                {% else %}bg-secondary{% endif %} me-2">
+                                                <i class="fas fa-cut me-1"></i>
+                                                {{ cutting_order.cutting_code }}
+                                            </span>
+                                            <span class="badge
+                                                {% if cutting_order.status == 'completed' %}bg-success
+                                                {% elif cutting_order.status == 'in_progress' %}bg-info
+                                                {% elif cutting_order.status == 'partially_completed' %}bg-warning text-dark
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ cutting_order.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-warehouse me-1"></i>
+                                                المستودع: {{ cutting_order.warehouse.name }}
+                                            </small>
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                تاريخ الإنشاء: {{ cutting_order.created_at|date:"d/m/Y H:i" }}
+                                            </small>
+                                            {% if cutting_order.assigned_to %}
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-user-tie me-1"></i>
+                                                المسؤول: {{ cutting_order.assigned_to.get_full_name|default:cutting_order.assigned_to.username }}
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="mt-2">
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar
+                                                    {% if cutting_order.completion_percentage == 100 %}bg-success
+                                                    {% elif cutting_order.completion_percentage > 50 %}bg-info
+                                                    {% else %}bg-warning{% endif %}"
+                                                     role="progressbar"
+                                                     style="width: {{ cutting_order.completion_percentage }}%">
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">
+                                                التقدم: {{ cutting_order.completion_percentage|floatformat:0 }}%
+                                                ({{ cutting_order.completed_items }}/{{ cutting_order.total_items }} عنصر)
+                                            </small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <a href="{% url 'cutting:order_detail' cutting_order.pk %}"
+                                               class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i> عرض التفاصيل
+                                            </a>
+                                            {% if cutting_order.status == 'pending' %}
+                                            <button class="btn btn-sm btn-success ms-1"
+                                                    onclick="startCutting({{ cutting_order.pk }})">
+                                                <i class="fas fa-play"></i> بدء التقطيع
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <th>أمر التقطيع</th>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            لم يتم إنشاء أمر التقطيع بعد
+                                        </span>
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-primary" onclick="createCuttingOrder({{ order.id }})">
+                                                <i class="fas fa-plus"></i> إنشاء أمر تقطيع
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% endif %}
+
                             <!-- Show expected inspection date -->
                             {% with types_list=order.get_selected_types_list %}
                             {% if types_list|length == 1 and 'inspection' in types_list and order.expected_delivery_date %}
@@ -1209,6 +1299,177 @@
     {% endif %}
     {% endwith %}
 
+    <!-- Cutting Orders Details -->
+    {% with types_list=order.get_selected_types_list %}
+    {% if 'products' in types_list or 'installation' in types_list %}
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-cut me-2"></i>
+                بطاقة تتبع التقطيع
+            </h5>
+            <small>معلومات شاملة عن حالة التقطيع المرتبطة بهذا الطلب</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-warning">
+                        <tr>
+                            <th width="25%">أسماء المنتجات</th>
+                            <th width="15%">المستودع</th>
+                            <th width="10%">العناصر</th>
+                            <th width="15%">تاريخ الإنشاء</th>
+                            <th width="15%">تاريخ الإكمال</th>
+                            <th width="10%">الحالة</th>
+                            <th width="10%">عرض</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cutting_order in order.cutting_orders.all %}
+                        <tr class="{% if cutting_order.status == 'completed' %}table-success{% elif cutting_order.status == 'in_progress' %}table-info{% elif cutting_order.status == 'rejected' %}table-danger{% else %}table-light{% endif %}">
+                            <td>
+                                <div class="product-names">
+                                    {% for item in cutting_order.items.all %}
+                                        <div class="mb-1">
+                                            <span class="badge bg-primary me-1">{{ forloop.counter }}</span>
+                                            <strong>{{ item.order_item.product.name|default:"منتج غير محدد" }}</strong>
+                                            {% if item.order_item.product.code %}
+                                                <small class="text-muted">({{ item.order_item.product.code }})</small>
+                                            {% endif %}
+                                        </div>
+                                    {% empty %}
+                                        <span class="text-muted">لا توجد عناصر</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ cutting_order.warehouse.name }}</div>
+                                    <small class="text-muted">{{ cutting_order.warehouse.address|default:"" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ cutting_order.items.count }}</div>
+                                    <small class="text-muted">عنصر</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ cutting_order.created_at|date:"Y-m-d" }}</div>
+                                    <small class="text-muted">{{ cutting_order.created_at|date:"H:i" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                {% if cutting_order.completed_at %}
+                                    <div class="text-center">
+                                        <div class="fw-bold text-success">{{ cutting_order.completed_at|date:"Y-m-d" }}</div>
+                                        <small class="text-muted">{{ cutting_order.completed_at|date:"H:i" }}</small>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center">
+                                        <span class="text-muted">غير مكتمل</span>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    {% if cutting_order.status == 'completed' %}
+                                        <span class="badge bg-success">مكتمل</span>
+                                    {% elif cutting_order.status == 'in_progress' %}
+                                        <span class="badge bg-primary">قيد التقطيع</span>
+                                    {% elif cutting_order.status == 'rejected' %}
+                                        <span class="badge bg-danger">مرفوض</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">قيد الانتظار</span>
+                                    {% endif %}
+
+                                    {% if cutting_order.status == 'rejected' and cutting_order.rejection_reason %}
+                                        <div class="mt-1">
+                                            <small class="text-danger">{{ cutting_order.rejection_reason|truncatechars:50 }}</small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <a href="{% url 'cutting:order_detail' cutting_order.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                لا توجد أوامر تقطيع لهذا الطلب
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- معلومات الاستلام لطلبات المنتجات -->
+    {% with types_list=order.get_selected_types_list %}
+    {% if 'products' in types_list %}
+        {% with product_receipts=order.product_receipts.all %}
+        {% if product_receipts %}
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    معلومات الاستلام من المخزن
+                </h5>
+                <small>تفاصيل استلام المنتجات من المخزن</small>
+            </div>
+            <div class="card-body">
+                {% for receipt in product_receipts %}
+                <div class="row mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <div class="col-md-6">
+                        <h6 class="text-success">
+                            <i class="fas fa-warehouse"></i>
+                            رقم الإذن: {{ receipt.permit_number }}
+                        </h6>
+                        <p class="mb-1">
+                            <strong>رقم الشنطة:</strong>
+                            <span class="badge bg-warning text-dark">{{ receipt.bag_number }}</span>
+                        </p>
+                        <p class="mb-1">
+                            <strong>تاريخ الاستلام:</strong>
+                            <span class="text-muted">{{ receipt.receipt_date|date:"d/m/Y H:i" }}</span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <strong>اسم المستلم:</strong>
+                            <span class="text-info">{{ receipt.received_by_name }}</span>
+                        </p>
+                        <p class="mb-1">
+                            <strong>المستخدم المسجل:</strong>
+                            <span class="text-muted">{{ receipt.received_by_user.get_full_name|default:receipt.received_by_user.username }}</span>
+                        </p>
+                        {% if receipt.notes %}
+                        <p class="mb-1">
+                            <strong>ملاحظات:</strong>
+                            <span class="text-muted">{{ receipt.notes }}</span>
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+    {% endif %}
+    {% endwith %}
+
     {% with types_list=order.get_selected_types_list %}
     {% if 'inspection' in types_list or 'inspection' in order.selected_types %}
     <!-- Inspection Details -->
@@ -1745,6 +2006,77 @@ function printInvoice(orderNumber) {
             document.body.removeChild(iframe);
         }
     }, 10000);
+}
+
+// وظائف أمر التقطيع
+function startCutting(orderId) {
+    Swal.fire({
+        title: 'بدء التقطيع',
+        text: 'هل تريد بدء عملية التقطيع لهذا الأمر؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، ابدأ',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/cutting/orders/${orderId}/start/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم!', 'تم بدء عملية التقطيع بنجاح', 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('خطأ!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
+}
+
+function createCuttingOrder(orderId) {
+    Swal.fire({
+        title: 'إنشاء أمر تقطيع',
+        text: 'هل تريد إنشاء أمر تقطيع لهذا الطلب؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#007bff',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، أنشئ',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/cutting/orders/create-from-order/${orderId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم!', 'تم إنشاء أمر التقطيع بنجاح', 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('خطأ!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
 }
 </script>
 {% endblock %}

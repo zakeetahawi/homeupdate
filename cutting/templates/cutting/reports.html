@@ -1,0 +1,603 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}تقارير التقطيع{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
+<style>
+    .reports-header {
+        background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+        color: white;
+        border-radius: 15px;
+    }
+    .report-card {
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        border-left: 4px solid #6f42c1;
+    }
+    .report-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .report-form {
+        background: #f8f9fc;
+        border-radius: 10px;
+        border: 2px dashed #e3e6f0;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- عنوان الصفحة -->
+    <div class="reports-header p-4 mb-4 shadow">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h3 mb-2">
+                    <i class="fas fa-chart-bar"></i>
+                    تقارير التقطيع
+                </h1>
+                <p class="mb-0">إنشاء وعرض تقارير مفصلة عن عمليات التقطيع</p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="d-flex justify-content-center gap-3">
+                    <div class="text-center">
+                        <div class="h4 mb-0">{{ recent_reports.count }}</div>
+                        <small>تقارير حديثة</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- نموذج إنشاء تقرير جديد -->
+        <div class="col-lg-4 mb-4">
+            <div class="card report-form shadow">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0 font-weight-bold">
+                        <i class="fas fa-plus-circle"></i>
+                        إنشاء تقرير جديد
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form id="reportForm">
+                        <div class="mb-3">
+                            <label class="form-label">نوع التقرير</label>
+                            <select id="reportType" class="form-select" required>
+                                <option value="">اختر نوع التقرير</option>
+                                {% for type_code, type_name in report_types %}
+                                    <option value="{{ type_code }}">{{ type_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">المستودع</label>
+                            <select id="warehouseId" class="form-select" required>
+                                <option value="">اختر المستودع</option>
+                                {% for warehouse in warehouses %}
+                                    <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label class="form-label">من تاريخ</label>
+                                    <input type="date" id="startDate" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label class="form-label">إلى تاريخ</label>
+                                    <input type="date" id="endDate" class="form-control" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-chart-line"></i> إنشاء التقرير
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- التقارير الحديثة -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-history"></i>
+                        التقارير الحديثة
+                    </h6>
+                    <button class="btn btn-sm btn-secondary" onclick="refreshReports()">
+                        <i class="fas fa-sync"></i> تحديث
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if recent_reports %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>نوع التقرير</th>
+                                        <th>المستودع</th>
+                                        <th>الفترة</th>
+                                        <th>الإحصائيات</th>
+                                        <th>تاريخ الإنشاء</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for report in recent_reports %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge badge-primary">
+                                                {{ report.get_report_type_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ report.warehouse.name }}</td>
+                                        <td class="small">
+                                            {{ report.start_date|date:"d/m/Y" }} - 
+                                            {{ report.end_date|date:"d/m/Y" }}
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <div class="text-success">
+                                                    <i class="fas fa-check"></i> {{ report.completed_items }} مكتمل
+                                                </div>
+                                                <div class="text-danger">
+                                                    <i class="fas fa-times"></i> {{ report.rejected_items }} مرفوض
+                                                </div>
+                                                <div class="text-warning">
+                                                    <i class="fas fa-clock"></i> {{ report.pending_items }} معلق
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="small text-muted">
+                                            {{ report.generated_at|date:"d/m/Y H:i" }}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-info" 
+                                                        onclick="viewReport({{ report.id }})">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-secondary" 
+                                                        onclick="printReport({{ report.id }})">
+                                                    <i class="fas fa-print"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-success" 
+                                                        onclick="exportReport({{ report.id }})">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">لا توجد تقارير</h5>
+                            <p class="text-muted">ابدأ بإنشاء تقرير جديد من النموذج المجاور</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-tachometer-alt"></i>
+                        إحصائيات سريعة - اليوم
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid" id="quickStats">
+                        <!-- سيتم تحميل الإحصائيات هنا عبر JavaScript -->
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                            <p class="text-muted mt-2">جاري تحميل الإحصائيات...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تقارير سريعة -->
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card report-card shadow">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-day fa-3x text-primary mb-3"></i>
+                    <h5>تقرير يومي</h5>
+                    <p class="text-muted">تقرير مفصل عن عمليات التقطيع اليوم</p>
+                    <button class="btn btn-primary" onclick="generateDailyReport()">
+                        <i class="fas fa-chart-line"></i> إنشاء تقرير يومي
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card report-card shadow">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-week fa-3x text-info mb-3"></i>
+                    <h5>تقرير أسبوعي</h5>
+                    <p class="text-muted">تقرير عن عمليات التقطيع هذا الأسبوع</p>
+                    <button class="btn btn-info" onclick="generateWeeklyReport()">
+                        <i class="fas fa-chart-bar"></i> إنشاء تقرير أسبوعي
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card report-card shadow">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-alt fa-3x text-success mb-3"></i>
+                    <h5>تقرير شهري</h5>
+                    <p class="text-muted">تقرير شامل عن عمليات التقطيع هذا الشهر</p>
+                    <button class="btn btn-success" onclick="generateMonthlyReport()">
+                        <i class="fas fa-chart-pie"></i> إنشاء تقرير شهري
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تقارير خاصة -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-user-tie"></i>
+                        تقرير حسب المستلم
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form id="receiverReportForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="text" id="receiverName" class="form-control" 
+                                       placeholder="اسم المستلم">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="date" id="receiverDate" class="form-control">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">
+                            <i class="fas fa-search"></i> إنشاء تقرير المستلم
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-warehouse"></i>
+                        تقرير حسب المستودع
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form id="warehouseReportForm">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <select id="warehouseReportId" class="form-select mb-3">
+                                    <option value="">اختر المستودع</option>
+                                    {% for warehouse in warehouses %}
+                                        <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-chart-area"></i> إنشاء تقرير المستودع
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    // تحميل الإحصائيات السريعة
+    loadQuickStats();
+
+    // تعيين التاريخ الافتراضي
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('endDate').value = today;
+    document.getElementById('receiverDate').value = today;
+
+    // تعيين تاريخ البداية (أول الشهر)
+    const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    document.getElementById('startDate').value = firstDay;
+});
+
+// إنشاء تقرير جديد
+document.getElementById('reportForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const reportType = document.getElementById('reportType').value;
+    const warehouseId = document.getElementById('warehouseId').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+
+    if (!reportType || !warehouseId || !startDate || !endDate) {
+        Swal.fire('خطأ!', 'يجب ملء جميع الحقول المطلوبة', 'error');
+        return;
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+        Swal.fire('خطأ!', 'تاريخ البداية يجب أن يكون قبل تاريخ النهاية', 'error');
+        return;
+    }
+
+    Swal.fire({
+        title: 'جاري إنشاء التقرير...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    fetch('{% url "cutting:generate_report" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            report_type: reportType,
+            warehouse_id: warehouseId,
+            start_date: startDate,
+            end_date: endDate
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire('تم!', data.message, 'success')
+                .then(() => {
+                    location.reload();
+                });
+        } else {
+            Swal.fire('خطأ!', data.message, 'error');
+        }
+    })
+    .catch(error => {
+        Swal.fire('خطأ!', 'حدث خطأ في إنشاء التقرير', 'error');
+    });
+});
+
+// تحميل الإحصائيات السريعة
+function loadQuickStats() {
+    const quickStatsContainer = document.getElementById('quickStats');
+
+    // محاكاة تحميل الإحصائيات (يمكن استبدالها بـ API حقيقي)
+    setTimeout(() => {
+        quickStatsContainer.innerHTML = `
+            <div class="text-center p-3 bg-light rounded">
+                <i class="fas fa-cut fa-2x text-primary mb-2"></i>
+                <h4 class="text-primary">45</h4>
+                <p class="text-muted mb-0">عمليات تقطيع اليوم</p>
+            </div>
+            <div class="text-center p-3 bg-light rounded">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <h4 class="text-success">38</h4>
+                <p class="text-muted mb-0">عناصر مكتملة</p>
+            </div>
+            <div class="text-center p-3 bg-light rounded">
+                <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
+                <h4 class="text-danger">3</h4>
+                <p class="text-muted mb-0">عناصر مرفوضة</p>
+            </div>
+            <div class="text-center p-3 bg-light rounded">
+                <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                <h4 class="text-warning">4</h4>
+                <p class="text-muted mb-0">عناصر معلقة</p>
+            </div>
+            <div class="text-center p-3 bg-light rounded">
+                <i class="fas fa-percentage fa-2x text-info mb-2"></i>
+                <h4 class="text-info">84%</h4>
+                <p class="text-muted mb-0">نسبة الإنجاز</p>
+            </div>
+        `;
+    }, 1000);
+}
+
+// عرض تقرير
+function viewReport(reportId) {
+    window.open(`{% url 'cutting:print_report' 0 %}`.replace('0', reportId), '_blank');
+}
+
+// طباعة تقرير
+function printReport(reportId) {
+    window.open(`{% url 'cutting:print_report' 0 %}`.replace('0', reportId), '_blank');
+}
+
+// تصدير تقرير
+function exportReport(reportId) {
+    Swal.fire({
+        title: 'تصدير التقرير',
+        text: 'اختر تنسيق التصدير',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'PDF',
+        cancelButtonText: 'Excel',
+        showDenyButton: true,
+        denyButtonText: 'CSV'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // تصدير PDF
+            window.open(`/cutting/reports/export/${reportId}/pdf/`, '_blank');
+        } else if (result.isDenied) {
+            // تصدير CSV
+            window.open(`/cutting/reports/export/${reportId}/csv/`, '_blank');
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+            // تصدير Excel
+            window.open(`/cutting/reports/export/${reportId}/excel/`, '_blank');
+        }
+    });
+}
+
+// إنشاء تقرير يومي سريع
+function generateDailyReport() {
+    const today = new Date().toISOString().split('T')[0];
+
+    Swal.fire({
+        title: 'تقرير يومي',
+        html: `
+            <div class="mb-3">
+                <label class="form-label">المستودع</label>
+                <select id="dailyWarehouse" class="form-select">
+                    <option value="">جميع المستودعات</option>
+                    {% for warehouse in warehouses %}
+                        <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">التاريخ</label>
+                <input type="date" id="dailyDate" class="form-control" value="${today}">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'إنشاء',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const warehouseId = document.getElementById('dailyWarehouse').value;
+            const date = document.getElementById('dailyDate').value;
+
+            if (warehouseId) {
+                window.open(`{% url 'cutting:daily_report' 0 %}?date=${date}`.replace('0', warehouseId), '_blank');
+            } else {
+                Swal.fire('خطأ!', 'يجب اختيار المستودع', 'error');
+            }
+        }
+    });
+}
+
+// إنشاء تقرير أسبوعي
+function generateWeeklyReport() {
+    const today = new Date();
+    const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
+    const weekEnd = new Date(today.setDate(today.getDate() - today.getDay() + 6));
+
+    generateCustomReport('weekly', weekStart.toISOString().split('T')[0], weekEnd.toISOString().split('T')[0]);
+}
+
+// إنشاء تقرير شهري
+function generateMonthlyReport() {
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    generateCustomReport('monthly', monthStart.toISOString().split('T')[0], monthEnd.toISOString().split('T')[0]);
+}
+
+// إنشاء تقرير مخصص
+function generateCustomReport(type, startDate, endDate) {
+    Swal.fire({
+        title: `تقرير ${type === 'weekly' ? 'أسبوعي' : 'شهري'}`,
+        html: `
+            <div class="mb-3">
+                <label class="form-label">المستودع</label>
+                <select id="customWarehouse" class="form-select">
+                    {% for warehouse in warehouses %}
+                        <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'إنشاء',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const warehouseId = document.getElementById('customWarehouse').value;
+
+            // تشغيل نموذج إنشاء التقرير العادي
+            document.getElementById('reportType').value = type;
+            document.getElementById('warehouseId').value = warehouseId;
+            document.getElementById('startDate').value = startDate;
+            document.getElementById('endDate').value = endDate;
+
+            document.getElementById('reportForm').dispatchEvent(new Event('submit'));
+        }
+    });
+}
+
+// تقرير حسب المستلم
+document.getElementById('receiverReportForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const receiverName = document.getElementById('receiverName').value;
+    const date = document.getElementById('receiverDate').value;
+
+    if (!receiverName || !date) {
+        Swal.fire('خطأ!', 'يجب ملء اسم المستلم والتاريخ', 'error');
+        return;
+    }
+
+    window.open(`{% url 'cutting:print_daily_delivery' 'DATE' 'RECEIVER' %}`.replace('DATE', date).replace('RECEIVER', encodeURIComponent(receiverName)), '_blank');
+});
+
+// تقرير حسب المستودع
+document.getElementById('warehouseReportForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const warehouseId = document.getElementById('warehouseReportId').value;
+
+    if (!warehouseId) {
+        Swal.fire('خطأ!', 'يجب اختيار المستودع', 'error');
+        return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    window.open(`{% url 'cutting:daily_report' 0 %}?date=${today}`.replace('0', warehouseId), '_blank');
+});
+
+// تحديث التقارير
+function refreshReports() {
+    location.reload();
+}
+
+// تحديث تلقائي للإحصائيات كل دقيقة
+setInterval(loadQuickStats, 60000);
+</script>
+{% endblock %}

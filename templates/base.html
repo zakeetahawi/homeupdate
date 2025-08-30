@@ -203,10 +203,26 @@
                                     <i class="fas fa-shopping-cart"></i><span class="nav-text">الطلبات</span>
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/inventory/">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="inventoryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-boxes"></i><span class="nav-text">المخزون</span>
                                 </a>
+                                <ul class="dropdown-menu" aria-labelledby="inventoryDropdown">
+                                    <li><a class="dropdown-item" href="/inventory/">
+                                        <i class="fas fa-warehouse"></i> إدارة المخزون
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="/cutting/">
+                                        <i class="fas fa-cut"></i> نظام التقطيع
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="/cutting/reports/">
+                                        <i class="fas fa-chart-bar"></i> تقارير التقطيع
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="/manufacturing/product-receipt/">
+                                        <i class="fas fa-box-open"></i> استلام المنتجات
+                                    </a></li>
+                                </ul>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/inspections/">
@@ -218,10 +234,18 @@
                                     <i class="fas fa-tools"></i><span class="nav-text">التركيبات</span>
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/manufacturing/">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="manufacturingDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-industry"></i><span class="nav-text">المصنع</span>
                                 </a>
+                                <ul class="dropdown-menu" aria-labelledby="manufacturingDropdown">
+                                    <li><a class="dropdown-item" href="/manufacturing/">
+                                        <i class="fas fa-list"></i> أوامر التصنيع
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="/manufacturing/fabric-receipt/">
+                                        <i class="fas fa-industry"></i> استلام من المصنع
+                                    </a></li>
+                                </ul>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/complaints/">
@@ -1560,5 +1584,85 @@
 
     <!-- معالج CSRF التلقائي -->
     <script src="{% static 'js/csrf-handler.js' %}"></script>
+
+    <!-- إصلاح مشكلة modal backdrop -->
+    <style>
+        /* إخفاء backdrop تماماً */
+        .modal-backdrop {
+            display: none !important;
+        }
+
+        /* إصلاح modal positioning */
+        .modal {
+            z-index: 1050 !important;
+            background-color: rgba(0,0,0,0.5) !important;
+        }
+
+        .modal.show {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+
+    <!-- إصلاح القوائم المنسدلة -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // إصلاح القوائم المنسدلة Bootstrap
+            const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+
+            dropdownToggles.forEach(function(toggle) {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // إغلاق جميع القوائم المفتوحة
+                    document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                        menu.classList.remove('show');
+                    });
+
+                    // فتح القائمة المطلوبة
+                    const targetMenu = this.nextElementSibling;
+                    if (targetMenu && targetMenu.classList.contains('dropdown-menu')) {
+                        targetMenu.classList.toggle('show');
+                    }
+                });
+            });
+
+            // إغلاق القوائم عند النقر خارجها
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.dropdown')) {
+                    document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                        menu.classList.remove('show');
+                    });
+                }
+            });
+        });
+
+        // إصلاح مشكلة modal backdrop عالمياً
+        $(document).ready(function() {
+            // منع إنشاء backdrop من الأساس
+            $.fn.modal.Constructor.Default.backdrop = false;
+
+            // إزالة أي backdrop موجود
+            $(document).on('show.bs.modal', '.modal', function () {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+            });
+
+            // تنظيف عند الإغلاق
+            $(document).on('hidden.bs.modal', '.modal', function () {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+            });
+
+            // إزالة backdrop كل ثانية (حل قوي)
+            setInterval(function() {
+                $('.modal-backdrop').remove();
+            }, 1000);
+        });
+    </script>
 </body>
 </html>

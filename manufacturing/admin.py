@@ -6,7 +6,8 @@ from django.http import HttpResponseRedirect
 from django import forms
 
 from .models import (
-    ManufacturingOrder, ManufacturingOrderItem, ProductionLine, ManufacturingDisplaySettings
+    ManufacturingOrder, ManufacturingOrderItem, ProductionLine, ManufacturingDisplaySettings,
+    FabricReceipt, FabricReceiptItem
 )
 
 
@@ -728,3 +729,54 @@ class ManufacturingDisplaySettingsAdmin(admin.ModelAdmin):
         """عرض عدد الطلبات النشطة"""
         return obj.active_orders_count
     active_orders_count.short_description = 'الطلبات النشطة'
+
+
+class FabricReceiptItemInline(admin.TabularInline):
+    """عناصر استلام الأقمشة"""
+    model = FabricReceiptItem
+    extra = 0
+    readonly_fields = ['created_at', 'updated_at']
+    fields = ['product_name', 'quantity_received', 'order_item', 'cutting_item', 'item_notes']
+
+
+@admin.register(FabricReceipt)
+class FabricReceiptAdmin(admin.ModelAdmin):
+    """إدارة استلام الأقمشة"""
+    list_display = ['receipt_code', 'customer_name', 'order_number', 'bag_number', 'receipt_type', 'receipt_date', 'received_by']
+    list_filter = ['receipt_type', 'receipt_date', 'received_by']
+    search_fields = ['receipt_code', 'bag_number', 'order__customer__name', 'order__order_number']
+    readonly_fields = ['receipt_code', 'created_at', 'updated_at']
+    inlines = [FabricReceiptItemInline]
+
+    fieldsets = (
+        ('معلومات أساسية', {
+            'fields': ('receipt_code', 'receipt_type', 'bag_number')
+        }),
+        ('الطلب والأوامر', {
+            'fields': ('order', 'cutting_order', 'manufacturing_order')
+        }),
+        ('معلومات الاستلام', {
+            'fields': ('receipt_date', 'received_by', 'notes')
+        }),
+        ('معلومات النظام', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def customer_name(self, obj):
+        return obj.customer_name
+    customer_name.short_description = 'العميل'
+
+    def order_number(self, obj):
+        return obj.order_number
+    order_number.short_description = 'رقم الطلب'
+
+
+@admin.register(FabricReceiptItem)
+class FabricReceiptItemAdmin(admin.ModelAdmin):
+    """إدارة عناصر استلام الأقمشة"""
+    list_display = ['fabric_receipt', 'product_name', 'quantity_received', 'order_item', 'cutting_item']
+    list_filter = ['fabric_receipt__receipt_type', 'fabric_receipt__receipt_date']
+    search_fields = ['product_name', 'fabric_receipt__receipt_code', 'fabric_receipt__bag_number']
+    readonly_fields = ['created_at', 'updated_at']

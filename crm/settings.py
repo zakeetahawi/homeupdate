@@ -156,6 +156,7 @@ INSTALLED_APPS = [
     'inventory',
     'orders',
     'manufacturing',
+    'cutting.apps.CuttingConfig',  # نظام التقطيع الجديد
     'reports',
     'installations',
     'complaints.apps.ComplaintsConfig',  # نظام إدارة الشكاوى

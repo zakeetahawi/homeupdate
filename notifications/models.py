@@ -42,6 +42,13 @@ class Notification(models.Model):
         ('inspection_status_changed', _('تغيير حالة معاينة')),
         ('manufacturing_status_changed', _('تغيير حالة أمر التصنيع')),
         ('complaint_created', _('شكوى جديدة')),
+        # إشعارات التقطيع الجديدة
+        ('cutting_order_created', _('أمر تقطيع جديد')),
+        ('cutting_completed', _('اكتمال التقطيع')),
+        ('cutting_item_rejected', _('رفض عنصر تقطيع')),
+        ('stock_shortage', _('نقص في المخزون')),
+        ('fabric_received', _('استلام أقمشة')),
+        ('cutting_ready_for_pickup', _('جاهز للاستلام من التقطيع')),
     ]
 
     PRIORITY_LEVELS = [
@@ -206,6 +213,14 @@ class Notification(models.Model):
             # إشعارات النظام
             'system_notification': {'icon': 'fas fa-bell', 'color': '#757575', 'bg': '#f5f5f5'},
             'user_notification': {'icon': 'fas fa-user', 'color': '#3f51b5', 'bg': '#e8eaf6'},
+
+            # إشعارات التقطيع الجديدة
+            'cutting_order_created': {'icon': 'fas fa-cut', 'color': '#6f42c1', 'bg': '#f3e5f5'},
+            'cutting_completed': {'icon': 'fas fa-check-circle', 'color': '#28a745', 'bg': '#d4edda'},
+            'cutting_item_rejected': {'icon': 'fas fa-times-circle', 'color': '#dc3545', 'bg': '#f8d7da'},
+            'stock_shortage': {'icon': 'fas fa-exclamation-triangle', 'color': '#fd7e14', 'bg': '#fff3cd'},
+            'fabric_received': {'icon': 'fas fa-industry', 'color': '#20c997', 'bg': '#d1ecf1'},
+            'cutting_ready_for_pickup': {'icon': 'fas fa-hand-holding', 'color': '#17a2b8', 'bg': '#d1ecf1'},
         }
 
         return icon_map.get(self.notification_type, {

@@ -119,6 +119,41 @@ class ReportDashboardView(LoginRequiredMixin, TemplateView):
 
         context['report_type_counts'] = type_counts
 
+        # إحصائيات التقطيع
+        try:
+            from cutting.models import CuttingOrder, CuttingOrderItem
+            from django.db.models import Q
+
+            cutting_stats = {
+                'active_orders': CuttingOrder.objects.filter(
+                    status__in=['pending', 'in_progress', 'partially_completed']
+                ).count(),
+                'completed_today': CuttingOrderItem.objects.filter(
+                    status='completed',
+                    cutting_date__date=today
+                ).count(),
+                'pending_items': CuttingOrderItem.objects.filter(
+                    status='pending'
+                ).count(),
+                'completion_rate': 0
+            }
+
+            # حساب نسبة الإنجاز
+            total_items = CuttingOrderItem.objects.count()
+            completed_items = CuttingOrderItem.objects.filter(status='completed').count()
+            if total_items > 0:
+                cutting_stats['completion_rate'] = round((completed_items / total_items) * 100, 1)
+
+            context['cutting_stats'] = cutting_stats
+        except ImportError:
+            # في حالة عدم وجود تطبيق التقطيع
+            context['cutting_stats'] = {
+                'active_orders': 0,
+                'completed_today': 0,
+                'pending_items': 0,
+                'completion_rate': 0
+            }
+
         return context
 
 class ReportListView(LoginRequiredMixin, ListView):

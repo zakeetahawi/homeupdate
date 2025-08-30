@@ -302,6 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <option value="accessory" {% if order_type_filter == 'accessory' %}selected{% endif %}>إكسسوار</option>
                         <option value="tailoring" {% if order_type_filter == 'tailoring' %}selected{% endif %}>تسليم</option>
                         <option value="inspection" {% if order_type_filter == 'inspection' %}selected{% endif %}>معاينة</option>
+                        <option value="products" {% if order_type_filter == 'products' %}selected{% endif %}>منتجات</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -403,6 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         {% elif order_type_filter == 'accessory' %}إكسسوار
                         {% elif order_type_filter == 'tailoring' %}تسليم
                         {% elif order_type_filter == 'inspection' %}معاينة
+                        {% elif order_type_filter == 'products' %}منتجات
                         {% else %}{{ order_type_filter }}
                         {% endif %}
                     </span>
@@ -507,9 +509,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             </td>
                             <td class="text-center">
                                 {# عرض حالة الطلب الحقيقية (order_status) كالمصدر الرئيسي للفلتر #}
-                                <span class="badge bg-secondary" style="font-size: 0.75rem;">
-                                    {{ order.get_order_status_display }}
-                                </span>
+                                {% load order_extras %}
+                                {% get_status_badge order.order_status %}
 
                                 {# إذا كانت حالة العرض مختلفة (مصادر أخرى مثل المعاينة/التركيب/المصنع)، أعرضها كمعلومة ثانوية #}
                                 {% with display_info=order.get_display_status %}
@@ -531,8 +532,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             </td>
                             <td class="text-center">
                                 {% with order_types=order.get_selected_types_list %}
-                                    {% if 'inspection' in order_types %}
-                                        <!-- للمعاينات: لا يوجد مصنع -->
+                                    {% if 'inspection' in order_types or 'products' in order_types %}
+                                        <!-- للمعاينات والمنتجات: لا يوجد مصنع -->
                                         <span class="text-muted">لا يوجد</span>
                                     {% else %}
                                         <!-- للطلبات الأخرى: عرض حالة أمر التصنيع -->
@@ -572,7 +573,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             {% endif %}
                                         {% endwith %}
                                     {% endif %}
-                                {% elif 'tailoring' in order.get_selected_types_list or 'accessory' in order.get_selected_types_list %}
+                                {% elif 'tailoring' in order.get_selected_types_list or 'accessory' in order.get_selected_types_list or 'products' in order.get_selected_types_list %}
                                     <span class="text-muted">لا يوجد</span>
                                 {% elif 'inspection' in order.get_selected_types_list %}
                                     <span class="text-muted">لا يوجد</span>

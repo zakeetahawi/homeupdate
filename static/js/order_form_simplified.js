@@ -425,10 +425,18 @@ function updateFormFields() {
     const showForContract = ['installation', 'tailoring', 'accessory'].includes(selectedType);
     const showRelatedInspection = ['installation', 'tailoring', 'accessory'].includes(selectedType);
 
+    console.log('🔍 نوع الطلب:', selectedType);
+    console.log('🔍 إظهار حقول العقد:', showForContract);
+    console.log('🔍 إظهار المعاينة المرتبطة:', showRelatedInspection);
+
     // إظهار/إخفاء حقول العقد
     const contractFields = document.querySelectorAll('.contract-field');
     const contractFileField = document.querySelector('.contract-file-field');
     const relatedInspectionField = document.querySelector('.related-inspection-field');
+
+    console.log('🔍 عدد حقول العقد:', contractFields.length);
+    console.log('🔍 حقل ملف العقد:', contractFileField ? 'موجود' : 'غير موجود');
+    console.log('🔍 حقل المعاينة المرتبطة:', relatedInspectionField ? 'موجود' : 'غير موجود');
     
     contractFields.forEach(field => {
         if (field) field.style.display = showForContract ? 'block' : 'none';

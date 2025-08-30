@@ -487,6 +487,12 @@
                                                 <i class="fas fa-cut me-2"></i> تسليم
                                             </label>
                                         </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input styled-radio" type="radio" name="order_type_selector" id="order_type_products" value="products">
+                                            <label class="form-check-label" for="order_type_products">
+                                                <i class="fas fa-boxes me-2"></i> منتجات
+                                            </label>
+                                        </div>
                                     </div>
 
                                     <div style="display:none;">
@@ -554,7 +560,7 @@
                                     {{ form.contract_number }}
                                     <div class="form-text text-danger">
                                         <i class="fas fa-exclamation-circle me-1"></i>
-                                        مطلوب عند اختيار التركيب، التفصيل، أو الإكسسوار
+                                        مطلوب عند اختيار التركيب أو التفصيل أو الإكسسوار (غير مطلوب للمنتجات)
                                     </div>
                                     {% if form.contract_number.errors %}
                                     <div class="alert alert-danger mt-2">
