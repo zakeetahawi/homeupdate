@@ -203,7 +203,10 @@
                                 <div class="border rounded p-2 bg-light">
                                     <small>
                                         <strong>{{ item.order_item.product.name|default:"غير محدد" }}</strong><br>
-                                        <span class="text-primary">الكمية: {{ item.quantity }}</span><br>
+                                        <span class="text-primary">الكمية: {{ item.order_item.quantity }}</span>
+                                        {% if item.additional_quantity and item.additional_quantity > 0 %}
+                                            <span class="text-warning"> + {{ item.additional_quantity }} إضافية</span>
+                                        {% endif %}<br>
                                         {% if item.order_item.fabric_type %}
                                             <span class="text-info">الخامة: {{ item.order_item.fabric_type }}</span><br>
                                         {% endif %}

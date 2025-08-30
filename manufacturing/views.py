@@ -46,7 +46,7 @@ def apply_default_year_filter(queryset, request, date_field='order_date'):
 
     return queryset
 
-from .models import ManufacturingOrder, ManufacturingOrderItem
+from .models import ManufacturingOrder, ManufacturingOrderItem, FabricReceipt, FabricReceiptItem
 from orders.models import Order
 from accounts.models import Department
 from accounts.utils import apply_default_year_filter
@@ -582,7 +582,6 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
 
                 # البحث عن بيانات الاستلام
                 # أولاً: البحث في FabricReceiptItem
-                from .models import FabricReceiptItem
                 fabric_receipt_item = FabricReceiptItem.objects.filter(
                     order_item=item,
                     fabric_receipt__manufacturing_order=self.object
@@ -606,7 +605,7 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
                     'fabric_received': fabric_receipt is not None,  # تغيير هنا: إذا وجد استلام فهو مستلم
                     'bag_number': fabric_receipt.bag_number if fabric_receipt else None,
                     'fabric_received_date': fabric_receipt.receipt_date if fabric_receipt else None,
-                    'fabric_receiver_name': fabric_receipt.received_by.get_full_name() if fabric_receipt and fabric_receipt.received_by else None,
+                    'fabric_receiver_name': fabric_receipt.received_by_name if fabric_receipt else None,
                 }
                 items_data.append(item_data)
 
@@ -2319,7 +2318,7 @@ class FabricReceiptView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """الحصول على أوامر التقطيع الجاهزة للاستلام للتصنيع فقط"""
+        """الحصول على أوامر التقطيع الجاهزة للاستلام للتصنيع وجميع الأنواع الأخرى"""
         from cutting.models import CuttingOrder
         from django.db.models import Q
 
@@ -2335,8 +2334,11 @@ class FabricReceiptView(LoginRequiredMixin, ListView):
             items__receiver_name__isnull=False,
             items__permit_number__isnull=False
         ).filter(
-            # للطلبات التي تحتوي على تصنيع (manufacturing)
-            Q(order__selected_types__icontains='manufacturing')
+            # تضمين جميع أنواع الطلبات: تصنيع، تركيب، تسليم، إكسسوار
+            Q(order__selected_types__icontains='manufacturing') |
+            Q(order__selected_types__icontains='installation') |
+            Q(order__selected_types__icontains='tailoring') |
+            Q(order__selected_types__icontains='accessory')
         ).exclude(
             # استبعاد الأوامر التي تم استلامها بالفعل
             items__fabric_received=True
@@ -2425,7 +2427,7 @@ def receive_cutting_order_for_manufacturing(request, cutting_order_id):
                 cutting_item=item,
                 order_item=item.order_item,
                 quantity_received=item.order_item.quantity + item.additional_quantity,
-                notes=item.notes
+                item_notes=item.notes or ''
             )
 
             # تحديث حالة العنصر
@@ -2655,8 +2657,6 @@ def receive_cutting_order(request, cutting_order_id):
             })
 
         # إنشاء سجل استلام الأقمشة
-        from .models import FabricReceipt, FabricReceiptItem
-
         fabric_receipt = FabricReceipt.objects.create(
             receipt_type='cutting_order',
             order=cutting_order.order,
@@ -2744,7 +2744,6 @@ class FabricReceiptDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'fabric_receipt'
 
     def get_object(self, queryset=None):
-        from .models import FabricReceipt
         receipt_id = self.kwargs.get('receipt_id')
         return get_object_or_404(FabricReceipt, id=receipt_id)
 
@@ -2773,7 +2772,6 @@ class FabricReceiptListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        from .models import FabricReceipt
         return FabricReceipt.objects.select_related(
             'order', 'order__customer', 'order__customer__branch',
             'cutting_order', 'manufacturing_order', 'received_by'
@@ -2783,7 +2781,6 @@ class FabricReceiptListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
 
         # إحصائيات
-        from .models import FabricReceipt
         context['total_receipts'] = FabricReceipt.objects.count()
         context['today_receipts'] = FabricReceipt.objects.filter(
             receipt_date__date=timezone.now().date()
@@ -2887,7 +2884,6 @@ def create_manufacturing_receipt(request):
         manufacturing_order = ManufacturingOrder.objects.get(id=manufacturing_order_id)
 
         # التحقق من عدم وجود استلام سابق
-        from .models import FabricReceipt
         if FabricReceipt.objects.filter(manufacturing_order=manufacturing_order).exists():
             return JsonResponse({
                 'success': False,

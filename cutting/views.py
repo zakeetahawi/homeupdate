@@ -15,6 +15,7 @@ from .models import CuttingOrder, CuttingOrderItem, CuttingReport
 from inventory.models import Warehouse
 from accounts.models import User
 from orders.models import Order
+from manufacturing.models import FabricReceipt, FabricReceiptItem
 
 
 class CuttingDashboardView(LoginRequiredMixin, TemplateView):
@@ -580,6 +581,8 @@ class CuttingReceiptView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         """الحصول على أوامر التقطيع الجاهزة للاستلام"""
+        from django.db.models import Q
+
         queryset = CuttingOrder.objects.select_related(
             'order', 'order__customer', 'warehouse'
         ).prefetch_related(
@@ -591,6 +594,12 @@ class CuttingReceiptView(LoginRequiredMixin, ListView):
             items__permit_number__isnull=False,
             # التأكد من عدم استلامها في المصنع بعد
             items__fabric_received=False
+        ).filter(
+            # تضمين جميع أنواع الطلبات: تركيب، تسليم، إكسسوار، تصنيع
+            Q(order__selected_types__icontains='installation') |
+            Q(order__selected_types__icontains='tailoring') |
+            Q(order__selected_types__icontains='accessory') |
+            Q(order__selected_types__icontains='manufacturing')
         ).distinct().order_by('-created_at')
 
         # البحث
@@ -656,8 +665,6 @@ def receive_cutting_order_ajax(request, cutting_order_id):
             })
 
         # إنشاء استلام الأقمشة
-        from manufacturing.models import FabricReceipt, FabricReceiptItem
-
         fabric_receipt = FabricReceipt.objects.create(
             order=cutting_order.order,
             cutting_order=cutting_order,
@@ -677,7 +684,7 @@ def receive_cutting_order_ajax(request, cutting_order_id):
                 cutting_item=item,
                 order_item=item.order_item,
                 quantity_received=item.order_item.quantity + item.additional_quantity,
-                notes=item.notes
+                item_notes=item.notes or ''
             )
 
             # تحديث حالة العنصر

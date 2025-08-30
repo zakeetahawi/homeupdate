@@ -14,7 +14,8 @@
 .status-pending_approval,
 .status-modification_required {
     background-color: #ffc107 !important;
-    color: #000 !important;
+    color: #212529 !important;
+    font-weight: 600 !important;
 }
 
 /* حالات غير مجدول - فضي */
@@ -51,9 +52,11 @@
     color: white !important;
 }
 
-.badge.bg-warning.text-dark {
+.badge.bg-warning.text-dark,
+.badge.badge-warning {
     background-color: #ffc107 !important;
-    color: #000 !important;
+    color: #212529 !important;
+    font-weight: 600 !important;
 }
 
 .badge.bg-secondary {
@@ -66,9 +69,11 @@
     color: white !important;
 }
 
-.badge.bg-primary {
+.badge.bg-primary,
+.badge.badge-primary {
     background-color: #007bff !important;
     color: white !important;
+    font-weight: 600 !important;
 }
 
 .badge.bg-danger {
