@@ -198,4 +198,14 @@ urlpatterns = [
         views.get_cutting_data,
         name='get_cutting_data'
     ),
+    path(
+        'receive-cutting-order/<int:cutting_order_id>/',
+        views.receive_cutting_order_for_manufacturing,
+        name='receive_cutting_order_for_manufacturing'
+    ),
+    path(
+        'get-cutting-order-data/<int:cutting_order_id>/',
+        views.get_cutting_order_data,
+        name='get_cutting_order_data'
+    ),
 ]

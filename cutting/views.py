@@ -572,6 +572,132 @@ def get_item_status(request, item_id):
     })
 
 
+class CuttingReceiptView(LoginRequiredMixin, ListView):
+    """صفحة استلام أوامر التقطيع الجاهزة للاستلام"""
+    template_name = 'cutting/cutting_receipt.html'
+    context_object_name = 'cutting_orders'
+    paginate_by = 20
+
+    def get_queryset(self):
+        """الحصول على أوامر التقطيع الجاهزة للاستلام"""
+        queryset = CuttingOrder.objects.select_related(
+            'order', 'order__customer', 'warehouse'
+        ).prefetch_related(
+            'items'
+        ).filter(
+            # أوامر التقطيع التي تحتوي على عناصر مكتملة وجاهزة للاستلام
+            items__status='completed',
+            items__receiver_name__isnull=False,
+            items__permit_number__isnull=False,
+            # التأكد من عدم استلامها في المصنع بعد
+            items__fabric_received=False
+        ).distinct().order_by('-created_at')
+
+        # البحث
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(cutting_code__icontains=search) |
+                Q(order__contract_number__icontains=search) |
+                Q(order__customer__name__icontains=search) |
+                Q(order__customer__phone__icontains=search)
+            )
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # إحصائيات
+        total_available_orders = self.get_queryset().count()
+        context['total_available_orders'] = total_available_orders
+
+        # معلومات الصفحات
+        paginator = context.get('paginator')
+        if paginator:
+            context['total_pages'] = paginator.num_pages
+            context['current_page'] = context['page_obj'].number
+
+        return context
+
+
+@login_required
+def receive_cutting_order_ajax(request, cutting_order_id):
+    """استلام أمر تقطيع عبر AJAX"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'طريقة غير مدعومة'})
+
+    try:
+        cutting_order = get_object_or_404(CuttingOrder, pk=cutting_order_id)
+
+        # التحقق من وجود عناصر جاهزة للاستلام
+        ready_items = cutting_order.items.filter(
+            status='completed',
+            receiver_name__isnull=False,
+            permit_number__isnull=False,
+            fabric_received=False
+        )
+
+        if not ready_items.exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'لا توجد عناصر جاهزة للاستلام في هذا الأمر'
+            })
+
+        data = json.loads(request.body)
+        bag_number = data.get('bag_number', '')
+        received_by_name = data.get('received_by_name', '')
+        notes = data.get('notes', '')
+
+        if not received_by_name:
+            return JsonResponse({
+                'success': False,
+                'message': 'يجب إدخال اسم المستلم'
+            })
+
+        # إنشاء استلام الأقمشة
+        from manufacturing.models import FabricReceipt, FabricReceiptItem
+
+        fabric_receipt = FabricReceipt.objects.create(
+            order=cutting_order.order,
+            cutting_order=cutting_order,
+            receipt_type='cutting_order',
+            permit_number=ready_items.first().permit_number,
+            bag_number=bag_number,
+            received_by_name=received_by_name,
+            received_by=request.user,
+            notes=notes
+        )
+
+        # إنشاء عناصر الاستلام وتحديث حالة العناصر
+        items_count = 0
+        for item in ready_items:
+            FabricReceiptItem.objects.create(
+                fabric_receipt=fabric_receipt,
+                cutting_item=item,
+                order_item=item.order_item,
+                quantity_received=item.order_item.quantity + item.additional_quantity,
+                notes=item.notes
+            )
+
+            # تحديث حالة العنصر
+            item.fabric_received = True
+            item.save()
+            items_count += 1
+
+        return JsonResponse({
+            'success': True,
+            'message': f'تم استلام {items_count} عنصر بنجاح',
+            'receipt_id': fabric_receipt.id
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+
 @login_required
 def cutting_notifications_api(request):
     """API للإشعارات المتعلقة بالتقطيع"""

@@ -24,6 +24,10 @@ urlpatterns = [
     path('orders/<int:order_id>/bulk-update/', views.bulk_update_items, name='bulk_update'),
     path('orders/<int:order_id>/bulk-complete/', views.bulk_complete_items, name='bulk_complete'),
     
+    # استلام أوامر التقطيع
+    path('receipt/', views.CuttingReceiptView.as_view(), name='cutting_receipt'),
+    path('receipt/<int:cutting_order_id>/receive/', views.receive_cutting_order_ajax, name='receive_cutting_order_ajax'),
+
     # التقارير
     path('reports/', views.CuttingReportsView.as_view(), name='reports'),
     path('reports/generate/', views.generate_cutting_report, name='generate_report'),

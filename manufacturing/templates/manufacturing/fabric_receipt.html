@@ -137,6 +137,33 @@
     .badge-primary {
         color: #ffffff !important;
     }
+
+    /* تصميم القائمة المربعة */
+    .modal-dialog.modal-square {
+        max-width: 600px !important;
+        width: 600px !important;
+        margin: 1.75rem auto;
+    }
+
+    .modal-content.modal-square {
+        border-radius: 15px;
+        min-height: 550px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header.modal-square {
+        border-radius: 15px 15px 0 0;
+        padding: 1.5rem;
+    }
+
+    .modal-body.modal-square {
+        padding: 2rem;
+    }
+
+    .modal-footer.modal-square {
+        border-radius: 0 0 15px 15px;
+        padding: 1.5rem;
+    }
 </style>
 {% endblock %}
 
@@ -147,17 +174,23 @@
         <div class="row align-items-center">
             <div class="col-md-8">
                 <h1 class="h3 mb-2">
-                    <i class="fas fa-industry"></i>
-                    استلام الأقمشة - المصنع
+                    <i class="fas fa-cut"></i>
+                    استلام أوامر التقطيع - المصنع
                 </h1>
-                <p class="mb-0">إدارة استلام الأقمشة من التقطيع إلى المصنع</p>
+                <p class="mb-0">إدارة استلام أوامر التقطيع الجاهزة للتصنيع</p>
             </div>
             <div class="col-md-4 text-center">
                 <div class="d-flex justify-content-center gap-3 mb-3">
                     <div class="text-center">
                         <div class="h4 mb-0">{{ total_available_orders }}</div>
-                        <small>أوامر متاحة</small>
+                        <small>أوامر تقطيع متاحة</small>
                     </div>
+                    {% if total_pages %}
+                    <div class="text-center">
+                        <div class="h4 mb-0">{{ total_pages }}</div>
+                        <small>صفحة</small>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="d-flex justify-content-center gap-2">
                     <a href="{% url 'manufacturing:fabric_receipt_list' %}" class="btn btn-info btn-sm">
@@ -178,9 +211,9 @@
             <form method="GET" class="row align-items-end">
                 <div class="col-md-6">
                     <label class="form-label">البحث</label>
-                    <input type="text" name="search" class="form-control" 
-                           placeholder="رقم العقد، اسم العميل، رقم الهاتف..."
-                           value="{{ search_query }}">
+                    <input type="text" name="search" class="form-control"
+                           placeholder="كود التقطيع، رقم العقد، اسم العميل..."
+                           value="{{ request.GET.search }}">
                 </div>
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-primary">
@@ -201,13 +234,18 @@
 
 
 
-    <!-- قائمة أوامر التصنيع الجاهزة للاستلام -->
-    {% if manufacturing_orders_ready %}
+    <!-- قائمة أوامر التقطيع الجاهزة للاستلام -->
+    {% if cutting_orders %}
     <div class="card shadow mb-4">
         <div class="card-header bg-success text-white">
             <h6 class="mb-0 font-weight-bold">
-                <i class="fas fa-industry"></i>
-                أوامر التصنيع الجاهزة للاستلام ({{ manufacturing_orders_ready.count }})
+                <i class="fas fa-cut"></i>
+                أوامر التقطيع الجاهزة للاستلام
+                {% if page_obj %}
+                <small class="text-light">
+                    ({{ page_obj.start_index }}-{{ page_obj.end_index }} من {{ page_obj.paginator.count }})
+                </small>
+                {% endif %}
             </h6>
         </div>
         <div class="card-body p-0">
@@ -215,46 +253,34 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-dark">
                         <tr>
-                            <th>كود التصنيع</th>
+                            <th>كود التقطيع</th>
                             <th>العميل</th>
-                            <th>رقم الطلب</th>
-                            <th>نوع الطلب</th>
                             <th>رقم العقد</th>
+                            <th>المستودع</th>
                             <th>تاريخ الإنشاء</th>
                             <th>عدد العناصر</th>
                             <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for manufacturing_order in manufacturing_orders_ready %}
+                        {% for cutting_order in cutting_orders %}
                         <tr>
                             <td>
-                                <strong class="text-success">{{ manufacturing_order.manufacturing_code }}</strong>
+                                <a href="{% url 'cutting:order_detail' cutting_order.id %}"
+                                   class="text-primary font-weight-bold">
+                                    {{ cutting_order.cutting_code }}
+                                </a>
                             </td>
-                            <td>{{ manufacturing_order.order.customer.name }}</td>
-                            <td>{{ manufacturing_order.order.order_number }}</td>
+                            <td>{{ cutting_order.order.customer.name }}</td>
+                            <td>{{ cutting_order.order.contract_number|default:"غير محدد" }}</td>
+                            <td>{{ cutting_order.warehouse.name }}</td>
+                            <td>{{ cutting_order.created_at|date:"Y-m-d" }}</td>
                             <td>
-                                {% if 'accessories' in manufacturing_order.order.selected_types %}
-                                    <span class="badge badge-info">اكسسوار</span>
-                                {% endif %}
-                                {% if 'delivery' in manufacturing_order.order.selected_types %}
-                                    <span class="badge badge-warning">تسليم</span>
-                                {% endif %}
-                                {% if 'installation' in manufacturing_order.order.selected_types %}
-                                    <span class="badge badge-success">تركيب</span>
-                                {% endif %}
-                                {% if 'products' in manufacturing_order.order.selected_types %}
-                                    <span class="badge badge-primary">منتجات</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ manufacturing_order.order.contract_number|default:"غير محدد" }}</td>
-                            <td>{{ manufacturing_order.created_at|date:"Y-m-d" }}</td>
-                            <td>
-                                <span class="badge badge-primary">{{ manufacturing_order.items.count }}</span>
+                                <span class="badge badge-primary">{{ cutting_order.items.count }}</span>
                             </td>
                             <td>
                                 <button class="btn btn-success btn-sm"
-                                        onclick="openReceiptModal({{ manufacturing_order.id }}, '{{ manufacturing_order.manufacturing_code }}', '{{ manufacturing_order.order.customer.name }}')">
+                                        onclick="openCuttingReceiptModal({{ cutting_order.id }}, '{{ cutting_order.cutting_code }}', '{{ cutting_order.order.customer.name }}')">
                                     <i class="fas fa-download"></i> استلام
                                 </button>
                             </td>
@@ -265,62 +291,115 @@
             </div>
         </div>
     </div>
+
+    <!-- نظام الصفحات -->
+    {% if is_paginated %}
+    <div class="d-flex justify-content-center mt-4">
+        <nav aria-label="صفحات أوامر التقطيع">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
     {% else %}
     <div class="card shadow">
         <div class="card-body text-center py-5">
             <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
-            <h4 class="text-muted">لا توجد أوامر تصنيع جاهزة</h4>
-            <p class="text-muted">لا توجد أوامر تصنيع جاهزة لاستلام الأقمشة حالياً</p>
+            <h4 class="text-muted">لا توجد أوامر تقطيع جاهزة</h4>
+            <p class="text-muted">لا توجد أوامر تقطيع مكتملة وجاهزة للاستلام حالياً</p>
+            <a href="{% url 'cutting:order_list' %}" class="btn btn-primary">
+                <i class="fas fa-list"></i> عرض جميع أوامر التقطيع
+            </a>
         </div>
     </div>
     {% endif %}
 </div>
 
-<!-- Modal استلام الأقمشة من المصنع -->
-<div class="modal fade" id="manufacturingReceiptModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
+<!-- Modal استلام أوامر التقطيع -->
+<div class="modal fade" id="cuttingReceiptModal" tabindex="-1">
+    <div class="modal-dialog modal-square">
+        <div class="modal-content modal-square">
+            <div class="modal-header modal-square bg-success text-white">
                 <h5 class="modal-title">
-                    <i class="fas fa-industry me-2"></i>
-                    استلام أقمشة من المصنع
+                    <i class="fas fa-cut me-2"></i>
+                    استلام أمر التقطيع
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="manufacturingReceiptForm">
+            <form id="cuttingReceiptForm">
                 {% csrf_token %}
-                <div class="modal-body">
-                    <input type="hidden" id="manufacturing_order_id" name="manufacturing_order_id">
+                <div class="modal-body modal-square">
+                    <input type="hidden" id="cutting_order_id" name="cutting_order_id">
 
-                    <div class="mb-3">
-                        <label class="form-label">أمر التصنيع</label>
-                        <input type="text" id="manufacturing_code_display" class="form-control" readonly>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">كود التقطيع</label>
+                            <input type="text" id="cutting_code_display" class="form-control" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">العميل</label>
+                            <input type="text" id="customer_name_display" class="form-control" readonly>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">العميل</label>
-                        <input type="text" id="customer_name_display" class="form-control" readonly>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="bag_number" class="form-label">رقم الشنطة <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="bag_number" name="bag_number" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="received_by_name" class="form-label">اسم المستلم <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="received_by_name" name="received_by_name" required>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="bag_number" class="form-label">رقم الشنطة <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="bag_number" name="bag_number" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="cutting_permit_number" class="form-label">رقم الإذن من التقطيع</label>
-                        <input type="text" class="form-control" id="cutting_permit_number" readonly>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="cutting_receiver_name" class="form-label">اسم المستلم من التقطيع</label>
-                        <input type="text" class="form-control" id="cutting_receiver_name" readonly>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="received_by_name" class="form-label">اسم المستلم (اختياري)</label>
-                        <input type="text" class="form-control" id="received_by_name" name="received_by_name"
-                               placeholder="سيتم استخدام اسم المستلم من التقطيع إذا ترك فارغاً">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">رقم الإذن من التقطيع</label>
+                            <input type="text" id="cutting_permit_number" class="form-control" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">اسم المستلم من التقطيع</label>
+                            <input type="text" id="cutting_receiver_name" class="form-control" readonly>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -328,10 +407,10 @@
                         <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer modal-square">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save me-2"></i>حفظ الاستلام
+                    <button type="button" class="btn btn-success" onclick="submitCuttingReceipt()">
+                        <i class="fas fa-check me-2"></i>تأكيد الاستلام
                     </button>
                 </div>
             </form>
@@ -355,16 +434,16 @@ if (typeof $.fn.modal === 'undefined') {
 } else {
     console.log('Bootstrap modal محمل بنجاح');
 }
-// فتح modal استلام الأقمشة
-function openReceiptModal(orderId, orderCode, customerName) {
+// فتح modal استلام أمر التقطيع
+function openCuttingReceiptModal(orderId, orderCode, customerName) {
     console.log('فتح modal للاستلام:', orderId, orderCode, customerName);
 
     // إزالة أي backdrop موجود
     $('.modal-backdrop').remove();
     $('body').removeClass('modal-open');
 
-    document.getElementById('manufacturing_order_id').value = orderId;
-    document.getElementById('manufacturing_code_display').value = orderCode;
+    document.getElementById('cutting_order_id').value = orderId;
+    document.getElementById('cutting_code_display').value = orderCode;
     document.getElementById('customer_name_display').value = customerName;
 
     // إعادة تعيين النموذج
@@ -374,13 +453,13 @@ function openReceiptModal(orderId, orderCode, customerName) {
     document.getElementById('cutting_permit_number').value = '';
     document.getElementById('cutting_receiver_name').value = '';
 
-    // جلب بيانات التقطيع
-    fetch(`/manufacturing/get-cutting-data/${orderId}/`)
+    // جلب بيانات التقطيع تلقائياً
+    fetch(`/manufacturing/get-cutting-order-data/${orderId}/`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                document.getElementById('cutting_permit_number').value = data.cutting_permit_number || 'غير متوفر';
-                document.getElementById('cutting_receiver_name').value = data.cutting_receiver_name || 'غير متوفر';
+                document.getElementById('cutting_permit_number').value = data.permit_number || 'غير متوفر';
+                document.getElementById('cutting_receiver_name').value = data.receiver_name || 'غير متوفر';
             }
         })
         .catch(error => {
@@ -388,10 +467,50 @@ function openReceiptModal(orderId, orderCode, customerName) {
         });
 
     // فتح modal باستخدام Bootstrap 5
-    const modal = new bootstrap.Modal(document.getElementById('manufacturingReceiptModal'));
+    const modal = new bootstrap.Modal(document.getElementById('cuttingReceiptModal'));
     modal.show();
 
     console.log('تم فتح modal بنجاح');
+}
+
+// إرسال نموذج استلام أمر التقطيع
+function submitCuttingReceipt() {
+    const orderId = document.getElementById('cutting_order_id').value;
+    const bagNumber = document.getElementById('bag_number').value;
+    const receivedByName = document.getElementById('received_by_name').value;
+    const notes = document.getElementById('notes').value;
+
+    if (!receivedByName.trim()) {
+        alert('يجب إدخال اسم المستلم');
+        return;
+    }
+
+    // إرسال البيانات
+    fetch(`/manufacturing/receive-cutting-order/${orderId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            bag_number: bagNumber,
+            received_by_name: receivedByName,
+            notes: notes
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('خطأ: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('خطأ:', error);
+        alert('حدث خطأ في الاتصال');
+    });
 }
 
 // تحديث الصفحة

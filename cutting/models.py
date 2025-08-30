@@ -284,7 +284,28 @@ class CuttingOrderItem(models.Model):
         auto_now=True,
         verbose_name='تاريخ التحديث'
     )
-    
+
+    # استلام الأقمشة في المصنع
+    fabric_received = models.BooleanField(
+        default=False,
+        verbose_name='تم استلام الأقمشة'
+    )
+
+    # رقم الشنطة
+    bag_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='رقم الشنطة'
+    )
+
+    # تاريخ الإنشاء
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء',
+        null=True,
+        blank=True
+    )
+
     class Meta:
         verbose_name = 'عنصر تقطيع'
         verbose_name_plural = 'عناصر التقطيع'
