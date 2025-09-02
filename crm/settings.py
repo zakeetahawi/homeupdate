@@ -250,26 +250,51 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 if not DATABASE_URL:
     raise ImproperlyConfigured("يجب تعيين رابط قاعدة البيانات (DATABASE_URL) في متغيرات البيئة.")
 
-# Cache Configuration
+# Cache Configuration - استخدام Redis للأداء الأفضل
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-        'TIMEOUT': 300,  # 5 minutes
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://localhost:6379/1',
         'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-            'CULL_FREQUENCY': 3,
-        }
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True,
+            },
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+            'IGNORE_EXCEPTIONS': True,
+        },
+        'TIMEOUT': 300,  # 5 minutes
+        'KEY_PREFIX': 'homeupdate',
+        'VERSION': 1,
     },
     'session': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'session-cache',
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://localhost:6379/2',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 20,
+                'retry_on_timeout': True,
+            },
+            'IGNORE_EXCEPTIONS': True,
+        },
         'TIMEOUT': 1800,  # 30 minutes
+        'KEY_PREFIX': 'homeupdate_session',
     },
     'query': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'query-cache',
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://localhost:6379/3',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 30,
+                'retry_on_timeout': True,
+            },
+            'IGNORE_EXCEPTIONS': True,
+        },
         'TIMEOUT': 600,  # 10 minutes
+        'KEY_PREFIX': 'homeupdate_query',
     }
 }
 

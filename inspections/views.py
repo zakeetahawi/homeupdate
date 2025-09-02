@@ -272,9 +272,14 @@ class InspectionCreateView(LoginRequiredMixin, CreateView):
             except Order.DoesNotExist:
                 pass
 
-        # حفظ المعاينة
-        messages.success(self.request, 'تم إنشاء المعاينة بنجاح')
+        # حفظ المعاينة بشكل سريع
         response = super().form_valid(form)
+        
+        # عرض رسالة نجاح فورية
+        if form.instance.inspection_file:
+            messages.success(self.request, 'تم إنشاء المعاينة بنجاح وسيتم رفع الملف في الخلفية')
+        else:
+            messages.success(self.request, 'تم إنشاء المعاينة بنجاح')
 
         # للتأكد من حفظ معلومات البائع، نقوم بتحديثها مرة أخرى بعد الحفظ إذا كانت من طلب
         if order_id and hasattr(form.instance, 'order') and form.instance.order and form.instance.order.salesperson:
@@ -396,6 +401,15 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
         # Save inspection first to ensure it exists
         response = super().form_valid(form)
+        
+        # التحقق من وجود ملف جديد وإعطاء رسالة مناسبة
+        old_file = old_inspection.inspection_file
+        new_file = inspection.inspection_file
+        if new_file and (not old_file or old_file != new_file):
+            messages.success(self.request, 'تم تحديث المعاينة بنجاح وسيتم رفع الملف الجديد في الخلفية')
+        else:
+            # إضافة رسالة نجاح مبكرة لتحسين تجربة المستخدم
+            messages.success(self.request, 'تم تحديث المعاينة بنجاح')
 
         # Try to get order if it exists
         try:
@@ -410,7 +424,7 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
                     inspection.order.tracking_status = 'pending'
 
                 inspection.order.save()
-                messages.success(self.request, 'تم تحديث حالة المعاينة والطلب المرتبط')
+                messages.success(self.request, 'تم تحديث حالة الطلب المرتبط أيضاً')
                 return redirect('orders:order_detail', inspection.order.pk)
         except AttributeError:
             # No order associated with this inspection
@@ -421,8 +435,6 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         if new_status == 'completed' and old_status != 'completed':
             if not hasattr(inspection, 'evaluation'):
                 return redirect('inspections:evaluation_create', inspection_pk=inspection.pk)
-
-        messages.success(self.request, 'تم تحديث حالة المعاينة بنجاح')
         return response
 
 

@@ -371,9 +371,9 @@ class Inspection(models.Model):
             self.expected_delivery_date = self.calculate_expected_delivery_date()
         
         super().save(*args, **kwargs)
-        # رفع تلقائي إلى Google Drive فقط إذا تغير الملف ولم يتم رفعه بعد
+        # جدولة رفع تلقائي إلى Google Drive فقط إذا تغير الملف ولم يتم رفعه بعد
         if file_changed and self.inspection_file and not self.is_uploaded_to_drive:
-            self.upload_to_google_drive_async()
+            self.schedule_upload_to_google_drive()
     def get_status_color(self):
         status_colors = {
             'pending': 'warning',
