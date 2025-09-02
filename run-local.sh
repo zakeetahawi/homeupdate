@@ -38,5 +38,26 @@ print_success "استخدم Ctrl+C لإيقاف جميع الخدمات"
 echo
 print_success "🎯 بدء التشغيل..."
 
-# تشغيل Django مع جميع الخدمات
+# تشغيل Celery Worker في الخلفية
+print_info "🔄 تشغيل Celery Worker..."
+celery -A crm worker --loglevel=info --logfile=/tmp/celery_worker_dev.log &
+CELERY_WORKER_PID=$!
+
+# تشغيل Celery Beat في الخلفية
+print_info "⏰ تشغيل Celery Beat..."
+celery -A crm beat --loglevel=info --logfile=/tmp/celery_beat_dev.log &
+CELERY_BEAT_PID=$!
+
+# دالة لإيقاف الخدمات عند الخروج
+cleanup() {
+    print_warning "إيقاف الخدمات..."
+    kill $CELERY_WORKER_PID 2>/dev/null
+    kill $CELERY_BEAT_PID 2>/dev/null
+    exit 0
+}
+
+# التقاط إشارة Ctrl+C
+trap cleanup SIGINT
+
+# تشغيل Django
 python manage.py runserver 0.0.0.0:8000

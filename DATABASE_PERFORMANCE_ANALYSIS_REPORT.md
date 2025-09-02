@@ -1,314 +1,469 @@
-# تقرير تحليل أداء قاعدة البيانات وإصلاح مشاكل N+1
+# Database Performance Analysis Report
 
-## ملخص التحليل
+## Executive Summary
 
-تم تحليل قاعدة الكود لتحديد مشاكل الأداء في قاعدة البيانات، خاصة مشكلة N+1 Query Problem، والاستعلامات غير الفعالة، والفهارس المفقودة، والاستعلامات المكررة.
+This report analyzes the Django codebase in `/home/zakee/homeupdate` to identify database performance bottlenecks. The analysis reveals several critical performance issues including N+1 query problems, inefficient queries, missing optimizations, and duplicate queries. The codebase shows good use of database indexes but has significant room for improvement in query optimization.
 
-## المشاكل المكتشفة والحلول المطبقة
+## Key Findings
 
-### 1. مشكلة N+1 في إحصائيات المندوبين
+### 1. N+1 Query Problems
 
-**الملف:** `/home/zakee/homeupdate/orders/views.py`
-**الدالة:** `salesperson_list`
-**السطر:** 1050-1065
+#### Issue 1.1: Order Items Access in Views
+**File:** `/home/zakee/homeupdate/orders/views.py`
+**Lines:** 1089-1092
 
-#### المشكلة الأصلية:
 ```python
-@login_required
-def salesperson_list(request):
-    salespersons = Salesperson.objects.all()
-
-    # Add order statistics for each salesperson
-    for sp in salespersons:
-        sp.total_orders = Order.objects.filter(salesperson=sp).count()
-        sp.completed_orders = Order.objects.filter(salesperson=sp, status='completed').count()
-        sp.pending_orders = Order.objects.filter(salesperson=sp, status='pending').count()
-        sp.total_sales = Order.objects.filter(salesperson=sp, status='completed').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+# PROBLEMATIC CODE
+for item in order.items.all():
+    # تنسيق الأسعار لإزالة الأصفار الزائدة
+    try:
+        unit_price = float(item.unit_price or 0)
+        total_price = float(item.total_price or 0)
+        quantity = int(item.quantity or 0)
 ```
 
-#### المشكلة:
-- لكل مندوب مبيعات، يتم تنفيذ 4 استعلامات منفصلة
-- إذا كان لدينا 10 مندوبين، سيتم تنفيذ 40 استعلام إضافي (N+1)
+**Problem:** When generating invoice content, the code iterates through `order.items.all()` without prefetching related product data, causing N+1 queries when accessing `item.product.name`.
 
-#### الحل المطبق:
+**Solution:**
 ```python
-@login_required
-def salesperson_list(request):
-    """
-    View for listing salespersons and their orders - Optimized to fix N+1 query problem
-    """
-    # استخدام annotate لحساب الإحصائيات في استعلام واحد بدلاً من N+1
-    from django.db.models import Case, When, IntegerField
-    
-    salespersons = Salesperson.objects.select_related('branch').annotate(
-        total_orders=Count('order'),
-        completed_orders=Count(
-            Case(
-                When(order__status='completed', then=1),
-                output_field=IntegerField()
-            )
-        ),
-        pending_orders=Count(
-            Case(
-                When(order__status='pending', then=1),
-                output_field=IntegerField()
-            )
-        ),
-        total_sales=Sum(
-            Case(
-                When(order__status='completed', then='order__total_amount'),
-                default=0,
-                output_field=models.DecimalField(max_digits=10, decimal_places=2)
-            )
+# OPTIMIZED CODE
+order_items = order.items.select_related('product').all()
+for item in order_items:
+    # تنسيق الأسعار لإزالة الأصفار الزائدة
+    try:
+        unit_price = float(item.unit_price or 0)
+        total_price = float(item.total_price or 0)
+        quantity = int(item.quantity or 0)
+        product_name = item.product.name if item.product else 'منتج'
+```
+
+#### Issue 1.2: Salesperson Statistics Calculation
+**File:** `/home/zakee/homeupdate/orders/views.py`
+**Lines:** 580-584
+
+```python
+# PROBLEMATIC CODE
+for sp in salespersons:
+    sp.total_orders = Order.objects.filter(salesperson=sp).count()
+    sp.completed_orders = Order.objects.filter(salesperson=sp, status='completed').count()
+    sp.pending_orders = Order.objects.filter(salesperson=sp, status='pending').count()
+    sp.total_sales = Order.objects.filter(salesperson=sp, status='completed').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+```
+
+**Problem:** This creates 4 database queries per salesperson, resulting in 4*N queries for N salespersons.
+
+**Solution:**
+```python
+# OPTIMIZED CODE
+from django.db.models import Count, Sum, Case, When
+
+salespersons = Salesperson.objects.annotate(
+    total_orders=Count('orders'),
+    completed_orders=Count(
+        Case(When(orders__status='completed', then=1))
+    ),
+    pending_orders=Count(
+        Case(When(orders__status='pending', then=1))
+    ),
+    total_sales=Sum(
+        Case(
+            When(orders__status='completed', then='orders__total_amount'),
+            default=0
         )
-    ).prefetch_related('order_set')
+    )
+).all()
 ```
 
-#### النتيجة:
-- تقليل عدد الاستعلامات من N*4+1 إلى 1 استعلام واحد
-- تحسين الأداء بنسبة تصل إلى 95% للصفحات التي تحتوي على عدد كبير من المندوبين
+#### Issue 1.3: Customer Analysis in Reports
+**File:** `/home/zakee/homeupdate/reports/views.py`
+**Lines:** 150-155
 
-### 2. مشكلة N+1 في قائمة العملاء
-
-**الملف:** `/home/zakee/homeupdate/customers/views.py`
-**الدالة:** `customer_list`
-**السطر:** 120-135
-
-#### المشكلة الأصلية:
 ```python
-# إضافة معلومات إضافية للعملاء من الفروع الأخرى
-cross_branch_customers = []
-if search_term:
-    for customer in page_obj:
-        if hasattr(request.user, 'branch') and request.user.branch:
-            if is_customer_cross_branch(request.user, customer):
-                cross_branch_customers.append(customer.pk)
+# PROBLEMATIC CODE
+'top_customers': Customer.objects.filter(
+    customer_orders__in=orders
+).annotate(
+    total_orders=Count('customer_orders'),
+    total_spent=Sum('customer_orders__total_amount')
+).order_by('-total_spent')[:10]
 ```
 
-#### المشكلة:
-- لكل عميل في الصفحة، يتم استدعاء `is_customer_cross_branch` التي قد تحتوي على استعلامات إضافية
-- استعلامات متكررة للتحقق من ��لفرع لكل عميل
+**Problem:** This query doesn't use select_related for customer data that might be accessed later.
 
-#### الحل المطبق:
+**Solution:**
 ```python
-# إضافة معلومات إضافية للعملاء من الفروع الأخرى - محسن لتجنب N+1
-cross_branch_customers = []
-if search_term and hasattr(request.user, 'branch') and request.user.branch:
-    # جمع معرفات العملاء في قائمة واحدة بدلاً من استعلام منفصل لكل عميل
-    customer_ids = [customer.pk for customer in page_obj]
-    # استعلام واحد للتحقق من العملاء من فروع أخرى
-    cross_branch_customer_ids = Customer.objects.filter(
-        pk__in=customer_ids
-    ).exclude(branch=request.user.branch).values_list('pk', flat=True)
-    cross_branch_customers = list(cross_branch_customer_ids)
+# OPTIMIZED CODE
+'top_customers': Customer.objects.filter(
+    customer_orders__in=orders
+).select_related('branch', 'category').annotate(
+    total_orders=Count('customer_orders'),
+    total_spent=Sum('customer_orders__total_amount')
+).order_by('-total_spent')[:10]
 ```
 
-#### النتيجة:
-- تقليل عدد الاستعلامات من N+1 إلى 1 استعلام واحد
-- تحسين الأداء خاصة في الصفحات التي تحتوي على عدد كبير من العملاء
+### 2. Inefficient Queries
 
-### 3. مشكلة N+1 في لوحة تحكم المخزون
+#### Issue 2.1: Order List View Without Optimization
+**File:** `/home/zakee/homeupdate/orders/views.py`
+**Lines:** 60-65
 
-**الملف:** `/home/zakee/homeupdate/inventory/views.py`
-**الكلاس:** `InventoryDashboardView`
-**الدالة:** `get_context_data`
-
-#### المشكلة الأصلية:
 ```python
-# بيانات الرسم البياني للمخزون حسب الفئة
-stock_by_category = []
-categories = Category.objects.all()
-
-for category in categories:
-    # حساب إجمالي المخزون لكل فئة
-    products_in_category = Product.objects.filter(category=category)
-    total_stock = 0
-
-    for product in products_in_category:
-        total_stock += get_cached_stock_level(product.id)
-
-    stock_by_category.append({
-        'name': category.name,
-        'stock': total_stock
-    })
+# PROBLEMATIC CODE
+if show_branch_filter and branch_filter:
+    orders = Order.objects.select_related('customer', 'salesperson').filter(branch__id=branch_filter)
+else:
+    orders = get_user_orders_queryset(request.user).select_related('customer', 'salesperson')
 ```
 
-#### المشكلة:
-- لكل فئة، يتم تنفيذ استعلام منفصل للحصول على المنتجات
-- حلقة مزدوجة تؤدي إلى N*M استعلامات
+**Problem:** Missing prefetch_related for related objects that are accessed in templates, and missing select_related for branch.
 
-#### الحل المطبق:
+**Solution:**
 ```python
-# بيانات الرسم البياني للمخزون حسب الفئة - محسن لتجنب N+1
-from django.db.models import Sum, Count
-from .models import Category, Product
+# OPTIMIZED CODE
+base_queryset = Order.objects.select_related(
+    'customer', 
+    'customer__branch',
+    'customer__category',
+    'salesperson', 
+    'salesperson__branch',
+    'branch',
+    'created_by'
+).prefetch_related(
+    'items__product',
+    'payments',
+    'inspections'
+)
 
-# استخدام استعلام واحد للحصول على جميع المنتجات مع فئاتها
-products_with_categories = Product.objects.select_related('category').all()
-
-# تجميع المنتجات حسب الفئة في الذاكرة
-category_products = {}
-for product in products_with_categories:
-    category_name = product.category.name if product.category else 'بدون فئة'
-    if category_name not in category_products:
-        category_products[category_name] = []
-    category_products[category_name].append(product)
-
-# حساب إجمالي المخزون لكل فئة
-stock_by_category = []
-for category_name, products in category_products.items():
-    total_stock = sum(get_cached_stock_level(product.id) for product in products)
-    stock_by_category.append({
-        'name': category_name,
-        'stock': total_stock
-    })
+if show_branch_filter and branch_filter:
+    orders = base_queryset.filter(branch__id=branch_filter)
+else:
+    orders = get_user_orders_queryset(request.user, base_queryset)
 ```
 
-#### النتيجة:
-- تقليل عدد الاستعلامات من N*M إلى 1 استعلام واحد
-- تحسين كبير في أداء لوحة التحكم
-
-## الحلول الإضافية المطبقة
-
-### 1. تحسين الاستعلامات باستخدام select_related و prefetch_related
-
-تم تطبيق `select_related` و `prefetch_related` في عدة أماكن:
+#### Issue 2.2: Inventory Report Generation
+**File:** `/home/zakee/homeupdate/reports/views.py`
+**Lines:** 190-200
 
 ```python
-# في orders/views.py
-orders = get_user_orders_queryset(request.user).select_related('customer', 'salesperson')
-
-# في customers/views.py
-customers = queryset.select_related(
-    'category', 'branch', 'created_by'
-).prefetch_related('customer_orders')
-
-# في inventory/views.py
-context['recent_transactions'] = StockTransaction.objects.select_related(
-    'product', 'created_by'
-).order_by('-date')[:10]
-```
-
-### 2. تفعيل Django Debug Toolbar
-
-تم تفعيل Django Debug Toolbar لمراقبة الاستعلامات:
-
-```python
-# في settings.py
-if DEBUG:
-    INSTALLED_APPS.append('debug_toolbar')
+# PROBLEMATIC CODE
+def generate_inventory_report(self, report):
+    products = Product.objects.all()
+    all_products = list(products)
     
-    # Debug Toolbar Middleware
-    MIDDLEWARE.insert(1, 'debug_toolbar.middleware.DebugToolbarMiddleware')
-    
-    # Debug Toolbar Settings
-    import socket
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS = [ip[: ip.rfind(".")] + ".1" for ip in ips] + ["127.0.0.1", "10.0.2.2"]
-    
-    DEBUG_TOOLBAR_CONFIG = {
-        'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
-        'SHOW_COLLAPSED': True,
-        'SQL_WARNING_THRESHOLD': 20,  # تحذير عند تجاوز 20 استعلام
-        'ENABLE_STACKTRACES': True,
-        'SHOW_TEMPLATE_CONTEXT': True,
+    data = {
+        'total_items': len(all_products),
+        'total_value': sum(product.current_stock * product.price for product in all_products),
+        'low_stock_items': [product for product in all_products if product.needs_restock],
+        'out_of_stock_items': [product for product in all_products if product.current_stock == 0],
+        'items': all_products
     }
 ```
 
-## التوصيات للتحسينات المستقبلية
+**Problem:** Loading all products into memory and performing calculations in Python instead of using database aggregations.
 
-### 1. إضافة فهارس قاعدة البيانات
-
-```sql
--- فهارس مقترحة لتحسين الأداء
-CREATE INDEX idx_order_status ON orders_order(status);
-CREATE INDEX idx_order_created_at ON orders_order(created_at);
-CREATE INDEX idx_customer_branch ON customers_customer(branch_id);
-CREATE INDEX idx_customer_created_at ON customers_customer(created_at);
-CREATE INDEX idx_product_category ON inventory_product(category_id);
-CREATE INDEX idx_stocktransaction_product_date ON inventory_stocktransaction(product_id, date);
+**Solution:**
+```python
+# OPTIMIZED CODE
+def generate_inventory_report(self, report):
+    from django.db.models import Sum, F, Case, When, IntegerField
+    
+    # Use database aggregations
+    inventory_stats = Product.objects.aggregate(
+        total_items=Count('id'),
+        total_value=Sum(F('current_stock') * F('price')),
+        low_stock_count=Count(
+            Case(When(needs_restock=True, then=1))
+        ),
+        out_of_stock_count=Count(
+            Case(When(current_stock=0, then=1))
+        )
+    )
+    
+    # Only fetch specific items when needed
+    low_stock_items = Product.objects.filter(needs_restock=True).select_related('category')[:50]
+    out_of_stock_items = Product.objects.filter(current_stock=0).select_related('category')[:50]
+    
+    data = {
+        'total_items': inventory_stats['total_items'],
+        'total_value': inventory_stats['total_value'] or 0,
+        'low_stock_items': list(low_stock_items),
+        'out_of_stock_items': list(out_of_stock_items),
+        'low_stock_count': inventory_stats['low_stock_count'],
+        'out_of_stock_count': inventory_stats['out_of_stock_count']
+    }
 ```
 
-### 2. استخدام التخزين المؤقت (Caching)
+### 3. Missing Database Indexes
+
+#### Issue 3.1: Order Status and Date Filtering
+**File:** `/home/zakee/homeupdate/orders/models.py`
+
+**Problem:** While the Order model has good indexes, some composite indexes for common query patterns are missing.
+
+**Current indexes:**
+```python
+indexes = [
+    models.Index(fields=['customer'], name='order_customer_idx'),
+    models.Index(fields=['salesperson'], name='order_salesperson_idx'),
+    models.Index(fields=['tracking_status'], name='order_tracking_status_idx'),
+    models.Index(fields=['order_date'], name='order_date_idx'),
+    models.Index(fields=['branch', 'tracking_status'], name='order_branch_status_idx'),
+    models.Index(fields=['payment_verified'], name='order_payment_verified_idx'),
+    models.Index(fields=['created_at'], name='order_created_at_idx'),
+]
+```
+
+**Recommended additional indexes:**
+```python
+# Add these indexes to the Order model
+indexes = [
+    # Existing indexes...
+    
+    # For order list filtering by status and date
+    models.Index(
+        fields=['order_status', 'order_date'], 
+        name='order_status_date_idx'
+    ),
+    
+    # For branch-specific order queries with date range
+    models.Index(
+        fields=['branch', 'order_date', 'order_status'], 
+        name='order_branch_date_status_idx'
+    ),
+    
+    # For customer order history queries
+    models.Index(
+        fields=['customer', 'created_at'], 
+        name='order_customer_created_idx'
+    ),
+    
+    # For payment status queries
+    models.Index(
+        fields=['payment_verified', 'order_status'], 
+        name='order_payment_status_idx'
+    ),
+    
+    # For selected_types JSON field queries (PostgreSQL specific)
+    models.Index(
+        fields=['selected_types'], 
+        name='order_selected_types_idx'
+    ),
+]
+```
+
+#### Issue 3.2: Customer Search Optimization
+**File:** `/home/zakee/homeupdate/customers/models.py`
+
+**Problem:** Missing indexes for common search patterns.
+
+**Recommended additional indexes:**
+```python
+# Add to Customer model indexes
+indexes = [
+    # Existing indexes...
+    
+    # For phone number searches (both phone fields)
+    models.Index(
+        fields=['phone', 'phone2'], 
+        name='customer_phones_search_idx'
+    ),
+    
+    # For name and phone combined searches
+    models.Index(
+        fields=['name', 'phone'], 
+        name='customer_name_phone_idx'
+    ),
+    
+    # For branch and status filtering
+    models.Index(
+        fields=['branch', 'status', 'created_at'], 
+        name='customer_branch_status_date_idx'
+    ),
+]
+```
+
+### 4. Duplicate Queries
+
+#### Issue 4.1: Repeated Customer Lookups
+**File:** `/home/zakee/homeupdate/orders/views.py`
+**Lines:** Multiple locations
 
 ```python
-# مثال على استخد��م Redis للتخزين المؤقت
-from django.core.cache import cache
-
-def get_dashboard_stats():
-    cache_key = 'dashboard_stats'
-    stats = cache.get(cache_key)
-    
-    if stats is None:
-        stats = {
-            'total_customers': Customer.objects.count(),
-            'total_orders': Order.objects.count(),
-            'total_products': Product.objects.count(),
-        }
-        cache.set(cache_key, stats, 300)  # 5 دقائق
-    
-    return stats
+# PROBLEMATIC CODE - Repeated in multiple places
+if customer_param.isdigit():
+    customer = Customer.objects.get(id=customer_param)
+else:
+    customer = Customer.objects.get(code=customer_param)
 ```
 
-### 3. تحسين الاستعلامات المعقدة
+**Problem:** This customer lookup pattern is repeated in multiple view methods without caching.
 
+**Solution:**
 ```python
-# استخدام raw SQL للاستعلامات المعقدة
-def get_sales_report():
-    return Order.objects.raw("""
-        SELECT o.id, o.order_number, c.name as customer_name,
-               SUM(oi.quantity * oi.unit_price) as total
-        FROM orders_order o
-        JOIN customers_customer c ON o.customer_id = c.id
-        JOIN orders_orderitem oi ON o.id = oi.order_id
-        WHERE o.status = 'completed'
-        GROUP BY o.id, o.order_number, c.name
-        ORDER BY total DESC
-    """)
-```
-
-### 4. تحسين الصفحات (Pagination)
-
-```python
-# استخدام Cursor Pagination للبيانات الكبيرة
-from django.core.paginator import Paginator
-from django.db.models import Q
-
-def optimized_pagination(request, queryset):
-    # استخدام cursor pagination للأداء الأفضل
-    cursor = request.GET.get('cursor')
-    if cursor:
-        queryset = queryset.filter(id__gt=cursor)
+# OPTIMIZED CODE - Create a utility function
+def get_customer_by_param(customer_param):
+    """Get customer by ID or code with caching"""
+    cache_key = f"customer_{customer_param}"
+    customer = cache.get(cache_key)
     
-    return queryset[:25]  # 25 عنصر فقط
+    if customer is None:
+        try:
+            if customer_param.isdigit():
+                customer = Customer.objects.select_related('branch', 'category').get(id=customer_param)
+            else:
+                customer = Customer.objects.select_related('branch', 'category').get(code=customer_param)
+            cache.set(cache_key, customer, timeout=300)  # 5 minutes
+        except Customer.DoesNotExist:
+            return None
+    
+    return customer
 ```
 
-## قياس الأداء
+#### Issue 4.2: Repeated Order Status Calculations
+**File:** `/home/zakee/homeupdate/orders/models.py`
 
-### قبل التحسين:
-- متوسط عدد الاستعلامات في صفحة المندوبين: 41 استعلام (10 مندوبين)
-- متوسط وقت التحميل: 2.5 ثانية
-- استهلاك الذاكرة: 45 ميجابايت
+**Problem:** The `get_display_status()` method performs multiple database queries that could be cached.
 
-### بعد التحسين:
-- متوسط عدد الاستعلامات في صفحة المندوبين: 2 استعلام
-- متوسط وقت التحميل: 0.3 ثانية
-- استهلاك الذاكرة: 12 ميجابايت
+**Solution:**
+```python
+# Add caching to the Order model
+@property
+def display_status_cached(self):
+    """Cached version of display status"""
+    cache_key = f"order_status_{self.pk}_{self.updated_at.timestamp()}"
+    status = cache.get(cache_key)
+    
+    if status is None:
+        status = self.get_display_status()
+        cache.set(cache_key, status, timeout=600)  # 10 minutes
+    
+    return status
+```
 
-## الخلاصة
+### 5. Query Optimization Recommendations
 
-تم إصلاح المشاكل الرئيسية التالية:
+#### Issue 5.1: Order Detail View Optimization
+**File:** `/home/zakee/homeupdate/orders/views.py`
 
-1. ✅ **مشكلة N+1 في إحصائيات المندوبين** - تم الإصلاح باستخدام `annotate`
-2. ✅ **مشكلة N+1 في قائمة العملاء** - تم الإصلاح بتجميع الاستعلامات
-3. ✅ **مشكلة N+1 في لوحة تحكم المخزون** - تم الإصلاح باستخدام `select_related`
-4. ✅ **تفعيل Django Debug Toolbar** - لمراقبة الأداء المستمرة
-5. ✅ **تحسين الاستعلامات العامة** - باستخدام `select_related` و `prefetch_related`
+**Current implementation:**
+```python
+def order_detail(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    payments = order.payments.all().order_by('-payment_date')
+    order_items = order.items.all()
+    inspections = order.inspections.all().order_by('-created_at')
+```
 
-### النتائج المحققة:
-- **تحسين الأداء بنسبة 85-95%** في الصفحات المحسنة
-- **تقليل عدد الاستعلامات** من مئات الاستعلامات إلى عدد قليل
-- **تحسين تجربة المستخدم** بأوقات تحميل أسرع
-- **تقليل استهلاك الموارد** على الخادم وقاعدة البيانات
+**Optimized implementation:**
+```python
+def order_detail(request, pk):
+    order = get_object_or_404(
+        Order.objects.select_related(
+            'customer',
+            'customer__branch',
+            'customer__category',
+            'salesperson',
+            'salesperson__branch',
+            'branch',
+            'created_by',
+            'related_inspection'
+        ).prefetch_related(
+            'payments',
+            'items__product',
+            'items__product__category',
+            'inspections__inspector'
+        ),
+        pk=pk
+    )
+    
+    # These are now prefetched
+    payments = order.payments.all()
+    order_items = order.items.all()
+    inspections = order.inspections.all()
+```
 
-تم توثيق جميع التغييرات وهي جاهزة للاستخدام في الإنتاج.
+#### Issue 5.2: Dashboard Query Optimization
+**File:** `/home/zakee/homeupdate/orders/views.py`
+
+**Current implementation:**
+```python
+def get_context_data(self, **kwargs):
+    orders = get_user_orders_queryset(self.request.user)
+    context['total_orders'] = orders.count()
+    context['pending_orders'] = orders.filter(status='pending').count()
+    context['completed_orders'] = orders.filter(status='completed').count()
+    context['recent_orders'] = orders.order_by('-created_at')[:10]
+```
+
+**Optimized implementation:**
+```python
+def get_context_data(self, **kwargs):
+    from django.db.models import Count, Case, When
+    
+    # Single query with aggregations
+    orders_stats = get_user_orders_queryset(self.request.user).aggregate(
+        total_orders=Count('id'),
+        pending_orders=Count(Case(When(status='pending', then=1))),
+        completed_orders=Count(Case(When(status='completed', then=1))),
+        total_sales=Sum(Case(When(status='completed', then='total_amount')))
+    )
+    
+    # Separate optimized query for recent orders
+    recent_orders = get_user_orders_queryset(self.request.user).select_related(
+        'customer', 'salesperson', 'branch'
+    ).order_by('-created_at')[:10]
+    
+    context.update(orders_stats)
+    context['recent_orders'] = recent_orders
+```
+
+## Performance Impact Assessment
+
+### High Impact Issues (Immediate Attention Required)
+1. **N+1 Queries in Salesperson Statistics** - Could generate 100+ queries for 25 salespersons
+2. **Inventory Report Memory Usage** - Loading all products into memory
+3. **Order List View Missing Optimizations** - Affects most common user operation
+
+### Medium Impact Issues
+1. **Missing Composite Indexes** - Affects query performance under load
+2. **Duplicate Customer Lookups** - Unnecessary database hits
+3. **Order Detail View Optimizations** - Affects individual order performance
+
+### Low Impact Issues
+1. **Cached Status Calculations** - Minor performance gains
+2. **Additional Index Recommendations** - Future-proofing for scale
+
+## Implementation Priority
+
+### Phase 1 (Immediate - Week 1)
+1. Fix N+1 queries in salesperson statistics
+2. Optimize order list view with proper select_related/prefetch_related
+3. Add critical missing indexes
+
+### Phase 2 (Short-term - Week 2-3)
+1. Implement customer lookup caching utility
+2. Optimize inventory report generation
+3. Add remaining recommended indexes
+
+### Phase 3 (Medium-term - Month 1)
+1. Implement comprehensive query optimization across all views
+2. Add query performance monitoring
+3. Implement database query caching strategy
+
+## Monitoring Recommendations
+
+1. **Enable Django Debug Toolbar** in development to monitor query counts
+2. **Add database query logging** in production
+3. **Implement query performance metrics** using Django's database instrumentation
+4. **Set up alerts** for queries exceeding performance thresholds
+
+## Conclusion
+
+The codebase shows good understanding of Django ORM patterns and includes appropriate database indexes. However, there are significant opportunities for performance improvements, particularly in addressing N+1 query problems and optimizing complex report generation. Implementing the recommended changes should result in:
+
+- **50-80% reduction** in database queries for list views
+- **60-90% improvement** in report generation time
+- **30-50% faster** page load times for order-related pages
+- **Better scalability** as data volume grows
+
+The most critical issues should be addressed immediately, as they have the potential to cause significant performance degradation under load.
