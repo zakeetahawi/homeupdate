@@ -239,7 +239,7 @@
                             <td>{{ product.code }}</td>
                             <td>{{ product.category }}</td>
                             <td>
-                                <span class="badge bg-danger">{{ product.stock }}</span>
+                                <span class="badge bg-danger">{{ product.current_stock_level|default:0 }}</span>
                             </td>
                             <td>{{ product.minimum_stock }}</td>
                             <td>

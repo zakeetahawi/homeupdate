@@ -68,16 +68,16 @@
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.category.name }}</td>
                                 <td>
-                                    <span class="{% if product.stock < product.minimum_stock %}text-danger{% endif %}">
-                                        {{ product.stock }}
+                                    <span class="{% if product.current_stock_calc < product.minimum_stock %}text-danger{% endif %}">
+                                        {{ product.current_stock_calc|default:0 }}
                                     </span>
                                 </td>
                                 <td>{{ product.minimum_stock }}</td>
                                 <td>{{ product.price }}</td>
                                 <td>
-                                    {% if product.stock == 0 %}
+                                    {% if product.current_stock_calc == 0 or not product.current_stock_calc %}
                                         <span class="badge bg-danger">نفذ من المخزون</span>
-                                    {% elif product.stock < product.minimum_stock %}
+                                    {% elif product.current_stock_calc < product.minimum_stock %}
                                         <span class="badge bg-warning">مخزون منخفض</span>
                                     {% else %}
                                         <span class="badge bg-success">متوفر</span>

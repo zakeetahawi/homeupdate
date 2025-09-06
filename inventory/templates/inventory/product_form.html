@@ -173,7 +173,7 @@
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i>
                             <strong>ملاحظة:</strong> لإضافة أو تعديل كميات المخزون، يرجى استخدام صفحة
-                            <a href="{% url 'inventory:stock_transaction_create' %}" class="alert-link">حركات المخزون</a>.
+                            <a href="{% url 'inventory:transaction_create' product.id %}" class="alert-link">حركات المخزون</a>.
                         </div>
                         {% endif %}
 

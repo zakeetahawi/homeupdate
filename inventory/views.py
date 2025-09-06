@@ -5,6 +5,7 @@ from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.db.models import Q, F, Sum, Count, OuterRef, Subquery, Case, When
+from django.db import models
 from django.utils import timezone
 from datetime import datetime, timedelta
 from .models import Product, Category, PurchaseOrder, StockTransaction, StockAlert
@@ -139,7 +140,15 @@ def product_list(request):
     sort_by = request.GET.get('sort', '-created_at')
 
     # الحصول على المنتجات من قاعدة البيانات مع حساب المخزون
-    products = Product.objects.select_related('category')
+    # استخدام annotation لحساب المخزون الحالي لكل منتج
+    from django.db.models import OuterRef, Subquery
+    latest_balance = StockTransaction.objects.filter(
+        product=OuterRef('pk')
+    ).order_by('-transaction_date').values('running_balance')[:1]
+    
+    products = Product.objects.select_related('category').annotate(
+        current_stock_calc=Subquery(latest_balance, output_field=models.IntegerField())
+    )
 
     # تطبيق البحث
     if search_query:
