@@ -80,22 +80,24 @@ else
     print_status "✔️ Redis يعمل بالفعل"
 fi
 
-# تشغيل Celery Worker
-print_info "تشغيل Celery Worker..."
-celery -A crm worker --loglevel=info --detach --pidfile=/tmp/celery_worker.pid --logfile=/tmp/celery_worker.log
-if [ $? -eq 0 ]; then
-    CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid 2>/dev/null)
-    print_status "✔️ تم تشغيل Celery Worker (PID: $CELERY_WORKER_PID)"
+# تشغيل Celery Worker مع جميع قوائم الانتظار
+print_info "تشغيل Celery Worker مع جميع قوائم الانتظار..."
+celery -A crm worker --loglevel=info --queues=celery,file_uploads,maintenance,calculations,status_updates --detach --pidfile=/tmp/celery_worker.pid --logfile=/tmp/celery_worker.log &
+CELERY_WORKER_PID=$!
+sleep 3  # انتظار بدء العملية
+if ps -p $CELERY_WORKER_PID > /dev/null; then
+    print_status "✔️ تم تشغيل Celery Worker مع جميع قوائم الانتظار (PID: $CELERY_WORKER_PID)"
 else
     print_error "❌ فشل في تشغيل Celery Worker"
 fi
 
-# تشغيل Celery Beat (للمهام الدورية)
-print_info "تشغيل Celery Beat..."
-celery -A crm beat --loglevel=info --detach --pidfile=/tmp/celery_beat.pid --logfile=/tmp/celery_beat.log --schedule=/tmp/celerybeat-schedule
-if [ $? -eq 0 ]; then
-    CELERY_BEAT_PID=$(cat /tmp/celery_beat.pid 2>/dev/null)
-    print_status "✔️ تم تشغيل Celery Beat (PID: $CELERY_BEAT_PID)"
+# تشغيل Celery Beat للمهام الدورية
+print_info "تشغيل Celery Beat للمهام الدورية..."
+celery -A crm beat --loglevel=info --detach --pidfile=/tmp/celery_beat.pid --logfile=/tmp/celery_beat.log --schedule=/tmp/celerybeat-schedule &
+CELERY_BEAT_PID=$!
+sleep 3  # انتظار بدء العملية
+if ps -p $CELERY_BEAT_PID > /dev/null; then
+    print_status "✔️ تم تشغيل Celery Beat للمهام الدورية (PID: $CELERY_BEAT_PID)"
 else
     print_error "❌ فشل في تشغيل Celery Beat"
 fi
@@ -210,7 +212,7 @@ gunicorn crm.wsgi:application \
     --worker-connections 1000 \
     --max-requests 1000 \
     --max-requests-jitter 50 \
-    --timeout 30 \
+    --timeout 300 \
     --keep-alive 2 \
     --preload \
     --access-logfile - \
@@ -302,14 +304,14 @@ while true; do
         break
     fi
 
-    # فحص Celery Worker
+    # فحص Celery Worker مع إعادة تشغيل محسنة
     if [ -f "/tmp/celery_worker.pid" ]; then
         CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid 2>/dev/null)
         if [ ! -z "$CELERY_WORKER_PID" ] && ! kill -0 $CELERY_WORKER_PID 2>/dev/null; then
-            print_warning "⚠️ Celery Worker توقف - إعادة تشغيل..."
-            celery -A crm worker --loglevel=info --detach --pidfile=/tmp/celery_worker.pid --logfile=/tmp/celery_worker.log
+            print_warning "⚠️ Celery Worker توقف - إعادة تشغيل مع جميع قوائم الانتظار..."
+            celery -A crm worker --loglevel=info --queues=celery,file_uploads,maintenance,calculations,status_updates --detach --pidfile=/tmp/celery_worker.pid --logfile=/tmp/celery_worker.log
             if [ $? -eq 0 ]; then
-                print_status "✔️ تم إعادة تشغيل Celery Worker"
+                print_status "✔️ تم إعادة تشغيل Celery Worker مع جميع قوائم الانتظار"
             else
                 print_error "❌ فشل في إعادة تشغيل Celery Worker"
             fi

@@ -71,6 +71,7 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
         'order_type_display',
         'customer_name',
         'status_display',
+        'installation_status_display',  # إضافة عرض حالة التركيب
         'order_date',
         'expected_delivery_date',
         'created_at',
@@ -122,6 +123,7 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
         ('order__branch', admin.RelatedFieldListFilter),
         ('order__salesperson', admin.RelatedFieldListFilter),
         ('production_line', admin.RelatedFieldListFilter),
+        ('order__installation_status', admin.RelatedFieldListFilter),  # إضافة فلتر حالة التركيب
     ]
     
     # إعادة date_hierarchy
@@ -162,18 +164,16 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
 
     actions = ['bulk_update_status']
-    
-    def get_queryset(self, request):
-        """تحسين الاستعلامات باستخدام select_related و prefetch_related"""
-        return super().get_queryset(request).select_related(
-            'order__customer', 'order__salesperson', 'production_line'
-        ).prefetch_related(
-            'items'
-        )
 
     def bulk_update_status(self, request, queryset):
         from django import forms
         from django.shortcuts import render, redirect
+        from django.apps import apps
+        from django.db import transaction
+        from django.core.cache import cache
+        from django.contrib import messages
+        from django.http import HttpResponseRedirect
+        
         class StatusForm(forms.Form):
             status = forms.ChoiceField(choices=queryset.model.STATUS_CHOICES, label='الحالة الجديدة')
 
@@ -181,9 +181,85 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
             form = StatusForm(request.POST)
             if form.is_valid():
                 new_status = form.cleaned_data['status']
-                count = queryset.update(status=new_status)
-                self.message_user(request, f'تم تحديث حالة {count} أمر تصنيع إلى {dict(queryset.model.STATUS_CHOICES)[new_status]} بنجاح.')
-                return None
+                count = 0
+                updated_orders = []
+                
+                # استخدام transaction لضمان التحديث الآمن
+                with transaction.atomic():
+                    Order = apps.get_model('orders', 'Order')
+                    
+                    # تحديث كل عنصر على حدة لضمان تطبيق الإشارات والمنطق المخصص
+                    for order in queryset.select_related('order'):
+                        old_status = order.status
+                        order.status = new_status
+                        order.save()
+                        
+                        # تحديث حالة التركيب في الطلب الأصلي إذا كان نوع التركيب
+                        if order.order_type == 'installation' and order.order:
+                            installation_status_mapping = {
+                                'pending_approval': 'needs_scheduling',
+                                'pending': 'needs_scheduling', 
+                                'in_progress': 'needs_scheduling',
+                                'ready_install': 'scheduled',
+                                'completed': 'completed',
+                                'delivered': 'completed',
+                                'rejected': 'needs_scheduling',
+                                'cancelled': 'cancelled',
+                            }
+                            
+                            new_installation_status = installation_status_mapping.get(new_status)
+                            if new_installation_status and order.order.installation_status != new_installation_status:
+                                # تحديث مباشر للطلب مع تجنب الإشارات التي قد تتداخل
+                                order.order.installation_status = new_installation_status
+                                order.order.save(update_fields=['installation_status'])
+                                updated_orders.append(order.order.pk)
+                        
+                        count += 1
+                
+                # مسح cache للنتائج المحدثة
+                cache_keys_to_clear = [
+                    'manufacturing_orders_list',
+                    'orders_installation_status',
+                    f'manufacturing_status_{new_status}',
+                ]
+                
+                for key in cache_keys_to_clear:
+                    cache.delete(key)
+                
+                # مسح cache للطلبات المحدثة
+                for order_pk in updated_orders:
+                    cache.delete(f'order_{order_pk}_installation_status')
+                
+                # رسالة النجاح مع تفاصيل إضافية
+                status_display = dict(queryset.model.STATUS_CHOICES)[new_status]
+                if updated_orders:
+                    installation_status_display = dict(Order._meta.get_field('installation_status').choices).get(
+                        installation_status_mapping.get(new_status), 'غير محدد'
+                    )
+                    messages.success(
+                        request, 
+                        f'✅ تم تحديث {count} أمر تصنيع إلى "{status_display}" بنجاح! '
+                        f'وتم تحديث حالة التركيب لـ {len(updated_orders)} طلب إلى "{installation_status_display}". '
+                        f'سيتم إعادة تحميل الصفحة لإظهار التحديثات.'
+                    )
+                else:
+                    messages.success(
+                        request, 
+                        f'✅ تم تحديث {count} أمر تصنيع إلى "{status_display}" بنجاح! '
+                        f'سيتم إعادة تحميل الصفحة لإظهار التحديثات.'
+                    )
+                
+                # إعادة توجيه مع إضافة معامل لإجبار إعادة التحميل
+                current_url = request.get_full_path()
+                # إزالة معامل updated السابق إن وجد
+                import re
+                current_url = re.sub(r'[?&]updated=\d+', '', current_url)
+                # إضافة timestamp جديد لضمان إعادة التحميل
+                import time
+                separator = '&' if '?' in current_url else '?'
+                refresh_url = f"{current_url}{separator}updated={int(time.time())}&_refresh=1"
+                
+                return HttpResponseRedirect(refresh_url)
         else:
             form = StatusForm()
         return render(request, 'admin/bulk_update_status.html', {
@@ -353,6 +429,30 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     status_display.short_description = 'الحالة'
     status_display.admin_order_field = 'status'  # تمكين الترتيب
 
+    def installation_status_display(self, obj):
+        """عرض حالة التركيب للطلبات من نوع التركيب"""
+        if obj.order_type == 'installation' and obj.order:
+            colors = {
+                'needs_scheduling': '#e6a700',    # أصفر
+                'scheduled': '#6f42c1',           # بنفسجي  
+                'in_installation': '#138496',     # أزرق فاتح
+                'completed': '#1e7e34',           # أخضر
+                'cancelled': '#545b62',           # رمادي
+                'modification_required': '#fd7e14',     # برتقالي
+                'modification_in_progress': '#20c997',  # أخضر فاتح
+                'modification_completed': '#1e7e34',    # أخضر
+            }
+            color = colors.get(obj.order.installation_status, '#6c757d')
+            return format_html(
+                '<span style="background-color: {}; color: white; padding: 3px 6px; '
+                'border-radius: 10px; font-size: 11px; white-space: nowrap;">{}</span>',
+                color,
+                obj.order.get_installation_status_display()
+            )
+        return format_html('<span style="color: #999;">-</span>')
+    installation_status_display.short_description = 'حالة التركيب'
+    installation_status_display.admin_order_field = 'order__installation_status'
+
     def delivery_info(self, obj):
         """عرض معلومات التسليم - اسم المستلم والتاريخ"""
         if obj.status == 'delivered':
@@ -462,23 +562,38 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     manufacturing_code.admin_order_field = 'id'  # تمكين الترتيب حسب ID
 
     def get_queryset(self, request):
-        """استعلام محسن للغاية - تحديد الحقول المطلوبة فقط"""
-        return super().get_queryset(request).select_related(
+        """استعلام محسن مع ضمان تحديث البيانات"""
+        queryset = super().get_queryset(request).select_related(
             'order', 
             'order__customer', 
+            'order__salesperson',
             'production_line',
             'created_by'
-        ).only(
-            'id', 'contract_number', 'invoice_number', 'order_type', 'order_date',
-            'expected_delivery_date', 'status', 'exit_permit_number', 'delivery_permit_number',
-            'delivery_recipient_name', 'delivery_date', 'created_at', 'updated_at',
-            'completion_date', 'rejection_reply_date', 'has_rejection_reply',
-            'order__id', 'order__order_number', 'order__customer__name',
-            'production_line__id', 'production_line__name',
-            'created_by__id', 'created_by__username'
-        ).defer(
-            'notes', 'rejection_reason', 'rejection_reply'
-        )
+        ).prefetch_related('items')
+        
+        # إضافة التحديث التلقائي إذا كان هناك معامل updated
+        if request.GET.get('updated'):
+            # مسح أي cache قد يكون موجود
+            from django.core.cache import cache
+            cache.clear()
+        
+        return queryset
+
+    def changelist_view(self, request, extra_context=None):
+        """تخصيص عرض قائمة التغييرات لضمان إعادة التحميل الصحيح"""
+        # مسح cache إذا كان هناك تحديث
+        if request.GET.get('updated') or request.GET.get('_refresh'):
+            from django.core.cache import cache
+            cache.clear()
+            
+            # إضافة header لمنع caching في المتصفح
+            response = super().changelist_view(request, extra_context)
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            return response
+        
+        return super().changelist_view(request, extra_context)
 
     def has_change_permission(self, request, obj=None):
         if obj and obj.status == 'pending_approval':

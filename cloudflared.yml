@@ -12,55 +12,65 @@ ingress:
     service: http://localhost:8000
     originRequest:
       httpHostHeader: elkhawaga.uk
-      connectTimeout: 30s
-      tlsTimeout: 10s
-      tcpKeepAlive: 30s
-      keepAliveConnections: 100
-      keepAliveTimeout: 90s
+      connectTimeout: 60s
+      tlsTimeout: 30s
+      tcpKeepAlive: 60s
+      keepAliveConnections: 200
+      keepAliveTimeout: 300s
+      noHappyEyeballs: false
+      disableChunkedEncoding: false
 
   # WWW subdomain - also routes to Django CRM application
   - hostname: www.elkhawaga.uk
     service: http://localhost:8000
     originRequest:
       httpHostHeader: www.elkhawaga.uk
-      connectTimeout: 30s
-      tlsTimeout: 10s
-      tcpKeepAlive: 30s
-      keepAliveConnections: 100
-      keepAliveTimeout: 90s
+      connectTimeout: 60s
+      tlsTimeout: 30s
+      tcpKeepAlive: 60s
+      keepAliveConnections: 200
+      keepAliveTimeout: 300s
+      noHappyEyeballs: false
+      disableChunkedEncoding: false
 
   # CRM subdomain - dedicated CRM access
   - hostname: crm.elkhawaga.uk
     service: http://localhost:8000
     originRequest:
       httpHostHeader: crm.elkhawaga.uk
-      connectTimeout: 30s
-      tlsTimeout: 10s
-      tcpKeepAlive: 30s
-      keepAliveConnections: 100
-      keepAliveTimeout: 90s
+      connectTimeout: 60s
+      tlsTimeout: 30s
+      tcpKeepAlive: 60s
+      keepAliveConnections: 200
+      keepAliveTimeout: 300s
+      noHappyEyeballs: false
+      disableChunkedEncoding: false
 
   # API subdomain - for API access
   - hostname: api.elkhawaga.uk
     service: http://localhost:8000
     originRequest:
       httpHostHeader: api.elkhawaga.uk
-      connectTimeout: 30s
-      tlsTimeout: 10s
-      tcpKeepAlive: 30s
-      keepAliveConnections: 100
-      keepAliveTimeout: 90s
+      connectTimeout: 60s
+      tlsTimeout: 30s
+      tcpKeepAlive: 60s
+      keepAliveConnections: 200
+      keepAliveTimeout: 300s
+      noHappyEyeballs: false
+      disableChunkedEncoding: false
 
   # Admin subdomain - for admin panel
   - hostname: admin.elkhawaga.uk
     service: http://localhost:8000
     originRequest:
       httpHostHeader: admin.elkhawaga.uk
-      connectTimeout: 30s
-      tlsTimeout: 10s
-      tcpKeepAlive: 30s
-      keepAliveConnections: 100
-      keepAliveTimeout: 90s
+      connectTimeout: 60s
+      tlsTimeout: 30s
+      tcpKeepAlive: 60s
+      keepAliveConnections: 200
+      keepAliveTimeout: 300s
+      noHappyEyeballs: false
+      disableChunkedEncoding: false
 
   # Catch-all rule - returns 404 for unmatched hostnames
   - service: http_status:404

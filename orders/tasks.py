@@ -56,7 +56,7 @@ def upload_contract_to_drive_async(self, order_id):
             return {'success': False, 'message': f'فشل نهائي: {str(e)}'}
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, queue='file_uploads')
 def upload_inspection_to_drive_async(self, inspection_id):
     """
     مهمة خلفية لرفع ملف المعاينة إلى Google Drive
@@ -138,7 +138,11 @@ def cleanup_failed_uploads():
         inspection_retry_count = 0
         for inspection in failed_inspections:
             try:
-                upload_inspection_to_drive_async.delay(inspection.pk)
+                # إرسال المهمة إلى queue المناسب
+                upload_inspection_to_drive_async.apply_async(
+                    args=[inspection.pk],
+                    queue='file_uploads'  # تأكد من استخدام القائمة الصحيحة
+                )
                 inspection_retry_count += 1
             except Exception as e:
                 logger.error(f"خطأ في إعادة جدولة رفع ملف المعاينة {inspection.pk}: {str(e)}")

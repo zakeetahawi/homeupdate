@@ -332,14 +332,35 @@ class ManufacturingOrder(models.Model):
             'cancelled': 'factory',
         }
 
+        # تحديث حالة التركيب للطلبات من نوع التركيب
+        installation_status_mapping = {
+            'pending_approval': 'needs_scheduling',
+            'pending': 'needs_scheduling', 
+            'in_progress': 'needs_scheduling',
+            'ready_install': 'scheduled',
+            'completed': 'completed',
+            'delivered': 'completed',
+            'rejected': 'needs_scheduling',
+            'cancelled': 'cancelled',
+        }
+
         new_order_status = order_status_mapping.get(self.status, self.status)
         new_tracking_status = tracking_status_mapping.get(self.status, 'factory')
 
+        # إعداد البيانات للتحديث
+        update_fields = {
+            'order_status': new_order_status,
+            'tracking_status': new_tracking_status
+        }
+
+        # إضافة حالة التركيب إذا كان طلب تركيب
+        if self.order_type == 'installation':
+            new_installation_status = installation_status_mapping.get(self.status)
+            if new_installation_status:
+                update_fields['installation_status'] = new_installation_status
+
         # تحديث بدون إطلاق الإشارات لتجنب الrecursion
-        Order.objects.filter(pk=self.order.pk).update(
-            order_status=new_order_status,
-            tracking_status=new_tracking_status
-        )
+        Order.objects.filter(pk=self.order.pk).update(**update_fields)
 
     def assign_production_line(self):
         """تحديد خط الإنتاج تلقائياً بناءً على فرع العميل"""

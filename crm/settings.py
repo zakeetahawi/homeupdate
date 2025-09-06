@@ -868,10 +868,23 @@ CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net")
 CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com")
 CSP_IMG_SRC = ("'self'", "data:", "https:")
 
-# File Upload Security
-FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 10MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 10MB
+# File Upload Security - محسن للملفات الكبيرة
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024  # 1GB للعمليات الكبيرة
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024  # 1GB للعمليات الكبيرة
 FILE_UPLOAD_TEMP_DIR = os.path.join(BASE_DIR, 'temp')
+
+# إعدادات إضافية للملفات الكبيرة
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+]
+
+# إعدادات Connection للعمليات الكبيرة
+CONN_MAX_AGE = 600  # 10 دقائق
+CONN_HEALTH_CHECKS = True
+
+# زمن انتظار أطول للعمليات الكبيرة
+REQUEST_TIMEOUT = 300  # 5 دقائق
 
 # Database Security
 DATABASES['default']['OPTIONS'].update({
@@ -1084,10 +1097,25 @@ CELERY_RESULT_COMPRESSION = 'gzip'
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
-# إعدادات انتهاء الصلاحية
-CELERY_TASK_SOFT_TIME_LIMIT = 300  # 5 دقائق
-CELERY_TASK_TIME_LIMIT = 600       # 10 دقائق
-CELERY_RESULT_EXPIRES = 3600       # ساعة واحدة
+# إعدادات انتهاء الصلاحية - محسنة للعمليات الكبيرة
+CELERY_TASK_SOFT_TIME_LIMIT = 1800  # 30 دقيقة للعمليات الكبيرة
+CELERY_TASK_TIME_LIMIT = 3600       # 60 دقيقة كحد أقصى
+CELERY_RESULT_EXPIRES = 7200        # ساعتان
+
+# إعدادات خاصة لقوائم مختلفة
+CELERY_TASK_ROUTES = {
+    'orders.tasks.upload_*': {'queue': 'file_uploads'},
+    'orders.tasks.sync_*': {'queue': 'file_uploads'},
+    'orders.tasks.bulk_*': {'queue': 'file_uploads'},
+    'inventory.tasks.sync_*': {'queue': 'file_uploads'},
+}
+
+# زمن انتظار أطول للمهام الكبيرة
+CELERY_TASK_ANNOTATIONS = {
+    'orders.tasks.upload_*': {'time_limit': 3600, 'soft_time_limit': 1800},
+    'orders.tasks.sync_*': {'time_limit': 3600, 'soft_time_limit': 1800},
+    'inventory.tasks.sync_*': {'time_limit': 3600, 'soft_time_limit': 1800},
+}
 
 # إعدادات المراقبة
 CELERY_WORKER_SEND_TASK_EVENTS = True
@@ -1110,3 +1138,101 @@ if not DEBUG:
     CELERY_TASK_SOFT_TIME_LIMIT = 180  # 3 دقائق
     CELERY_TASK_TIME_LIMIT = 300       # 5 دقائق
     CELERY_WORKER_MAX_MEMORY_PER_CHILD = 150000  # 150MB
+
+# ===== إعدادات خاصة للعمليات الكبيرة والمزامنة =====
+# Large Operations Configuration
+
+# إعدادات خاصة بالرفع والجسر لمنع انقطاع الاتصال
+LARGE_OPERATIONS_CONFIG = {
+    'MAX_UPLOAD_SIZE': 2 * 1024 * 1024 * 1024,  # 2 جيجابايت
+    'UPLOAD_CHUNK_SIZE': 10 * 1024 * 1024,       # 10 ميجابايت chunks
+    'CONNECTION_TIMEOUT': 900,                    # 15 دقيقة
+    'READ_TIMEOUT': 1800,                        # 30 دقيقة
+    'BRIDGE_KEEPALIVE': 300,                     # 5 دقائق keep-alive
+}
+
+# إعدادات خاصة بمزامنة جداول جوجل
+GOOGLE_SYNC_CONFIG = {
+    'BATCH_SIZE': 1000,           # عدد الصفوف في كل دفعة
+    'MAX_RETRIES': 5,             # عدد المحاولات
+    'RETRY_DELAY': 60,            # الانتظار بين المحاولات (ثانية)
+    'TIMEOUT_PER_BATCH': 600,     # 10 دقائق لكل دفعة
+    'TOTAL_TIMEOUT': 7200,        # ساعتان للعملية الكاملة
+}
+
+# إعدادات خاصة بتحديث أسعار المنتجات
+PRODUCT_UPDATE_CONFIG = {
+    'BATCH_SIZE': 500,            # منتجات في كل دفعة
+    'PROCESSING_TIMEOUT': 1800,   # 30 دقيقة
+    'DATABASE_BATCH_SIZE': 100,   # حفظ كل 100 منتج
+    'MEMORY_LIMIT': 512 * 1024 * 1024,  # 512 ميجابايت
+}
+
+# تطبيق الإعدادات على Celery للعمليات الكبيرة
+CELERY_TASK_ANNOTATIONS = {
+    '*': {
+        'rate_limit': '10/m',
+        'time_limit': 300,
+        'soft_time_limit': 240,
+    },
+    'orders.tasks.upload_file_to_google_drive': {
+        'rate_limit': '5/m',
+        'time_limit': 1800,     # 30 دقيقة
+        'soft_time_limit': 1500, # 25 دقيقة
+        'retry_kwargs': {'max_retries': 5, 'countdown': 60},
+    },
+    'orders.tasks.sync_products_with_google': {
+        'rate_limit': '1/h',     # مرة واحدة في الساعة
+        'time_limit': 7200,      # ساعتان
+        'soft_time_limit': 6600, # ساعة و 50 دقيقة
+        'retry_kwargs': {'max_retries': 3, 'countdown': 300},
+    },
+    'orders.tasks.bulk_update_prices': {
+        'rate_limit': '2/h',     # مرتان في الساعة
+        'time_limit': 3600,      # ساعة واحدة
+        'soft_time_limit': 3300, # 55 دقيقة
+        'retry_kwargs': {'max_retries': 3, 'countdown': 180},
+    },
+}
+
+# إعدادات خاصة بقاعدة البيانات للعمليات الكبيرة
+DATABASES['default']['CONN_MAX_AGE'] = 600  # 10 دقائق
+DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+# PostgreSQL specific options
+DATABASES['default']['OPTIONS'] = {
+    'connect_timeout': 60,
+    'options': '-c statement_timeout=300000 -c idle_in_transaction_session_timeout=600000'
+}
+
+# Session timeout للعمليات الطويلة
+SESSION_COOKIE_AGE = 86400  # 24 ساعة
+SESSION_SAVE_EVERY_REQUEST = False  # لا نحفظ في كل طلب لتحسين الأداء
+
+# إعدادات Cache للعمليات الكبيرة
+CACHE_MIDDLEWARE_SECONDS = 300  # 5 دقائق
+CACHE_MIDDLEWARE_KEY_PREFIX = 'elkhawaga_'
+
+# إعدادات Logging للعمليات الكبيرة
+LOGGING['loggers']['large_operations'] = {
+    'handlers': ['file', 'console'],
+    'level': 'INFO',
+    'propagate': False,
+}
+
+# تطبيق الإعدادات على أساس نوع العملية
+def apply_large_operation_settings():
+    """تطبيق إعدادات خاصة للعمليات الكبيرة"""
+    import os
+    import sys
+    
+    # زيادة حدود Python
+    sys.setrecursionlimit(5000)
+    
+    # إعدادات متغيرات البيئة
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'crm.settings'
+    os.environ['CELERY_OPTIMIZATION_ENABLED'] = '1'
+    
+    return True
+
+# استدعاء دالة تطبيق الإعدادات
+apply_large_operation_settings()
