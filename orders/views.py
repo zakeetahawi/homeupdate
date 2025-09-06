@@ -79,35 +79,13 @@ def order_list(request):
     else:
         orders = get_user_orders_queryset(request.user).select_related('customer', 'salesperson')
 
-    # تطبيق فلتر السنة مع دعم السنوات المتعددة والسنة الافتراضية
+    # تطبيق فلتر السنة مع دعم السنوات المتعددة والسنة الافتراضية - موحد
+    from accounts.utils import apply_default_year_filter
+    orders = apply_default_year_filter(orders, request, 'order_date')
+    
+    # الحصول على معاملات السنة للعرض
     selected_years = request.GET.getlist('years')
     year_filter = request.GET.get('year', '')
-    
-    # إذا تم تحديد سنوات متعددة
-    if selected_years:
-        try:
-            year_filters = Q()
-            for year_str in selected_years:
-                if year_str != 'all':
-                    year = int(year_str)
-                    year_filters |= Q(order_date__year=year)
-            
-            if year_filters:
-                orders = orders.filter(year_filters)
-        except (ValueError, TypeError):
-            pass
-    # إذا تم تحديد سنة واحدة فقط
-    elif year_filter and year_filter != 'all':
-        try:
-            year = int(year_filter)
-            orders = orders.filter(order_date__year=year)
-        except (ValueError, TypeError):
-            pass
-    # إذا لم يتم تحديد أي سنة، استخدم السنة الافتراضية من الإعدادات
-    else:
-        from accounts.models import DashboardYearSettings
-        default_year = DashboardYearSettings.get_default_year()
-        orders = orders.filter(order_date__year=default_year)
 
     if search_query:
         orders = orders.filter(

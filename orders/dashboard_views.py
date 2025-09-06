@@ -3,7 +3,7 @@
 """
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import datetime
@@ -12,37 +12,9 @@ from .permissions import get_user_orders_queryset, get_user_role_permissions
 
 
 def apply_year_filter(orders, request):
-    """تطبيق فلتر السنة على الطلبات مع دعم السنة الافتراضية والسنوات المتعددة"""
-    # الحصول على السنوات المحددة
-    selected_years = request.GET.getlist('years')
-    year_filter = request.GET.get('year', '')
-    
-    # إذا تم تحديد سنوات متعددة
-    if selected_years:
-        try:
-            year_filters = Q()
-            for year_str in selected_years:
-                if year_str != 'all':
-                    year = int(year_str)
-                    year_filters |= Q(order_date__year=year)
-            
-            if year_filters:
-                orders = orders.filter(year_filters)
-        except (ValueError, TypeError):
-            pass
-    # إذا تم تحديد سنة واحدة فقط
-    elif year_filter and year_filter != 'all':
-        try:
-            year = int(year_filter)
-            orders = orders.filter(order_date__year=year)
-        except (ValueError, TypeError):
-            pass
-    # إذا لم يتم تحديد أي سنة، استخدم السنة الحالية كافتراضي
-    else:
-        current_year = timezone.now().year
-        orders = orders.filter(order_date__year=current_year)
-    
-    return orders
+    """تطبيق فلتر السنة على الطلبات مع دعم السنة الافتراضية والسنوات المتعددة - موحد"""
+    from accounts.utils import apply_default_year_filter
+    return apply_default_year_filter(orders, request, 'order_date')
 
 
 def get_available_years():
@@ -67,36 +39,52 @@ def orders_dashboard(request):
     # تطبيق فلتر السنة
     orders = apply_year_filter(orders, request)
     
-    # إحصائيات البطاقات الأربع
-    inspection_count = orders.filter(selected_types__icontains='inspection').count()
-    installation_count = orders.filter(selected_types__icontains='installation').count()
-    accessory_count = orders.filter(selected_types__icontains='accessory').count()
-    tailoring_count = orders.filter(selected_types__icontains='tailoring').count()
+    # إحصائيات البطاقات الأربع - محسنة للأداء
+    from django.db.models import Case, When, IntegerField
     
-    # إحصائيات عامة
-    total_orders = orders.count()
-    # Use canonical order_status for dashboard counts
-    # pending card should include these order_status values per spec
-    pending_orders = orders.filter(order_status__in=[
-        'pending_approval', 'pending', 'in_progress', 'ready_install'
-    ]).count()
-    # in progress: currently in manufacturing (kept for breakdown views)
-    in_progress_orders = orders.filter(order_status='in_progress').count()
-    # completed: finished or delivered
-    completed_orders = orders.filter(order_status__in=['completed', 'delivered']).count()
-    # ready for install (ready_install) - kept as separate metric
-    ready_install_orders = orders.filter(order_status='ready_install').count()
+    # استخدام annotate لتحسين الأداء بدلاً من استعلامات منفصلة
+    orders_with_counts = orders.aggregate(
+        inspection_count=Count('id', filter=Q(selected_types__icontains='inspection')),
+        installation_count=Count('id', filter=Q(selected_types__icontains='installation')),
+        accessory_count=Count('id', filter=Q(selected_types__icontains='accessory')),
+        tailoring_count=Count('id', filter=Q(selected_types__icontains='tailoring'))
+    )
+    
+    inspection_count = orders_with_counts['inspection_count']
+    installation_count = orders_with_counts['installation_count']
+    accessory_count = orders_with_counts['accessory_count']
+    tailoring_count = orders_with_counts['tailoring_count']
+    
+    # إحصائيات عامة - محسنة للأداء باستخدام aggregate
+    general_stats = orders.aggregate(
+        total_orders=Count('id'),
+        pending_orders=Count('id', filter=Q(order_status__in=[
+            'pending_approval', 'pending', 'in_progress', 'ready_install'
+        ])),
+        in_progress_orders=Count('id', filter=Q(order_status='in_progress')),
+        completed_orders=Count('id', filter=Q(order_status__in=['completed', 'delivered'])),
+        ready_install_orders=Count('id', filter=Q(order_status='ready_install'))
+    )
+    
+    total_orders = general_stats['total_orders']
+    pending_orders = general_stats['pending_orders']
+    in_progress_orders = general_stats['in_progress_orders']
+    completed_orders = general_stats['completed_orders']
+    ready_install_orders = general_stats['ready_install_orders']
     
     # إجمالي الإيرادات - مسؤول المصنع فقط لا يرى الإيرادات
     if hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager and not request.user.is_superuser:
         total_revenue = 0  # مسؤول المصنع لا يرى الإيرادات
     else:
-        total_revenue = orders.aggregate(
-            total=Sum('total_amount')
-        )['total'] or 0
+        revenue_stats = orders.aggregate(
+            total_revenue=Sum('total_amount')
+        )
+        total_revenue = revenue_stats['total_revenue'] or 0
     
-    # أحدث الطلبات
-    recent_orders = orders.order_by('-created_at')[:10]
+    # أحدث الطلبات - محسنة مع select_related
+    recent_orders = orders.select_related(
+        'customer', 'salesperson', 'branch'
+    ).order_by('-created_at')[:10]
     
     # رمز العملة
     system_settings = SystemSettings.get_settings()

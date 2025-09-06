@@ -30,21 +30,9 @@ from django.conf import settings
 
 
 def apply_default_year_filter(queryset, request, date_field='order_date'):
-    """تطبيق فلتر السنة الافتراضية على QuerySet"""
-    from django.utils import timezone
-
-    # إذا لم يتم تحديد فلتر تاريخ، استخدم السنة الحالية
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
-
-    if not date_from and not date_to:
-        current_year = timezone.now().year
-        filter_kwargs = {
-            f'{date_field}__year': current_year
-        }
-        queryset = queryset.filter(**filter_kwargs)
-
-    return queryset
+    """تطبيق فلتر السنة الافتراضية على QuerySet - موحد"""
+    from accounts.utils import apply_default_year_filter as unified_filter
+    return unified_filter(queryset, request, date_field)
 
 from .models import ManufacturingOrder, ManufacturingOrderItem, FabricReceipt, FabricReceiptItem
 from orders.models import Order

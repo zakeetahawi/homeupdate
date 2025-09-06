@@ -119,6 +119,9 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
         'status',
         'order_type',
         'order_date',
+        ('order__branch', admin.RelatedFieldListFilter),
+        ('order__salesperson', admin.RelatedFieldListFilter),
+        ('production_line', admin.RelatedFieldListFilter),
     ]
     
     # إعادة date_hierarchy
@@ -126,6 +129,9 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     
     # ترتيب محسن
     ordering = ['-id']  # استخدام id بدلاً من created_at
+    
+    # الإجراءات المجمعة موجودة بالفعل في الكود
+    # actions = ['bulk_update_status']  # موجود بالفعل
 
     # تم تبسيط الفلاتر
     # list_filter = (
@@ -480,6 +486,8 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
             return (request.user.has_perm('manufacturing.can_approve_orders')
                     or request.user.is_superuser)
         return super().has_change_permission(request, obj)
+
+    # الإجراءات المجمعة موجودة بالفعل في الكود (bulk_update_status)
 
 
 @admin.register(ManufacturingOrderItem)

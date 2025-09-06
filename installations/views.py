@@ -86,10 +86,10 @@ def dashboard(request):
     )
     ready_manufacturing_query = apply_default_year_filter(ready_manufacturing_query, request, 'order_date')
     
-    # حساب العدد بطريقة محسّنة
-    ready_order_ids = set(ready_orders_query.values_list('id', flat=True))
-    ready_mfg_order_ids = set(ready_manufacturing_query.values_list('order_id', flat=True))
-    total_orders_ready_for_installation = len(ready_order_ids | ready_mfg_order_ids)
+    # حساب العدد بطريقة محسّنة - استخدام aggregate
+    ready_orders_count = ready_orders_query.count()
+    ready_mfg_count = ready_manufacturing_query.count()
+    total_orders_ready_for_installation = ready_orders_count + ready_mfg_count
 
     # 4. إحصائيات أخرى محسّنة (مفلترة بالسنة الافتراضية)
     orders_with_debt_query = Order.objects.filter(
@@ -132,15 +132,16 @@ def dashboard(request):
         created_at__gte=timezone.now() - timezone.timedelta(days=7)
     )
     recent_orders_query = apply_default_year_filter(recent_orders_query, request, 'order_date')
-    recent_orders = recent_orders_query.select_related('customer', 'manufacturing_order')[:10]
+    recent_orders = recent_orders_query.select_related('customer', 'branch')[:10]
 
     # 8. الطلبات التي تحتاج جدولة - محسّنة ومحدودة (مفلترة بالسنة الافتراضية)
+    # جميع الطلبات التي لم يتم جدولتها بعد (ليس فقط الجاهزة)
     orders_needing_scheduling_query = Order.objects.filter(
         selected_types__icontains='installation',
-        order_status__in=['ready_install', 'completed'],
         installationschedule__isnull=True
     )
     orders_needing_scheduling_query = apply_default_year_filter(orders_needing_scheduling_query, request, 'order_date')
+    orders_needing_scheduling_count = orders_needing_scheduling_query.count()  # العدد الإجمالي
     orders_needing_scheduling = list(
         orders_needing_scheduling_query.select_related('customer', 'manufacturing_order')[:10]
     )
@@ -167,7 +168,7 @@ def dashboard(request):
     ).annotate(
         installations_count=Count(
             'installationschedule',
-            filter=Q(installationschedule__scheduled_date__year=default_year)
+            filter=Q(installationschedule__order__order_date__year=default_year)
         )
     )
 
@@ -188,6 +189,7 @@ def dashboard(request):
         'upcoming_installations': upcoming_installations,
         'recent_orders': recent_orders,
         'orders_needing_scheduling': orders_needing_scheduling,
+        'orders_needing_scheduling_count': orders_needing_scheduling_count,  # العدد الإجمالي للطلبات التي تحتاج جدولة
         'teams_stats': teams_stats,
         'default_year': default_year,
     }
@@ -371,12 +373,11 @@ def installation_list(request):
                 'location_type': getattr(installation, 'location_type', None),
             })
     
-    # 2. جلب الطلبات الجاهزة للتركيب (غير المجدولة) - مفلترة بالسنة الافتراضية
+    # 2. جلب الطلبات التي تحتاج جدولة (غير المجدولة) - مفلترة بالسنة الافتراضية
     if not status_filter or status_filter == 'needs_scheduling':
-        # الطلبات العادية الجاهزة
+        # جميع الطلبات التي لم يتم جدولتها بعد (ليس فقط الجاهزة)
         ready_orders_query = Order.objects.filter(
             selected_types__icontains='installation',
-            order_status__in=['ready_install', 'completed'],
             installationschedule__isnull=True
         ).select_related('customer')
         # تطبيق فلتر السنة الافتراضية
@@ -1743,14 +1744,22 @@ def installation_stats_api(request):
     from accounts.utils import apply_default_year_filter
     from accounts.models import DashboardYearSettings
 
-    # تطبيق فلتر السنة الافتراضية
+    # تطبيق فلتر السنة الافتراضية - محسن
     installation_schedules_queryset = InstallationSchedule.objects.all()
-    installation_schedules_filtered = apply_default_year_filter(installation_schedules_queryset, request, 'scheduled_date')
+    installation_schedules_filtered = apply_default_year_filter(installation_schedules_queryset, request, 'order__order_date')
 
-    total = installation_schedules_filtered.count()
-    completed = installation_schedules_filtered.filter(status='completed').count()
-    pending = installation_schedules_filtered.filter(status='pending').count()
-    in_progress = installation_schedules_filtered.filter(status='in_progress').count()
+    # استخدام aggregate لتحسين الأداء
+    stats = installation_schedules_filtered.aggregate(
+        total=Count('id'),
+        completed=Count('id', filter=Q(status='completed')),
+        pending=Count('id', filter=Q(status='pending')),
+        in_progress=Count('id', filter=Q(status='in_progress'))
+    )
+    
+    total = stats['total']
+    completed = stats['completed']
+    pending = stats['pending']
+    in_progress = stats['in_progress']
 
     # إحصائيات طلبات التركيب
     installation_orders_queryset = Order.objects.filter(selected_types__icontains='installation')

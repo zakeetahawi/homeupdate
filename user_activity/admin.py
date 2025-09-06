@@ -133,15 +133,17 @@ class UserSessionAdmin(admin.ModelAdmin):
 class UserLoginHistoryAdmin(admin.ModelAdmin):
     """إدارة سجلات تسجيل الدخول"""
     list_display = [
-        'user', 'login_time', 'logout_time', 'session_duration_display',
+        'user_display', 'login_time', 'logout_time', 'session_duration_display',
         'device_type', 'browser', 'ip_address', 'is_successful_login'
     ]
     list_filter = [
         'is_successful_login', 'device_type', 'logout_reason',
+        ('user', admin.RelatedOnlyFieldListFilter),
         'login_time', 'logout_time'
     ]
     search_fields = [
-        'user__username', 'user__email', 'ip_address', 'browser', 'operating_system'
+        'user__username', 'user__first_name', 'user__last_name', 'user__email', 
+        'ip_address', 'browser', 'operating_system', 'device_type'
     ]
     readonly_fields = [
         'user', 'login_time', 'logout_time', 'ip_address', 'user_agent',
@@ -152,6 +154,20 @@ class UserLoginHistoryAdmin(admin.ModelAdmin):
     date_hierarchy = 'login_time'
     ordering = ['-login_time']
     list_per_page = 50
+
+    def user_display(self, obj):
+        """عرض اسم المستخدم مع رابط"""
+        if obj.user:
+            full_name = obj.user.get_full_name() or obj.user.username
+            return format_html(
+                '<a href="{}" target="_blank">{}</a><br/><small style="color: #666;">{}</small>',
+                reverse('admin:accounts_user_change', args=[obj.user.pk]),
+                full_name,
+                obj.user.username
+            )
+        return '-'
+    user_display.short_description = 'المستخدم'
+    user_display.admin_order_field = 'user__username'
 
     def session_duration_display(self, obj):
         """عرض مدة الجلسة"""

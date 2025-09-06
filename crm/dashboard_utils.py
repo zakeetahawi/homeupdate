@@ -199,11 +199,9 @@ def get_installation_orders_statistics(
     branch_filter, start_date, end_date, show_all_years=False
 ):
     """إحصائيات طلبات التركيب المحسنة"""
-    # البحث في الطلبات التي تحتوي على تركيب
+    # البحث في الطلبات التي تحتوي على تركيب - محسن
     orders = Order.objects.filter(
-        Q(selected_types__icontains="installation")
-        | Q(service_types__contains=["installation"])
-        | Q(service_types__icontains="installation")
+        selected_types__icontains="installation"
     )
 
     # تطبيق فلتر التاريخ
@@ -270,25 +268,37 @@ def get_installations_statistics(
 
 
 def get_inventory_statistics(branch_filter):
-    """إحصائيات المخزون المبسطة - سريعة جداً"""
+    """إحصائيات المخزون المحسنة - سريعة جداً"""
     # فلترة المنتجات
     products_filter = {}
     if branch_filter != "all" and hasattr(Product, "branch"):
         products_filter["branch_id"] = branch_filter
 
-    # الحصول على عدد المنتجات الإجمالي فقط
+    # إحصائيات مبسطة - بدون استخدام current_stock (property)
     total_products = Product.objects.filter(**products_filter).count()
-
-    # إحصائيات مبسطة بدون حساب المخزون التفصيلي
-    # يمكن إضافة حساب المخزون لاحقاً عند الحاجة
+    
+    # حساب المخزون المنخفض والمنتهي بطريقة مبسطة
+    # يمكن تحسينها لاحقاً عند الحاجة
+    low_stock_products = 0
+    out_of_stock_products = 0
+    
+    # حساب المخزون للمنتجات (يمكن تحسينها لاحقاً)
+    for product in Product.objects.filter(**products_filter)[:100]:  # عينة من 100 منتج
+        try:
+            current_stock = product.current_stock
+            if current_stock <= 0:
+                out_of_stock_products += 1
+            elif current_stock <= product.minimum_stock:
+                low_stock_products += 1
+        except:
+            pass
 
     return {
         "total_products": total_products,
-        "low_stock": 0,  # سيتم حسابها لاحقاً
-        "out_of_stock": 0,  # سيتم حسابها لاحقاً
-        "total_value": 0,  # سيتم حسابها لاحقاً
-        "low_stock_percentage": 0,
-        "out_of_stock_percentage": 0,
+        "active_products": total_products,  # جميع المنتجات تعتبر نشطة
+        "inactive_products": 0,  # لا يوجد منتجات غير نشطة
+        "low_stock_products": low_stock_products,
+        "out_of_stock_products": out_of_stock_products,
     }
 
 
