@@ -12,9 +12,8 @@ from .permissions import get_user_orders_queryset, get_user_role_permissions
 
 
 def apply_year_filter(orders, request):
-    """تطبيق فلتر السنة على الطلبات مع دعم السنة الافتراضية والسنوات المتعددة - موحد"""
-    from accounts.utils import apply_default_year_filter
-    return apply_default_year_filter(orders, request, 'order_date')
+    """لا يطبق أي فلتر - تم إلغاء الفلترة الافتراضية"""
+    return orders
 
 
 def get_available_years():
@@ -58,19 +57,23 @@ def orders_dashboard(request):
     # إحصائيات عامة - محسنة للأداء باستخدام aggregate
     general_stats = orders.aggregate(
         total_orders=Count('id'),
-        pending_orders=Count('id', filter=Q(order_status__in=[
-            'pending_approval', 'pending', 'in_progress', 'ready_install'
-        ])),
+        pending_orders=Count('id', filter=Q(order_status__in=['pending', 'pending_approval'])),  # شمل قيد الموافقة
         in_progress_orders=Count('id', filter=Q(order_status='in_progress')),
         completed_orders=Count('id', filter=Q(order_status__in=['completed', 'delivered'])),
         ready_install_orders=Count('id', filter=Q(order_status='ready_install'))
     )
-    
+
     total_orders = general_stats['total_orders']
     pending_orders = general_stats['pending_orders']
     in_progress_orders = general_stats['in_progress_orders']
     completed_orders = general_stats['completed_orders']
     ready_install_orders = general_stats['ready_install_orders']
+
+    # إحصائيات المعاينات (للمطابقة مع جدول المعاينات)
+    from inspections.models import Inspection
+    pending_inspections_count = Inspection.objects.filter(status='pending').count()
+    orders_with_pending_inspections = orders.filter(inspections__status='pending').distinct().count()
+    orders_without_inspections = pending_orders - orders_with_pending_inspections
     
     # إجمالي الإيرادات - مسؤول المصنع فقط لا يرى الإيرادات
     if hasattr(request.user, 'is_factory_manager') and request.user.is_factory_manager and not request.user.is_superuser:
@@ -113,6 +116,10 @@ def orders_dashboard(request):
         'available_years': available_years,
         'selected_year': selected_year,
         'hide_revenue': hide_revenue,
+        # إحصائيات المعاينات المطابقة
+        'pending_inspections_count': pending_inspections_count,
+        'orders_with_pending_inspections': orders_with_pending_inspections,
+        'orders_without_inspections': orders_without_inspections,
     }
     
     return render(request, 'orders/orders_dashboard.html', context)

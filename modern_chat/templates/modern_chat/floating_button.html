@@ -1,0 +1,1860 @@
+<!-- الزر العائم للدردشة - قابل للسحب -->
+<div id="chatFloatingButton" class="chat-floating-btn draggable-btn">
+    <div class="chat-btn-main" onclick="toggleChatWidget()">
+        <i class="fas fa-comments"></i>
+        <span class="chat-notification-badge" id="chatNotificationBadge" style="display: none;">0</span>
+    </div>
+</div>
+
+<!-- نافذة الدردشة المصغرة -->
+<div id="chatWidget" class="chat-widget" style="display: none;">
+    <div class="chat-widget-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="fas fa-comments me-2"></i>
+                الدردشة
+            </h6>
+            <div class="chat-widget-controls">
+                <button class="btn btn-sm" onclick="minimizeChatWidget()" title="تصغير">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="btn btn-sm" onclick="closeChatWidget()" title="إغلاق">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="chat-widget-body">
+        <div class="chat-widget-tabs">
+            <div class="nav nav-tabs" role="tablist">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#chatRooms" type="button">
+                    المحادثات
+                </button>
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#activeUsers" type="button">
+                    المستخدمون
+                </button>
+            </div>
+        </div>
+        
+        <div class="tab-content">
+            <!-- المحادثات -->
+            <div class="tab-pane fade show active" id="chatRooms">
+                <div class="chat-rooms-list" id="chatRoomsList">
+                    <div class="text-center p-3">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <p class="mt-2 mb-0">جاري التحميل...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- المستخدمون النشطون -->
+            <div class="tab-pane fade" id="activeUsers">
+                <div class="active-users-list" id="activeUsersWidget">
+                    <div class="text-center p-3">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <p class="mt-2 mb-0">جاري التحميل...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="chat-widget-footer">
+        <small class="text-muted text-center d-block">
+            <i class="fas fa-comments me-1"></i>
+            نظام الدردشة المصغر
+        </small>
+    </div>
+</div>
+
+<!-- نافذة دردشة صغيرة مثل مسنجر -->
+<div id="miniChatWindow" class="mini-chat-window" style="display: none;">
+    <div class="mini-chat-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <div class="mini-chat-avatar">
+                    <span id="miniChatUserInitial">U</span>
+                </div>
+                <div class="ms-2">
+                    <h6 class="mb-0" id="miniChatUserName">اسم المستخدم</h6>
+                    <small class="text-success" id="miniChatUserStatus">متصل</small>
+                </div>
+            </div>
+            <div class="mini-chat-controls">
+                <button class="btn btn-sm" onclick="minimizeMiniChat()" title="تصغير">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="btn btn-sm" onclick="closeMiniChat()" title="إغلاق">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mini-chat-messages" id="miniChatMessages">
+        <!-- الرسائل ستظهر هنا -->
+    </div>
+
+    <!-- مؤشر الكتابة -->
+    <div class="typing-indicator" id="typingIndicator" style="display: none;">
+        <span class="typing-user"></span> يكتب
+        <div class="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </div>
+
+    <div class="mini-chat-input">
+        <div class="d-flex">
+            <input type="text" class="form-control form-control-sm"
+                   id="miniChatInput" placeholder="اكتب رسالة..."
+                   onkeypress="handleMiniChatEnter(event)"
+                   oninput="handleTyping()"
+                   onblur="stopTyping()">
+            <button class="btn btn-primary btn-sm ms-2" onclick="sendMiniChatMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- قائمة النقر بالزر الأيمن -->
+<div id="userContextMenu" class="context-menu" style="display: none;">
+    <div class="context-menu-item" onclick="viewUserProfile()">
+        <i class="fas fa-user me-2"></i>
+        عرض الملف الشخصي
+    </div>
+    <div class="context-menu-item" onclick="startPrivateChat()">
+        <i class="fas fa-comments me-2"></i>
+        بدء محادثة
+    </div>
+    <div class="context-menu-item" onclick="blockUser()">
+        <i class="fas fa-ban me-2"></i>
+        حظر المستخدم
+    </div>
+</div>
+
+<style>
+.chat-floating-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1050;
+    cursor: move;
+    user-select: none;
+    transition: none;
+    will-change: transform;
+}
+
+.chat-floating-btn.dragging {
+    transform: scale(1.05);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    z-index: 1060;
+    transition: none;
+}
+
+.chat-floating-btn.snapping {
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.chat-floating-btn:not(.dragging):not(.snapping) {
+    transition: transform 0.2s ease;
+}
+
+.chat-btn-main {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.chat-btn-main:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+}
+
+.chat-notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid white;
+}
+
+.chat-widget {
+    position: fixed;
+    bottom: 100px;
+    right: 30px;
+    width: 320px;
+    height: 400px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    z-index: 1040;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideInUp 0.3s ease;
+    border: 1px solid #e0e0e0;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.chat-widget-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 15px 15px 0 0;
+}
+
+.chat-widget-controls button {
+    background: none;
+    border: none;
+    color: white;
+    padding: 5px;
+    margin-left: 5px;
+    border-radius: 5px;
+    transition: background 0.2s ease;
+}
+
+.chat-widget-controls button:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.chat-widget-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-widget-tabs .nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+}
+
+.chat-widget-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-size: 14px;
+    padding: 10px 15px;
+}
+
+.chat-widget-tabs .nav-link.active {
+    background: white;
+    color: #667eea;
+    border-bottom: 2px solid #667eea;
+}
+
+.tab-content {
+    flex: 1;
+    overflow: hidden;
+}
+
+.tab-pane {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.chat-rooms-list, .active-users-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.chat-room-item, .user-item-widget {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.chat-room-item:hover, .user-item-widget:hover {
+    background: #f8f9fa;
+}
+
+.chat-widget-footer {
+    padding: 15px;
+    border-top: 1px solid #dee2e6;
+    background: #f8f9fa;
+}
+
+.user-avatar-small {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.status-online { background: #10b981; }
+.status-away { background: #f59e0b; }
+.status-busy { background: #ef4444; }
+.status-offline { background: #6b7280; }
+
+/* قائمة النقر بالزر الأيمن */
+.context-menu {
+    position: fixed;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    z-index: 2000;
+    min-width: 180px;
+    padding: 5px 0;
+}
+
+.context-menu-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-size: 14px;
+    color: #333;
+}
+
+.context-menu-item:hover {
+    background: #f8f9fa;
+}
+
+.context-menu-item i {
+    width: 16px;
+    text-align: center;
+}
+
+/* إشعارات الرسائل الجديدة */
+.new-message-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    z-index: 2000;
+    animation: slideInRight 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    max-width: 300px;
+    word-wrap: break-word;
+}
+
+.new-message-notification:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+}
+
+.new-message-notification i {
+    margin-left: 8px;
+    font-size: 16px;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* الإشعار العام للرسائل الجديدة */
+.global-message-notification {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    z-index: 2000;
+    cursor: pointer;
+    animation: slideInRight 0.3s ease, pulse 2s infinite 1s;
+    min-width: 250px;
+}
+
+.notification-content {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.notification-content i {
+    font-size: 24px;
+    color: #667eea;
+    margin-left: 15px;
+}
+
+.notification-text {
+    flex: 1;
+}
+
+.notification-text strong {
+    display: block;
+    color: #333;
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.notification-text small {
+    color: #666;
+    font-size: 12px;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+/* نافذة الدردشة الصغيرة مثل مسنجر */
+.mini-chat-window {
+    position: fixed;
+    bottom: 100px;
+    right: 100px;
+    width: 300px;
+    height: 350px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    z-index: 1045;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    animation: slideInUp 0.3s ease;
+}
+
+.mini-chat-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 10px 10px 0 0;
+}
+
+.mini-chat-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.mini-chat-controls button {
+    background: none;
+    border: none;
+    color: white;
+    padding: 5px;
+    margin-left: 5px;
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+.mini-chat-controls button:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.mini-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    background: #f8f9fa;
+}
+
+.mini-chat-input {
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    background: white;
+}
+
+.mini-message {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: flex-start;
+}
+
+.mini-message.own {
+    flex-direction: row-reverse;
+}
+
+.mini-message-content {
+    max-width: 70%;
+    padding: 8px 12px;
+    border-radius: 15px;
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+.mini-message:not(.own) .mini-message-content {
+    background: #e9ecef;
+    color: #333;
+}
+
+.mini-message.own .mini-message-content {
+    background: #667eea;
+    color: white;
+}
+
+.mini-message-time {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-top: 2px;
+    text-align: center;
+}
+
+/* مؤشر الكتابة */
+.typing-indicator {
+    padding: 8px 15px;
+    background: rgba(0,0,0,0.05);
+    border-top: 1px solid #ddd;
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+}
+
+.typing-dots {
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.typing-dots span {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #666;
+    margin: 0 1px;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* تحسينات للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .chat-widget {
+        width: calc(100vw - 20px);
+        right: 10px;
+        left: 10px;
+        height: 400px;
+    }
+
+    .chat-floating-btn {
+        bottom: 20px;
+        right: 20px;
+    }
+
+    .mini-chat-window {
+        width: calc(100vw - 40px);
+        right: 20px;
+        height: 300px;
+    }
+}
+</style>
+
+<script>
+let chatWidgetVisible = false;
+let chatWidgetMinimized = false;
+let isDragging = false;
+let dragOffset = { x: 0, y: 0 };
+
+// متغيرات WebSocket
+let chatSocket = null;
+let isConnected = false;
+let reconnectAttempts = 0;
+let maxReconnectAttempts = 5;
+let reconnectDelay = 1000;
+
+// إعداد WebSocket
+function initializeWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat/`;
+
+    chatSocket = new WebSocket(wsUrl);
+
+    chatSocket.onopen = function(e) {
+        console.log('WebSocket متصل');
+        isConnected = true;
+        reconnectAttempts = 0;
+
+        // إرسال تحديث حالة المستخدم
+        sendWebSocketMessage({
+            type: 'user_status_update',
+            status: 'online'
+        });
+    };
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        handleWebSocketMessage(data);
+    };
+
+    chatSocket.onclose = function(e) {
+        console.log('WebSocket مقطوع');
+        isConnected = false;
+
+        // إعادة الاتصال التلقائي
+        if (reconnectAttempts < maxReconnectAttempts) {
+            setTimeout(() => {
+                reconnectAttempts++;
+                console.log(`محاولة إعادة الاتصال ${reconnectAttempts}/${maxReconnectAttempts}`);
+                initializeWebSocket();
+            }, reconnectDelay * reconnectAttempts);
+        }
+    };
+
+    chatSocket.onerror = function(e) {
+        console.error('خطأ في WebSocket:', e);
+    };
+}
+
+function sendWebSocketMessage(message) {
+    if (chatSocket && isConnected) {
+        chatSocket.send(JSON.stringify(message));
+    } else {
+        console.warn('WebSocket غير متصل');
+    }
+}
+
+function handleWebSocketMessage(data) {
+    console.log('رسالة WebSocket:', data);
+
+    switch(data.type) {
+        case 'new_message':
+            handleNewWebSocketMessage(data.message);
+            break;
+        case 'typing_indicator':
+            handleTypingIndicator(data);
+            break;
+        case 'user_status_update':
+            handleUserStatusUpdate(data);
+            break;
+        case 'new_message_notification':
+            handleNewMessageNotification(data);
+            break;
+        case 'room_joined':
+            console.log('تم الانضمام للغرفة:', data.room_id);
+            break;
+        case 'messages_read':
+            handleMessagesRead(data);
+            break;
+    }
+}
+
+function handleNewWebSocketMessage(message) {
+    // إضافة الرسالة للواجهة فوراً
+    if (!message.sender.is_current_user) {
+        addMiniChatMessage(message.content, false, message.created_at);
+        playNotificationSound();
+
+        // فتح النافذة تلقائياً إذا لم تكن مفتوحة
+        const miniWindow = document.getElementById('miniChatWindow');
+        if (miniWindow.style.display !== 'flex') {
+            openMiniChatForRoom(message.room_id);
+        }
+
+        // إظهار إشعار
+        showNewMessageNotification({
+            sender: { name: message.sender.name },
+            content: message.content
+        });
+    }
+
+    // تحديث العداد
+    lastMessageCount++;
+}
+
+function handleTypingIndicator(data) {
+    const typingIndicator = document.getElementById('typingIndicator');
+    if (!typingIndicator) return;
+
+    if (data.is_typing) {
+        typingIndicator.innerHTML = `
+            <span class="typing-user">${data.user_name}</span> يكتب
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        `;
+        typingIndicator.style.display = 'block';
+    } else {
+        typingIndicator.style.display = 'none';
+    }
+}
+
+function handleUserStatusUpdate(data) {
+    // تحديث حالة المستخدم في القائمة
+    updateUserStatusInList(data.user_id, data.status);
+}
+
+function handleNewMessageNotification(data) {
+    // إشعار للرسائل من غرف أخرى
+    if (currentChatRoomId !== data.room_id) {
+        showGlobalNewMessageNotification({
+            has_new_messages: true,
+            new_message_count: 1,
+            sender_name: data.message.sender_name
+        });
+    }
+}
+
+function handleMessagesRead(data) {
+    // تحديث حالة قراءة الرسائل
+    console.log(`المستخدم ${data.user_id} قرأ الرسائل في الغرفة ${data.room_id}`);
+}
+
+// إعداد السحب والإفلات
+document.addEventListener('DOMContentLoaded', function() {
+    const floatingBtn = document.getElementById('chatFloatingButton');
+
+    // إعداد السحب
+    floatingBtn.addEventListener('mousedown', startDrag);
+    floatingBtn.addEventListener('touchstart', startDrag);
+
+    // تهيئة WebSocket
+    initializeWebSocket();
+
+    // تحديث حالة المستخدم وتحميل البيانات
+    updateUserStatus();
+    loadActiveUsers();
+
+    // تحديث دوري أقل تكراراً (لأن WebSocket يتولى التحديثات الفورية)
+    setInterval(updateUserStatus, 300000); // كل 5 دقائق
+    setInterval(loadActiveUsers, 600000);  // كل 10 دقائق
+});
+
+function startDrag(e) {
+    if (e.target.closest('.chat-btn-main')) {
+        e.preventDefault();
+        isDragging = true;
+
+        const floatingBtn = document.getElementById('chatFloatingButton');
+        const rect = floatingBtn.getBoundingClientRect();
+
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+        dragOffset.x = clientX - rect.left;
+        dragOffset.y = clientY - rect.top;
+
+        floatingBtn.classList.add('dragging');
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchmove', drag);
+        document.addEventListener('touchend', stopDrag);
+    }
+}
+
+function drag(e) {
+    if (!isDragging) return;
+
+    e.preventDefault();
+    const floatingBtn = document.getElementById('chatFloatingButton');
+
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+    let newX = clientX - dragOffset.x;
+    let newY = clientY - dragOffset.y;
+
+    // حدود الشاشة مع هامش
+    const margin = 10;
+    const maxX = window.innerWidth - floatingBtn.offsetWidth - margin;
+    const maxY = window.innerHeight - floatingBtn.offsetHeight - margin;
+
+    newX = Math.max(margin, Math.min(newX, maxX));
+    newY = Math.max(margin, Math.min(newY, maxY));
+
+    // استخدام transform بدلاً من left/top للأداء الأفضل
+    floatingBtn.style.transform = `translate(${newX - parseInt(floatingBtn.style.right || 30)}px, ${newY - parseInt(floatingBtn.style.bottom || 30)}px) scale(1.05)`;
+}
+
+function stopDrag() {
+    if (!isDragging) return;
+
+    isDragging = false;
+    const floatingBtn = document.getElementById('chatFloatingButton');
+
+    floatingBtn.classList.remove('dragging');
+    floatingBtn.classList.add('snapping');
+
+    // التقاط إلى الحواف
+    snapToEdge();
+
+    setTimeout(() => {
+        floatingBtn.classList.remove('snapping');
+    }, 200);
+
+    document.removeEventListener('mousemove', drag);
+    document.removeEventListener('mouseup', stopDrag);
+    document.removeEventListener('touchmove', drag);
+    document.removeEventListener('touchend', stopDrag);
+}
+
+function snapToEdge() {
+    const floatingBtn = document.getElementById('chatFloatingButton');
+    const rect = floatingBtn.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+
+    // إعادة تعيين transform
+    floatingBtn.style.transform = '';
+
+    if (centerX < window.innerWidth / 2) {
+        // التقاط إلى اليسار
+        floatingBtn.style.left = '20px';
+        floatingBtn.style.right = 'auto';
+        floatingBtn.style.top = rect.top + 'px';
+        floatingBtn.style.bottom = 'auto';
+    } else {
+        // التقاط إلى اليمين
+        floatingBtn.style.right = '20px';
+        floatingBtn.style.left = 'auto';
+        floatingBtn.style.top = rect.top + 'px';
+        floatingBtn.style.bottom = 'auto';
+    }
+}
+
+function toggleChatWidget() {
+    if (isDragging) return; // منع فتح النافذة أثناء السحب
+
+    const widget = document.getElementById('chatWidget');
+
+    if (chatWidgetVisible) {
+        if (chatWidgetMinimized) {
+            // إظهار النافذة المصغرة
+            widget.style.display = 'flex';
+            chatWidgetMinimized = false;
+            loadChatData();
+            // إخفاء عداد الإشعارات عند فتح النافذة
+            const badge = document.getElementById('chatNotificationBadge');
+            if (badge) {
+                badge.style.display = 'none';
+            }
+        } else {
+            // إخفاء النافذة
+            closeChatWidget();
+        }
+    } else {
+        // إظهار النافذة
+        widget.style.display = 'flex';
+        chatWidgetVisible = true;
+        chatWidgetMinimized = false;
+        loadChatData();
+        // إخفاء عداد الإشعارات عند فتح النافذة
+        const badge = document.getElementById('chatNotificationBadge');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function minimizeChatWidget() {
+    const widget = document.getElementById('chatWidget');
+    widget.style.display = 'none';
+    chatWidgetMinimized = true;
+}
+
+function closeChatWidget() {
+    const widget = document.getElementById('chatWidget');
+    widget.style.display = 'none';
+    chatWidgetVisible = false;
+    chatWidgetMinimized = false;
+}
+
+function openFullChat() {
+    // لا نحتاج هذه الدالة بعد الآن
+    alert('تم إزالة شاشة المحادثة الكبيرة. استخدم النافذة الصغيرة فقط.');
+}
+
+function loadChatData() {
+    // تحميل المحادثات
+    loadChatRooms();
+    // تحميل المستخدمين النشطين
+    loadActiveUsers();
+}
+
+function loadChatRooms() {
+    fetch('/modern-chat/api/user-rooms/')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('chatRoomsList');
+
+            if (data.rooms && data.rooms.length > 0) {
+                container.innerHTML = data.rooms.map(room => `
+                    <div class="chat-room-item" onclick="openRoomFromWidget('${room.id}')">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar-small">
+                                ${room.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="ms-2 flex-grow-1">
+                                <h6 class="mb-0" style="font-size: 14px;">${room.name}</h6>
+                                <small class="text-muted">
+                                    ${room.last_message ? room.last_message.content.substring(0, 30) + '...' : 'لا توجد رسائل'}
+                                </small>
+                            </div>
+                            ${room.unread_count > 0 ? `<span class="badge bg-primary">${room.unread_count}</span>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = `
+                    <div class="text-center p-3">
+                        <i class="fas fa-comments text-muted" style="font-size: 32px;"></i>
+                        <p class="text-muted mt-2 mb-0">لا توجد محادثات</p>
+                        <small class="text-muted">ابدأ محادثة جديدة من قائمة المستخدمين</small>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('خطأ في تحميل المحادثات:', error);
+            const container = document.getElementById('chatRoomsList');
+            container.innerHTML = `
+                <div class="text-center p-3">
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                    <p class="text-muted mt-2 mb-0">خطأ في التحميل</p>
+                </div>
+            `;
+        });
+}
+
+function openRoomFromWidget(roomId) {
+    // فتح النافذة الصغيرة بدلاً من الانتقال للصفحة
+    openMiniChatForRoom(roomId);
+
+    // إغلاق النافذة الكبيرة
+    closeChatWidget();
+}
+
+function loadActiveUsers() {
+    console.log('جاري تحميل المستخدمين النشطين...');
+
+    fetch('/modern-chat/api/active-users/')
+        .then(response => {
+            console.log('استجابة الخادم:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('بيانات المستخدمين:', data);
+            updateActiveUsersWidget(data.users || []);
+
+            // تحديث عداد الإشعارات
+            const badge = document.getElementById('chatNotificationBadge');
+            if (badge && data.count > 0) {
+                badge.textContent = data.count;
+                badge.style.display = 'flex';
+            } else if (badge) {
+                badge.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('خطأ في تحميل المستخدمين النشطين:', error);
+            const container = document.getElementById('activeUsersWidget');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center p-3">
+                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                        <p class="text-muted mt-2 mb-0">خطأ في التحميل: ${error.message}</p>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadActiveUsers()">
+                            <i class="fas fa-redo"></i> إعادة المحاولة
+                        </button>
+                    </div>
+                `;
+            }
+        });
+}
+
+function updateActiveUsersWidget(users) {
+    const container = document.getElementById('activeUsersWidget');
+    
+    if (users.length === 0) {
+        container.innerHTML = `
+            <div class="text-center p-3">
+                <i class="fas fa-user-slash text-muted" style="font-size: 32px;"></i>
+                <p class="text-muted mt-2 mb-0">لا يوجد مستخدمون نشطون</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = users.map(user => `
+        <div class="user-item-widget"
+             onclick="startPrivateChatFromWidget(${user.id})"
+             oncontextmenu="showUserContextMenu(event, ${user.id}, '${user.name}', '${user.username}')">
+            <div class="d-flex align-items-center">
+                <div class="user-avatar-small">
+                    ${user.name.charAt(0).toUpperCase()}
+                </div>
+                <div class="ms-2 flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0" style="font-size: 14px;">${user.name}</h6>
+                        <span class="status-indicator status-${user.status}"></span>
+                    </div>
+                    <small class="text-muted">${getStatusText(user.status)}</small>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function startPrivateChatFromWidget(userId) {
+    // فتح نافذة دردشة صغيرة بدلاً من الانتقال للصفحة
+    openMiniChat(userId);
+}
+
+// دوال النافذة الصغيرة
+let currentChatUserId = null;
+let currentChatRoomId = null;
+
+function openMiniChat(userId) {
+    // إخفاء النافذة الكبيرة
+    closeChatWidget();
+
+    currentChatUserId = userId;
+
+    // إظهار النافذة الصغيرة
+    const miniWindow = document.getElementById('miniChatWindow');
+    miniWindow.style.display = 'flex';
+
+    // تحميل بيانات المستخدم
+    loadUserDataForMiniChat(userId);
+
+    // إنشاء أو العثور على غرفة الدردشة
+    createOrFindPrivateRoom(userId);
+}
+
+function createOrFindPrivateRoom(userId) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                     document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    fetch(`/modern-chat/private/${userId}/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        if (data.room_id) {
+            currentChatRoomId = data.room_id;
+
+            // تحديث معلومات المستخدم في النافذة
+            if (data.other_user) {
+                document.getElementById('miniChatUserInitial').textContent =
+                    data.other_user.name.charAt(0).toUpperCase();
+                document.getElementById('miniChatUserName').textContent = data.other_user.name;
+                document.getElementById('miniChatUserStatus').textContent = 'متصل';
+            }
+
+            loadMiniChatMessages(data.room_id);
+            startMessagePolling();
+            console.log('تم إنشاء/العثور على الغرفة:', data.room_id);
+        }
+    })
+    .catch(error => {
+        console.error('خطأ في إنشاء الغرفة:', error);
+        alert('خطأ في إنشاء المحادثة: ' + error.message);
+    });
+}
+
+function loadUserDataForMiniChat(userId) {
+    // الحصول على بيانات المستخدم من API
+    fetch(`/modern-chat/api/user-info/${userId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('خطأ في تحميل بيانات المستخدم:', data.error);
+                return;
+            }
+
+            // تحديث واجهة النافذة الصغيرة
+            document.getElementById('miniChatUserInitial').textContent =
+                data.name.charAt(0).toUpperCase();
+            document.getElementById('miniChatUserName').textContent = data.name;
+
+            // تحديث حالة المستخدم
+            const statusText = {
+                'online': 'متصل',
+                'away': 'غائب',
+                'busy': 'مشغول',
+                'offline': 'غير متصل'
+            };
+            document.getElementById('miniChatUserStatus').textContent =
+                statusText[data.status] || 'غير معروف';
+
+            console.log('تم تحميل بيانات المستخدم:', data.name);
+        })
+        .catch(error => {
+            console.error('خطأ في تحميل بيانات المستخدم:', error);
+            // قيم افتراضية في حالة الخطأ
+            document.getElementById('miniChatUserInitial').textContent = 'U';
+            document.getElementById('miniChatUserName').textContent = 'مستخدم';
+            document.getElementById('miniChatUserStatus').textContent = 'غير معروف';
+        });
+}
+
+function loadMiniChatMessages(roomId) {
+    if (!roomId) return;
+
+    fetch(`/modern-chat/api/messages/${roomId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('miniChatMessages');
+            container.innerHTML = '';
+
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(message => {
+                    addMiniChatMessage(message.content, message.sender.is_current_user, message.created_at);
+                });
+                // تحديث عداد الرسائل المهم جداً!
+                lastMessageCount = data.messages.length;
+                console.log('تم تحديث lastMessageCount إلى:', lastMessageCount);
+            } else {
+                container.innerHTML = `
+                    <div class="text-center text-muted p-3">
+                        <i class="fas fa-comments fa-2x mb-2"></i>
+                        <p class="mb-0">ابدأ المحادثة</p>
+                    </div>
+                `;
+                lastMessageCount = 0;
+            }
+
+            // تحديد الرسائل كمقروءة عند فتح النافذة
+            markMessagesAsRead(roomId);
+        })
+        .catch(error => {
+            console.error('خطأ في تحميل الرسائل:', error);
+        });
+}
+
+function sendMiniChatMessage() {
+    const input = document.getElementById('miniChatInput');
+    const message = input.value.trim();
+
+    if (!message || !currentChatRoomId) return;
+
+    // تعطيل الإدخال مؤقتاً
+    input.disabled = true;
+
+    // إرسال عبر WebSocket إذا كان متصلاً
+    if (isConnected) {
+        sendWebSocketMessage({
+            type: 'send_message',
+            room_id: currentChatRoomId,
+            content: message
+        });
+
+        // إضافة الرسالة للواجهة فوراً
+        addMiniChatMessage(message, true);
+        input.value = '';
+
+        // التأكد من أن النافذة مفتوحة
+        const miniWindow = document.getElementById('miniChatWindow');
+        if (miniWindow.style.display !== 'flex') {
+            miniWindow.style.display = 'flex';
+            console.log('تم فتح النافذة تلقائياً بعد إرسال الرسالة');
+        }
+
+        // تحديث عداد الرسائل
+        lastMessageCount++;
+        console.log('تم إرسال الرسالة عبر WebSocket');
+
+        input.disabled = false;
+        input.focus();
+    } else {
+        // استخدام HTTP كبديل
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        fetch('/modern-chat/api/send-message/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                room_id: currentChatRoomId,
+                content: message
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            // إضافة الرسالة للواجهة
+            addMiniChatMessage(message, true);
+            input.value = '';
+
+            // التأكد من أن النافذة مفتوحة
+            const miniWindow = document.getElementById('miniChatWindow');
+            if (miniWindow.style.display !== 'flex') {
+                miniWindow.style.display = 'flex';
+                console.log('تم فتح النافذة تلقائياً بعد إرسال الرسالة');
+            }
+
+            // تحديث عداد الرسائل
+            lastMessageCount++;
+            console.log('تم إرسال الرسالة عبر HTTP');
+        })
+        .catch(error => {
+            console.error('خطأ في إرسال الرسالة:', error);
+            alert('خطأ في إرسال الرسالة: ' + error.message);
+        })
+        .finally(() => {
+            input.disabled = false;
+            input.focus();
+        });
+    }
+}
+
+function addMiniChatMessage(content, isOwn = false, timestamp = null) {
+    const container = document.getElementById('miniChatMessages');
+
+    // إزالة رسالة "ابدأ المحادثة" إذا كانت موجودة
+    const emptyMessage = container.querySelector('.text-center');
+    if (emptyMessage) {
+        emptyMessage.remove();
+    }
+
+    const messageElement = document.createElement('div');
+    messageElement.className = `mini-message ${isOwn ? 'own' : ''}`;
+
+    let time;
+    if (timestamp) {
+        time = new Date(timestamp).toLocaleTimeString('ar-EG', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } else {
+        time = new Date().toLocaleTimeString('ar-EG', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    messageElement.innerHTML = `
+        <div class="mini-message-content">
+            ${content}
+            <div class="mini-message-time">${time}</div>
+        </div>
+    `;
+
+    container.appendChild(messageElement);
+    container.scrollTop = container.scrollHeight;
+
+    // إضافة تأثير بصري للرسالة الجديدة
+    if (!timestamp) { // رسالة جديدة
+        messageElement.style.opacity = '0';
+        messageElement.style.transform = 'translateY(10px)';
+        setTimeout(() => {
+            messageElement.style.transition = 'all 0.3s ease';
+            messageElement.style.opacity = '1';
+            messageElement.style.transform = 'translateY(0)';
+        }, 10);
+    }
+}
+
+let typingTimer = null;
+let isTyping = false;
+
+function handleMiniChatEnter(event) {
+    if (event.key === 'Enter') {
+        sendMiniChatMessage();
+        stopTyping();
+    }
+}
+
+function handleTyping() {
+    if (!isConnected || !currentChatRoomId) return;
+
+    // إرسال مؤشر بدء الكتابة
+    if (!isTyping) {
+        isTyping = true;
+        sendWebSocketMessage({
+            type: 'typing_start',
+            room_id: currentChatRoomId
+        });
+    }
+
+    // إعادة تعيين المؤقت
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+        stopTyping();
+    }, 2000); // توقف الكتابة بعد ثانيتين من عدم النشاط
+}
+
+function stopTyping() {
+    if (isTyping && isConnected && currentChatRoomId) {
+        isTyping = false;
+        sendWebSocketMessage({
+            type: 'typing_stop',
+            room_id: currentChatRoomId
+        });
+    }
+
+    clearTimeout(typingTimer);
+}
+
+function minimizeMiniChat() {
+    const miniWindow = document.getElementById('miniChatWindow');
+    miniWindow.style.display = 'none';
+    // يمكن إضافة حالة مصغرة هنا
+}
+
+let messagePollingInterval = null;
+let lastMessageCount = 0;
+
+function startMessagePolling() {
+    // إيقاف التحديث السابق إن وجد
+    if (messagePollingInterval) {
+        clearInterval(messagePollingInterval);
+    }
+
+    // تحديث الرسائل كل 5 ثوان فقط عند فتح النافذة
+    messagePollingInterval = setInterval(() => {
+        if (currentChatRoomId && document.getElementById('miniChatWindow').style.display === 'flex') {
+            checkForNewMessages();
+        }
+    }, 5000);
+}
+
+let isCheckingMessages = false;
+
+function checkForNewMessages() {
+    if (!currentChatRoomId || isCheckingMessages) return;
+
+    isCheckingMessages = true;
+
+    fetch(`/modern-chat/api/messages/${currentChatRoomId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.messages && data.messages.length > lastMessageCount) {
+                console.log(`رسائل جديدة: ${data.messages.length - lastMessageCount}`);
+
+                // هناك رسائل جديدة
+                const newMessages = data.messages.slice(lastMessageCount);
+                let hasNewMessagesFromOthers = false;
+
+                newMessages.forEach(message => {
+                    if (!message.sender.is_current_user) {
+                        // رسالة من مستخدم آخر
+                        addMiniChatMessage(message.content, false, message.created_at);
+                        showNewMessageNotification(message);
+                        hasNewMessagesFromOthers = true;
+                        console.log('رسالة جديدة من:', message.sender.name);
+                    } else {
+                        console.log('رسالة من المستخدم الحالي، تم تجاهلها');
+                    }
+                });
+
+                lastMessageCount = data.messages.length;
+
+                // تحديد الرسائل كمقروءة إذا كانت النافذة مفتوحة
+                if (hasNewMessagesFromOthers &&
+                    document.getElementById('miniChatWindow').style.display === 'flex') {
+                    markMessagesAsRead(currentChatRoomId);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('خطأ في فحص الرسائل الجديدة:', error);
+        })
+        .finally(() => {
+            isCheckingMessages = false;
+        });
+}
+
+function showNewMessageNotification(message) {
+    // تشغيل الصوت
+    playNotificationSound();
+
+    // إظهار إشعار الرسالة الجديدة
+    const notification = document.createElement('div');
+    notification.className = 'new-message-notification';
+    notification.innerHTML = `
+        <i class="fas fa-comment"></i>
+        رسالة جديدة من ${message.sender.name}
+    `;
+
+    // إضافة حدث النقر لفتح النافذة وإخفاء الإشعار
+    notification.onclick = () => {
+        // فتح النافذة إذا لم تكن مفتوحة
+        const miniWindow = document.getElementById('miniChatWindow');
+        if (miniWindow.style.display !== 'flex') {
+            openMiniChatForRoom(currentChatRoomId);
+        }
+        // إزالة الإشعار
+        notification.remove();
+        // تحديد الرسائل كمقروءة
+        markMessagesAsRead(currentChatRoomId);
+    };
+
+    document.body.appendChild(notification);
+
+    // إزالة الإشعار بعد 5 ثوان
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+
+    // تحديث عداد الإشعارات
+    updateNotificationBadge();
+
+    // فتح النافذة الصغيرة تلقائياً إذا لم تكن مفتوحة
+    const miniWindow = document.getElementById('miniChatWindow');
+    if (miniWindow.style.display !== 'flex') {
+        console.log('فتح النافذة تلقائياً لرسالة جديدة');
+        openMiniChatForRoom(currentChatRoomId);
+    }
+}
+
+function updateNotificationBadge() {
+    const badge = document.getElementById('chatNotificationBadge');
+    if (badge) {
+        badge.style.display = 'flex';
+        badge.textContent = '!';
+    }
+}
+
+function closeMiniChat() {
+    const miniWindow = document.getElementById('miniChatWindow');
+    miniWindow.style.display = 'none';
+
+    // إيقاف التحديث الدوري
+    if (messagePollingInterval) {
+        clearInterval(messagePollingInterval);
+        messagePollingInterval = null;
+    }
+
+    // إعادة تعيين المتغيرات
+    currentChatUserId = null;
+    currentChatRoomId = null;
+    lastMessageCount = 0;
+}
+
+// إنشاء أصوات الإشعارات
+let notificationAudio = null;
+
+function initializeNotificationSound() {
+    // إنشاء صوت إشعار باستخدام Web Audio API
+    if (typeof(Audio) !== "undefined") {
+        // يمكن استخدام ملف صوتي أو إنشاء صوت برمجياً
+        notificationAudio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
+    }
+}
+
+function playNotificationSound() {
+    try {
+        if (notificationAudio) {
+            notificationAudio.currentTime = 0;
+            notificationAudio.play().catch(e => {
+                console.log('لا يمكن تشغيل الصوت:', e);
+            });
+        } else {
+            // صوت بديل باستخدام beep
+            createBeepSound();
+        }
+    } catch (error) {
+        console.log('خطأ في تشغيل الصوت:', error);
+    }
+}
+
+function createBeepSound() {
+    // إنشاء صوت beep برمجياً
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+        console.log('لا يمكن إنشاء الصوت:', error);
+    }
+}
+
+function markMessagesAsRead(roomId) {
+    if (!roomId) return;
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                     document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    fetch(`/modern-chat/api/mark-read/${roomId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log(`تم تحديد ${data.marked_count} رسالة كمقروءة`);
+            // إخفاء عداد الإشعارات
+            const badge = document.getElementById('chatNotificationBadge');
+            if (badge) {
+                badge.style.display = 'none';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('خطأ في تحديد الرسائل كمقروءة:', error);
+    });
+}
+
+function openMiniChatForRoom(roomId) {
+    if (!roomId) return;
+
+    // إظهار النافذة الصغيرة
+    const miniWindow = document.getElementById('miniChatWindow');
+    miniWindow.style.display = 'flex';
+
+    // تحديث معرف الغرفة
+    currentChatRoomId = roomId;
+
+    // الانضمام للغرفة عبر WebSocket
+    if (isConnected) {
+        sendWebSocketMessage({
+            type: 'join_room',
+            room_id: roomId
+        });
+    }
+
+    // تحميل الرسائل
+    loadMiniChatMessages(roomId);
+
+    // بدء التحديث الدوري (كنسخة احتياطية)
+    startMessagePolling();
+
+    // تحديد الرسائل كمقروءة
+    if (isConnected) {
+        sendWebSocketMessage({
+            type: 'mark_read',
+            room_id: roomId
+        });
+    }
+}
+
+function openFullChatFromMini() {
+    // لا نحتاج هذه الدالة بعد الآن - تم إزالة الشاشة الكبيرة
+    alert('تم إزالة شاشة المحادثة الكبيرة. استخدم النافذة الصغيرة فقط.');
+}
+
+// متغيرات قائمة السياق
+let contextMenuUserId = null;
+let contextMenuUserName = '';
+let contextMenuUsername = '';
+
+// دوال قائمة السياق
+function showUserContextMenu(event, userId, userName, username) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    contextMenuUserId = userId;
+    contextMenuUserName = userName;
+    contextMenuUsername = username;
+
+    const contextMenu = document.getElementById('userContextMenu');
+    contextMenu.style.display = 'block';
+    contextMenu.style.left = event.pageX + 'px';
+    contextMenu.style.top = event.pageY + 'px';
+
+    // إخفاء القائمة عند النقر في أي مكان آخر
+    setTimeout(() => {
+        document.addEventListener('click', hideContextMenu);
+    }, 10);
+}
+
+function hideContextMenu() {
+    const contextMenu = document.getElementById('userContextMenu');
+    contextMenu.style.display = 'none';
+    document.removeEventListener('click', hideContextMenu);
+}
+
+function viewUserProfile() {
+    hideContextMenu();
+    if (contextMenuUserId) {
+        // فتح صفحة الملف الشخصي
+        window.open(`/accounts/profile/${contextMenuUserId}/`, '_blank');
+    }
+}
+
+function startPrivateChat() {
+    hideContextMenu();
+    if (contextMenuUserId) {
+        startPrivateChatFromWidget(contextMenuUserId);
+    }
+}
+
+function blockUser() {
+    hideContextMenu();
+    if (contextMenuUserId) {
+        if (confirm(`هل أنت متأكد من حظر المستخدم ${contextMenuUserName}؟`)) {
+            // هنا يمكن إضافة منطق الحظر
+            alert('تم حظر المستخدم بنجاح');
+        }
+    }
+}
+
+function getStatusText(status) {
+    const statusMap = {
+        'online': 'متصل',
+        'away': 'غائب', 
+        'busy': 'مشغول',
+        'offline': 'غير متصل'
+    };
+    return statusMap[status] || 'غير معروف';
+}
+
+// تحديث البيانات عند الحاجة فقط
+let lastActiveUsersUpdate = 0;
+setInterval(function() {
+    // تحديث المستخدمين النشطين فقط إذا كانت النافذة مفتوحة ومرت 3 دقائق على آخر تحديث
+    if (chatWidgetVisible && !chatWidgetMinimized &&
+        (Date.now() - lastActiveUsersUpdate) > 180000) {
+        loadActiveUsers();
+        lastActiveUsersUpdate = Date.now();
+    }
+}, 60000);
+
+// فحص الرسائل الجديدة للمستخدم الحالي
+let globalMessageCheckInterval = null;
+
+function startGlobalMessageCheck() {
+    if (globalMessageCheckInterval) {
+        clearInterval(globalMessageCheckInterval);
+    }
+
+    globalMessageCheckInterval = setInterval(() => {
+        checkForNewMessagesGlobal();
+    }, 30000); // فحص كل 30 ثانية
+}
+
+let isCheckingGlobalMessages = false;
+
+function checkForNewMessagesGlobal() {
+    // تجنب الطلبات المتكررة
+    if (isCheckingGlobalMessages) return;
+
+    isCheckingGlobalMessages = true;
+
+    // فحص الرسائل الجديدة في جميع الغرف
+    fetch('/modern-chat/api/check-new-messages/', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.has_new_messages) {
+            // إظهار إشعار وفتح النافذة
+            showGlobalNewMessageNotification(data);
+
+            // فتح النافذة تلقائياً إذا لم تكن مفتوحة
+            if (!chatWidgetVisible && document.getElementById('miniChatWindow').style.display !== 'flex') {
+                // لا نفتح تلقائياً، فقط نظهر الإشعار
+                console.log('رسائل جديدة متاحة');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('خطأ في فحص الرسائل الجديدة:', error);
+    })
+    .finally(() => {
+        isCheckingGlobalMessages = false;
+    });
+}
+
+function showGlobalNewMessageNotification(data) {
+    const notification = document.createElement('div');
+    notification.className = 'global-message-notification';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas fa-envelope"></i>
+            <div class="notification-text">
+                <strong>رسائل جديدة (${data.new_message_count})</strong>
+                <small>انقر لفتح الدردشة</small>
+            </div>
+        </div>
+    `;
+
+    notification.onclick = () => {
+        // فتح النافذة إذا لم تكن مفتوحة
+        if (!chatWidgetVisible) {
+            toggleChatWidget();
+        }
+        // إذا كانت مفتوحة ومصغرة، إظهارها
+        else if (chatWidgetMinimized) {
+            const widget = document.getElementById('chatWidget');
+            widget.style.display = 'flex';
+            chatWidgetMinimized = false;
+        }
+
+        // إخفاء عداد الإشعارات
+        const badge = document.getElementById('chatNotificationBadge');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+
+        notification.remove();
+    };
+
+    document.body.appendChild(notification);
+
+    // إزالة الإشعار بعد 5 ثوان
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+
+    // تحديث عداد الإشعارات
+    const badge = document.getElementById('chatNotificationBadge');
+    if (badge) {
+        badge.style.display = 'flex';
+        badge.textContent = data.new_message_count;
+    }
+}
+
+// بدء فحص الرسائل عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    startGlobalMessageCheck();
+    initializeNotificationSound();
+
+    // طلب إذن الإشعارات
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+});
+
+// تحديث حالة المستخدم
+function updateUserStatus() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                     document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    if (!csrfToken) {
+        console.warn('CSRF token not found');
+        return;
+    }
+
+    fetch('/modern-chat/api/update-status/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            status: 'online'
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            console.log('تم تحديث حالة المستخدم');
+        }
+        return response.json();
+    })
+    .catch(error => console.error('Error updating status:', error));
+}
+
+// تحديث الحالة كل 30 ثانية
+setInterval(updateUserStatus, 30000);
+
+// تحديث الحالة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    updateUserStatus();
+});
+</script>

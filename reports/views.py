@@ -167,7 +167,11 @@ class ReportListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         # عرض جميع التقارير للجميع ممن لديهم الصلاحية
-        return Report.objects.all()
+        queryset = Report.objects.all()
+
+        # تم إلغاء الفلترة الافتراضية
+
+        return queryset
 
 class ReportCreateView(LoginRequiredMixin, CreateView):
     model = Report

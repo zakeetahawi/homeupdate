@@ -635,6 +635,51 @@ class DashboardYearSettings(models.Model):
         return timezone.now().year
 
 
+class YearFilterExemption(models.Model):
+    """
+    إعدادات استثناء الأقسام من فلتر السنة الافتراضية
+    """
+    SECTION_CHOICES = [
+        ('customers', 'العملاء'),
+        ('inspections', 'المعاينات'),
+        ('inventory', 'المخزون'),
+        ('reports', 'التقارير'),
+        ('orders', 'الطلبات'),
+        ('installations', 'التركيبات'),
+        ('manufacturing', 'التصنيع'),
+    ]
+
+    section = models.CharField(_('القسم'), max_length=50, choices=SECTION_CHOICES, unique=True)
+    is_exempt = models.BooleanField(_('معفى من فلتر السنة'), default=False)
+    description = models.CharField(_('الوصف'), max_length=200, blank=True)
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+
+    class Meta:
+        verbose_name = _('إعفاء قسم من فلتر السنة')
+        verbose_name_plural = _('إعفاءات الأقسام من فلتر السنة')
+        ordering = ['section']
+
+    def __str__(self):
+        status = 'معفى' if self.is_exempt else 'غير معفى'
+        return f"{self.get_section_display()} - {status}"
+
+    @classmethod
+    def is_section_exempt(cls, section_name):
+        """التحقق من إعفاء قسم معين من فلتر السنة"""
+        try:
+            exemption = cls.objects.get(section=section_name)
+            return exemption.is_exempt
+        except cls.DoesNotExist:
+            # إذا لم يكن هناك إعداد، فالقسم غير معفى (يطبق الفلتر)
+            return False
+
+    @classmethod
+    def get_exempt_sections(cls):
+        """الحصول على قائمة الأقسام المعفاة من فلتر السنة"""
+        return cls.objects.filter(is_exempt=True).values_list('section', flat=True)
+
+
 
 
 

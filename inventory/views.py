@@ -55,10 +55,12 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
             for p in low_stock_products
         ]
 
-        # الحصول على آخر حركات المخزون - محسن
-        context['recent_transactions'] = StockTransaction.objects.select_related(
+        # الحصول على آخر حركات المخزون
+        recent_transactions = StockTransaction.objects.select_related(
             'product', 'created_by'
-        ).order_by('-date')[:10]
+        )
+
+        context['recent_transactions'] = recent_transactions.order_by('-date')[:10]
 
         # الحصول على عدد طلبات الشراء المعلقة
         context['pending_purchase_orders'] = PurchaseOrder.objects.filter(
@@ -149,6 +151,10 @@ def product_list(request):
     products = Product.objects.select_related('category').annotate(
         current_stock_calc=Subquery(latest_balance, output_field=models.IntegerField())
     )
+
+    # تطبيق فلتر السنة مع إمكانية الاستثناء
+    from accounts.utils import apply_default_year_filter
+    products = apply_default_year_filter(products, request, 'created_at', 'inventory')
 
     # تطبيق البحث
     if search_query:

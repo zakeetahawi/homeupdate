@@ -10,6 +10,9 @@
     <meta name="theme-color" content="#007bff">
     <meta name="format-detection" content="telephone=no">
     <meta name="csrf-token" content="{{ csrf_token }}">
+    {% if user.is_authenticated %}
+    <meta name="current-user" content="{{ user.username }}">
+    {% endif %}
     <title>{% block title %}نظام إدارة العملاء{% endblock %}</title>
     
     <!-- Favicon -->
@@ -1574,10 +1577,7 @@
     </script>
     {% endif %}
 
-    <!-- القائمة الجانبية للمستخدمين النشطين -->
-    {% if user.is_authenticated %}
-        {% include 'includes/online_users_sidebar.html' %}
-    {% endif %}
+
 
     <!-- CSRF Token للإشعارات -->
     {% csrf_token %}
@@ -1664,5 +1664,10 @@
             }, 1000);
         });
     </script>
+
+    <!-- الزر العائم للدردشة -->
+    {% if user.is_authenticated %}
+        {% include 'modern_chat/floating_button.html' %}
+    {% endif %}
 </body>
 </html>

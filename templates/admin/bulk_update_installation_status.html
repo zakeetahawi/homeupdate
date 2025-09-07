@@ -1,0 +1,252 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extrahead %}
+<style>
+.form-container {
+    background: white;
+    border-radius: 8px;
+    padding: 30px;
+    margin: 20px 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    max-width: 600px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    background: white;
+    transition: border-color 0.3s;
+}
+
+.form-group select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-right: 10px;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+    color: white;
+    text-decoration: none;
+}
+
+.selected-items {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.selected-items h4 {
+    margin: 0 0 10px 0;
+    color: #495057;
+}
+
+.item-list {
+    max-height: 200px;
+    overflow-y: auto;
+    background: white;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.item {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.item:last-child {
+    border-bottom: none;
+}
+
+.item-info {
+    flex: 1;
+}
+
+.item-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-needs_scheduling { background-color: #ffc107; color: #000; }
+.status-scheduled { background-color: #17a2b8; color: #fff; }
+.status-in_installation { background-color: #007bff; color: #fff; }
+.status-completed { background-color: #28a745; color: #fff; }
+.status-cancelled { background-color: #dc3545; color: #fff; }
+.status-modification_required { background-color: #fd7e14; color: #fff; }
+
+.warning-box {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+    color: #856404;
+}
+
+.warning-box i {
+    margin-left: 8px;
+    color: #f39c12;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>{{ title }}</h1>
+    
+    <div class="form-container">
+        <div class="warning-box">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>تنبيه:</strong> سيتم تحديث حالة التركيب للعناصر المحددة. هذا الإجراء لا يمكن التراجع عنه.
+        </div>
+
+        <div class="selected-items">
+            <h4><i class="fas fa-list"></i> العناصر المحددة ({{ queryset.count }} عنصر):</h4>
+            <div class="item-list">
+                {% for item in queryset %}
+                <div class="item">
+                    <div class="item-info">
+                        <strong>{{ item.manufacturing_code }}</strong> - {{ item.order.customer.name }}
+                        <br>
+                        <small>{{ item.order.order_number }}</small>
+                    </div>
+                    <div class="item-status status-{{ item.order.installation_status }}">
+                        {{ item.order.get_installation_status_display }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- إضافة العناصر المحددة -->
+            {% for item in queryset %}
+                <input type="hidden" name="_selected_action" value="{{ item.pk }}">
+            {% endfor %}
+            
+            <div class="form-group">
+                <label for="{{ form.installation_status.id_for_label }}">
+                    <i class="fas fa-tools"></i> {{ form.installation_status.label }}
+                </label>
+                {{ form.installation_status }}
+                {% if form.installation_status.help_text %}
+                    <small class="form-text text-muted">{{ form.installation_status.help_text }}</small>
+                {% endif %}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" name="apply" class="btn-primary">
+                    <i class="fas fa-check"></i> تطبيق التحديث
+                </button>
+                <a href="{% url 'admin:manufacturing_manufacturingorder_changelist' %}" class="btn-secondary">
+                    <i class="fas fa-times"></i> إلغاء
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تأكيد قبل التطبيق
+    const form = document.querySelector('form');
+    const applyBtn = document.querySelector('button[name="apply"]');
+
+    if (form && applyBtn) {
+        form.addEventListener('submit', function(e) {
+            const selectedStatus = document.querySelector('select[name="installation_status"]').value;
+            const statusText = document.querySelector('select[name="installation_status"] option:checked').textContent;
+            const itemCount = {{ queryset.count }};
+
+            if (!confirm(`هل أنت متأكد من تحديث حالة التركيب لـ ${itemCount} عنصر إلى "${statusText}"؟`)) {
+                e.preventDefault();
+                return;
+            }
+
+            // إضافة مؤشر تحميل
+            applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+            applyBtn.disabled = true;
+
+            // إضافة معالج لإعادة التحميل بعد النجاح
+            setTimeout(function() {
+                // إذا تم إرسال النموذج بنجاح، سيتم إعادة التوجيه تلقائياً
+                // هذا مجرد احتياط إضافي
+                if (window.location.href.indexOf('updated=1') === -1) {
+                    window.location.reload(true);
+                }
+            }, 3000);
+        });
+    }
+
+    // إذا كانت الصفحة تحتوي على معامل updated، أعد تحميل الصفحة الأساسية
+    if (window.location.href.indexOf('updated=1') !== -1) {
+        setTimeout(function() {
+            // إعادة التوجيه للصفحة الأساسية مع تجنب الـ cache
+            const baseUrl = '{% url "admin:manufacturing_manufacturingorder_changelist" %}';
+            const timestamp = new Date().getTime();
+            window.location.href = baseUrl + '?_refresh=' + timestamp + '&_nocache=1';
+        }, 2000);
+    }
+});
+</script>
+{% endblock %}

@@ -70,6 +70,8 @@ def customer_list(request):
         'category', 'branch', 'created_by'
     ).prefetch_related('customer_orders')
 
+    # تم إلغاء الفلترة الافتراضية
+
     # تحسين الاستعلامات باستخدام الفهارس
     if form.is_valid():
         search = form.cleaned_data.get('search')
@@ -132,6 +134,13 @@ def customer_list(request):
         ).exclude(branch=request.user.branch).values_list('pk', flat=True)
         cross_branch_customers = list(cross_branch_customer_ids)
 
+    # معلومات فلتر السنة
+    from customers.models import Customer
+    available_years = Customer.objects.dates('created_at', 'year', order='DESC')
+    available_years = [year.year for year in available_years]
+    selected_years = request.GET.getlist('years')
+    year_filter = request.GET.get('year', '')
+
     context = {
         'page_obj': page_obj,
         'form': form,
@@ -144,6 +153,9 @@ def customer_list(request):
         'branch_value': branch_value,
         'cross_branch_customers': cross_branch_customers,
         'user_branch': request.user.branch,
+        'available_years': available_years,
+        'selected_years': selected_years,
+        'year_filter': year_filter,
     }
 
     return render(request, 'customers/customer_list.html', context)
@@ -600,12 +612,17 @@ class CustomerDashboardView(LoginRequiredMixin, TemplateView):
         # تطبيق نظام الصلاحيات - الحصول على العملاء حسب دور المستخدم
         try:
             customers = get_user_customers_queryset(user)
-            
+
             # التحقق من أن customers هو QuerySet صحيح
             if not hasattr(customers, 'select_related'):
                 customers = Customer.objects.all()
-            
+
             customers = customers.select_related("category", "branch", "created_by")
+
+            # تطبيق فلتر السنة مع إمكانية الاستثناء
+            from accounts.utils import apply_default_year_filter
+            customers = apply_default_year_filter(customers, self.request, 'created_at', 'customers')
+
         except Exception as e:
             print(f"Error in CustomerDashboardView: {str(e)}")
             customers = Customer.objects.select_related("category", "branch", "created_by")

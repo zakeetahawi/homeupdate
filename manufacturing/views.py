@@ -29,10 +29,7 @@ from django.db import transaction
 from django.conf import settings
 
 
-def apply_default_year_filter(queryset, request, date_field='order_date'):
-    """تطبيق فلتر السنة الافتراضية على QuerySet - موحد"""
-    from accounts.utils import apply_default_year_filter as unified_filter
-    return unified_filter(queryset, request, date_field)
+
 
 from .models import ManufacturingOrder, ManufacturingOrderItem, FabricReceipt, FabricReceiptItem
 from orders.models import Order
@@ -70,10 +67,6 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
 
         # تطبيق إعدادات العرض للمستخدم الحالي
         queryset = self.apply_display_settings_filter(queryset)
-
-        # تطبيق فلتر السنة الافتراضية
-        from accounts.utils import apply_default_year_filter
-        queryset = apply_default_year_filter(queryset, self.request, 'order_date')
 
         # Apply filters - دعم الفلاتر المتعددة
         # فلتر الحالات (اختيار متعدد)
@@ -1465,15 +1458,9 @@ class DashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        # Get date range for the dashboard (last 30 days)
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
-        
-        # Get all manufacturing orders
-        orders = ManufacturingOrder.objects.filter(
-            order_date__range=(start_date, end_date)
-        ).select_related('order', 'order__customer')
+
+        # Get all manufacturing orders (بدون فلترة افتراضية)
+        orders = ManufacturingOrder.objects.all().select_related('order', 'order__customer')
         
         # Calculate status counts
         status_counts = orders.values('status').annotate(
@@ -1547,8 +1534,6 @@ class DashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
             'delivered_orders': orders.filter(status='delivered').count(),
             'cancelled_orders': orders.filter(status='cancelled').count(),
             'total_revenue': sum(order.order.total_amount for order in orders if order.order and order.order.total_amount),
-            'start_date': start_date,
-            'end_date': end_date,
         })
         
         return context

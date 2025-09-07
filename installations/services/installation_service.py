@@ -74,16 +74,21 @@ class InstallationService:
         """تحديث حالة التركيب"""
         try:
             installation = InstallationSchedule.objects.get(id=installation_id)
+            old_status = installation.status
             installation.status = new_status
             installation.save()
-            
+
+            # تحديث الطلبات المرتبطة
+            from installations.views import update_related_orders
+            update_related_orders(installation, new_status, old_status)
+
             # إذا تم إكمال التركيب، إنشاء أرشيف
             if new_status == 'completed':
                 InstallationArchive.objects.get_or_create(
                     installation=installation
                 )
-            
-            return True, "تم تحديث الحالة بنجاح"
+
+            return True, "تم تحديث الحالة وأمر التصنيع بنجاح"
         except InstallationSchedule.DoesNotExist:
             return False, "التركيب غير موجود"
         except Exception as e:

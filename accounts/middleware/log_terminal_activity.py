@@ -56,10 +56,14 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
             ip_address = self._get_client_ip(request)
             session_key = request.session.session_key
 
+            print(f"{GREEN}[DEBUG] Updating online status for user: {user.username}{NC}")
+            print(f"{GREEN}[DEBUG] IP: {ip_address}, Session: {session_key}{NC}")
+
             if not session_key:
                 # إنشاء session key إذا لم يكن موجود
                 request.session.create()
                 session_key = request.session.session_key
+                print(f"{GREEN}[DEBUG] Created new session: {session_key}{NC}")
 
             # تنظيف المستخدمين غير المتصلين أولاً
             OnlineUser.cleanup_offline_users()
@@ -81,6 +85,8 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
                 }
             )
 
+            print(f"{GREEN}[DEBUG] Online user {'created' if created else 'updated'}: {user.username}{NC}")
+
             # تحديث النشاط إذا كان المستخدم موجود مسبقاً
             if not created:
                 page_title = self._get_page_title(request.path)
@@ -90,9 +96,12 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
                     page_title=page_title,
                     action_performed=action_performed
                 )
+                print(f"{GREEN}[DEBUG] Activity updated for {user.username}{NC}")
 
         except Exception as e:
             print(f"{RED}[ERROR] خطأ في تحديث حالة المستخدم المتصل: {e}{NC}")
+            import traceback
+            traceback.print_exc()
 
     def _log_activity(self, request, response):
         """تسجيل النشاط في قاعدة البيانات"""

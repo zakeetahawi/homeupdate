@@ -6,22 +6,24 @@ from django.utils import timezone
 from .models import DashboardYearSettings
 
 
-def apply_default_year_filter(queryset, request, date_field='created_at', exclude_customers=False):
+def apply_default_year_filter(queryset, request, date_field='created_at', section_name=None):
     """
-    تطبيق فلتر السنة الافتراضية على أي استعلام
-    
+    تطبيق فلتر السنة الافتراضية على أي استعلام مع دعم الاستثناءات
+
     Args:
         queryset: الاستعلام المراد تطبيق الفلتر عليه
         request: كائن الطلب للحصول على المعاملات
         date_field: اسم حقل التاريخ (افتراضي: created_at)
-        exclude_customers: استثناء العملاء من فلتر السنة الافتراضية (افتراضي: False)
-    
+        section_name: اسم القسم للتحقق من الاستثناء (اختياري)
+
     Returns:
-        queryset مفلتر حسب السنة
+        queryset مفلتر حسب السنة (إذا لم يكن القسم معفى)
     """
-    # إذا كان المطلوب استثناء العملاء، لا تطبق الفلتر
-    if exclude_customers:
-        return queryset
+    # التحقق من إعفاء القسم من فلتر السنة
+    if section_name:
+        from .models import YearFilterExemption
+        if YearFilterExemption.is_section_exempt(section_name):
+            return queryset
     
     # الحصول على السنوات المحددة من المعاملات
     selected_years = request.GET.getlist('years')

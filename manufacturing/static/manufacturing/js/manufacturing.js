@@ -55,12 +55,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Show success message
                     showToast('تم تحديث الحالة بنجاح', 'success');
-                    
-                    // If status is completed or ready for installation, reload the page to update other elements
-                    if (newStatus === 'completed' || newStatus === 'ready_install') {
+
+                    // تحديث فوري للواجهة بدلاً من إعادة تحميل الصفحة
+                    updateUIAfterStatusChange(orderId, newStatus, data);
+
+                    // إعادة تحميل الصفحة فقط للحالات الحرجة
+                    if (newStatus === 'completed' || newStatus === 'ready_install' || newStatus === 'delivered') {
                         setTimeout(() => {
                             window.location.reload();
-                        }, 1000);
+                        }, 1500);
                     }
                 } else {
                     throw new Error(data.error || 'حدث خطأ غير معروف');
@@ -321,4 +324,91 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     `;
     document.head.appendChild(toastStyles);
+
+    // دالة تحديث الواجهة بعد تغيير الحالة
+    function updateUIAfterStatusChange(orderId, newStatus, responseData) {
+        try {
+            // تحديث جميع العناصر المرتبطة بهذا الطلب
+            const orderElements = document.querySelectorAll(`[data-order-id="${orderId}"]`);
+
+            orderElements.forEach(element => {
+                // تحديث النص إذا كان يحتوي على حالة
+                if (element.textContent && element.textContent.includes('حالة')) {
+                    element.textContent = responseData.status_display || newStatus;
+                }
+
+                // تحديث الكلاسات للألوان
+                element.classList.remove('pending', 'in_progress', 'completed', 'ready_install', 'delivered', 'cancelled', 'rejected');
+                element.classList.add(newStatus);
+            });
+
+            // تحديث العدادات في الداشبورد
+            updateDashboardCounters();
+
+            // تحديث أي جداول موجودة
+            updateTableRows(orderId, newStatus, responseData);
+
+        } catch (error) {
+            console.error('خطأ في تحديث الواجهة:', error);
+        }
+    }
+
+    // دالة تحديث العدادات في الداشبورد
+    function updateDashboardCounters() {
+        // إعادة حساب العدادات من الجدول الحالي
+        const statusCounts = {
+            pending: 0,
+            in_progress: 0,
+            ready_install: 0,
+            completed: 0,
+            delivered: 0
+        };
+
+        // عد الحالات من الجدول
+        document.querySelectorAll('.status-badge').forEach(badge => {
+            const status = badge.className.split(' ').find(cls => statusCounts.hasOwnProperty(cls));
+            if (status) {
+                statusCounts[status]++;
+            }
+        });
+
+        // تحديث العدادات في البطاقات
+        Object.keys(statusCounts).forEach(status => {
+            const counterElement = document.querySelector(`[data-status-counter="${status}"]`);
+            if (counterElement) {
+                counterElement.textContent = statusCounts[status];
+            }
+        });
+    }
+
+    // دالة تحديث صفوف الجدول
+    function updateTableRows(orderId, newStatus, responseData) {
+        const tableRows = document.querySelectorAll(`tr[data-order-id="${orderId}"]`);
+
+        tableRows.forEach(row => {
+            // تحديث خلية الحالة
+            const statusCell = row.querySelector('.status-badge');
+            if (statusCell) {
+                statusCell.className = `status-badge ${newStatus}`;
+                statusCell.textContent = responseData.status_display || newStatus;
+            }
+
+            // تحديث تاريخ التحديث
+            const updatedCell = row.querySelector('.updated-at');
+            if (updatedCell && responseData.updated_at) {
+                updatedCell.textContent = responseData.updated_at;
+            }
+
+            // إضافة تأثير بصري للتحديث
+            row.style.backgroundColor = '#e8f5e8';
+            setTimeout(() => {
+                row.style.backgroundColor = '';
+            }, 2000);
+        });
+    }
+
+    // تصدير الدوال للاستخدام العام
+    window.updateUIAfterStatusChange = updateUIAfterStatusChange;
+    window.updateDashboardCounters = updateDashboardCounters;
+    window.updateTableRows = updateTableRows;
 });

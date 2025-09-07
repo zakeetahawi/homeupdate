@@ -79,9 +79,7 @@ def order_list(request):
     else:
         orders = get_user_orders_queryset(request.user).select_related('customer', 'salesperson')
 
-    # تطبيق فلتر السنة مع دعم السنوات المتعددة والسنة الافتراضية - موحد
-    from accounts.utils import apply_default_year_filter
-    orders = apply_default_year_filter(orders, request, 'order_date')
+    # تم إلغاء الفلترة الافتراضية
     
     # الحصول على معاملات السنة للعرض
     selected_years = request.GET.getlist('years')
@@ -114,8 +112,8 @@ def order_list(request):
 
     order_type_filter = request.GET.get('order_type', '')
     if order_type_filter:
-        # البحث الدقيق في selected_types
-        orders = orders.filter(selected_types__contains=order_type_filter)
+        # البحث الدقيق في selected_types مع تحسين للبحث
+        orders = orders.filter(selected_types__icontains=order_type_filter)
 
     # فلتر التاريخ
     date_from = request.GET.get('date_from', '')

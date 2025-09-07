@@ -93,6 +93,9 @@ urlpatterns = [
     ),
     # نظام النسخ الاحتياطي والاستعادة الجديد
     path("backup-system/", include("backup_system.urls", namespace="backup_system")),
+    # نظام الدردشة الحديث (API فقط)
+    path("modern-chat/", include("modern_chat.urls", namespace="modern_chat")),
+
 ]
 
 # إضافة مسارات الملفات الثابتة ووسائط التحميل في وضع التطوير

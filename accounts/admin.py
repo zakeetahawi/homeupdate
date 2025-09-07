@@ -12,7 +12,8 @@ from django.utils.translation import gettext_lazy as _
 from .models import (
     User, CompanyInfo, Branch, Department, Salesperson,
     Role, UserRole, SystemSettings, BranchMessage, DashboardYearSettings,
-    ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings
+    ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings,
+    YearFilterExemption
 )
 
 
@@ -664,29 +665,11 @@ class BranchMessageAdmin(admin.ModelAdmin):
             'all': ('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',)
         }
 
-@admin.register(DashboardYearSettings)
-class DashboardYearSettingsAdmin(admin.ModelAdmin):
-    list_per_page = 50  # عرض 50 صف كافتراضي
-    """إدارة إعدادات السنوات في الداش بورد"""
-    list_display = ('year', 'is_active', 'is_default', 'description', 'created_at')
-    list_filter = ('is_active', 'is_default', 'created_at')
-    search_fields = ('year', 'description')
-    readonly_fields = ('created_at', 'updated_at')
-    ordering = ('-year',)
-    
-    fieldsets = (
-        (_('معلومات السنة'), {
-            'fields': ('year', 'description')
-        }),
-        (_('حالة السنة'), {
-            'fields': ('is_active', 'is_default'),
-            'description': _('يمكن تعيين سنة واحدة فقط كافتراضية')
-        }),
-        (_('معلومات النظام'), {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
+# تم إلغاء إدارة إعدادات السنة الافتراضية
+# @admin.register(DashboardYearSettings)
+# class DashboardYearSettingsAdmin(admin.ModelAdmin):
+#     """إدارة إعدادات السنوات في الداش بورد - تم إلغاؤها"""
+#     pass
     
     actions = ['activate_years', 'deactivate_years', 'set_as_default']
     
@@ -721,6 +704,37 @@ class DashboardYearSettingsAdmin(admin.ModelAdmin):
         return super().has_delete_permission(request, obj)
 
 
+@admin.register(YearFilterExemption)
+class YearFilterExemptionAdmin(admin.ModelAdmin):
+    """إدارة استثناءات فلتر السنة للأقسام"""
+    list_display = ['section', 'get_section_display', 'is_exempt', 'description', 'updated_at']
+    list_filter = ['is_exempt', 'section']
+    search_fields = ['section', 'description']
+    list_editable = ['is_exempt', 'description']
+    ordering = ['section']
+
+    fieldsets = (
+        ('معلومات القسم', {
+            'fields': ('section', 'is_exempt')
+        }),
+        ('تفاصيل إضافية', {
+            'fields': ('description',),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_section_display(self, obj):
+        """عرض اسم القسم بالعربية"""
+        return obj.get_section_display()
+    get_section_display.short_description = 'اسم القسم'
+
+    def save_model(self, request, obj, form, change):
+        """حفظ النموذج مع رسالة تأكيد"""
+        super().save_model(request, obj, form, change)
+        if obj.is_exempt:
+            messages.success(request, f'تم إعفاء قسم {obj.get_section_display()} من فلتر السنة الافتراضية')
+        else:
+            messages.success(request, f'تم إلغاء إعفاء قسم {obj.get_section_display()} - سيطبق فلتر السنة الافتراضية')
 
 
 

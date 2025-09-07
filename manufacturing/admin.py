@@ -1,8 +1,13 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse, path
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render, redirect
+from django.http import HttpResponseRedirect, JsonResponse
+from django.contrib import messages
+from django.db.models import Q, Count
+from django.utils.safestring import mark_safe
+from django.views.decorators.http import require_http_methods
+from django.contrib.admin.views.decorators import staff_member_required
 from django import forms
 
 from .models import (
@@ -71,7 +76,6 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
         'order_type_display',
         'customer_name',
         'status_display',
-        'installation_status_display',  # إضافة عرض حالة التركيب
         'order_date',
         'expected_delivery_date',
         'created_at',
@@ -123,7 +127,6 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
         ('order__branch', admin.RelatedFieldListFilter),
         ('order__salesperson', admin.RelatedFieldListFilter),
         ('production_line', admin.RelatedFieldListFilter),
-        ('order__installation_status', admin.RelatedFieldListFilter),  # إضافة فلتر حالة التركيب
     ]
     
     # إعادة date_hierarchy
@@ -163,12 +166,17 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     inlines = [ManufacturingOrderItemInline]
     date_hierarchy = 'created_at'
 
-    actions = ['bulk_update_status']
+    actions = [
+        'bulk_update_status',
+        # إجراءات سريعة لتحديث الحالة
+        'mark_pending_approval', 'mark_pending', 'mark_in_progress',
+        'mark_ready_install', 'mark_completed', 'mark_delivered',
+        'mark_rejected', 'mark_cancelled'
+    ]
 
     def bulk_update_status(self, request, queryset):
         from django import forms
         from django.shortcuts import render, redirect
-        from django.apps import apps
         from django.db import transaction
         from django.core.cache import cache
         from django.contrib import messages
@@ -182,84 +190,49 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
             if form.is_valid():
                 new_status = form.cleaned_data['status']
                 count = 0
-                updated_orders = []
-                
+
                 # استخدام transaction لضمان التحديث الآمن
                 with transaction.atomic():
-                    Order = apps.get_model('orders', 'Order')
-                    
                     # تحديث كل عنصر على حدة لضمان تطبيق الإشارات والمنطق المخصص
                     for order in queryset.select_related('order'):
-                        old_status = order.status
                         order.status = new_status
                         order.save()
-                        
-                        # تحديث حالة التركيب في الطلب الأصلي إذا كان نوع التركيب
-                        if order.order_type == 'installation' and order.order:
-                            installation_status_mapping = {
-                                'pending_approval': 'needs_scheduling',
-                                'pending': 'needs_scheduling', 
-                                'in_progress': 'needs_scheduling',
-                                'ready_install': 'scheduled',
-                                'completed': 'completed',
-                                'delivered': 'completed',
-                                'rejected': 'needs_scheduling',
-                                'cancelled': 'cancelled',
-                            }
-                            
-                            new_installation_status = installation_status_mapping.get(new_status)
-                            if new_installation_status and order.order.installation_status != new_installation_status:
-                                # تحديث مباشر للطلب مع تجنب الإشارات التي قد تتداخل
-                                order.order.installation_status = new_installation_status
-                                order.order.save(update_fields=['installation_status'])
-                                updated_orders.append(order.order.pk)
-                        
                         count += 1
                 
                 # مسح cache للنتائج المحدثة
                 cache_keys_to_clear = [
                     'manufacturing_orders_list',
-                    'orders_installation_status',
                     f'manufacturing_status_{new_status}',
                 ]
-                
+
                 for key in cache_keys_to_clear:
                     cache.delete(key)
-                
-                # مسح cache للطلبات المحدثة
-                for order_pk in updated_orders:
-                    cache.delete(f'order_{order_pk}_installation_status')
-                
-                # رسالة النجاح مع تفاصيل إضافية
+
+                # رسالة النجاح
                 status_display = dict(queryset.model.STATUS_CHOICES)[new_status]
-                if updated_orders:
-                    installation_status_display = dict(Order._meta.get_field('installation_status').choices).get(
-                        installation_status_mapping.get(new_status), 'غير محدد'
-                    )
-                    messages.success(
-                        request, 
-                        f'✅ تم تحديث {count} أمر تصنيع إلى "{status_display}" بنجاح! '
-                        f'وتم تحديث حالة التركيب لـ {len(updated_orders)} طلب إلى "{installation_status_display}". '
-                        f'سيتم إعادة تحميل الصفحة لإظهار التحديثات.'
-                    )
-                else:
-                    messages.success(
-                        request, 
-                        f'✅ تم تحديث {count} أمر تصنيع إلى "{status_display}" بنجاح! '
-                        f'سيتم إعادة تحميل الصفحة لإظهار التحديثات.'
-                    )
+                messages.success(
+                    request,
+                    f'✅ تم تحديث {count} أمر تصنيع إلى "{status_display}" بنجاح!'
+                )
                 
-                # إعادة توجيه مع إضافة معامل لإجبار إعادة التحميل
+                # إجبار إعادة تحميل كاملة للصفحة مع مسح الـ cache
                 current_url = request.get_full_path()
-                # إزالة معامل updated السابق إن وجد
+                # إزالة معاملات التحديث السابقة
                 import re
-                current_url = re.sub(r'[?&]updated=\d+', '', current_url)
+                current_url = re.sub(r'[?&](updated|_refresh)=\d+', '', current_url)
                 # إضافة timestamp جديد لضمان إعادة التحميل
                 import time
+                timestamp = int(time.time())
                 separator = '&' if '?' in current_url else '?'
-                refresh_url = f"{current_url}{separator}updated={int(time.time())}&_refresh=1"
-                
-                return HttpResponseRedirect(refresh_url)
+                refresh_url = f"{current_url}{separator}updated={timestamp}&_refresh={timestamp}&_nocache=1"
+
+                # إضافة headers لمنع الـ cache
+                response = HttpResponseRedirect(refresh_url)
+                response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+                response['Pragma'] = 'no-cache'
+                response['Expires'] = '0'
+
+                return response
         else:
             form = StatusForm()
         return render(request, 'admin/bulk_update_status.html', {
@@ -268,6 +241,55 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
             'action_checkbox_name': admin.helpers.ACTION_CHECKBOX_NAME,
         })
     bulk_update_status.short_description = 'تبديل حالة الأوامر المحددة جماعياً'
+
+    # إجراءات سريعة لتحديث الحالة
+    def mark_pending_approval(self, request, queryset):
+        """تغيير الحالة إلى قيد الموافقة"""
+        updated = queryset.update(status='pending_approval')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "قيد الموافقة"')
+    mark_pending_approval.short_description = "تغيير الحالة إلى قيد الموافقة"
+
+    def mark_pending(self, request, queryset):
+        """تغيير الحالة إلى قيد الانتظار"""
+        updated = queryset.update(status='pending')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "قيد الانتظار"')
+    mark_pending.short_description = "تغيير الحالة إلى قيد الانتظار"
+
+    def mark_in_progress(self, request, queryset):
+        """تغيير الحالة إلى قيد التصنيع"""
+        updated = queryset.update(status='in_progress')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "قيد التصنيع"')
+    mark_in_progress.short_description = "تغيير الحالة إلى قيد التصنيع"
+
+    def mark_ready_install(self, request, queryset):
+        """تغيير الحالة إلى جاهز للتركيب"""
+        updated = queryset.update(status='ready_install')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "جاهز للتركيب"')
+    mark_ready_install.short_description = "تغيير الحالة إلى جاهز للتركيب"
+
+    def mark_completed(self, request, queryset):
+        """تغيير الحالة إلى مكتمل"""
+        updated = queryset.update(status='completed')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "مكتمل"')
+    mark_completed.short_description = "تغيير الحالة إلى مكتمل"
+
+    def mark_delivered(self, request, queryset):
+        """تغيير الحالة إلى تم التسليم"""
+        updated = queryset.update(status='delivered')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "تم التسليم"')
+    mark_delivered.short_description = "تغيير الحالة إلى تم التسليم"
+
+    def mark_rejected(self, request, queryset):
+        """تغيير الحالة إلى مرفوض"""
+        updated = queryset.update(status='rejected')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "مرفوض"')
+    mark_rejected.short_description = "تغيير الحالة إلى مرفوض"
+
+    def mark_cancelled(self, request, queryset):
+        """تغيير الحالة إلى ملغي"""
+        updated = queryset.update(status='cancelled')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "ملغي"')
+    mark_cancelled.short_description = "تغيير الحالة إلى ملغي"
 
     fieldsets = (
         ('معلومات الطلب الأساسية', {
@@ -429,29 +451,7 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     status_display.short_description = 'الحالة'
     status_display.admin_order_field = 'status'  # تمكين الترتيب
 
-    def installation_status_display(self, obj):
-        """عرض حالة التركيب للطلبات من نوع التركيب"""
-        if obj.order_type == 'installation' and obj.order:
-            colors = {
-                'needs_scheduling': '#e6a700',    # أصفر
-                'scheduled': '#6f42c1',           # بنفسجي  
-                'in_installation': '#138496',     # أزرق فاتح
-                'completed': '#1e7e34',           # أخضر
-                'cancelled': '#545b62',           # رمادي
-                'modification_required': '#fd7e14',     # برتقالي
-                'modification_in_progress': '#20c997',  # أخضر فاتح
-                'modification_completed': '#1e7e34',    # أخضر
-            }
-            color = colors.get(obj.order.installation_status, '#6c757d')
-            return format_html(
-                '<span style="background-color: {}; color: white; padding: 3px 6px; '
-                'border-radius: 10px; font-size: 11px; white-space: nowrap;">{}</span>',
-                color,
-                obj.order.get_installation_status_display()
-            )
-        return format_html('<span style="color: #999;">-</span>')
-    installation_status_display.short_description = 'حالة التركيب'
-    installation_status_display.admin_order_field = 'order__installation_status'
+
 
     def delivery_info(self, obj):
         """عرض معلومات التسليم - اسم المستلم والتاريخ"""
@@ -563,37 +563,32 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         """استعلام محسن مع ضمان تحديث البيانات"""
+        # إضافة التحديث التلقائي إذا كان هناك معامل updated
+        if request.GET.get('updated') or request.GET.get('_refresh'):
+            # مسح أي cache قد يكون موجود
+            from django.core.cache import cache
+            cache.clear()
+
+            # إجبار إعادة جلب البيانات من قاعدة البيانات بدون cache
+            from django.db import connection
+            connection.queries_log.clear()
+
         queryset = super().get_queryset(request).select_related(
-            'order', 
-            'order__customer', 
+            'order',
+            'order__customer',
             'order__salesperson',
             'production_line',
             'created_by'
         ).prefetch_related('items')
-        
-        # إضافة التحديث التلقائي إذا كان هناك معامل updated
-        if request.GET.get('updated'):
-            # مسح أي cache قد يكون موجود
-            from django.core.cache import cache
-            cache.clear()
-        
+
+        # إذا كان هناك تحديث، أجبر إعادة تقييم الـ queryset
+        if request.GET.get('updated') or request.GET.get('_refresh'):
+            # إعادة تقييم الـ queryset لضمان الحصول على أحدث البيانات
+            queryset = queryset.all()
+
         return queryset
 
-    def changelist_view(self, request, extra_context=None):
-        """تخصيص عرض قائمة التغييرات لضمان إعادة التحميل الصحيح"""
-        # مسح cache إذا كان هناك تحديث
-        if request.GET.get('updated') or request.GET.get('_refresh'):
-            from django.core.cache import cache
-            cache.clear()
-            
-            # إضافة header لمنع caching في المتصفح
-            response = super().changelist_view(request, extra_context)
-            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            response['Pragma'] = 'no-cache'
-            response['Expires'] = '0'
-            return response
-        
-        return super().changelist_view(request, extra_context)
+
 
     def has_change_permission(self, request, obj=None):
         if obj and obj.status == 'pending_approval':
@@ -601,6 +596,11 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
             return (request.user.has_perm('manufacturing.can_approve_orders')
                     or request.user.is_superuser)
         return super().has_change_permission(request, obj)
+
+
+
+
+
 
     # الإجراءات المجمعة موجودة بالفعل في الكود (bulk_update_status)
 

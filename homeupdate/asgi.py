@@ -1,5 +1,5 @@
 """
-ASGI config for CRM project.
+ASGI config for homeupdate project.
 """
 import os
 import django

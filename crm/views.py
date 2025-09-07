@@ -61,7 +61,7 @@ def admin_dashboard(request):
         get_user_activity_analytics,
         get_installation_order_scheduling_analytics,
     )
-    from accounts.models import CompanyInfo, Branch, DashboardYearSettings
+    from accounts.models import CompanyInfo, Branch
 
     # الحصول على المعاملات من الطلب
     selected_branch = request.GET.get("branch", "all")
@@ -395,8 +395,6 @@ def get_or_create_company_info():
 
 def get_filter_data():
     """الحصول على بيانات الفلاتر"""
-    from accounts.models import DashboardYearSettings
-
     branches = Branch.objects.filter(is_active=True).order_by("name")
     months = [
         (1, "يناير"),
@@ -413,8 +411,8 @@ def get_filter_data():
         (12, "ديسمبر"),
     ]
 
-    # السنوات النشطة من الإعدادات
-    dashboard_years = list(DashboardYearSettings.get_available_years())
+    # تم إلغاء السنوات من الإعدادات
+    dashboard_years = []
 
     # جميع السنوات من البيانات الفعلية
     all_years = set()

@@ -22,12 +22,16 @@ from user_activity.models import OnlineUser, UserActivityLog, UserSession, UserL
 def online_users_api(request):
     """API لجلب المستخدمين النشطين حالياً"""
     try:
+        print(f"[DEBUG] Online users API called by user: {request.user if request.user.is_authenticated else 'Anonymous'}")
+
         # تنظيف المستخدمين غير المتصلين
         OnlineUser.cleanup_offline_users()
-        
+
         # جلب المستخدمين النشطين
         online_users = OnlineUser.get_online_users().select_related('user')
         total_online = online_users.count()
+
+        print(f"[DEBUG] Found {total_online} online users")
 
         # التحقق من صلاحيات المستخدم
         user_is_admin = False
@@ -38,10 +42,14 @@ def online_users_api(request):
                 request.user.groups.filter(name__in=['مدير النظام', 'Admin', 'Administrators']).exists()
             )
 
+        print(f"[DEBUG] User is admin: {user_is_admin}")
+
         users_data = []
 
         # عرض المستخدمين حسب الصلاحيات
         for online_user in online_users:
+            print(f"[DEBUG] Processing user: {online_user.user.username}")
+
             # تحديد دور المستخدم
             user_role = 'مستخدم عادي'
             if online_user.user.is_superuser:
@@ -91,6 +99,8 @@ def online_users_api(request):
 
             users_data.append(user_data)
         
+        print(f"[DEBUG] Final response: success=True, total_online={total_online}, users_count={len(users_data)}")
+
         return JsonResponse({
             'success': True,
             'users': users_data,
@@ -100,6 +110,9 @@ def online_users_api(request):
         })
         
     except Exception as e:
+        print(f"[ERROR] Exception in online_users_api: {e}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
             'error': str(e)

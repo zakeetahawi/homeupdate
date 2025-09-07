@@ -141,19 +141,12 @@ def system_settings(request):
                 'currency_symbol': 'ر.س'
             }
 
-    # إضافة السنة الافتراضية
-    try:
-        from .models import DashboardYearSettings
-        default_year = DashboardYearSettings.get_default_year()
-    except Exception:
-        from django.utils import timezone
-        default_year = timezone.now().year
+    # تم إلغاء السنة الافتراضية
 
     return {
         'system_settings': settings,
         'currency_code': settings.currency,
         'currency_symbol': settings.CURRENCY_SYMBOLS.get(settings.currency, settings.currency),
-        'default_year': default_year
     }
 
 def user_context(request):

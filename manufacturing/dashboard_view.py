@@ -18,12 +18,8 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Get all manufacturing orders and apply default year filter
+        # Get all manufacturing orders (بدون فلترة افتراضية)
         all_orders = ManufacturingOrder.objects.all().select_related('order', 'order__customer')
-        all_orders = apply_default_year_filter(all_orders, self.request, 'order_date')
-
-        # Get default year for display
-        default_year = DashboardYearSettings.get_default_year()
 
         # Get date range for charts (last 6 months for better view)
         end_date = timezone.now().date()
@@ -206,9 +202,6 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
 
             # Production lines statistics
             'production_lines_stats': production_lines_stats,
-
-            # Year filter information
-            'default_year': default_year,
 
             # Date ranges
             'start_date': start_date,

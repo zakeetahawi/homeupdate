@@ -289,6 +289,8 @@
         </div>
     </div>
 
+
+
     <!-- Alert Cards -->
     <div class="row mb-4">
         {% if pending_approval_count > 0 %}
@@ -767,5 +769,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 </script>
+<!-- إضافة ملفات JavaScript المطلوبة -->
+<script src="{% static 'manufacturing/js/production-line-dropdowns.js' %}"></script>
+<script src="{% static 'manufacturing/js/bootstrap-dropdown-fix.js' %}"></script>
 <!-- <script src="{% static 'manufacturing/js/universal-dropdown-fix.js' %}"></script> -->
 {% endblock %}

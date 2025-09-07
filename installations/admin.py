@@ -16,6 +16,92 @@ from .models import (
 from manufacturing.models import ManufacturingOrder
 
 
+# فلتر مخصص لنوع الطلب - للاستخدام مع ManufacturingOrder
+class OrderTypeFilter(admin.SimpleListFilter):
+    title = 'نوع الطلب'
+    parameter_name = 'order_type'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('installation', 'تركيب'),
+            ('custom', 'تفصيل'),
+            ('accessory', 'اكسسوار'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(order_type=self.value())
+        return queryset
+
+
+# فلتر مخصص لنوع الطلب - للاستخدام مع InstallationSchedule (من Order)
+class InstallationOrderTypeFilter(admin.SimpleListFilter):
+    title = 'نوع الطلب'
+    parameter_name = 'order_type'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('installation', 'تركيب'),
+            ('custom', 'تفصيل'),
+            ('accessory', 'اكسسوار'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            # فلترة حسب نوع الطلب من Order
+            if self.value() == 'installation':
+                return queryset.filter(order__selected_types__icontains='installation')
+            elif self.value() == 'custom':
+                return queryset.filter(order__selected_types__icontains='custom')
+            elif self.value() == 'accessory':
+                return queryset.filter(order__selected_types__icontains='accessory')
+        return queryset
+
+
+# فلتر مخصص لحالة التركيب
+class InstallationStatusFilter(admin.SimpleListFilter):
+    title = 'حالة التركيب'
+    parameter_name = 'installation_status'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('needs_scheduling', 'يحتاج جدولة'),
+            ('scheduled', 'مجدول'),
+            ('in_installation', 'قيد التركيب'),
+            ('completed', 'مكتمل'),
+            ('cancelled', 'ملغي'),
+            ('modification_required', 'يحتاج تعديل'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(order__installation_status=self.value())
+        return queryset
+
+
+# فلتر مخصص لحالة المصنع
+class ManufacturingStatusFilter(admin.SimpleListFilter):
+    title = 'حالة المصنع'
+    parameter_name = 'manufacturing_status'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('pending_approval', 'قيد الموافقة'),
+            ('pending', 'قيد الانتظار'),
+            ('in_progress', 'قيد التصنيع'),
+            ('ready_install', 'جاهز للتركيب'),
+            ('completed', 'مكتمل'),
+            ('delivered', 'تم التسليم'),
+            ('rejected', 'مرفوض'),
+            ('cancelled', 'ملغي'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(status=self.value())
+        return queryset
+
+
 def currency_format(amount):
     """تنسيق المبلغ مع عملة النظام"""
     try:
@@ -90,11 +176,23 @@ class InstallationScheduleAdmin(admin.ModelAdmin):
         'installation_code', 'customer_name', 'scheduled_date', 'scheduled_time',
         'team', 'status_display', 'created_at'
     ]
-    list_filter = ['status', 'scheduled_date', 'team', 'created_at']
+    list_filter = [
+        'status',
+        InstallationOrderTypeFilter,  # فلتر مخصص لنوع الطلب (من Order)
+        'scheduled_date',
+        'team',
+        'created_at'
+    ]
     search_fields = ['order__order_number', 'order__customer__name']
     list_editable = ['team']
     date_hierarchy = 'scheduled_date'
     ordering = ['-scheduled_date', '-scheduled_time']
+
+    # إضافة إجراءات مجمعة لتغيير حالة التركيب
+    actions = [
+        'mark_status_scheduled', 'mark_status_in_installation', 'mark_status_completed',
+        'mark_status_cancelled', 'mark_status_modification_required'
+    ]
     
     fieldsets = (
         ('معلومات الطلب', {
@@ -196,6 +294,37 @@ class InstallationScheduleAdmin(admin.ModelAdmin):
             return code
     installation_code.short_description = 'رقم طلب التركيب'
 
+    # إجراءات التحديث المجمع لحالة التركيب
+    def mark_status_scheduled(self, request, queryset):
+        """تغيير حالة التركيب إلى مجدول"""
+        updated = queryset.update(status='scheduled')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} تركيب إلى "مجدول"')
+    mark_status_scheduled.short_description = "تغيير الحالة إلى مجدول"
+
+    def mark_status_in_installation(self, request, queryset):
+        """تغيير حالة التركيب إلى قيد التركيب"""
+        updated = queryset.update(status='in_installation')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} تركيب إلى "قيد التركيب"')
+    mark_status_in_installation.short_description = "تغيير الحالة إلى قيد التركيب"
+
+    def mark_status_completed(self, request, queryset):
+        """تغيير حالة التركيب إلى مكتمل"""
+        updated = queryset.update(status='completed')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} تركيب إلى "مكتمل"')
+    mark_status_completed.short_description = "تغيير الحالة إلى مكتمل"
+
+    def mark_status_cancelled(self, request, queryset):
+        """تغيير حالة التركيب إلى ملغي"""
+        updated = queryset.update(status='cancelled')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} تركيب إلى "ملغي"')
+    mark_status_cancelled.short_description = "تغيير الحالة إلى ملغي"
+
+    def mark_status_modification_required(self, request, queryset):
+        """تغيير حالة التركيب إلى يحتاج تعديل"""
+        updated = queryset.update(status='modification_required')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} تركيب إلى "يحتاج تعديل"')
+    mark_status_modification_required.short_description = "تغيير الحالة إلى يحتاج تعديل"
+
     def get_queryset(self, request):
         """تحسين الاستعلامات لتحسين الأداء"""
         return super().get_queryset(request).select_related(
@@ -244,12 +373,75 @@ class InstallationManufacturingOrderAdmin(admin.ModelAdmin):
         'status', 'installation_status_display', 'order_date', 'expected_delivery_date', 'production_line'
     ]
     list_filter = [
-        'status', 'order_date', 'expected_delivery_date',
+        ManufacturingStatusFilter,  # فلتر مخصص لحالة المصنع
+        OrderTypeFilter,  # فلتر مخصص لنوع الطلب (من ManufacturingOrder)
+        InstallationStatusFilter,  # فلتر مخصص لحالة التركيب
+        'order_date',
+        'expected_delivery_date',
         ('order__branch', admin.RelatedFieldListFilter),
         ('order__salesperson', admin.RelatedFieldListFilter),
         ('production_line', admin.RelatedFieldListFilter),
-        ('order__installation_status', admin.ChoicesFieldListFilter),
     ]
+
+    # إضافة روابط سريعة للفلترة
+    def changelist_view(self, request, extra_context=None):
+        if extra_context is None:
+            extra_context = {}
+
+        # إضافة روابط سريعة للحالات المختلفة
+        extra_context['quick_filters'] = [
+            {
+                'name': 'يحتاج جدولة',
+                'url': '?order__installation_status__exact=needs_scheduling',
+                'count': self.get_queryset(request).filter(order__installation_status='needs_scheduling').count()
+            },
+            {
+                'name': 'مجدول',
+                'url': '?order__installation_status__exact=scheduled',
+                'count': self.get_queryset(request).filter(order__installation_status='scheduled').count()
+            },
+            {
+                'name': 'قيد التركيب',
+                'url': '?order__installation_status__exact=in_installation',
+                'count': self.get_queryset(request).filter(order__installation_status='in_installation').count()
+            },
+            {
+                'name': 'مكتمل',
+                'url': '?order__installation_status__exact=completed',
+                'count': self.get_queryset(request).filter(order__installation_status='completed').count()
+            },
+            {
+                'name': 'ملغي',
+                'url': '?order__installation_status__exact=cancelled',
+                'count': self.get_queryset(request).filter(order__installation_status='cancelled').count()
+            },
+            {
+                'name': 'يحتاج تعديل',
+                'url': '?order__installation_status__exact=modification_required',
+                'count': self.get_queryset(request).filter(order__installation_status='modification_required').count()
+            },
+        ]
+
+        # مسح cache إذا كان هناك تحديث
+        if request.GET.get('updated') or request.GET.get('_refresh') or request.GET.get('_nocache'):
+            from django.core.cache import cache
+            cache.clear()
+
+            # مسح cache الـ ORM أيضاً
+            from django.db import connection
+            if hasattr(connection, 'queries_log'):
+                connection.queries_log.clear()
+
+        # إضافة header لمنع caching في المتصفح دائماً
+        response = super().changelist_view(request, extra_context)
+        if request.GET.get('updated') or request.GET.get('_refresh') or request.GET.get('_nocache'):
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            response['Last-Modified'] = ''
+            response['ETag'] = ''
+
+        return response
     search_fields = [
         'manufacturing_code', 'contract_number', 'invoice_number',
         'order__order_number', 'order__customer__name', 'order__customer__phone'
@@ -260,8 +452,12 @@ class InstallationManufacturingOrderAdmin(admin.ModelAdmin):
     
     # إضافة إجراءات مجمعة لتغيير الحالة
     actions = [
-        'mark_as_pending', 'mark_as_in_progress', 'mark_as_ready_install', 'mark_as_completed', 'mark_as_delivered',
-        'mark_installation_needs_scheduling', 'mark_installation_scheduled', 'mark_installation_in_progress', 
+        # إجراءات حالة أوامر التصنيع
+        'mark_manufacturing_pending_approval', 'mark_manufacturing_pending', 'mark_manufacturing_in_progress',
+        'mark_manufacturing_ready_install', 'mark_manufacturing_completed', 'mark_manufacturing_delivered',
+        'mark_manufacturing_rejected', 'mark_manufacturing_cancelled',
+        # إجراءات حالة التركيب
+        'mark_installation_needs_scheduling', 'mark_installation_scheduled', 'mark_installation_in_progress',
         'mark_installation_completed', 'mark_installation_cancelled', 'mark_installation_modification_required'
     ]
     
@@ -281,6 +477,43 @@ class InstallationManufacturingOrderAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def changelist_view(self, request, extra_context=None):
+        """تخصيص عرض قائمة التغييرات لضمان إعادة التحميل الصحيح"""
+        if extra_context is None:
+            extra_context = {}
+
+        # مسح cache إذا كان هناك تحديث
+        if request.GET.get('updated') or request.GET.get('_refresh') or request.GET.get('_nocache'):
+            from django.core.cache import cache
+            cache.clear()
+
+            # مسح cache الـ ORM أيضاً
+            from django.db import connection
+            if hasattr(connection, 'queries_log'):
+                connection.queries_log.clear()
+
+        # إضافة header لمنع caching في المتصفح دائماً
+        response = super().changelist_view(request, extra_context)
+        if request.GET.get('updated') or request.GET.get('_refresh') or request.GET.get('_nocache'):
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            response['Last-Modified'] = ''
+            response['ETag'] = ''
+
+        return response
+
+    def get_queryset(self, request):
+        """تخصيص الـ queryset لضمان الحصول على أحدث البيانات"""
+        queryset = super().get_queryset(request)
+
+        # إذا كان هناك تحديث، تجنب الـ cache
+        if request.GET.get('updated') or request.GET.get('_refresh') or request.GET.get('_nocache'):
+            # إعادة تقييم الـ queryset لضمان الحصول على أحدث البيانات
+            queryset = queryset.all()
+
+        return queryset
 
     def order_number(self, obj):
         """عرض رقم الطلب مع رابط"""
@@ -396,205 +629,137 @@ class InstallationManufacturingOrderAdmin(admin.ModelAdmin):
     mark_as_delivered.short_description = "تغيير الحالة إلى تم التسليم"
 
     def get_queryset(self, request):
-        """تحسين الاستعلامات لتحسين الأداء - عرض فقط طلبات التركيب"""
-        return super().get_queryset(request).filter(
-            order__selected_types__icontains='installation'
-        ).select_related(
+        """تحسين الاستعلامات لتحسين الأداء - عرض جميع أوامر التصنيع"""
+        return super().get_queryset(request).select_related(
             'order', 'order__customer', 'order__branch', 'production_line'
         )
+
+
+
+    # دالة مساعدة لتحديث حالة التركيب
+    def _update_installation_status(self, request, queryset, new_status, status_display):
+        """دالة مساعدة لتحديث حالة التركيب"""
+        from installations.models import InstallationSchedule
+        from django.db import transaction
+
+        with transaction.atomic():
+            # الحصول على الطلبات
+            orders = [order.order for order in queryset if order.order]
+            order_ids = [order.id for order in orders]
+
+            if order_ids:
+                # تحديث حالة التركيب في الطلبات مباشرة
+                from orders.models import Order
+                Order.objects.filter(id__in=order_ids).update(installation_status=new_status)
+
+                # تحديث أو إنشاء InstallationSchedule
+                existing_installations = InstallationSchedule.objects.filter(order_id__in=order_ids)
+                existing_order_ids = set(existing_installations.values_list('order_id', flat=True))
+
+                # إنشاء InstallationSchedule للطلبات التي لا تملكها
+                new_installations = []
+                for order in orders:
+                    if order.id not in existing_order_ids:
+                        new_installations.append(InstallationSchedule(
+                            order=order,
+                            status=new_status
+                        ))
+
+                if new_installations:
+                    InstallationSchedule.objects.bulk_create(new_installations)
+
+                # تحديث الحالات الموجودة
+                updated_count = existing_installations.update(status=new_status)
+                total_updated = len(new_installations) + updated_count
+
+                # مسح cache
+                from django.core.cache import cache
+                cache.clear()
+            else:
+                total_updated = 0
+
+        self.message_user(request, f'✅ تم تغيير حالة التركيب لـ {total_updated} طلب إلى "{status_display}"')
+        return total_updated
 
     # إجراءات تغيير حالة التركيب - محسنة للأداء
     def mark_installation_needs_scheduling(self, request, queryset):
         """تغيير حالة التركيب إلى بحاجة جدولة"""
-        from installations.models import InstallationSchedule
-        from django.db import transaction
-        
-        with transaction.atomic():
-            # الحصول على الطلبات
-            orders = [order.order for order in queryset if order.order]
-            order_ids = [order.id for order in orders]
-            
-            # إنشاء InstallationSchedule للطلبات التي لا تملكها
-            existing_installations = InstallationSchedule.objects.filter(order_id__in=order_ids)
-            existing_order_ids = set(existing_installations.values_list('order_id', flat=True))
-            
-            new_installations = []
-            for order in orders:
-                if order.id not in existing_order_ids:
-                    new_installations.append(InstallationSchedule(
-                        order=order,
-                        status='needs_scheduling'
-                    ))
-            
-            if new_installations:
-                InstallationSchedule.objects.bulk_create(new_installations)
-            
-            # تحديث الحالات الموجودة
-            updated_count = existing_installations.update(status='needs_scheduling')
-            total_updated = len(new_installations) + updated_count
-            
-        self.message_user(request, f'تم تغيير حالة التركيب لـ {total_updated} طلب إلى "بحاجة جدولة"')
+        self._update_installation_status(request, queryset, 'needs_scheduling', 'بحاجة جدولة')
     mark_installation_needs_scheduling.short_description = "تغيير حالة التركيب إلى بحاجة جدولة"
 
     def mark_installation_scheduled(self, request, queryset):
         """تغيير حالة التركيب إلى مجدول"""
-        from installations.models import InstallationSchedule
-        from django.db import transaction
-        
-        with transaction.atomic():
-            # الحصول على الطلبات
-            orders = [order.order for order in queryset if order.order]
-            order_ids = [order.id for order in orders]
-            
-            # إنشاء InstallationSchedule للطلبات التي لا تملكها
-            existing_installations = InstallationSchedule.objects.filter(order_id__in=order_ids)
-            existing_order_ids = set(existing_installations.values_list('order_id', flat=True))
-            
-            new_installations = []
-            for order in orders:
-                if order.id not in existing_order_ids:
-                    new_installations.append(InstallationSchedule(
-                        order=order,
-                        status='scheduled'
-                    ))
-            
-            if new_installations:
-                InstallationSchedule.objects.bulk_create(new_installations)
-            
-            # تحديث الحالات الموجودة
-            updated_count = existing_installations.update(status='scheduled')
-            total_updated = len(new_installations) + updated_count
-            
-        self.message_user(request, f'تم تغيير حالة التركيب لـ {total_updated} طلب إلى "مجدول"')
+        self._update_installation_status(request, queryset, 'scheduled', 'مجدول')
     mark_installation_scheduled.short_description = "تغيير حالة التركيب إلى مجدول"
 
     def mark_installation_in_progress(self, request, queryset):
         """تغيير حالة التركيب إلى قيد التركيب"""
-        from installations.models import InstallationSchedule
-        from django.db import transaction
-        
-        with transaction.atomic():
-            # الحصول على الطلبات
-            orders = [order.order for order in queryset if order.order]
-            order_ids = [order.id for order in orders]
-            
-            # إنشاء InstallationSchedule للطلبات التي لا تملكها
-            existing_installations = InstallationSchedule.objects.filter(order_id__in=order_ids)
-            existing_order_ids = set(existing_installations.values_list('order_id', flat=True))
-            
-            new_installations = []
-            for order in orders:
-                if order.id not in existing_order_ids:
-                    new_installations.append(InstallationSchedule(
-                        order=order,
-                        status='in_installation'
-                    ))
-            
-            if new_installations:
-                InstallationSchedule.objects.bulk_create(new_installations)
-            
-            # تحديث الحالات الموجودة
-            updated_count = existing_installations.update(status='in_installation')
-            total_updated = len(new_installations) + updated_count
-            
-        self.message_user(request, f'تم تغيير حالة التركيب لـ {total_updated} طلب إلى "قيد التركيب"')
+        self._update_installation_status(request, queryset, 'in_installation', 'قيد التركيب')
     mark_installation_in_progress.short_description = "تغيير حالة التركيب إلى قيد التركيب"
 
     def mark_installation_completed(self, request, queryset):
         """تغيير حالة التركيب إلى مكتمل"""
-        from installations.models import InstallationSchedule
-        from django.db import transaction
-        
-        with transaction.atomic():
-            # الحصول على الطلبات
-            orders = [order.order for order in queryset if order.order]
-            order_ids = [order.id for order in orders]
-            
-            # إنشاء InstallationSchedule للطلبات التي لا تملكها
-            existing_installations = InstallationSchedule.objects.filter(order_id__in=order_ids)
-            existing_order_ids = set(existing_installations.values_list('order_id', flat=True))
-            
-            new_installations = []
-            for order in orders:
-                if order.id not in existing_order_ids:
-                    new_installations.append(InstallationSchedule(
-                        order=order,
-                        status='completed'
-                    ))
-            
-            if new_installations:
-                InstallationSchedule.objects.bulk_create(new_installations)
-            
-            # تحديث الحالات الموجودة
-            updated_count = existing_installations.update(status='completed')
-            total_updated = len(new_installations) + updated_count
-            
-        self.message_user(request, f'تم تغيير حالة التركيب لـ {total_updated} طلب إلى "مكتمل"')
+        self._update_installation_status(request, queryset, 'completed', 'مكتمل')
     mark_installation_completed.short_description = "تغيير حالة التركيب إلى مكتمل"
 
     def mark_installation_cancelled(self, request, queryset):
         """تغيير حالة التركيب إلى ملغي"""
-        from installations.models import InstallationSchedule
-        from django.db import transaction
-        
-        with transaction.atomic():
-            # الحصول على الطلبات
-            orders = [order.order for order in queryset if order.order]
-            order_ids = [order.id for order in orders]
-            
-            # إنشاء InstallationSchedule للطلبات التي لا تملكها
-            existing_installations = InstallationSchedule.objects.filter(order_id__in=order_ids)
-            existing_order_ids = set(existing_installations.values_list('order_id', flat=True))
-            
-            new_installations = []
-            for order in orders:
-                if order.id not in existing_order_ids:
-                    new_installations.append(InstallationSchedule(
-                        order=order,
-                        status='cancelled'
-                    ))
-            
-            if new_installations:
-                InstallationSchedule.objects.bulk_create(new_installations)
-            
-            # تحديث الحالات الموجودة
-            updated_count = existing_installations.update(status='cancelled')
-            total_updated = len(new_installations) + updated_count
-            
-        self.message_user(request, f'تم تغيير حالة التركيب لـ {total_updated} طلب إلى "ملغي"')
+        self._update_installation_status(request, queryset, 'cancelled', 'ملغي')
     mark_installation_cancelled.short_description = "تغيير حالة التركيب إلى ملغي"
 
     def mark_installation_modification_required(self, request, queryset):
         """تغيير حالة التركيب إلى يحتاج تعديل"""
-        from installations.models import InstallationSchedule
-        from django.db import transaction
-        
-        with transaction.atomic():
-            # الحصول على الطلبات
-            orders = [order.order for order in queryset if order.order]
-            order_ids = [order.id for order in orders]
-            
-            # إنشاء InstallationSchedule للطلبات التي لا تملكها
-            existing_installations = InstallationSchedule.objects.filter(order_id__in=order_ids)
-            existing_order_ids = set(existing_installations.values_list('order_id', flat=True))
-            
-            new_installations = []
-            for order in orders:
-                if order.id not in existing_order_ids:
-                    new_installations.append(InstallationSchedule(
-                        order=order,
-                        status='modification_required'
-                    ))
-            
-            if new_installations:
-                InstallationSchedule.objects.bulk_create(new_installations)
-            
-            # تحديث الحالات الموجودة
-            updated_count = existing_installations.update(status='modification_required')
-            total_updated = len(new_installations) + updated_count
-            
-        self.message_user(request, f'تم تغيير حالة التركيب لـ {total_updated} طلب إلى "يحتاج تعديل"')
+        self._update_installation_status(request, queryset, 'modification_required', 'يحتاج تعديل')
     mark_installation_modification_required.short_description = "تغيير حالة التركيب إلى يحتاج تعديل"
+
+    # إجراءات تحديث حالات أوامر التصنيع
+    def mark_manufacturing_pending_approval(self, request, queryset):
+        """تغيير حالة أمر التصنيع إلى قيد الموافقة"""
+        updated = queryset.update(status='pending_approval')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "قيد الموافقة"')
+    mark_manufacturing_pending_approval.short_description = "تغيير حالة التصنيع إلى قيد الموافقة"
+
+    def mark_manufacturing_pending(self, request, queryset):
+        """تغيير حالة أمر التصنيع إلى قيد الانتظار"""
+        updated = queryset.update(status='pending')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "قيد الانتظار"')
+    mark_manufacturing_pending.short_description = "تغيير حالة التصنيع إلى قيد الانتظار"
+
+    def mark_manufacturing_in_progress(self, request, queryset):
+        """تغيير حالة أمر التصنيع إلى قيد التصنيع"""
+        updated = queryset.update(status='in_progress')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "قيد التصنيع"')
+    mark_manufacturing_in_progress.short_description = "تغيير حالة التصنيع إلى قيد التصنيع"
+
+    def mark_manufacturing_ready_install(self, request, queryset):
+        """تغيير حالة أمر التصنيع إلى جاهز للتركيب"""
+        updated = queryset.update(status='ready_install')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "جاهز للتركيب"')
+    mark_manufacturing_ready_install.short_description = "تغيير حالة التصنيع إلى جاهز للتركيب"
+
+    def mark_manufacturing_completed(self, request, queryset):
+        """تغيير حالة أمر التصنيع إلى مكتمل"""
+        updated = queryset.update(status='completed')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "مكتمل"')
+    mark_manufacturing_completed.short_description = "تغيير حالة التصنيع إلى مكتمل"
+
+    def mark_manufacturing_delivered(self, request, queryset):
+        """تغيير حالة أمر التصنيع إلى تم التسليم"""
+        updated = queryset.update(status='delivered')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "تم التسليم"')
+    mark_manufacturing_delivered.short_description = "تغيير حالة التصنيع إلى تم التسليم"
+
+    def mark_manufacturing_rejected(self, request, queryset):
+        """تغيير حالة أمر التصنيع إلى مرفوض"""
+        updated = queryset.update(status='rejected')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "مرفوض"')
+    mark_manufacturing_rejected.short_description = "تغيير حالة التصنيع إلى مرفوض"
+
+    def mark_manufacturing_cancelled(self, request, queryset):
+        """تغيير حالة أمر التصنيع إلى ملغي"""
+        updated = queryset.update(status='cancelled')
+        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "ملغي"')
+    mark_manufacturing_cancelled.short_description = "تغيير حالة التصنيع إلى ملغي"
 
 
 # إزالة تسجيل نموذج أوامر التعديل - سنستخدم admin مخصص لـ manufacturing.models.ManufacturingOrder

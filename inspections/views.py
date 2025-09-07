@@ -33,6 +33,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         dashboard_qs = Inspection.objects.all() if self.request.user.is_superuser else Inspection.objects.filter(
             Q(inspector=self.request.user) | Q(created_by=self.request.user)
         )
+
+        # تم إلغاء الفلترة الافتراضية
         if branch_id:
             dashboard_qs = dashboard_qs.filter(order__customer__branch_id=branch_id)
         if status == 'pending' and from_orders == '1':
@@ -66,6 +68,9 @@ class CompletedInspectionsDetailView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(inspector=self.request.user) | Q(created_by=self.request.user)
             )
+
+        # تم إلغاء الفلترة الافتراضية
+
         return queryset.select_related('customer', 'inspector', 'branch')
 
 class CancelledInspectionsDetailView(LoginRequiredMixin, ListView):
@@ -80,6 +85,9 @@ class CancelledInspectionsDetailView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(inspector=self.request.user) | Q(created_by=self.request.user)
             )
+
+        # تم إلغاء الفلترة الافتراضية
+
         return queryset.select_related('customer', 'inspector', 'branch')
 
 class PendingInspectionsDetailView(LoginRequiredMixin, ListView):
@@ -94,6 +102,9 @@ class PendingInspectionsDetailView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(inspector=self.request.user) | Q(created_by=self.request.user)
             )
+
+        # تم إلغاء الفلترة الافتراضية
+
         return queryset.select_related('customer', 'inspector', 'branch')
 
 class InspectionListView(LoginRequiredMixin, ListView):
@@ -119,6 +130,8 @@ class InspectionListView(LoginRequiredMixin, ListView):
         queryset = Inspection.objects.all() if self.request.user.is_superuser else Inspection.objects.filter(
             Q(inspector=self.request.user) | Q(created_by=self.request.user)
         )
+
+        # تم إلغاء الفلترة الافتراضية
         if form.is_valid():
             q = form.cleaned_data.get('q')
             branch_id = form.cleaned_data.get('branch')

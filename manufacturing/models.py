@@ -360,7 +360,28 @@ class ManufacturingOrder(models.Model):
                 update_fields['installation_status'] = new_installation_status
 
         # تحديث بدون إطلاق الإشارات لتجنب الrecursion
-        Order.objects.filter(pk=self.order.pk).update(**update_fields)
+        updated_count = Order.objects.filter(pk=self.order.pk).update(**update_fields)
+
+        # إجبار تحديث الطلب في الذاكرة
+        if updated_count > 0:
+            self.order.refresh_from_db()
+
+            # تسجيل التحديث للتتبع
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"تم تحديث حالة الطلب {self.order.order_number} من التصنيع: {update_fields}")
+
+        # تحديث التركيبات المرتبطة إذا كان طلب تركيب
+        if self.order_type == 'installation' and 'installation_status' in update_fields:
+            try:
+                from installations.models import InstallationSchedule
+                # البحث عن التركيبات المرتبطة بهذا الطلب
+                installations = InstallationSchedule.objects.filter(order=self.order)
+                for installation in installations:
+                    installation.status = update_fields['installation_status']
+                    installation.save()
+            except ImportError:
+                pass  # في حالة عدم وجود تطبيق التركيبات
 
     def assign_production_line(self):
         """تحديد خط الإنتاج تلقائياً بناءً على فرع العميل"""

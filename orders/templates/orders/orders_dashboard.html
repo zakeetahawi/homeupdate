@@ -295,7 +295,7 @@
                 <div class="stats-card pending-orders">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title text-muted mb-1">قيد الانتظار</h6>
+                            <h6 class="card-title text-muted mb-1">قيد الانتظار والموافقة</h6>
                             <h2 class="mb-0 text-warning">{{ pending_orders|default_if_none:0 }}</h2>
                         </div>
                         <i class="fas fa-clock fa-2x text-warning opacity-50"></i>
@@ -326,6 +326,46 @@
                 </div>
             </div>
             {% endif %}
+        </div>
+
+        <!-- بطاقات توضيحية للمعاينات -->
+        <div class="row mt-3">
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="stats-card border-info">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">معاينات قيد الانتظار</h6>
+                            <h3 class="mb-0 text-info">{{ pending_inspections_count|default_if_none:0 }}</h3>
+                            <small class="text-muted">من جدول المعاينات</small>
+                        </div>
+                        <i class="fas fa-search fa-2x text-info opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="stats-card border-warning">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">طلبات لها معاينات قيد الانتظار</h6>
+                            <h3 class="mb-0 text-warning">{{ orders_with_pending_inspections|default_if_none:0 }}</h3>
+                            <small class="text-muted">طلبات تحتاج معاينة</small>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="stats-card border-secondary">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">الفرق</h6>
+                            <h3 class="mb-0 text-secondary">{{ orders_without_inspections|default_if_none:0 }}</h3>
+                            <small class="text-muted">طلبات بدون معاينات</small>
+                        </div>
+                        <i class="fas fa-minus fa-2x text-secondary opacity-50"></i>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

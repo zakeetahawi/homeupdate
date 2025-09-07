@@ -363,16 +363,21 @@ class Order(models.Model):
             models.Index(fields=['payment_verified'], name='order_payment_verified_idx'),
             models.Index(fields=['created_at'], name='order_created_at_idx'),
         ]
-    def calculate_final_price(self):
+    def calculate_final_price(self, force_update=False):
         """حساب السعر النهائي للطلب مع الخصم"""
         # التحقق من وجود مفتاح أساسي أولاً
         if not self.pk:
             return 0
 
+        # حماية الطلبات المدفوعة من تغيير الأسعار (إلا إذا كان إجباري)
+        if not force_update and self.paid_amount > 0:
+            # إذا كان هناك مبلغ مدفوع، لا نغير السعر النهائي
+            return self.final_price or 0
+
         # حساب السعر الأساسي من عناصر الطلب مع الخصم
         total = 0
         total_discount = 0
-        
+
         for item in self.items.select_related('product').all():
             item_total = item.quantity * item.unit_price
             item_discount = item_total * (item.discount_percentage / 100) if item.discount_percentage else 0
@@ -855,7 +860,10 @@ class Order(models.Model):
     
     def update_installation_status(self):
         """تحديث حالة التركيب بناءً على قسم التركيبات"""
-        if getattr(self, '_updating_installation_status', False):
+        # تجنب التحديث المتكرر من مصادر مختلفة
+        if (getattr(self, '_updating_installation_status', False) or
+            getattr(self, '_updating_installation_status_bulk', False) or
+            getattr(self, '_updating_from_signal', False)):
             return
         setattr(self, '_updating_installation_status', True)
         try:
@@ -1337,12 +1345,20 @@ def order_post_save(sender, instance, created, **kwargs):
 def update_order_installation_status(sender, instance, **kwargs):
     """تحديث حالة الطلب عند تغيير حالة التركيب"""
     try:
+        # تجنب التحديث المتكرر من التحديث المجمع
+        if hasattr(instance, '_bulk_update') or hasattr(instance.order, '_updating_installation_status_bulk'):
+            return
+
         if instance.order:
             # تحديث حالة التركيب في الطلب فقط إذا تغيرت
             if instance.order.installation_status != instance.status:
+                # إضافة علامة لتجنب الحلقة اللانهائية
+                setattr(instance.order, '_updating_from_signal', True)
                 instance.order.installation_status = instance.status
                 # استخدام update_fields لتجنب استدعاء دالة save الكاملة
                 instance.order.save(update_fields=['installation_status'])
+                # إزالة العلامة
+                delattr(instance.order, '_updating_from_signal')
                 
                 # تحديث إشارة الإكمال بدون استدعاء save الكاملة
                 try:
@@ -1590,21 +1606,46 @@ class OrderItem(models.Model):
             if not self.order.pk:
                 raise models.ValidationError('يجب حفظ الطلب أولاً قبل إنشاء عنصر الطلب')
 
+            # التحقق من حماية الطلبات المدفوعة
+            is_new = self.pk is None
+            force_update = getattr(self, '_force_price_update', False)
+
+            if not is_new and not force_update and self.order.paid_amount > 0:
+                # إذا كان الطلب مدفوع، تحقق من التغييرات في السعر
+                try:
+                    old_item = OrderItem.objects.get(pk=self.pk)
+                    if (old_item.unit_price != self.unit_price or
+                        old_item.quantity != self.quantity or
+                        old_item.discount_percentage != self.discount_percentage):
+
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"محاولة تعديل أسعار طلب مدفوع {self.order.order_number}")
+
+                        # يمكن إضافة استثناء هنا لمنع التعديل تماماً
+                        # raise models.ValidationError('لا يمكن تعديل أسعار الطلبات المدفوعة')
+
+                        # أو السماح بالتعديل مع تسجيل تحذير
+                        pass
+                except OrderItem.DoesNotExist:
+                    pass
+
             super().save(*args, **kwargs)
 
-            # جدولة تحديث السعر النهائي للطلب بشكل غير متزامن
-            try:
-                from .tasks import calculate_order_totals_async
-                calculate_order_totals_async.delay(self.order.pk)
-            except Exception as e:
-                # في حالة فشل الجدولة، نحدث السعر مباشرة
+            # تحديث السعر النهائي للطلب (مع مراعاة الحماية)
+            if is_new or force_update:
                 try:
-                    self.order.calculate_final_price()
-                    self.order.save(update_fields=['final_price', 'total_amount'])
-                except Exception as calc_error:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f"خطأ في تحديث السعر النهائي للطلب {self.order.pk}: {str(calc_error)}")
+                    from .tasks import calculate_order_totals_async
+                    calculate_order_totals_async.delay(self.order.pk)
+                except Exception as e:
+                    # في حالة فشل الجدولة، نحدث السعر مباشرة
+                    try:
+                        self.order.calculate_final_price(force_update=force_update)
+                        self.order.save(update_fields=['final_price', 'total_amount'])
+                    except Exception as calc_error:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f"خطأ في تحديث السعر النهائي للطلب {self.order.pk}: {str(calc_error)}")
 
         except Exception as e:
             import logging

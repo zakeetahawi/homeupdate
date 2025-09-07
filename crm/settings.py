@@ -40,6 +40,8 @@ import time
 from django.db import connection
 from django.utils.deprecation import MiddlewareMixin
 
+import socket
+
 class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
     def process_view(self, request, view_func, view_args, view_kwargs):
         request._start_time = time.time()
@@ -98,11 +100,44 @@ if DEBUG:
     ALLOWED_HOSTS.extend([
     'localhost',
     '127.0.0.1',
+    '192.168.2.41',  # عنوان الخادم الحالي
     '192.168.2.25',  # عنوان الشبكة المحلية
     '*.trycloudflare.com',
     '*.ngrok-free.app',
     'testserver',  # للاختبارات
     ])
+
+# حاول إضافة عناوين الـ IP المحلية تلقائياً إلى ALLOWED_HOSTS (بدون مكتبات خارجية)
+try:
+    import subprocess
+
+    ips = []
+    # اجلب كل عناوين inet من ip addr
+    try:
+        out = subprocess.check_output(['ip', '-4', 'addr', 'show'], text=True)
+        for line in out.splitlines():
+            line = line.strip()
+            if line.startswith('inet '):
+                parts = line.split()
+                if len(parts) >= 2:
+                    addr = parts[1].split('/')[0]
+                    if addr and not addr.startswith('127.'):
+                        ips.append(addr)
+    except Exception:
+        # فشل استخدام ip، جرب socket كخطة احتياط
+        try:
+            _sock_ip = socket.gethostbyname(socket.gethostname())
+            if _sock_ip and not _sock_ip.startswith('127.'):
+                ips.append(_sock_ip)
+        except Exception:
+            pass
+
+    for ip_addr in ips:
+        if ip_addr not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(ip_addr)
+except Exception:
+    # لا تمنع الإقلاع إن فشل اكتشاف IP المحلي
+    pass
 
 # إضافة دومين elkhawaga.uk وجميع النطاقات الفرعية
 ALLOWED_HOSTS.extend([
@@ -163,6 +198,7 @@ INSTALLED_APPS = [
     'notifications.apps.NotificationsConfig',  # نظام الإشعارات المتكامل
     'odoo_db_manager.apps.OdooDbManagerConfig',
     'backup_system.apps.BackupSystemConfig',  # نظام النسخ الاحتياطي والاستعادة الجديد
+    'modern_chat.apps.ModernChatConfig',  # نظام الدردشة الحديث
     'corsheaders',
     'django_apscheduler',
     'dbbackup',

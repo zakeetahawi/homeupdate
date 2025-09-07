@@ -314,8 +314,9 @@ def order_post_save(sender, instance, created, **kwargs):
 def order_item_post_save(sender, instance, created, **kwargs):
     """معالج حفظ عنصر الطلب"""
     if created:
-        # تحديث المبلغ الإجمالي للطلب
-        instance.order.calculate_final_price()
+        # تحديث المبلغ الإجمالي للطلب (للطلبات الجديدة فقط)
+        force_update = getattr(instance, '_force_price_update', False)
+        instance.order.calculate_final_price(force_update=force_update)
         # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
         instance.order._is_auto_update = True  # تمييز التحديث التلقائي
         Order.objects.filter(pk=instance.order.pk).update(
