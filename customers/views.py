@@ -699,26 +699,66 @@ def find_customer_by_phone(request):
 
 @login_required
 def check_customer_phone(request):
-    """API: التحقق من وجود عميل برقم الهاتف"""
-    phone = request.GET.get('phone')
+    """API: التحقق من وجود عميل برقم الهاتف مع validation للصيغة"""
+    import re
+
+    phone = request.GET.get('phone', '').strip()
+    customer_id = request.GET.get('customer_id')  # لاستثناء العميل الحالي عند التعديل
+
     if not phone:
-        return JsonResponse({'found': False, 'error': 'رقم الهاتف مطلوب'}, status=400)
-    
-    customer = Customer.objects.filter(phone=phone).first()
-    if customer:
         return JsonResponse({
+            'valid': False,
+            'found': False,
+            'error': 'رقم الهاتف مطلوب'
+        }, status=400)
+
+    # تنظيف الرقم من المسافات والرموز
+    phone = re.sub(r'[^\d]', '', phone)
+
+    # فحص صيغة الرقم
+    if not re.match(r'^01[0-9]{9}$', phone):
+        return JsonResponse({
+            'valid': False,
+            'found': False,
+            'error': 'رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 01 (مثال: 01234567890)'
+        })
+
+    # فحص التكرار
+    qs = Customer.objects.filter(Q(phone=phone) | Q(phone2=phone))
+
+    # استثناء العميل الحالي عند التعديل
+    if customer_id:
+        try:
+            qs = qs.exclude(pk=int(customer_id))
+        except (ValueError, TypeError):
+            pass
+
+    customer = qs.first()
+    if customer:
+        # تحديد أي رقم هو المكرر
+        phone_field = 'phone' if customer.phone == phone else 'phone2'
+        return JsonResponse({
+            'valid': True,
             'found': True,
+            'error': f'رقم الهاتف مستخدم بالفعل للعميل: {customer.name}',
             'customer': {
                 'id': customer.pk,
                 'name': customer.name,
                 'branch': customer.branch.name if customer.branch else 'غير محدد',
                 'phone': customer.phone,
+                'phone2': customer.phone2,
                 'email': customer.email,
                 'address': customer.address,
-                'url': f"/customers/{customer.pk}/"
+                'url': f"/customers/{customer.pk}/",
+                'duplicate_field': phone_field
             }
         })
-    return JsonResponse({'found': False})
+
+    return JsonResponse({
+        'valid': True,
+        'found': False,
+        'message': 'رقم الهاتف متاح للاستخدام'
+    })
 
 @login_required
 @require_POST

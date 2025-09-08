@@ -137,6 +137,53 @@
         margin-top: 5px;
         display: block;
     }
+
+    /* تحسين مظهر رسائل التحقق من الهاتف */
+    .phone-validation {
+        font-size: 12px;
+        margin-top: 5px;
+        padding: 5px 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.9);
+        border-left: 3px solid;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .phone-validation.text-danger {
+        border-left-color: #dc3545;
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+
+    .phone-validation.text-warning {
+        border-left-color: #ffc107;
+        background-color: rgba(255, 193, 7, 0.1);
+    }
+
+    .phone-validation.text-success {
+        border-left-color: #28a745;
+        background-color: rgba(40, 167, 69, 0.1);
+    }
+
+    /* تحسين مظهر حقول الهاتف */
+    .form-control.border-danger {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15) !important;
+    }
+
+    .form-control.border-warning {
+        border-color: #ffc107 !important;
+        box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.15) !important;
+    }
+
+    .form-control.border-success {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.15) !important;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
     
     .tab-pane {
         animation: fadeIn 0.3s ease-in-out;
@@ -255,6 +302,9 @@
         <!-- Form Content -->
         <form method="post" enctype="multipart/form-data" id="customerForm">
             {% csrf_token %}
+            {% if form.instance.pk %}
+            <input type="hidden" name="customer_id" value="{{ form.instance.pk }}">
+            {% endif %}
             
             {% if form.non_field_errors %}
             <div class="alert alert-danger mt-3">
@@ -504,26 +554,107 @@ function hideDuplicateAlert() {
     }
 }
 
-// دالة البحث عن العميل برقم الهاتف
-function checkCustomerPhone(phone) {
-    if (phone.length < 5) return; // لا تبحث إلا إذا كان الرقم 5 أرقام على الأقل
-    
-    fetch(`/customers/api/check-phone/?phone=${phone}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.found) {
-                showDuplicateCustomerCard(data.customer);
-            } else {
-                hideDuplicateCustomerCard();
-            }
-        })
-        .catch(error => {
-            console.error('Error checking phone:', error);
-        });
+// دالة البحث عن العميل برقم الهاتف مع validation
+function checkCustomerPhone(phone, inputElement, isPhone2 = false) {
+    // تنظيف الرقم
+    phone = phone.replace(/[^\d]/g, '');
+
+    // إزالة رسائل الخطأ السابقة
+    clearPhoneValidation(inputElement);
+
+    if (phone.length === 0) {
+        hideDuplicateCustomerCard();
+        return;
+    }
+
+    // فحص الصيغة أولاً
+    if (phone.length > 0 && phone.length < 11) {
+        if (phone.length >= 2 && !phone.startsWith('01')) {
+            showPhoneValidationError(inputElement, 'رقم الهاتف يجب أن يبدأ بـ 01');
+            return;
+        }
+        if (phone.length === 11 && !/^01[0-9]{9}$/.test(phone)) {
+            showPhoneValidationError(inputElement, 'رقم الهاتف غير صحيح');
+            return;
+        }
+        // لا نفحص التكرار إلا إذا كان الرقم مكتمل
+        if (phone.length < 11) {
+            hideDuplicateCustomerCard();
+            return;
+        }
+    }
+
+    if (phone.length === 11) {
+        // فحص الصيغة النهائي
+        if (!/^01[0-9]{9}$/.test(phone)) {
+            showPhoneValidationError(inputElement, 'رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 01');
+            return;
+        }
+
+        // فحص التكرار
+        const customerId = document.querySelector('input[name="customer_id"]')?.value || '';
+        fetch(`/customers/api/check-phone/?phone=${phone}&customer_id=${customerId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.valid) {
+                    showPhoneValidationError(inputElement, data.error);
+                } else if (data.found) {
+                    showDuplicateCustomerCard(data.customer, isPhone2);
+                    showPhoneValidationError(inputElement, data.error, 'warning');
+                } else {
+                    showPhoneValidationSuccess(inputElement, data.message);
+                    hideDuplicateCustomerCard();
+                }
+            })
+            .catch(error => {
+                console.error('Error checking phone:', error);
+                showPhoneValidationError(inputElement, 'خطأ في التحقق من الرقم');
+            });
+    } else if (phone.length > 11) {
+        showPhoneValidationError(inputElement, 'رقم الهاتف يجب أن يكون 11 رقم فقط');
+    }
+}
+
+// دوال التحقق من صحة الرقم
+function showPhoneValidationError(inputElement, message, type = 'error') {
+    clearPhoneValidation(inputElement);
+
+    const errorDiv = document.createElement('div');
+    errorDiv.className = `phone-validation ${type === 'warning' ? 'text-warning' : 'text-danger'}`;
+    errorDiv.innerHTML = `<i class="fas fa-${type === 'warning' ? 'exclamation-triangle' : 'times-circle'} me-1"></i>${message}`;
+    errorDiv.style.fontSize = '12px';
+    errorDiv.style.marginTop = '5px';
+
+    inputElement.parentNode.appendChild(errorDiv);
+    inputElement.classList.add(type === 'warning' ? 'border-warning' : 'border-danger');
+}
+
+function showPhoneValidationSuccess(inputElement, message) {
+    clearPhoneValidation(inputElement);
+
+    const successDiv = document.createElement('div');
+    successDiv.className = 'phone-validation text-success';
+    successDiv.innerHTML = `<i class="fas fa-check-circle me-1"></i>${message}`;
+    successDiv.style.fontSize = '12px';
+    successDiv.style.marginTop = '5px';
+
+    inputElement.parentNode.appendChild(successDiv);
+    inputElement.classList.add('border-success');
+}
+
+function clearPhoneValidation(inputElement) {
+    // إزالة رسائل التحقق السابقة
+    const existingValidation = inputElement.parentNode.querySelector('.phone-validation');
+    if (existingValidation) {
+        existingValidation.remove();
+    }
+
+    // إزالة الألوان من الحقل
+    inputElement.classList.remove('border-danger', 'border-warning', 'border-success');
 }
 
 // دالة عرض بطاقة العميل المكرر
-function showDuplicateCustomerCard(customer) {
+function showDuplicateCustomerCard(customer, isPhone2 = false) {
     const alertContainer = document.getElementById('duplicateCustomerAlert');
     if (alertContainer) {
         alertContainer.innerHTML = `
@@ -536,8 +667,10 @@ function showDuplicateCustomerCard(customer) {
                     </h6>
                     <p class="mb-3">
                         <strong>الاسم:</strong> ${customer.name}<br>
-                        <strong>رقم الهاتف:</strong> ${customer.phone}<br>
-                        <strong>الفرع:</strong> ${customer.branch || 'غير محدد'}
+                        <strong>رقم الهاتف الأول:</strong> ${customer.phone}<br>
+                        ${customer.phone2 ? `<strong>رقم الهاتف الثاني:</strong> ${customer.phone2}<br>` : ''}
+                        <strong>الفرع:</strong> ${customer.branch || 'غير محدد'}<br>
+                        ${customer.duplicate_field ? `<small class="text-warning"><i class="fas fa-exclamation-triangle"></i> الرقم المكرر: ${customer.duplicate_field === 'phone2' ? 'الهاتف الثاني' : 'الهاتف الأول'}</small>` : ''}
                     </p>
                                             <div class="d-flex gap-2 flex-wrap">
                             <a href="/customers/${customer.id}/" class="btn btn-outline-primary btn-sm">
@@ -586,22 +719,53 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // التحقق من رقم الهاتف فور الكتابة
+    // التحقق من رقم الهاتف الأول فور الكتابة
     const phoneInput = document.getElementById('{{ form.phone.id_for_label }}');
     if (phoneInput) {
         let timeout;
         phoneInput.addEventListener('input', function(e) {
             clearTimeout(timeout);
             const phone = e.target.value.trim();
-            
-            // انتظار 500 مللي ثانية بعد توقف الكتابة
+
+            // انتظار 300 مللي ثانية بعد توقف الكتابة
             timeout = setTimeout(() => {
-                if (phone.length >= 5) {
-                    checkCustomerPhone(phone);
+                checkCustomerPhone(phone, phoneInput, false);
+            }, 300);
+        });
+
+        // فحص فوري عند فقدان التركيز
+        phoneInput.addEventListener('blur', function(e) {
+            const phone = e.target.value.trim();
+            if (phone.length > 0) {
+                checkCustomerPhone(phone, phoneInput, false);
+            }
+        });
+    }
+
+    // التحقق من رقم الهاتف الثاني فور الكتابة
+    const phone2Input = document.getElementById('{{ form.phone2.id_for_label }}');
+    if (phone2Input) {
+        let timeout2;
+        phone2Input.addEventListener('input', function(e) {
+            clearTimeout(timeout2);
+            const phone2 = e.target.value.trim();
+
+            // انتظار 300 مللي ثانية بعد توقف الكتابة
+            timeout2 = setTimeout(() => {
+                if (phone2.length > 0) {
+                    checkCustomerPhone(phone2, phone2Input, true);
                 } else {
-                    hideDuplicateCustomerCard();
+                    clearPhoneValidation(phone2Input);
                 }
-            }, 500);
+            }, 300);
+        });
+
+        // فحص فوري عند فقدان التركيز
+        phone2Input.addEventListener('blur', function(e) {
+            const phone2 = e.target.value.trim();
+            if (phone2.length > 0) {
+                checkCustomerPhone(phone2, phone2Input, true);
+            }
         });
     }
     

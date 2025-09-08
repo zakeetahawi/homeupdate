@@ -1,6 +1,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
+import re
 from .models import Customer, CustomerCategory, CustomerNote
 from accounts.models import Branch
 
@@ -11,7 +12,12 @@ class CustomerForm(forms.ModelForm):
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'dir': 'ltr',
-            'placeholder': _('أدخل رقم الهاتف الثاني (اختياري)')
+            'placeholder': '01234567890 (اختياري)',
+            'maxlength': '11',
+            'pattern': '^01[0-9]{9}$',
+            'title': 'يجب أن يكون الرقم 11 رقم ويبدأ بـ 01',
+            'data-check-duplicate': 'true',
+            'autocomplete': 'tel'
         })
     )
 
@@ -24,7 +30,16 @@ class CustomerForm(forms.ModelForm):
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'dir': 'ltr',
+                'placeholder': '01234567890',
+                'maxlength': '11',
+                'pattern': '^01[0-9]{9}$',
+                'title': 'يجب أن يكون الرقم 11 رقم ويبدأ بـ 01',
+                'data-check-duplicate': 'true',
+                'autocomplete': 'tel'
+            }),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
             'birth_date': forms.DateInput(attrs={
                 'class': 'form-control',
@@ -92,6 +107,17 @@ class CustomerForm(forms.ModelForm):
     def clean_phone(self):
         phone = self.cleaned_data.get('phone')
         if phone:
+            # تنظيف الرقم من المسافات والرموز
+            phone = re.sub(r'[^\d]', '', phone)
+
+            # فحص صيغة الرقم
+            if not re.match(r'^01[0-9]{9}$', phone):
+                raise ValidationError(
+                    _('رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 01 (مثال: 01234567890)'),
+                    code='invalid_phone_format'
+                )
+
+            # فحص التكرار
             qs = Customer.objects.filter(phone=phone)
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
@@ -103,13 +129,53 @@ class CustomerForm(forms.ModelForm):
                     _('رقم الهاتف مستخدم بالفعل للعميل: %(name)s (الفرع: %(branch)s)'),
                     code='duplicate_phone',
                     params={
-                        'name': existing.name, 
+                        'name': existing.name,
                         'branch': existing.branch.name if existing.branch else '-',
                         'customer_id': existing.pk,
                         'customer_url': f'/customers/{existing.pk}/'
                     }
                 )
         return phone
+
+    def clean_phone2(self):
+        phone2 = self.cleaned_data.get('phone2')
+        if phone2:
+            # تنظيف الرقم من المسافات والرموز
+            phone2 = re.sub(r'[^\d]', '', phone2)
+
+            # فحص صيغة الرقم
+            if not re.match(r'^01[0-9]{9}$', phone2):
+                raise ValidationError(
+                    _('رقم الهاتف الثاني يجب أن يكون 11 رقم ويبدأ بـ 01 (مثال: 01234567890)'),
+                    code='invalid_phone2_format'
+                )
+
+            # فحص التكرار
+            qs = Customer.objects.filter(phone2=phone2)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                existing = qs.first()
+                raise ValidationError(
+                    _('رقم الهاتف الثاني مستخدم بالفعل للعميل: %(name)s (الفرع: %(branch)s)'),
+                    code='duplicate_phone2',
+                    params={
+                        'name': existing.name,
+                        'branch': existing.branch.name if existing.branch else '-',
+                        'customer_id': existing.pk,
+                        'customer_url': f'/customers/{existing.pk}/'
+                    }
+                )
+
+            # فحص أن الرقم الثاني مختلف عن الرقم الأول
+            phone = self.cleaned_data.get('phone')
+            if phone and phone == phone2:
+                raise ValidationError(
+                    _('رقم الهاتف الثاني يجب أن يكون مختلف عن رقم الهاتف الأول'),
+                    code='same_phone_numbers'
+                )
+
+        return phone2
 
 class CustomerNoteForm(forms.ModelForm):
     class Meta:
