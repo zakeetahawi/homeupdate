@@ -123,6 +123,9 @@ def customer_list(request):
     status_value = request.GET.get('status', '')
     branch_value = request.GET.get('branch', '')
 
+    # معلومات فلتر السنة
+    from customers.models import Customer
+
     # إضافة معلومات إضافية للعملاء من الفروع الأخرى - محسن لتجنب N+1
     cross_branch_customers = []
     if search_term and hasattr(request.user, 'branch') and request.user.branch:
@@ -133,9 +136,6 @@ def customer_list(request):
             pk__in=customer_ids
         ).exclude(branch=request.user.branch).values_list('pk', flat=True)
         cross_branch_customers = list(cross_branch_customer_ids)
-
-    # معلومات فلتر السنة
-    from customers.models import Customer
     available_years = Customer.objects.dates('created_at', 'year', order='DESC')
     available_years = [year.year for year in available_years]
     selected_years = request.GET.getlist('years')
