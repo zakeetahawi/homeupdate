@@ -2034,7 +2034,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (periodSelect) {
             periodSelect.addEventListener('change', function() {
                 if (this.value === 'year') {
-                    console.log('Auto-submitting filters for year selection');
                     filterForm.submit();
                 }
             });
@@ -2052,18 +2051,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     this.style.borderColor = '#e9ecef';
                     this.style.boxShadow = 'none';
                 }, 1000);
-                
-                console.log(`Filter changed: ${this.name} = ${this.value}`);
             });
         });
     }
     
-    // Debug logging
-    console.log('Enhanced Dashboard initialized');
-    console.log('Current filters:', {
-        branch: document.getElementById('branch-filter')?.value,
-        month: document.getElementById('period-select')?.value,
-        year: document.getElementById('year-filter')?.value,
+    // Dashboard initialized
         show_all_years: showAllYearsInput?.value,
         comparison_type: document.getElementById('comparison-type-select')?.value
     });

@@ -8,6 +8,39 @@ from inventory.models import Warehouse
 import uuid
 
 
+class Section(models.Model):
+    """نموذج الأقسام"""
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name='اسم القسم'
+    )
+
+    description = models.TextField(
+        blank=True,
+        verbose_name='وصف القسم'
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='نشط'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء'
+    )
+
+    class Meta:
+        verbose_name = 'قسم'
+        verbose_name_plural = 'الأقسام'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class CuttingOrder(models.Model):
     """نموذج أمر التقطيع"""
     

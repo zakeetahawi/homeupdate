@@ -259,24 +259,18 @@
      * تهيئة معالج CSRF
      */
     function initCsrfHandler() {
-        console.log('🔒 تهيئة معالج CSRF...');
-        
         // الحصول على الـ token الحالي
         csrfToken = getCurrentCsrfToken();
-        
-        if (csrfToken) {
-            console.log('✅ تم العثور على CSRF token');
-        } else {
+
+        if (!csrfToken) {
             console.warn('⚠️ لم يتم العثور على CSRF token');
             refreshCsrfToken();
         }
-        
+
         // إعداد المعالجات
         setupAjaxCsrf();
         setupFormCsrf();
         setupPeriodicRefresh();
-        
-        console.log('✅ تم تهيئة معالج CSRF بنجاح');
     }
     
     /**

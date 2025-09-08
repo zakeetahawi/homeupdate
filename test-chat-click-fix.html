@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>اختبار فتح المحادثة</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>اختبار فتح المحادثة عند الضغط على المستخدم</h1>
+    
+    <div style="padding: 20px; border: 1px solid #ddd; margin: 20px;">
+        <h3>خطوات الاختبار:</h3>
+        <ol>
+            <li>افتح المتصفح وانتقل إلى: <code>http://localhost:8000</code></li>
+            <li>سجل الدخول: <code>admin / admin123</code></li>
+            <li>افتح console المتصفح (F12)</li>
+            <li>انقر على الزر العائم للمحادثة</li>
+            <li>انتقل إلى تبويب "المستخدمون"</li>
+            <li>انقر على أي مستخدم في القائمة</li>
+        </ol>
+    </div>
+    
+    <div style="padding: 20px; border: 1px solid #ddd; margin: 20px; background: #f0f8ff;">
+        <h3>النتائج المتوقعة:</h3>
+        <ul>
+            <li>✅ يجب أن تظهر رسائل console تشير إلى تهيئة ChatManager</li>
+            <li>✅ عند النقر على مستخدم، يجب أن تظهر رسائل:</li>
+            <ul>
+                <li><code>فتح محادثة مع المستخدم: [USER_ID]</code></li>
+                <li><code>تم العثور على الغرفة: [ROOM_ID]</code></li>
+                <li><code>معلومات المستخدم: [USER_INFO]</code></li>
+                <li><code>ChatManager.openChat called with: [ROOM_ID] [USER_INFO]</code></li>
+                <li><code>إنشاء نافذة جديدة</code></li>
+                <li><code>تم إضافة النافذة للصفحة</code></li>
+                <li><code>تم إنشاء النافذة بنجاح</code></li>
+            </ul>
+            <li>✅ يجب أن تفتح نافذة محادثة جديدة في أسفل يمين الشاشة</li>
+            <li>✅ النافذة يجب أن تحتوي على اسم المستخدم في الأعلى</li>
+            <li>✅ يجب أن تحتوي على حقل إدخال الرسائل في الأسفل</li>
+        </ul>
+    </div>
+    
+    <div style="padding: 20px; border: 1px solid #ffeeee; margin: 20px; background: #fff5f5;">
+        <h3>الأخطاء المحتملة:</h3>
+        <ul>
+            <li>❌ <code>Cannot read properties of undefined (reading 'then')</code> - تم إصلاحه</li>
+            <li>❌ <code>ChatManager is not defined</code> - تحقق من تهيئة النظام</li>
+            <li>❌ لا تفتح النافذة - تحقق من console للأخطاء</li>
+            <li>❌ النافذة فارغة - تحقق من تحميل الرسائل</li>
+        </ul>
+    </div>
+    
+    <div style="padding: 20px; border: 1px solid #eeffee; margin: 20px; background: #f5fff5;">
+        <h3>الإصلاحات المطبقة:</h3>
+        <ul>
+            <li>✅ إصلاح دالة <code>startPrivateChatFromWidget</code> لتعمل بدون Promise</li>
+            <li>✅ إضافة تحقق من الأخطاء في <code>ChatManager.openChat</code></li>
+            <li>✅ إضافة تحقق من الأخطاء في <code>createChatWindow</code></li>
+            <li>✅ إضافة رسائل console للتتبع</li>
+            <li>✅ تحسين معالجة الأخطاء</li>
+        </ul>
+    </div>
+    
+    <div style="padding: 20px; border: 1px solid #ffffee; margin: 20px; background: #fffff5;">
+        <h3>اختبار متقدم:</h3>
+        <ol>
+            <li>افتح نافذتين في متصفحين مختلفين</li>
+            <li>سجل دخول بمستخدمين مختلفين</li>
+            <li>في المتصفح الأول، انقر على المستخدم الثاني</li>
+            <li>يجب أن تفتح نافذة المحادثة</li>
+            <li>اكتب رسالة وأرسلها</li>
+            <li>في المتصفح الثاني، يجب أن تفتح النافذة تلقائياً وتظهر الرسالة</li>
+            <li>اختبر الكتابة (يجب أن يظهر "يكتب...")</li>
+            <li>اختبر كتم الصوت</li>
+            <li>اختبر تصغير/استعادة النافذة</li>
+        </ol>
+    </div>
+    
+    <script>
+        // اختبار بسيط للتأكد من وجود ChatManager
+        setTimeout(() => {
+            if (typeof ChatManager !== 'undefined') {
+                console.log('✅ ChatManager موجود ومُعرف');
+                console.log('ChatManager:', ChatManager);
+            } else {
+                console.error('❌ ChatManager غير مُعرف');
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

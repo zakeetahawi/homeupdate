@@ -40,8 +40,6 @@ import time
 from django.db import connection
 from django.utils.deprecation import MiddlewareMixin
 
-import socket
-
 class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
     def process_view(self, request, view_func, view_args, view_kwargs):
         request._start_time = time.time()
@@ -87,90 +85,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-development-key-for-j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
-# قراءة ALLOWED_HOSTS من متغيرات البيئة. يجب أن تكون سلسلة نصية مفصولة بفاصلة.
-# مثال: ALLOWED_HOSTS="localhost,127.0.0.1,mydomain.com"
-allowed_hosts_str = os.environ.get('ALLOWED_HOSTS')
-if not allowed_hosts_str:
-    ALLOWED_HOSTS = []
-else:
-    ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(',')]
-
-# في وضع التطوير، يمكن إضافة نطاقات إضافية لتسهيل الاختبار
-if DEBUG:
-    ALLOWED_HOSTS.extend([
-    'localhost',
-    '127.0.0.1',
-    '192.168.2.41',  # عنوان الخادم الحالي
-    '192.168.2.25',  # عنوان الشبكة المحلية
-    '*.trycloudflare.com',
-    '*.ngrok-free.app',
-    'testserver',  # للاختبارات
-    ])
-
-# حاول إضافة عناوين الـ IP المحلية تلقائياً إلى ALLOWED_HOSTS (بدون مكتبات خارجية)
-try:
-    import subprocess
-
-    ips = []
-    # اجلب كل عناوين inet من ip addr
-    try:
-        out = subprocess.check_output(['ip', '-4', 'addr', 'show'], text=True)
-        for line in out.splitlines():
-            line = line.strip()
-            if line.startswith('inet '):
-                parts = line.split()
-                if len(parts) >= 2:
-                    addr = parts[1].split('/')[0]
-                    if addr and not addr.startswith('127.'):
-                        ips.append(addr)
-    except Exception:
-        # فشل استخدام ip، جرب socket كخطة احتياط
-        try:
-            _sock_ip = socket.gethostbyname(socket.gethostname())
-            if _sock_ip and not _sock_ip.startswith('127.'):
-                ips.append(_sock_ip)
-        except Exception:
-            pass
-
-    for ip_addr in ips:
-        if ip_addr not in ALLOWED_HOSTS:
-            ALLOWED_HOSTS.append(ip_addr)
-except Exception:
-    # لا تمنع الإقلاع إن فشل اكتشاف IP المحلي
-    pass
-
-# إضافة دومين elkhawaga.uk وجميع النطاقات الفرعية
-ALLOWED_HOSTS.extend([
-    'elkhawaga.uk',
-    'www.elkhawaga.uk',
-    'crm.elkhawaga.uk',
-    'admin.elkhawaga.uk',
-    'api.elkhawaga.uk',
-    '*.elkhawaga.uk',
-])
-
-# إضافة عناوين الشبكة المحلية الشائعة
-ALLOWED_HOSTS.extend([
-    '192.168.1.*',  # نطاق الشبكة المحلية الشائع
-    '192.168.2.*',  # نطاق الشبكة المحلية الشائع
-    '10.0.0.*',     # نطاق الشبكة المحلية الشائع
-    '172.16.*',     # نطاق الشبكة المحلية الشائع
-    '172.17.*',     # نطاق الشبكة المحلية الشائع
-    '172.18.*',     # نطاق الشبكة المحلية الشائع
-    '172.19.*',     # نطاق الشبكة المحلية الشائع
-    '172.20.*',     # نطاق الشبكة المحلية الشائع
-    '172.21.*',     # نطاق الشبكة المحلية الشائع
-    '172.22.*',     # نطاق الشبكة المحلية الشائع
-    '172.23.*',     # نطاق الشبكة المحلية الشائع
-    '172.24.*',     # نطاق الشبكة المحلية الشائع
-    '172.25.*',     # نطاق الشبكة المحلية الشائع
-    '172.26.*',     # نطاق الشبكة المحلية الشائع
-    '172.27.*',     # نطاق الشبكة المحلية الشائع
-    '172.28.*',     # نطاق الشبكة المحلية الشائع
-    '172.29.*',     # نطاق الشبكة المحلية الشائع
-    '172.30.*',     # نطاق الشبكة المحلية الشائع
-    '172.31.*',     # نطاق الشبكة المحلية الشائع
-])
+# إعداد ALLOWED_HOSTS مبسط
+ALLOWED_HOSTS = ['*']  # السماح لجميع النطاقات
+# تم تبسيط ALLOWED_HOSTS
 
 # Application definition
 INSTALLED_APPS = [
@@ -199,6 +116,7 @@ INSTALLED_APPS = [
     'odoo_db_manager.apps.OdooDbManagerConfig',
     'backup_system.apps.BackupSystemConfig',  # نظام النسخ الاحتياطي والاستعادة الجديد
     'modern_chat.apps.ModernChatConfig',  # نظام الدردشة الحديث
+    'channels',  # دعم WebSocket للدردشة الفورية
     'corsheaders',
     'django_apscheduler',
     'dbbackup',
@@ -275,9 +193,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'crm.wsgi.application'
 
-# تم إزالة إعدادات Channels و Redis لأنها غير مستخدمة
-# ASGI_APPLICATION = 'crm.asgi.application'
-# CHANNEL_LAYERS = {...}
+# إعدادات WebSocket و Channels للدردشة الحديثة
+ASGI_APPLICATION = 'crm.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+            "capacity": 1500,
+            "expiry": 60,
+        },
+    },
+}
 
 # --- قاعدة البيانات ---
 # استخدام dj_database_url لتبسيط تكوين قاعدة البيانات من متغير بيئة واحد.

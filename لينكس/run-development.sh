@@ -7,7 +7,7 @@ WHITE='\033[1;37m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-PROJECT_DIR="/home/zakee/homeupdate"
+PROJECT_DIR="/home/xhunterx/homeupdate"
 
 print_status() { echo -e "${GREEN}$1${NC}"; }
 print_error() { echo -e "${RED}$1${NC}"; }
@@ -119,10 +119,10 @@ cleanup() {
         rm -f /tmp/celerybeat-schedule-dev*
     fi
 
-    # إيقاف Django runserver
+    # إيقاف Daphne
     if [ ! -z "$DJANGO_PID" ]; then
         kill $DJANGO_PID 2>/dev/null
-        print_status "تم إيقاف Django runserver"
+        print_status "تم إيقاف Daphne"
     fi
 
     exit 0
@@ -137,18 +137,18 @@ print_info "📊 مراقبة Celery Worker: tail -f /tmp/celery_worker_dev.log"
 print_info "⏰ مراقبة Celery Beat: tail -f /tmp/celery_beat_dev.log"
 print_info "Ctrl+C للإيقاف"
 
-# تشغيل Django runserver
-python manage.py runserver 0.0.0.0:8000 &
+# تشغيل Daphne للتطوير مع WebSocket
+daphne -b 0.0.0.0 -p 8000 crm.asgi:application &
 DJANGO_PID=$!
-print_status "خادم التطوير يعمل (PID: $DJANGO_PID)"
+print_status "خادم التطوير مع WebSocket يعمل (PID: $DJANGO_PID)"
 
 # مراقبة العمليات
 while true; do
     sleep 30
 
-    # فحص Django runserver
+    # فحص Daphne
     if ! kill -0 $DJANGO_PID 2>/dev/null; then
-        print_error "❌ Django runserver توقف!"
+        print_error "❌ Daphne توقف!"
         break
     fi
 

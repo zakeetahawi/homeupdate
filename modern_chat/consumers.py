@@ -54,6 +54,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             data = json.loads(text_data)
             message_type = data.get('type')
 
+            print(f"📨 استقبال رسالة WebSocket: {message_type} من {self.user.username}")
+
             if message_type == 'join_room':
                 await self.join_room(data.get('room_id'))
             elif message_type == 'leave_room':
@@ -66,12 +68,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.handle_typing(data.get('room_id'), False)
             elif message_type == 'mark_read':
                 await self.mark_messages_read(data.get('room_id'))
+            elif message_type == 'user_status_update':
+                # تحديث حالة المستخدم
+                await self.update_user_status(data.get('status', 'online'))
+            else:
+                print(f"⚠️ نوع رسالة غير معروف: {message_type}")
 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            print(f"❌ خطأ في تحليل JSON: {e}")
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': 'Invalid JSON format'
             }))
+        except Exception as e:
+            print(f"❌ خطأ في معالجة الرسالة: {e}")
+            import traceback
+            traceback.print_exc()
+
+            # إرسال رسالة خطأ مبسطة
+            try:
+                await self.send(text_data=json.dumps({
+                    'type': 'error',
+                    'message': 'حدث خطأ في معالجة الرسالة'
+                }))
+            except Exception as send_error:
+                print(f"❌ خطأ في إرسال رسالة الخطأ: {send_error}")
 
     async def join_room(self, room_id):
         if not room_id:
@@ -119,7 +140,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def send_message(self, data):
         room_id = data.get('room_id')
         content = data.get('content', '').strip()
-        
+
         if not content or not room_id:
             return
 
@@ -133,19 +154,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'type': 'new_message',
             'message': {
                 'id': str(message['id']),
-                'content': message['content'],
+                'content': str(message['content']),
                 'sender': {
-                    'id': message['sender_id'],
-                    'name': message['sender_name'],
+                    'id': int(message['sender_id']),
+                    'name': str(message['sender_name']),
                     'is_current_user': False  # سيتم تحديثه في chat_message
                 },
-                'created_at': message['created_at'],
-                'room_id': room_id
+                'created_at': message['created_at'].isoformat() if hasattr(message['created_at'], 'isoformat') else str(message['created_at']),
+                'room_id': str(room_id)  # تحويل UUID إلى string
             }
         }
 
         await self.channel_layer.group_send(
-            f"chat_{room_id}",
+            f"chat_{str(room_id)}",  # تحويل UUID إلى string
             message_data
         )
 
@@ -157,13 +178,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         await self.channel_layer.group_send(
-            f"chat_{room_id}",
+            f"chat_{str(room_id)}",  # تحويل UUID إلى string
             {
                 'type': 'typing_indicator',
                 'user_id': self.user.id,
                 'user_name': self.user.get_full_name() or self.user.username,
                 'is_typing': is_typing,
-                'room_id': room_id
+                'room_id': str(room_id)  # تحويل UUID إلى string
             }
         )
 
@@ -196,12 +217,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def typing_indicator(self, event):
         # لا نرسل مؤشر الكتابة للمستخدم نفسه
         if event['user_id'] != self.user.id:
-            await self.send(text_data=json.dumps({
-                'type': 'typing_indicator',
-                'user_name': event['user_name'],
-                'is_typing': event['is_typing'],
-                'room_id': event['room_id']
-            }))
+            try:
+                await self.send(text_data=json.dumps({
+                    'type': 'typing_indicator',
+                    'user_id': int(event['user_id']),
+                    'user_name': str(event['user_name']),
+                    'is_typing': bool(event['is_typing']),
+                    'room_id': str(event['room_id'])
+                }))
+            except Exception as e:
+                print(f"❌ خطأ في إرسال مؤشر الكتابة: {e}")
 
     async def messages_read(self, event):
         if event['user_id'] != self.user.id:
@@ -237,21 +262,39 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def save_message(self, room_id, content):
         try:
-            room = ChatRoom.objects.get(id=room_id, participants=self.user)
+            # البحث عن الغرفة بطريقة أكثر مرونة
+            room = ChatRoom.objects.filter(
+                id=room_id,
+                participants=self.user
+            ).first()
+
+            if not room:
+                print(f"❌ لم يتم العثور على الغرفة {room_id} للمستخدم {self.user.username}")
+                return None
+
             message = Message.objects.create(
                 room=room,
                 sender=self.user,
                 content=content,
                 message_type='text'
             )
+
+            # تحديث وقت آخر تحديث للغرفة
+            room.updated_at = timezone.now()
+            room.save(update_fields=['updated_at'])
+
+            print(f"✅ تم حفظ الرسالة {message.id} في الغرفة {room_id}")
+
             return {
-                'id': message.id,
-                'content': message.content,
-                'sender_id': message.sender.id,
-                'sender_name': message.sender.get_full_name() or message.sender.username,
-                'created_at': message.created_at.isoformat()
+                'id': str(message.id),  # تحويل UUID إلى string
+                'content': str(message.content),
+                'sender_id': int(message.sender.id),
+                'sender_name': str(message.sender.get_full_name() or message.sender.username),
+                'created_at': message.created_at.isoformat(),
+                'room_id': str(room_id)  # إضافة room_id
             }
-        except ChatRoom.DoesNotExist:
+        except Exception as e:
+            print(f"❌ خطأ في حفظ الرسالة: {e}")
             return None
 
     @database_sync_to_async

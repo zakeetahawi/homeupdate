@@ -118,6 +118,24 @@ stop_process_by_name "gunicorn" "Gunicorn"
 print_info "إيقاف Django runserver..."
 stop_process_by_name "manage.py runserver" "Django runserver"
 
+# إيقاف Daphne (خادم WebSocket)
+print_info "إيقاف Daphne (WebSocket Server)..."
+stop_process_by_name "daphne.*crm.asgi" "Daphne WebSocket Server"
+
+# إيقاف أي عملية تستخدم المنفذ 8000
+print_info "إيقاف العمليات على المنفذ 8000..."
+port_8000_pids=$(lsof -ti:8000 2>/dev/null)
+if [ ! -z "$port_8000_pids" ]; then
+    echo "$port_8000_pids" | while read pid; do
+        if [ ! -z "$pid" ]; then
+            kill -9 "$pid" 2>/dev/null
+            print_success "تم إيقاف العملية على المنفذ 8000 (PID: $pid)"
+        fi
+    done
+else
+    print_info "لا توجد عمليات تستخدم المنفذ 8000"
+fi
+
 # إيقاف Cloudflare Tunnel
 print_info "إيقاف Cloudflare Tunnel..."
 stop_process_by_name "cloudflared tunnel" "Cloudflare Tunnel"
@@ -149,7 +167,7 @@ fi
 
 # عرض العمليات المتبقية
 print_info "فحص العمليات المتبقية..."
-remaining_processes=$(ps aux | grep -E "(gunicorn|celery|cloudflared|manage.py)" | grep -v grep | grep -v "stop-all.sh")
+remaining_processes=$(ps aux | grep -E "(gunicorn|celery|cloudflared|manage.py|daphne)" | grep -v grep | grep -v "stop-all.sh")
 
 if [ ! -z "$remaining_processes" ]; then
     print_warning "العمليات المتبقية:"
@@ -167,6 +185,8 @@ print_header "ملخص الإيقاف"
 print_success "✅ تم إيقاف Celery Worker"
 print_success "✅ تم إيقاف Celery Beat"
 print_success "✅ تم إيقاف خادم الويب"
+print_success "✅ تم إيقاف Daphne WebSocket Server"
+print_success "✅ تم تحرير المنفذ 8000"
 print_success "✅ تم إيقاف Cloudflare Tunnel"
 print_success "✅ تم تنظيف الملفات المؤقتة"
 

@@ -9,7 +9,7 @@ BLUE='\033[0;34m'
 BOLD_BLUE='\033[1;34m'
 NC='\033[0m'
 
-PROJECT_DIR="/home/zakee/homeupdate"
+PROJECT_DIR="/home/xhunterx/homeupdate"
 
 print_status() { echo -e "${GREEN}$1${NC}"; }
 print_error() { echo -e "${RED}$1${NC}"; }
@@ -102,14 +102,8 @@ else
     print_error "❌ فشل في تشغيل Celery Beat"
 fi
 
-print_info "تشغيل Cloudflare Tunnel..."
-if [ -f "cloudflared" ]; then
-    ./cloudflared tunnel --config cloudflared.yml run > /dev/null 2>&1 &
-    TUNNEL_PID=$!
-    print_status "✔️ تم تشغيل Cloudflare Tunnel (PID: $TUNNEL_PID)"
-else
-    print_error "ملف cloudflared غير موجود"
-fi
+print_info "تخطي Cloudflare Tunnel - تشغيل محلي"
+print_status "✔️ الخادم سيعمل محلياً على المنفذ 8000"
 
 # تصدير إعدادات قاعدة البيانات إلى البيئة حتى يستخدمها سكريبت النسخ الاحتياطي
 if [ -f "crm/settings.py" ]; then
@@ -133,7 +127,7 @@ if [ -f "لينكس/db-backup.sh" ]; then
     chmod +x "لينكس/db-backup.sh"
     ./لينكس/db-backup.sh > /tmp/db_backup.log 2>&1 &
     DB_BACKUP_PID=$!
-    print_status "✔️ تم تشغيل خدمة النسخ الاحتياطي (PID: $DB_BACKUP_PID) - ستُحفظ النسخ في /home/zakee/homeupdate/media/backups"
+    print_status "✔️ تم تشغيل خدمة النسخ الاحتياطي (PID: $DB_BACKUP_PID) - ستُحفظ النسخ في /home/xhunterx/homeupdate/media/backups"
 else
     print_error "ملف النسخ الاحتياطي لينكس/db-backup.sh غير موجود"
 fi
@@ -172,11 +166,7 @@ cleanup() {
         rm -f /tmp/celerybeat-schedule*
     fi
 
-    # إيقاف Cloudflare Tunnel
-    if [ ! -z "$TUNNEL_PID" ]; then
-        kill $TUNNEL_PID 2>/dev/null
-        print_status "تم إيقاف Cloudflare Tunnel"
-    fi
+    # لا حاجة لإيقاف Cloudflare Tunnel (غير مستخدم)
 
     # إيقاف خدمة النسخ الاحتياطي
     if [ ! -z "$DB_BACKUP_PID" ]; then
@@ -198,27 +188,19 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-print_status "🚀 بدء خادم الإنتاج..."
-print_info "الموقع: https://elkhawaga.uk"
+print_status "🚀 بدء خادم الإنتاج المحلي مع دعم WebSocket..."
+print_info "الموقع: http://localhost:8000"
 print_info "المستخدم: admin | كلمة المرور: admin123"
 print_info "📊 مراقبة Celery: tail -f /tmp/celery_worker.log"
 print_info "⏰ مراقبة المهام الدورية: tail -f /tmp/celery_beat.log"
+print_info "🔌 دعم WebSocket للدردشة الفورية"
 print_info "Ctrl+C للإيقاف"
 
-gunicorn crm.wsgi:application \
-    --bind 0.0.0.0:8000 \
-    --workers 3 \
-    --worker-class sync \
-    --worker-connections 1000 \
-    --max-requests 1000 \
-    --max-requests-jitter 50 \
-    --timeout 300 \
-    --keep-alive 2 \
-    --preload \
-    --access-logfile - \
-    --error-logfile - \
-    --log-level info \
-    --access-logformat '[%(t)s] "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' 2>&1 | while read line; do
+# استخدام Daphne بدلاً من Gunicorn لدعم WebSocket
+daphne -b 0.0.0.0 -p 8000 \
+    --access-log /tmp/daphne_access.log \
+    --proxy-headers \
+    crm.asgi:application 2>&1 | while read line; do
         # تطبيق فلتر logs أولاً
         # تجاهل رسائل gunicorn access logs التي تبدأ بـ [[
         if [[ "$line" =~ ^\[\[.*\]\] ]]; then

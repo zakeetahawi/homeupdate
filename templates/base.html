@@ -1120,8 +1120,6 @@
             fetch('{% url "notifications:ajax_count" %}?_=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
-                    console.log('📊 تحديث العداد:', data);
-
                     if (data.success) {
                         const badge = document.querySelector('#notification-count-badge');
                         if (badge) {
@@ -1139,11 +1137,8 @@
 
         // دالة تحديد إشعار من القائمة المنسدلة كمقروء
         function markDropdownNotificationAsRead(notificationId, targetUrl) {
-            console.log('📝 محاولة تحديد الإشعار كمقروء:', notificationId, 'والانتقال إلى:', targetUrl);
-
             // البحث عن CSRF token
             const csrfToken = getCsrfToken();
-            console.log('🔐 CSRF Token للإشعار:', csrfToken ? 'موجود' : 'مفقود');
 
             if (!csrfToken) {
                 console.error('❌ لا يمكن العثور على CSRF token، انتقال مباشر');
@@ -1160,10 +1155,7 @@
                     'Content-Type': 'application/x-www-form-urlencoded'
                 }
             })
-            .then(response => {
-                console.log('📡 استجابة الخادم:', response.status);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 console.log('📊 بيانات الاستجابة:', data);
 
@@ -1204,10 +1196,8 @@
         function setupDropdownNotificationListeners() {
             // البحث في القائمة الأصلية والديناميكية
             const dropdownItems = document.querySelectorAll('.notification-dropdown-item, .dropdown-item[data-notification-id]');
-            console.log('🔧 إعداد listeners لـ', dropdownItems.length, 'إشعار');
 
             dropdownItems.forEach((item, index) => {
-                console.log(`🔗 إعداد listener للإشعار ${index + 1}:`, item.getAttribute('data-notification-id'));
 
                 // إزالة listeners السابقة لتجنب التكرار
                 item.removeEventListener('click', handleNotificationClick);
@@ -1237,12 +1227,9 @@
 
         // تحديث قائمة الإشعارات الحديثة
         function updateRecentNotifications() {
-            console.log('🔄 بدء تحديث قائمة الإشعارات الحديثة...');
-
             // التحقق من وجود عنصر الإشعارات أولاً
             const notificationsDropdown = document.querySelector('#notificationsDropdown');
             if (!notificationsDropdown) {
-                console.log('❌ لم يتم العثور على عنصر الإشعارات');
                 return; // لا توجد إشعارات في هذه الصفحة
             }
 
@@ -1394,13 +1381,11 @@
             console.log('🔄 محاولة تحديد جميع الإشعارات كمقروءة');
 
             if (!confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')) {
-                console.log('❌ تم إلغاء العملية من قبل المستخدم');
                 return;
             }
 
             // البحث عن CSRF token
             const csrfToken = getCsrfToken();
-            console.log('🔐 CSRF Token:', csrfToken ? 'موجود' : 'مفقود');
 
             if (!csrfToken) {
                 console.error('❌ لا يمكن العثور على CSRF token');
@@ -1549,11 +1534,6 @@
 
         // تحديث الإشعارات عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 تحميل صفحة الإشعارات');
-
-            // فحص CSRF token
-            const csrfToken = getCsrfToken();
-            console.log('🔐 CSRF Token متوفر:', csrfToken ? 'نعم' : 'لا');
 
             updateNotificationCount();
             updateRecentNotifications(); // تحديث فوري للقائمة المنسدلة

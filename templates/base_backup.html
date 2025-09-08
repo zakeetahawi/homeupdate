@@ -594,10 +594,10 @@
             if (orderBox) {
                 orderBox.classList.toggle('show');
 
-                // تأثير صوتي لطيف (اختياري)
-                if (orderBox.classList.contains('show')) {
-                    playNotificationSound();
-                }
+                // تأثير صوتي معطل - يتم التحكم به من نظام الدردشة
+                // if (orderBox.classList.contains('show')) {
+                //     playNotificationSound();
+                // }
             }
         } else if (type === 'complaint') {
             // إغلاق صندوق الطلبات إذا كان مفتوحاً
@@ -609,10 +609,10 @@
             if (complaintBox) {
                 complaintBox.classList.toggle('show');
 
-                // تأثير صوتي لطيف (اختياري)
-                if (complaintBox.classList.contains('show')) {
-                    playNotificationSound();
-                }
+                // تأثير صوتي معطل - يتم التحكم به من نظام الدردشة
+                // if (complaintBox.classList.contains('show')) {
+                //     playNotificationSound();
+                // }
             }
         }
     }
@@ -655,7 +655,12 @@
     }
 
     function playNotificationSound() {
-        // تأثير صوتي لطيف وخفيف
+        // تم تعطيل هذه الدالة - يتم التحكم في الأصوات من نظام الدردشة فقط
+        console.log('تم تعطيل الصوت من base_backup.html - يتم التحكم به من ChatManager');
+        return;
+
+        // الكود القديم معطل
+        /*
         try {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioContext.createOscillator();
@@ -676,6 +681,7 @@
         } catch (e) {
             // تجاهل الأخطاء الصوتية
         }
+        */
     }
 
     function markNotificationAsRead(notificationId, type) {

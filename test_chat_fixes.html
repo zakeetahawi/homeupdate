@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار إصلاحات نظام الدردشة</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-title {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .test-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            background: #f8f9fa;
+        }
+        .success {
+            border-left-color: #27ae60;
+            background: #d5f4e6;
+        }
+        .warning {
+            border-left-color: #f39c12;
+            background: #fef9e7;
+        }
+        .error {
+            border-left-color: #e74c3c;
+            background: #fadbd8;
+        }
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #2980b9;
+        }
+        .status {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .log {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 اختبار إصلاحات نظام الدردشة</h1>
+    
+    <div class="test-container">
+        <h2 class="test-title">1. اختبار نظام الكتم للأصوات</h2>
+        <div class="test-item">
+            <span class="status">الحالة:</span>
+            <span id="muteStatus">جاري الفحص...</span>
+        </div>
+        <button class="test-button" onclick="testMuteSystem()">اختبار نظام الكتم</button>
+        <button class="test-button" onclick="testSoundPlay()">اختبار تشغيل الصوت</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">2. اختبار تحديث حالة المستخدمين</h2>
+        <div class="test-item">
+            <span class="status">الحالة:</span>
+            <span id="userStatusStatus">جاري الفحص...</span>
+        </div>
+        <button class="test-button" onclick="testUserStatusUpdate()">اختبار تحديث الحالة</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">3. اختبار WebSocket والتحديثات</h2>
+        <div class="test-item">
+            <span class="status">الحالة:</span>
+            <span id="websocketStatus">جاري الفحص...</span>
+        </div>
+        <button class="test-button" onclick="testWebSocketConnection()">اختبار WebSocket</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">4. اختبار عدم وجود تكرارات</h2>
+        <div class="test-item">
+            <span class="status">الحالة:</span>
+            <span id="duplicateStatus">جاري الفحص...</span>
+        </div>
+        <button class="test-button" onclick="testForDuplicates()">فحص التكرارات</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">📋 سجل الاختبارات</h2>
+        <div class="log" id="testLog"></div>
+        <button class="test-button" onclick="clearLog()">مسح السجل</button>
+        <button class="test-button" onclick="runAllTests()">تشغيل جميع الاختبارات</button>
+    </div>
+
+    <script>
+        // دالة لإضافة رسائل للسجل
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString('ar-EG');
+            const color = type === 'success' ? '#27ae60' : 
+                         type === 'error' ? '#e74c3c' : 
+                         type === 'warning' ? '#f39c12' : '#3498db';
+            
+            logElement.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('testLog').innerHTML = '';
+        }
+
+        // اختبار نظام الكتم
+        function testMuteSystem() {
+            log('🔇 بدء اختبار نظام الكتم...', 'info');
+            
+            try {
+                // التحقق من وجود ChatManager
+                if (typeof ChatManager === 'undefined') {
+                    log('❌ ChatManager غير موجود!', 'error');
+                    document.getElementById('muteStatus').innerHTML = '<span style="color: red;">فشل - ChatManager غير موجود</span>';
+                    return;
+                }
+
+                // اختبار دوال الكتم
+                const testRoomId = 'test-room-123';
+                
+                // اختبار كتم المحادثة
+                const muteResult = ChatManager.toggleChatMute(testRoomId);
+                log(`✅ تم كتم المحادثة: ${muteResult}`, 'success');
+                
+                // اختبار فحص حالة الكتم
+                const isMuted = ChatManager.isChatMuted(testRoomId);
+                log(`🔍 حالة الكتم: ${isMuted ? 'مكتوم' : 'غير مكتوم'}`, 'info');
+                
+                // اختبار إلغاء الكتم
+                ChatManager.toggleChatMute(testRoomId);
+                const isUnmuted = !ChatManager.isChatMuted(testRoomId);
+                log(`🔊 تم إلغاء الكتم: ${isUnmuted}`, 'success');
+                
+                document.getElementById('muteStatus').innerHTML = '<span style="color: green;">✅ يعمل بشكل صحيح</span>';
+                log('✅ نظام الكتم يعمل بشكل صحيح', 'success');
+                
+            } catch (error) {
+                log(`❌ خطأ في نظام الكتم: ${error.message}`, 'error');
+                document.getElementById('muteStatus').innerHTML = '<span style="color: red;">❌ فشل</span>';
+            }
+        }
+
+        // اختبار تشغيل الصوت
+        function testSoundPlay() {
+            log('🔊 بدء اختبار تشغيل الصوت...', 'info');
+            
+            try {
+                if (typeof ChatManager === 'undefined') {
+                    log('❌ ChatManager غير موجود!', 'error');
+                    return;
+                }
+
+                // اختبار تشغيل صوت الاستقبال
+                ChatManager.playNotificationSound('test-room');
+                log('🎵 تم تشغيل صوت الاستقبال', 'success');
+                
+                // اختبار تشغيل صوت الإرسال
+                setTimeout(() => {
+                    ChatManager.playSendSound();
+                    log('🎵 تم تشغيل صوت الإرسال', 'success');
+                }, 1000);
+                
+            } catch (error) {
+                log(`❌ خطأ في تشغيل الصوت: ${error.message}`, 'error');
+            }
+        }
+
+        // اختبار تحديث حالة المستخدمين
+        function testUserStatusUpdate() {
+            log('👥 بدء اختبار تحديث حالة المستخدمين...', 'info');
+            
+            try {
+                // التحقق من وجود الدوال
+                if (typeof loadActiveUsers === 'function') {
+                    log('✅ دالة loadActiveUsers موجودة', 'success');
+                } else {
+                    log('❌ دالة loadActiveUsers غير موجودة', 'error');
+                }
+
+                if (typeof ChatManager !== 'undefined' && typeof ChatManager.refreshUserListAfterDelete === 'function') {
+                    log('✅ دالة refreshUserListAfterDelete موجودة', 'success');
+                } else {
+                    log('❌ دالة refreshUserListAfterDelete غير موجودة', 'error');
+                }
+
+                document.getElementById('userStatusStatus').innerHTML = '<span style="color: green;">✅ الدوال موجودة</span>';
+                log('✅ دوال تحديث حالة المستخدمين موجودة', 'success');
+                
+            } catch (error) {
+                log(`❌ خطأ في فحص دوال المستخدمين: ${error.message}`, 'error');
+                document.getElementById('userStatusStatus').innerHTML = '<span style="color: red;">❌ فشل</span>';
+            }
+        }
+
+        // اختبار WebSocket
+        function testWebSocketConnection() {
+            log('🌐 بدء اختبار WebSocket...', 'info');
+            
+            try {
+                if (typeof ChatManager === 'undefined') {
+                    log('❌ ChatManager غير موجود!', 'error');
+                    document.getElementById('websocketStatus').innerHTML = '<span style="color: red;">❌ فشل</span>';
+                    return;
+                }
+
+                // التحقق من حالة الاتصال
+                if (ChatManager.socket) {
+                    log(`🔗 حالة WebSocket: ${ChatManager.socket.readyState}`, 'info');
+                    log(`📡 متصل: ${ChatManager.isConnected}`, 'info');
+                    
+                    if (ChatManager.isConnected) {
+                        document.getElementById('websocketStatus').innerHTML = '<span style="color: green;">✅ متصل</span>';
+                        log('✅ WebSocket متصل بنجاح', 'success');
+                    } else {
+                        document.getElementById('websocketStatus').innerHTML = '<span style="color: orange;">⚠️ غير متصل</span>';
+                        log('⚠️ WebSocket غير متصل', 'warning');
+                    }
+                } else {
+                    log('❌ WebSocket غير مهيأ', 'error');
+                    document.getElementById('websocketStatus').innerHTML = '<span style="color: red;">❌ غير مهيأ</span>';
+                }
+                
+            } catch (error) {
+                log(`❌ خطأ في فحص WebSocket: ${error.message}`, 'error');
+                document.getElementById('websocketStatus').innerHTML = '<span style="color: red;">❌ خطأ</span>';
+            }
+        }
+
+        // فحص التكرارات
+        function testForDuplicates() {
+            log('🔍 بدء فحص التكرارات...', 'info');
+            
+            try {
+                let duplicatesFound = 0;
+                
+                // فحص الدوال المكررة
+                const functionsToCheck = [
+                    'initializeWebSocket',
+                    'sendWebSocketMessage', 
+                    'handleWebSocketMessage',
+                    'playNotificationSound',
+                    'createBeepSound'
+                ];
+                
+                functionsToCheck.forEach(funcName => {
+                    if (typeof window[funcName] === 'function') {
+                        log(`⚠️ دالة مكررة موجودة: ${funcName}`, 'warning');
+                        duplicatesFound++;
+                    }
+                });
+
+                // فحص المتغيرات المكررة
+                const variablesToCheck = [
+                    'chatSocket',
+                    'isConnected',
+                    'notificationAudio',
+                    'sendAudio'
+                ];
+                
+                variablesToCheck.forEach(varName => {
+                    if (typeof window[varName] !== 'undefined') {
+                        log(`⚠️ متغير مكرر موجود: ${varName}`, 'warning');
+                        duplicatesFound++;
+                    }
+                });
+
+                if (duplicatesFound === 0) {
+                    document.getElementById('duplicateStatus').innerHTML = '<span style="color: green;">✅ لا توجد تكرارات</span>';
+                    log('✅ لا توجد تكرارات - النظام نظيف', 'success');
+                } else {
+                    document.getElementById('duplicateStatus').innerHTML = `<span style="color: orange;">⚠️ ${duplicatesFound} تكرار موجود</span>`;
+                    log(`⚠️ تم العثور على ${duplicatesFound} تكرار`, 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ خطأ في فحص التكرارات: ${error.message}`, 'error');
+                document.getElementById('duplicateStatus').innerHTML = '<span style="color: red;">❌ خطأ</span>';
+            }
+        }
+
+        // تشغيل جميع الاختبارات
+        function runAllTests() {
+            log('🚀 بدء تشغيل جميع الاختبارات...', 'info');
+            clearLog();
+            
+            setTimeout(() => testMuteSystem(), 500);
+            setTimeout(() => testUserStatusUpdate(), 1000);
+            setTimeout(() => testWebSocketConnection(), 1500);
+            setTimeout(() => testForDuplicates(), 2000);
+            
+            setTimeout(() => {
+                log('🏁 انتهاء جميع الاختبارات', 'success');
+            }, 2500);
+        }
+
+        // تشغيل الاختبارات عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            log('📋 صفحة اختبار إصلاحات نظام الدردشة جاهزة', 'info');
+            log('💡 اضغط على "تشغيل جميع الاختبارات" لبدء الفحص', 'info');
+        });
+    </script>
+</body>
+</html>

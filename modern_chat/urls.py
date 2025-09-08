@@ -16,4 +16,7 @@ urlpatterns = [
     path('api/user-rooms/', views.get_user_rooms, name='user_rooms'),
     path('api/user-info/<int:user_id>/', views.get_user_info, name='user_info'),
     path('api/mark-read/<uuid:room_id>/', views.mark_messages_read, name='mark_messages_read'),
+    path('api/delete-conversation/', views.delete_conversation, name='delete_conversation'),
+    path('api/block-user/', views.block_user, name='block_user'),
+    path('api/room-info/<uuid:room_id>/', views.room_info, name='room_info'),
 ]

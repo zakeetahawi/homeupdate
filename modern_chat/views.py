@@ -276,6 +276,11 @@ def get_user_rooms(request):
                 created_at__gt=timezone.now() - timezone.timedelta(hours=24)
             ).exclude(sender=request.user).count()
 
+            # الحصول على المستخدم الآخر في المحادثة الخاصة
+            other_user = None
+            if room.room_type == 'private':
+                other_user = room.participants.exclude(id=request.user.id).first()
+
             rooms_data.append({
                 'id': str(room.id),
                 'name': room.name,
@@ -286,7 +291,9 @@ def get_user_rooms(request):
                     'created_at': last_message.created_at.isoformat()
                 } if last_message else None,
                 'unread_count': unread_count,
-                'participants_count': room.participants.count()
+                'participants_count': room.participants.count(),
+                'other_user_id': other_user.id if other_user else None,
+                'other_user_name': other_user.get_full_name() or other_user.username if other_user else None
             })
 
         return JsonResponse({
@@ -354,3 +361,172 @@ def mark_messages_read(request, room_id):
         return JsonResponse({
             'error': str(e)
         }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_conversation(request):
+    """حذف المحادثة مع مستخدم معين أو بمعرف الغرفة"""
+    try:
+        data = json.loads(request.body)
+        other_user_id = data.get('user_id')
+        room_id = data.get('room_id')
+
+        # دعم حذف المحادثة بمعرف الغرفة أو معرف المستخدم
+        if room_id:
+            # حذف بمعرف الغرفة
+            try:
+                room = ChatRoom.objects.get(id=room_id, participants=request.user)
+
+                # حذف جميع الرسائل في الغرفة
+                Message.objects.filter(room=room).delete()
+
+                # حذف الغرفة
+                room.delete()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': 'تم حذف المحادثة بنجاح'
+                })
+
+            except ChatRoom.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'المحادثة غير موجودة أو لا تملك صلاحية للوصول إليها'
+                }, status=404)
+
+        elif other_user_id:
+            # حذف بمعرف المستخدم (الطريقة القديمة)
+            try:
+                other_user = User.objects.get(id=other_user_id)
+            except User.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'المستخدم غير موجود'
+                }, status=404)
+
+            if other_user == request.user:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'لا يمكن حذف محادثة مع نفسك'
+                }, status=400)
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'معرف المستخدم أو معرف الغرفة مطلوب'
+            }, status=400)
+
+        # البحث عن الدردشة الخاصة
+        room = ChatRoom.objects.filter(
+            room_type='private',
+            participants=request.user
+        ).filter(
+            participants=other_user
+        ).first()
+
+        if not room:
+            return JsonResponse({
+                'success': False,
+                'error': 'لا توجد محادثة مع هذا المستخدم'
+            }, status=404)
+
+        # حذف جميع الرسائل في الغرفة (soft delete)
+        messages_count = Message.objects.filter(room=room).update(is_deleted=True)
+
+        # يمكن أيضاً حذف الغرفة نفسها أو تعطيلها
+        room.is_active = False
+        room.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'تم حذف المحادثة مع {other_user.get_full_name() or other_user.username}',
+            'deleted_messages_count': messages_count
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def block_user(request):
+    """حظر مستخدم"""
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+
+        if not user_id:
+            return JsonResponse({'error': 'معرف المستخدم مطلوب'}, status=400)
+
+        try:
+            user_to_block = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'المستخدم غير موجود'
+            }, status=404)
+
+        if user_to_block == request.user:
+            return JsonResponse({'error': 'لا يمكن حظر نفسك'}, status=400)
+
+        # إضافة المستخدم إلى قائمة المحظورين
+        # يمكن إنشاء نموذج BlockedUser أو استخدام حقل في UserStatus
+
+        # تحديث حالة المستخدم المحظور
+        blocked_status, created = UserStatus.objects.get_or_create(user=user_to_block)
+
+        # يمكن إضافة حقل blocked_by في النموذج أو استخدام طريقة أخرى
+        # هنا سنستخدم طريقة بسيطة بتعطيل الدردشة معه
+
+        # البحث عن الدردشة الخاصة وتعطيلها
+        room = ChatRoom.objects.filter(
+            room_type='private',
+            participants=request.user
+        ).filter(
+            participants=user_to_block
+        ).first()
+
+        if room:
+            room.is_active = False
+            room.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'تم حظر المستخدم {user_to_block.get_full_name() or user_to_block.username}'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def room_info(request, room_id):
+    """الحصول على معلومات الغرفة"""
+    try:
+        room = get_object_or_404(ChatRoom, id=room_id)
+
+        # التحقق من أن المستخدم عضو في الغرفة
+        if not room.participants.filter(id=request.user.id).exists():
+            return JsonResponse({'error': 'غير مسموح'}, status=403)
+
+        # الحصول على المستخدم الآخر
+        other_user = room.participants.exclude(id=request.user.id).first()
+
+        return JsonResponse({
+            'room_id': str(room.id),
+            'room_name': room.name,
+            'other_user': {
+                'id': other_user.id,
+                'name': other_user.get_full_name() or other_user.username,
+                'username': other_user.username
+            } if other_user else None
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
