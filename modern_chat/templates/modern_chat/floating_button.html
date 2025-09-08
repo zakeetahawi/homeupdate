@@ -28,28 +28,15 @@
     <div class="chat-widget-body">
         <div class="chat-widget-tabs">
             <div class="nav nav-tabs" role="tablist">
-                <button class="nav-link active" onclick="switchChatTab('chatRooms', this)" type="button">
-                    المحادثات
-                </button>
-                <button class="nav-link" onclick="switchChatTab('activeUsers', this)" type="button">
+                <button class="nav-link active" onclick="switchChatTab('activeUsers', this)" type="button">
                     المستخدمون
                 </button>
             </div>
         </div>
         
         <div class="tab-content">
-            <!-- المحادثات -->
-            <div class="tab-pane fade show active" id="chatRooms">
-                <div class="chat-rooms-list" id="chatRoomsList">
-                    <div class="text-center p-3">
-                        <div class="spinner-border spinner-border-sm" role="status"></div>
-                        <p class="mt-2 mb-0">جاري التحميل...</p>
-                    </div>
-                </div>
-            </div>
-            
             <!-- المستخدمون النشطون -->
-            <div class="tab-pane fade" id="activeUsers">
+            <div class="tab-pane fade show active" id="activeUsers">
                 <div class="active-users-list" id="activeUsersWidget">
                     <div class="text-center p-3">
                         <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -350,6 +337,43 @@
 
 .chat-room-item:hover, .user-item-widget:hover {
     background: #f8f9fa;
+}
+
+/* تحسين مظهر المستخدمين حسب الحالة */
+.user-online {
+    border-left: 3px solid #28a745;
+    background: linear-gradient(90deg, rgba(40, 167, 69, 0.05) 0%, transparent 100%);
+}
+
+.user-offline {
+    border-left: 3px solid #6c757d;
+    background: linear-gradient(90deg, rgba(108, 117, 125, 0.03) 0%, transparent 100%);
+}
+
+.user-online:hover {
+    background: linear-gradient(90deg, rgba(40, 167, 69, 0.1) 0%, #f8f9fa 100%);
+}
+
+.user-offline:hover {
+    background: linear-gradient(90deg, rgba(108, 117, 125, 0.08) 0%, #f8f9fa 100%);
+}
+
+/* تحسين مظهر الأفاتار */
+.user-avatar-small {
+    position: relative;
+    overflow: visible;
+}
+
+/* تحسين مظهر مؤشر الحالة */
+.status-indicator-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .chat-widget-footer {
@@ -1172,11 +1196,17 @@ const ChatManager = {
             return;
         }
 
+        // فحص التكرار - إذا كانت الرسالة موجودة بالفعل
+        if (this.isMessageAlreadyDisplayed(roomId, message)) {
+            console.log('الرسالة موجودة بالفعل، تجاهل التكرار');
+            return;
+        }
+
         // تشغيل الصوت مع فحص الكتم
         this.playSound('receive', roomId);
 
         // فتح النافذة تلقائياً إذا لم تكن مفتوحة
-        if (!this.openChats.has(roomId) && currentChatRoomId !== roomId) {
+        if (!this.openChats.has(roomId) && (!currentChatRoomId || currentChatRoomId !== roomId)) {
             console.log('فتح نافذة صغيرة للرسالة الواردة');
             const senderInfo = {
                 id: message.sender?.id || message.sender_id,
@@ -1206,13 +1236,77 @@ const ChatManager = {
         // إظهار إشعار
         this.showNotification(message);
 
-        // تحديث قائمة المحادثات والمستخدمين
-        if (typeof loadChatRooms === 'function') {
-            loadChatRooms();
-        }
+        // تحديث قائمة المستخدمين
         if (typeof loadActiveUsers === 'function') {
             loadActiveUsers();
         }
+    },
+
+    // فحص إذا كانت الرسالة موجودة بالفعل لتجنب التكرار
+    isMessageAlreadyDisplayed(roomId, message) {
+        const messageId = message.id || message.temp_id;
+
+        // فحص بالمعرف الفريد أولاً إذا كان متاحاً
+        if (messageId) {
+            // فحص النافذة الصغيرة
+            if (currentChatRoomId === roomId) {
+                const miniMessages = document.getElementById('miniChatMessages');
+                if (miniMessages) {
+                    const existingMessage = miniMessages.querySelector(`[data-message-id="${messageId}"]`);
+                    if (existingMessage) {
+                        return true;
+                    }
+                }
+            }
+
+            // فحص النافذة الكبيرة
+            const messagesContainer = document.getElementById(`messages-${roomId}`);
+            if (messagesContainer) {
+                const existingMessage = messagesContainer.querySelector(`[data-message-id="${messageId}"]`);
+                if (existingMessage) {
+                    return true;
+                }
+            }
+        }
+
+        // فحص بالمحتوى والوقت كبديل
+        const containers = [];
+
+        // إضافة النافذة الصغيرة إذا كانت للغرفة الحالية
+        if (currentChatRoomId === roomId) {
+            const miniMessages = document.getElementById('miniChatMessages');
+            if (miniMessages) containers.push(miniMessages);
+        }
+
+        // إضافة النافذة الكبيرة
+        const messagesContainer = document.getElementById(`messages-${roomId}`);
+        if (messagesContainer) containers.push(messagesContainer);
+
+        for (let container of containers) {
+            const messageElements = container.querySelectorAll('.message, .chat-message');
+            for (let element of messageElements) {
+                const messageContent = element.querySelector('.message-content');
+                if (messageContent && messageContent.textContent.trim() === message.content.trim()) {
+                    // فحص إضافي بالوقت
+                    const messageTime = element.querySelector('.message-time');
+                    if (messageTime && message.created_at) {
+                        const displayedTime = new Date(messageTime.getAttribute('data-timestamp') || messageTime.textContent);
+                        const messageTime_obj = new Date(message.created_at);
+                        const timeDiff = Math.abs(displayedTime - messageTime_obj);
+
+                        // إذا كان الفرق أقل من 10 ثوان، اعتبرها نفس الرسالة
+                        if (timeDiff < 10000) {
+                            return true;
+                        }
+                    } else {
+                        // إذا لم يكن هناك وقت، اعتمد على المحتوى فقط
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     },
 
     // تحديث قائمة المستخدمين عند حذف المحادثة
@@ -1221,9 +1315,6 @@ const ChatManager = {
         if (typeof loadActiveUsers === 'function') {
             loadActiveUsers();
         }
-        if (typeof loadChatRooms === 'function') {
-            loadChatRooms();
-        }
     },
 
     // إضافة رسالة لنافذة المحادثة
@@ -1231,12 +1322,22 @@ const ChatManager = {
         const messagesContainer = document.getElementById(`messages-${roomId}`);
         if (!messagesContainer) return;
 
+        // فحص التكرار قبل الإضافة
+        if (this.isMessageAlreadyDisplayed(roomId, message)) {
+            console.log('رسالة مكررة في النافذة الكبيرة، تم تجاهلها');
+            return;
+        }
+
         // إزالة رسالة التحميل
         const loading = messagesContainer.querySelector('.loading-messages');
         if (loading) loading.remove();
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+
+        // إضافة معرف فريد للرسالة لتجنب التكرار
+        const messageId = message.id || message.temp_id || 'msg_' + Date.now() + '_' + Math.random();
+        messageDiv.setAttribute('data-message-id', messageId);
 
         const time = new Date(message.created_at || new Date()).toLocaleTimeString('ar-EG', {
             hour: '2-digit',
@@ -1246,7 +1347,7 @@ const ChatManager = {
         messageDiv.innerHTML = `
             <div class="message-content">
                 ${message.content}
-                <div class="message-time">${time}</div>
+                <div class="message-time" data-timestamp="${message.created_at || new Date().toISOString()}">${time}</div>
             </div>
         `;
 
@@ -1273,12 +1374,14 @@ const ChatManager = {
         const content = input.value.trim();
         if (!content) return;
 
-        // إضافة الرسالة للواجهة فوراً
-        this.addMessageToWindow(roomId, {
+        // إضافة الرسالة للواجهة فوراً مع معرف مؤقت لتجنب التكرار
+        const tempMessage = {
             content: content,
             created_at: new Date(),
-            sender: { name: 'أنت' }
-        }, true);
+            sender: { name: 'أنت' },
+            temp_id: 'temp_' + Date.now() + '_' + Math.random()
+        };
+        this.addMessageToWindow(roomId, tempMessage, true);
 
         // إرسال عبر WebSocket
         if (this.isConnected) {
@@ -1295,11 +1398,6 @@ const ChatManager = {
 
         // تشغيل صوت الإرسال
         this.playSound('send', roomId);
-
-        // تحديث قائمة المحادثات
-        if (typeof loadChatRooms === 'function') {
-            setTimeout(loadChatRooms, 500); // تأخير قصير للتأكد من حفظ الرسالة
-        }
     },
 
     // معالجة ضغط المفاتيح
@@ -2031,74 +2129,8 @@ function openFullChat() {
 }
 
 function loadChatData() {
-    // تحميل المحادثات
-    loadChatRooms();
     // تحميل المستخدمين النشطين
     loadActiveUsers();
-}
-
-function sendWebSocketMessage(data) {
-    if (ChatManager.socket && ChatManager.socket.readyState === WebSocket.OPEN) {
-        ChatManager.socket.send(JSON.stringify(data));
-    } else {
-        console.error('WebSocket غير متصل');
-    }
-}
-
-function loadChatRooms() {
-    console.log('تحميل قائمة المحادثات...');
-    fetch('/modern-chat/api/user-rooms/')
-        .then(response => response.json())
-        .then(data => {
-            console.log('بيانات المحادثات:', data);
-            const container = document.getElementById('chatRoomsList');
-
-            if (!container) {
-                console.error('عنصر chatRoomsList غير موجود');
-                return;
-            }
-
-            if (data.rooms && data.rooms.length > 0) {
-                console.log('عدد المحادثات:', data.rooms.length);
-                container.innerHTML = data.rooms.map(room => `
-                    <div class="chat-room-item"
-                         onclick="openRoomFromWidget('${room.id}')"
-                         oncontextmenu="showRoomContextMenu(event, '${room.id}', '${room.other_user_id || 'unknown'}', '${room.other_user_name || room.name}')">
-                        <div class="d-flex align-items-center">
-                            <div class="user-avatar-small">
-                                ${(room.other_user_name || room.name).charAt(0).toUpperCase()}
-                            </div>
-                            <div class="ms-2 flex-grow-1">
-                                <h6 class="mb-0" style="font-size: 14px;">${room.other_user_name || room.name}</h6>
-                                <small class="text-muted">
-                                    ${room.last_message ? room.last_message.content.substring(0, 30) + '...' : 'لا توجد رسائل'}
-                                </small>
-                            </div>
-                            ${room.unread_count > 0 ? `<span class="badge bg-primary">${room.unread_count}</span>` : ''}
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                console.log('لا توجد محادثات في البيانات');
-                container.innerHTML = `
-                    <div class="text-center p-3">
-                        <i class="fas fa-comments text-muted" style="font-size: 32px;"></i>
-                        <p class="text-muted mt-2 mb-0">لا توجد محادثات</p>
-                        <small class="text-muted">ابدأ محادثة جديدة من قائمة المستخدمين</small>
-                    </div>
-                `;
-            }
-        })
-        .catch(error => {
-            console.error('خطأ في تحميل المحادثات:', error);
-            const container = document.getElementById('chatRoomsList');
-            container.innerHTML = `
-                <div class="text-center p-3">
-                    <i class="fas fa-exclamation-triangle text-warning"></i>
-                    <p class="text-muted mt-2 mb-0">خطأ في التحميل</p>
-                </div>
-            `;
-        });
 }
 
 function sendWebSocketMessage(data) {
@@ -2126,19 +2158,36 @@ function loadActiveUsers() {
             return response.json();
         })
         .then(data => {
-            updateActiveUsersWidget(data.users || []);
+            console.log('📊 بيانات المستخدمين المستلمة:', data);
 
-            // تحديث عداد الإشعارات بناءً على عدد المستخدمين النشطين المفلترين
-            const activeUsersCount = (data.users || []).filter(user => {
-                const isOnline = user.status === 'online' || user.status === 'away' || user.status === 'busy';
-                const hasRecentActivity = user.last_seen &&
-                    new Date(user.last_seen) > new Date(Date.now() - 30 * 60 * 1000);
-                return isOnline || hasRecentActivity;
+            const users = data.users || [];
+            updateActiveUsersWidget(users);
+
+            // حساب عدد المتصلين الفعلي بدقة
+            const onlineCount = users.filter(user => {
+                const now = new Date();
+                const lastSeen = user.last_seen ? new Date(user.last_seen) : null;
+                const timeDiff = lastSeen ? (now - lastSeen) / 1000 / 60 : Infinity;
+                return (user.status === 'online' || user.status === 'away' || user.status === 'busy') && timeDiff <= 3;
             }).length;
 
+            console.log(`✅ تم تحميل ${users.length} مستخدم، منهم ${onlineCount} متصل فعلياً`);
+
+            // تحديث عنوان التبويب ليظهر عدد المتصلين
+            const activeUsersTab = document.querySelector('.nav-link[onclick*="activeUsers"]');
+            if (activeUsersTab) {
+                const baseText = 'المستخدمون';
+                if (onlineCount > 0) {
+                    activeUsersTab.innerHTML = `${baseText} <span class="badge bg-success ms-1">${onlineCount}</span>`;
+                } else {
+                    activeUsersTab.innerHTML = baseText;
+                }
+            }
+
+            // تحديث شارة الإشعارات (اختياري)
             const badge = document.getElementById('chatNotificationBadge');
-            if (badge && activeUsersCount > 0) {
-                badge.textContent = activeUsersCount;
+            if (badge && onlineCount > 0) {
+                badge.textContent = onlineCount;
                 badge.style.display = 'flex';
             } else if (badge) {
                 badge.style.display = 'none';
@@ -2174,61 +2223,123 @@ function updateActiveUsersWidget(users) {
         container.innerHTML = `
             <div class="text-center p-3">
                 <i class="fas fa-user-slash text-muted" style="font-size: 32px;"></i>
-                <p class="text-muted mt-2 mb-0">لا يوجد مستخدمون نشطون</p>
+                <p class="text-muted mt-2 mb-0">لا يوجد مستخدمون</p>
                 <small class="text-muted">آخر تحديث: ${new Date().toLocaleTimeString('ar-EG')}</small>
             </div>
         `;
         return;
     }
 
-    // فلترة المستخدمين النشطين فقط
-    const activeUsers = users.filter(user => {
-        // التحقق من أن المستخدم نشط فعلاً
-        const isOnline = user.status === 'online' || user.status === 'away' || user.status === 'busy';
-        const hasRecentActivity = user.last_seen &&
-            new Date(user.last_seen) > new Date(Date.now() - 30 * 60 * 1000); // آخر 30 دقيقة
+    // تصنيف المستخدمين حسب الحالة
+    const onlineUsers = [];
+    const offlineUsers = [];
 
-        return isOnline || hasRecentActivity;
+    users.forEach(user => {
+        // تحديد الحالة الفعلية بدقة
+        const now = new Date();
+        const lastSeen = user.last_seen ? new Date(user.last_seen) : null;
+        const timeDiff = lastSeen ? (now - lastSeen) / 1000 / 60 : Infinity; // بالدقائق
+
+        // المستخدم متصل إذا:
+        // 1. حالته online/away/busy
+        // 2. آخر ظهور له خلال آخر 3 دقائق
+        const isReallyOnline = (user.status === 'online' || user.status === 'away' || user.status === 'busy') &&
+                              timeDiff <= 3;
+
+        if (isReallyOnline) {
+            onlineUsers.push({...user, isOnline: true});
+        } else {
+            offlineUsers.push({...user, isOnline: false});
+        }
     });
 
-    if (activeUsers.length === 0) {
+    // ترتيب المستخدمين: المتصلين أولاً، ثم غير المتصلين
+    const sortedUsers = [...onlineUsers, ...offlineUsers];
+
+    if (sortedUsers.length === 0) {
         container.innerHTML = `
             <div class="text-center p-3">
                 <i class="fas fa-user-clock text-muted" style="font-size: 32px;"></i>
-                <p class="text-muted mt-2 mb-0">لا يوجد مستخدمون نشطون حالياً</p>
+                <p class="text-muted mt-2 mb-0">لا يوجد مستخدمون</p>
                 <small class="text-muted">آخر تحديث: ${new Date().toLocaleTimeString('ar-EG')}</small>
             </div>
         `;
         return;
     }
 
-    container.innerHTML = activeUsers.map(user => {
+    container.innerHTML = sortedUsers.map(user => {
         // التأكد من وجود البيانات المطلوبة
         const userName = user.name || user.username || 'مستخدم';
-        const userStatus = user.status || 'offline';
         const userId = user.id || 0;
+        const isOnline = user.isOnline;
+
+        // تحديد النص والأيقونة حسب الحالة الفعلية
+        let statusText, statusColor, statusIcon;
+        if (isOnline) {
+            statusText = 'متصل الآن';
+            statusColor = '#28a745'; // أخضر
+            statusIcon = 'fas fa-circle';
+        } else {
+            const lastSeen = user.last_seen ? new Date(user.last_seen) : null;
+            if (lastSeen) {
+                const timeDiff = (new Date() - lastSeen) / 1000 / 60; // بالدقائق
+                if (timeDiff < 60) {
+                    statusText = `آخر ظهور منذ ${Math.round(timeDiff)} دقيقة`;
+                } else if (timeDiff < 1440) {
+                    statusText = `آخر ظهور منذ ${Math.round(timeDiff / 60)} ساعة`;
+                } else {
+                    statusText = `آخر ظهور منذ ${Math.round(timeDiff / 1440)} يوم`;
+                }
+            } else {
+                statusText = 'غير متصل';
+            }
+            statusColor = '#6c757d'; // رمادي
+            statusIcon = 'fas fa-circle';
+        }
 
         return `
-            <div class="user-item-widget"
-                 onclick="showUserContextMenu(event, ${userId}, '${userName}', '${user.username || userName}')"
-                 oncontextmenu="showUserContextMenu(event, ${userId}, '${userName}', '${user.username || userName}')">
+            <div class="user-item-widget ${isOnline ? 'user-online' : 'user-offline'}"
+                 onclick="showUserContextMenu(event, ${userId}, '${userName}', '${user.username || userName}', ${isOnline})"
+                 oncontextmenu="showUserContextMenu(event, ${userId}, '${userName}', '${user.username || userName}', ${isOnline})"
+                 style="opacity: ${isOnline ? '1' : '0.7'}; cursor: pointer;">
                 <div class="d-flex align-items-center">
-                    <div class="user-avatar-small">
+                    <div class="user-avatar-small position-relative">
                         ${userName.charAt(0).toUpperCase()}
+                        <span class="position-absolute bottom-0 end-0 translate-middle-x"
+                              style="width: 12px; height: 12px; background: ${statusColor}; border: 2px solid white; border-radius: 50%;"></span>
                     </div>
                     <div class="ms-2 flex-grow-1">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0" style="font-size: 14px;">${userName}</h6>
-                            <span class="status-indicator status-${userStatus}" title="${getStatusText(userStatus)}"></span>
+                            <h6 class="mb-0" style="font-size: 14px; color: ${isOnline ? '#000' : '#6c757d'};">${userName}</h6>
+                            <i class="${statusIcon}" style="color: ${statusColor}; font-size: 8px;"></i>
                         </div>
-                        <small class="text-muted">${getStatusText(userStatus)}</small>
+                        <small style="color: ${statusColor}; font-size: 11px;">
+                            <i class="fas fa-circle" style="font-size: 6px; margin-left: 4px;"></i>
+                            ${statusText}
+                        </small>
                     </div>
                 </div>
             </div>
         `;
     }).join('');
 
-    console.log(`تم تحديث قائمة المستخدمين النشطين: ${activeUsers.length} مستخدم`);
+    // إضافة إحصائيات في أسفل القائمة
+    const onlineCount = sortedUsers.filter(user => user.isOnline).length;
+    const offlineCount = sortedUsers.length - onlineCount;
+
+    container.innerHTML += `
+        <div class="users-stats mt-2 p-2 border-top" style="background: #f8f9fa; font-size: 11px;">
+            <div class="d-flex justify-content-between text-muted">
+                <span><i class="fas fa-circle text-success" style="font-size: 6px;"></i> متصل: ${onlineCount}</span>
+                <span><i class="fas fa-circle text-secondary" style="font-size: 6px;"></i> غير متصل: ${offlineCount}</span>
+            </div>
+            <div class="text-center mt-1">
+                <small class="text-muted">آخر تحديث: ${new Date().toLocaleTimeString('ar-EG')}</small>
+            </div>
+        </div>
+    `;
+
+    console.log(`✅ تم تحديث قائمة المستخدمين: ${onlineCount} متصل، ${offlineCount} غير متصل`);
 }
 
 function startPrivateChatFromWidget(userId) {
@@ -2451,8 +2562,8 @@ function sendMiniChatMessage() {
             content: message
         });
 
-        // إضافة الرسالة للواجهة فوراً
-        addMiniChatMessage(message, true);
+        // لا نضيف الرسالة فوراً - ننتظر تأكيد الخادم عبر WebSocket
+        // addMiniChatMessage(message, true); // تم تعطيله لتجنب التكرار
         input.value = '';
 
         // التأكد من أن النافذة مفتوحة
@@ -2489,8 +2600,8 @@ function sendMiniChatMessage() {
                 throw new Error(data.error);
             }
 
-            // إضافة الرسالة للواجهة
-            addMiniChatMessage(message, true);
+            // لا نضيف الرسالة هنا - ننتظر تأكيد الخادم عبر WebSocket
+            // addMiniChatMessage(message, true); // تم تعطيله لتجنب التكرار
             input.value = '';
 
             // التأكد من أن النافذة مفتوحة
@@ -2518,6 +2629,31 @@ function sendMiniChatMessage() {
 function addMiniChatMessage(content, isOwn = false, timestamp = null) {
     const container = document.getElementById('miniChatMessages');
 
+    // فحص التكرار قبل الإضافة
+    const existingMessages = container.querySelectorAll('.message');
+    for (let msg of existingMessages) {
+        const msgContent = msg.querySelector('.message-content');
+        if (msgContent && msgContent.textContent.trim() === content.trim()) {
+            // فحص إضافي للوقت إذا كان متاحاً
+            const msgTime = msg.querySelector('.message-time');
+            if (msgTime && timestamp) {
+                const existingTime = new Date(msgTime.getAttribute('data-timestamp') || msgTime.textContent);
+                const newTime = new Date(timestamp);
+                const timeDiff = Math.abs(existingTime - newTime);
+
+                // إذا كان الفرق أقل من 10 ثوان، اعتبرها نفس الرسالة
+                if (timeDiff < 10000) {
+                    console.log('رسالة مكررة تم تجاهلها:', content);
+                    return;
+                }
+            } else if (!timestamp) {
+                // إذا لم يكن هناك وقت، اعتمد على المحتوى فقط
+                console.log('رسالة مكررة تم تجاهلها (بدون وقت):', content);
+                return;
+            }
+        }
+    }
+
     // إزالة رسالة "ابدأ المحادثة" إذا كانت موجودة
     const emptyMessage = container.querySelector('.text-center');
     if (emptyMessage) {
@@ -2526,6 +2662,10 @@ function addMiniChatMessage(content, isOwn = false, timestamp = null) {
 
     const messageElement = document.createElement('div');
     messageElement.className = `mini-message ${isOwn ? 'own' : ''}`;
+
+    // إضافة معرف فريد للرسالة
+    const messageId = 'mini_msg_' + Date.now() + '_' + Math.random();
+    messageElement.setAttribute('data-message-id', messageId);
 
     let time;
     if (timestamp) {
@@ -2541,9 +2681,9 @@ function addMiniChatMessage(content, isOwn = false, timestamp = null) {
     }
 
     messageElement.innerHTML = `
-        <div class="mini-message-content">
+        <div class="mini-message-content message-content">
             ${content}
-            <div class="mini-message-time">${time}</div>
+            <div class="mini-message-time message-time" data-timestamp="${timestamp || new Date().toISOString()}">${time}</div>
         </div>
     `;
 
@@ -2875,11 +3015,6 @@ function markMessagesAsRead(roomId) {
             // إخفاء عداد الإشعارات فوراً
             hideChatNotificationBadge();
 
-            // تحديث قائمة المحادثات لإزالة العدادات
-            if (typeof loadChatRooms === 'function') {
-                loadChatRooms();
-            }
-
             // إرسال إشعار عبر WebSocket أن الرسائل تم قراءتها
             if (ChatManager.isConnected && ChatManager.socket) {
                 ChatManager.socket.send(JSON.stringify({
@@ -2990,7 +3125,7 @@ let contextMenuRoomId = null;
 let isChatMuted = false;
 
 // دوال قائمة السياق
-function showUserContextMenu(event, userId, userName, username) {
+function showUserContextMenu(event, userId, userName, username, isOnline = false) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -2999,6 +3134,30 @@ function showUserContextMenu(event, userId, userName, username) {
     contextMenuUsername = username;
 
     const contextMenu = document.getElementById('userContextMenu');
+
+    // تحديث خيارات القائمة حسب حالة الاتصال
+    const chatItem = contextMenu.querySelector('.context-menu-item[onclick="startPrivateChat()"]');
+    const profileItem = contextMenu.querySelector('.context-menu-item[onclick="viewUserProfile()"]');
+
+    if (chatItem) {
+        if (isOnline) {
+            chatItem.style.display = 'block';
+            chatItem.innerHTML = `<i class="fas fa-comments me-2 text-success"></i>بدء محادثة مع ${userName}`;
+            chatItem.style.color = '#28a745';
+        } else {
+            chatItem.style.display = 'none';
+        }
+    }
+
+    if (profileItem) {
+        profileItem.style.display = 'block';
+        if (isOnline) {
+            profileItem.innerHTML = `<i class="fas fa-user me-2 text-primary"></i>عرض ملف ${userName} (متصل)`;
+        } else {
+            profileItem.innerHTML = `<i class="fas fa-user me-2 text-muted"></i>عرض ملف ${userName} (غير متصل)`;
+        }
+    }
+
     contextMenu.style.display = 'block';
     contextMenu.style.left = event.pageX + 'px';
     contextMenu.style.top = event.pageY + 'px';
@@ -3226,11 +3385,6 @@ function deleteConversation() {
 
                     // تحديث القوائم فوراً باستخدام النظام الجديد
                     ChatManager.refreshUserListAfterDelete();
-
-                    // تحديث قائمة الغرف
-                    if (typeof loadChatRooms === 'function') {
-                        loadChatRooms();
-                    }
 
                     // تحديث قائمة المستخدمين النشطين
                     updateActiveUsersWidget();
@@ -3541,9 +3695,6 @@ function switchChatTab(tabId, buttonElement) {
         if (tabId === 'activeUsers') {
             // تحديث قائمة المستخدمين النشطين
             loadActiveUsers();
-        } else if (tabId === 'chatRooms') {
-            // تحديث قائمة المحادثات
-            loadChatRooms();
         }
     }
 }
@@ -3566,9 +3717,7 @@ setInterval(updateUserStatusPeriodically, 120000);
 
 // تحميل البيانات الأولية للتبويب الافتراضي
 document.addEventListener('DOMContentLoaded', function() {
-    const defaultTab = document.querySelector('.chat-widget-tabs .nav-link.active');
-    if (defaultTab && defaultTab.textContent.trim() === 'المحادثات') {
-        loadChatRooms();
-    }
+    // تحميل المستخدمين النشطين عند بدء التشغيل
+    loadActiveUsers();
 });
 </script>
