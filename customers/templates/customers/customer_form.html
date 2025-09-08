@@ -184,6 +184,20 @@
         from { opacity: 0; transform: translateY(-5px); }
         to { opacity: 1; transform: translateY(0); }
     }
+
+    /* تأثير الاهتزاز للحقول الخاطئة */
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+
+    /* تحسين مظهر الحقول الخاطئة */
+    .form-control.is-invalid,
+    .form-select.is-invalid {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    }
     
     .tab-pane {
         animation: fadeIn 0.3s ease-in-out;
@@ -546,6 +560,12 @@
 
 {% block extra_js %}
 <script>
+// متغيرات لتتبع حالة validation
+let phoneValidationState = {
+    phone: { valid: false, checked: false },
+    phone2: { valid: true, checked: true } // الرقم الثاني اختياري
+};
+
 // دالة إخفاء بطاقة العميل المكرر
 function hideDuplicateAlert() {
     const alert = document.getElementById('duplicateCustomerAlert');
@@ -580,6 +600,10 @@ function checkCustomerPhone(phone, inputElement, isPhone2 = false) {
         // لا نفحص التكرار إلا إذا كان الرقم مكتمل
         if (phone.length < 11) {
             hideDuplicateCustomerCard();
+            // تحديث حالة validation للرقم غير المكتمل
+            const fieldName = inputElement.id.includes('phone2') ? 'phone2' : 'phone';
+            phoneValidationState[fieldName].valid = false;
+            phoneValidationState[fieldName].checked = false;
             return;
         }
     }
@@ -627,6 +651,11 @@ function showPhoneValidationError(inputElement, message, type = 'error') {
 
     inputElement.parentNode.appendChild(errorDiv);
     inputElement.classList.add(type === 'warning' ? 'border-warning' : 'border-danger');
+
+    // تحديث حالة validation
+    const fieldName = inputElement.id.includes('phone2') ? 'phone2' : 'phone';
+    phoneValidationState[fieldName].valid = (type === 'warning'); // warning يعني رقم صحيح لكن مكرر
+    phoneValidationState[fieldName].checked = true;
 }
 
 function showPhoneValidationSuccess(inputElement, message) {
@@ -640,6 +669,11 @@ function showPhoneValidationSuccess(inputElement, message) {
 
     inputElement.parentNode.appendChild(successDiv);
     inputElement.classList.add('border-success');
+
+    // تحديث حالة validation
+    const fieldName = inputElement.id.includes('phone2') ? 'phone2' : 'phone';
+    phoneValidationState[fieldName].valid = true;
+    phoneValidationState[fieldName].checked = true;
 }
 
 function clearPhoneValidation(inputElement) {
@@ -651,6 +685,67 @@ function clearPhoneValidation(inputElement) {
 
     // إزالة الألوان من الحقل
     inputElement.classList.remove('border-danger', 'border-warning', 'border-success');
+
+    // إعادة تعيين حالة validation
+    const fieldName = inputElement.id.includes('phone2') ? 'phone2' : 'phone';
+    if (inputElement.value.trim() === '') {
+        phoneValidationState[fieldName].valid = fieldName === 'phone2'; // phone2 اختياري
+        phoneValidationState[fieldName].checked = fieldName === 'phone2';
+    } else {
+        phoneValidationState[fieldName].valid = false;
+        phoneValidationState[fieldName].checked = false;
+    }
+}
+
+// دالة التحقق من صحة جميع الحقول المطلوبة
+function validateRequiredFields() {
+    const errors = [];
+
+    // فحص الحقول الأساسية
+    const nameField = document.getElementById('{{ form.name.id_for_label }}');
+    if (nameField && !nameField.value.trim()) {
+        errors.push('اسم العميل مطلوب');
+    }
+
+    // فحص رقم الهاتف
+    if (!phoneValidationState.phone.valid) {
+        errors.push('رقم الهاتف غير صحيح أو غير مكتمل');
+    }
+
+    // فحص رقم الهاتف الثاني (إذا تم إدخاله)
+    const phone2Field = document.getElementById('{{ form.phone2.id_for_label }}');
+    if (phone2Field && phone2Field.value.trim() && !phoneValidationState.phone2.valid) {
+        errors.push('رقم الهاتف الثاني غير صحيح');
+    }
+
+    return errors;
+}
+
+// دالة عرض أخطاء التحقق
+function showValidationErrors(errors) {
+    if (errors.length === 0) return;
+
+    const errorHtml = `
+        <div class="alert alert-danger mt-3" id="validationErrors">
+            <h6><i class="fas fa-exclamation-triangle me-2"></i>يرجى تصحيح الأخطاء التالية:</h6>
+            <ul class="mb-0">
+                ${errors.map(error => `<li>${error}</li>`).join('')}
+            </ul>
+        </div>
+    `;
+
+    // إزالة الأخطاء السابقة
+    const existingErrors = document.getElementById('validationErrors');
+    if (existingErrors) {
+        existingErrors.remove();
+    }
+
+    // إضافة الأخطاء الجديدة
+    const form = document.getElementById('customerForm');
+    form.insertAdjacentHTML('afterbegin', errorHtml);
+
+    // التمرير للأعلى لإظهار الأخطاء
+    document.getElementById('validationErrors').scrollIntoView({ behavior: 'smooth' });
 }
 
 // دالة عرض بطاقة العميل المكرر
@@ -701,6 +796,38 @@ function hideDuplicateCustomerCard() {
     }
 }
 
+
+
+// دالة إظهار خطأ التبديل
+function showTabSwitchError() {
+    // إزالة الرسالة السابقة إن وجدت
+    const existingAlert = document.getElementById('tabSwitchError');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+
+    const errorHtml = `
+        <div class="alert alert-warning alert-dismissible fade show mt-3" id="tabSwitchError">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>لا يمكن الانتقال!</strong> يرجى تصحيح الأخطاء في الحقول المطلوبة أولاً.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+
+    const form = document.getElementById('customerForm');
+    form.insertAdjacentHTML('afterbegin', errorHtml);
+
+    // إزالة الرسالة تلقائياً بعد 5 ثوان
+    setTimeout(() => {
+        const alert = document.getElementById('tabSwitchError');
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+
+
 document.addEventListener('DOMContentLoaded', function() {
     // Image preview functionality
     const imageInput = document.getElementById('{{ form.image.id_for_label }}');
@@ -719,6 +846,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // إدارة التبويبات مع التحقق
+    const tabButtons = document.querySelectorAll('[data-bs-toggle="pill"]');
+    tabButtons.forEach(function(button) {
+        // منع التبديل إذا كان هناك أخطاء
+        button.addEventListener('show.bs.tab', function(e) {
+            // التحقق من صحة التبويب الحالي قبل السماح بالتبديل
+            if (!validateCurrentTab()) {
+                e.preventDefault(); // منع التبديل
+                showTabSwitchError();
+                showFirstError();
+                return false;
+            }
+        });
+
+        // تحديث مؤشر الخطوات عند التبديل الناجح
+        button.addEventListener('shown.bs.tab', function(e) {
+            updateStepIndicator(e.target.id);
+        });
+    });
+
     // التحقق من رقم الهاتف الأول فور الكتابة
     const phoneInput = document.getElementById('{{ form.phone.id_for_label }}');
     if (phoneInput) {
@@ -769,13 +916,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Tab navigation
-    const tabButtons = document.querySelectorAll('[data-bs-toggle="pill"]');
-    tabButtons.forEach(function(button) {
-        button.addEventListener('shown.bs.tab', function(e) {
-            updateStepIndicator(e.target.id);
-        });
-    });
+
     
     // Form validation
     const form = document.getElementById('customerForm');
@@ -787,11 +928,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// دوال التنقل بين التبويبات (خارج DOMContentLoaded)
 function nextTab(tabId) {
     if (validateCurrentTab()) {
         const tab = new bootstrap.Tab(document.getElementById(tabId));
         tab.show();
     } else {
+        showTabSwitchError();
         showFirstError();
     }
 }
@@ -801,11 +944,15 @@ function prevTab(tabId) {
     tab.show();
 }
 
+// دالة التحقق من صحة التبويب الحالي
 function validateCurrentTab() {
     const activeTab = document.querySelector('.tab-pane.active');
+    if (!activeTab) return true;
+
     const requiredFields = activeTab.querySelectorAll('[required]');
     let isValid = true;
-    
+
+    // فحص الحقول المطلوبة العادية
     requiredFields.forEach(function(field) {
         if (!field.value.trim()) {
             field.classList.add('is-invalid');
@@ -814,16 +961,119 @@ function validateCurrentTab() {
             field.classList.remove('is-invalid');
         }
     });
-    
+
+    // فحص خاص لحقول الهاتف في تبويب الاتصال
+    if (activeTab.id === 'contact') {
+        const phoneField = document.getElementById('{{ form.phone.id_for_label }}');
+        const phone2Field = document.getElementById('{{ form.phone2.id_for_label }}');
+
+        // فحص رقم الهاتف الأول (مطلوب)
+        if (phoneField) {
+            if (!phoneField.value.trim()) {
+                phoneField.classList.add('is-invalid');
+                if (typeof showPhoneValidationError === 'function') {
+                    showPhoneValidationError(phoneField, 'رقم الهاتف مطلوب');
+                }
+                isValid = false;
+            } else if (typeof phoneValidationState !== 'undefined' && !phoneValidationState.phone.valid) {
+                phoneField.classList.add('is-invalid');
+                isValid = false;
+
+                // إظهار رسالة خطأ مخصصة حسب المشكلة
+                const phone = phoneField.value.replace(/[^\d]/g, '');
+                let errorMsg = 'رقم الهاتف غير صحيح';
+
+                if (phone.length < 11) {
+                    errorMsg = `رقم الهاتف ناقص (${phone.length}/11 رقم)`;
+                } else if (phone.length > 11) {
+                    errorMsg = `رقم الهاتف زائد (${phone.length}/11 رقم)`;
+                } else if (!phone.startsWith('01')) {
+                    errorMsg = 'رقم الهاتف يجب أن يبدأ بـ 01';
+                }
+
+                if (typeof showPhoneValidationError === 'function' && !phoneField.parentNode.querySelector('.phone-validation')) {
+                    showPhoneValidationError(phoneField, errorMsg);
+                }
+            } else {
+                phoneField.classList.remove('is-invalid');
+            }
+        }
+
+        // فحص رقم الهاتف الثاني (اختياري لكن إذا تم إدخاله يجب أن يكون صحيح)
+        if (phone2Field && phone2Field.value.trim()) {
+            if (typeof phoneValidationState !== 'undefined' && !phoneValidationState.phone2.valid) {
+                phone2Field.classList.add('is-invalid');
+                isValid = false;
+
+                // إظهار رسالة خطأ إذا لم تكن موجودة
+                if (typeof showPhoneValidationError === 'function' && !phone2Field.parentNode.querySelector('.phone-validation')) {
+                    showPhoneValidationError(phone2Field, 'رقم الهاتف الثاني غير صحيح');
+                }
+            } else {
+                phone2Field.classList.remove('is-invalid');
+            }
+        }
+    }
+
     return isValid;
 }
 
+// دالة إظهار أول خطأ
 function showFirstError() {
-    const firstError = document.querySelector('.is-invalid');
+    // البحث عن أول حقل يحتوي على خطأ
+    const firstError = document.querySelector('.is-invalid, .border-danger');
     if (firstError) {
         firstError.focus();
         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // إضافة تأثير بصري للفت الانتباه
+        firstError.style.animation = 'shake 0.5s ease-in-out';
+        setTimeout(() => {
+            firstError.style.animation = '';
+        }, 500);
     }
+}
+
+// دالة إظهار خطأ التبديل
+function showTabSwitchError() {
+    // إزالة الرسالة السابقة إن وجدت
+    const existingAlert = document.getElementById('tabSwitchError');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+
+    const activeTab = document.querySelector('.tab-pane.active');
+    let errorMessage = 'يرجى تصحيح الأخطاء في الحقول المطلوبة أولاً.';
+
+    if (activeTab && activeTab.id === 'basic') {
+        errorMessage = 'يرجى إدخال اسم العميل قبل الانتقال للخطوة التالية.';
+    } else if (activeTab && activeTab.id === 'contact') {
+        errorMessage = 'يرجى إدخال رقم هاتف صحيح (11 رقم يبدأ بـ 01) قبل الانتقال للخطوة التالية.';
+    }
+
+    const errorHtml = `
+        <div class="alert alert-danger alert-dismissible fade show mt-3" id="tabSwitchError" style="border-left: 4px solid #dc3545;">
+            <i class="fas fa-times-circle me-2"></i>
+            <strong>لا يمكن الانتقال!</strong> ${errorMessage}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+
+    const form = document.getElementById('customerForm');
+    if (form) {
+        form.insertAdjacentHTML('afterbegin', errorHtml);
+
+        // التمرير للأعلى لإظهار الرسالة
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // إزالة الرسالة تلقائياً بعد 5 ثوان
+    setTimeout(() => {
+        const alert = document.getElementById('tabSwitchError');
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
 }
 
 function updateStepIndicator(activeTabId) {
