@@ -294,6 +294,11 @@ def customer_create(request):
                     customer.branch = request.user.branch
 
                 customer.save()
+
+                # معالجة بيانات المسؤولين للشركات والجهات الحكومية
+                if customer.customer_type in ['corporate', 'government']:
+                    save_customer_responsibles(request, customer)
+
                 messages.success(request, _('تم إضافة العميل {} بنجاح').format(customer.name))
                 return redirect('customers:customer_detail', pk=customer.pk)
             except Exception as e:
@@ -346,7 +351,15 @@ def customer_update(request, pk):
         form = CustomerForm(request.POST, request.FILES, instance=customer, user=request.user)
         if form.is_valid():
             try:
-                form.save()
+                updated_customer = form.save()
+
+                # معالجة بيانات المسؤولين للشركات والجهات الحكومية
+                if updated_customer.customer_type in ['corporate', 'government']:
+                    save_customer_responsibles(request, updated_customer)
+                else:
+                    # حذف المسؤولين إذا تم تغيير نوع العميل
+                    updated_customer.responsibles.all().delete()
+
                 messages.success(request, 'تم تحديث بيانات العميل بنجاح.')
                 return redirect('customers:customer_detail', pk=customer.pk)
             except Exception as e:
@@ -462,21 +475,36 @@ def add_customer_note(request, pk):
         messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
         return redirect("customers:customer_list")
     
-    form = CustomerNoteForm(request.POST)
+    form = CustomerNoteForm(request.POST, user=request.user)
 
     if form.is_valid():
-        note = form.save(commit=False)
-        note.customer = customer
-        note.created_by = request.user
-        
-        # إضافة معلوم��ت الفرع إذا كان من فرع مختلف
-        if is_cross_branch:
-            note.note = f"[من فرع {request.user.branch.name if request.user.branch else 'غير محدد'}] {note.note}"
-        
-        note.save()
-        messages.success(request, 'تمت إضافة الملاحظة بنجاح.')
+        try:
+            note = form.save(commit=False)
+            note.customer = customer
+            note.created_by = request.user
+
+            # إضافة معلوم��ت الفرع إذا كان من فرع مختلف
+            if is_cross_branch:
+                note.note = f"[من فرع {request.user.branch.name if request.user.branch else 'غير محدد'}] {note.note}"
+
+            note.save()
+            messages.success(request, 'تمت إضافة الملاحظة بنجاح.')
+        except Exception as e:
+            messages.error(request, f'حدث خطأ أثناء حفظ الملاحظة: {str(e)}')
     else:
-        messages.error(request, 'حدث خطأ أثناء إضافة الملاحظة.')
+        # إظهار أخطاء النموذج بالتفصيل
+        error_messages = []
+        for field, errors in form.errors.items():
+            for error in errors:
+                if field == 'note':
+                    error_messages.append(str(error))
+                else:
+                    error_messages.append(f'{field}: {error}')
+
+        if error_messages:
+            messages.error(request, '; '.join(error_messages))
+        else:
+            messages.error(request, 'حدث خطأ أثناء إضافة الملاحظة.')
 
     return redirect('customers:customer_detail', pk=pk)
 
@@ -969,3 +997,67 @@ def customer_detail_redirect(request, pk):
     except Customer.DoesNotExist:
         messages.error(request, "العميل غير موجود.")
         return redirect("customers:customer_list")
+
+
+def save_customer_responsibles(request, customer):
+    """
+    حفظ بيانات مسؤولي العميل من النموذج
+    """
+    from .models import CustomerResponsible
+
+    # حذف المسؤولين الحاليين
+    customer.responsibles.all().delete()
+
+    # جمع بيانات المسؤولين من النموذج
+    responsibles_data = []
+    for key, value in request.POST.items():
+        if key.startswith('responsible_') and key.endswith('_name'):
+            # استخراج رقم المسؤول
+            parts = key.split('_')
+            if len(parts) >= 3:
+                responsible_id = parts[1]
+                name = value.strip()
+
+                if name:  # فقط إذا كان الاسم موجود
+                    position = request.POST.get(f'responsible_{responsible_id}_position', '').strip()
+                    phone = request.POST.get(f'responsible_{responsible_id}_phone', '').strip()
+                    email = request.POST.get(f'responsible_{responsible_id}_email', '').strip()
+                    is_primary = request.POST.get(f'responsible_{responsible_id}_is_primary') == 'on'
+
+                    responsibles_data.append({
+                        'name': name,
+                        'position': position,
+                        'phone': phone,
+                        'email': email,
+                        'is_primary': is_primary,
+                        'order': int(responsible_id)
+                    })
+
+    # ترتيب المسؤولين حسب الترتيب
+    responsibles_data.sort(key=lambda x: x['order'])
+
+    # التأكد من وجود مسؤول رئيسي واحد فقط
+    primary_count = sum(1 for r in responsibles_data if r['is_primary'])
+    if primary_count == 0 and responsibles_data:
+        # إذا لم يكن هناك مسؤول رئيسي، اجعل الأول رئيسي
+        responsibles_data[0]['is_primary'] = True
+    elif primary_count > 1:
+        # إذا كان هناك أكثر من مسؤول رئيسي، اجعل الأول فقط رئيسي
+        primary_set = False
+        for r in responsibles_data:
+            if r['is_primary'] and not primary_set:
+                primary_set = True
+            elif r['is_primary'] and primary_set:
+                r['is_primary'] = False
+
+    # حفظ المسؤولين
+    for i, responsible_data in enumerate(responsibles_data, 1):
+        CustomerResponsible.objects.create(
+            customer=customer,
+            name=responsible_data['name'],
+            position=responsible_data['position'],
+            phone=responsible_data['phone'],
+            email=responsible_data['email'],
+            is_primary=responsible_data['is_primary'],
+            order=i
+        )

@@ -155,6 +155,17 @@
                             </td>
                         </tr>
                         {% endif %}
+                        {% if customer.discount_type %}
+                        <tr>
+                            <th>{% trans 'نوع الخصم' %}:</th>
+                            <td>
+                                <span class="badge bg-success">
+                                    <i class="fas fa-percentage me-1"></i>{{ customer.discount_type.name }}
+                                </span>
+                                <small class="text-muted ms-2">({{ customer.discount_type.percentage }}%)</small>
+                            </td>
+                        </tr>
+                        {% endif %}
                         <tr>
                             <th>{% trans 'الحالة' %}:</th>
                             <td>
@@ -234,6 +245,67 @@
                     </table>
                 </div>
             </div>
+
+            <!-- قسم المسؤولين للشركات والجهات الحكومية -->
+            {% if customer.customer_type == 'corporate' or customer.customer_type == 'government' %}
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>مسؤولي العميل
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if customer.responsibles.exists %}
+                        <div class="row">
+                            {% for responsible in customer.responsibles.all %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-left-primary">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="text-primary mb-1">
+                                                    <i class="fas fa-user me-1"></i>{{ responsible.name }}
+                                                    {% if responsible.is_primary %}
+                                                    <span class="badge bg-warning text-dark ms-2">رئيسي</span>
+                                                    {% endif %}
+                                                </h6>
+                                                {% if responsible.position %}
+                                                <p class="text-muted mb-1">
+                                                    <i class="fas fa-briefcase me-1"></i>{{ responsible.position }}
+                                                </p>
+                                                {% endif %}
+                                                {% if responsible.phone %}
+                                                <p class="mb-1">
+                                                    <i class="fas fa-phone me-1 text-success"></i>
+                                                    <a href="tel:{{ responsible.phone }}" class="text-decoration-none">{{ responsible.phone }}</a>
+                                                </p>
+                                                {% endif %}
+                                                {% if responsible.email %}
+                                                <p class="mb-0">
+                                                    <i class="fas fa-envelope me-1 text-info"></i>
+                                                    <a href="mailto:{{ responsible.email }}" class="text-decoration-none">{{ responsible.email }}</a>
+                                                </p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-users fa-3x mb-3"></i>
+                            <p>لم يتم إضافة مسؤولين لهذا العميل بعد</p>
+                            <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i>إضافة مسؤولين
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
               <!-- Customer Interests -->
             <div class="card mb-4">
                 <div class="card-header bg-light">
@@ -276,12 +348,15 @@
                     <h5 class="card-title mb-0">{% trans 'إضافة ملاحظة' %}</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{% url 'customers:add_note' customer.pk %}">
+                    <form method="post" action="{% url 'customers:add_note' customer.pk %}" id="noteForm">
                         {% csrf_token %}
                         <div class="mb-3">
                             {{ note_form.note }}
+                            <div class="invalid-feedback" id="noteError" style="display: none;">
+                                يرجى كتابة الملاحظة قبل الإضافة
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="addNoteBtn">
                             <i class="fas fa-plus"></i> {% trans 'إضافة' %}
                         </button>
                     </form>
@@ -527,6 +602,24 @@
         border-color: #ffc107;
         color: #856404;
     }
+
+    #orders-table td, #orders-table th {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 0.25rem;
+        justify-content: center;
+        align-items: center;
+    }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
 </style>
 {% endblock %}
 
@@ -542,21 +635,45 @@
                 html: true
             });
         });
+
+        // التحقق من نموذج إضافة الملاحظة
+        const noteForm = document.getElementById('noteForm');
+        const noteTextarea = document.querySelector('#noteForm textarea');
+        const noteError = document.getElementById('noteError');
+        const addNoteBtn = document.getElementById('addNoteBtn');
+
+        if (noteForm && noteTextarea) {
+            noteForm.addEventListener('submit', function(e) {
+                const noteValue = noteTextarea.value.trim();
+
+                if (!noteValue) {
+                    e.preventDefault();
+
+                    // إظهار رسالة الخطأ
+                    noteTextarea.classList.add('is-invalid');
+                    noteError.style.display = 'block';
+
+                    // التركيز على الحقل
+                    noteTextarea.focus();
+
+                    // إضافة تأثير اهتزاز
+                    noteTextarea.style.animation = 'shake 0.5s ease-in-out';
+                    setTimeout(() => {
+                        noteTextarea.style.animation = '';
+                    }, 500);
+
+                    return false;
+                }
+            });
+
+            // إزالة رسالة الخطأ عند الكتابة
+            noteTextarea.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    this.classList.remove('is-invalid');
+                    noteError.style.display = 'none';
+                }
+            });
+        }
     });
 </script>
 {% endblock %}
-
-<style>
-#orders-table td, #orders-table th {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    vertical-align: middle;
-}
-.action-buttons {
-    display: flex;
-    gap: 0.25rem;
-    justify-content: center;
-    align-items: center;
-}
-</style>

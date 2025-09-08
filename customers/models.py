@@ -128,6 +128,85 @@ class CustomerType(models.Model):
         return self.name
 
 
+class DiscountType(models.Model):
+    """أنواع الخصومات"""
+    name = models.CharField(_('اسم نوع الخصم'), max_length=100, db_index=True)
+    percentage = models.DecimalField(
+        _('نسبة الخصم'),
+        max_digits=5,
+        decimal_places=2,
+        help_text=_('نسبة الخصم بالمئة (مثال: 10.50)')
+    )
+    description = models.TextField(_('وصف الخصم'), blank=True)
+    is_active = models.BooleanField(_('نشط'), default=True)
+    is_default = models.BooleanField(_('افتراضي'), default=False)
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+
+    class Meta:
+        verbose_name = _('نوع الخصم')
+        verbose_name_plural = _('أنواع الخصومات')
+        ordering = ['-is_default', 'percentage', 'name']
+        indexes = [
+            models.Index(fields=['is_active'], name='discount_type_active_idx'),
+            models.Index(fields=['percentage'], name='discount_type_perc_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.percentage}%)"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.percentage < 0 or self.percentage > 100:
+            raise ValidationError(_('نسبة الخصم يجب أن تكون بين 0 و 100'))
+
+
+class CustomerResponsible(models.Model):
+    """مسؤولي العملاء (للشركات والجهات الحكومية)"""
+    customer = models.ForeignKey(
+        'Customer',
+        on_delete=models.CASCADE,
+        related_name='responsibles',
+        verbose_name=_('العميل')
+    )
+    name = models.CharField(_('اسم المسؤول'), max_length=200, db_index=True)
+    position = models.CharField(_('المنصب'), max_length=100, blank=True)
+    phone = models.CharField(_('رقم الهاتف'), max_length=20, blank=True)
+    email = models.EmailField(_('البريد الإلكتروني'), blank=True)
+    is_primary = models.BooleanField(_('المسؤول الرئيسي'), default=False)
+    order = models.PositiveSmallIntegerField(_('الترتيب'), default=1)
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _('مسؤول العميل')
+        verbose_name_plural = _('مسؤولي العملاء')
+        ordering = ['order', 'name']
+        unique_together = [('customer', 'order')]
+        indexes = [
+            models.Index(fields=['customer', 'is_primary'], name='cust_resp_primary_idx'),
+            models.Index(fields=['name'], name='cust_resp_name_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.name} - {self.customer.name}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # التأكد من وجود مسؤول رئيسي واحد فقط لكل عميل
+        if self.is_primary:
+            existing_primary = CustomerResponsible.objects.filter(
+                customer=self.customer,
+                is_primary=True
+            ).exclude(pk=self.pk)
+
+            if existing_primary.exists():
+                raise ValidationError(_('يمكن أن يكون هناك مسؤول رئيسي واحد فقط لكل عميل'))
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
 class Customer(models.Model):
     STATUS_CHOICES = [
         ('active', _('نشط')),
@@ -210,6 +289,18 @@ class Customer(models.Model):
         db_index=True
     )
     notes = models.TextField(_('ملاحظات'), blank=True)
+
+    # حقل الخصم
+    discount_type = models.ForeignKey(
+        'DiscountType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='customers',
+        verbose_name=_('نوع الخصم'),
+        help_text=_('نوع الخصم المطبق على هذا العميل')
+    )
+
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -364,3 +455,25 @@ class Customer(models.Model):
         """الحصول على رابط تفاصيل العميل"""
         from django.urls import reverse
         return reverse('customers:customer_detail_by_code', kwargs={'customer_code': self.code})
+
+    def requires_responsibles(self):
+        """تحديد ما إذا كان نوع العميل يتطلب مسؤولين"""
+        return self.customer_type in ['corporate', 'government']
+
+    def get_primary_responsible(self):
+        """الحصول على المسؤول الرئيسي"""
+        return self.responsibles.filter(is_primary=True).first()
+
+    def get_all_responsibles(self):
+        """الحصول على جميع المسؤولين مرتبين"""
+        return self.responsibles.all().order_by('order', 'name')
+
+    def get_discount_percentage(self):
+        """الحصول على نسبة الخصم"""
+        if self.discount_type:
+            return self.discount_type.percentage
+        return 0
+
+    def has_discount(self):
+        """تحديد ما إذا كان العميل له خصم"""
+        return self.discount_type is not None and self.discount_type.is_active

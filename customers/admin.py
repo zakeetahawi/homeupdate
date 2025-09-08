@@ -6,7 +6,8 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django import forms
 from .models import (
-    Customer, CustomerCategory, CustomerNote, CustomerType, get_customer_types
+    Customer, CustomerCategory, CustomerNote, CustomerType,
+    DiscountType, CustomerResponsible, get_customer_types
 )
 
 
@@ -83,36 +84,69 @@ class CustomerTypeAdmin(admin.ModelAdmin):
     ordering = ['name']
 
 
+class CustomerResponsibleInline(admin.TabularInline):
+    """إدارة مسؤولي العملاء كـ inline"""
+    model = CustomerResponsible
+    extra = 1
+    max_num = 3
+    fields = ['name', 'position', 'phone', 'email', 'is_primary', 'order']
+    ordering = ['order', 'name']
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+
+        # إضافة validation للتأكد من وجود مسؤول رئيسي واحد فقط
+        class CustomFormSet(formset):
+            def clean(self):
+                super().clean()
+                if any(self.errors):
+                    return
+
+                primary_count = 0
+                for form in self.forms:
+                    if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+                        if form.cleaned_data.get('is_primary', False):
+                            primary_count += 1
+
+                if primary_count > 1:
+                    raise forms.ValidationError(_('يمكن أن يكون هناك مسؤول رئيسي واحد فقط'))
+                elif primary_count == 0 and obj and obj.requires_responsibles():
+                    raise forms.ValidationError(_('يجب تحديد مسؤول رئيسي واحد على الأقل'))
+
+        return CustomFormSet
+
+
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     form = CustomerAdminForm
     list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
     list_max_show_all = 50  # تقليل من 100 إلى 50
     show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
-    
+
     list_display = [
         'customer_code_display', 'customer_image', 'name', 'customer_type_display',
         'branch', 'phone', 'phone2', 'birth_date_display', 'status', 'category'
     ]
-    
+
     # إضافة إمكانية الترتيب لجميع الأعمدة
     sortable_by = [
         'code', 'name', 'customer_type', 'branch__name',
         'phone', 'phone2', 'birth_date', 'status', 'category__name',
         'created_at'
     ]
-    
+
     list_filter = [
         'status', 'customer_type', 'category',
         'branch', 'birth_date', 'created_at'
     ]
-    
+
     search_fields = [
         'code', 'name', 'phone', 'phone2', 'email',
         'birth_date', 'notes', 'category__name'
     ]
-    
+
     readonly_fields = ['created_by', 'created_at', 'updated_at']
+    inlines = [CustomerResponsibleInline]
 
     fieldsets = (
         (_('معلومات أساسية'), {
@@ -125,7 +159,7 @@ class CustomerAdmin(admin.ModelAdmin):
             'fields': ('phone', 'phone2', 'email', 'birth_date', 'address')
         }),
         (_('معلومات إضافية'), {
-            'fields': ('branch', 'interests', 'notes')
+            'fields': ('branch', 'interests', 'notes', 'discount_type')
         }),
         (_('معلومات النظام'), {
             'classes': ('collapse',),
@@ -255,3 +289,70 @@ class CustomerAdmin(admin.ModelAdmin):
         css = {
             'all': ('css/admin-extra.css',)
         }
+
+
+@admin.register(DiscountType)
+class DiscountTypeAdmin(admin.ModelAdmin):
+    """إدارة أنواع الخصومات"""
+    list_display = ['name', 'percentage', 'is_active', 'is_default', 'customers_count', 'created_at']
+    list_filter = ['is_active', 'is_default', 'created_at']
+    search_fields = ['name', 'description']
+    ordering = ['-is_default', 'percentage', 'name']
+    readonly_fields = ['created_at', 'updated_at']
+
+    fieldsets = (
+        (_('معلومات أساسية'), {
+            'fields': ('name', 'percentage', 'description')
+        }),
+        (_('الإعدادات'), {
+            'fields': ('is_active', 'is_default')
+        }),
+        (_('معلومات النظام'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def customers_count(self, obj):
+        """عدد العملاء الذين يستخدمون هذا النوع من الخصم"""
+        count = obj.customers.count()
+        if count > 0:
+            return format_html(
+                '<a href="{}?discount_type__id__exact={}">{} عميل</a>',
+                reverse('admin:customers_customer_changelist'),
+                obj.id,
+                count
+            )
+        return '0 عميل'
+    customers_count.short_description = _('عدد العملاء')
+
+    def save_model(self, request, obj, form, change):
+        # التأكد من وجود نوع خصم افتراضي واحد فقط
+        if obj.is_default:
+            DiscountType.objects.filter(is_default=True).exclude(pk=obj.pk).update(is_default=False)
+        super().save_model(request, obj, form, change)
+
+
+
+
+
+@admin.register(CustomerResponsible)
+class CustomerResponsibleAdmin(admin.ModelAdmin):
+    """إدارة مسؤولي العملاء"""
+    list_display = ['name', 'customer', 'position', 'phone', 'is_primary', 'order']
+    list_filter = ['is_primary', 'created_at']
+    search_fields = ['name', 'customer__name', 'position', 'phone', 'email']
+    ordering = ['customer__name', 'order', 'name']
+    autocomplete_fields = ['customer']
+
+    fieldsets = (
+        (_('معلومات المسؤول'), {
+            'fields': ('customer', 'name', 'position')
+        }),
+        (_('معلومات الاتصال'), {
+            'fields': ('phone', 'email')
+        }),
+        (_('الإعدادات'), {
+            'fields': ('is_primary', 'order')
+        }),
+    )
