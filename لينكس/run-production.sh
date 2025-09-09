@@ -9,7 +9,7 @@ BLUE='\033[0;34m'
 BOLD_BLUE='\033[1;34m'
 NC='\033[0m'
 
-PROJECT_DIR="/home/xhunterx/homeupdate"
+PROJECT_DIR="/home/zakee/homeupdate"
 
 print_status() { echo -e "${GREEN}$1${NC}"; }
 print_error() { echo -e "${RED}$1${NC}"; }
@@ -82,9 +82,35 @@ fi
 
 # تشغيل Celery Worker مع جميع قوائم الانتظار
 print_info "تشغيل Celery Worker مع جميع قوائم الانتظار..."
-celery -A crm worker --loglevel=info --queues=celery,file_uploads,maintenance,calculations,status_updates --detach --pidfile=/tmp/celery_worker.pid --logfile=/tmp/celery_worker.log &
-CELERY_WORKER_PID=$!
-sleep 3  # انتظار بدء العملية
+cd "$PROJECT_DIR"  # التأكد من أننا في المجلد الصحيح
+if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
+    # تنظيف الملفات القديمة
+    rm -f /tmp/celery_worker.pid /tmp/celery_worker.log
+    
+    # تشغيل Celery Worker مع مراقبة الأخطاء
+    celery -A crm worker \
+        --loglevel=info \
+        --queues=celery,file_uploads,maintenance,calculations,status_updates \
+        --pidfile=/tmp/celery_worker.pid \
+        --logfile=/tmp/celery_worker.log \
+        --detach
+
+    sleep 5  # انتظار بدء العملية
+    
+    if [ -f "/tmp/celery_worker.pid" ]; then
+        CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid)
+        if ps -p $CELERY_WORKER_PID > /dev/null; then
+            print_status "✔️ تم تشغيل Celery Worker بنجاح (PID: $CELERY_WORKER_PID)"
+        else
+            print_error "❌ فشل في تشغيل Celery Worker - راجع السجل في /tmp/celery_worker.log"
+            tail -n 20 /tmp/celery_worker.log
+        fi
+    else
+        print_error "❌ فشل في تشغيل Celery Worker - لم يتم إنشاء ملف PID"
+    fi
+else
+    print_error "❌ فشل في تشغيل Celery Worker - ملف التهيئة crm/__init__.py غير موجود"
+fi
 if ps -p $CELERY_WORKER_PID > /dev/null; then
     print_status "✔️ تم تشغيل Celery Worker مع جميع قوائم الانتظار (PID: $CELERY_WORKER_PID)"
 else
@@ -93,17 +119,60 @@ fi
 
 # تشغيل Celery Beat للمهام الدورية
 print_info "تشغيل Celery Beat للمهام الدورية..."
-celery -A crm beat --loglevel=info --detach --pidfile=/tmp/celery_beat.pid --logfile=/tmp/celery_beat.log --schedule=/tmp/celerybeat-schedule &
-CELERY_BEAT_PID=$!
-sleep 3  # انتظار بدء العملية
+cd "$PROJECT_DIR"  # التأكد من أننا في المجلد الصحيح
+if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
+    # تنظيف الملفات القديمة
+    rm -f /tmp/celery_beat.pid /tmp/celery_beat.log /tmp/celerybeat-schedule*
+    
+    # تشغيل Celery Beat مع مراقبة الأخطاء
+    celery -A crm beat \
+        --loglevel=info \
+        --pidfile=/tmp/celery_beat.pid \
+        --logfile=/tmp/celery_beat.log \
+        --schedule=/tmp/celerybeat-schedule \
+        --detach
+
+    sleep 5  # انتظار بدء العملية
+    
+    if [ -f "/tmp/celery_beat.pid" ]; then
+        CELERY_BEAT_PID=$(cat /tmp/celery_beat.pid)
+        if ps -p $CELERY_BEAT_PID > /dev/null; then
+            print_status "✔️ تم تشغيل Celery Beat بنجاح (PID: $CELERY_BEAT_PID)"
+        else
+            print_error "❌ فشل في تشغيل Celery Beat - راجع السجل في /tmp/celery_beat.log"
+            tail -n 20 /tmp/celery_beat.log
+        fi
+    else
+        print_error "❌ فشل في تشغيل Celery Beat - لم يتم إنشاء ملف PID"
+    fi
+else
+    print_error "❌ فشل في تشغيل Celery Beat - ملف التهيئة crm/__init__.py غير موجود"
+fi
 if ps -p $CELERY_BEAT_PID > /dev/null; then
     print_status "✔️ تم تشغيل Celery Beat للمهام الدورية (PID: $CELERY_BEAT_PID)"
 else
     print_error "❌ فشل في تشغيل Celery Beat"
 fi
 
-print_info "تخطي Cloudflare Tunnel - تشغيل محلي"
-print_status "✔️ الخادم سيعمل محلياً على المنفذ 8000"
+# تشغيل Cloudflare Tunnel
+print_info "جاري تشغيل Cloudflare Tunnel..."
+if [ -f "cloudflared" ]; then
+    chmod +x cloudflared
+    ./cloudflared tunnel --config cloudflared.yml run > /tmp/cloudflared.log 2>&1 &
+    TUNNEL_PID=$!
+    sleep 5  # انتظار بدء التانل
+    
+    if ps -p $TUNNEL_PID > /dev/null; then
+        print_status "✔️ تم تشغيل Cloudflare Tunnel (PID: $TUNNEL_PID)"
+        print_tunnel "🌐 يمكن الوصول للموقع عبر: https://elkhawaga.uk"
+    else
+        print_error "❌ فشل في تشغيل Cloudflare Tunnel"
+        print_status "⚠️ سيتم الاستمرار في الوضع المحلي على المنفذ 8000"
+    fi
+else
+    print_warning "⚠️ ملف cloudflared غير موجود"
+    print_status "⚠️ سيتم الاستمرار في الوضع المحلي على المنفذ 8000"
+fi
 
 # تصدير إعدادات قاعدة البيانات إلى البيئة حتى يستخدمها سكريبت النسخ الاحتياطي
 if [ -f "crm/settings.py" ]; then
@@ -127,7 +196,7 @@ if [ -f "لينكس/db-backup.sh" ]; then
     chmod +x "لينكس/db-backup.sh"
     ./لينكس/db-backup.sh > /tmp/db_backup.log 2>&1 &
     DB_BACKUP_PID=$!
-    print_status "✔️ تم تشغيل خدمة النسخ الاحتياطي (PID: $DB_BACKUP_PID) - ستُحفظ النسخ في /home/xhunterx/homeupdate/media/backups"
+    print_status "✔️ تم تشغيل خدمة النسخ الاحتياطي (PID: $DB_BACKUP_PID) - ستُحفظ النسخ في /home/zakee/homeupdate/media/backups"
 else
     print_error "ملف النسخ الاحتياطي لينكس/db-backup.sh غير موجود"
 fi
@@ -166,7 +235,11 @@ cleanup() {
         rm -f /tmp/celerybeat-schedule*
     fi
 
-    # لا حاجة لإيقاف Cloudflare Tunnel (غير مستخدم)
+    # إيقاف Cloudflare Tunnel
+    if [ ! -z "$TUNNEL_PID" ]; then
+        kill $TUNNEL_PID 2>/dev/null
+        print_status "تم إيقاف Cloudflare Tunnel"
+    fi
 
     # إيقاف خدمة النسخ الاحتياطي
     if [ ! -z "$DB_BACKUP_PID" ]; then
@@ -314,14 +387,40 @@ while true; do
         fi
     fi
 
-    # فحص حالة التانل
-    check_tunnel_status
-    tunnel_ok=$?
-
-    if [ $tunnel_ok -eq 0 ]; then
-        print_status "✅ النظام يعمل بشكل طبيعي - الجسر متصل"
+    # فحص حالة التانل وإعادة تشغيله إذا توقف
+    if [ ! -z "$TUNNEL_PID" ]; then
+        if ! kill -0 $TUNNEL_PID 2>/dev/null; then
+            print_warning "⚠️ Cloudflare Tunnel توقف - جاري إعادة التشغيل..."
+            ./cloudflared tunnel --config cloudflared.yml run > /tmp/cloudflared.log 2>&1 &
+            TUNNEL_PID=$!
+            sleep 5
+            
+            if ps -p $TUNNEL_PID > /dev/null; then
+                print_status "✔️ تم إعادة تشغيل Cloudflare Tunnel (PID: $TUNNEL_PID)"
+                print_tunnel "🌐 يمكن الوصول للموقع عبر: https://elkhawaga.uk"
+            else
+                print_error "❌ فشل في إعادة تشغيل Cloudflare Tunnel"
+            fi
+        else
+            # فحص الاتصال بالموقع
+            if curl -s --max-time 10 https://elkhawaga.uk > /dev/null 2>&1; then
+                if [ "$TUNNEL_STATUS" != "connected" ]; then
+                    TUNNEL_STATUS="connected"
+                    print_tunnel "✅ النظام يعمل بشكل طبيعي - الجسر متصل"
+                fi
+            else
+                if [ "$TUNNEL_STATUS" != "disconnected" ]; then
+                    TUNNEL_STATUS="disconnected"
+                    print_warning "⚠️ الجسر يعمل ولكن الموقع غير متاح - جاري المحاولة مجدداً..."
+                    kill $TUNNEL_PID 2>/dev/null
+                    ./cloudflared tunnel --config cloudflared.yml run > /tmp/cloudflared.log 2>&1 &
+                    TUNNEL_PID=$!
+                    sleep 5
+                fi
+            fi
+        fi
     else
-        print_warning "⚠️ النظام يعمل محلياً - الجسر منقطع"
+        print_warning "⚠️ النظام يعمل محلياً - الجسر غير مشغل"
     fi
 done
 

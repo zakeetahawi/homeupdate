@@ -4,6 +4,7 @@
 # Tunnel configuration (will be updated after tunnel creation)
 tunnel: 02d18311-1c6a-479a-a4c2-cc5750fb846e
 credentials-file: ./cloudflare-credentials.json
+origincert: ./cert.pem
 
 # Ingress rules - defines how traffic is routed
 ingress:
