@@ -397,9 +397,10 @@
                                         {% endif %}
                                     </div>
                                 </div>
-                                <div class="col-md-6">                                    <div class="form-group">
+                                <div class="col-md-6">
+                                    <div class="form-group">
                                         <label for="{{ form.customer_type.id_for_label }}" class="form-label required-field">{{ form.customer_type.label }}</label>
-                                        <select name="customer_type" class="form-select" id="{{ form.customer_type.id_for_label }}">
+                                        <select name="customer_type" class="form-select" id="{{ form.customer_type.id_for_label }}" onchange="toggleResponsibleFields()">
                                             {% for choice in form.customer_type.field.choices %}
                                             <option value="{{ choice.0 }}"{% if form.customer_type.value == choice.0 %} selected{% endif %}>{{ choice.1 }}</option>
                                             {% endfor %}
@@ -514,7 +515,44 @@
 
                 <!-- Additional Information Tab -->
                 <div class="tab-pane fade" id="additional" role="tabpanel">
+                    <!-- حقل نوع الخصم -->
                     <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.discount_type.id_for_label }}" class="form-label">
+                                    <i class="fas fa-percentage me-2 text-success"></i>{{ form.discount_type.label }}
+                                </label>
+                                {{ form.discount_type }}
+                                {% if form.discount_type.errors %}
+                                <span class="error-text">{{ form.discount_type.errors.0 }}</span>
+                                {% endif %}
+                                <small class="text-muted">اختر نوع الخصم المطبق على هذا العميل (اختياري)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- حقول المسؤولين (للشركات والجهات الحكومية) -->
+                    <div id="responsibleSection" style="display: none;">
+                        <div class="card mt-3">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-users me-2"></i>مسؤولي العميل
+                                    <small class="ms-2">(مطلوب للشركات والجهات الحكومية)</small>
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="responsibleFields">
+                                    <!-- سيتم إضافة حقول المسؤولين هنا ديناميكياً -->
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addResponsibleBtn" onclick="addResponsibleField()">
+                                    <i class="fas fa-plus me-1"></i>إضافة مسؤول آخر
+                                </button>
+                                <small class="text-muted d-block mt-2">يمكن إضافة حتى 3 مسؤولين كحد أقصى</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
                         <div class="col-md-12">
                             <div class="form-group">
                                 <label for="{{ form.interests.id_for_label }}" class="form-label">{{ form.interests.label }}</label>
@@ -926,6 +964,9 @@ document.addEventListener('DOMContentLoaded', function() {
             showFirstError();
         }
     });
+
+    // تحديد حقول المسؤولين عند تحميل الصفحة
+    toggleResponsibleFields();
 });
 
 // دوال التنقل بين التبويبات (خارج DOMContentLoaded)
@@ -1076,6 +1117,196 @@ function showTabSwitchError() {
     }, 5000);
 }
 
+// متغيرات لإدارة المسؤولين
+let responsibleCount = 0;
+const maxResponsibles = 3;
+
+// دالة إظهار/إخفاء حقول المسؤولين حسب نوع العميل
+function toggleResponsibleFields() {
+    const customerType = document.getElementById('{{ form.customer_type.id_for_label }}').value;
+    const responsibleSection = document.getElementById('responsibleSection');
+
+    if (customerType === 'corporate' || customerType === 'government') {
+        responsibleSection.style.display = 'block';
+        // إضافة حقل مسؤول واحد على الأقل
+        if (responsibleCount === 0) {
+            addResponsibleField();
+        }
+    } else {
+        responsibleSection.style.display = 'none';
+        // مسح جميع حقول المسؤولين
+        clearResponsibleFields();
+    }
+}
+
+// دالة إضافة حقل مسؤول جديد
+function addResponsibleField() {
+    if (responsibleCount >= maxResponsibles) {
+        alert('يمكن إضافة 3 مسؤولين كحد أقصى');
+        return;
+    }
+
+    responsibleCount++;
+    const fieldsContainer = document.getElementById('responsibleFields');
+    const addButton = document.getElementById('addResponsibleBtn');
+
+    const responsibleHtml = `
+        <div class="responsible-field-group border rounded p-3 mb-3" id="responsible-${responsibleCount}">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 text-primary">
+                    <i class="fas fa-user me-1"></i>المسؤول ${responsibleCount}
+                </h6>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeResponsibleField(${responsibleCount})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label required-field">اسم المسؤول</label>
+                        <input type="text" name="responsible_${responsibleCount}_name" class="form-control"
+                               placeholder="اسم المسؤول" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">المنصب</label>
+                        <input type="text" name="responsible_${responsibleCount}_position" class="form-control"
+                               placeholder="المنصب (اختياري)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">رقم الهاتف</label>
+                        <input type="text" name="responsible_${responsibleCount}_phone" class="form-control"
+                               placeholder="01234567890" pattern="^01[0-9]{9}$" dir="ltr">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">البريد الإلكتروني</label>
+                        <input type="email" name="responsible_${responsibleCount}_email" class="form-control"
+                               placeholder="البريد الإلكتروني (اختياري)" dir="ltr">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-check mt-2">
+                <input type="checkbox" name="responsible_${responsibleCount}_is_primary"
+                       class="form-check-input primary-responsible-checkbox"
+                       id="responsible_${responsibleCount}_primary"
+                       onchange="handlePrimaryResponsible(${responsibleCount})">
+                <label class="form-check-label" for="responsible_${responsibleCount}_primary">
+                    المسؤول الرئيسي
+                </label>
+            </div>
+        </div>
+    `;
+
+    fieldsContainer.insertAdjacentHTML('beforeend', responsibleHtml);
+
+    // إخفاء زر الإضافة إذا وصلنا للحد الأقصى
+    if (responsibleCount >= maxResponsibles) {
+        addButton.style.display = 'none';
+    }
+
+    // إذا كان هذا أول مسؤول، اجعله رئيسي تلقائياً
+    if (responsibleCount === 1) {
+        document.getElementById(`responsible_${responsibleCount}_primary`).checked = true;
+    }
+}
+
+// دالة حذف حقل مسؤول
+function removeResponsibleField(id) {
+    const fieldGroup = document.getElementById(`responsible-${id}`);
+    if (fieldGroup) {
+        fieldGroup.remove();
+        responsibleCount--;
+
+        // إظهار زر الإضافة مرة أخرى
+        const addButton = document.getElementById('addResponsibleBtn');
+        if (addButton) {
+            addButton.style.display = 'inline-block';
+        }
+
+        // إعادة ترقيم المسؤولين
+        renumberResponsibles();
+    }
+}
+
+// دالة مسح جميع حقول المسؤولين
+function clearResponsibleFields() {
+    const fieldsContainer = document.getElementById('responsibleFields');
+    fieldsContainer.innerHTML = '';
+    responsibleCount = 0;
+
+    const addButton = document.getElementById('addResponsibleBtn');
+    if (addButton) {
+        addButton.style.display = 'inline-block';
+    }
+}
+
+// دالة إعادة ترقيم المسؤولين
+function renumberResponsibles() {
+    const fieldGroups = document.querySelectorAll('.responsible-field-group');
+    fieldGroups.forEach((group, index) => {
+        const newNumber = index + 1;
+        const oldId = group.id;
+        const newId = `responsible-${newNumber}`;
+
+        group.id = newId;
+        group.querySelector('h6').innerHTML = `<i class="fas fa-user me-1"></i>المسؤول ${newNumber}`;
+
+        // تحديث أسماء الحقول
+        const inputs = group.querySelectorAll('input');
+        inputs.forEach(input => {
+            const name = input.name;
+            if (name) {
+                const newName = name.replace(/responsible_\d+_/, `responsible_${newNumber}_`);
+                input.name = newName;
+
+                if (input.type === 'checkbox') {
+                    input.id = `responsible_${newNumber}_primary`;
+                    const label = group.querySelector(`label[for="${input.id}"]`);
+                    if (label) {
+                        label.setAttribute('for', input.id);
+                    }
+                }
+            }
+        });
+
+        // تحديث دالة الحذف
+        const deleteBtn = group.querySelector('.btn-outline-danger');
+        if (deleteBtn) {
+            deleteBtn.setAttribute('onclick', `removeResponsibleField(${newNumber})`);
+        }
+
+        // تحديث دالة المسؤول الرئيسي
+        const primaryCheckbox = group.querySelector('.primary-responsible-checkbox');
+        if (primaryCheckbox) {
+            primaryCheckbox.setAttribute('onchange', `handlePrimaryResponsible(${newNumber})`);
+        }
+    });
+
+    responsibleCount = fieldGroups.length;
+}
+
+// دالة التعامل مع المسؤول الرئيسي (واحد فقط)
+function handlePrimaryResponsible(selectedId) {
+    const allPrimaryCheckboxes = document.querySelectorAll('.primary-responsible-checkbox');
+    allPrimaryCheckboxes.forEach(checkbox => {
+        if (checkbox.id !== `responsible_${selectedId}_primary`) {
+            checkbox.checked = false;
+        }
+    });
+}
+
+
+
 function updateStepIndicator(activeTabId) {
     const steps = document.querySelectorAll('.step');
     const connectors = document.querySelectorAll('.step-connector');
@@ -1127,4 +1358,39 @@ document.querySelectorAll('textarea').forEach(function(textarea) {
     });
 });
 </script>
+
+<!-- تحميل المسؤولين الموجودين في حالة التعديل -->
+{% if customer and customer.responsibles.exists %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // انتظار حتى يتم تحميل جميع الدوال
+    setTimeout(function() {
+        const existingResponsibles = [
+            {% for responsible in customer.responsibles.all %}
+            {
+                name: "{{ responsible.name|escapejs }}",
+                position: "{{ responsible.position|escapejs }}",
+                phone: "{{ responsible.phone|escapejs }}",
+                email: "{{ responsible.email|escapejs }}",
+                is_primary: {{ responsible.is_primary|yesno:"true,false" }}
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        existingResponsibles.forEach((responsible, index) => {
+            addResponsibleField();
+            const currentId = responsibleCount;
+
+            // تعبئة البيانات
+            document.querySelector(`input[name="responsible_${currentId}_name"]`).value = responsible.name;
+            document.querySelector(`input[name="responsible_${currentId}_position"]`).value = responsible.position;
+            document.querySelector(`input[name="responsible_${currentId}_phone"]`).value = responsible.phone;
+            document.querySelector(`input[name="responsible_${currentId}_email"]`).value = responsible.email;
+            document.querySelector(`input[name="responsible_${currentId}_is_primary"]`).checked = responsible.is_primary;
+        });
+    }, 100);
+});
+</script>
+{% endif %}
+
 {% endblock %}

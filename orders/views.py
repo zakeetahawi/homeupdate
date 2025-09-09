@@ -909,11 +909,18 @@ def order_detail_by_number(request, order_number):
         from inspections.models import Inspection
         inspections = Inspection.objects.filter(order=order)
 
+    # Get customer notes
+    from customers.models import CustomerNote
+    customer_notes = CustomerNote.objects.filter(
+        customer=order.customer
+    ).select_related('created_by').order_by('-created_at')[:5]
+
     context = {
         'order': order,
         'payments': payments,
         'order_items': order_items,
         'inspections': inspections,
+        'customer_notes': customer_notes,
         'can_edit': can_user_edit_order(request.user, order),
         'can_delete': can_user_delete_order(request.user, order),
     }
@@ -945,11 +952,18 @@ def order_detail_by_code(request, order_code):
         from inspections.models import Inspection
         inspections = Inspection.objects.filter(order=order).select_related('inspector')
 
+    # Get customer notes
+    from customers.models import CustomerNote
+    customer_notes = CustomerNote.objects.filter(
+        customer=order.customer
+    ).select_related('created_by').order_by('-created_at')[:5]
+
     context = {
         'order': order,
         'payments': payments,
         'order_items': order_items,
         'inspections': inspections,
+        'customer_notes': customer_notes,
         'can_edit': can_user_edit_order(request.user, order),
         'can_delete': can_user_delete_order(request.user, order),
     }

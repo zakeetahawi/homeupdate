@@ -2,7 +2,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 import re
-from .models import Customer, CustomerCategory, CustomerNote
+from .models import Customer, CustomerCategory, CustomerNote, DiscountType, CustomerResponsible
 from accounts.models import Branch
 
 class CustomerForm(forms.ModelForm):
@@ -26,7 +26,7 @@ class CustomerForm(forms.ModelForm):
         fields = [
             'name', 'phone', 'phone2', 'email', 'birth_date', 'address',
             'customer_type', 'category', 'status', 'interests',
-            'image'
+            'image', 'discount_type'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -53,6 +53,10 @@ class CustomerForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-select'}),
             'interests': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
+            'discount_type': forms.Select(attrs={
+                'class': 'form-select',
+                'data-placeholder': 'اختر نوع الخصم (اختياري)'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -178,20 +182,33 @@ class CustomerForm(forms.ModelForm):
         return phone2
 
 class CustomerNoteForm(forms.ModelForm):
+    note = forms.CharField(
+        label=_('الملاحظة'),
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': _('أضف ملاحظتك هنا...'),
+            'required': True
+        }),
+        required=True,
+        error_messages={
+            'required': _('يرجى كتابة الملاحظة قبل الإضافة'),
+        }
+    )
+
     class Meta:
         model = CustomerNote
         fields = ['note']
-        widgets = {
-            'note': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': _('أضف ملاحظتك هنا...')
-            }),
-        }
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+
+    def clean_note(self):
+        note = self.cleaned_data.get('note')
+        if not note or not note.strip():
+            raise forms.ValidationError(_('يرجى كتابة الملاحظة قبل الإضافة'))
+        return note.strip()
 
     def save(self, commit=True):
         note = super().save(commit=False)
@@ -237,3 +254,65 @@ class CustomerSearchForm(forms.Form):
         self.fields['customer_type'].choices = (
             [('', _('كل الأنواع'))] + list(Customer.get_customer_types())
         )
+
+
+
+
+
+class CustomerResponsibleForm(forms.ModelForm):
+    """نموذج مسؤولي العملاء"""
+
+    class Meta:
+        model = CustomerResponsible
+        fields = ['name', 'position', 'phone', 'email', 'is_primary']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'اسم المسؤول',
+                'required': True
+            }),
+            'position': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'المنصب (اختياري)'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'dir': 'ltr',
+                'placeholder': '01234567890',
+                'pattern': '^01[0-9]{9}$',
+                'title': 'يجب أن يكون الرقم 11 رقم ويبدأ بـ 01'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'dir': 'ltr',
+                'placeholder': 'البريد الإلكتروني (اختياري)'
+            }),
+            'is_primary': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if phone:
+            # تنظيف الرقم من المسافات والرموز
+            phone = re.sub(r'[^\d]', '', phone)
+
+            # فحص صيغة الرقم
+            if not re.match(r'^01[0-9]{9}$', phone):
+                raise ValidationError(
+                    _('رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 01 (مثال: 01234567890)')
+                )
+        return phone
+
+
+# FormSet للمسؤولين
+CustomerResponsibleFormSet = forms.inlineformset_factory(
+    Customer,
+    CustomerResponsible,
+    form=CustomerResponsibleForm,
+    extra=1,
+    max_num=3,
+    can_delete=True,
+    fields=['name', 'position', 'phone', 'email', 'is_primary']
+)
