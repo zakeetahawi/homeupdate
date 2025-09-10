@@ -541,10 +541,6 @@
                     </h6>
 
                     <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#statusModal">
-                            <i class="fas fa-edit me-2"></i>
-                            تحديث الحالة
-                        </button>
 
                         {% if complaint.status not in 'resolved,pending_evaluation,closed' %}
                         <a href="{% url 'complaints:complaint_edit' complaint.pk %}" class="btn btn-outline-primary">

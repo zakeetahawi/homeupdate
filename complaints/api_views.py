@@ -115,7 +115,7 @@ class ComplaintStatusUpdateView(View):
     def has_permission(self, user, complaint):
         """
         Check if user has permission to update complaint status
-        Enhanced to ensure only original creators can close/resolve complaints
+        Enhanced to use the new permission system
         """
         # Get the new status from request data
         try:
@@ -124,12 +124,36 @@ class ComplaintStatusUpdateView(View):
         except:
             new_status = None
 
-        # Only original complaint creator can close or resolve complaints
+        # Check user's complaint permissions
+        try:
+            permissions = user.complaint_permissions
+            if not permissions.is_active:
+                return False
+        except:
+            # If no permissions record, fall back to group-based permissions
+            permissions = None
+
+        # Check specific status change permissions
+        if new_status == 'resolved':
+            if permissions and not permissions.can_resolve_complaints:
+                return False
+        elif new_status == 'closed':
+            if permissions and not permissions.can_close_complaints:
+                return False
+
+        # Check general status change permission
+        if permissions and not permissions.can_change_complaint_status:
+            return False
+
+        # Only original complaint creator can close or resolve complaints (unless admin)
         if new_status in ['resolved', 'closed']:
             if complaint.created_by == user:
                 return True
+            # Check if user has admin permissions
+            if permissions and permissions.can_edit_all_complaints:
+                return True
             # Supervisors and managers can also close/resolve
-            if (user.groups.filter(name__in=['Complaints_Supervisors', 'Managers']).exists()):
+            if user.groups.filter(name__in=['Complaints_Supervisors', 'Managers']).exists():
                 return True
             return False
 
@@ -140,6 +164,10 @@ class ComplaintStatusUpdateView(View):
 
         # منشئ الشكوى يمكنه التحديث (ما عدا الإغلاق والحل)
         if complaint.created_by == user:
+            return True
+
+        # Check if user can edit all complaints
+        if permissions and permissions.can_edit_all_complaints:
             return True
 
         # مدير القسم يمكنه التحديث
@@ -265,7 +293,20 @@ class ComplaintEscalationView(View):
     def has_permission(self, user, complaint):
         """
         Check if user has permission to escalate complaint
+        Enhanced to use the new permission system
         """
+        # Check user's complaint permissions
+        try:
+            permissions = user.complaint_permissions
+            if not permissions.is_active:
+                return False
+            # Check if user has escalation permission
+            if not permissions.can_escalate_complaints:
+                return False
+        except:
+            # If no permissions record, fall back to group-based permissions
+            pass
+
         # المسؤول المعين يمكنه التصعيد
         if complaint.assigned_to == user:
             return True
@@ -400,7 +441,22 @@ class ComplaintAssignmentView(View):
     def has_permission(self, user, complaint):
         """
         Check if user has permission to assign complaint
+        Enhanced to use the new permission system
         """
+        # Check user's complaint permissions
+        try:
+            permissions = user.complaint_permissions
+            if not permissions.is_active:
+                return False
+            # Check if user has assignment permission
+            if not permissions.can_assign_complaints:
+                # If user doesn't have assignment permission, check if they can at least assign their own
+                if complaint.assigned_to != user and complaint.created_by != user:
+                    return False
+        except:
+            # If no permissions record, fall back to group-based permissions
+            pass
+
         # المسؤول المعين يمكنه التعيين
         if complaint.assigned_to == user:
             return True
@@ -408,6 +464,13 @@ class ComplaintAssignmentView(View):
         # منشئ الشكوى يمكنه التعيين
         if complaint.created_by == user:
             return True
+
+        # Check if user can assign all complaints
+        try:
+            if user.complaint_permissions.can_assign_complaints:
+                return True
+        except:
+            pass
 
         # المشرفون يمكنهم التعيين
         if user.groups.filter(name='Complaints_Supervisors').exists():
@@ -548,9 +611,10 @@ def complaints_notifications_api(request):
         # الحصول على المعاملات
         limit = int(request.GET.get('limit', 10))
 
-        # الحصول على الإشعارات الفعلية من قاعدة البيانات
+        # الحصول على الإشعارات غير المقروءة فقط للشكاوى النشطة
         notifications_queryset = ComplaintNotification.objects.filter(
             recipient=request.user,
+            is_read=False,  # فقط الإشعارات غير المقروءة
             complaint__status__in=['new', 'in_progress', 'escalated']  # فقط الشكاوى التي تحتاج إجراء
         ).select_related('complaint', 'complaint__customer').order_by('-created_at')[:limit]
 
@@ -593,40 +657,22 @@ def complaints_notifications_api(request):
 @require_http_methods(["POST"])
 def clear_complaints_notifications(request):
     """
-    مسح جميع إشعارات الشكاوى للمستخدم الحالي
+    API endpoint لمسح جميع إشعارات الشكاوى للمستخدم الحالي
     """
     try:
-        from django.contrib.contenttypes.models import ContentType
-        from notifications.models import Notification, NotificationVisibility
+        from .models import ComplaintNotification
 
-        # الحصول على نوع محتوى الشكاوى
-        complaint_content_type = ContentType.objects.get_for_model(Complaint)
-
-        # الحصول على إشعارات الشكاوى للمستخدم الحالي
-        complaint_notifications = Notification.objects.filter(
-            visible_to=request.user,
-            content_type=complaint_content_type
-        )
-
-        deleted_count = 0
-
-        # مسح سجلات الرؤية للمستخدم الحالي
-        visibility_deleted = NotificationVisibility.objects.filter(
-            user=request.user,
-            notification__in=complaint_notifications
-        ).delete()[0]
-
-        # مسح الإشعارات التي لا يراها أي مستخدم آخر
-        for notification in complaint_notifications:
-            if not notification.visibility_records.exclude(user=request.user).exists():
-                notification.delete()
-                deleted_count += 1
+        # تحديد إشعارات الشكاوى غير المحلولة فقط كمقروءة (نفس منطق العداد)
+        updated_count = ComplaintNotification.objects.filter(
+            recipient=request.user,
+            is_read=False,
+            complaint__status__in=['new', 'in_progress', 'escalated']
+        ).update(is_read=True)
 
         return JsonResponse({
             'success': True,
-            'message': f'تم مسح {deleted_count} إشعار بنجاح',
-            'deleted_count': deleted_count,
-            'visibility_cleared': visibility_deleted
+            'message': f'تم تحديد {updated_count} إشعار كمقروء',
+            'updated_count': updated_count
         })
 
     except Exception as e:
@@ -636,6 +682,9 @@ def clear_complaints_notifications(request):
         }, status=500)
 
 
+
+
+
 @login_required
 @require_http_methods(["GET"])
 def assigned_complaints_api(request):
@@ -643,10 +692,12 @@ def assigned_complaints_api(request):
     API endpoint للشكاوى المسندة للمستخدم الحالي
     """
     try:
-        # الحصول على الشكاوى المسندة للمستخدم والتي لم يتم حلها بعد
+        # الحصول على الشكاوى المسندة للمستخدم والتي لم يتم حلها بعد (استبعاد المحلولة والمغلقة)
         assigned_complaints = Complaint.objects.filter(
             assigned_to=request.user,
             status__in=['new', 'in_progress', 'overdue', 'escalated']
+        ).exclude(
+            status__in=['resolved', 'closed', 'pending_evaluation']
         ).select_related('customer', 'complaint_type').order_by('-created_at')[:5]
 
         complaints_data = []
@@ -680,16 +731,47 @@ def assigned_complaints_api(request):
 @require_http_methods(["GET"])
 def escalated_complaints_api(request):
     """
-    API endpoint للشكاوى المصعدة التي تحتاج انتباه فوري
+    API endpoint للشكاوى المصعدة للمستخدم الحالي فقط
     """
     try:
-        # الحصول على الشكاوى المصعدة
+        # الحصول على الشكاوى المصعدة إلى المستخدم الحالي (آخر تصعيد فقط)
+        from .models import ComplaintEscalation
+        from django.db.models import Max
+
+        # الحصول على آخر تصعيد لكل شكوى
+        latest_escalations = ComplaintEscalation.objects.filter(
+            complaint__status='escalated'
+        ).values('complaint_id').annotate(
+            latest_escalation_date=Max('escalated_at')
+        )
+
+        # الحصول على IDs الشكاوى التي آخر تصعيد لها هو للمستخدم الحالي
+        escalated_complaint_ids = []
+        for escalation_info in latest_escalations:
+            latest_escalation = ComplaintEscalation.objects.filter(
+                complaint_id=escalation_info['complaint_id'],
+                escalated_at=escalation_info['latest_escalation_date']
+            ).first()
+
+            if latest_escalation and latest_escalation.escalated_to == request.user:
+                escalated_complaint_ids.append(escalation_info['complaint_id'])
+
         escalated_complaints = Complaint.objects.filter(
+            id__in=escalated_complaint_ids,
             status='escalated'
-        ).select_related('customer', 'complaint_type', 'assigned_to').order_by('-created_at')[:10]
+        ).select_related('customer', 'complaint_type', 'assigned_to').prefetch_related('escalations').order_by('-created_at')[:10]
 
         complaints_data = []
         for complaint in escalated_complaints:
+            # الحصول على آخر تصعيد للشكوى
+            latest_escalation = complaint.escalations.order_by('-escalated_at').first()
+            escalation_reason = 'سبب غير محدد'
+            escalation_description = ''
+
+            if latest_escalation:
+                escalation_reason = latest_escalation.get_reason_display()
+                escalation_description = latest_escalation.description
+
             complaints_data.append({
                 'id': complaint.id,
                 'complaint_number': complaint.complaint_number,
@@ -700,7 +782,8 @@ def escalated_complaints_api(request):
                 'created_at': complaint.created_at.isoformat(),
                 'deadline': complaint.deadline.isoformat() if complaint.deadline else None,
                 'url': f'/complaints/{complaint.id}/',
-                'escalation_reason': 'تجاوز الموعد النهائي'
+                'escalation_reason': escalation_reason,
+                'escalation_description': escalation_description
             })
 
         return JsonResponse({
