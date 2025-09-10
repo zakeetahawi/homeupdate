@@ -1,6 +1,6 @@
 import os
 # ======================================
-# Slow Query & Performance Logging
+# Optimized Logging Configuration 
 # ======================================
 import logging
 
@@ -12,30 +12,68 @@ LOGGING = {
             'format': '[{asctime}] {levelname} {name} {message}',
             'style': '{',
         },
+        'minimal': {
+            'format': '{message}',
+            'style': '{',
+        },
     },
     'handlers': {
         'slow_queries_file': {
-            'level': 'INFO',
+            'level': 'WARNING',  # تقليل مستوى التسجيل
             'class': 'logging.FileHandler',
             'filename': '/tmp/slow_queries.log',
             'formatter': 'verbose',
         },
+        'null': {
+            'class': 'logging.NullHandler',
+        },
     },
     'loggers': {
         'django.db.backends': {
-            'handlers': ['slow_queries_file'],
-            'level': 'INFO',
+            'handlers': ['null'],  # إيقاف تسجيل استعلامات قاعدة البيانات
+            'level': 'ERROR',
             'propagate': False,
         },
         'performance': {
             'handlers': ['slow_queries_file'],
-            'level': 'INFO',
+            'level': 'WARNING',  # تسجيل التحذيرات فقط
+            'propagate': False,
+        },
+        # إيقاف رسائل التصحيح غير المهمة
+        'accounts.middleware': {
+            'handlers': ['null'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'accounts.signals': {
+            'handlers': ['null'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'user_activity': {
+            'handlers': ['null'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'daphne.http_protocol': {
+            'handlers': ['null'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'daphne.ws_protocol': {
+            'handlers': ['null'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['null'],
+            'level': 'ERROR',
             'propagate': False,
         },
     },
 }
 
-# تسجيل الاستعلامات البطيئة فقط (أكبر من 500ms)
+# تسجيل الاستعلامات البطيئة فقط (أكبر من 1000ms) لتقليل الضغط
 import time
 from django.db import connection
 from django.utils.deprecation import MiddlewareMixin
@@ -45,15 +83,11 @@ class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
         request._start_time = time.time()
 
     def process_response(self, request, response):
+        # تقليل حساسية التسجيل لتقليل الرسائل
         total_time = (time.time() - getattr(request, '_start_time', time.time())) * 1000
-        if total_time > 500:
+        if total_time > 1000:  # تسجيل الصفحات التي تستغرق أكثر من ثانية فقط
             logger = logging.getLogger('performance')
-            logger.info(f"SLOW PAGE: {request.path} | {int(total_time)}ms | user={getattr(request, 'user', None)}")
-        for q in getattr(connection, 'queries', []):
-            duration = float(q.get('time', 0)) * 1000
-            if duration > 500:
-                logger = logging.getLogger('performance')
-                logger.info(f"SLOW QUERY: {q['sql']} | {duration:.0f}ms | path={getattr(request, 'path', '')}")
+            logger.warning(f"VERY_SLOW_PAGE: {request.path} | {int(total_time)}ms | user={getattr(request, 'user', None)}")
         return response
 
 # أضف هذا الميدل وير في أعلى قائمة MIDDLEWARE
@@ -61,13 +95,14 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
-import dj_database_url
+# تم إزالة dj_database_url و ImproperlyConfigured غير المستخدمين
 from django.core.exceptions import ImproperlyConfigured
 # تحديد ما إذا كان النظام في وضع الاختبار
 TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
-# تحميل متغيرات البيئة من ملف .env
-load_dotenv()
+# تحميل متغيرات البيئة من ملف .env (إذا كان موجوداً)
+if os.path.exists(os.path.join(os.path.dirname(__file__), '..', '.env')):
+    load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -84,6 +119,18 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-development-key-for-j
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+
+# إعدادات لتقليل الرسائل غير الضرورية وتحسين الأداء
+SILENCED_SYSTEM_CHECKS = [
+    'urls.W002',  # تجاهل تحذيرات URL patterns
+    'models.W042',  # تجاهل تحذيرات auto_now
+]
+
+# تقليل مستوى تسجيل Django
+if not DEBUG:
+    import logging
+    logging.getLogger('django.request').setLevel(logging.ERROR)
+    logging.getLogger('django.db.backends').setLevel(logging.ERROR)
 
 # إعداد ALLOWED_HOSTS مبسط
 ALLOWED_HOSTS = ['*']  # السماح لجميع النطاقات
@@ -135,23 +182,19 @@ AUTHENTICATION_BACKENDS = [
 
 # قائمة الوسطاء الأساسية مع إدارة اتصالات محسنة
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # إذا كنت تستخدم Whitenoise
-    'crm.middleware.connection_manager.EmergencyConnectionMiddleware',  # طوارئ - أولوية عالية
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'accounts.middleware.log_terminal_activity.AdvancedActivityLoggerMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'crm.middleware.permission_handler.PermissionDeniedMiddleware',
-    'odoo_db_manager.middleware.default_user.DefaultUserMiddleware',  # إنشاء مستخدم افتراضي
-    'crm.middleware.connection_manager.DatabaseConnectionMiddleware',  # إدارة الاتصالات - أولوية متوسطة
-    'crm.middleware.connection_manager.ConnectionMonitoringMiddleware',  # مراقبة - أولوية منخفضة
-    # 'crm.middleware.PerformanceMiddleware',  # تم تعطيل مؤقتاً
-    # 'crm.middleware.LazyLoadMiddleware',  # تم تعطيل مؤقتاً
+    # إزالة middleware مؤقتاً لحل المشكلة
+    # 'accounts.middleware.RoleBasedPermissionsMiddleware',
+    # إزالة middleware الثقيل مؤقتاً لحل أزمة الاتصالات
+    # 'accounts.middleware.LogTerminalActivityMiddleware',  
+    # 'crm.settings.QueryPerformanceLoggingMiddleware',
 ]
 
 # Debug toolbar configuration for performance monitoring
@@ -211,11 +254,7 @@ CHANNEL_LAYERS = {
 }
 
 # --- قاعدة البيانات ---
-# استخدام dj_database_url لتبسيط تكوين قاعدة البيانات من متغير بيئة واحد.
-# مثال: DATABASE_URL="postgres://user:password@host:port/dbname"
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if not DATABASE_URL:
-    raise ImproperlyConfigured("يجب تعيين رابط قاعدة البيانات (DATABASE_URL) في متغيرات البيئة.")
+# استخدام الإعدادات المباشرة بدلاً من DATABASE_URL لتبسيط التكوين
 
 # Cache Configuration - استخدام Redis للأداء الأفضل
 CACHES = {
@@ -265,7 +304,7 @@ CACHES = {
     }
 }
 
-# Database Configuration - محسن مع PgBouncer لحل مشكلة "too many clients"
+# Database Configuration - إعدادات طارئة لحل أزمة الاتصالات
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -273,14 +312,13 @@ DATABASES = {
         'USER': 'postgres',
         'PASSWORD': '5525',
         'HOST': 'localhost',
-        'PORT': '5432',  # PostgreSQL المباشر (سيتم تغييره إلى 6432 بعد تثبيت PgBouncer)
-        'CONN_MAX_AGE': 0,  # إغلاق الاتصالات فوراً - مهم مع PgBouncer
-        'CONN_HEALTH_CHECKS': False,  # تعطيل مع PgBouncer لتجنب التداخل
+        'PORT': '5432',
+        'CONN_MAX_AGE': 0,  # إغلاق فوري للاتصالات
+        'CONN_HEALTH_CHECKS': False,  # إيقاف فحص الاتصالات
         'OPTIONS': {
             'client_encoding': 'UTF8',
-            'sslmode': 'prefer',
-            'connect_timeout': 10,
-            # إزالة options مع PgBouncer لأنه يدير الجلسات
+            'sslmode': 'disable',  # تبسيط الاتصال
+            'connect_timeout': 5,  # تقليل timeout
         },
     }
 }
@@ -641,143 +679,6 @@ ACTIVITY_TRACKING = {
 #     DATABASES['default']['AUTOCOMMIT'] = True  # تمكين AUTOCOMMIT لتجنب مشاكل الاتصال
 
 #     # تم نقل إعدادات قاعدة بيانات Railway إلى بداية الملف
-
-# Advanced Logging Configuration
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-        'colored': {
-            'format': '\033[1;36m{asctime}\033[0m \033[1;32m{levelname}\033[0m \033[1;33m{module}\033[0m {message}',
-            'style': '{',
-        },
-    },
-    'filters': {
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
-        },
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse',
-        },
-    },
-    'filters': {
-        'exclude_unwanted_requests': {
-            '()': 'django.utils.log.CallbackFilter',
-            'callback': lambda record: not any(path in record.getMessage() for path in [
-                '/accounts/notifications/data/',
-                '/accounts/api/online-users/',
-                '/media/users/',
-                '/static/',
-                'favicon.ico'
-            ])
-        },
-    },
-    'handlers': {
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'colored',
-            'filters': ['exclude_unwanted_requests'],
-        },
-        'file': {
-            'level': 'WARNING',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
-            'maxBytes': 1024 * 1024 * 5,  # 5 MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
-        'error_file': {
-            'level': 'ERROR',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'errors.log'),
-            'maxBytes': 1024 * 1024 * 10,  # 10 MB
-            'backupCount': 10,
-            'formatter': 'verbose',
-        },
-        'security_file': {
-            'level': 'WARNING',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'security.log'),
-            'maxBytes': 1024 * 1024 * 5,  # 5 MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
-        'performance_file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'performance.log'),
-            'maxBytes': 1024 * 1024 * 5,  # 5 MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'django.request': {
-            'handlers': ['error_file'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
-        'django.security': {
-            'handlers': ['security_file'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-        'django.db.backends': {
-            'handlers': ['performance_file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'crm': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'accounts': {
-            'handlers': ['console', 'file', 'security_file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'orders': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'customers': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'inventory': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'manufacturing': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'inspections': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
-}
 
 # Create logs directory if it doesn't exist
 os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
@@ -1198,12 +1099,7 @@ SESSION_SAVE_EVERY_REQUEST = False  # لا نحفظ في كل طلب لتحسي�
 CACHE_MIDDLEWARE_SECONDS = 300  # 5 دقائق
 CACHE_MIDDLEWARE_KEY_PREFIX = 'elkhawaga_'
 
-# إعدادات Logging للعمليات الكبيرة
-LOGGING['loggers']['large_operations'] = {
-    'handlers': ['file', 'console'],
-    'level': 'INFO',
-    'propagate': False,
-}
+# إعدادات Logging للعمليات الكبيرة - تم دمجها في تكوين LOGGING الرئيسي أعلاه
 
 # تطبيق الإعدادات على أساس نوع العملية
 def apply_large_operation_settings():

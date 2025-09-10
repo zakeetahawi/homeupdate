@@ -11,6 +11,10 @@ NC='\033[0m'
 
 PROJECT_DIR="/home/zakee/homeupdate"
 
+# تقليل مستوى التسجيل للتشغيل السلس
+export DEBUG=False
+export DJANGO_LOG_LEVEL=ERROR
+
 print_status() { echo -e "${GREEN}$1${NC}"; }
 print_error() { echo -e "${RED}$1${NC}"; }
 print_info() { echo -e "${WHITE}$1${NC}"; }
@@ -97,15 +101,15 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
     # تنظيف الملفات القديمة
     rm -f /tmp/celery_worker.pid /tmp/celery_worker.log
 
-    # تشغيل Celery Worker مع الإعدادات المحسنة لقاعدة البيانات
+    # تشغيل Celery Worker مع إعدادات طارئة لتقليل استخدام قاعدة البيانات
     celery -A crm worker \
-        --loglevel=info \
-        --queues=celery,file_uploads,maintenance,calculations,status_updates \
+        --loglevel=error \
+        --queues=celery \
         --pidfile=/tmp/celery_worker.pid \
         --logfile=/tmp/celery_worker.log \
-        --pool=prefork \
-        --concurrency=2 \
-        --max-tasks-per-child=100 \
+        --pool=solo \
+        --concurrency=1 \
+        --max-tasks-per-child=50 \
         --detach
 
     sleep 5  # انتظار بدء العملية
@@ -137,9 +141,9 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
     # تنظيف الملفات القديمة
     rm -f /tmp/celery_beat.pid /tmp/celery_beat.log /tmp/celerybeat-schedule*
     
-    # تشغيل Celery Beat مع مراقبة الأخطاء
+    # تشغيل Celery Beat مع تقليل استهلاك قاعدة البيانات
     celery -A crm beat \
-        --loglevel=info \
+        --loglevel=error \
         --pidfile=/tmp/celery_beat.pid \
         --logfile=/tmp/celery_beat.log \
         --schedule=/tmp/celerybeat-schedule \
@@ -292,14 +296,28 @@ daphne -b 0.0.0.0 -p 8000 \
     --proxy-headers \
     --verbosity 1 \
     crm.asgi:application 2>&1 | while read line; do
-        # تطبيق فلتر logs أولاً
+        # تطبيق فلتر logs محسن لتقليل الرسائل غير المهمة
         # تجاهل رسائل gunicorn access logs التي تبدأ بـ [[
         if [[ "$line" =~ ^\[\[.*\]\] ]]; then
             continue
         fi
 
-        if [[ "$line" == *"/accounts/notifications/data/"* ]] || \
+        # تجاهل رسائل DEBUG والاستعلامات المتكررة
+        if [[ "$line" == *"[DEBUG]"* ]] || \
+           [[ "$line" == *"Updating online status"* ]] || \
+           [[ "$line" == *"Online user updated"* ]] || \
+           [[ "$line" == *"Activity updated"* ]] || \
+           [[ "$line" == *"/accounts/notifications/data/"* ]] || \
            [[ "$line" == *"/accounts/api/online-users/"* ]] || \
+           [[ "$line" == *"/notifications/ajax/count/"* ]] || \
+           [[ "$line" == *"/notifications/ajax/recent/"* ]] || \
+           [[ "$line" == *"/complaints/api/assigned/"* ]] || \
+           [[ "$line" == *"/complaints/api/escalated/"* ]] || \
+           [[ "$line" == *"/complaints/api/notifications/"* ]] || \
+           [[ "$line" == *"/complaints/api/assignment-notifications/"* ]] || \
+           [[ "$line" == *"/modern-chat/api/active-users/"* ]] || \
+           [[ "$line" == *"/modern-chat/api/check-new-messages/"* ]] || \
+           [[ "$line" == *"/inventory/api/product-autocomplete/"* ]] || \
            [[ "$line" == *"/media/users/"* ]] || \
            [[ "$line" == *"/media/"* ]] || \
            [[ "$line" == *"/static/"* ]] || \
