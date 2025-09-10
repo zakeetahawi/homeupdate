@@ -1280,6 +1280,8 @@ class ComplaintUserPermissions(models.Model):
         related_name='complaint_permissions',
         verbose_name='المستخدم'
     )
+
+    # صلاحيات الإسناد والتصعيد
     can_be_assigned_complaints = models.BooleanField(
         default=False,
         verbose_name='يمكن إسناد الشكاوى إليه',
@@ -1290,6 +1292,13 @@ class ComplaintUserPermissions(models.Model):
         verbose_name='يمكن تصعيد الشكاوى إليه',
         help_text='هل يمكن تصعيد الشكاوى لهذا المستخدم؟'
     )
+    can_escalate_complaints = models.BooleanField(
+        default=False,
+        verbose_name='يمكن تصعيد الشكاوى',
+        help_text='هل يمكن لهذا المستخدم تصعيد الشكاوى للآخرين؟'
+    )
+
+    # صلاحيات العرض والتعديل
     can_view_all_complaints = models.BooleanField(
         default=False,
         verbose_name='يمكن عرض جميع الشكاوى',
@@ -1299,6 +1308,33 @@ class ComplaintUserPermissions(models.Model):
         default=False,
         verbose_name='يمكن تعديل جميع الشكاوى',
         help_text='هل يمكن لهذا المستخدم تعديل جميع الشكاوى؟'
+    )
+    can_delete_complaints = models.BooleanField(
+        default=False,
+        verbose_name='يمكن حذف الشكاوى',
+        help_text='هل يمكن لهذا المستخدم حذف الشكاوى؟'
+    )
+
+    # صلاحيات إدارية
+    can_assign_complaints = models.BooleanField(
+        default=False,
+        verbose_name='يمكن إسناد الشكاوى للآخرين',
+        help_text='هل يمكن لهذا المستخدم إسناد الشكاوى للمستخدمين الآخرين؟'
+    )
+    can_change_complaint_status = models.BooleanField(
+        default=True,
+        verbose_name='يمكن تغيير حالة الشكوى',
+        help_text='هل يمكن لهذا المستخدم تغيير حالة الشكاوى المسندة إليه؟'
+    )
+    can_resolve_complaints = models.BooleanField(
+        default=True,
+        verbose_name='يمكن حل الشكاوى',
+        help_text='هل يمكن لهذا المستخدم حل الشكاوى؟'
+    )
+    can_close_complaints = models.BooleanField(
+        default=False,
+        verbose_name='يمكن إغلاق الشكاوى',
+        help_text='هل يمكن لهذا المستخدم إغلاق الشكاوى نهائياً؟'
     )
     max_assigned_complaints = models.PositiveIntegerField(
         default=0,

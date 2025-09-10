@@ -48,15 +48,17 @@ class ComplaintTypeAdmin(admin.ModelAdmin):
 @admin.register(ComplaintUserPermissions)
 class ComplaintUserPermissionsAdmin(admin.ModelAdmin):
     list_display = [
-        'user', 'can_be_assigned_complaints', 'can_receive_escalations',
-        'current_assigned_count', 'max_assigned_complaints', 'is_active'
+        'user', 'permissions_summary', 'current_assigned_count',
+        'max_assigned_complaints', 'is_active'
     ]
     list_filter = [
-        'can_be_assigned_complaints', 'can_receive_escalations',
-        'can_view_all_complaints', 'can_edit_all_complaints', 'is_active'
+        'can_be_assigned_complaints', 'can_receive_escalations', 'can_escalate_complaints',
+        'can_view_all_complaints', 'can_edit_all_complaints', 'can_delete_complaints',
+        'can_assign_complaints', 'can_resolve_complaints', 'can_close_complaints', 'is_active'
     ]
     search_fields = ['user__username', 'user__first_name', 'user__last_name', 'user__email']
     filter_horizontal = ['departments', 'complaint_types']
+    list_editable = ['is_active']
 
     fieldsets = (
         ('المستخدم', {
@@ -64,12 +66,22 @@ class ComplaintUserPermissionsAdmin(admin.ModelAdmin):
         }),
         ('صلاحيات الإسناد والتصعيد', {
             'fields': (
-                'can_be_assigned_complaints', 'can_receive_escalations',
-                'max_assigned_complaints'
-            )
+                'can_be_assigned_complaints', 'can_receive_escalations', 'can_escalate_complaints',
+                'can_assign_complaints', 'max_assigned_complaints'
+            ),
+            'description': 'صلاحيات متعلقة بإسناد وتصعيد الشكاوى'
         }),
         ('صلاحيات العرض والتعديل', {
-            'fields': ('can_view_all_complaints', 'can_edit_all_complaints')
+            'fields': (
+                'can_view_all_complaints', 'can_edit_all_complaints', 'can_delete_complaints'
+            ),
+            'description': 'صلاحيات عرض وتعديل الشكاوى'
+        }),
+        ('صلاحيات إدارة الحالة', {
+            'fields': (
+                'can_change_complaint_status', 'can_resolve_complaints', 'can_close_complaints'
+            ),
+            'description': 'صلاحيات تغيير حالة الشكاوى'
         }),
         ('التخصص', {
             'fields': ('departments', 'complaint_types'),
@@ -84,6 +96,34 @@ class ComplaintUserPermissionsAdmin(admin.ModelAdmin):
         }),
     )
     readonly_fields = ('created_at', 'updated_at')
+
+    def permissions_summary(self, obj):
+        """ملخص الصلاحيات"""
+        permissions = []
+        if obj.can_view_all_complaints:
+            permissions.append('عرض الكل')
+        if obj.can_edit_all_complaints:
+            permissions.append('تعديل الكل')
+        if obj.can_be_assigned_complaints:
+            permissions.append('إسناد إليه')
+        if obj.can_assign_complaints:
+            permissions.append('إسناد للآخرين')
+        if obj.can_escalate_complaints:
+            permissions.append('تصعيد')
+        if obj.can_receive_escalations:
+            permissions.append('استقبال تصعيد')
+        if obj.can_resolve_complaints:
+            permissions.append('حل')
+        if obj.can_close_complaints:
+            permissions.append('إغلاق')
+        if obj.can_delete_complaints:
+            permissions.append('حذف')
+
+        if not permissions:
+            return format_html('<span style="color: gray;">لا توجد صلاحيات</span>')
+
+        return format_html('<span style="color: green;">{}</span>', ' | '.join(permissions))
+    permissions_summary.short_description = 'ملخص الصلاحيات'
 
     def current_assigned_count(self, obj):
         """عدد الشكاوى المسندة حالياً"""
@@ -106,7 +146,13 @@ class ComplaintUserPermissionsAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')
 
-    actions = ['enable_assignment', 'disable_assignment', 'enable_escalation', 'disable_escalation']
+    actions = [
+        'enable_assignment', 'disable_assignment',
+        'enable_escalation', 'disable_escalation',
+        'enable_escalate_permission', 'disable_escalate_permission',
+        'enable_all_permissions', 'disable_all_permissions',
+        'make_supervisor', 'make_staff_member'
+    ]
 
     def enable_assignment(self, request, queryset):
         """تفعيل إمكانية الإسناد"""
@@ -131,6 +177,110 @@ class ComplaintUserPermissionsAdmin(admin.ModelAdmin):
         updated = queryset.update(can_receive_escalations=False)
         self.message_user(request, f'تم إلغاء إمكانية التصعيد لـ {updated} مستخدم')
     disable_escalation.short_description = 'إلغاء إمكانية التصعيد'
+
+    def enable_escalate_permission(self, request, queryset):
+        """تفعيل صلاحية التصعيد"""
+        updated = queryset.update(can_escalate_complaints=True)
+        self.message_user(request, f'تم تفعيل صلاحية التصعيد لـ {updated} مستخدم')
+    enable_escalate_permission.short_description = 'تفعيل صلاحية التصعيد'
+
+    def disable_escalate_permission(self, request, queryset):
+        """إلغاء صلاحية التصعيد"""
+        updated = queryset.update(can_escalate_complaints=False)
+        self.message_user(request, f'تم إلغاء صلاحية التصعيد لـ {updated} مستخدم')
+    disable_escalate_permission.short_description = 'إلغاء صلاحية التصعيد'
+
+    def enable_all_permissions(self, request, queryset):
+        """تفعيل جميع الصلاحيات (مشرف)"""
+        updated = queryset.update(
+            can_be_assigned_complaints=True,
+            can_receive_escalations=True,
+            can_escalate_complaints=True,
+            can_view_all_complaints=True,
+            can_edit_all_complaints=True,
+            can_assign_complaints=True,
+            can_resolve_complaints=True,
+            can_close_complaints=True,
+            is_active=True
+        )
+        self.message_user(request, f'تم تفعيل جميع الصلاحيات لـ {updated} مستخدم')
+    enable_all_permissions.short_description = 'تفعيل جميع الصلاحيات (مشرف)'
+
+    def disable_all_permissions(self, request, queryset):
+        """إلغاء جميع الصلاحيات"""
+        updated = queryset.update(
+            can_be_assigned_complaints=False,
+            can_receive_escalations=False,
+            can_escalate_complaints=False,
+            can_view_all_complaints=False,
+            can_edit_all_complaints=False,
+            can_assign_complaints=False,
+            can_resolve_complaints=False,
+            can_close_complaints=False,
+            can_delete_complaints=False
+        )
+        self.message_user(request, f'تم إلغاء جميع الصلاحيات لـ {updated} مستخدم')
+    disable_all_permissions.short_description = 'إلغاء جميع الصلاحيات'
+
+    def make_supervisor(self, request, queryset):
+        """جعل المستخدم مشرف شكاوى"""
+        updated = queryset.update(
+            can_be_assigned_complaints=True,
+            can_receive_escalations=True,
+            can_escalate_complaints=True,
+            can_view_all_complaints=True,
+            can_edit_all_complaints=True,
+            can_assign_complaints=True,
+            can_resolve_complaints=True,
+            can_close_complaints=True,
+            is_active=True
+        )
+
+        # إضافة المستخدمين للمجموعات المناسبة
+        from django.contrib.auth.models import Group
+        try:
+            supervisor_group = Group.objects.get(name='Complaints_Supervisors')
+            manager_group = Group.objects.get(name='Managers')
+            for permission in queryset:
+                permission.user.groups.add(supervisor_group, manager_group)
+        except Group.DoesNotExist:
+            pass
+
+        self.message_user(request, f'تم جعل {updated} مستخدم مشرف شكاوى')
+    make_supervisor.short_description = 'جعل مشرف شكاوى'
+
+    def make_staff_member(self, request, queryset):
+        """جعل المستخدم موظف شكاوى عادي"""
+        updated = queryset.update(
+            can_be_assigned_complaints=True,
+            can_receive_escalations=False,
+            can_escalate_complaints=False,
+            can_view_all_complaints=False,
+            can_edit_all_complaints=False,
+            can_assign_complaints=False,
+            can_resolve_complaints=True,
+            can_close_complaints=False,
+            can_delete_complaints=False,
+            can_change_complaint_status=True,
+            is_active=True
+        )
+
+        # إضافة المستخدمين لمجموعة الموظفين
+        from django.contrib.auth.models import Group
+        try:
+            staff_group = Group.objects.get(name='Complaints_Staff')
+            for permission in queryset:
+                # إزالة من المجموعات الإدارية
+                permission.user.groups.remove(
+                    *Group.objects.filter(name__in=['Complaints_Supervisors', 'Managers', 'Complaints_Managers'])
+                )
+                # إضافة لمجموعة الموظفين
+                permission.user.groups.add(staff_group)
+        except Group.DoesNotExist:
+            pass
+
+        self.message_user(request, f'تم جعل {updated} مستخدم موظف شكاوى عادي')
+    make_staff_member.short_description = 'جعل موظف شكاوى عادي'
 
 
 class ComplaintUpdateInline(admin.TabularInline):
@@ -349,7 +499,7 @@ class ComplaintUpdateAdmin(admin.ModelAdmin):
     ]
     list_filter = [
         'update_type', 'is_visible_to_customer', 'created_at',
-        ('complaint__status', admin.RelatedOnlyFieldListFilter),
+        'complaint__status',
         ('created_by', admin.RelatedOnlyFieldListFilter)
     ]
     search_fields = [
