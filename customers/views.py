@@ -509,6 +509,92 @@ def add_customer_note(request, pk):
     return redirect('customers:customer_detail', pk=pk)
 
 @login_required
+@require_POST
+def add_customer_note_by_code(request, customer_code):
+    """
+    View for adding a note to a customer using customer code
+    """
+    try:
+        customer = Customer.objects.get(code=customer_code)
+    except Customer.DoesNotExist:
+        messages.error(request, "العميل غير موجود.")
+        return redirect("customers:customer_list")
+
+    # التحقق من صلاحية المستخدم لعرض هذا العميل (مع السماح بالوصول عبر الفروع)
+    is_cross_branch = is_customer_cross_branch(request.user, customer)
+    if not can_user_view_customer(request.user, customer, allow_cross_branch=is_cross_branch):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
+        return redirect("customers:customer_list")
+
+    form = CustomerNoteForm(request.POST, user=request.user)
+
+    if form.is_valid():
+        try:
+            note_text = form.cleaned_data['note']
+
+            # التحقق من عدم وجود ملاحظة مطابقة في آخر 30 ثانية لمنع التكرار
+            from django.utils import timezone
+            from datetime import timedelta
+
+            # تنظيف النص للمقارنة
+            clean_note_text = note_text.strip().lower()
+
+            recent_notes = CustomerNote.objects.filter(
+                customer=customer,
+                created_by=request.user,
+                created_at__gte=timezone.now() - timedelta(seconds=30)
+            )
+
+            # فحص النصوص المتشابهة
+            for recent_note in recent_notes:
+                if recent_note.note.strip().lower() == clean_note_text:
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'error': 'تم إضافة هذه الملاحظة مؤخراً'})
+                    messages.warning(request, 'تم إضافة هذه الملاحظة مؤخراً.')
+                    return redirect("customers:customer_detail_by_code", customer_code=customer.code)
+
+
+            note = form.save(commit=False)
+            note.customer = customer
+            note.created_by = request.user
+
+            # إضافة معلومات الفرع إذا كان من فرع مختلف
+            if is_cross_branch:
+                note.note = f"[من فرع {request.user.branch.name if request.user.branch else 'غير محدد'}] {note.note}"
+
+            note.save()
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': 'تمت إضافة الملاحظة بنجاح'})
+
+            messages.success(request, 'تمت إضافة الملاحظة بنجاح.')
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': f'حدث خطأ أثناء حفظ الملاحظة: {str(e)}'})
+            messages.error(request, f'حدث خطأ أثناء حفظ الملاحظة: {str(e)}')
+    else:
+        # إظهار أخطاء النموذج بالتفصيل
+        error_messages = []
+        for field, errors in form.errors.items():
+            for error in errors:
+                if field == 'note':
+                    error_messages.append(str(error))
+                else:
+                    error_messages.append(f'{field}: {error}')
+
+        if error_messages:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': '; '.join(error_messages)})
+            messages.error(request, '; '.join(error_messages))
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'حدث خطأ أثناء إضافة الملاحظة.'})
+            messages.error(request, 'حدث خطأ أثناء إضافة الملاحظة.')
+
+    return redirect('customers:customer_detail_by_code', customer_code=customer_code)
+
+
+@login_required
 def delete_customer_note(request, customer_pk, note_pk):
     """
     View for deleting a customer note
@@ -601,30 +687,36 @@ def get_customer_notes(request, pk):
 @login_required
 def get_customer_details(request, pk):
     """API endpoint to get customer details"""
-    customer = get_object_or_404(Customer, pk=pk)
+    try:
+        customer = get_object_or_404(Customer, pk=pk)
 
-    # التحقق من صلاحية المستخدم لحذف هذا العميل
-    if not can_user_delete_customer(request.user, customer):
-        messages.error(request, "ليس لديك صلاحية لحذف هذا العميل.")
-        return redirect("customers:customer_detail", pk=pk)
+        # التحقق من صلاحية المستخدم لعرض هذا العميل
+        if not can_user_view_customer(request.user, customer):
+            return JsonResponse({
+                'success': False,
+                'error': 'ليس لديك صلاحية لعرض هذا العميل.'
+            }, status=403)
 
-    # التحقق من صلاحية المستخدم لعرض هذا العميل
-    if not can_user_view_customer(request.user, customer):
-        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
-        return redirect("customers:customer_list")
+        customer_data = {
+            'id': customer.id,
+            'name': customer.name,
+            'code': customer.code,
+            'phone': customer.phone,
+            'email': customer.email or '',
+            'address': customer.address or '',
+            'customer_type': customer.get_customer_type_display() if hasattr(customer, 'customer_type') else '',
+            'status': customer.get_status_display() if hasattr(customer, 'status') else 'نشط'
+        }
 
-    customer_data = {
-        'id': customer.id,
-        'name': customer.name,
-        'code': customer.code,
-        'phone': customer.phone,
-        'email': customer.email,
-        'address': customer.address,
-        'customer_type': customer.get_customer_type_display(),
-        'status': customer.get_status_display()
-    }
-
-    return JsonResponse(customer_data)
+        return JsonResponse({
+            'success': True,
+            'customer': customer_data
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'خطأ في جلب بيانات العميل: {str(e)}'
+        }, status=500)
 
 
 class CustomerDashboardView(LoginRequiredMixin, TemplateView):
@@ -907,41 +999,81 @@ def customer_detail_by_code(request, customer_code):
     """
     
     try:
-        # محاولة الحصول على العميل من queryset المستخدم العادي
-        queryset = get_queryset_for_user(request.user, None)
-        
-        # التحقق من أن queryset صحيح
-        if not hasattr(queryset, 'select_related'):
-            # إذا لم يكن QuerySet صحيح، استخدم جميع العملاء
-            queryset = Customer.objects.all()
-        
-        customer = queryset.select_related(
+        # البحث عن العميل في جميع العملاء أولاً
+        customer = Customer.objects.select_related(
             'category', 'branch', 'created_by'
         ).get(code=customer_code)
-        is_cross_branch = False
+
+        # تحديد ما إذا كان العميل من فرع آخر
+        is_cross_branch = is_customer_cross_branch(request.user, customer)
+
+        # للمستخدمين المشرفين، نعرض سجل الوصول إذا كان العميل من فرع مختلف
+        show_cross_branch_alert = is_cross_branch
+        if request.user.is_superuser and hasattr(request.user, 'branch') and request.user.branch:
+            show_cross_branch_alert = customer.branch != request.user.branch
+
     except Customer.DoesNotExist:
-        # إذا لم يوجد، محاولة البحث في جميع العملاء (للوصول عبر الفروع)
-        try:
-            customer = Customer.objects.select_related(
-                'category', 'branch', 'created_by'
-            ).get(code=customer_code)
-            is_cross_branch = is_customer_cross_branch(request.user, customer)
-        except Customer.DoesNotExist:
-            messages.error(request, f"العميل بكود {customer_code} غير موجود.")
-            return redirect("customers:customer_list")
+        messages.error(request, f"العميل بكود {customer_code} غير موجود.")
+        return redirect("customers:customer_list")
 
     # التحقق من صلاحية المستخدم لعرض هذا العميل
     if not can_user_view_customer(request.user, customer, allow_cross_branch=is_cross_branch):
         messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
         return redirect("customers:customer_list")
 
+    # تسجيل الوصول للعميل
+    from customers.models import CustomerAccessLog
+    from django.utils import timezone
+    from datetime import timedelta
+
+    def get_client_ip(request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+
+    # التحقق من عدم وجود سجل وصول مماثل في آخر دقيقة لتجنب التكرار
+    one_minute_ago = timezone.now() - timedelta(minutes=1)
+    recent_access = CustomerAccessLog.objects.filter(
+        customer=customer,
+        user=request.user,
+        accessed_at__gte=one_minute_ago
+    ).exists()
+
+    if not recent_access:
+        CustomerAccessLog.objects.create(
+            customer=customer,
+            user=request.user,
+            user_branch=getattr(request.user, 'branch', None),
+            customer_branch=customer.branch,
+            is_cross_branch=is_cross_branch,
+            ip_address=get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+
     # إضافة ملاحظة عند الوصول لعميل من فرع آخر
     if is_cross_branch:
-        CustomerNote.objects.create(
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # التحقق من عدم وجود ملاحظة وصول مماثلة في آخر ساعة
+        access_note_text = f"تم الوصول لبيانات العميل من فرع {request.user.branch.name if request.user.branch else 'غير محدد'} بواسطة {request.user.get_full_name() or request.user.username}"
+
+        recent_access_notes = CustomerNote.objects.filter(
             customer=customer,
-            note=f"تم الوصول لبيانات العميل من فرع {request.user.branch.name if request.user.branch else 'غير محدد'} بواسطة {request.user.get_full_name() or request.user.username}",
-            created_by=request.user
+            created_by=request.user,
+            note__icontains="تم الوصول لبيانات العميل",
+            created_at__gte=timezone.now() - timedelta(hours=1)
         )
+
+        if not recent_access_notes.exists():
+            CustomerNote.objects.create(
+                customer=customer,
+                note=access_note_text,
+                created_by=request.user
+            )
 
     # تحسين استعلام الطلبات باستخدام prefetch_related
     customer_orders = customer.customer_orders.select_related(
@@ -971,6 +1103,11 @@ def customer_detail_by_code(request, customer_code):
         # في حالة فشل select_related، نحاول الحصول على الملاحظات بدونها
         notes = customer.notes_history.all().order_by('-created_at')[:5]
 
+    # جلب سجلات الوصول للعميل
+    access_logs = customer.access_logs.select_related(
+        'user', 'user_branch', 'customer_branch'
+    ).order_by('-accessed_at')[:20]
+
     # الحصول على صلاحيات المستخدم لهذا العميل
     permissions = get_user_customer_permissions(request.user)
 
@@ -979,8 +1116,13 @@ def customer_detail_by_code(request, customer_code):
         'orders': orders,
         'inspections': inspections,
         'notes': notes,
+        'access_logs': access_logs,
         'permissions': permissions,
         'is_cross_branch': is_cross_branch,
+        'show_cross_branch_alert': show_cross_branch_alert,
+        'user_branch': request.user.branch,
+        'note_form': CustomerNoteForm(),  # إضافة نموذج الملاحظة
+        'can_edit': can_user_edit_customer(request.user, customer),
     }
 
     return render(request, 'customers/customer_detail.html', context)

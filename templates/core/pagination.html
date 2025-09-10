@@ -31,8 +31,12 @@
         {% endif %}
         
         <!-- أرقام الصفحات -->
-        {% for num in page_obj|get_page_range %}
-        {% if page_obj.number == num %}
+        {% for num in page_range %}
+        {% if num == "..." %}
+        <li class="page-item disabled">
+            <span class="page-link">...</span>
+        </li>
+        {% elif page_obj.number == num %}
         <li class="page-item active">
             <span class="page-link">{{ num }}</span>
         </li>

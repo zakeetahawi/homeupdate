@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تحليل الشكاوى وطرق الحل{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analysis-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .method-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+    
+    .method-name {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .method-stats {
+        display: flex;
+        gap: 15px;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="analysis-card">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-chart-line me-3"></i>
+                    تحليل الشكاوى وطرق الحل
+                </h1>
+                <p class="mb-0 opacity-75">
+                    تحليل شامل للشكاوى وفعالية طرق الحل من {{ start_date|date:"d/m/Y" }} إلى {{ end_date|date:"d/m/Y" }}
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <i class="fas fa-analytics fa-3x opacity-50"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Period Filter -->
+    <div class="filter-card">
+        <form method="get" class="row g-3 align-items-center">
+            <div class="col-auto">
+                <label class="form-label fw-bold">فترة التحليل:</label>
+            </div>
+            <div class="col-auto">
+                <select name="period" class="form-select" onchange="this.form.submit()">
+                    <option value="1month" {% if period == '1month' %}selected{% endif %}>الشهر الماضي</option>
+                    <option value="3months" {% if period == '3months' %}selected{% endif %}>آخر 3 أشهر</option>
+                    <option value="6months" {% if period == '6months' %}selected{% endif %}>آخر 6 أشهر</option>
+                    <option value="1year" {% if period == '1year' %}selected{% endif %}>السنة الماضية</option>
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_complaints }}</div>
+                <div class="stat-label">إجمالي الشكاوى</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_resolved }}</div>
+                <div class="stat-label">الشكاوى المحلولة</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ resolution_rate }}%</div>
+                <div class="stat-label">معدل الحل</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ resolution_methods_stats|length }}</div>
+                <div class="stat-label">طرق الحل المستخدمة</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Resolution Methods Analysis -->
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h5 class="mb-4">
+                    <i class="fas fa-tools text-primary me-2"></i>
+                    أكثر طرق الحل استخداماً
+                </h5>
+                {% for method in resolution_methods_stats %}
+                <div class="method-item">
+                    <div class="method-name">
+                        {{ method.resolution_method__name|default:"غير محدد" }}
+                    </div>
+                    <div class="method-stats">
+                        <span><i class="fas fa-hashtag"></i> {{ method.count }}</span>
+                        <span><i class="fas fa-clock"></i> {{ method.avg_resolution_hours|floatformat:1 }}ساعة</span>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">لا توجد بيانات متاحة</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Customer Satisfaction -->
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h5 class="mb-4">
+                    <i class="fas fa-star text-warning me-2"></i>
+                    أفضل طرق الحل (رضا العملاء)
+                </h5>
+                {% for method in customer_satisfaction %}
+                <div class="method-item">
+                    <div class="method-name">
+                        {{ method.resolution_method__name }}
+                    </div>
+                    <div class="method-stats">
+                        <span><i class="fas fa-star text-warning"></i> {{ method.avg_rating|floatformat:1 }}/5</span>
+                        <span><i class="fas fa-users"></i> {{ method.count }} تقييم</span>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">لا توجد تقييمات متاحة</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Fastest Methods -->
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h5 class="mb-4">
+                    <i class="fas fa-tachometer-alt text-success me-2"></i>
+                    أسرع طرق الحل
+                </h5>
+                {% for method in fastest_methods %}
+                <div class="method-item">
+                    <div class="method-name">
+                        {{ method.resolution_method__name }}
+                    </div>
+                    <div class="method-stats">
+                        <span><i class="fas fa-clock text-success"></i> {{ method.avg_hours|floatformat:1 }} ساعة</span>
+                        <span><i class="fas fa-hashtag"></i> {{ method.count }} حالة</span>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">لا توجد بيانات متاحة</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Type vs Resolution Analysis -->
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h5 class="mb-4">
+                    <i class="fas fa-chart-pie text-info me-2"></i>
+                    تحليل النوع مقابل طريقة الحل
+                </h5>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    {% regroup type_resolution_analysis by complaint_type__name as grouped_types %}
+                    {% for type_group in grouped_types %}
+                    <div class="mb-3">
+                        <h6 class="text-primary">{{ type_group.grouper }}</h6>
+                        {% for item in type_group.list %}
+                        <div class="d-flex justify-content-between align-items-center mb-1 ps-3">
+                            <small>{{ item.resolution_method__name|default:"غير محدد" }}</small>
+                            <span class="badge bg-secondary">{{ item.count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">لا توجد بيانات متاحة</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Trend -->
+    {% if monthly_analysis %}
+    <div class="chart-container">
+        <h5 class="mb-4">
+            <i class="fas fa-chart-line text-primary me-2"></i>
+            الاتجاه الشهري للشكاوى
+        </h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>الشهر</th>
+                        <th>إجمالي الشكاوى</th>
+                        <th>المحلولة</th>
+                        <th>المصعدة</th>
+                        <th>المتأخرة</th>
+                        <th>معدل الحل</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for month_data in monthly_analysis %}
+                    <tr>
+                        <td>{{ month_data.month|date:"F Y" }}</td>
+                        <td>{{ month_data.total }}</td>
+                        <td><span class="badge bg-success">{{ month_data.resolved }}</span></td>
+                        <td><span class="badge bg-warning">{{ month_data.escalated }}</span></td>
+                        <td><span class="badge bg-danger">{{ month_data.overdue }}</span></td>
+                        <td>
+                            {% if month_data.total > 0 %}
+                                {% widthratio month_data.resolved month_data.total 100 %}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // يمكن إضافة مخططات تفاعلية هنا باستخدام Chart.js أو مكتبة أخرى
+    console.log('تحليل الشكاوى محمل بنجاح');
+</script>
+{% endblock %}

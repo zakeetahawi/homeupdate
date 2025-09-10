@@ -15,31 +15,32 @@ app = Celery('homeupdate')
 # استخدام إعدادات Django لـ Celery
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# إعدادات Celery المحسنة
+# إعدادات Celery المحسنة لتقليل استهلاك الاتصالات
 app.conf.update(
     # إعدادات Redis
     broker_url='redis://localhost:6379/0',
     result_backend='redis://localhost:6379/0',
-    
+
     # إعدادات المهام
     task_serializer='json',
     accept_content=['json'],
     result_serializer='json',
     timezone='Africa/Cairo',
     enable_utc=True,
-    
-    # إعدادات الأداء
+
+    # إعدادات الأداء المحسنة
     task_compression='gzip',
     result_compression='gzip',
-    
-    # إعدادات إعادة المحاولة
+
+    # إعدادات إعادة المحاولة المحسنة
     task_acks_late=True,
-    worker_prefetch_multiplier=1,
-    
-    # إعدادات انتهاء الصلاحية
-    task_soft_time_limit=300,  # 5 دقائق
-    task_time_limit=600,       # 10 دقائق
-    result_expires=3600,       # ساعة واحدة
+    worker_prefetch_multiplier=1,  # تقليل التحميل المسبق
+    worker_max_tasks_per_child=50,  # إعادة تشغيل العامل بعد 50 مهمة
+
+    # إعدادات انتهاء الصلاحية المحسنة
+    task_soft_time_limit=180,  # 3 دقائق (مخفض)
+    task_time_limit=300,       # 5 دقائق (مخفض)
+    result_expires=1800,       # 30 دقيقة (مخفض)
     
     # إعدادات المراقبة
     worker_send_task_events=True,
@@ -54,16 +55,31 @@ app.conf.update(
         'orders.tasks.cleanup_failed_uploads': {'queue': 'maintenance'},
     },
     
-    # إعدادات المهام الدورية
+    # إعدادات المهام الدورية المحسنة
     beat_schedule={
+        'cleanup-database-connections': {
+            'task': 'complaints.tasks.cleanup_database_connections',
+            'schedule': 300.0,  # كل 5 دقائق
+            'options': {'queue': 'maintenance'}
+        },
+        'monitor-database-connections': {
+            'task': 'complaints.tasks.monitor_database_connections',
+            'schedule': 180.0,  # كل 3 دقائق
+            'options': {'queue': 'maintenance'}
+        },
+        'system-health-check': {
+            'task': 'complaints.tasks.system_health_check',
+            'schedule': 600.0,  # كل 10 دقائق
+            'options': {'queue': 'maintenance'}
+        },
+        'cleanup-expired-cache': {
+            'task': 'complaints.tasks.cleanup_expired_cache',
+            'schedule': 1800.0,  # كل 30 دقيقة
+            'options': {'queue': 'maintenance'}
+        },
         'cleanup-failed-uploads': {
             'task': 'orders.tasks.cleanup_failed_uploads',
             'schedule': 3600.0,  # كل ساعة
-            'options': {'queue': 'maintenance'}
-        },
-        'clear-expired-cache': {
-            'task': 'orders.tasks.clear_expired_cache',
-            'schedule': 7200.0,  # كل ساعتين
             'options': {'queue': 'maintenance'}
         },
     },
@@ -72,21 +88,31 @@ app.conf.update(
 # اكتشاف المهام تلقائياً من جميع التطبيقات المثبتة
 app.autodiscover_tasks()
 
-# إعدادات إضافية للأمان والأداء
+# إعدادات إضافية محسنة للأمان والأداء
 app.conf.update(
     # إعدادات الأمان
     worker_hijack_root_logger=False,
     worker_log_color=False,
-    
-    # إعدادات الشبكة
+
+    # إعدادات الشبكة المحسنة
     broker_connection_retry_on_startup=True,
     broker_connection_retry=True,
-    broker_connection_max_retries=10,
-    
-    # إعدادات الذاكرة
-    worker_max_memory_per_child=200000,  # 200MB
+    broker_connection_max_retries=5,  # تقليل عدد المحاولات
+    broker_pool_limit=10,  # تحديد حد pool الاتصالات
+
+    # إعدادات الذاكرة المحسنة
+    worker_max_memory_per_child=100000,  # 100MB (مخفض)
     worker_disable_rate_limits=False,
-    
+    worker_max_tasks_per_child=50,  # إعادة تشغيل العامل بعد 50 مهمة
+
+    # إعدادات قاعدة البيانات
+    database_engine_options={
+        'pool_pre_ping': True,
+        'pool_recycle': 300,  # إعادة تدوير الاتصالات كل 5 دقائق
+        'pool_timeout': 20,
+        'max_overflow': 0,
+    },
+
     # إعدادات التسجيل
     worker_log_format='[%(asctime)s: %(levelname)s/%(processName)s] %(message)s',
     worker_task_log_format='[%(asctime)s: %(levelname)s/%(processName)s][%(task_name)s(%(task_id)s)] %(message)s',

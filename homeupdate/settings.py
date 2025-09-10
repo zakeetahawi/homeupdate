@@ -11,6 +11,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'channels',  # دعم WebSocket
     # الأقسام الأساسية
+    'core',  # Core utilities and template tags
     'accounts',  # Accounts
     'customers',  # إدارة العملاء
     'orders',  # الطلبات
@@ -104,6 +105,15 @@ DATABASE_URL = os.environ.get('DATABASE_URL', 'postgres://postgres:5525@localhos
 
 DATABASES = {
     'default': dj_database_url.parse(DATABASE_URL)
+}
+
+# إضافة إعدادات محسنة لإدارة الاتصالات
+DATABASES['default']['CONN_MAX_AGE'] = 60   # تقليل إلى دقيقة واحدة لتجنب تراكم الاتصالات
+DATABASES['default']['CONN_HEALTH_CHECKS'] = True  # فحص صحة الاتصالات
+DATABASES['default']['OPTIONS'] = {
+    'connect_timeout': 10,
+    'options': '-c statement_timeout=30000 -c idle_in_transaction_session_timeout=60000',
+    'sslmode': 'prefer',
 }
 
 # إعدادات Channels و WebSocket

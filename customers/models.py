@@ -108,6 +108,104 @@ class CustomerNote(models.Model):
                 f"{self.created_at.strftime('%Y-%m-%d')}")
 
 
+class CustomerAccessLog(models.Model):
+    """سجل الوصول للعملاء"""
+    customer = models.ForeignKey(
+        'Customer',
+        on_delete=models.CASCADE,
+        related_name='access_logs',
+        verbose_name=_('العميل')
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name=_('المستخدم')
+    )
+    user_branch = models.ForeignKey(
+        'accounts.Branch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='user_accesses',
+        verbose_name=_('فرع المستخدم')
+    )
+    customer_branch = models.ForeignKey(
+        'accounts.Branch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='customer_accesses',
+        verbose_name=_('فرع العميل')
+    )
+    is_cross_branch = models.BooleanField(
+        _('وصول عبر فروع'),
+        default=False
+    )
+    ip_address = models.GenericIPAddressField(
+        _('عنوان IP'),
+        null=True,
+        blank=True
+    )
+    user_agent = models.TextField(
+        _('معلومات المتصفح'),
+        blank=True
+    )
+    accessed_at = models.DateTimeField(
+        _('تاريخ الوصول'),
+        auto_now_add=True
+    )
+
+    class Meta:
+        verbose_name = _('سجل وصول العميل')
+        verbose_name_plural = _('سجلات وصول العملاء')
+        ordering = ['-accessed_at']
+        indexes = [
+            models.Index(
+                fields=['customer', 'accessed_at'],
+                name='customer_access_log_idx'
+            ),
+            models.Index(
+                fields=['user', 'accessed_at'],
+                name='user_access_log_idx'
+            ),
+            models.Index(
+                fields=['is_cross_branch', 'accessed_at'],
+                name='cross_branch_access_idx'
+            ),
+        ]
+
+    def __str__(self):
+        cross_branch_text = " (عبر فروع)" if self.is_cross_branch else ""
+        return (f"{self.user.get_full_name() or self.user.username} - "
+                f"{self.customer.name}{cross_branch_text} - "
+                f"{self.accessed_at.strftime('%Y-%m-%d %H:%M')}")
+
+    @property
+    def access_type(self):
+        """نوع الوصول"""
+        if self.is_cross_branch:
+            return "وصول عبر فروع"
+        return "وصول عادي"
+
+    @property
+    def time_since_access(self):
+        """الوقت منذ الوصول"""
+        from django.utils import timezone
+        now = timezone.now()
+        diff = now - self.accessed_at
+
+        if diff.days > 0:
+            return f"منذ {diff.days} يوم"
+        elif diff.seconds > 3600:
+            hours = diff.seconds // 3600
+            return f"منذ {hours} ساعة"
+        elif diff.seconds > 60:
+            minutes = diff.seconds // 60
+            return f"منذ {minutes} دقيقة"
+        else:
+            return "منذ لحظات"
+
+
 class CustomerType(models.Model):
     code = models.CharField(_('الرمز'), max_length=20, unique=True)
     name = models.CharField(_('اسم النوع'), max_length=50, db_index=True)

@@ -17,7 +17,7 @@
                         <strong>تنبيه:</strong> هذا العميل من فرع آخر ({{ customer.branch.name }})
                         <span class="ms-auto">
                             <i class="fas fa-info-circle me-1"></i>
-                            يمكنك عرض البيانات وإ��شاء طلبات مرتبطة بفرعك ({{ user_branch.name }})
+                            يمكنك عرض البيانات وإنشاء طلبات مرتبطة بفرعك ({{ user_branch.name }})
                         </span>
                     </div>
                 </div>
@@ -96,6 +96,12 @@
                                         <small class="d-block">مرتبط بفرعك</small>
                                     {% endif %}
                                 </a>
+                                <a href="{% url 'complaints:complaint_create' %}?customer_id={{ customer.pk }}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-headset"></i> {% trans 'إنشاء شكوى' %}
+                                    {% if is_cross_branch %}
+                                        <small class="d-block">مرتبط بفرعك</small>
+                                    {% endif %}
+                                </a>
                                 {% if can_edit %}
                                     <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-primary btn-sm">
                                         <i class="fas fa-edit"></i> {% trans 'تعديل' %}
@@ -122,6 +128,39 @@
             </div>
         </div>
     </div>
+
+    <!-- Cross-Branch Access Log -->
+    {% if show_cross_branch_alert %}
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-info border-0 shadow-sm">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle fa-2x text-info"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="alert-heading mb-1">
+                            <i class="fas fa-history me-2"></i>سجل الوصول عبر الفروع
+                        </h6>
+                        <p class="mb-2">
+                            تم الوصول لبيانات هذا العميل من فرع <strong>{{ user_branch.name }}</strong>
+                            بواسطة <strong>{{ user.get_full_name|default:user.username }}</strong>
+                        </p>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            تم تسجيل هذا الوصول في سجل ملاحظات العميل
+                        </small>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <span class="badge bg-info">
+                            <i class="fas fa-exchange-alt me-1"></i>وصول عبر فروع
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="row">
         <!-- Customer Information -->
@@ -340,60 +379,167 @@
             {% endif %}
         </div>
 
-        <!-- Notes & History -->
+        <!-- Customer Details Tabs -->
         <div class="col-md-8">
-            <!-- Add Note Form -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% trans 'إضافة ملاحظة' %}</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="{% url 'customers:add_note' customer.pk %}" id="noteForm">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            {{ note_form.note }}
-                            <div class="invalid-feedback" id="noteError" style="display: none;">
-                                يرجى كتابة الملاحظة قبل الإضافة
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary" id="addNoteBtn">
-                            <i class="fas fa-plus"></i> {% trans 'إضافة' %}
-                        </button>
-                    </form>
-                </div>
-            </div>
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs mb-4" id="customerTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab">
+                        <i class="fas fa-sticky-note me-2"></i>الملاحظات
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="complaints-tab" data-bs-toggle="tab" data-bs-target="#complaints" type="button" role="tab">
+                        <i class="fas fa-exclamation-triangle me-2"></i>الشكاوى
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="access-logs-tab" data-bs-toggle="tab" data-bs-target="#access-logs" type="button" role="tab">
+                        <i class="fas fa-history me-2"></i>سجل الوصول
+                        {% if access_logs %}
+                            <span class="badge bg-info ms-1">{{ access_logs|length }}</span>
+                        {% endif %}
+                    </button>
+                </li>
+            </ul>
 
-            <!-- Notes History -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% trans 'سجل الملاحظات' %}</h5>
-                </div>
-                <div class="card-body">
-                    {% if customer.notes_history.all %}
-                    <div class="timeline">
-                        {% for note in customer.notes_history.all %}
-                        <div class="timeline-item">
-                            <div class="timeline-date">
-                                {{ note.created_at|date:"Y-m-d H:i" }}
-                            </div>
-                            <div class="timeline-content">
-                                <p>{{ note.note }}</p>
-                                <small class="text-muted">
-                                    {% trans 'بواسطة' %}:
-                                    {% if note.created_by %}
-                                        {{ note.created_by.get_full_name|default:note.created_by.username }}
-                                    {% else %}
-                                        غير محدد
-                                    {% endif %}
-                                </small>
-                            </div>
+            <!-- Tab Content -->
+            <div class="tab-content" id="customerTabsContent">
+                <!-- Notes Tab -->
+                <div class="tab-pane fade show active" id="notes" role="tabpanel">
+                    <!-- Add Note Button -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">{% trans 'ملاحظات العميل' %}</h5>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addNoteModal">
+                                <i class="fas fa-plus me-1"></i>{% trans 'إضافة ملاحظة' %}
+                            </button>
                         </div>
-                        {% endfor %}
                     </div>
-                    {% else %}
-                    <p class="text-muted">{% trans 'لا توجد ملاحظات' %}</p>
-                    {% endif %}
+
+                    <!-- Notes History -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">{% trans 'سجل الملاحظات' %}</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if customer.notes_history.all %}
+                            <div class="notes-list">
+                                {% for note in customer.notes_history.all %}
+                                <div class="note-item {% if 'تم الوصول لبيانات العميل' in note.note %}cross-branch-note{% endif %} mb-3 p-3 border rounded">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>{{ note.created_at|date:"Y-m-d H:i" }}
+                                        </small>
+                                        {% if 'تم الوصول لبيانات العميل' in note.note %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-exchange-alt me-1"></i>وصول عبر فروع
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="mb-2">{{ note.note }}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>
+                                        {% if note.created_by %}
+                                            {{ note.created_by.get_full_name|default:note.created_by.username }}
+                                        {% else %}
+                                            غير محدد
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted">{% trans 'لا توجد ملاحظات' %}</p>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Complaints Tab -->
+                <div class="tab-pane fade" id="complaints" role="tabpanel">
+                    {% include 'complaints/widgets/customer_complaints_widget.html' with customer=customer %}
+                </div>
+
+                <!-- Access Logs Tab -->
+                <div class="tab-pane fade" id="access-logs" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-history me-2"></i>سجل الوصول للعميل
+                            </h5>
+                            <small class="text-muted">
+                                آخر {{ access_logs|length }} عملية وصول
+                            </small>
+                        </div>
+                        <div class="card-body">
+                            {% if access_logs %}
+                                <div class="access-logs-list">
+                                    {% for log in access_logs %}
+                                    <div class="access-log-item {% if log.is_cross_branch %}cross-branch-access{% endif %} mb-3 p-3 border rounded">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    {% if log.is_cross_branch %}
+                                                        <i class="fas fa-exchange-alt text-warning fa-lg"></i>
+                                                    {% else %}
+                                                        <i class="fas fa-eye text-primary fa-lg"></i>
+                                                    {% endif %}
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-1">
+                                                        {{ log.user.get_full_name|default:log.user.username }}
+                                                        {% if log.is_cross_branch %}
+                                                            <span class="badge bg-warning text-dark ms-2">
+                                                                <i class="fas fa-building me-1"></i>وصول عبر فروع
+                                                            </span>
+                                                        {% endif %}
+                                                    </h6>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-clock me-1"></i>{{ log.accessed_at|date:"Y-m-d H:i:s" }}
+                                                        <span class="ms-2">({{ log.time_since_access }})</span>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div class="text-end">
+                                                {% if log.user_branch and log.user_branch != customer.branch %}
+                                                    <small class="text-muted d-block">
+                                                        <i class="fas fa-user-tag me-1"></i>{{ log.user_branch.name }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        {% if log.is_cross_branch and log.customer_branch %}
+                                            <div class="alert alert-warning alert-sm mb-0">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                تم الوصول من فرع <strong>{{ log.user_branch.name|default:"غير محدد" }}</strong>
+                                                لعميل تابع لفرع <strong>{{ log.customer_branch.name }}</strong>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                {% if access_logs|length >= 20 %}
+                                    <div class="text-center mt-3">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            يتم عرض آخر 20 عملية وصول فقط
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-history text-muted mb-3" style="font-size: 3rem;"></i>
+                                    <h6 class="text-muted">لا توجد سجلات وصول</h6>
+                                    <p class="text-muted small">لم يتم تسجيل أي عمليات وصول لهذا العميل بعد</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -638,13 +784,69 @@
 
         // التحقق من نموذج إضافة الملاحظة
         const noteForm = document.getElementById('noteForm');
-        const noteTextarea = document.querySelector('#noteForm textarea');
+        const noteTextarea = document.getElementById('noteTextarea');
         const noteError = document.getElementById('noteError');
         const addNoteBtn = document.getElementById('addNoteBtn');
+        const addNoteModal = document.getElementById('addNoteModal');
 
-        if (noteForm && noteTextarea) {
-            noteForm.addEventListener('submit', function(e) {
+        // إعادة تعيين النموذج عند فتح الـ Modal
+        if (addNoteModal) {
+            addNoteModal.addEventListener('shown.bs.modal', function () {
+                if (noteTextarea) {
+                    noteTextarea.value = '';
+                    noteTextarea.focus();
+                    isSubmitting = false; // إعادة تعيين حالة الإرسال
+                    lastSubmittedNote = ''; // مسح آخر ملاحظة
+                    checkNoteContent();
+                }
+            });
+        }
+
+        if (noteForm && noteTextarea && addNoteBtn) {
+            let isSubmitting = false; // متغير لمنع الإرسال المتكرر
+            let lastSubmittedNote = ''; // آخر ملاحظة تم إرسالها
+
+            // تعطيل زر الإضافة في البداية إذا كان النص فارغ
+            function checkNoteContent() {
                 const noteValue = noteTextarea.value.trim();
+                if (noteValue.length > 0) {
+                    addNoteBtn.disabled = false;
+                    addNoteBtn.classList.remove('btn-secondary');
+                    addNoteBtn.classList.add('btn-primary');
+                    noteTextarea.classList.remove('is-invalid');
+                    noteError.style.display = 'none';
+                } else {
+                    addNoteBtn.disabled = true;
+                    addNoteBtn.classList.remove('btn-primary');
+                    addNoteBtn.classList.add('btn-secondary');
+                }
+            }
+
+            // فحص المحتوى عند التحميل
+            checkNoteContent();
+
+            // فحص المحتوى عند الكتابة
+            noteTextarea.addEventListener('input', checkNoteContent);
+            noteTextarea.addEventListener('keyup', checkNoteContent);
+            noteTextarea.addEventListener('paste', function() {
+                setTimeout(checkNoteContent, 100);
+            });
+
+            noteForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // منع الإرسال العادي دائماً
+
+                // التحقق من عدم الإرسال المتكرر
+                if (isSubmitting) {
+                    return false;
+                }
+
+                const noteValue = noteTextarea.value.trim();
+
+                // التحقق من عدم تكرار نفس الملاحظة
+                if (noteValue === lastSubmittedNote) {
+                    alert('تم إرسال هذه الملاحظة مؤخراً');
+                    return false;
+                }
 
                 if (!noteValue) {
                     e.preventDefault();
@@ -662,7 +864,105 @@
                         noteTextarea.style.animation = '';
                     }, 500);
 
+                    // إظهار رسالة تنبيه
+                    alert('يرجى كتابة الملاحظة قبل الإضافة');
+
                     return false;
+                } else {
+                    // إخفاء رسالة الخطأ إذا كان النص موجود
+                    noteTextarea.classList.remove('is-invalid');
+                    noteError.style.display = 'none';
+
+                    // تعيين حالة الإرسال
+                    isSubmitting = true;
+                    lastSubmittedNote = noteValue; // حفظ الملاحظة المرسلة
+
+                    // تعطيل الزر لمنع الإرسال المتكرر
+                    addNoteBtn.disabled = true;
+                    addNoteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإضافة...';
+
+                    // إرسال النموذج عبر AJAX لتجنب إعادة تحميل الصفحة
+                    const formData = new FormData(noteForm);
+                    fetch(noteForm.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    }).then(response => {
+                        return response.json().then(data => {
+                            if (response.ok && data.success) {
+                                // إغلاق الـ Modal
+                                const modal = bootstrap.Modal.getInstance(addNoteModal);
+                                modal.hide();
+
+                                // إعادة تعيين النموذج
+                                noteTextarea.value = '';
+                                addNoteBtn.disabled = true;
+                                addNoteBtn.innerHTML = '<i class="fas fa-plus me-1"></i>إضافة الملاحظة';
+                                addNoteBtn.classList.remove('btn-primary');
+                                addNoteBtn.classList.add('btn-secondary');
+
+                                // إعادة تعيين حالة الإرسال
+                                isSubmitting = false;
+
+                                // مسح آخر ملاحظة مرسلة بعد 30 ثانية
+                                setTimeout(() => {
+                                    lastSubmittedNote = '';
+                                }, 30000);
+
+                                // إعادة تحميل الصفحة بعد تأخير قصير
+                                setTimeout(() => {
+                                    location.reload();
+                                }, 500);
+                            } else {
+                                // إعادة تفعيل الزر في حالة الخطأ
+                                isSubmitting = false;
+                                addNoteBtn.disabled = false;
+                                addNoteBtn.innerHTML = '<i class="fas fa-plus me-1"></i>إضافة الملاحظة';
+
+                                const errorMessage = data.error || 'حدث خطأ أثناء إضافة الملاحظة';
+                                alert(errorMessage);
+                            }
+                        }).catch(() => {
+                            // في حالة فشل تحليل JSON، نحاول كـ text
+                            return response.text().then(text => {
+                                if (response.ok) {
+                                    // إغلاق الـ Modal
+                                    const modal = bootstrap.Modal.getInstance(addNoteModal);
+                                    modal.hide();
+
+                                    // إعادة تعيين النموذج
+                                    noteTextarea.value = '';
+                                    addNoteBtn.disabled = true;
+                                    addNoteBtn.innerHTML = '<i class="fas fa-plus me-1"></i>إضافة الملاحظة';
+                                    addNoteBtn.classList.remove('btn-primary');
+                                    addNoteBtn.classList.add('btn-secondary');
+
+                                    // إعادة تعيين حالة الإرسال
+                                    isSubmitting = false;
+
+                                    // إعادة تحميل الصفحة بعد تأخير قصير
+                                    setTimeout(() => {
+                                        location.reload();
+                                    }, 500);
+                                } else {
+                                    // إعادة تفعيل الزر في حالة الخطأ
+                                    isSubmitting = false;
+                                    addNoteBtn.disabled = false;
+                                    addNoteBtn.innerHTML = '<i class="fas fa-plus me-1"></i>إضافة الملاحظة';
+                                    alert('حدث خطأ أثناء إضافة الملاحظة');
+                                }
+                            });
+                        });
+                    }).catch(error => {
+                        isSubmitting = false;
+                        addNoteBtn.disabled = false;
+                        addNoteBtn.innerHTML = '<i class="fas fa-plus me-1"></i>إضافة الملاحظة';
+                        alert('حدث خطأ أثناء إضافة الملاحظة');
+                    });
+
+                    return false; // منع الإرسال العادي للنموذج
                 }
             });
 
@@ -676,4 +976,134 @@
         }
     });
 </script>
+
+<style>
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+/* تحسينات إضافية للنموذج */
+#noteForm textarea {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#noteForm textarea:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+#noteForm textarea.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+#addNoteBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+#addNoteBtn {
+    transition: all 0.3s ease;
+}
+
+/* تحسينات لعرض ملاحظات الوصول عبر الفروع */
+.note-item.cross-branch-note {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
+    border-left: 4px solid #2196f3 !important;
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.1);
+}
+
+.notes-list .note-item {
+    transition: all 0.3s ease;
+}
+
+.notes-list .note-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+/* تحسينات لسجل الوصول */
+.access-log-item {
+    transition: all 0.3s ease;
+    border-left: 4px solid #dee2e6 !important;
+}
+
+.access-log-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.access-log-item.cross-branch-access {
+    background: linear-gradient(135deg, #fff3cd 0%, #fefefe 100%);
+    border-left: 4px solid #ffc107 !important;
+}
+
+.access-logs-list .access-log-item:last-child {
+    margin-bottom: 0 !important;
+}
+
+.alert-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+/* تحسين عرض تنبيه الوصول عبر الفروع */
+.cross-branch-customer-detail {
+    border: 2px solid #ff9800;
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
+}
+</style>
+
+<!-- Add Note Modal -->
+<div class="modal fade" id="addNoteModal" tabindex="-1" aria-labelledby="addNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addNoteModalLabel">
+                    <i class="fas fa-sticky-note me-2"></i>إضافة ملاحظة جديدة
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'customers:add_note_by_code' customer.code %}" id="noteForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="noteTextarea" class="form-label">الملاحظة</label>
+                        <textarea class="form-control" id="noteTextarea" name="note" rows="4"
+                                  placeholder="أضف ملاحظتك هنا..." required></textarea>
+                        {% if note_form.note.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in note_form.note.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="invalid-feedback" id="noteError" style="display: none;">
+                            يرجى كتابة الملاحظة قبل الإضافة
+                        </div>
+                    </div>
+                    <div class="text-muted small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        ستتم إضافة الملاحظة باسم: {{ user.get_full_name|default:user.username }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="addNoteBtn" disabled>
+                        <i class="fas fa-plus me-1"></i>إضافة الملاحظة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

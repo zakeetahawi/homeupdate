@@ -250,10 +250,28 @@
                                     </a></li>
                                 </ul>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/complaints/">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="complaintsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-exclamation-triangle"></i><span class="nav-text">الشكاوى</span>
                                 </a>
+                                <ul class="dropdown-menu" aria-labelledby="complaintsDropdown">
+                                    <li><a class="dropdown-item" href="/complaints/">
+                                        <i class="fas fa-tachometer-alt"></i> لوحة التحكم
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="/complaints/list/">
+                                        <i class="fas fa-list"></i> قائمة الشكاوى
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="/complaints/admin/">
+                                        <i class="fas fa-shield-alt"></i> الشكاوى غير المحلولة
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="/complaints/reports/">
+                                        <i class="fas fa-chart-line"></i> التقارير المتقدمة
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="/complaints/create/">
+                                        <i class="fas fa-plus"></i> شكوى جديدة
+                                    </a></li>
+                                </ul>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/reports/list/">
@@ -284,9 +302,113 @@
                 </ul>
                 <div class="d-flex align-items-center ms-auto">
                     {% if user.is_authenticated %}
-                        <!-- أيقونة الإشعارات -->
+                        <!-- أيقونة إشعارات الشكاوى المحسنة -->
+                        <div class="dropdown me-2">
+                            <button class="btn btn-outline-warning position-relative" type="button" id="complaintsNotificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="إشعارات الشكاوى">
+                                <i class="fas fa-headset"></i>
+                                <!-- عداد الشكاوى غير المحلولة -->
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="unresolved-complaints-badge" style="display: none;">
+                                    0
+                                </span>
+                                <!-- عداد الإشعارات الجديدة -->
+                                <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-warning text-dark" id="complaints-notification-count-badge" style="display: none; font-size: 0.6em;">
+                                    0
+                                </span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="complaintsNotificationsDropdown" style="width: 350px; max-height: 400px; overflow-y: auto;">
+                                <li class="dropdown-header d-flex justify-content-between align-items-center bg-light">
+                                    <span class="fw-bold">
+                                        <i class="fas fa-headset me-2 text-warning"></i>
+                                        مركز الشكاوى
+                                    </span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-danger me-1" onclick="clearComplaintsNotifications()" title="مسح جميع الإشعارات">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        <a href="{% url 'complaints:notifications_list' %}" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+                                    </div>
+                                </li>
+
+                                <!-- إحصائيات سريعة -->
+                                <li class="px-3 py-2 bg-light border-bottom">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <div class="d-flex align-items-center justify-content-center">
+                                                <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+                                                <span class="fw-bold text-danger" id="unresolved-count-display">0</span>
+                                                <small class="text-muted ms-1">غير محلولة</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="d-flex align-items-center justify-content-center">
+                                                <i class="fas fa-bell text-warning me-1"></i>
+                                                <span class="fw-bold text-warning" id="new-notifications-display">0</span>
+                                                <small class="text-muted ms-1">إشعار جديد</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li id="complaints-notifications-loading" class="text-center p-3">
+                                    <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+                                </li>
+                                <li id="complaints-notifications-empty" class="text-center p-3" style="display: none;">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    <br>لا توجد إشعارات جديدة
+                                </li>
+                                <div id="complaints-notifications-list"></div>
+                                <li><hr class="dropdown-divider"></li>
+                                <!-- روابط سريعة -->
+                                <li>
+                                    <div class="row px-2">
+                                        <div class="col-6">
+                                            <a class="dropdown-item text-center py-2" href="{% url 'complaints:complaint_list' %}">
+                                                <i class="fas fa-list me-1"></i>
+                                                جميع الشكاوى
+                                            </a>
+                                        </div>
+                                        <div class="col-6">
+                                            <a class="dropdown-item text-center py-2" href="{% url 'complaints:admin_complaint_list' %}">
+                                                <i class="fas fa-shield-alt me-1"></i>
+                                                غير المحلولة
+                                            </a>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- أيقونة إشعارات التعيين -->
+                        <div class="dropdown me-2">
+                            <button class="btn btn-outline-info position-relative" type="button" id="assignmentNotificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="إشعارات التعيين">
+                                <i class="fas fa-user-check"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="assignment-notification-badge" style="display: none;">
+                                    0
+                                </span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="assignmentNotificationsDropdown" style="width: 350px; max-height: 400px; overflow-y: auto;">
+                                <li class="dropdown-header d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-user-check me-2"></i>إشعارات التعيين</span>
+                                    <a href="{% url 'complaints:complaint_list' %}?assigned_to={{ user.id }}" class="btn btn-sm btn-outline-primary">الشكاوى المسندة</a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li id="assignment-notifications-loading" class="text-center p-3">
+                                    <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+                                </li>
+                                <li id="assignment-notifications-empty" class="text-center p-3" style="display: none;">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    <br>
+                                    لا توجد إشعارات تعيين
+                                </li>
+                                <div id="assignment-notifications-list">
+                                    <!-- Assignment notifications will be loaded here -->
+                                </div>
+                            </ul>
+                        </div>
+
+                        <!-- أيقونة الإشعارات العامة -->
                         <div class="dropdown me-3">
-                            <button class="btn btn-outline-light position-relative" type="button" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-outline-light position-relative" type="button" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="الإشعارات العامة">
                                 <i class="fas fa-bell"></i>
                                 {% if notifications_unread_count > 0 %}
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notification-count-badge">
@@ -705,6 +827,50 @@
 
 
 
+    <!-- Assigned Complaints Popup -->
+    <div id="assignedComplaintsPopup" class="assigned-complaints-popup" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h5><i class="fas fa-exclamation-triangle text-warning me-2"></i>شكاوى مسندة إليك</h5>
+                <div class="popup-controls">
+                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="snoozeComplaintsPopup()">
+                        <i class="fas fa-clock"></i> تأجيل
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="hideComplaintsPopup()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="popup-body" id="assignedComplaintsContent">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Escalated Complaints Popup -->
+    <div id="escalatedComplaintsPopup" class="escalated-complaints-popup" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header bg-danger">
+                <h5><i class="fas fa-fire text-white me-2"></i>شكاوى مصعدة - عاجل!</h5>
+                <div class="popup-controls">
+                    <button class="btn btn-sm btn-outline-light me-2" onclick="snoozeEscalatedPopup()">
+                        <i class="fas fa-clock"></i> تأجيل
+                    </button>
+                    <button class="btn btn-sm btn-outline-light" onclick="hideEscalatedPopup()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="popup-body" id="escalatedComplaintsContent">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
     <main class="container-fluid mt-4 flex-grow" id="main-content">
         {% if messages %}
@@ -1115,7 +1281,7 @@
     <!-- JavaScript للإشعارات -->
     {% if user.is_authenticated %}
     <script>
-        // تحديث عداد الإشعارات
+        // تحديث عداد الإشعارات العامة
         function updateNotificationCount() {
             fetch('{% url "notifications:ajax_count" %}?_=' + Date.now())
                 .then(response => response.json())
@@ -1133,6 +1299,409 @@
                     }
                 })
                 .catch(error => console.error('❌ خطأ في تحديث العداد:', error));
+        }
+
+        // تحديث إشعارات التعيين
+        function updateAssignmentNotifications() {
+            fetch('/complaints/api/assignment-notifications/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const badge = document.querySelector('#assignment-notification-badge');
+                        const list = document.querySelector('#assignment-notifications-list');
+                        const loading = document.querySelector('#assignment-notifications-loading');
+                        const empty = document.querySelector('#assignment-notifications-empty');
+
+                        // Update badge
+                        if (badge) {
+                            if (data.unread_assignments > 0) {
+                                badge.textContent = data.unread_assignments;
+                                badge.style.display = 'inline';
+                            } else {
+                                badge.style.display = 'none';
+                            }
+                        }
+
+                        // Update dropdown list
+                        if (list && loading && empty) {
+                            loading.style.display = 'none';
+
+                            if (data.notifications.length > 0) {
+                                empty.style.display = 'none';
+                                let html = '';
+
+                                data.notifications.forEach(notification => {
+                                    const isUnread = !notification.is_read;
+                                    html += `
+                                        <li>
+                                            <a class="dropdown-item py-3 px-3 ${isUnread ? 'bg-light border-start border-info border-3' : ''}"
+                                               href="${notification.url}"
+                                               style="border-radius: 8px; margin: 2px 8px; white-space: normal; word-wrap: break-word;">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1 fw-bold">${notification.title}</h6>
+                                                        <p class="mb-1 text-muted small">${notification.message}</p>
+                                                        <div class="d-flex justify-content-between">
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-hashtag me-1"></i>${notification.complaint_number}
+                                                            </small>
+                                                            <small class="text-muted">
+                                                                ${notification.created_at}
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                    ${isUnread ? '<span class="badge bg-info ms-2">جديد</span>' : ''}
+                                                </div>
+                                            </a>
+                                        </li>
+                                    `;
+                                });
+
+                                list.innerHTML = html;
+                            } else {
+                                empty.style.display = 'block';
+                                list.innerHTML = '';
+                            }
+                        }
+                    }
+                })
+                .catch(error => console.error('Error updating assignment notifications:', error));
+        }
+
+        // تحديث عداد إشعارات الشكاوى
+        function updateComplaintsNotificationCount() {
+            // جلب إحصائيات الشكاوى غير المحلولة
+            fetch('/complaints/api/unresolved-stats/?_=' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // تحديث عداد الشكاوى غير المحلولة
+                        const unresolvedBadge = document.querySelector('#unresolved-complaints-badge');
+                        const unresolvedDisplay = document.querySelector('#unresolved-count-display');
+
+                        if (unresolvedBadge && unresolvedDisplay) {
+                            if (data.unresolved_count > 0) {
+                                unresolvedBadge.textContent = data.unresolved_count;
+                                unresolvedBadge.style.display = 'inline';
+                                unresolvedDisplay.textContent = data.unresolved_count;
+
+                                // تغيير لون العداد حسب الأولوية
+                                if (data.urgent_count > 0) {
+                                    unresolvedBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger';
+                                } else if (data.overdue_count > 0) {
+                                    unresolvedBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning';
+                                } else {
+                                    unresolvedBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info';
+                                }
+                            } else {
+                                unresolvedBadge.style.display = 'none';
+                                unresolvedDisplay.textContent = '0';
+                            }
+                        }
+                    }
+                })
+                .catch(error => console.error('❌ خطأ في تحديث عداد الشكاوى غير المحلولة:', error));
+
+            // جلب الإشعارات الجديدة
+            fetch('/complaints/api/notifications/?_=' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const notificationBadge = document.querySelector('#complaints-notification-count-badge');
+                        const notificationDisplay = document.querySelector('#new-notifications-display');
+
+                        if (notificationBadge && notificationDisplay) {
+                            if (data.unread_count > 0) {
+                                notificationBadge.textContent = data.unread_count;
+                                notificationBadge.style.display = 'inline';
+                                notificationDisplay.textContent = data.unread_count;
+                            } else {
+                                notificationBadge.style.display = 'none';
+                                notificationDisplay.textContent = '0';
+                            }
+                        }
+                    }
+                })
+                .catch(error => console.error('❌ خطأ في تحديث عداد الإشعارات:', error));
+        }
+
+        // تحميل إشعارات الشكاوى في القائمة المنسدلة
+        function loadComplaintsNotifications() {
+            const loadingElement = document.getElementById('complaints-notifications-loading');
+            const emptyElement = document.getElementById('complaints-notifications-empty');
+            const listElement = document.getElementById('complaints-notifications-list');
+
+            if (loadingElement) loadingElement.style.display = 'block';
+            if (emptyElement) emptyElement.style.display = 'none';
+            if (listElement) listElement.innerHTML = '';
+
+            fetch('/complaints/api/notifications/?limit=5&_=' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    if (loadingElement) loadingElement.style.display = 'none';
+
+                    if (data.success && data.notifications && data.notifications.length > 0) {
+                        let html = '';
+                        data.notifications.forEach(notification => {
+                            const typeIcon = getComplaintNotificationIcon(notification.type);
+                            const timeAgo = getTimeAgo(notification.created_at);
+
+                            html += `
+                                <li class="dropdown-item-text p-3 border-bottom">
+                                    <div class="d-flex align-items-start">
+                                        <div class="me-2">
+                                            <i class="${typeIcon} text-primary"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 fw-bold">${notification.title}</h6>
+                                            <p class="mb-1 small text-muted">${notification.message}</p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                ${timeAgo}
+                                                ${notification.complaint_number ? ' | ' + notification.complaint_number : ''}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </li>
+                            `;
+                        });
+
+                        if (listElement) listElement.innerHTML = html;
+                    } else {
+                        if (emptyElement) emptyElement.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ خطأ في تحميل إشعارات الشكاوى:', error);
+                    if (loadingElement) loadingElement.style.display = 'none';
+                    if (emptyElement) emptyElement.style.display = 'block';
+                });
+        }
+
+        // الحصول على أيقونة نوع الإشعار
+        function getComplaintNotificationIcon(type) {
+            const icons = {
+                'new_complaint': 'fas fa-plus-circle',
+                'status_change': 'fas fa-exchange-alt',
+                'assignment': 'fas fa-user-tag',
+                'escalation': 'fas fa-arrow-up',
+                'deadline': 'fas fa-clock',
+                'overdue': 'fas fa-exclamation-triangle',
+                'comment': 'fas fa-comment'
+            };
+            return icons[type] || 'fas fa-bell';
+        }
+
+        // حساب الوقت المنقضي
+        function getTimeAgo(dateString) {
+            const now = new Date();
+            const date = new Date(dateString);
+            const diffInSeconds = Math.floor((now - date) / 1000);
+
+            if (diffInSeconds < 60) return 'الآن';
+            if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' دقيقة';
+            if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' ساعة';
+            return Math.floor(diffInSeconds / 86400) + ' يوم';
+        }
+
+        // مسح جميع إشعارات الشكاوى
+        function clearComplaintsNotifications() {
+            if (confirm('هل أنت متأكد من مسح جميع إشعارات الشكاوى؟')) {
+                fetch('/complaints/api/notifications/clear/', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCsrfToken(),
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // تحديث العداد
+                        updateComplaintsNotificationCount();
+
+                        // إخفاء القائمة المنسدلة
+                        const dropdown = document.getElementById('complaintsNotificationsDropdown');
+                        if (dropdown) {
+                            const bsDropdown = bootstrap.Dropdown.getInstance(dropdown);
+                            if (bsDropdown) bsDropdown.hide();
+                        }
+
+                        // إظهار رسالة نجاح
+                        showNotificationMessage('تم مسح جميع إشعارات الشكاوى بنجاح', 'success');
+                    } else {
+                        showNotificationMessage('حدث خطأ أثناء مسح الإشعارات', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('خطأ في مسح الإشعارات:', error);
+                    showNotificationMessage('حدث خطأ أثناء مسح الإشعارات', 'error');
+                });
+            }
+        }
+
+        // إدارة popup الشكاوى المسندة
+        function checkAssignedComplaints() {
+            // التحقق من وجود popup مخفي مؤقتاً
+            const snoozedUntil = localStorage.getItem('complaintsPopupSnoozed');
+            if (snoozedUntil && new Date() < new Date(snoozedUntil)) {
+                return; // لا تظهر الـ popup إذا كان مؤجل
+            }
+
+            fetch('/complaints/api/assigned/?_=' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.complaints && data.complaints.length > 0) {
+                        showAssignedComplaintsPopup(data.complaints);
+                    }
+                })
+                .catch(error => console.error('خطأ في جلب الشكاوى المسندة:', error));
+        }
+
+        function showAssignedComplaintsPopup(complaints) {
+            const popup = document.getElementById('assignedComplaintsPopup');
+            const content = document.getElementById('assignedComplaintsContent');
+
+            if (!popup || !content) return;
+
+            let html = '';
+            complaints.forEach(complaint => {
+                const priorityClass = `complaint-priority-${complaint.priority}`;
+                const timeAgo = getTimeAgo(complaint.created_at);
+
+                html += `
+                    <div class="complaint-item ${priorityClass}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">
+                                <a href="/complaints/${complaint.id}/" class="text-decoration-none">
+                                    شكوى رقم ${complaint.complaint_number}
+                                </a>
+                            </h6>
+                            <span class="badge bg-${getPriorityColor(complaint.priority)}">${getPriorityText(complaint.priority)}</span>
+                        </div>
+                        <p class="mb-1 small">${complaint.title}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">العميل: ${complaint.customer_name}</small>
+                            <small class="text-muted">${timeAgo}</small>
+                        </div>
+                        ${complaint.deadline ? `<div class="mt-1"><small class="text-danger"><i class="fas fa-clock"></i> الموعد النهائي: ${new Date(complaint.deadline).toLocaleDateString('ar-EG')}</small></div>` : ''}
+                    </div>
+                `;
+            });
+
+            content.innerHTML = html;
+            popup.style.display = 'block';
+        }
+
+        function hideComplaintsPopup() {
+            const popup = document.getElementById('assignedComplaintsPopup');
+            if (popup) {
+                popup.style.display = 'none';
+            }
+        }
+
+        function snoozeComplaintsPopup() {
+            const hours = prompt('كم ساعة تريد تأجيل الإشعارات؟ (افتراضي: 4 ساعات)', '4');
+            if (hours && !isNaN(hours)) {
+                const snoozeUntil = new Date();
+                snoozeUntil.setHours(snoozeUntil.getHours() + parseInt(hours));
+                localStorage.setItem('complaintsPopupSnoozed', snoozeUntil.toISOString());
+                hideComplaintsPopup();
+                showNotificationMessage(`تم تأجيل إشعارات الشكاوى لمدة ${hours} ساعة`, 'info');
+            }
+        }
+
+        function getPriorityColor(priority) {
+            const colors = {
+                'high': 'danger',
+                'medium': 'warning',
+                'low': 'success'
+            };
+            return colors[priority] || 'secondary';
+        }
+
+        function getPriorityText(priority) {
+            const texts = {
+                'high': 'عالية',
+                'medium': 'متوسطة',
+                'low': 'منخفضة'
+            };
+            return texts[priority] || 'غير محدد';
+        }
+
+        // إدارة popup الشكاوى المصعدة
+        function checkEscalatedComplaints() {
+            // التحقق من وجود popup مخفي مؤقتاً
+            const snoozedUntil = localStorage.getItem('escalatedPopupSnoozed');
+            if (snoozedUntil && new Date() < new Date(snoozedUntil)) {
+                return; // لا تظهر الـ popup إذا كان مؤجل
+            }
+
+            fetch('/complaints/api/escalated/?_=' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.complaints && data.complaints.length > 0) {
+                        showEscalatedComplaintsPopup(data.complaints);
+                    }
+                })
+                .catch(error => console.error('خطأ في جلب الشكاوى المصعدة:', error));
+        }
+
+        function showEscalatedComplaintsPopup(complaints) {
+            const popup = document.getElementById('escalatedComplaintsPopup');
+            const content = document.getElementById('escalatedComplaintsContent');
+
+            if (!popup || !content) return;
+
+            let html = '<div class="alert alert-danger mb-3"><i class="fas fa-fire me-2"></i><strong>تحذير:</strong> هذه الشكاوى تجاوزت الموعد النهائي وتحتاج تدخل فوري!</div>';
+
+            complaints.forEach(complaint => {
+                const timeAgo = getTimeAgo(complaint.created_at);
+
+                html += `
+                    <div class="complaint-item mb-3 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0 text-danger">
+                                <a href="/complaints/${complaint.id}/" class="text-decoration-none text-danger">
+                                    <i class="fas fa-fire me-1"></i>شكوى رقم ${complaint.complaint_number}
+                                </a>
+                            </h6>
+                            <span class="badge bg-danger">مصعدة</span>
+                        </div>
+                        <p class="mb-1 fw-bold">${complaint.title}</p>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted">العميل: ${complaint.customer_name}</small>
+                            <small class="text-muted">المسؤول: ${complaint.assigned_to}</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-danger"><i class="fas fa-clock"></i> منذ ${timeAgo}</small>
+                            ${complaint.deadline ? `<small class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> تجاوز الموعد النهائي</small>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            content.innerHTML = html;
+            popup.style.display = 'block';
+        }
+
+        function hideEscalatedPopup() {
+            const popup = document.getElementById('escalatedComplaintsPopup');
+            if (popup) {
+                popup.style.display = 'none';
+            }
+        }
+
+        function snoozeEscalatedPopup() {
+            const hours = prompt('كم ساعة تريد تأجيل إشعارات الشكاوى المصعدة؟ (افتراضي: 2 ساعة)', '2');
+            if (hours && !isNaN(hours)) {
+                const snoozeUntil = new Date();
+                snoozeUntil.setHours(snoozeUntil.getHours() + parseInt(hours));
+                localStorage.setItem('escalatedPopupSnoozed', snoozeUntil.toISOString());
+                hideEscalatedPopup();
+                showNotificationMessage(`تم تأجيل إشعارات الشكاوى المصعدة لمدة ${hours} ساعة`, 'warning');
+            }
         }
 
         // دالة تحديد إشعار من القائمة المنسدلة كمقروء
@@ -1536,6 +2105,8 @@
         document.addEventListener('DOMContentLoaded', function() {
 
             updateNotificationCount();
+            updateComplaintsNotificationCount(); // تحديث عداد الشكاوى
+            updateAssignmentNotifications(); // تحديث إشعارات التعيين
             updateRecentNotifications(); // تحديث فوري للقائمة المنسدلة
 
             // إعداد event listeners للقائمة الموجودة (الأصلية والديناميكية)
@@ -1548,10 +2119,26 @@
                 setupDropdownNotificationListeners();
             }, 2000);
 
+            // إعداد مستمع لتحميل إشعارات الشكاوى عند فتح القائمة
+            const complaintsDropdown = document.getElementById('complaintsNotificationsDropdown');
+            if (complaintsDropdown) {
+                complaintsDropdown.addEventListener('click', function() {
+                    loadComplaintsNotifications();
+                });
+            }
+
+            // فحص الشكاوى المسندة والمصعدة عند تحميل الصفحة
+            setTimeout(checkAssignedComplaints, 2000); // تأخير 2 ثانية
+            setTimeout(checkEscalatedComplaints, 3000); // تأخير 3 ثواني للشكاوى المصعدة
+
             // تحديث دوري كل 30 ثانية
             setInterval(function() {
                 updateNotificationCount();
+                updateComplaintsNotificationCount();
+                updateAssignmentNotifications(); // تحديث إشعارات التعيين
                 updateRecentNotifications();
+                checkAssignedComplaints(); // فحص الشكاوى المسندة دورياً
+                checkEscalatedComplaints(); // فحص الشكاوى المصعدة دورياً
             }, 30000);
         });
     </script>
@@ -1564,6 +2151,156 @@
 
     <!-- معالج CSRF التلقائي -->
     <script src="{% static 'js/csrf-handler.js' %}"></script>
+
+    <!-- Assignment Notifications System -->
+    {% if user.is_authenticated %}
+    <script src="{% static 'js/assignment-notifications.js' %}"></script>
+    {% endif %}
+
+    <!-- Assigned Complaints Popup CSS -->
+    <style>
+        .assigned-complaints-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 400px;
+            max-width: 90vw;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            border: 2px solid #ffc107;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .popup-content {
+            padding: 0;
+        }
+
+        .popup-header {
+            background: linear-gradient(135deg, #ffc107, #ff8f00);
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .popup-header h5 {
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .popup-controls {
+            display: flex;
+            align-items: center;
+        }
+
+        .popup-body {
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .complaint-item {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .complaint-item:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .complaint-priority-high {
+            border-left: 4px solid #dc3545;
+        }
+
+        .complaint-priority-medium {
+            border-left: 4px solid #ffc107;
+        }
+
+        .complaint-priority-low {
+            border-left: 4px solid #28a745;
+        }
+
+        @media (max-width: 768px) {
+            .assigned-complaints-popup {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                width: auto;
+            }
+        }
+
+        /* Escalated Complaints Popup - أكثر إلحاحاً */
+        .escalated-complaints-popup {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 450px;
+            max-width: 90vw;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 15px 40px rgba(220, 53, 69, 0.4);
+            z-index: 10000;
+            border: 3px solid #dc3545;
+            animation: pulseEscalated 2s infinite;
+        }
+
+        @keyframes pulseEscalated {
+            0% {
+                box-shadow: 0 15px 40px rgba(220, 53, 69, 0.4);
+            }
+            50% {
+                box-shadow: 0 15px 40px rgba(220, 53, 69, 0.8);
+            }
+            100% {
+                box-shadow: 0 15px 40px rgba(220, 53, 69, 0.4);
+            }
+        }
+
+        .escalated-complaints-popup .popup-header {
+            background: linear-gradient(135deg, #dc3545, #c82333) !important;
+            color: white;
+            padding: 15px;
+            border-radius: 7px 7px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .escalated-complaints-popup .complaint-item {
+            border-left: 4px solid #dc3545;
+            background: #fff5f5;
+        }
+
+        @media (max-width: 768px) {
+            .escalated-complaints-popup {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+            }
+        }
+    </style>
 
     <!-- إصلاح مشكلة modal backdrop -->
     <style>

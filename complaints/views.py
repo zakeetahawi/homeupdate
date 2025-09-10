@@ -17,6 +17,7 @@ from django.views.generic import (
 from accounts.models import Department
 from customers.models import Customer
 from orders.models import Order
+from notifications.models import Notification
 
 from .forms import (
     ComplaintForm, ComplaintUpdateForm, ComplaintStatusUpdateForm,
@@ -25,7 +26,7 @@ from .forms import (
     ComplaintBulkActionForm
 )
 from .models import (
-    Complaint, ComplaintType, ComplaintUpdate
+    Complaint, ComplaintType, ComplaintUpdate, ResolutionMethod, ComplaintEvaluation
 )
 
 
@@ -36,15 +37,31 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # إحصائيات عامة
-        total_complaints = Complaint.objects.count()
-        new_complaints = Complaint.objects.filter(status='new').count()
-        in_progress_complaints = Complaint.objects.filter(status='in_progress').count()
-        resolved_complaints = Complaint.objects.filter(status='resolved').count()
-        overdue_complaints = Complaint.objects.filter(status='overdue').count()
+        # استخدام cache للإحصائيات
+        from django.core.cache import cache
+        cache_key = f'complaints_dashboard_stats_{self.request.user.id}'
+        cached_stats = cache.get(cache_key)
 
-        # إحصائيات حسب النوع
-        complaints_by_type = Complaint.objects.values(
+        if cached_stats:
+            context.update(cached_stats)
+            return context
+
+        # تحسين الاستعلامات باستخدام استعلام واحد للإحصائيات العامة
+        from django.db.models import Case, When, IntegerField
+
+        status_stats = Complaint.objects.aggregate(
+            total_complaints=Count('id'),
+            new_complaints=Count(Case(When(status='new', then=1), output_field=IntegerField())),
+            in_progress_complaints=Count(Case(When(status='in_progress', then=1), output_field=IntegerField())),
+            resolved_complaints=Count(Case(When(status='resolved', then=1), output_field=IntegerField())),
+            pending_evaluation_complaints=Count(Case(When(status='pending_evaluation', then=1), output_field=IntegerField())),
+            closed_complaints=Count(Case(When(status='closed', then=1), output_field=IntegerField())),
+            overdue_complaints=Count(Case(When(status='overdue', then=1), output_field=IntegerField())),
+            avg_rating=Avg('customer_rating')
+        )
+
+        # إحصائيات حسب النوع مع تحسين الاستعلام
+        complaints_by_type = Complaint.objects.select_related('complaint_type').values(
             'complaint_type__name'
         ).annotate(
             count=Count('id')
@@ -57,8 +74,8 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
             count=Count('id')
         ).order_by('-count')
 
-        # إحصائيات حسب المسؤول
-        complaints_by_assignee = Complaint.objects.exclude(
+        # إحصائيات حسب المسؤول مع تحسين الاستعلام
+        complaints_by_assignee = Complaint.objects.select_related('assigned_to').exclude(
             assigned_to__isnull=True
         ).values(
             'assigned_to__first_name', 'assigned_to__last_name'
@@ -66,73 +83,78 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
             count=Count('id')
         ).order_by('-count')[:5]
 
-        # الشكاوى الحديثة
+        # الشكاوى الحديثة مع تحسين العلاقات
         recent_complaints = Complaint.objects.select_related(
-            'customer', 'complaint_type', 'assigned_to'
+            'customer', 'complaint_type', 'assigned_to', 'assigned_department'
         ).order_by('-created_at')[:10]
 
-        # الشكاوى المتأخرة
+        # الشكاوى المتأخرة مع تحسين الاستعلام
+        now = timezone.now()
         overdue_complaints_list = Complaint.objects.filter(
-            deadline__lt=timezone.now(),
+            deadline__lt=now,
             status__in=['new', 'in_progress']
         ).select_related(
-            'customer', 'complaint_type', 'assigned_to'
+            'customer', 'complaint_type', 'assigned_to', 'assigned_department'
         ).order_by('deadline')[:10]
 
-        # معدل الرضا
-        avg_rating = Complaint.objects.filter(
-            customer_rating__isnull=False
+        # إحصائيات الأداء (آخر 30 يوم) مع تحسين الاستعلام
+        thirty_days_ago = now - timedelta(days=30)
+        performance_stats = Complaint.objects.filter(
+            created_at__gte=thirty_days_ago
         ).aggregate(
-            avg_rating=Avg('customer_rating')
-        )['avg_rating'] or 0
+            new_complaints_30d=Count('id'),
+            resolved_complaints_30d=Count(Case(
+                When(resolved_at__gte=thirty_days_ago, then=1),
+                output_field=IntegerField()
+            ))
+        )
 
-        # إحصائيات الأداء (آخر 30 يوم)
-        thirty_days_ago = timezone.now() - timedelta(days=30)
-        performance_stats = {
-            'new_complaints_30d': Complaint.objects.filter(
-                created_at__gte=thirty_days_ago
-            ).count(),
-            'resolved_complaints_30d': Complaint.objects.filter(
-                resolved_at__gte=thirty_days_ago
-            ).count(),
-            'avg_resolution_time': self.calculate_avg_resolution_time(),
-        }
+        # حساب متوسط وقت الحل بشكل محسن
+        performance_stats['avg_resolution_time'] = self.calculate_avg_resolution_time()
 
-        context.update({
-            'total_complaints': total_complaints,
-            'new_complaints': new_complaints,
-            'in_progress_complaints': in_progress_complaints,
-            'resolved_complaints': resolved_complaints,
-            'overdue_complaints': overdue_complaints,
-            'complaints_by_type': complaints_by_type,
-            'complaints_by_priority': complaints_by_priority,
-            'complaints_by_assignee': complaints_by_assignee,
+        # تجميع البيانات للـ context
+        dashboard_data = {
+            'total_complaints': status_stats['total_complaints'],
+            'new_complaints': status_stats['new_complaints'],
+            'in_progress_complaints': status_stats['in_progress_complaints'],
+            'resolved_complaints': status_stats['resolved_complaints'],
+            'pending_evaluation_complaints': status_stats['pending_evaluation_complaints'],
+            'closed_complaints': status_stats['closed_complaints'],
+            'overdue_complaints': status_stats['overdue_complaints'],
+            'complaints_by_type': list(complaints_by_type),
+            'complaints_by_priority': list(complaints_by_priority),
+            'complaints_by_assignee': list(complaints_by_assignee),
             'recent_complaints': recent_complaints,
             'overdue_complaints_list': overdue_complaints_list,
-            'avg_rating': round(avg_rating, 2),
+            'avg_rating': round(status_stats['avg_rating'] or 0, 2),
             'performance_stats': performance_stats,
-        })
+        }
 
+        # حفظ البيانات في الـ cache لمدة 5 دقائق
+        cache.set(cache_key, dashboard_data, 300)
+
+        context.update(dashboard_data)
         return context
 
     def calculate_avg_resolution_time(self):
-        """حساب متوسط وقت الحل"""
-        resolved_complaints = Complaint.objects.filter(
-            resolved_at__isnull=False
-        )
+        """حساب متوسط وقت الحل بشكل محسن"""
+        from django.db.models import ExpressionWrapper, DurationField, F, Avg
 
-        total_time = timedelta()
-        count = 0
+        # استخدام استعلام قاعدة البيانات لحساب المتوسط مباشرة
+        avg_resolution = Complaint.objects.filter(
+            resolved_at__isnull=False,
+            created_at__isnull=False
+        ).annotate(
+            resolution_duration=ExpressionWrapper(
+                F('resolved_at') - F('created_at'),
+                output_field=DurationField()
+            )
+        ).aggregate(
+            avg_duration=Avg('resolution_duration')
+        )['avg_duration']
 
-        for complaint in resolved_complaints:
-            resolution_time = complaint.resolution_time
-            if resolution_time:
-                total_time += resolution_time
-                count += 1
-
-        if count > 0:
-            avg_seconds = total_time.total_seconds() / count
-            avg_hours = avg_seconds / 3600
+        if avg_resolution:
+            avg_hours = avg_resolution.total_seconds() / 3600
             return round(avg_hours, 1)
 
         return 0
@@ -150,23 +172,31 @@ class ComplaintListView(LoginRequiredMixin, ListView):
             'customer', 'complaint_type', 'assigned_to', 'assigned_department'
         ).order_by('-created_at')
 
-        # تطبيق الفلاتر
+        # تطبيق صلاحيات الوصول للشكاوى
+        queryset = self.apply_complaint_permissions(queryset)
+
+        # تطبيق الفلاتر مع دعم التحديد المتعدد
         form = ComplaintFilterForm(self.request.GET)
         if form.is_valid():
             if form.cleaned_data['status']:
-                queryset = queryset.filter(status=form.cleaned_data['status'])
+                queryset = queryset.filter(status__in=form.cleaned_data['status'])
 
             if form.cleaned_data['priority']:
-                queryset = queryset.filter(priority=form.cleaned_data['priority'])
+                queryset = queryset.filter(priority__in=form.cleaned_data['priority'])
 
             if form.cleaned_data['complaint_type']:
                 queryset = queryset.filter(
-                    complaint_type=form.cleaned_data['complaint_type']
+                    complaint_type__in=form.cleaned_data['complaint_type']
                 )
 
             if form.cleaned_data['assigned_to']:
                 queryset = queryset.filter(
-                    assigned_to=form.cleaned_data['assigned_to']
+                    assigned_to__in=form.cleaned_data['assigned_to']
+                )
+
+            if form.cleaned_data.get('assigned_department'):
+                queryset = queryset.filter(
+                    assigned_department__in=form.cleaned_data['assigned_department']
                 )
             
             if form.cleaned_data['date_from']:
@@ -179,7 +209,150 @@ class ComplaintListView(LoginRequiredMixin, ListView):
                     created_at__date__lte=form.cleaned_data['date_to']
                 )
 
-            if form.cleaned_data['search']:
+            if form.cleaned_data.get('search'):
+                search_term = form.cleaned_data['search']
+                search_query = (
+                    Q(complaint_number__icontains=search_term) |
+                    Q(customer__name__icontains=search_term) |
+                    Q(title__icontains=search_term) |
+                    Q(description__icontains=search_term)
+                )
+                queryset = queryset.filter(search_query)
+
+        # الفلاتر المتقدمة
+        customer_name = self.request.GET.get('customer_name')
+        if customer_name:
+            queryset = queryset.filter(customer__name__icontains=customer_name)
+
+        complaint_id = self.request.GET.get('complaint_id')
+        if complaint_id:
+            queryset = queryset.filter(id__icontains=complaint_id)
+
+        assigned_to = self.request.GET.get('assigned_to')
+        if assigned_to:
+            queryset = queryset.filter(assigned_to_id=assigned_to)
+
+        evaluation_status = self.request.GET.get('evaluation_status')
+        if evaluation_status == 'needs_evaluation':
+            queryset = queryset.filter(status='pending_evaluation')
+        elif evaluation_status == 'evaluated':
+            queryset = queryset.filter(status='closed', evaluation__isnull=False)
+        elif evaluation_status == 'not_evaluated':
+            queryset = queryset.filter(status='closed', evaluation__isnull=True)
+
+        return queryset
+
+    def apply_complaint_permissions(self, queryset):
+        """تطبيق صلاحيات الوصول للشكاوى"""
+        user = self.request.user
+
+        # مدير النظام يرى جميع الشكاوى
+        if user.is_superuser:
+            return queryset
+
+        # مدير الشكاوى يرى جميع الشكاوى
+        if user.groups.filter(name='Complaints_Managers').exists():
+            return queryset
+
+        # مشرف الشكاوى يرى جميع الشكاوى
+        if user.groups.filter(name='Complaints_Supervisors').exists():
+            return queryset
+
+        # المدراء يرون جميع الشكاوى
+        if user.groups.filter(name='Managers').exists():
+            return queryset
+
+        # مدير القسم يرى شكاوى قسمه
+        if hasattr(user, 'managed_departments') and user.managed_departments.exists():
+            managed_departments = user.managed_departments.all()
+            return queryset.filter(assigned_department__in=managed_departments)
+
+        # المستخدم العادي يرى الشكاوى المعينة إليه أو التي أنشأها
+        return queryset.filter(
+            Q(assigned_to=user) | Q(created_by=user)
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = ComplaintFilterForm(self.request.GET)
+        context['bulk_action_form'] = ComplaintBulkActionForm()
+
+        # قائمة المستخدمين للفلاتر المتقدمة
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        context['users'] = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
+
+        # إضافة معلومات الصلاحيات للسياق
+        context['is_admin'] = (
+            self.request.user.is_superuser or
+            self.request.user.groups.filter(name__in=[
+                'Complaints_Managers', 'Complaints_Supervisors', 'Managers'
+            ]).exists()
+        )
+
+        return context
+
+
+class AdminComplaintListView(LoginRequiredMixin, ListView):
+    """قائمة الشكاوى للمدراء - وصول كامل لجميع الشكاوى غير المحلولة"""
+    model = Complaint
+    template_name = 'complaints/admin_complaint_list.html'
+    context_object_name = 'complaints'
+    paginate_by = 25
+
+    def dispatch(self, request, *args, **kwargs):
+        # التحقق من صلاحيات المدير
+        if not (request.user.is_superuser or
+                request.user.groups.filter(name__in=[
+                    'Complaints_Managers', 'Complaints_Supervisors', 'Managers'
+                ]).exists()):
+            messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+            return redirect('complaints:complaint_list')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        # المدراء يرون جميع الشكاوى غير المحلولة
+        queryset = Complaint.objects.select_related(
+            'customer', 'complaint_type', 'assigned_to', 'assigned_department'
+        ).exclude(
+            status__in=['resolved', 'closed']
+        ).order_by('-created_at', '-priority')
+
+        # تطبيق الفلاتر
+        form = ComplaintFilterForm(self.request.GET)
+        if form.is_valid():
+            if form.cleaned_data['status']:
+                queryset = queryset.filter(status__in=form.cleaned_data['status'])
+
+            if form.cleaned_data['priority']:
+                queryset = queryset.filter(priority__in=form.cleaned_data['priority'])
+
+            if form.cleaned_data['complaint_type']:
+                queryset = queryset.filter(
+                    complaint_type__in=form.cleaned_data['complaint_type']
+                )
+
+            if form.cleaned_data['assigned_to']:
+                queryset = queryset.filter(
+                    assigned_to__in=form.cleaned_data['assigned_to']
+                )
+
+            if form.cleaned_data.get('assigned_department'):
+                queryset = queryset.filter(
+                    assigned_department__in=form.cleaned_data['assigned_department']
+                )
+
+            if form.cleaned_data['date_from']:
+                queryset = queryset.filter(
+                    created_at__date__gte=form.cleaned_data['date_from']
+                )
+
+            if form.cleaned_data['date_to']:
+                queryset = queryset.filter(
+                    created_at__date__lte=form.cleaned_data['date_to']
+                )
+
+            if form.cleaned_data.get('search'):
                 search_term = form.cleaned_data['search']
                 search_query = (
                     Q(complaint_number__icontains=search_term) |
@@ -195,6 +368,103 @@ class ComplaintListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['filter_form'] = ComplaintFilterForm(self.request.GET)
         context['bulk_action_form'] = ComplaintBulkActionForm()
+
+        # إحصائيات للمدراء
+        all_unresolved = Complaint.objects.exclude(status__in=['resolved', 'closed'])
+        context['stats'] = {
+            'total_unresolved': all_unresolved.count(),
+            'urgent_count': all_unresolved.filter(priority='urgent').count(),
+            'overdue_count': all_unresolved.filter(deadline__lt=timezone.now()).count(),
+            'escalated_count': all_unresolved.filter(status='escalated').count(),
+            'unassigned_count': all_unresolved.filter(assigned_to__isnull=True).count(),
+        }
+
+        context['is_admin_view'] = True
+
+        return context
+
+
+class ComplaintReportsView(LoginRequiredMixin, TemplateView):
+    """تقارير الشكاوى المتقدمة"""
+    template_name = 'complaints/reports.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        # التحقق من صلاحيات الوصول للتقارير
+        if not (request.user.is_superuser or
+                request.user.groups.filter(name__in=[
+                    'Complaints_Managers', 'Complaints_Supervisors', 'Managers'
+                ]).exists()):
+            messages.error(request, 'ليس لديك صلاحية للوصول إلى التقارير')
+            return redirect('complaints:complaint_list')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # نموذج الفلترة للتقارير
+        context['filter_form'] = ComplaintFilterForm(self.request.GET)
+
+        # إحصائيات عامة
+        all_complaints = Complaint.objects.all()
+        context['total_complaints'] = all_complaints.count()
+        context['resolved_complaints'] = all_complaints.filter(status='resolved').count()
+        context['pending_complaints'] = all_complaints.exclude(status__in=['resolved', 'closed']).count()
+
+        # إحصائيات حسب الفترة الزمنية
+        from datetime import datetime, timedelta
+        today = timezone.now().date()
+        week_ago = today - timedelta(days=7)
+        month_ago = today - timedelta(days=30)
+
+        context['this_week'] = all_complaints.filter(created_at__date__gte=week_ago).count()
+        context['this_month'] = all_complaints.filter(created_at__date__gte=month_ago).count()
+
+        # إحصائيات حسب الأولوية
+        context['priority_stats'] = {
+            'urgent': all_complaints.filter(priority='urgent').count(),
+            'high': all_complaints.filter(priority='high').count(),
+            'medium': all_complaints.filter(priority='medium').count(),
+            'low': all_complaints.filter(priority='low').count(),
+        }
+
+        # إحصائيات حسب الحالة
+        context['status_stats'] = {
+            'new': all_complaints.filter(status='new').count(),
+            'in_progress': all_complaints.filter(status='in_progress').count(),
+            'resolved': all_complaints.filter(status='resolved').count(),
+            'closed': all_complaints.filter(status='closed').count(),
+            'escalated': all_complaints.filter(status='escalated').count(),
+            'overdue': all_complaints.filter(status='overdue').count(),
+        }
+
+        # إحصائيات حسب نوع الشكوى
+        complaint_types = ComplaintType.objects.annotate(
+            complaint_count=Count('complaint')
+        ).order_by('-complaint_count')[:10]
+        context['type_stats'] = complaint_types
+
+        # متوسط وقت الحل
+        resolved_complaints = all_complaints.filter(
+            status='resolved',
+            resolved_at__isnull=False
+        )
+        if resolved_complaints.exists():
+            total_resolution_time = sum([
+                (complaint.resolved_at - complaint.created_at).total_seconds() / 3600
+                for complaint in resolved_complaints
+            ])
+            context['avg_resolution_time'] = round(total_resolution_time / resolved_complaints.count(), 2)
+        else:
+            context['avg_resolution_time'] = 0
+
+        # أفضل الموظفين في حل الشكاوى
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        top_resolvers = User.objects.annotate(
+            resolved_count=Count('assigned_complaints', filter=Q(assigned_complaints__status='resolved'))
+        ).filter(resolved_count__gt=0).order_by('-resolved_count')[:5]
+        context['top_resolvers'] = top_resolvers
+
         return context
 
 
@@ -299,14 +569,11 @@ class ComplaintCreateView(LoginRequiredMixin, CreateView):
             print(f"  القسم المختص: {self.object.assigned_department}")
             print(f"  تاريخ الإنشاء: {self.object.created_at}")
             
-            # التحقق من الطلبات المرتبطة
-            related_orders = self.object.related_orders.all()
-            if related_orders.exists():
-                print(f"الطلبات المرتبطة ({related_orders.count()}):")
-                for order in related_orders:
-                    print(f"  - طلب رقم {order.id}: {order}")
+            # التحقق من الطلب المرتبط
+            if self.object.related_order:
+                print(f"الطلب المرتبط: طلب رقم {self.object.related_order.id}: {self.object.related_order}")
             else:
-                print("لا توجد طلبات مرتبطة")
+                print("لا يوجد طلب مرتبط")
 
             # التحقق من نوع الطلب (AJAX أم عادي)
             if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -438,20 +705,48 @@ def complaint_status_update(request, pk):
     if request.method == 'POST':
         form = ComplaintStatusUpdateForm(request.POST, instance=complaint)
         if form.is_valid():
+            # حفظ الحالة القديمة قبل التحديث
+            old_status = complaint.status
+            old_status_display = complaint.get_status_display()
+
+            # Handle resolution method for resolved status
+            resolution_method_id = request.POST.get('resolution_method')
+            if form.cleaned_data['status'] == 'resolved':
+                if not resolution_method_id:
+                    messages.error(request, 'يجب اختيار طريقة الحل عند حل الشكوى')
+                    return redirect('complaints:complaint_detail', pk=pk)
+
+                try:
+                    resolution_method = ResolutionMethod.objects.get(id=resolution_method_id, is_active=True)
+                except ResolutionMethod.DoesNotExist:
+                    messages.error(request, 'طريقة الحل المحددة غير صحيحة')
+                    return redirect('complaints:complaint_detail', pk=pk)
 
             complaint = form.save()
-            
+
+            # Set resolution method if resolving
+            if complaint.status == 'resolved' and resolution_method_id:
+                complaint.resolution_method = resolution_method
+                complaint.save()
+
             # إنشاء تحديث
             notes = form.cleaned_data.get('notes', '')
-            description = (
-                notes or
-                f'تم تغيير حالة الشكوى إلى {complaint.get_status_display()}'
-            )
+            description = f'تم تغيير حالة الشكوى من {old_status_display} إلى {complaint.get_status_display()}'
+
+            if complaint.status == 'resolved' and hasattr(complaint, 'resolution_method') and complaint.resolution_method:
+                description += f'\nطريقة الحل: {complaint.resolution_method.name}'
+
+            if notes:
+                description += f'\nملاحظات: {notes}'
+
             ComplaintUpdate.objects.create(
                 complaint=complaint,
-                update_type='status_change',
+                update_type='resolution' if complaint.status == 'resolved' else 'status_change',
                 title=f'تغيير الحالة إلى {complaint.get_status_display()}',
                 description=description,
+                old_status=old_status,
+                new_status=complaint.status,
+                resolution_method=complaint.resolution_method if complaint.status == 'resolved' else None,
                 created_by=request.user,
                 is_visible_to_customer=True
             )
@@ -529,6 +824,9 @@ def complaint_escalate(request, pk):
     if request.method == 'POST':
         form = ComplaintEscalationForm(request.POST)
         if form.is_valid():
+            # حفظ الحالة القديمة
+            old_status = complaint.status
+
             # إنشاء سجل تصعيد
             escalation = form.save(commit=False)
             escalation.complaint = complaint
@@ -545,7 +843,9 @@ def complaint_escalate(request, pk):
                 complaint=complaint,
                 update_type='escalation',
                 title='تصعيد الشكوى',
-                description=f'تم تصعيد الشكوى إلى {escalation.escalated_to.get_full_name()}',
+                description=f'تم تصعيد الشكوى إلى {escalation.escalated_to.get_full_name()}\nسبب التصعيد: {escalation.reason}',
+                old_status=old_status,
+                new_status='escalated',
                 created_by=request.user,
                 is_visible_to_customer=True
             )
@@ -564,10 +864,15 @@ def complaint_resolve(request, pk):
     if request.method == 'POST':
         form = ComplaintResolutionForm(request.POST, instance=complaint)
         if form.is_valid():
-            resolution_description = form.cleaned_data['resolution_description']
+            resolution_description = form.cleaned_data.get('resolution_notes', 'تم حل الشكوى')
+
+            # حفظ الحالة القديمة قبل التحديث
+            old_status = complaint.status
+            old_status_display = complaint.get_status_display()
 
             complaint.status = 'resolved'
             complaint.resolved_at = timezone.now()
+            complaint.resolved_by = request.user
             complaint.save()
 
             # إنشاء تحديث
@@ -576,12 +881,17 @@ def complaint_resolve(request, pk):
                 update_type='resolution',
                 title='تم حل الشكوى',
                 description=resolution_description,
+                old_status=old_status,
+                new_status='resolved',
                 created_by=request.user,
                 is_visible_to_customer=True
             )
 
             messages.success(request, 'تم حل الشكوى بنجاح')
             return redirect('complaints:complaint_detail', pk=pk)
+        else:
+            messages.error(request, 'حدث خطأ في حل الشكوى. يرجى المحاولة مرة أخرى.')
+
     return redirect('complaints:complaint_detail', pk=pk)
 
 
@@ -725,18 +1035,169 @@ def bulk_action(request):
         
         else:
             messages.error(request, 'إجراء غير صحيح')
+    
+    return redirect('complaints:complaint_list')
+def complaints_analysis(request):
+    """تحليل الشكاوى وطرق الحل"""
+    from django.db.models import Count, Avg, Q, F
+    from django.db.models.functions import TruncMonth
+    from datetime import timedelta
+
+    # الحصول على الفترة الزمنية من الطلب
+    period = request.GET.get('period', '6months')
+
+    # تحديد تاريخ البداية حسب الفترة
+    end_date = timezone.now()
+    if period == '1month':
+        start_date = end_date - timedelta(days=30)
+    elif period == '3months':
+        start_date = end_date - timedelta(days=90)
+    elif period == '6months':
+        start_date = end_date - timedelta(days=180)
+    elif period == '1year':
+        start_date = end_date - timedelta(days=365)
+    else:
+        start_date = end_date - timedelta(days=180)  # افتراضي 6 أشهر
+
+    # الشكاوى في الفترة المحددة
+    complaints_in_period = Complaint.objects.filter(
+        created_at__gte=start_date,
+        created_at__lte=end_date
+    )
+
+    # الشكاوى المحلولة فقط
+    resolved_complaints = complaints_in_period.filter(status='resolved')
+
+    # إحصائيات عامة
+    total_complaints = complaints_in_period.count()
+    total_resolved = resolved_complaints.count()
+    resolution_rate = (total_resolved / total_complaints * 100) if total_complaints > 0 else 0
+
+    # تحليل طرق الحل
+    resolution_methods_stats = resolved_complaints.values(
+        'resolution_method__name'
+    ).annotate(
+        count=Count('id'),
+        avg_resolution_time=Avg(
+            F('resolved_at') - F('created_at')
+        )
+    ).order_by('-count')
+
+    # تحويل وقت الحل إلى ساعات
+    for method in resolution_methods_stats:
+        if method['avg_resolution_time']:
+            method['avg_resolution_hours'] = method['avg_resolution_time'].total_seconds() / 3600
+        else:
+            method['avg_resolution_hours'] = 0
+
+    # تحليل الشكاوى حسب النوع وطريقة الحل
+    type_resolution_analysis = resolved_complaints.values(
+        'complaint_type__name',
+        'resolution_method__name'
+    ).annotate(
+        count=Count('id')
+    ).order_by('complaint_type__name', '-count')
+
+    # تحليل الشكاوى حسب الشهر
+    monthly_analysis = complaints_in_period.annotate(
+        month=TruncMonth('created_at')
+    ).values('month').annotate(
+        total=Count('id'),
+        resolved=Count('id', filter=Q(status='resolved')),
+        escalated=Count('id', filter=Q(status='escalated')),
+        overdue=Count('id', filter=Q(status='overdue'))
+    ).order_by('month')
+
+    # أكثر طرق الحل فعالية (حسب معدل رضا العملاء)
+    customer_satisfaction = resolved_complaints.filter(
+        customer_rating__isnull=False
+    ).values(
+        'resolution_method__name'
+    ).annotate(
+        avg_rating=Avg('customer_rating'),
+        count=Count('id')
+    ).filter(count__gte=3).order_by('-avg_rating')  # فقط الطرق التي استخدمت 3 مرات على الأقل
+
+    # أسرع طرق الحل
+    fastest_methods = resolved_complaints.filter(
+        resolution_method__isnull=False
+    ).values(
+        'resolution_method__name'
+    ).annotate(
+        avg_time=Avg(F('resolved_at') - F('created_at')),
+        count=Count('id')
+    ).filter(count__gte=3).order_by('avg_time')[:5]
+
+    # تحويل الوقت إلى ساعات
+    for method in fastest_methods:
+        if method['avg_time']:
+            method['avg_hours'] = method['avg_time'].total_seconds() / 3600
+        else:
+            method['avg_hours'] = 0
+
+    context = {
+        'period': period,
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_complaints': total_complaints,
+        'total_resolved': total_resolved,
+        'resolution_rate': round(resolution_rate, 1),
+        'resolution_methods_stats': resolution_methods_stats,
+        'type_resolution_analysis': type_resolution_analysis,
+        'monthly_analysis': monthly_analysis,
+        'customer_satisfaction': customer_satisfaction,
+        'fastest_methods': fastest_methods,
+    }
+
+    return render(request, 'complaints/analysis.html', context)
 
 
 @login_required
 def notifications_list(request):
     """قائمة إشعارات الشكاوى للمستخدم مع إحصائيات وفلاتر متقدمة."""
-    # تم حذف نظام الإشعارات
-    stats = {
-        'total_notifications': 0,
-        'unread_notifications': 0,
-        'urgent_notifications': 0,
-        'today_notifications': 0,
-    }
+    try:
+        # استخدام نظام الإشعارات المخصص
+        from django.contrib.contenttypes.models import ContentType
+        from notifications.models import Notification
+
+        # الحصول على إشعارات الشكاوى للمستخدم الحالي
+        complaint_content_type = ContentType.objects.get_for_model(Complaint)
+        base_queryset = Notification.objects.filter(
+            visible_to=request.user,
+            content_type=complaint_content_type
+        ).order_by('-created_at')
+
+        # حساب الإحصائيات
+        total_notifications = base_queryset.count()
+
+        # الإشعارات غير المقروءة (التي لا يوجد لها سجل قراءة أو مقروءة كـ False)
+        unread_notifications = base_queryset.exclude(
+            visibility_records__user=request.user,
+            visibility_records__is_read=True
+        ).count()
+
+        # الإشعارات العاجلة (priority عالي)
+        urgent_notifications = base_queryset.filter(priority='high').count()
+
+        # إشعارات اليوم
+        today_notifications = base_queryset.filter(created_at__date=timezone.now().date()).count()
+
+        stats = {
+            'total_notifications': total_notifications,
+            'unread_notifications': unread_notifications,
+            'urgent_notifications': urgent_notifications,
+            'today_notifications': today_notifications,
+        }
+
+    except Exception as e:
+        # في حالة حدوث خطأ، نستخدم queryset فارغ
+        base_queryset = Notification.objects.none()
+        stats = {
+            'total_notifications': 0,
+            'unread_notifications': 0,
+            'urgent_notifications': 0,
+            'today_notifications': 0,
+        }
 
     # Apply filters
     queryset = base_queryset
@@ -888,6 +1349,138 @@ def ajax_complaint_stats(request):
     }
     
     return JsonResponse(stats, safe=False)
+
+
+class ComplaintEvaluationReportView(LoginRequiredMixin, TemplateView):
+    """تقرير تقييمات الشكاوى"""
+    template_name = 'complaints/evaluation_report.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        # التحقق من صلاحيات الوصول للتقارير
+        if not (request.user.is_superuser or
+                request.user.groups.filter(name__in=[
+                    'Complaints_Managers', 'Complaints_Supervisors', 'Managers'
+                ]).exists()):
+            messages.error(request, 'ليس لديك صلاحية للوصول إلى تقارير التقييمات')
+            return redirect('complaints:complaint_list')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # إحصائيات التقييمات العامة
+        evaluations = ComplaintEvaluation.objects.select_related('complaint')
+
+        if evaluations.exists():
+            # متوسط التقييمات
+            avg_stats = evaluations.aggregate(
+                avg_overall=Avg('overall_rating'),
+                avg_response_time=Avg('response_time_rating'),
+                avg_solution_quality=Avg('solution_quality_rating'),
+                avg_staff_behavior=Avg('staff_behavior_rating'),
+                total_evaluations=Count('id')
+            )
+
+            # توزيع التقييمات
+            rating_distribution = evaluations.values('overall_rating').annotate(
+                count=Count('id')
+            ).order_by('overall_rating')
+
+            # التقييمات حسب نوع الشكوى
+            by_complaint_type = evaluations.values(
+                'complaint__complaint_type__name'
+            ).annotate(
+                count=Count('id'),
+                avg_rating=Avg('overall_rating')
+            ).order_by('-avg_rating')
+
+            # التقييمات الحديثة
+            recent_evaluations = evaluations.order_by('-evaluation_date')[:10]
+
+            # نسبة التوصية
+            recommendation_stats = evaluations.aggregate(
+                total_responses=Count('would_recommend'),
+                positive_recommendations=Count('would_recommend', filter=Q(would_recommend=True)),
+                negative_recommendations=Count('would_recommend', filter=Q(would_recommend=False))
+            )
+
+            if recommendation_stats['total_responses'] > 0:
+                recommendation_percentage = (
+                    recommendation_stats['positive_recommendations'] /
+                    recommendation_stats['total_responses'] * 100
+                )
+            else:
+                recommendation_percentage = 0
+
+            context.update({
+                'avg_stats': avg_stats,
+                'rating_distribution': list(rating_distribution),
+                'by_complaint_type': list(by_complaint_type),
+                'recent_evaluations': recent_evaluations,
+                'recommendation_stats': recommendation_stats,
+                'recommendation_percentage': round(recommendation_percentage, 1),
+                'has_data': True
+            })
+        else:
+            context['has_data'] = False
+
+        return context
+
+
+@login_required
+def create_evaluation(request, complaint_id):
+    """إنشاء تقييم للشكوى"""
+    complaint = get_object_or_404(Complaint, pk=complaint_id)
+
+    # التحقق من أن الشكوى محلولة وبحاجة تقييم
+    if complaint.status != 'pending_evaluation':
+        messages.error(request, 'هذه الشكوى غير متاحة للتقييم')
+        return redirect('complaints:complaint_detail', pk=complaint.pk)
+
+    # التحقق من عدم وجود تقييم مسبق
+    if hasattr(complaint, 'evaluation'):
+        messages.info(request, 'تم تقييم هذه الشكوى مسبقاً')
+        return redirect('complaints:complaint_detail', pk=complaint.pk)
+
+    if request.method == 'POST':
+        try:
+            # إنشاء التقييم
+            evaluation = ComplaintEvaluation.objects.create(
+                complaint=complaint,
+                overall_rating=int(request.POST.get('overall_rating')),
+                response_time_rating=int(request.POST.get('response_time_rating')),
+                solution_quality_rating=int(request.POST.get('solution_quality_rating')),
+                staff_behavior_rating=int(request.POST.get('staff_behavior_rating')),
+                positive_feedback=request.POST.get('positive_feedback', ''),
+                negative_feedback=request.POST.get('negative_feedback', ''),
+                suggestions=request.POST.get('suggestions', ''),
+                would_recommend=request.POST.get('would_recommend') == 'true',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
+            # تحديث الشكوى لتصبح قابلة للإغلاق
+            messages.success(request, 'تم حفظ التقييم بنجاح. شكراً لك!')
+
+            # إنشاء تحديث للشكوى
+            ComplaintUpdate.objects.create(
+                complaint=complaint,
+                update_type='customer_response',
+                title='تم إضافة تقييم العميل',
+                description=f'تم تقييم الشكوى بمتوسط {evaluation.average_rating:.1f}/5',
+                created_by=request.user,
+                is_visible_to_customer=True
+            )
+
+            return redirect('complaints:complaint_detail', pk=complaint.pk)
+
+        except (ValueError, TypeError) as e:
+            messages.error(request, 'حدث خطأ في البيانات المدخلة')
+
+    context = {
+        'complaint': complaint
+    }
+
+    return render(request, 'complaints/create_evaluation.html', context)
 
 
 # AJAX Views for smart customer selection and data loading
@@ -1075,7 +1668,7 @@ def get_complaint_type_fields(request, type_id):
             # جلب موظفي القسم المختص
             from accounts.models import User
             staff_users = User.objects.filter(
-                department=complaint_type.responsible_department,
+                departments=complaint_type.responsible_department,
                 is_active=True
             ).values('id', 'first_name', 'last_name', 'username')
             
@@ -1131,3 +1724,98 @@ def get_complaint_type_fields(request, type_id):
         
     except ComplaintType.DoesNotExist:
         return JsonResponse({'error': 'نوع الشكوى غير موجود'}, status=404)
+
+
+# Import export functions
+from .utils.export import export_complaints_to_csv, export_complaints_to_excel
+from django.contrib.auth.decorators import permission_required
+from django.utils.decorators import method_decorator
+from django.views.generic import FormView
+from django import forms
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from .models import Complaint, ComplaintType
+
+class ExportForm(forms.Form):
+    """نموذج تصدير الشكاوى"""
+    EXPORT_CHOICES = [
+        ('csv', 'تصدير إلى CSV'),
+        ('excel', 'تصدير إلى Excel'),
+    ]
+    
+    export_format = forms.ChoiceField(
+        choices=EXPORT_CHOICES,
+        label='صيغة التصدير',
+        widget=forms.RadioSelect
+    )
+    
+    date_from = forms.DateField(
+        required=False,
+        label='من تاريخ',
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
+    
+    date_to = forms.DateField(
+        required=False,
+        label='إلى تاريخ',
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
+    
+    status = forms.MultipleChoiceField(
+        choices=Complaint.STATUS_CHOICES,
+        required=False,
+        label='الحالة',
+        widget=forms.CheckboxSelectMultiple
+    )
+    
+    complaint_type = forms.ModelMultipleChoiceField(
+        queryset=ComplaintType.objects.filter(is_active=True),
+        required=False,
+        label='نوع الشكوى',
+        widget=forms.CheckboxSelectMultiple
+    )
+    
+    priority = forms.MultipleChoiceField(
+        choices=Complaint.PRIORITY_CHOICES,
+        required=False,
+        label='الأولوية',
+        widget=forms.CheckboxSelectMultiple
+    )
+
+@method_decorator(permission_required('complaints.view_complaint'), name='dispatch')
+class ExportComplaintsView(FormView):
+    """صفحة تصدير الشكاوى"""
+    template_name = 'complaints/export.html'
+    form_class = ExportForm
+    success_url = reverse_lazy('complaints:export_complaints')
+    
+    def form_valid(self, form):
+        queryset = Complaint.objects.all()
+        
+        # تطبيق الفلاتر
+        if form.cleaned_data['date_from']:
+            queryset = queryset.filter(created_at__date__gte=form.cleaned_data['date_from'])
+        
+        if form.cleaned_data['date_to']:
+            queryset = queryset.filter(created_at__date__lte=form.cleaned_data['date_to'])
+        
+        if form.cleaned_data['status']:
+            queryset = queryset.filter(status__in=form.cleaned_data['status'])
+        
+        if form.cleaned_data['complaint_type']:
+            queryset = queryset.filter(complaint_type__in=form.cleaned_data['complaint_type'])
+        
+        if form.cleaned_data['priority']:
+            queryset = queryset.filter(priority__in=form.cleaned_data['priority'])
+        
+        # التأكد من وجود نتائج
+        if not queryset.exists():
+            messages.warning(self.request, 'لا توجد شكاوى تطابق معايير البحث')
+            return redirect('complaints:export_complaints')
+        
+        # تصدير البيانات
+        if form.cleaned_data['export_format'] == 'csv':
+            return export_complaints_to_csv(queryset=queryset)
+        else:
+            return export_complaints_to_excel(queryset=queryset)

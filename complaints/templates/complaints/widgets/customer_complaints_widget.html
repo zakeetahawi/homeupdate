@@ -1,0 +1,132 @@
+{% load complaints_tags %}
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+            <i class="fas fa-headset me-2"></i>
+            شكاوى العميل
+        </h6>
+        {% if has_complaints %}
+        <div class="btn-group">
+            <a href="{% url 'complaints:customer_complaints' customer.id %}"
+               class="btn btn-sm btn-outline-light">
+                <i class="fas fa-external-link-alt me-1"></i>
+                عرض الكل
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="card-body">
+        {% if has_complaints %}
+            <!-- Statistics Row -->
+            <div class="row mb-3">
+                <div class="col-6 col-md-3 text-center">
+                    <div class="text-primary fw-bold fs-5">{{ stats.total }}</div>
+                    <small class="text-muted">إجمالي</small>
+                </div>
+                <div class="col-6 col-md-3 text-center">
+                    <div class="text-info fw-bold fs-5">{{ stats.new }}</div>
+                    <small class="text-muted">جديدة</small>
+                </div>
+                <div class="col-6 col-md-3 text-center">
+                    <div class="text-warning fw-bold fs-5">{{ stats.in_progress }}</div>
+                    <small class="text-muted">قيد الحل</small>
+                </div>
+                <div class="col-6 col-md-3 text-center">
+                    <div class="text-success fw-bold fs-5">{{ stats.resolved }}</div>
+                    <small class="text-muted">محلولة</small>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Recent Complaints -->
+            <div class="complaints-list">
+                {% for complaint in complaints %}
+                    <div class="complaint-item border-start border-3 border-{{ complaint.status }} p-3 mb-2 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    <a href="{% url 'complaints:complaint_detail' complaint.pk %}" 
+                                       class="text-decoration-none text-dark">
+                                        {{ complaint.title|truncatechars:50 }}
+                                    </a>
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ complaint.created_at|date:"d/m/Y" }}
+                                    {% if complaint.complaint_type %}
+                                        | <i class="fas fa-tag me-1"></i>{{ complaint.complaint_type.name }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                {% complaint_status_badge complaint.status %}
+                                {% complaint_priority_badge complaint.priority %}
+                            </div>
+                        </div>
+                        
+                        {% if complaint.assigned_to %}
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-user me-1"></i>
+                                    المسؤول: {{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}
+                                </small>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ complaint|time_until_deadline }}
+                            </small>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="mt-3 d-flex gap-2">
+                <a href="{% url 'complaints:customer_complaints' customer.id %}"
+                   class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-list me-1"></i>
+                    جميع الشكاوى
+                </a>
+            </div>
+        {% else %}
+            <!-- No Complaints State -->
+            <div class="text-center py-4">
+                <i class="fas fa-smile text-success mb-3" style="font-size: 3rem;"></i>
+                <h6 class="text-muted">لا توجد شكاوى لهذا العميل</h6>
+                <p class="text-muted small">هذا أمر جيد! العميل راضٍ عن الخدمة</p>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    يمكنك إضافة شكوى جديدة من الأزرار في أعلى الصفحة
+                </small>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.complaint-item {
+    transition: all 0.3s ease;
+}
+
+.complaint-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.border-new { border-color: #007bff !important; }
+.border-in_progress { border-color: #ffc107 !important; }
+.border-resolved { border-color: #28a745 !important; }
+.border-overdue { border-color: #dc3545 !important; }
+.border-escalated { border-color: #6f42c1 !important; }
+.border-closed { border-color: #6c757d !important; }
+</style>

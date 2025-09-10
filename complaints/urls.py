@@ -1,5 +1,7 @@
 from django.urls import path
-from . import views
+from . import views, api_views
+from .views import ExportComplaintsView
+from .api_views import clear_complaints_notifications, assigned_complaints_api
 
 app_name = 'complaints'
 
@@ -9,6 +11,8 @@ urlpatterns = [
     
     # إدارة الشكاوى
     path('list/', views.ComplaintListView.as_view(), name='complaint_list'),
+    path('admin/', views.AdminComplaintListView.as_view(), name='admin_complaint_list'),
+    path('reports/', views.ComplaintReportsView.as_view(), name='reports'),
     path('create/', views.ComplaintCreateView.as_view(), name='complaint_create'),
     path('<int:pk>/', views.ComplaintDetailView.as_view(), name='complaint_detail'),
     path('<int:pk>/edit/', views.ComplaintUpdateView.as_view(), name='complaint_edit'),
@@ -25,8 +29,13 @@ urlpatterns = [
     # عرض شكاوى العميل
     path('customer/<int:customer_id>/', views.customer_complaints, name='customer_complaints'),
     
-    # الإحصائيات
+    # الإحصائيات والتصدير
     path('statistics/', views.complaints_statistics, name='statistics'),
+    path('export/', ExportComplaintsView.as_view(), name='export_complaints'),
+
+    # التقييمات
+    path('evaluations/report/', views.ComplaintEvaluationReportView.as_view(), name='evaluation_report'),
+    path('<int:complaint_id>/evaluate/', views.create_evaluation, name='create_evaluation'),
     
     # الإجراءات المجمعة
     path('bulk-action/', views.bulk_action, name='bulk_action'),
@@ -40,6 +49,7 @@ urlpatterns = [
     
     # الإشعارات
     path('notifications/', views.notifications_list, name='notifications_list'),
+    path('analysis/', views.complaints_analysis, name='analysis'),
     path('notifications/bulk-action/',
          views.notification_bulk_action, name='notification_bulk_action'),
     path('notifications/mark-all-as-read/',
@@ -48,4 +58,30 @@ urlpatterns = [
          views.mark_notification_as_read, name='mark_notification_as_read'),
     path('notifications/<int:notification_id>/delete/',
          views.delete_notification, name='delete_notification'),
+
+    # Enhanced API Endpoints
+    path('api/<int:complaint_id>/status/',
+         api_views.ComplaintStatusUpdateView.as_view(), name='api_status_update'),
+    path('api/<int:complaint_id>/assignment/',
+         api_views.ComplaintAssignmentUpdateView.as_view(), name='api_assignment_update'),
+    path('api/<int:complaint_id>/escalate/',
+         api_views.ComplaintEscalationView.as_view(), name='api_escalate'),
+    path('api/<int:complaint_id>/assign/',
+         api_views.ComplaintAssignmentView.as_view(), name='api_assign'),
+    path('api/<int:complaint_id>/note/',
+         api_views.ComplaintNoteView.as_view(), name='api_note'),
+    path('api/search/', api_views.complaint_search_api, name='api_search'),
+    path('api/stats/', api_views.complaint_stats_api, name='api_stats'),
+    path('api/notifications/', api_views.complaints_notifications_api, name='api_notifications'),
+    path('api/notifications/clear/', api_views.clear_complaints_notifications, name='api_clear_notifications'),
+    path('api/notifications/<int:notification_id>/read/', api_views.mark_complaint_notification_read, name='api_mark_notification_read'),
+    path('api/assigned/', api_views.assigned_complaints_api, name='api_assigned_complaints'),
+    path('api/escalated/', api_views.escalated_complaints_api, name='api_escalated_complaints'),
+    path('api/assignment-notifications/', api_views.AssignmentNotificationsView.as_view(), name='api_assignment_notifications'),
+    path('api/assignment-notifications/<int:notification_id>/read/', api_views.mark_assignment_notification_read, name='api_mark_assignment_read'),
+    path('api/resolution-methods/', api_views.ResolutionMethodsView.as_view(), name='api_resolution_methods'),
+    path('api/users-for-escalation/', api_views.UsersForEscalationView.as_view(), name='api_users_for_escalation'),
+    path('api/users-for-assignment/', api_views.UsersForAssignmentView.as_view(), name='api_users_for_assignment'),
+    path('api/unresolved-stats/', api_views.UnresolvedComplaintsStatsView.as_view(), name='api_unresolved_stats'),
+    path('api/complaint-type/<int:complaint_type_id>/responsible-staff/', api_views.get_complaint_type_responsible_staff, name='api_complaint_type_responsible_staff'),
 ]

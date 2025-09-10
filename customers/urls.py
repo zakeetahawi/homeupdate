@@ -13,6 +13,7 @@ urlpatterns = [
     
     # URLs باستخدام كود العميل
     path('customer/<str:customer_code>/', views.customer_detail_by_code, name='customer_detail_by_code'),
+    path('customer/<str:customer_code>/add-note/', views.add_customer_note_by_code, name='add_note_by_code'),
     
     # URLs القديمة مع إعادة توجيه
     path('<int:pk>/', views.customer_detail_redirect, name='customer_detail'),

@@ -1,9 +1,10 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from datetime import timedelta
 from .models import (
     Complaint, ComplaintType, ComplaintUpdate, ComplaintAttachment,
-    ComplaintEscalation
+    ComplaintEscalation, ComplaintTemplate, ResolutionMethod
 )
 from customers.models import Customer
 from orders.models import Order
@@ -14,6 +15,17 @@ User = get_user_model()
 
 class ComplaintForm(forms.ModelForm):
     """نموذج إنشاء وتحديث الشكوى"""
+    
+    template = forms.ModelChoiceField(
+        queryset=ComplaintTemplate.objects.filter(is_active=True),
+        required=False,
+        empty_label='اختر نموذجاً (اختياري)',
+        label='نموذج جاهز',
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'data-placeholder': 'اختر نموذجاً جاهزاً'
+        })
+    )
     
     # حقول التعيين والمسؤولية
     assigned_to = forms.ModelChoiceField(
@@ -56,6 +68,17 @@ class ComplaintForm(forms.ModelForm):
         self.customer = kwargs.pop('customer', None)
         super().__init__(*args, **kwargs)
         
+        # تحديث قائمة النماذج بناءً على نوع الشكوى
+        if 'complaint_type' in self.data:
+            try:
+                complaint_type_id = int(self.data.get('complaint_type'))
+                self.fields['template'].queryset = ComplaintTemplate.objects.filter(
+                    complaint_type_id=complaint_type_id,
+                    is_active=True
+                )
+            except (ValueError, TypeError):
+                self.fields['template'].queryset = ComplaintTemplate.objects.none()
+        
         # إخفاء حقل العميل الأصلي واستخدام البحث الذكي
         self.fields['customer'].widget = forms.HiddenInput()
         
@@ -82,6 +105,11 @@ class ComplaintForm(forms.ModelForm):
         self.fields['assigned_to'].queryset = User.objects.filter(
             is_active=True
         ).order_by('first_name', 'last_name')
+
+        # إضافة JavaScript لتحديث قائمة الموظفين بناءً على نوع الشكوى
+        self.fields['complaint_type'].widget.attrs.update({
+            'onchange': 'updateResponsibleStaff(this.value)'
+        })
         
         # تحديث queryset للفروع
         try:
@@ -107,22 +135,103 @@ class ComplaintForm(forms.ModelForm):
         if hasattr(self, 'customer') and self.customer:
             customer_info = f"{self.customer.name} - {self.customer.phone}"
             self.fields['customer_search'].initial = customer_info
+            # Set the customer in the hidden field
+            self.fields['customer'].initial = self.customer.pk
             # Update orders queryset for the current customer
             self.fields['related_order'].queryset = Order.objects.filter(
                 customer=self.customer
             ).order_by('-created_at')
+            # Make customer search field readonly when customer is pre-selected
+            self.fields['customer_search'].widget.attrs['readonly'] = True
+            self.fields['customer_search'].widget.attrs['class'] += ' bg-light'
         else:
             self.fields['customer_search'].initial = ''
             self.fields['related_order'].queryset = Order.objects.none()
     
     def clean(self):
         cleaned_data = super().clean()
-        
-        # تحديث قائمة الطلبات بناءً على العميل المحدد
-        customer = cleaned_data.get('customer')
+        errors = {}
+
+        try:
+            # استخدام النموذج إذا تم اختياره
+            template = cleaned_data.get('template')
+            if template:
+                customer = cleaned_data.get('customer')
+                related_order = cleaned_data.get('related_order')
+
+                try:
+                    # تعبئة العنوان والوصف من النموذج
+                    cleaned_data['title'] = template.generate_title(
+                        customer=customer,
+                        order=related_order
+                    )
+                    cleaned_data['description'] = template.generate_description(
+                        customer=customer,
+                        order=related_order
+                    )
+
+                    # تعيين الأولوية والموعد النهائي من النموذج
+                    cleaned_data['priority'] = template.priority
+                    if not cleaned_data.get('deadline'):
+                        cleaned_data['deadline'] = timezone.now() + timedelta(
+                            hours=template.default_deadline_hours
+                        )
+                except Exception as e:
+                    errors['template'] = f'خطأ في تطبيق النموذج: {str(e)}'
+
+            # التحقق من العميل
+            customer = cleaned_data.get('customer')
+            if not customer:
+                errors['customer'] = 'يجب اختيار عميل'
+            else:
+                # التحقق من نشاط العميل
+                if hasattr(customer, 'is_active') and not customer.is_active:
+                    errors['customer'] = 'هذا العميل غير نشط حالياً'
+
+                # التحقق من وجود عقد ساري للعميل (إذا كان مطلوباً)
+                try:
+                    if hasattr(customer, 'has_active_contract') and not customer.has_active_contract():
+                        errors['customer'] = 'لا يوجد عقد ساري لهذا العميل'
+                except Exception:
+                    # تجاهل الخطأ إذا كانت الطريقة غير متوفرة
+                    pass
+
+            # التحقق من الطلب المرتبط
+            related_order = cleaned_data.get('related_order')
+            if related_order and customer:
+                if related_order.customer != customer:
+                    errors['related_order'] = 'الطلب المحدد لا ينتمي للعميل المختار'
+
+                # التحقق من حالة الطلب
+                if hasattr(related_order, 'status') and related_order.status in ['cancelled', 'rejected']:
+                    errors['related_order'] = 'لا يمكن ربط شكوى بطلب ملغي أو مرفوض'
+
+        except Exception as e:
+            errors['__all__'] = f'حدث خطأ في التحقق من البيانات: {str(e)}'
+
+        if errors:
+            raise forms.ValidationError(errors)
+
+        # تحديث قائمة الطلبات
         if customer and customer != self.customer:
             self.customer = customer
             self.update_related_order_queryset()
+        
+        # التحقق من الموعد النهائي
+        deadline = cleaned_data.get('deadline')
+        if deadline:
+            if deadline < timezone.now():
+                raise forms.ValidationError({
+                    'deadline': 'لا يمكن تحديد موعد نهائي في الماضي'
+                })
+            
+            complaint_type = cleaned_data.get('complaint_type')
+            if complaint_type and complaint_type.default_deadline_hours:
+                max_deadline = timezone.now() + timedelta(hours=complaint_type.default_deadline_hours * 2)
+                if deadline > max_deadline:
+                    raise forms.ValidationError({
+                        'deadline': f'الموعد النهائي يتجاوز الحد المسموح به ({complaint_type.default_deadline_hours * 2} ساعة)'
+                    })
         
         return cleaned_data
     
@@ -216,9 +325,24 @@ class ComplaintForm(forms.ModelForm):
 class ComplaintUpdateForm(forms.ModelForm):
     """نموذج إضافة تحديث للشكوى"""
     
+    class Meta:
+        model = ComplaintUpdate
+        fields = ['update_type', 'title', 'description', 'is_visible_to_customer']
+        widgets = {
+            'title': forms.TextInput(attrs={'placeholder': 'عنوان التحديث'}),
+            'description': forms.Textarea(attrs={
+                'placeholder': 'تفاصيل التحديث (إجباري)',
+                'rows': 4
+            })
+        }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
+        # جعل الوصف إجباري
+        self.fields['description'].required = True
+        self.fields['description'].help_text = 'يجب إضافة تفاصيل التحديث'
+
         # إضافة CSS classes
         for field_name, field in self.fields.items():
             if isinstance(field.widget, forms.widgets.Input):
@@ -228,17 +352,6 @@ class ComplaintUpdateForm(forms.ModelForm):
                 field.widget.attrs['rows'] = 4
             elif isinstance(field.widget, forms.widgets.Select):
                 field.widget.attrs['class'] = 'form-select'
-    
-    class Meta:
-        model = ComplaintUpdate
-        fields = ['update_type', 'title', 'description', 'is_visible_to_customer']
-        widgets = {
-            'title': forms.TextInput(attrs={'placeholder': 'عنوان التحديث'}),
-            'description': forms.Textarea(attrs={
-                'placeholder': 'تفاصيل التحديث',
-                'rows': 4
-            })
-        }
 
 
 class ComplaintStatusUpdateForm(forms.ModelForm):
@@ -246,14 +359,20 @@ class ComplaintStatusUpdateForm(forms.ModelForm):
     
     notes = forms.CharField(
         widget=forms.Textarea(attrs={'rows': 3}),
-        required=False,
+        required=True,
         label='ملاحظات التحديث',
-        help_text='ملاحظات إضافية حول تغيير الحالة'
+        help_text='ملاحظات إضافية حول تغيير الحالة (إجباري)'
     )
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
+        # فلترة الموظفين النشطين فقط (جميع المستخدمين النشطين)
+        self.fields['assigned_to'].queryset = User.objects.filter(
+            is_active=True
+        ).order_by('first_name', 'last_name')
+        self.fields['assigned_to'].required = False
+
         # إضافة CSS classes
         for field_name, field in self.fields.items():
             if isinstance(field.widget, forms.widgets.Input):
@@ -263,10 +382,10 @@ class ComplaintStatusUpdateForm(forms.ModelForm):
                 field.widget.attrs['rows'] = 4
             elif isinstance(field.widget, forms.widgets.Select):
                 field.widget.attrs['class'] = 'form-select'
-    
+
     class Meta:
         model = Complaint
-        fields = ['status']
+        fields = ['status', 'assigned_to', 'assigned_department']
 
 
 class ComplaintAssignmentForm(forms.ModelForm):
@@ -282,11 +401,10 @@ class ComplaintAssignmentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # فلترة الموظفين النشطين فقط
+        # فلترة الموظفين النشطين فقط (جميع المستخدمين النشطين)
         self.fields['assigned_to'].queryset = User.objects.filter(
-            is_active=True,
-            is_staff=True
-        )
+            is_active=True
+        ).order_by('first_name', 'last_name')
         
         # إضافة CSS classes
         for field_name, field in self.fields.items():
@@ -359,12 +477,20 @@ class ComplaintAttachmentForm(forms.ModelForm):
 
 class ComplaintResolutionForm(forms.ModelForm):
     """نموذج حل الشكوى"""
-    
+
     resolution_notes = forms.CharField(
         widget=forms.Textarea(attrs={'rows': 4}),
         required=True,
         label='ملاحظات الحل',
         help_text='اشرح كيف تم حل الشكوى'
+    )
+
+    resolution_method = forms.ModelChoiceField(
+        queryset=ResolutionMethod.objects.filter(is_active=True),
+        required=True,
+        label='طريقة الحل',
+        help_text='اختر طريقة الحل المناسبة',
+        empty_label='اختر طريقة الحل...'
     )
     
     def __init__(self, *args, **kwargs):
@@ -382,15 +508,16 @@ class ComplaintResolutionForm(forms.ModelForm):
     
     class Meta:
         model = Complaint
-        fields = ['status']
+        fields = ['status', 'resolution_method']
         
     def save(self, commit=True):
         complaint = super().save(commit=False)
+        complaint.status = 'resolved'
         complaint.resolved_at = timezone.now()
-        
+
         if commit:
             complaint.save()
-            
+
         return complaint
 
 
@@ -420,37 +547,70 @@ class ComplaintCustomerRatingForm(forms.ModelForm):
 
 
 class ComplaintFilterForm(forms.Form):
-    """نموذج فلترة الشكاوى"""
-    
-    status = forms.ChoiceField(
-        choices=[('', 'جميع الحالات')] + Complaint.STATUS_CHOICES,
+    """نموذج فلترة الشكاوى مع دعم التحديد المتعدد"""
+
+    status = forms.MultipleChoiceField(
+        choices=Complaint.STATUS_CHOICES,
         required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-select',
+            'data-placeholder': 'اختر الحالات...',
+            'multiple': True
+        })
     )
-    priority = forms.ChoiceField(
-        choices=[('', 'جميع الأولويات')] + Complaint.PRIORITY_CHOICES,
+    priority = forms.MultipleChoiceField(
+        choices=Complaint.PRIORITY_CHOICES,
         required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-select',
+            'data-placeholder': 'اختر الأولويات...',
+            'multiple': True
+        })
     )
-    complaint_type = forms.ModelChoiceField(
+    complaint_type = forms.ModelMultipleChoiceField(
         queryset=ComplaintType.objects.filter(is_active=True),
         required=False,
-        empty_label='جميع الأنواع',
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-select',
+            'data-placeholder': 'اختر الأنواع...',
+            'multiple': True
+        })
     )
-    assigned_to = forms.ModelChoiceField(
-        queryset=User.objects.filter(is_active=True, is_staff=True),
+    assigned_to = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
         required=False,
-        empty_label='جميع الموظفين',
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-select',
+            'data-placeholder': 'اختر الموظفين...',
+            'multiple': True
+        })
+    )
+    assigned_department = forms.ModelMultipleChoiceField(
+        queryset=Department.objects.filter(is_active=True),
+        required=False,
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-select',
+            'data-placeholder': 'اختر الأقسام...',
+            'multiple': True
+        })
     )
     date_from = forms.DateField(
         required=False,
+        label='من تاريخ',
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
     date_to = forms.DateField(
         required=False,
+        label='إلى تاريخ',
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    search = forms.CharField(
+        required=False,
+        label='البحث',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'ابحث في رقم الشكوى، العميل، العنوان، أو الوصف...'
+        })
     )
 
 
@@ -469,7 +629,7 @@ class ComplaintBulkActionForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     assigned_to = forms.ModelChoiceField(
-        queryset=User.objects.filter(is_active=True, is_staff=True),
+        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
         required=False,
         empty_label='اختر الموظف',
         widget=forms.Select(attrs={'class': 'form-select'})

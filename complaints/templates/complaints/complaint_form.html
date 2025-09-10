@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load widget_tweaks %}
 
 {% block title %}
     {% if complaint %}
@@ -15,20 +16,35 @@
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css" rel="stylesheet" />
 
 <style>
+    /* Mobile-first styles */
     .form-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    @media (min-width: 768px) {
+        .form-header {
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
     }
     
     .form-card {
         background: white;
         border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    @media (min-width: 768px) {
+        .form-card {
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
     }
     
     .form-section {
@@ -85,9 +101,53 @@
     
     .btn-action {
         border-radius: 10px;
-        padding: 0.75rem 2rem;
+        padding: 0.75rem 1rem;
         font-weight: 600;
-        min-width: 120px;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    @media (min-width: 768px) {
+        .btn-action {
+            width: auto;
+            min-width: 120px;
+            padding: 0.75rem 2rem;
+            margin-bottom: 0;
+        }
+    }
+    
+    /* Responsive grid adjustments */
+    .grid-col {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding: 0.5rem;
+    }
+    
+    @media (min-width: 768px) {
+        .grid-col {
+            flex: 0 0 50%;
+            max-width: 50%;
+            padding: 1rem;
+        }
+    }
+    
+    /* Mobile-friendly form controls */
+    .form-control, .form-select {
+        font-size: 16px; /* Prevents zoom on iOS */
+        -webkit-appearance: none; /* Better styling on iOS */
+        margin-bottom: 1rem;
+    }
+    
+    /* Touch-friendly checkboxes and radio buttons */
+    .form-check-input {
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-top: 0.25rem;
+    }
+    
+    .form-check-label {
+        padding-left: 0.5rem;
+        padding-top: 0.25rem;
     }
     
     .priority-preview {
@@ -233,6 +293,7 @@
                                     {% endif %}
                                 </select>
                                 {{ form.customer }}
+                                {{ form.customer_search|add_class:"d-none" }}
                                 {% if form.customer.errors %}
                                     <div class="invalid-feedback d-block">
                                         {{ form.customer.errors|join:", " }}
@@ -393,57 +454,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- معلومات مرتبطة -->
-                    <div class="form-section">
-                        <h5 class="form-section-title">
-                            <i class="fas fa-link me-2"></i>
-                            ربط بسجلات أخرى (اختياري)
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.related_order.id_for_label }}" class="form-label">
-                                    {{ form.related_order.label }}
-                                </label>
-                                {{ form.related_order }}
-                                {% if form.related_order.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.related_order.errors|join:", " }}
-                                    </div>
-                                {% endif %}
-                                <div class="form-help-text">اختر الطلب المرتبط بالشكوى (سيتم تحديث القائمة عند اختيار العميل)</div>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.content_type.id_for_label }}" class="form-label">
-                                    {{ form.content_type.label }}
-                                </label>
-                                {{ form.content_type }}
-                                {% if form.content_type.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.content_type.errors|join:", " }}
-                                    </div>
-                                {% endif %}
-                                <div class="form-help-text">نوع السجل المرتبط</div>
-                            </div>
-                        </div>
-                        
-                        <div class="row" id="object-id-row" style="display:none;">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.object_id.id_for_label }}" class="form-label">
-                                    {{ form.object_id.label }}
-                                </label>
-                                {{ form.object_id }}
-                                {% if form.object_id.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.object_id.errors|join:", " }}
-                                    </div>
-                                {% endif %}
-                                <div class="form-help-text">معرف السجل المحدد</div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -578,6 +588,37 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
+    // تحديث معلومات العميل عند الاختيار
+    function updateCustomerInfo(customerId) {
+        console.log('تحديث معلومات العميل:', customerId);
+        if (customerId) {
+            console.log('إرسال طلب جلب معلومات العميل...');
+            $.get(`/complaints/ajax/customer-info/${customerId}/`, function(data) {
+                console.log('تم استلام معلومات العميل:', data);
+                $('#customer-details').html(`
+                    <h6 class="mb-2">${data.name}</h6>
+                    <p class="mb-1"><i class="fas fa-phone me-1"></i> ${data.phone}</p>
+                    <p class="mb-1"><i class="fas fa-envelope me-1"></i> ${data.email}</p>
+                    <p class="mb-0"><i class="fas fa-map-marker-alt me-1"></i> ${data.address}</p>
+                `);
+                $('#customer-info').show();
+                $('#no-customer-selected').hide();
+                console.log('تم تحديث عرض معلومات العميل');
+            }).fail(function(xhr, status, error) {
+                console.error('خطأ في جلب معلومات العميل:');
+                console.error('Status:', status);
+                console.error('Error:', error);
+                console.error('Response:', xhr.responseText);
+                $('#customer-info').hide();
+                $('#no-customer-selected').show();
+            });
+        } else {
+            console.log('لا يوجد معرف عميل - إخفاء المعلومات');
+            $('#customer-info').hide();
+            $('#no-customer-selected').show();
+        }
+    }
+
     $(document).ready(function() {
         // تتبع الزر المضغوط
         $('.submit-btn').click(function() {
@@ -659,114 +700,7 @@
             $('#id_customer').val('');
             $('#customer-info').hide();
             $('#no-customer-selected').show();
-            updateCustomerOrders(null);
         });
-
-        // تحديث معلومات العميل عند الاختيار
-        function updateCustomerInfo(customerId) {
-            console.log('تحديث معلومات العميل:', customerId);
-            if (customerId) {
-                console.log('إرسال طلب جلب معلومات العميل...');
-                $.get(`/complaints/ajax/customer-info/${customerId}/`, function(data) {
-                    console.log('تم استلام معلومات العميل:', data);
-                    $('#customer-details').html(`
-                        <h6 class="mb-2">${data.name}</h6>
-                        <p class="mb-1"><i class="fas fa-phone me-1"></i> ${data.phone}</p>
-                        <p class="mb-1"><i class="fas fa-envelope me-1"></i> ${data.email}</p>
-                        <p class="mb-0"><i class="fas fa-map-marker-alt me-1"></i> ${data.address}</p>
-                    `);
-                    $('#customer-info').show();
-                    $('#no-customer-selected').hide();
-                    console.log('تم تحديث عرض معلومات العميل');
-                }).fail(function(xhr, status, error) {
-                    console.error('خطأ في جلب معلومات العميل:');
-                    console.error('Status:', status);
-                    console.error('Error:', error);
-                    console.error('Response:', xhr.responseText);
-                    $('#customer-info').hide();
-                    $('#no-customer-selected').show();
-                });
-            } else {
-                console.log('لا يوجد معرف عميل - إخفاء المعلومات');
-                $('#customer-info').hide();
-                $('#no-customer-selected').show();
-            }
-        }
-        
-        // تحديث قائمة الطلبات بناءً على العميل المختار
-        function updateCustomerOrders(customerId) {
-            const orderSelect = $('#id_related_order');
-            
-            // تفريغ المجموعة السابقة من الطلبات المتاحة
-            window.availableOrderIds = new Set();
-            
-            if (customerId) {
-                // تعطيل حقل اختيار الطلب أثناء التحميل
-                orderSelect.prop('disabled', true);
-                
-                $.get(`/complaints/ajax/customer-orders/${customerId}/`, function(data) {
-                    orderSelect.empty();
-                    orderSelect.append('<option value="">اختر طلب (اختياري)</option>');
-                    
-                    if (data.orders && data.orders.length > 0) {
-                        console.log(`تم العثور على ${data.orders.length} طلبات للعميل`);
-                        
-                        // تخزين معلومات الطلبات الفعلية للعميل
-                        window.customerOrders = data.orders;
-                        
-                        data.orders.forEach(function(order) {
-                            // تحويل معرف الطلب إلى رقم صحيح وحفظه
-                            const orderId = parseInt(order.id, 10);
-                            window.availableOrderIds.add(orderId);
-                            console.log('تمت إضافة معرف الطلب:', orderId, 'من النوع', typeof orderId);
-                            
-                            // تحضير نص الطلب مع معلومات إضافية
-                            let orderText = `${order.order_number || order.id} - ${order.created_at}`;
-                            if (order.total_amount > 0) {
-                                orderText += ` (${order.total_amount} ج.م)`;
-                            }
-                            if (order.salesperson && order.salesperson !== 'غير محدد') {
-                                orderText += ` - البائع: ${order.salesperson}`;
-                            }
-                            if (order.created_by && order.created_by !== 'غير محدد') {
-                                orderText += ` - المنشئ: ${order.created_by}`;
-                            }
-                            
-                            // نستخدم معرف الطلب (id) كقيمة رقمية دائماً
-                            const orderValue = parseInt(order.id, 10);
-                            const orderNumber = order.order_number || `طلب #${order.id}`;
-                            const option = `<option value="${orderValue}" 
-                                data-order-number="${orderNumber}"
-                                data-salesperson="${order.salesperson || ''}"
-                                data-created-by="${order.created_by || ''}"
-                                data-status="${order.status || ''}"
-                                data-description="${order.description || ''}"
-                                title="${order.description || 'لا يوجد وصف'}">
-                                ${orderText}
-                            </option>`;
-                            orderSelect.append(option);
-                        });
-                        
-                        console.log('الطلبات المتاحة:', Array.from(window.availableOrderIds));
-                    } else {
-                        console.log('لا توجد طلبات للعميل');
-                        orderSelect.append('<option value="">لا توجد طلبات لهذا العميل</option>');
-                    }
-                    
-                    // إعادة تفعيل حقل اختيار الطلب
-                    orderSelect.prop('disabled', false);
-                }).fail(function(xhr, status, error) {
-                    console.error('خطأ في جلب طلبات العميل:', error);
-                    console.error('استجابة الخادم:', xhr.responseText);
-                    orderSelect.empty();
-                    orderSelect.append('<option value="">حدث خطأ في جلب الطلبات</option>');
-                    orderSelect.prop('disabled', false);
-                });
-            } else {
-                orderSelect.empty();
-                orderSelect.append('<option value="">اختر عميل أولاً</option>');
-            }
-        }
 
         // تحديث مؤشر الأولوية
         $('#id_priority').change(function() {
@@ -841,66 +775,16 @@
             }
         }
 
-        // إظهار/إخفاء حقل معرف الكائن
-        $('#id_content_type').change(function() {
-            if ($(this).val()) {
-                $('#object-id-row').show();
-            } else {
-                $('#object-id-row').hide();
-                $('#id_object_id').val('');
-            }
-        });
-
-        // تحديث معلومات السجل المرتبط
-        $('#id_content_type, #id_object_id').change(function() {
-            const contentType = $('#id_content_type').val();
-            const objectId = $('#id_object_id').val();
-            
-            if (contentType && objectId) {
-                // AJAX call لجلب معلومات السجل المرتبط
-                $.get(`/api/related-objects/${contentType}/${objectId}/`, function(data) {
-                    $('#related-object-details').html(`
-                        <h6 class="mb-2">${data.title}</h6>
-                        <p class="mb-1">${data.description}</p>
-                        <a href="${data.url}" class="btn btn-sm btn-outline-primary" target="_blank">
-                            <i class="fas fa-external-link-alt me-1"></i>
-                            عرض السجل
-                        </a>
-                    `);
-                    $('#related-object-card').show();
-                }).fail(function() {
-                    $('#related-object-card').hide();
-                });
-            } else {
-                $('#related-object-card').hide();
-            }
-        });
-
         // تفعيل التحقق من صحة النموذج وإرسال النموذج
         $('.needs-validation').on('submit', function(e) {
             e.preventDefault();
             console.log('بدء التحقق من صحة النموذج...');
             
             const form = $(this);
-            const relatedOrderField = $('#id_related_order');
-            const customerId = $('#id_customer').val();
             
             // Reset any previous validation states
-            relatedOrderField.removeClass('is-invalid');
             $('.related-order-error').remove();
             
-            // Only validate related_order if a customer is selected
-            if (customerId) {
-                const selectedOrderId = relatedOrderField.val();
-                
-                // If an order is selected but not in the available orders, show error
-                if (selectedOrderId && !window.availableOrderIds.has(selectedOrderId)) {
-                    console.error('الطلب المحدد غير صالح للعميل الحالي');
-                    relatedOrderField.addClass('is-invalid');
-                    relatedOrderField.after('<div class="invalid-feedback related-order-error">الطلب المحدد غير صالح للعميل الحالي</div>');
-                    return false;
-                }
-            }
             const formData = new FormData(form[0]);
             const submitBtn = $(document.activeElement);
             const originalText = submitBtn.html();
@@ -915,38 +799,6 @@
             const submitButton = $('button[type="submit"][clicked=true]');
             if (submitButton.length) {
                 formData.append('action', submitButton.val());
-            }
-            
-            // التحقق من الطلب المرتبط إذا تم اختياره وإزالته إذا كان هناك مشكلة
-            let relatedOrder = formData.get('related_order');
-            if (relatedOrder && relatedOrder !== '') {
-                console.log('تم اختيار طلب مرتبط (قبل التحويل):', relatedOrder, typeof relatedOrder);
-                
-                // تحويل معرف الطلب إلى رقم صحيح
-                relatedOrder = parseInt(relatedOrder, 10);
-                formData.set('related_order', relatedOrder);
-                console.log('تم تحويل معرف الطلب إلى رقم:', relatedOrder, typeof relatedOrder);
-                
-                // التحقق من صحة الطلب المرتبط
-                if (!window.availableOrderIds || !window.availableOrderIds.has(relatedOrder.toString())) {
-                    console.warn('الطلب المحدد قد لا يكون صالحاً:', relatedOrder);
-                    console.warn('الطلبات المتاحة:', window.availableOrderIds ? Array.from(window.availableOrderIds) : 'غير محدد');
-                    
-                    // إزالة حقل الطلب المرتبط من النموذج لتجنب الأخطاء في السيرفر
-                    console.warn('إزالة حقل الطلب المرتبط من النموذج لتجنب الخطأ');
-                    formData.delete('related_order');
-                    $('#id_related_order').val('');
-                    $('#id_related_order').trigger('change');
-                    
-                    // إضافة رسالة تحذير دون إيقاف النموذج
-                    alert('تم إزالة الطلب المرتبط تلقائياً لتجنب الأخطاء. سيتم إنشاء الشكوى بدون ربطها بطلب.');
-                } else {
-                    console.log('الطلب المرتبط صالح:', relatedOrder);
-                    $('#id_related_order').removeClass('is-invalid').addClass('is-valid');
-                    
-                    // تحديث قيمة الطلب في النموذج بالرقم المحول
-                    formData.set('related_order', relatedOrder);
-                }
             }
             
             // التحقق من الحقول المطلوبة
@@ -1003,60 +855,11 @@
                     console.error('استجابة الخادم:', xhr.responseText);
                     
                     let errorMessage = 'حدث خطأ أثناء الحفظ:\n';
-                    let hasRelatedOrderError = false;
                     
                     try {
                         const response = JSON.parse(xhr.responseText);
                         if (response.errors) {
-                            // فحص إذا كان الخطأ متعلق بالطلب المرتبط
-                            if (response.errors.related_order) {
-                                hasRelatedOrderError = true;
-                                console.warn('خطأ في الطلب المرتبط:', response.errors.related_order);
-                                
-                                // إزالة حقل الطلب المرتبط وإعادة تقديم النموذج
-                                $('#id_related_order').val('').addClass('is-invalid');
-                                
-                                // إظهار رسالة للمستخدم
-                                alert('تم اكتشاف مشكلة في الطلب المرتبط. سيتم إعادة تقديم النموذج بدون ربطه بطلب.');
-                                
-                                // إنشاء نسخة جديدة من بيانات النموذج بدون الطلب المرتبط
-                                const newFormData = new FormData(form[0]);
-                                newFormData.delete('related_order');
-                                
-                                // إضافة action مرة أخرى إذا كان موجوداً
-                                if (submitButton.length) {
-                                    newFormData.append('action', submitButton.val());
-                                }
-                                
-                                // إرسال النموذج مرة أخرى
-                                $.ajax({
-                                    url: form.attr('action') || window.location.href,
-                                    method: 'POST',
-                                    data: newFormData,
-                                    processData: false,
-                                    contentType: false,
-                                    headers: {
-                                        'X-CSRFToken': csrftoken
-                                    },
-                                    success: function(response) {
-                                        console.log('تم الحفظ بنجاح بدون الطلب المرتبط:', response);
-                                        if (response.redirect_url) {
-                                            window.location.href = response.redirect_url;
-                                        } else {
-                                            window.location.href = '/complaints/';
-                                        }
-                                    },
-                                    error: function(xhr, status, error) {
-                                        console.error('ما زالت هناك مشكلة في الحفظ:', error);
-                                        submitBtn.prop('disabled', false).html(originalText);
-                                        alert('حدث خطأ آخر أثناء محاولة الحفظ. يرجى المحاولة مرة أخرى لاحقاً.');
-                                    }
-                                });
-                                
-                                return; // إيقاف التنفيذ هنا
-                            }
-                            
-                            // إظهار الأخطاء الأخرى في النموذج إذا لم تكن متعلقة بالطلب المرتبط
+                            // إظهار الأخطاء في النموذج
                             Object.entries(response.errors).forEach(([field, errors]) => {
                                 errorMessage += `${field}: ${errors.join(', ')}\n`;
                                 // تحديث واجهة المستخدم لإظهار الخطأ
@@ -1079,30 +882,12 @@
                         errorMessage += xhr.responseText || 'حدث خطأ غير متوقع';
                     }
                     
-                    // عرض رسالة الخطأ فقط إذا لم يكن هناك خطأ في الطلب المرتبط (لأننا سنقوم بمعالجته)
-                    if (!hasRelatedOrderError) {
-                        alert(errorMessage);
-                        submitBtn.prop('disabled', false).html(originalText);
-                    }
+                    alert(errorMessage);
+                    submitBtn.prop('disabled', false).html(originalText);
                 }
             });
             
             return false;
-        });
-
-        // التحقق من صحة قيمة related_order
-        $('#id_related_order').change(function() {
-            const selectedValue = $(this).val();
-            if (selectedValue) {
-                if (window.availableOrderIds && !window.availableOrderIds.has(selectedValue)) {
-                    $(this).addClass('is-invalid');
-                    alert('هذا الطلب غير صالح. يرجى اختيار طلب آخر من القائمة.');
-                } else {
-                    $(this).removeClass('is-invalid').addClass('is-valid');
-                }
-            } else {
-                $(this).removeClass('is-invalid').removeClass('is-valid');
-            }
         });
 
         // تحديث حقول التعيين عند تغيير نوع الشكوى
@@ -1194,9 +979,6 @@
         console.log('- نوع الشكوى:', initialComplaintType);
         console.log('- الأولوية:', initialPriority);
         
-        // الإعداد الأولي للمصفوفة المتاحة للطلبات
-        window.availableOrderIds = new Set();
-        
         // تفعيل الأحداث
         if (initialCustomer) {
             $('#id_customer').trigger('change');
@@ -1207,7 +989,6 @@
         if (initialPriority) {
             $('#id_priority').trigger('change');
         }
-        $('#id_content_type').trigger('change');
     });
 
     // تأكيد قبل الخروج إذا كانت هناك تغييرات غير محفوظة
@@ -1314,5 +1095,136 @@
         
         return true;
     });
+
+    // تحديد العميل تلقائياً إذا تم تمرير customer_id في URL
+    $(document).ready(function() {
+        console.log('Document ready - starting auto customer selection');
+        console.log('Current URL:', window.location.href);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const customerId = urlParams.get('customer_id');
+
+        console.log('URL Parameters:', window.location.search);
+        console.log('Customer ID from URL:', customerId);
+
+        if (customerId) {
+            // تحديد العميل في الحقل المخفي
+            $('#id_customer').val(customerId);
+            console.log('Set customer ID in hidden field:', customerId);
+
+            // جلب معلومات العميل وعرضها في Select2
+            $.ajax({
+                url: `/customers/api/customer/${customerId}/`,
+                method: 'GET',
+                success: function(response) {
+                    console.log('API Response received:', response);
+                    if (response.success && response.customer) {
+                        const customer = response.customer;
+                        const customerInfo = `${customer.name} - ${customer.phone}`;
+
+                        // إضافة الخيار المحدد إلى Select2
+                        const option = new Option(customerInfo, customer.id, true, true);
+                        $('#customer_search_select').append(option).trigger('change');
+
+                        // تحديث معلومات العميل المعروضة
+                        updateCustomerInfo(customerId);
+
+                        // إضافة تنبيه نجاح
+                        showCustomerSelectedAlert(customer);
+
+                        // تحديث قائمة الطلبات للعميل المحدد
+                        updateOrdersForCustomer(customerId);
+
+                        console.log(`تم تحديد العميل تلقائياً: ${customerInfo}`);
+                    } else {
+                        showErrorAlert('فشل في جلب بيانات العميل');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('خطأ في جلب معلومات العميل:', error);
+                    console.error('AJAX Error Details:', {xhr, status, error});
+                    showErrorAlert('خطأ في الاتصال بالخادم');
+                }
+            });
+        } else {
+            console.log('No customer_id parameter found in URL');
+        }
+    });
+
+    // دالة لإظهار تنبيه نجاح تحديد العميل
+    function showCustomerSelectedAlert(customer) {
+        const alertHtml = `
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>تم تحديد العميل تلقائياً:</strong> ${customer.name}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+
+        // إضافة التنبيه في أعلى النموذج
+        $('.card-body').first().prepend(alertHtml);
+
+        // إزالة التنبيه تلقائياً بعد 5 ثوان
+        setTimeout(function() {
+            $('.alert-success').fadeOut();
+        }, 5000);
+    }
+
+    // دالة لإظهار تنبيه خطأ
+    function showErrorAlert(message) {
+        const alertHtml = `
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>تنبيه:</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+
+        $('.card-body').first().prepend(alertHtml);
+
+        setTimeout(function() {
+            $('.alert-warning').fadeOut();
+        }, 5000);
+    }
+
+    // دالة تحديث الموظفين المسؤولين بناءً على نوع الشكوى
+    window.updateResponsibleStaff = function(complaintTypeId) {
+        if (!complaintTypeId) {
+            // إذا لم يتم اختيار نوع شكوى، عرض جميع الموظفين
+            return;
+        }
+
+        $.ajax({
+            url: `/complaints/api/complaint-type/${complaintTypeId}/responsible-staff/`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const assignedToSelect = $('#id_assigned_to');
+                    const currentValue = assignedToSelect.val();
+
+                    // مسح الخيارات الحالية
+                    assignedToSelect.empty();
+                    assignedToSelect.append('<option value="">اختر الموظف المسؤول</option>');
+
+                    // إضافة الموظفين المسؤولين
+                    response.staff.forEach(function(staff) {
+                        assignedToSelect.append(
+                            `<option value="${staff.id}">${staff.name}</option>`
+                        );
+                    });
+
+                    // استعادة القيمة المحددة سابقاً إذا كانت متاحة
+                    if (currentValue) {
+                        assignedToSelect.val(currentValue);
+                    }
+
+                    console.log(`تم تحديث قائمة الموظفين المسؤولين لنوع الشكوى ${complaintTypeId}`);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('خطأ في جلب الموظفين المسؤولين:', error);
+            }
+        });
+    };
 </script>
 {% endblock %}

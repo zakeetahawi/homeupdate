@@ -72,6 +72,17 @@ CORE_DEPARTMENTS = [
         'children': []
     },
     {
+        'name': 'الشكاوى',
+        'code': 'complaints',
+        'url_name': 'complaints:dashboard',
+        'department_type': 'department',
+        'icon': 'fas fa-headset',
+        'order': 65,
+        'has_pages': False,
+        'is_core': True,
+        'children': []
+    },
+    {
         'name': 'التقارير',
         'code': 'reports',
         'url_name': 'reports:dashboard',
@@ -159,7 +170,7 @@ def create_core_departments():
     # حذف الأقسام الوهمية والإدارات والوحدات الإضافية
     real_departments = [
         'customers', 'orders', 'inventory', 'inspections',
-        'installations', 'factory', 'reports', 'data_management'
+        'installations', 'factory', 'complaints', 'reports', 'data_management'
     ]
 
     # حذف جميع الأقسام التي ليست في القائمة الحقيقية

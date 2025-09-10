@@ -1,0 +1,159 @@
+{% load complaints_tags %}
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-gradient-info text-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+            <i class="fas fa-tasks me-2"></i>
+            الشكاوى المسندة إليك
+        </h6>
+        {% if has_complaints %}
+            <div class="d-flex align-items-center gap-2">
+                {% if overdue_count > 0 %}
+                    <span class="badge bg-danger">{{ overdue_count }} متأخرة</span>
+                {% endif %}
+                <span class="badge bg-light text-dark">{{ complaints|length }}</span>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="card-body">
+        {% if has_complaints %}
+            <div class="complaints-list">
+                {% for complaint in complaints %}
+                    <div class="complaint-item border-start border-3 border-{{ complaint.status }} p-3 mb-3 bg-light rounded-end position-relative">
+                        {% if complaint.deadline < now %}
+                            <div class="position-absolute top-0 end-0 mt-2 me-2">
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    متأخرة
+                                </span>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    <a href="{% url 'complaints:complaint_detail' complaint.pk %}" 
+                                       class="text-decoration-none text-dark">
+                                        {{ complaint.title|truncatechars:45 }}
+                                    </a>
+                                </h6>
+                                
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    {% complaint_status_badge complaint.status %}
+                                    {% complaint_priority_badge complaint.priority %}
+                                </div>
+                                
+                                <div class="row text-muted small">
+                                    <div class="col-12 col-md-6 mb-1">
+                                        <i class="fas fa-user me-1"></i>
+                                        {{ complaint.customer.name|truncatechars:20 }}
+                                    </div>
+                                    <div class="col-12 col-md-6 mb-1">
+                                        <i class="fas fa-tag me-1"></i>
+                                        {{ complaint.complaint_type.name }}
+                                    </div>
+                                    <div class="col-12 col-md-6 mb-1">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        {{ complaint.created_at|date:"d/m/Y" }}
+                                    </div>
+                                    <div class="col-12 col-md-6 mb-1">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ complaint|time_until_deadline }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Actions -->
+                        <div class="mt-2 d-flex gap-1">
+                            <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>
+                                عرض
+                            </a>
+                            {% if complaint.status == 'new' %}
+                                <button class="btn btn-sm btn-outline-warning"
+                                        data-quick-action="status"
+                                        data-complaint-id="{{ complaint.pk }}"
+                                        data-value="in_progress">
+                                    <i class="fas fa-play me-1"></i>
+                                    بدء العمل
+                                </button>
+                            {% elif complaint.status == 'in_progress' %}
+                                <button class="btn btn-sm btn-outline-success"
+                                        data-quick-action="status"
+                                        data-complaint-id="{{ complaint.pk }}"
+                                        data-value="resolved">
+                                    <i class="fas fa-check me-1"></i>
+                                    حل
+                                </button>
+                            {% endif %}
+                            {% if complaint.status not in 'resolved,closed' %}
+                                <button class="btn btn-sm btn-outline-danger"
+                                        data-quick-action="escalate"
+                                        data-complaint-id="{{ complaint.pk }}"
+                                        title="تصعيد سريع">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-info"
+                                        data-quick-action="note"
+                                        data-complaint-id="{{ complaint.pk }}"
+                                        title="إضافة ملاحظة">
+                                    <i class="fas fa-sticky-note"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- View All Link -->
+            <div class="text-center mt-3">
+                <a href="{% url 'complaints:complaint_list' %}?assigned_to={{ user.id }}" 
+                   class="btn btn-outline-info">
+                    <i class="fas fa-list me-1"></i>
+                    عرض جميع الشكاوى المسندة إليك
+                </a>
+            </div>
+        {% else %}
+            <!-- No Complaints State -->
+            <div class="text-center py-4">
+                <i class="fas fa-clipboard-check text-success mb-3" style="font-size: 3rem;"></i>
+                <h6 class="text-muted">لا توجد شكاوى مسندة إليك حالياً</h6>
+                <p class="text-muted small">عمل ممتاز! لا توجد شكاوى تحتاج لمتابعتك</p>
+                <a href="{% url 'complaints:complaint_list' %}" 
+                   class="btn btn-outline-info">
+                    <i class="fas fa-search me-1"></i>
+                    تصفح جميع الشكاوى
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.bg-gradient-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.complaint-item {
+    transition: all 0.3s ease;
+}
+
+.complaint-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.border-new { border-color: #007bff !important; }
+.border-in_progress { border-color: #ffc107 !important; }
+.border-resolved { border-color: #28a745 !important; }
+.border-overdue { border-color: #dc3545 !important; }
+.border-escalated { border-color: #6f42c1 !important; }
+.border-closed { border-color: #6c757d !important; }
+</style>
+
+<!-- Load unified quick actions -->
+{% load static %}
+<script src="{% static 'js/complaints-quick-actions.js' %}"></script>

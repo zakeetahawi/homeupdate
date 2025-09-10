@@ -11,19 +11,19 @@ import multiprocessing
 bind = "127.0.0.1:8000"
 backlog = 2048
 
-# Worker processes
-workers = multiprocessing.cpu_count() * 2 + 1
+# Worker processes - محسن لتقليل استهلاك الاتصالات
+workers = min(multiprocessing.cpu_count(), 4)  # حد أقصى 4 عمال
 worker_class = "sync"
-worker_connections = 1000
+worker_connections = 100  # تقليل عدد الاتصالات لكل عامل
 timeout = 30
-keepalive = 5
+keepalive = 2  # تقليل keepalive
 
 # Restart workers after this many requests, with up to this much jitter
-max_requests = 1000
-max_requests_jitter = 100
+max_requests = 500  # تقليل عدد الطلبات قبل إعادة التشغيل
+max_requests_jitter = 50
 
 # Restart workers after this much time has passed
-max_worker_age = 3600  # 1 hour
+max_worker_age = 1800  # 30 دقيقة (مخفض)
 
 # Preload application code before forking worker processes
 preload_app = True

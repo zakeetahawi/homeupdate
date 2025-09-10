@@ -175,35 +175,10 @@
         </div>
     </div>
 
-    <!-- ترقيم الصفحات -->
+    <!-- Unified Pagination -->
     {% if error_analyses.has_other_pages %}
-    <nav aria-label="ترقيم الصفحات">
-        <ul class="pagination justify-content-center">
-            {% if error_analyses.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ error_analyses.previous_page_number }}">السابق</a>
-                </li>
-            {% endif %}
-
-            {% for num in error_analyses.paginator.page_range %}
-                {% if error_analyses.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
-                    </li>
-                {% elif num > error_analyses.number|add:'-3' and num < error_analyses.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-
-            {% if error_analyses.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ error_analyses.next_page_number }}">التالي</a>
-                </li>
-            {% endif %}
-        </ul>
-    </nav>
+    {% load pagination_tags %}
+    {% render_pagination error_analyses %}
     {% endif %}
 </div>
 

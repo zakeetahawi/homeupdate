@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}تقييم الشكوى - {{ complaint.complaint_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.evaluation-form {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.rating-section {
+    background: white;
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.star-rating {
+    display: flex;
+    gap: 5px;
+    margin: 10px 0;
+}
+
+.star-rating input[type="radio"] {
+    display: none;
+}
+
+.star-rating label {
+    font-size: 2rem;
+    color: #ddd;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.star-rating label:hover,
+.star-rating label:hover ~ label,
+.star-rating input[type="radio"]:checked ~ label {
+    color: #ffc107;
+}
+
+.star-rating input[type="radio"]:checked + label,
+.star-rating input[type="radio"]:checked + label ~ label {
+    color: #ffc107;
+}
+
+.feedback-section {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #007bff;
+}
+
+.recommendation-section {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.1rem;
+    border-radius: 25px;
+    color: white;
+    transition: transform 0.3s ease;
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    color: white;
+}
+
+.complaint-info {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.rating-label {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    padding: 12px 15px;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="evaluation-form">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-2">
+                            <i class="fas fa-star me-3"></i>تقييم الشكوى
+                        </h2>
+                        <p class="mb-0 opacity-75">نرجو منك تقييم تجربتك في حل الشكوى</p>
+                    </div>
+                    <div class="text-end">
+                        <a href="{% url 'complaints:complaint_detail' complaint.pk %}" class="btn btn-light btn-lg">
+                            <i class="fas fa-arrow-right me-2"></i>العودة للشكوى
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="complaint-info mt-3">
+                    <h5 class="mb-2">{{ complaint.complaint_number }}</h5>
+                    <p class="mb-1">{{ complaint.title }}</p>
+                    <small class="opacity-75">تم الحل في: {{ complaint.resolved_at|date:"Y-m-d H:i" }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج التقييم -->
+    <form method="post" id="evaluationForm">
+        {% csrf_token %}
+        
+        <!-- التقييم العام -->
+        <div class="rating-section">
+            <div class="rating-label">
+                <i class="fas fa-star text-warning me-2"></i>التقييم العام لتجربة حل الشكوى
+            </div>
+            <div class="star-rating" data-rating="overall_rating">
+                <input type="radio" name="overall_rating" value="5" id="overall_5">
+                <label for="overall_5">★</label>
+                <input type="radio" name="overall_rating" value="4" id="overall_4">
+                <label for="overall_4">★</label>
+                <input type="radio" name="overall_rating" value="3" id="overall_3">
+                <label for="overall_3">★</label>
+                <input type="radio" name="overall_rating" value="2" id="overall_2">
+                <label for="overall_2">★</label>
+                <input type="radio" name="overall_rating" value="1" id="overall_1">
+                <label for="overall_1">★</label>
+            </div>
+            <small class="text-muted">اختر من 1 (غير راضي جداً) إلى 5 (راضي جداً)</small>
+        </div>
+
+        <!-- تقييم سرعة الاستجابة -->
+        <div class="rating-section">
+            <div class="rating-label">
+                <i class="fas fa-clock text-info me-2"></i>تقييم سرعة الاستجابة
+            </div>
+            <div class="star-rating" data-rating="response_time_rating">
+                <input type="radio" name="response_time_rating" value="5" id="response_5">
+                <label for="response_5">★</label>
+                <input type="radio" name="response_time_rating" value="4" id="response_4">
+                <label for="response_4">★</label>
+                <input type="radio" name="response_time_rating" value="3" id="response_3">
+                <label for="response_3">★</label>
+                <input type="radio" name="response_time_rating" value="2" id="response_2">
+                <label for="response_2">★</label>
+                <input type="radio" name="response_time_rating" value="1" id="response_1">
+                <label for="response_1">★</label>
+            </div>
+            <small class="text-muted">كيف تقيم سرعة استجابتنا لشكواك؟</small>
+        </div>
+
+        <!-- تقييم جودة الحل -->
+        <div class="rating-section">
+            <div class="rating-label">
+                <i class="fas fa-check-circle text-success me-2"></i>تقييم جودة الحل
+            </div>
+            <div class="star-rating" data-rating="solution_quality_rating">
+                <input type="radio" name="solution_quality_rating" value="5" id="solution_5">
+                <label for="solution_5">★</label>
+                <input type="radio" name="solution_quality_rating" value="4" id="solution_4">
+                <label for="solution_4">★</label>
+                <input type="radio" name="solution_quality_rating" value="3" id="solution_3">
+                <label for="solution_3">★</label>
+                <input type="radio" name="solution_quality_rating" value="2" id="solution_2">
+                <label for="solution_2">★</label>
+                <input type="radio" name="solution_quality_rating" value="1" id="solution_1">
+                <label for="solution_1">★</label>
+            </div>
+            <small class="text-muted">هل كان الحل المقدم مناسباً ومرضياً؟</small>
+        </div>
+
+        <!-- تقييم تعامل الموظفين -->
+        <div class="rating-section">
+            <div class="rating-label">
+                <i class="fas fa-users text-primary me-2"></i>تقييم تعامل الموظفين
+            </div>
+            <div class="star-rating" data-rating="staff_behavior_rating">
+                <input type="radio" name="staff_behavior_rating" value="5" id="staff_5">
+                <label for="staff_5">★</label>
+                <input type="radio" name="staff_behavior_rating" value="4" id="staff_4">
+                <label for="staff_4">★</label>
+                <input type="radio" name="staff_behavior_rating" value="3" id="staff_3">
+                <label for="staff_3">★</label>
+                <input type="radio" name="staff_behavior_rating" value="2" id="staff_2">
+                <label for="staff_2">★</label>
+                <input type="radio" name="staff_behavior_rating" value="1" id="staff_1">
+                <label for="staff_1">★</label>
+            </div>
+            <small class="text-muted">كيف تقيم تعامل فريق العمل معك؟</small>
+        </div>
+
+        <!-- التعليقات الإيجابية -->
+        <div class="feedback-section">
+            <label for="positive_feedback" class="form-label">
+                <i class="fas fa-thumbs-up text-success me-2"></i>ما أعجبك في خدمتنا؟
+            </label>
+            <textarea class="form-control" id="positive_feedback" name="positive_feedback" rows="3" 
+                      placeholder="اذكر النقاط الإيجابية في تجربتك..."></textarea>
+        </div>
+
+        <!-- التعليقات السلبية -->
+        <div class="feedback-section">
+            <label for="negative_feedback" class="form-label">
+                <i class="fas fa-thumbs-down text-danger me-2"></i>ما لم يعجبك؟
+            </label>
+            <textarea class="form-control" id="negative_feedback" name="negative_feedback" rows="3" 
+                      placeholder="اذكر النقاط التي تحتاج تحسين..."></textarea>
+        </div>
+
+        <!-- الاقتراحات -->
+        <div class="feedback-section">
+            <label for="suggestions" class="form-label">
+                <i class="fas fa-lightbulb text-warning me-2"></i>اقتراحات للتحسين
+            </label>
+            <textarea class="form-control" id="suggestions" name="suggestions" rows="3" 
+                      placeholder="كيف يمكننا تحسين خدمتنا؟"></textarea>
+        </div>
+
+        <!-- التوصية -->
+        <div class="recommendation-section">
+            <div class="rating-label text-white">
+                <i class="fas fa-heart me-2"></i>هل تنصح بخدماتنا؟
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="would_recommend" id="recommend_yes" value="true">
+                <label class="form-check-label text-white" for="recommend_yes">
+                    <i class="fas fa-thumbs-up me-1"></i>نعم، أنصح
+                </label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="would_recommend" id="recommend_no" value="false">
+                <label class="form-check-label text-white" for="recommend_no">
+                    <i class="fas fa-thumbs-down me-1"></i>لا أنصح
+                </label>
+            </div>
+        </div>
+
+        <!-- أزرار الإجراءات -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-submit btn-lg">
+                <i class="fas fa-paper-plane me-2"></i>إرسال التقييم
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // تفعيل تقييم النجوم
+    $('.star-rating').each(function() {
+        const $rating = $(this);
+        const $inputs = $rating.find('input[type="radio"]');
+        const $labels = $rating.find('label');
+        
+        $labels.on('click', function() {
+            const value = $(this).prev('input').val();
+            $inputs.prop('checked', false);
+            $(this).prev('input').prop('checked', true);
+            
+            // تحديث الألوان
+            $labels.removeClass('selected');
+            $(this).addClass('selected').prevAll('label').addClass('selected');
+        });
+        
+        // تأثير hover
+        $labels.on('mouseenter', function() {
+            $(this).addClass('hover').prevAll('label').addClass('hover');
+            $(this).nextAll('label').removeClass('hover');
+        });
+        
+        $rating.on('mouseleave', function() {
+            $labels.removeClass('hover');
+        });
+    });
+    
+    // التحقق من صحة النموذج
+    $('#evaluationForm').on('submit', function(e) {
+        let isValid = true;
+        const requiredRatings = ['overall_rating', 'response_time_rating', 'solution_quality_rating', 'staff_behavior_rating'];
+        
+        requiredRatings.forEach(function(rating) {
+            if (!$(`input[name="${rating}"]:checked`).length) {
+                isValid = false;
+                $(`[data-rating="${rating}"]`).closest('.rating-section').addClass('border border-danger');
+            } else {
+                $(`[data-rating="${rating}"]`).closest('.rating-section').removeClass('border border-danger');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('يرجى تقييم جميع النقاط المطلوبة');
+            $('html, body').animate({
+                scrollTop: $('.border-danger').first().offset().top - 100
+            }, 500);
+        }
+    });
+});
+</script>
+{% endblock %}

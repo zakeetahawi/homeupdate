@@ -1,125 +1,153 @@
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
-from django.contrib.auth import get_user_model
-from .models import Complaint, ComplaintUpdate, ComplaintEscalation
-from accounts.models import Department
-
-
-User = get_user_model()
-
+from django.urls import reverse
+from django.db.models import Q
+from .models import Complaint, ComplaintUpdate, ComplaintEscalation, ComplaintNotification
+from .services.notification_service import notification_service
 
 @receiver(post_save, sender=Complaint)
-def complaint_post_save(sender, instance, created, **kwargs):
-    """إشارة بعد حفظ الشكوى"""
+def handle_complaint_notifications(sender, instance, created, **kwargs):
+    """معالجة إشعارات الشكوى باستخدام خدمة الإشعارات المحسنة"""
     if created:
-        # تم إزالة إنشاء إشعارات الشكوى الجديدة
-        pass
-
+        # استخدام خدمة الإشعارات المحسنة
+        notification_service.notify_new_complaint(instance)
 
 @receiver(pre_save, sender=Complaint)
-def complaint_status_change(sender, instance, **kwargs):
-    """تتبع تغيير حالة الشكوى"""
-    if instance.pk:
+def handle_status_change_notifications(sender, instance, **kwargs):
+    """معالجة إشعارات تغيير الحالة باستخدام خدمة الإشعارات المحسنة"""
+    if instance.pk:  # للتأكد من أن الشكوى موجودة مسبقاً
         try:
             old_instance = Complaint.objects.get(pk=instance.pk)
 
-            # تسجيل تغيير الحالة
+            # تغيير الحالة
             if old_instance.status != instance.status:
-                ComplaintUpdate.objects.create(
-                    complaint=instance,
-                    update_type='status_change',
-                    title=f'تغيير الحالة من {old_instance.get_status_display()} إلى {instance.get_status_display()}',
-                    description=f'تم تغيير حالة الشكوى من {old_instance.get_status_display()} إلى {instance.get_status_display()}',
-                    old_status=old_instance.status,
-                    new_status=instance.status,
-                    is_visible_to_customer=True
-                )
+                # تخزين البيانات للمعالجة بعد الحفظ
+                instance._old_status = old_instance.status
+                instance._status_changed = True
 
-                # تم إزالة إنشاء إشعار تغيير الحالة
-                pass
-
-                # إشعار المدير في حالة التأخير
-                if instance.status == 'overdue':
-                    notify_managers_overdue(instance)
-
-            # تسجيل تغيير المسؤول
+            # تغيير المسؤول
             if old_instance.assigned_to != instance.assigned_to:
-                ComplaintUpdate.objects.create(
-                    complaint=instance,
-                    update_type='assignment',
-                    title='تغيير المسؤول',
-                    description=f'تم تعيين {instance.assigned_to.get_full_name() if instance.assigned_to else "غير محدد"} كمسؤول عن الشكوى',
-                    old_assignee=old_instance.assigned_to,
-                    new_assignee=instance.assigned_to,
-                    is_visible_to_customer=False
-                )
+                instance._old_assignee = old_instance.assigned_to
+                instance._assignee_changed = True
 
         except Complaint.DoesNotExist:
             pass
 
 
-def create_complaint_notification(complaint, notification_type, title, message, recipient):
-    """إنشاء إشعار شكوى - تم تعطيلها"""
-    pass
+@receiver(post_save, sender=Complaint)
+def handle_post_save_notifications(sender, instance, created, **kwargs):
+    """معالجة الإشعارات بعد حفظ الشكوى"""
+    if not created:
+        # معالجة تغيير الحالة
+        if hasattr(instance, '_status_changed') and instance._status_changed:
+            notification_service.notify_status_change(
+                complaint=instance,
+                old_status=instance._old_status,
+                new_status=instance.status,
+                changed_by=getattr(instance, '_changed_by', None)
+            )
+            # تنظيف البيانات المؤقتة
+            delattr(instance, '_old_status')
+            delattr(instance, '_status_changed')
 
+        # معالجة تغيير المسؤول
+        if hasattr(instance, '_assignee_changed') and instance._assignee_changed:
+            notification_service.notify_assignment_change(
+                complaint=instance,
+                old_assignee=instance._old_assignee,
+                new_assignee=instance.assigned_to,
+                changed_by=getattr(instance, '_changed_by', None)
+            )
+            # تنظيف البيانات المؤقتة
+            delattr(instance, '_old_assignee')
+            delattr(instance, '_assignee_changed')
 
-def notify_department_users(complaint, department, title, message):
-    """إشعار مستخدمي قسم معين"""
-    users = department.users.filter(is_active=True)
-    for user in users:
-        create_complaint_notification(
-            complaint=complaint,
-            notification_type='new_complaint',
-            title=title,
-            message=message,
-            recipient=user
-        )
+@receiver(post_save, sender=ComplaintUpdate)
+def handle_update_notifications(sender, instance, created, **kwargs):
+    """معالجة إشعارات التحديثات"""
+    if created:
+        recipients = set()
+        if instance.complaint.assigned_to:
+            recipients.add(instance.complaint.assigned_to)
+        if instance.complaint.created_by:
+            recipients.add(instance.complaint.created_by)
+        if instance.complaint.assigned_department and instance.complaint.assigned_department.manager:
+            recipients.add(instance.complaint.assigned_department.manager)
 
-
-def notify_managers_overdue(complaint):
-    """إشعار المديرين في حالة تأخر الشكوى"""
-    # إشعار مدير النظام
-    managers = User.objects.filter(
-        is_general_manager=True,
-        is_active=True
-    )
-    
-    for manager in managers:
-        create_complaint_notification(
-            complaint=complaint,
-            notification_type='overdue',
-            title=f'تأخر في حل الشكوى #{complaint.complaint_number}',
-            message=f'تجاوزت الشكوى المقدمة من العميل {complaint.customer.name} الموعد النهائي للحل',
-            recipient=manager
-        )
-
+        for recipient in recipients:
+            if recipient != instance.created_by:  # لا نرسل إشعاراً لمنشئ التحديث
+                ComplaintNotification.create_notification(
+                    complaint=instance.complaint,
+                    notification_type='comment',
+                    recipient=recipient,
+                    title=f'تحديث جديد على الشكوى {instance.complaint.complaint_number}',
+                    message=instance.description[:100] + '...' if len(instance.description) > 100 else instance.description
+                )
 
 @receiver(post_save, sender=ComplaintEscalation)
-def escalation_notification(sender, instance, created, **kwargs):
-    """إشعار التصعيد"""
+def handle_escalation_notifications(sender, instance, created, **kwargs):
+    """معالجة إشعارات التصعيد"""
     if created:
-        # إشعار المصعد إليه
+        # إشعار للمسؤول الجديد
         if instance.escalated_to:
-            create_complaint_notification(
+            ComplaintNotification.create_notification(
                 complaint=instance.complaint,
                 notification_type='escalation',
-                title=f'تصعيد الشكوى #{instance.complaint.complaint_number}',
-                message=f'تم تصعيد الشكوى إليك - السبب: {instance.get_reason_display()}',
-                recipient=instance.escalated_to
+                recipient=instance.escalated_to,
+                title=f'تم تصعيد الشكوى {instance.complaint.complaint_number} إليك',
+                message=f'تم تصعيد الشكوى من {instance.escalated_from.get_full_name() if instance.escalated_from else "النظام"}'
             )
-        
-        # إشعار المديرين
-        managers = User.objects.filter(
-            is_general_manager=True,
-            is_active=True
-        )
-        
-        for manager in managers:
-            create_complaint_notification(
-                complaint=instance.complaint,
-                notification_type='escalation',
-                title=f'تصعيد الشكوى #{instance.complaint.complaint_number}',
-                message=f'تم تصعيد شكوى العميل {instance.complaint.customer.name} - السبب: {instance.get_reason_display()}',
-                recipient=manager
+
+        # إشعار للمدراء
+        if instance.complaint.assigned_department and instance.complaint.assigned_department.manager:
+            manager = instance.complaint.assigned_department.manager
+            if manager != instance.escalated_to:
+                    ComplaintNotification.create_notification(
+                        complaint=instance.complaint,
+                        notification_type='escalation',
+                        recipient=manager,
+                        title=f'تم تصعيد الشكوى {instance.complaint.complaint_number}',
+                        message=f'تم تصعيد الشكوى إلى {instance.escalated_to.get_full_name()}'
+                    )
+
+def check_complaint_deadlines():
+    """فحص المواعيد النهائية للشكاوى وإرسال إشعارات"""
+    # الشكاوى التي يقترب موعدها النهائي (خلال 24 ساعة)
+    deadline_approaching = Complaint.objects.filter(
+        Q(status__in=['new', 'in_progress']) &
+        Q(deadline__lte=timezone.now() + timezone.timedelta(hours=24)) &
+        Q(deadline__gt=timezone.now())
+    )
+
+    for complaint in deadline_approaching:
+        if complaint.assigned_to:
+            ComplaintNotification.create_notification(
+                complaint=complaint,
+                notification_type='deadline',
+                recipient=complaint.assigned_to,
+                title=f'اقتراب الموعد النهائي للشكوى {complaint.complaint_number}',
+                message=f'يتبقى أقل من 24 ساعة على الموعد النهائي لحل الشكوى'
+            )
+
+    # الشكاوى المتأخرة
+    overdue = Complaint.objects.filter(
+        status__in=['new', 'in_progress'],
+        deadline__lt=timezone.now()
+    )
+
+    for complaint in overdue:
+        recipients = set()
+        if complaint.assigned_to:
+            recipients.add(complaint.assigned_to)
+        if complaint.assigned_department and complaint.assigned_department.manager:
+            recipients.add(complaint.assigned_department.manager)
+
+        for recipient in recipients:
+            ComplaintNotification.create_notification(
+                complaint=complaint,
+                notification_type='overdue',
+                recipient=recipient,
+                title=f'تجاوز الموعد النهائي للشكوى {complaint.complaint_number}',
+                message=f'تم تجاوز الموعد النهائي لحل الشكوى. يرجى اتخاذ الإجراء المناسب.'
             )
