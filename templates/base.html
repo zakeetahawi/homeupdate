@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
+{% load complaints_permissions %}
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -302,6 +303,8 @@
                 </ul>
                 <div class="d-flex align-items-center ms-auto">
                     {% if user.is_authenticated %}
+                        <!-- فحص صلاحيات الشكاوى - يظهر للمدراء والمستخدمين ذوي الصلاحيات -->
+                        {% if user|has_complaints_permissions %}
                         <!-- أيقونة إشعارات الشكاوى المحسنة -->
                         <div class="dropdown me-2">
                             <button class="btn btn-outline-warning position-relative" type="button" id="complaintsNotificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="إشعارات الشكاوى">
@@ -377,7 +380,10 @@
                                 </li>
                             </ul>
                         </div>
+                        {% endif %}
 
+                        <!-- فحص صلاحيات التعيين والتصعيد - يظهر للمدراء والمستخدمين ذوي الصلاحيات -->
+                        {% if user|has_assignment_permissions %}
                         <!-- أيقونة إشعارات التعيين -->
                         <div class="dropdown me-2">
                             <button class="btn btn-outline-info position-relative" type="button" id="assignmentNotificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="إشعارات التعيين">
@@ -405,6 +411,7 @@
                                 </div>
                             </ul>
                         </div>
+                        {% endif %}
 
                         <!-- أيقونة الإشعارات العامة -->
                         <div class="dropdown me-3">
@@ -1303,6 +1310,12 @@
 
         // تحديث إشعارات التعيين
         function updateAssignmentNotifications() {
+            // التحقق من وجود العنصر قبل التحديث (قد يكون مخفي بسبب الصلاحيات)
+            const assignmentDropdown = document.querySelector('#assignmentNotificationsDropdown');
+            if (!assignmentDropdown) {
+                return; // العنصر غير موجود، المستخدم ليس له صلاحيات
+            }
+
             fetch('/complaints/api/assignment-notifications/')
                 .then(response => response.json())
                 .then(data => {
@@ -1370,6 +1383,12 @@
 
         // تحديث عداد إشعارات الشكاوى
         function updateComplaintsNotificationCount() {
+            // التحقق من وجود العنصر قبل التحديث (قد يكون مخفي بسبب الصلاحيات)
+            const complaintsDropdown = document.querySelector('#complaintsNotificationsDropdown');
+            if (!complaintsDropdown) {
+                return; // العنصر غير موجود، المستخدم ليس له صلاحيات
+            }
+
             // جلب إحصائيات الشكاوى غير المحلولة
             fetch('/complaints/api/unresolved-stats/?_=' + Date.now())
                 .then(response => response.json())
