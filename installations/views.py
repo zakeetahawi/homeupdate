@@ -109,12 +109,12 @@ def dashboard(request):
     scheduled_installations = installation_schedules_queryset.filter(status='scheduled').count()
     modification_required_installations = installation_schedules_queryset.filter(status='modification_required').count()
 
-    # حساب الطلبات التي تحتاج جدولة (من Order مباشرة)
-    orders_needing_scheduling_queryset = Order.objects.filter(
-        selected_types__icontains='installation',
-        installationschedule__isnull=True
-    )
-    orders_needing_scheduling_count = orders_needing_scheduling_queryset.count()
+    # حساب الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
+    orders_needing_scheduling_count = ManufacturingOrder.objects.filter(
+        status__in=['ready_install', 'delivered'],
+        order__selected_types__icontains='installation',
+        order__installationschedule__isnull=True
+    ).count()
 
     # 3. الطلبات المديونة (بدون فلترة افتراضية)
     orders_with_debt_query = Order.objects.filter(
@@ -156,10 +156,17 @@ def dashboard(request):
     )
     recent_orders = recent_orders_query.select_related('customer', 'branch')[:10]
 
-    # 8. الطلبات التي تحتاج جدولة (للجداول)
-    orders_needing_scheduling = list(
-        orders_needing_scheduling_queryset.select_related('customer', 'manufacturing_order')[:10]
-    )
+    # 8. الطلبات التي تحتاج جدولة (للجداول) - أوامر التصنيع الجاهزة فقط
+    orders_needing_scheduling_queryset = ManufacturingOrder.objects.filter(
+        status__in=['ready_install', 'delivered'],
+        order__selected_types__icontains='installation',
+        order__installationschedule__isnull=True
+    ).select_related('order', 'order__customer')
+
+    orders_needing_scheduling = []
+    for mfg_order in orders_needing_scheduling_queryset[:10]:
+        mfg_order.order.manufacturing_order = mfg_order
+        orders_needing_scheduling.append(mfg_order.order)
 
     # 9. إحصائيات الفرق (بدون فلترة افتراضية)
     teams_stats = InstallationTeam.objects.filter(
@@ -367,70 +374,38 @@ def installation_list(request):
                 'location_type': getattr(installation, 'location_type', None),
             })
     
-    # 2. جلب الطلبات التي تحتاج جدولة (غير المجدولة) - مفلترة بالسنة الافتراضية
+    # 2. جلب الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
     if not status_filter or status_filter == 'needs_scheduling':
-        # جميع الطلبات التي لم يتم جدولتها بعد (ليس فقط الجاهزة)
-        ready_orders_query = Order.objects.filter(
-            selected_types__icontains='installation',
-            installationschedule__isnull=True
-        ).select_related('customer')
-        # تطبيق فلتر السنة الافتراضية
-        ready_orders_query = apply_default_year_filter(ready_orders_query, request, 'order_date')
-        
-        # تطبيق فلاتر الطلبات الجاهزة
-        if order_status_filter:
-            ready_orders_query = ready_orders_query.filter(order_status=order_status_filter)
-        if search:
-            search_q = Q(order_number__icontains=search) | \
-                      Q(customer__name__icontains=search) | \
-                      Q(customer__phone__icontains=search)
-            ready_orders_query = ready_orders_query.filter(search_q)
-        
-        # إضافة الطلبات العادية
-        for order in ready_orders_query:
-            installation_items.append({
-                'type': 'needs_scheduling',
-                'installation': None,
-                'order': order,
-                'customer': order.customer,
-                'team': None,
-                'status': 'needs_scheduling',
-                'scheduled_date': None,
-                'created_at': order.created_at,
-                'location_type': getattr(order, 'location_type', None),
-            })
-        
-        # أوامر التصنيع الجاهزة (مفلترة بالسنة الافتراضية)
+        # أوامر التصنيع الجاهزة للتركيب أو المسلمة فقط
         ready_manufacturing_query = ManufacturingOrder.objects.filter(
             status__in=['ready_install', 'delivered'],
             order__selected_types__icontains='installation',
             order__installationschedule__isnull=True
         ).select_related('order__customer')
-        # تم إلغاء الفلترة الافتراضية
+        # تطبيق فلتر السنة الافتراضية
+        ready_manufacturing_query = apply_default_year_filter(ready_manufacturing_query, request, 'order_date')
         
-        # تطبيق نفس فلاتر البحث
+        # تطبيق فلاتر البحث
         if search:
             search_q = Q(order__order_number__icontains=search) | \
                       Q(order__customer__name__icontains=search) | \
                       Q(order__customer__phone__icontains=search)
             ready_manufacturing_query = ready_manufacturing_query.filter(search_q)
-        
-        # تجنب التكرار
-        existing_order_ids = {item['order'].id for item in installation_items if item['type'] == 'needs_scheduling'}
-        
+
+        # إضافة أوامر التصنيع الجاهزة للتركيب
         for mfg_order in ready_manufacturing_query:
-            if mfg_order.order_id not in existing_order_ids:
-                installation_items.append({
-                    'type': 'needs_scheduling',
-                    'installation': None,
-                    'order': mfg_order.order,
-                    'customer': mfg_order.order.customer,
-                    'team': None,
-                    'status': 'needs_scheduling',
-                    'scheduled_date': None,
-                    'created_at': mfg_order.created_at,
-                    'location_type': getattr(mfg_order.order, 'location_type', None),
-                })
+            installation_items.append({
+                'type': 'needs_scheduling',
+                'installation': None,
+                'order': mfg_order.order,
+                'customer': mfg_order.order.customer,
+                'team': None,
+                'status': 'needs_scheduling',
+                'scheduled_date': None,
+                'created_at': mfg_order.created_at,
+                'location_type': getattr(mfg_order.order, 'location_type', None),
+                'manufacturing_order': mfg_order,  # إضافة أمر التصنيع للمرجع
+            })
     
     # 3. جلب الطلبات تحت التصنيع (للعرض فقط) - مفلترة بالسنة الافتراضية
     if not status_filter or status_filter == 'under_manufacturing':
@@ -847,32 +822,19 @@ def orders_modal(request):
             selected_types__icontains='installation'
         ).select_related('customer', 'branch', 'salesperson')
     elif order_type == 'ready':
-        # جلب الطلبات العادية الجاهزة للتركيب - فقط طلبات التركيب
-        regular_orders = Order.objects.filter(
-            selected_types__icontains='installation',
-            order_status__in=['ready_install', 'completed'],
-            installationschedule__isnull=True
-        ).select_related('customer', 'branch', 'salesperson')
-
-        # جلب أوامر التصنيع الجاهزة للتركيب (فقط من نوع تركيب)
+        # جلب أوامر التصنيع الجاهزة للتركيب فقط (جاهز للتركيب أو تم التسليم)
         from manufacturing.models import ManufacturingOrder
         manufacturing_orders = ManufacturingOrder.objects.filter(
-            status__in=['ready_install', 'delivered'],  # إضافة حالة "تم التسليم"
+            status__in=['ready_install', 'delivered'],
             order__selected_types__icontains='installation',
-            order__installationschedule__isnull=True  # التأكد من عدم وجود جدولة
+            order__installationschedule__isnull=True
         ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson')
 
-        # دمج الطلبات مع تمييز أوامر التصنيع (بدون تكرار)
-        orders = list(regular_orders)
-        existing_order_ids = set(order.id for order in orders)
-        
+        # تحويل أوامر التصنيع إلى طلبات مع ربط أمر التصنيع
+        orders = []
         for mfg_order in manufacturing_orders:
-            # إضافة أمر التصنيع فقط إذا لم يكن موجوداً بالفعل
-            if mfg_order.order.id not in existing_order_ids:
-                # إضافة أمر التصنيع للطلب (سيتم التعامل معه في القالب)
-                mfg_order.order.manufacturing_order = mfg_order
-                orders.append(mfg_order.order)
-                existing_order_ids.add(mfg_order.order.id)
+            mfg_order.order.manufacturing_order = mfg_order
+            orders.append(mfg_order.order)
     elif order_type == 'manufacturing':
         # عرض جميع أوامر التصنيع قيد التنفيذ أو قيد الانتظار (وليس فقط الأحدث لكل طلب)
         from manufacturing.models import ManufacturingOrder
