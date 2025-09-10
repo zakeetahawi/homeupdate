@@ -465,24 +465,14 @@ class ComplaintDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'complaint'
 
     def get_object(self):
-        """تحسين جلب تفاصيل الشكوى باستخدام الكاش"""
-        from django.core.cache import cache
-
-        # محاولة جلب الشكوى من الكاش
+        """تحسين جلب تفاصيل الشكوى بتقليل الاستعلامات"""
         complaint_id = self.kwargs.get('pk')
-        cache_key = f'complaint_detail_{complaint_id}'
-        complaint = cache.get(cache_key)
-
-        if complaint is None:
-            # إذا لم تكن موجودة في الكاش، قم بجلبها من قاعدة البيانات
-            complaint = super().get_object(
-                queryset=self.get_queryset()
-            )
-            
-            # حفظ في الكاش لمدة 10 دقائق
-            cache.set(cache_key, complaint, 600)
-
-        return complaint
+        
+        # جلب واحد محسن مع جميع العلاقات
+        return get_object_or_404(
+            self.get_queryset(),
+            pk=complaint_id
+        )
 
     def get_queryset(self):
         """تحسين الاستعلامات باستخدام select_related و prefetch_related"""
@@ -498,8 +488,7 @@ class ComplaintDetailView(LoginRequiredMixin, DetailView):
         )
 
     def get_context_data(self, **kwargs):
-        """تحسين جلب البيانات السياقية مع الحفاظ على سجل التحديثات"""
-        from django.core.cache import cache
+        """تحسين جلب البيانات السياقية مع تقليل الاستعلامات"""
         context = super().get_context_data(**kwargs)
 
         # إعداد النماذج بناءً على حالة الشكوى
@@ -520,41 +509,30 @@ class ComplaintDetailView(LoginRequiredMixin, DetailView):
         # تحديث السياق بالنماذج
         context.update(forms_data)
 
-        # جلب البيانات مباشرة من قاعدة البيانات لضمان عرضها الصحيح
+        # جلب البيانات المرتبطة بطريقة محسنة (تم جلبها بالفعل عبر prefetch_related)
         context.update({
-            'updates': self.object.updates.select_related('created_by').prefetch_related(
-                'old_assignee', 'new_assignee'
-            ).order_by('-created_at'),
-            'attachments': self.object.attachments.select_related('uploaded_by').order_by('-uploaded_at'),
-            'escalations': self.object.escalations.select_related(
-                'escalated_by', 'escalated_to', 'escalated_from'
-            ).order_by('-escalated_at')
+            'updates': self.object.updates.all()[:20],  # تحديد عدد التحديثات
+            'attachments': self.object.attachments.all()[:10],  # تحديد عدد المرفقات
+            'escalations': self.object.escalations.all()[:5]  # تحديد عدد التصعيدات
         })
 
-        # جلب الإشعارات الخاصة بالمستخدم الحالي
+        # جلب الإشعارات بشكل محدود
         context['notifications'] = self.object.notifications.filter(
             recipient=self.request.user
-        ).select_related('recipient').order_by('-created_at')[:10]
+        )[:5]  # تحديد عدد الإشعارات
 
-        # إضافة معلومات الصلاحيات
+        # إضافة معلومات الصلاحيات بدون استعلامات إضافية
         user = self.request.user
-        
-        # تحسين فحص المجموعات
-        user_groups = user.groups.filter(
-            name__in=['Complaints_Managers', 'Complaints_Supervisors']
-        )
-        is_admin = user.is_superuser or user_groups.exists()
-        
         context.update({
             'user_can_update': user.has_perm('complaints.change_complaint'),
             'user_can_resolve': user.has_perm('complaints.resolve_complaint'),
             'user_can_escalate': user.has_perm('complaints.escalate_complaint'),
             'user_can_delete': user.has_perm('complaints.delete_complaint'),
             'user_can_assign': user.has_perm('complaints.assign_complaint'),
-            'is_admin': is_admin
+            'is_admin': user.is_superuser or user.is_staff
         })
         
-        # إضافة إحصائيات سريعة عن الشكوى
+        # إضافة إحصائيات سريعة بدون استعلامات معقدة
         resolution_time = None
         if self.object.resolved_at and self.object.created_at:
             resolution_time = (
@@ -567,9 +545,9 @@ class ComplaintDetailView(LoginRequiredMixin, DetailView):
             is_overdue = self.object.deadline < timezone.now()
 
         context['complaint_stats'] = {
-            'updates_count': context['updates'].count(),
-            'attachments_count': context['attachments'].count(),
-            'escalations_count': context['escalations'].count(),
+            'updates_count': len(context['updates']),
+            'attachments_count': len(context['attachments']),
+            'escalations_count': len(context['escalations']),
             'resolution_time_hours': round(resolution_time, 1) if resolution_time else None,
             'is_overdue': is_overdue,
             'time_since_creation': round((
@@ -1028,7 +1006,7 @@ def complaint_escalate(request, pk):
 
 @login_required
 def complaint_resolve(request, pk):
-    """حل الشكوى"""
+    """حل الشكوى وتحويلها لانتظار التقييم"""
     complaint = get_object_or_404(Complaint, pk=pk)
 
     if request.method == 'POST':
@@ -1040,7 +1018,8 @@ def complaint_resolve(request, pk):
             old_status = complaint.status
             old_status_display = complaint.get_status_display()
 
-            complaint.status = 'resolved'
+            # تغيير الحالة إلى انتظار التقييم بدلاً من محلولة مباشرة
+            complaint.status = 'pending_evaluation'
             complaint.resolved_at = timezone.now()
             complaint.resolved_by = request.user
             complaint.save()
@@ -1049,19 +1028,50 @@ def complaint_resolve(request, pk):
             ComplaintUpdate.objects.create(
                 complaint=complaint,
                 update_type='resolution',
-                title='تم حل الشكوى',
-                description=resolution_description,
+                title='تم حل الشكوى - في انتظار التقييم',
+                description=f'{resolution_description}\n\nتم حل الشكوى وهي الآن في انتظار تقييم العميل',
                 old_status=old_status,
-                new_status='resolved',
+                new_status='pending_evaluation',
                 created_by=request.user,
                 is_visible_to_customer=True
             )
 
-            messages.success(request, 'تم حل الشكوى بنجاح')
+            messages.success(request, f'تم حل الشكوى رقم {complaint.complaint_number} بنجاح وهي الآن في انتظار تقييم العميل')
             return redirect('complaints:complaint_detail', pk=pk)
         else:
             messages.error(request, 'حدث خطأ في حل الشكوى. يرجى المحاولة مرة أخرى.')
 
+    return redirect('complaints:complaint_detail', pk=pk)
+
+
+@login_required
+def mark_complaint_as_resolved(request, pk):
+    """تحديد الشكوى كمحلولة بعد التقييم"""
+    complaint = get_object_or_404(Complaint, pk=pk)
+    
+    # التحقق من أن الشكوى في انتظار التقييم أو تم تقييمها
+    if complaint.status not in ['pending_evaluation']:
+        messages.warning(request, 'لا يمكن تطبيق هذا الإجراء على الشكوى في الحالة الحالية')
+        return redirect('complaints:complaint_detail', pk=pk)
+    
+    # تحديث حالة الشكوى إلى محلولة
+    old_status = complaint.status
+    complaint.status = 'resolved'
+    complaint.save()
+    
+    # إنشاء سجل تحديث
+    ComplaintUpdate.objects.create(
+        complaint=complaint,
+        update_type='status_change',
+        title='تأكيد حل الشكوى',
+        description=f'تم تأكيد حل الشكوى بواسطة {request.user.get_full_name() or request.user.username}',
+        old_status=old_status,
+        new_status='resolved',
+        created_by=request.user,
+        is_visible_to_customer=True
+    )
+    
+    messages.success(request, f'تم تأكيد حل الشكوى رقم {complaint.complaint_number}')
     return redirect('complaints:complaint_detail', pk=pk)
 
 
@@ -1108,6 +1118,75 @@ def customer_rating(request, pk):
             messages.success(request, 'تم حفظ تقييمك بنجاح')
             return redirect('complaints:complaint_detail', pk=pk)
     
+    return redirect('complaints:complaint_detail', pk=pk)
+
+
+@login_required
+def start_action_on_escalated_complaint(request, pk):
+    """بدء الإجراء على الشكوى المصعدة (إيقاف التصعيد)"""
+    complaint = get_object_or_404(Complaint, pk=pk)
+    
+    # التحقق من أن الشكوى في حالة مصعدة
+    if complaint.status != 'escalated':
+        messages.warning(request, 'لا يمكن تطبيق هذا الإجراء - الحالة الحالية: ' + complaint.get_status_display())
+        return redirect('complaints:complaint_detail', pk=pk)
+    
+    # تحديث حالة الشكوى إلى قيد المعالجة
+    old_status = complaint.status
+    complaint.status = 'in_progress'
+    
+    # تعيين الشكوى للمستخدم الحالي إذا لم تكن مُعيّنة
+    if not complaint.assigned_to:
+        complaint.assigned_to = request.user
+    
+    complaint.save()
+    
+    # إنشاء سجل تحديث
+    ComplaintUpdate.objects.create(
+        complaint=complaint,
+        update_type='status_change',
+        title='بدء الإجراء على الشكوى المصعدة',
+        description=f'تم بدء الإجراء من قبل {request.user.get_full_name() or request.user.username}\nتم تغيير الحالة من "مصعدة" إلى "قيد المعالجة"',
+        old_status=old_status,
+        new_status='in_progress',
+        created_by=request.user,
+        is_visible_to_customer=True
+    )
+    
+    messages.success(request, f'تم بدء الإجراء على الشكوى المصعدة رقم {complaint.complaint_number} بنجاح')
+    return redirect('complaints:complaint_detail', pk=pk)
+
+
+@login_required
+def close_complaint(request, pk):
+    """إغلاق الشكوى بعد التقييم"""
+    complaint = get_object_or_404(Complaint, pk=pk)
+    
+    # التحقق من أن الشكوى محلولة
+    if complaint.status != 'resolved':
+        messages.warning(request, 'لا يمكن إغلاق الشكوى - يجب أن تكون محلولة أولاً')
+        return redirect('complaints:complaint_detail', pk=pk)
+    
+    # تحديث حالة الشكوى إلى مغلقة
+    old_status = complaint.status
+    complaint.status = 'closed'
+    complaint.closed_at = timezone.now()
+    complaint.closed_by = request.user
+    complaint.save()
+    
+    # إنشاء سجل تحديث
+    ComplaintUpdate.objects.create(
+        complaint=complaint,
+        update_type='status_change',
+        title='إغلاق الشكوى',
+        description=f'تم إغلاق الشكوى نهائياً بواسطة {request.user.get_full_name() or request.user.username}',
+        old_status=old_status,
+        new_status='closed',
+        created_by=request.user,
+        is_visible_to_customer=True
+    )
+    
+    messages.success(request, f'تم إغلاق الشكوى رقم {complaint.complaint_number} نهائياً')
     return redirect('complaints:complaint_detail', pk=pk)
 
 

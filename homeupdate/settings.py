@@ -108,13 +108,17 @@ DATABASES = {
 }
 
 # إضافة إعدادات محسنة لإدارة الاتصالات
-DATABASES['default']['CONN_MAX_AGE'] = 60   # تقليل إلى دقيقة واحدة لتجنب تراكم الاتصالات
+DATABASES['default']['CONN_MAX_AGE'] = 0   # إغلاق الاتصالات فوراً لتجنب تراكمها
 DATABASES['default']['CONN_HEALTH_CHECKS'] = True  # فحص صحة الاتصالات
 DATABASES['default']['OPTIONS'] = {
     'connect_timeout': 10,
-    'options': '-c statement_timeout=30000 -c idle_in_transaction_session_timeout=60000',
+    'options': '-c statement_timeout=30000 -c idle_in_transaction_session_timeout=30000',
     'sslmode': 'prefer',
+    'server_side_binding': True,  # تقليل استهلاك الذاكرة
 }
+
+# إضافة connection pooling لتحسين إدارة الاتصالات
+DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql_psycopg2'
 
 # إعدادات Channels و WebSocket
 ASGI_APPLICATION = 'homeupdate.asgi.application'
