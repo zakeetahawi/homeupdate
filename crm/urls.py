@@ -10,6 +10,7 @@ from inventory.views import dashboard_view
 from .csrf_views import get_csrf_token_view, csrf_debug_view, test_csrf_view
 from accounts.api_views import dashboard_stats
 from customers.views import customer_list, customer_detail
+from . import api_monitoring
 
 # تم حذف test_completion_view
 
@@ -95,6 +96,18 @@ urlpatterns = [
     path("backup-system/", include("backup_system.urls", namespace="backup_system")),
     # نظام الدردشة الحديث (API فقط)
     path("modern-chat/", include("modern_chat.urls", namespace="modern_chat")),
+
+    # لوحة مراقبة النظام
+    path("monitoring/", views.monitoring_dashboard, name="monitoring_dashboard"),
+
+    # API مراقبة النظام وقاعدة البيانات
+    path("api/monitoring/status/", api_monitoring.monitoring_status, name="monitoring_status"),
+    path("api/monitoring/database/", api_monitoring.database_stats, name="database_stats"),
+    path("api/monitoring/system/", api_monitoring.system_stats, name="system_stats"),
+    path("api/monitoring/pool/", api_monitoring.pool_stats, name="pool_stats"),
+    path("api/monitoring/actions/", api_monitoring.DatabaseActionsView.as_view(), name="database_actions"),
+    path("api/monitoring/health/", api_monitoring.health_check, name="health_check"),
+    path("api/monitoring/alerts/", api_monitoring.alerts, name="monitoring_alerts"),
 
 ]
 

@@ -59,12 +59,12 @@ app.conf.update(
     beat_schedule={
         'cleanup-database-connections': {
             'task': 'complaints.tasks.cleanup_database_connections',
-            'schedule': 300.0,  # كل 5 دقائق
+            'schedule': 600.0,  # كل 10 دقائق (مخفض من 5 لتقليل الضغط)
             'options': {'queue': 'maintenance'}
         },
         'monitor-database-connections': {
             'task': 'complaints.tasks.monitor_database_connections',
-            'schedule': 180.0,  # كل 3 دقائق
+            'schedule': 300.0,  # كل 5 دقائق (مخفض من 3 لتقليل الضغط)
             'options': {'queue': 'maintenance'}
         },
         'system-health-check': {
@@ -94,23 +94,24 @@ app.conf.update(
     worker_hijack_root_logger=False,
     worker_log_color=False,
 
-    # إعدادات الشبكة المحسنة
+    # إعدادات الشبكة المحسنة لتجنب "too many clients"
     broker_connection_retry_on_startup=True,
     broker_connection_retry=True,
-    broker_connection_max_retries=5,  # تقليل عدد المحاولات
-    broker_pool_limit=10,  # تحديد حد pool الاتصالات
+    broker_connection_max_retries=3,  # تقليل أكبر من 5 إلى 3
+    broker_pool_limit=5,  # تقليل كبير من 10 إلى 5
 
     # إعدادات الذاكرة المحسنة
-    worker_max_memory_per_child=100000,  # 100MB (مخفض)
+    worker_max_memory_per_child=80000,  # 80MB (مخفض أكثر)
     worker_disable_rate_limits=False,
-    worker_max_tasks_per_child=50,  # إعادة تشغيل العامل بعد 50 مهمة
+    worker_max_tasks_per_child=20,  # تقليل كبير من 50 إلى 20 لإعادة تشغيل أسرع
 
-    # إعدادات قاعدة البيانات
+    # إعدادات قاعدة البيانات محسنة بقوة
     database_engine_options={
         'pool_pre_ping': True,
-        'pool_recycle': 300,  # إعادة تدوير الاتصالات كل 5 دقائق
-        'pool_timeout': 20,
-        'max_overflow': 0,
+        'pool_recycle': 180,  # تقليل من 300 إلى 180 ثانية (3 دقائق)
+        'pool_timeout': 10,   # تقليل من 20 إلى 10 ثواني
+        'max_overflow': 0,    # منع الاتصالات الإضافية
+        'pool_size': 3,       # حد أقصى 3 اتصالات فقط لكل عامل
     },
 
     # إعدادات التسجيل

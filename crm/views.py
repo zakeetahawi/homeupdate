@@ -8,6 +8,7 @@ from django.db.models import Count, Sum, F, Q
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.admin.views.decorators import staff_member_required
 from django.views.generic import TemplateView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -690,3 +691,14 @@ def dashboard_api(request):
         },
     }
     return Response(data)
+
+
+@staff_member_required
+def monitoring_dashboard(request):
+    """
+    لوحة تحكم مراقبة النظام
+    """
+    return render(request, 'monitoring/dashboard.html', {
+        'title': 'لوحة مراقبة النظام',
+        'page_title': 'مراقبة النظام وقاعدة البيانات',
+    })

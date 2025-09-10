@@ -24,7 +24,6 @@ urlpatterns = [
     path('<int:pk>/close/', views.close_complaint, name='close_complaint'),
     path('<int:pk>/mark-resolved/', views.mark_complaint_as_resolved, name='mark_complaint_as_resolved'),
     path('<int:pk>/assign/', views.complaint_assignment, name='complaint_assignment'),
-    path('<int:pk>/update/', views.complaint_add_update, name='complaint_add_update'),
     path('<int:pk>/escalate/', views.complaint_escalate, name='complaint_escalate'),
     path('<int:pk>/resolve/', views.complaint_resolve, name='complaint_resolve'),
     path('<int:pk>/attachment/', views.complaint_add_attachment, name='complaint_add_attachment'),

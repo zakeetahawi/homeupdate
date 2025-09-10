@@ -391,7 +391,7 @@ class ComplaintAssignmentView(View):
                     pass  # Keep existing department if new one not found
 
             complaint._changed_by = request.user  # للاستخدام في الإشعارات
-            complaint.save()
+            complaint.save()  # هذا سيستدعي signals تلقائياً
 
             # Create update log
             assigned_to_name = assigned_to.get_full_name() or assigned_to.username
@@ -417,25 +417,12 @@ class ComplaintAssignmentView(View):
                 is_visible_to_customer=True
             )
 
-            # Send notification using the notification service
-            try:
-                notification_service.send_assignment_notification(
-                    complaint=complaint,
-                    assigned_to=assigned_to,
-                    assigned_by=request.user,
-                    notes=assignment_notes,
-                    urgent=urgent_notification
-                )
-                notification_sent = True
-            except Exception as e:
-                print(f"Error sending assignment notification: {e}")
-                notification_sent = False
-
+            # الإشعارات ستُرسل تلقائياً عبر signals عند حفظ الشكوى
             return JsonResponse({
                 'success': True,
                 'message': 'تم تعيين الشكوى بنجاح',
                 'assigned_to': assigned_to_name,
-                'notification_sent': notification_sent
+                'notification_sent': True  # signals ستتولى الإشعارات
             })
 
         except json.JSONDecodeError:
@@ -1067,17 +1054,12 @@ class AssignmentNotificationsView(View):
     def get(self, request):
         """Get assignment notifications for current user"""
         try:
-            # Get complaints assigned to current user that are unread
-            assigned_complaints = Complaint.objects.filter(
-                assigned_to=request.user,
-                status__in=['new', 'in_progress', 'escalated']
-            ).select_related('customer', 'created_by').order_by('-created_at')[:5]
-
-            # Get assignment notifications for current user
+            # Get assignment notifications for current user (only unread and for active complaints)
             assignment_notifications = ComplaintNotification.objects.filter(
                 recipient=request.user,
-                notification_type='assignment',
-                is_read=False
+                notification_type__in=['assignment', 'new_complaint'],
+                is_read=False,
+                complaint__status__in=['new', 'in_progress', 'escalated']  # فقط الشكاوى النشطة
             ).select_related('complaint', 'complaint__customer').order_by('-created_at')[:5]
 
             notifications_data = []
@@ -1097,29 +1079,9 @@ class AssignmentNotificationsView(View):
                     'is_read': notification.is_read
                 })
 
-            # Add recently assigned complaints (if no specific notifications)
-            if len(notifications_data) < 3:
-                for complaint in assigned_complaints:
-                    if not any(n['complaint_id'] == complaint.id for n in notifications_data):
-                        notifications_data.append({
-                            'id': f'complaint_{complaint.id}',
-                            'type': 'assigned_complaint',
-                            'title': f'شكوى مسندة إليك: {complaint.complaint_number}',
-                            'message': f'شكوى من العميل {complaint.customer.name} - {complaint.title}',
-                            'complaint_id': complaint.id,
-                            'complaint_number': complaint.complaint_number,
-                            'customer_name': complaint.customer.name,
-                            'created_at': complaint.created_at.strftime('%Y-%m-%d %H:%M'),
-                            'url': f'/complaints/{complaint.id}/',
-                            'is_read': True,
-                            'priority': complaint.priority,
-                            'status': complaint.status
-                        })
-
             return JsonResponse({
                 'success': True,
                 'notifications': notifications_data[:5],  # Limit to 5
-                'total_assigned': assigned_complaints.count(),
                 'unread_assignments': assignment_notifications.count()
             })
 

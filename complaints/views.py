@@ -1271,8 +1271,15 @@ def bulk_action(request):
         action = form.cleaned_data['action']
         
         if action == 'assign' and form.cleaned_data['assigned_to']:
-            complaints.update(assigned_to=form.cleaned_data['assigned_to'])
-            messages.success(request, f'تم تعيين المسؤول لـ {complaints.count()} شكوى')
+            # استخدام save() بدلاً من update() لاستدعاء signals
+            assigned_to = form.cleaned_data['assigned_to']
+            count = 0
+            for complaint in complaints:
+                complaint.assigned_to = assigned_to
+                complaint._changed_by = request.user
+                complaint.save()
+                count += 1
+            messages.success(request, f'تم تعيين المسؤول لـ {count} شكوى')
         
         elif action == 'change_status' and form.cleaned_data['status']:
             complaints.update(status=form.cleaned_data['status'])

@@ -5,11 +5,64 @@ from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import ChatRoom, Message, UserStatus
+from django.db import connection
+from django.core.cache import cache
+from asgiref.sync import sync_to_async
+import time
+import logging
+
+# إعدادات محسنة لتجنب مشكلة "too many clients"
+logger = logging.getLogger('websocket')
 
 User = get_user_model()
 
 
-class ChatConsumer(AsyncWebsocketConsumer):
+class OptimizedDatabaseMixin:
+    """
+    Mixin لتحسين استخدام قاعدة البيانات في WebSocket
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._connection_cache = {}
+        self._last_cleanup = time.time()
+
+    async def cleanup_connections(self):
+        """تنظيف الاتصالات بشكل دوري"""
+        current_time = time.time()
+        if current_time - self._last_cleanup > 300:  # كل 5 دقائق
+            await sync_to_async(connection.close)()
+            self._last_cleanup = current_time
+            logger.debug("WebSocket database connections cleaned up")
+
+    @database_sync_to_async
+    def get_cached_user(self, user_id):
+        """الحصول على المستخدم مع تخزين مؤقت"""
+        cache_key = f"user_{user_id}"
+        user = cache.get(cache_key)
+        if not user:
+            try:
+                user = User.objects.get(id=user_id)
+                cache.set(cache_key, user, 300)  # 5 دقائق
+            except User.DoesNotExist:
+                return None
+        return user
+
+    @database_sync_to_async
+    def get_cached_room(self, room_id):
+        """الحصول على الغرفة مع تخزين مؤقت"""
+        cache_key = f"room_{room_id}"
+        room = cache.get(cache_key)
+        if not room:
+            try:
+                room = ChatRoom.objects.get(id=room_id)
+                cache.set(cache_key, room, 300)  # 5 دقائق
+            except ChatRoom.DoesNotExist:
+                return None
+        return room
+
+
+class ChatConsumer(OptimizedDatabaseMixin, AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope["user"]
         if self.user.is_anonymous:

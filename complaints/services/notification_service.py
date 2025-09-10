@@ -83,9 +83,13 @@ class ComplaintNotificationService:
                 'overdue': 'متأخرة',
                 'escalated': 'مصعدة'
             }
-            
+
             message = f'تم تغيير حالة الشكوى من "{status_messages.get(old_status, old_status)}" إلى "{status_messages.get(new_status, new_status)}"'
-            
+
+            # إخفاء الإشعارات القديمة عند حل الشكوى أو إغلاقها
+            if new_status in ['resolved', 'closed']:
+                self._hide_old_notifications_for_resolved_complaint(complaint)
+
             # Notify customer (if resolved or closed)
             if new_status in ['resolved', 'closed'] and hasattr(complaint.customer, 'user'):
                 self._send_notification(
@@ -127,6 +131,10 @@ class ComplaintNotificationService:
         Send notifications when complaint assignment changes
         """
         try:
+            # إخفاء الإشعارات القديمة للمسؤول السابق
+            if old_assignee:
+                self._hide_old_assignment_notifications(complaint, old_assignee)
+
             # Notify new assignee
             if new_assignee:
                 self._send_notification(
@@ -290,7 +298,7 @@ class ComplaintNotificationService:
                 'complaint': complaint,
                 'title': title,
                 'message': message,
-                'complaint_url': f"{settings.SITE_URL}{reverse('complaints:complaint_detail', kwargs={'pk': complaint.pk})}"
+                'complaint_url': f"http://localhost:8000{reverse('complaints:complaint_detail', kwargs={'pk': complaint.pk})}"
             }
             
             html_message = render_to_string('complaints/emails/notification.html', context)
@@ -307,6 +315,101 @@ class ComplaintNotificationService:
             
         except Exception as e:
             logger.error(f"Error sending email notification: {str(e)}")
+
+    def _hide_old_assignment_notifications(self, complaint, old_assignee):
+        """
+        إخفاء الإشعارات القديمة للمسؤول السابق عند تغيير التعيين
+        """
+        try:
+            from complaints.models import ComplaintNotification
+
+            # تحديد الإشعارات القديمة للمسؤول السابق كمقروءة
+            old_notifications = ComplaintNotification.objects.filter(
+                complaint=complaint,
+                recipient=old_assignee,
+                notification_type__in=['assignment', 'new_complaint'],
+                is_read=False
+            )
+
+            # طباعة تفاصيل للتشخيص
+            logger.info(f"🔍 البحث عن إشعارات قديمة للمسؤول {old_assignee.username} للشكوى {complaint.complaint_number}")
+            logger.info(f"🔍 عدد الإشعارات الموجودة قبل الإخفاء: {old_notifications.count()}")
+
+            updated_count = old_notifications.update(is_read=True)
+
+            if updated_count > 0:
+                logger.info(f"✅ تم إخفاء {updated_count} إشعار قديم للمسؤول السابق {old_assignee.username} للشكوى {complaint.complaint_number}")
+            else:
+                logger.info(f"ℹ️ لا توجد إشعارات قديمة لإخفائها للمسؤول {old_assignee.username} للشكوى {complaint.complaint_number}")
+
+        except Exception as e:
+            logger.error(f"Error hiding old assignment notifications: {str(e)}")
+
+    def _hide_old_notifications_for_resolved_complaint(self, complaint):
+        """
+        إخفاء جميع الإشعارات القديمة عند حل الشكوى أو إغلاقها
+        """
+        try:
+            from complaints.models import ComplaintNotification
+
+            # تحديد جميع الإشعارات غير المقروءة للشكوى كمقروءة
+            old_notifications = ComplaintNotification.objects.filter(
+                complaint=complaint,
+                is_read=False
+            )
+
+            updated_count = old_notifications.update(is_read=True)
+
+            if updated_count > 0:
+                logger.info(f"تم إخفاء {updated_count} إشعار قديم للشكوى المحلولة {complaint.complaint_number}")
+
+        except Exception as e:
+            logger.error(f"Error hiding old notifications for resolved complaint: {str(e)}")
+
+    def cleanup_old_notifications(self):
+        """
+        تنظيف شامل للإشعارات القديمة
+        """
+        try:
+            from complaints.models import ComplaintNotification, Complaint
+
+            # إخفاء إشعارات الشكاوى المحلولة/المغلقة
+            resolved_complaints = Complaint.objects.filter(status__in=['resolved', 'closed'])
+            total_hidden = 0
+
+            for complaint in resolved_complaints:
+                hidden_count = ComplaintNotification.objects.filter(
+                    complaint=complaint,
+                    is_read=False
+                ).update(is_read=True)
+                total_hidden += hidden_count
+
+                if hidden_count > 0:
+                    logger.info(f"تم إخفاء {hidden_count} إشعار للشكوى المحلولة {complaint.complaint_number}")
+
+            # إخفاء إشعارات التعيين للمستخدمين الذين لم يعودوا مسؤولين
+            active_complaints = Complaint.objects.filter(status__in=['new', 'in_progress', 'escalated'])
+
+            for complaint in active_complaints:
+                if complaint.assigned_to:
+                    # إخفاء جميع الإشعارات للمستخدمين الآخرين (عدا المسؤول الحالي)
+                    old_notifications = ComplaintNotification.objects.filter(
+                        complaint=complaint,
+                        is_read=False
+                    ).exclude(recipient=complaint.assigned_to)
+
+                    hidden_count = old_notifications.update(is_read=True)
+                    total_hidden += hidden_count
+
+                    if hidden_count > 0:
+                        logger.info(f"تم إخفاء {hidden_count} إشعار قديم للشكوى {complaint.complaint_number}")
+
+            logger.info(f"✅ تم تنظيف {total_hidden} إشعار قديم إجمالي")
+            return total_hidden
+
+        except Exception as e:
+            logger.error(f"Error cleaning up old notifications: {str(e)}")
+            return 0
 
 
 # Global instance

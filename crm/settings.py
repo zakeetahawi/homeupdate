@@ -133,11 +133,12 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 
-# قائمة الوسطاء الأساسية (تم تعطيل الوسطاء المخصصة مؤقتاً)
+# قائمة الوسطاء الأساسية مع إدارة اتصالات محسنة
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # إذا كنت تستخدم Whitenoise
+    'crm.middleware.connection_manager.EmergencyConnectionMiddleware',  # طوارئ - أولوية عالية
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -147,6 +148,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'crm.middleware.permission_handler.PermissionDeniedMiddleware',
     'odoo_db_manager.middleware.default_user.DefaultUserMiddleware',  # إنشاء مستخدم افتراضي
+    'crm.middleware.connection_manager.DatabaseConnectionMiddleware',  # إدارة الاتصالات - أولوية متوسطة
+    'crm.middleware.connection_manager.ConnectionMonitoringMiddleware',  # مراقبة - أولوية منخفضة
     # 'crm.middleware.PerformanceMiddleware',  # تم تعطيل مؤقتاً
     # 'crm.middleware.LazyLoadMiddleware',  # تم تعطيل مؤقتاً
 ]
@@ -262,7 +265,7 @@ CACHES = {
     }
 }
 
-# Database Configuration
+# Database Configuration - محسن مع PgBouncer لحل مشكلة "too many clients"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -270,12 +273,34 @@ DATABASES = {
         'USER': 'postgres',
         'PASSWORD': '5525',
         'HOST': 'localhost',
-        'PORT': '5432',
-        'CONN_MAX_AGE': 300,  # إعادة استخدام الاتصالات لمدة 5 دقائق
+        'PORT': '5432',  # PostgreSQL المباشر (سيتم تغييره إلى 6432 بعد تثبيت PgBouncer)
+        'CONN_MAX_AGE': 0,  # إغلاق الاتصالات فوراً - مهم مع PgBouncer
+        'CONN_HEALTH_CHECKS': False,  # تعطيل مع PgBouncer لتجنب التداخل
         'OPTIONS': {
             'client_encoding': 'UTF8',
             'sslmode': 'prefer',
             'connect_timeout': 10,
+            # إزالة options مع PgBouncer لأنه يدير الجلسات
+        },
+    }
+}
+
+# إعدادات احتياطية للاتصال المباشر (للطوارئ)
+DATABASES_DIRECT = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'crm_system',
+        'USER': 'postgres',
+        'PASSWORD': '5525',
+        'HOST': 'localhost',
+        'PORT': '5432',  # الاتصال المباشر
+        'CONN_MAX_AGE': 0,
+        'CONN_HEALTH_CHECKS': True,
+        'OPTIONS': {
+            'client_encoding': 'UTF8',
+            'sslmode': 'prefer',
+            'connect_timeout': 10,
+            'options': '-c statement_timeout=30000 -c idle_in_transaction_session_timeout=30000',
         },
     }
 }
@@ -843,9 +868,9 @@ FILE_UPLOAD_HANDLERS = [
     'django.core.files.uploadhandler.MemoryFileUploadHandler',
 ]
 
-# إعدادات Connection للعمليات الكبيرة
-CONN_MAX_AGE = 600  # 10 دقائق
-CONN_HEALTH_CHECKS = True
+# إعدادات Connection للعمليات الكبيرة - تم توحيدها في DATABASES
+# CONN_MAX_AGE = 0  # تم نقلها إلى DATABASES
+# CONN_HEALTH_CHECKS = True  # تم نقلها إلى DATABASES
 
 # زمن انتظار أطول للعمليات الكبيرة
 REQUEST_TIMEOUT = 300  # 5 دقائق
@@ -1159,14 +1184,11 @@ CELERY_TASK_ANNOTATIONS = {
     },
 }
 
-# إعدادات خاصة بقاعدة البيانات للعمليات الكبيرة
-DATABASES['default']['CONN_MAX_AGE'] = 600  # 10 دقائق
-DATABASES['default']['CONN_HEALTH_CHECKS'] = True
-# PostgreSQL specific options
-DATABASES['default']['OPTIONS'] = {
-    'connect_timeout': 60,
-    'options': '-c statement_timeout=300000 -c idle_in_transaction_session_timeout=600000'
-}
+# إعدادات خاصة بقاعدة البيانات للعمليات الكبيرة - تم توحيدها أعلاه
+# تم نقل جميع إعدادات قاعدة البيانات إلى DATABASES في بداية الملف لتجنب التضارب
+# DATABASES['default']['CONN_MAX_AGE'] = 0  # تم توحيدها
+# DATABASES['default']['CONN_HEALTH_CHECKS'] = True  # تم توحيدها
+# DATABASES['default']['OPTIONS'] تم توحيدها أعلاه
 
 # Session timeout للعمليات الطويلة
 SESSION_COOKIE_AGE = 86400  # 24 ساعة

@@ -53,6 +53,10 @@ def handle_post_save_notifications(sender, instance, created, **kwargs):
 
         # معالجة تغيير المسؤول
         if hasattr(instance, '_assignee_changed') and instance._assignee_changed:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"🔄 تغيير المسؤول للشكوى {instance.complaint_number}: من {instance._old_assignee} إلى {instance.assigned_to}")
+
             notification_service.notify_assignment_change(
                 complaint=instance,
                 old_assignee=instance._old_assignee,
