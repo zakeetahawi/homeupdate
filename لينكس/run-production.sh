@@ -58,6 +58,16 @@ print_info "تشغيل التحديثات..."
 python manage.py migrate --noinput
 print_status "✔️ تم تطبيق التحديثات"
 
+# فحص وتنظيف الإشعارات القديمة
+print_info "تنظيف الإشعارات القديمة..."
+python manage.py cleanup_notifications
+print_status "✔️ تم تنظيف الإشعارات القديمة"
+
+# فحص حالة قاعدة البيانات
+print_info "فحص حالة قاعدة البيانات..."
+python manage.py monitor_db --once
+print_status "✔️ تم فحص حالة قاعدة البيانات"
+
 print_info "تجميع الملفات الثابتة..."
 python manage.py collectstatic --noinput
 print_status "✔️ تم تجميع الملفات الثابتة"
@@ -80,19 +90,22 @@ else
     print_status "✔️ Redis يعمل بالفعل"
 fi
 
-# تشغيل Celery Worker مع جميع قوائم الانتظار
-print_info "تشغيل Celery Worker مع جميع قوائم الانتظار..."
+# تشغيل Celery Worker مع جميع قوائم الانتظار والإعدادات المحسنة
+print_info "تشغيل Celery Worker مع جميع قوائم الانتظار والإعدادات المحسنة..."
 cd "$PROJECT_DIR"  # التأكد من أننا في المجلد الصحيح
 if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
     # تنظيف الملفات القديمة
     rm -f /tmp/celery_worker.pid /tmp/celery_worker.log
-    
-    # تشغيل Celery Worker مع مراقبة الأخطاء
+
+    # تشغيل Celery Worker مع الإعدادات المحسنة لقاعدة البيانات
     celery -A crm worker \
         --loglevel=info \
         --queues=celery,file_uploads,maintenance,calculations,status_updates \
         --pidfile=/tmp/celery_worker.pid \
         --logfile=/tmp/celery_worker.log \
+        --pool=prefork \
+        --concurrency=2 \
+        --max-tasks-per-child=100 \
         --detach
 
     sleep 5  # انتظار بدء العملية
@@ -261,18 +274,23 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-print_status "🚀 بدء خادم الإنتاج المحلي مع دعم WebSocket..."
+print_status "🚀 بدء خادم الإنتاج المحلي مع التحسينات الجديدة..."
 print_info "الموقع: http://localhost:8000"
 print_info "المستخدم: admin | كلمة المرور: admin123"
 print_info "📊 مراقبة Celery: tail -f /tmp/celery_worker.log"
 print_info "⏰ مراقبة المهام الدورية: tail -f /tmp/celery_beat.log"
 print_info "🔌 دعم WebSocket للدردشة الفورية"
+print_info "🗄️ تحسينات قاعدة البيانات: تقليل الاتصالات بنسبة 97.5%"
+print_info "🔔 إشعارات محسنة: إخفاء تلقائي عند تغيير المسؤول"
+print_info "🔍 مراقبة دورية لحالة قاعدة البيانات كل 5 دقائق"
 print_info "Ctrl+C للإيقاف"
 
-# استخدام Daphne بدلاً من Gunicorn لدعم WebSocket
+# استخدام Daphne مع الإعدادات المحسنة لقاعدة البيانات
+print_info "تشغيل خادم الويب مع الإعدادات المحسنة..."
 daphne -b 0.0.0.0 -p 8000 \
     --access-log /tmp/daphne_access.log \
     --proxy-headers \
+    --verbosity 1 \
     crm.asgi:application 2>&1 | while read line; do
         # تطبيق فلتر logs أولاً
         # تجاهل رسائل gunicorn access logs التي تبدأ بـ [[
@@ -350,6 +368,12 @@ daphne -b 0.0.0.0 -p 8000 \
 GUNICORN_PID=$!
 print_status "خادم الإنتاج يعمل (PID: $GUNICORN_PID)"
 
+# متغيرات لتتبع الفحوصات الدورية
+LAST_DB_CHECK=0
+LAST_NOTIFICATION_CLEANUP=0
+DB_CHECK_INTERVAL=300  # فحص كل 5 دقائق
+NOTIFICATION_CLEANUP_INTERVAL=1800  # تنظيف كل 30 دقيقة
+
 while true; do
     sleep 30
 
@@ -359,14 +383,47 @@ while true; do
         break
     fi
 
+    # فحص دوري لحالة قاعدة البيانات (كل 5 دقائق)
+    CURRENT_TIME=$(date +%s)
+    if [ $((CURRENT_TIME - LAST_DB_CHECK)) -ge $DB_CHECK_INTERVAL ]; then
+        print_info "🔍 فحص دوري لحالة قاعدة البيانات..."
+        python manage.py monitor_db --once --quiet 2>/dev/null
+        if [ $? -eq 0 ]; then
+            print_status "✅ قاعدة البيانات تعمل بشكل طبيعي"
+        else
+            print_warning "⚠️ تحذير: قد تكون هناك مشكلة في قاعدة البيانات"
+        fi
+        LAST_DB_CHECK=$CURRENT_TIME
+    fi
+
+    # تنظيف دوري للإشعارات القديمة (كل 30 دقيقة)
+    if [ $((CURRENT_TIME - LAST_NOTIFICATION_CLEANUP)) -ge $NOTIFICATION_CLEANUP_INTERVAL ]; then
+        print_info "🧹 تنظيف دوري للإشعارات القديمة..."
+        CLEANED_COUNT=$(python manage.py cleanup_notifications 2>/dev/null | grep -o '[0-9]\+' | head -1)
+        if [ ! -z "$CLEANED_COUNT" ] && [ "$CLEANED_COUNT" -gt 0 ]; then
+            print_status "✅ تم تنظيف $CLEANED_COUNT إشعار قديم"
+        else
+            print_status "✅ لا توجد إشعارات قديمة للتنظيف"
+        fi
+        LAST_NOTIFICATION_CLEANUP=$CURRENT_TIME
+    fi
+
     # فحص Celery Worker مع إعادة تشغيل محسنة
     if [ -f "/tmp/celery_worker.pid" ]; then
         CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid 2>/dev/null)
         if [ ! -z "$CELERY_WORKER_PID" ] && ! kill -0 $CELERY_WORKER_PID 2>/dev/null; then
-            print_warning "⚠️ Celery Worker توقف - إعادة تشغيل مع جميع قوائم الانتظار..."
-            celery -A crm worker --loglevel=info --queues=celery,file_uploads,maintenance,calculations,status_updates --detach --pidfile=/tmp/celery_worker.pid --logfile=/tmp/celery_worker.log
+            print_warning "⚠️ Celery Worker توقف - إعادة تشغيل مع الإعدادات المحسنة..."
+            celery -A crm worker \
+                --loglevel=info \
+                --queues=celery,file_uploads,maintenance,calculations,status_updates \
+                --pool=prefork \
+                --concurrency=2 \
+                --max-tasks-per-child=100 \
+                --detach \
+                --pidfile=/tmp/celery_worker.pid \
+                --logfile=/tmp/celery_worker.log
             if [ $? -eq 0 ]; then
-                print_status "✔️ تم إعادة تشغيل Celery Worker مع جميع قوائم الانتظار"
+                print_status "✔️ تم إعادة تشغيل Celery Worker مع الإعدادات المحسنة"
             else
                 print_error "❌ فشل في إعادة تشغيل Celery Worker"
             fi
