@@ -37,16 +37,7 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # استخدام cache للإحصائيات
-        from django.core.cache import cache
-        cache_key = f'complaints_dashboard_stats_{self.request.user.id}'
-        cached_stats = cache.get(cache_key)
-
-        if cached_stats:
-            context.update(cached_stats)
-            return context
-
-        # تحسين الاستعلامات باستخدام استعلام واحد للإحصائيات العامة
+        # تحسين الاستعلامات بدون كاش لتجنب مشاكل BrokenPipe
         from django.db.models import Case, When, IntegerField
 
         status_stats = Complaint.objects.aggregate(
@@ -130,9 +121,6 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
             'performance_stats': performance_stats,
         }
 
-        # حفظ البيانات في الـ cache لمدة 5 دقائق
-        cache.set(cache_key, dashboard_data, 300)
-
         context.update(dashboard_data)
         return context
 
@@ -168,8 +156,10 @@ class ComplaintListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
+        # تحسين الاستعلامات مع تجنب مشاكل الكاش
         queryset = Complaint.objects.select_related(
-            'customer', 'complaint_type', 'assigned_to', 'assigned_department'
+            'customer', 'complaint_type', 'assigned_to', 'assigned_department',
+            'created_by', 'branch', 'related_order'
         ).order_by('-created_at')
 
         # تطبيق صلاحيات الوصول للشكاوى
@@ -469,45 +459,123 @@ class ComplaintReportsView(LoginRequiredMixin, TemplateView):
 
 
 class ComplaintDetailView(LoginRequiredMixin, DetailView):
-    """تفاصيل الشكوى"""
+    """تفاصيل الشكوى مع تحسين الأداء والكاش"""
     model = Complaint
     template_name = 'complaints/complaint_detail.html'
     context_object_name = 'complaint'
 
+    def get_object(self):
+        """تحسين جلب تفاصيل الشكوى باستخدام الكاش"""
+        from django.core.cache import cache
+
+        # محاولة جلب الشكوى من الكاش
+        complaint_id = self.kwargs.get('pk')
+        cache_key = f'complaint_detail_{complaint_id}'
+        complaint = cache.get(cache_key)
+
+        if complaint is None:
+            # إذا لم تكن موجودة في الكاش، قم بجلبها من قاعدة البيانات
+            complaint = super().get_object(
+                queryset=self.get_queryset()
+            )
+            
+            # حفظ في الكاش لمدة 10 دقائق
+            cache.set(cache_key, complaint, 600)
+
+        return complaint
+
     def get_queryset(self):
+        """تحسين الاستعلامات باستخدام select_related و prefetch_related"""
         return Complaint.objects.select_related(
             'customer', 'complaint_type', 'assigned_to', 'assigned_department',
-            'created_by', 'branch', 'related_order'
+            'created_by', 'branch', 'related_order', 'resolution_method'
         ).prefetch_related(
             'updates__created_by',
             'attachments__uploaded_by',
-            'notifications',
-            'escalations'
+            'notifications__recipient',
+            'escalations__escalated_by',
+            'escalations__escalated_to'
         )
 
     def get_context_data(self, **kwargs):
+        """تحسين جلب البيانات السياقية مع الحفاظ على سجل التحديثات"""
+        from django.core.cache import cache
         context = super().get_context_data(**kwargs)
-        
-        # نماذج التحديث
-        context['update_form'] = ComplaintUpdateForm()
-        context['status_form'] = ComplaintStatusUpdateForm(instance=self.object)
-        context['assignment_form'] = ComplaintAssignmentForm(instance=self.object)
-        context['escalation_form'] = ComplaintEscalationForm()
-        context['attachment_form'] = ComplaintAttachmentForm()
-        context['resolution_form'] = ComplaintResolutionForm(instance=self.object)
-        context['rating_form'] = ComplaintCustomerRatingForm(instance=self.object)
 
-        # التحديثات والمرفقات
-        context['updates'] = self.object.updates.order_by('-created_at')
-        context['attachments'] = self.object.attachments.order_by('-uploaded_at')
+        # إعداد النماذج بناءً على حالة الشكوى
+        forms_data = {
+            'update_form': ComplaintUpdateForm(),
+            'status_form': ComplaintStatusUpdateForm(instance=self.object),
+            'assignment_form': ComplaintAssignmentForm(instance=self.object),
+            'escalation_form': ComplaintEscalationForm(),
+            'attachment_form': ComplaintAttachmentForm(),
+        }
 
-        # الإشعارات
+        # إضافة نماذج إضافية حسب حالة الشكوى
+        if self.object.status == 'pending_evaluation':
+            forms_data['rating_form'] = ComplaintCustomerRatingForm(instance=self.object)
+        elif self.object.status not in ['resolved', 'closed']:
+            forms_data['resolution_form'] = ComplaintResolutionForm(instance=self.object)
+
+        # تحديث السياق بالنماذج
+        context.update(forms_data)
+
+        # جلب البيانات مباشرة من قاعدة البيانات لضمان عرضها الصحيح
+        context.update({
+            'updates': self.object.updates.select_related('created_by').prefetch_related(
+                'old_assignee', 'new_assignee'
+            ).order_by('-created_at'),
+            'attachments': self.object.attachments.select_related('uploaded_by').order_by('-uploaded_at'),
+            'escalations': self.object.escalations.select_related(
+                'escalated_by', 'escalated_to', 'escalated_from'
+            ).order_by('-escalated_at')
+        })
+
+        # جلب الإشعارات الخاصة بالمستخدم الحالي
         context['notifications'] = self.object.notifications.filter(
             recipient=self.request.user
-        ).order_by('-created_at')
+        ).select_related('recipient').order_by('-created_at')[:10]
 
-        # التصعيدات
-        context['escalations'] = self.object.escalations.order_by('-escalated_at')
+        # إضافة معلومات الصلاحيات
+        user = self.request.user
+        
+        # تحسين فحص المجموعات
+        user_groups = user.groups.filter(
+            name__in=['Complaints_Managers', 'Complaints_Supervisors']
+        )
+        is_admin = user.is_superuser or user_groups.exists()
+        
+        context.update({
+            'user_can_update': user.has_perm('complaints.change_complaint'),
+            'user_can_resolve': user.has_perm('complaints.resolve_complaint'),
+            'user_can_escalate': user.has_perm('complaints.escalate_complaint'),
+            'user_can_delete': user.has_perm('complaints.delete_complaint'),
+            'user_can_assign': user.has_perm('complaints.assign_complaint'),
+            'is_admin': is_admin
+        })
+        
+        # إضافة إحصائيات سريعة عن الشكوى
+        resolution_time = None
+        if self.object.resolved_at and self.object.created_at:
+            resolution_time = (
+                self.object.resolved_at - self.object.created_at
+            ).total_seconds() / 3600
+            
+        # حساب ما إذا كانت الشكوى متأخرة
+        is_overdue = False
+        if hasattr(self.object, 'deadline') and self.object.deadline:
+            is_overdue = self.object.deadline < timezone.now()
+
+        context['complaint_stats'] = {
+            'updates_count': context['updates'].count(),
+            'attachments_count': context['attachments'].count(),
+            'escalations_count': context['escalations'].count(),
+            'resolution_time_hours': round(resolution_time, 1) if resolution_time else None,
+            'is_overdue': is_overdue,
+            'time_since_creation': round((
+                timezone.now() - self.object.created_at
+            ).total_seconds() / 3600, 1)
+        }
 
         return context
 
@@ -699,7 +767,7 @@ class ComplaintUpdateView(LoginRequiredMixin, UpdateView):
 
 @login_required
 def complaint_status_update(request, pk):
-    """تحديث حالة الشكوى"""
+    """تحديث حالة الشكوى مع معالجة تلقائية لبدء العمل"""
     complaint = get_object_or_404(Complaint, pk=pk)
     
     if request.method == 'POST':
@@ -708,6 +776,10 @@ def complaint_status_update(request, pk):
             # حفظ الحالة القديمة قبل التحديث
             old_status = complaint.status
             old_status_display = complaint.get_status_display()
+
+            # إذا كانت الحالة الجديدة هي "in_progress" وكان المستخدم غير مسند، قم بتعيينه
+            if form.cleaned_data['status'] == 'in_progress' and not complaint.assigned_to:
+                complaint.assigned_to = request.user
 
             # Handle resolution method for resolved status
             resolution_method_id = request.POST.get('resolution_method')
@@ -739,6 +811,12 @@ def complaint_status_update(request, pk):
             if notes:
                 description += f'\nملاحظات: {notes}'
 
+            # إضافة معلومات إضافية لحالات معينة
+            if complaint.status == 'in_progress':
+                description += f'\nبدأ العمل على الشكوى بواسطة: {request.user.get_full_name() or request.user.username}'
+                if complaint.assigned_to == request.user:
+                    description += '\nتم تعيين الشكوى تلقائياً للمستخدم الحالي'
+
             ComplaintUpdate.objects.create(
                 complaint=complaint,
                 update_type='resolution' if complaint.status == 'resolved' else 'status_change',
@@ -751,13 +829,53 @@ def complaint_status_update(request, pk):
                 is_visible_to_customer=True
             )
 
-            success_message = (
-                f'تم تحديث حالة الشكوى رقم {complaint.complaint_number} '
-                f'إلى "{complaint.get_status_display()}".'
-            )
+            # رسائل نجاح مختلفة حسب الحالة
+            if complaint.status == 'in_progress':
+                success_message = f'تم بدء العمل على الشكوى رقم {complaint.complaint_number} بنجاح'
+            elif complaint.status == 'resolved':
+                success_message = f'تم حل الشكوى رقم {complaint.complaint_number} بنجاح'
+            else:
+                success_message = f'تم تحديث حالة الشكوى رقم {complaint.complaint_number} إلى "{complaint.get_status_display()}"'
+
             messages.success(request, success_message)
             return redirect('complaints:complaint_detail', pk=pk)
 
+    return redirect('complaints:complaint_detail', pk=pk)
+
+
+@login_required
+def start_working_on_complaint(request, pk):
+    """بدء العمل على الشكوى"""
+    complaint = get_object_or_404(Complaint, pk=pk)
+    
+    # التحقق من أن الشكوى في حالة جديدة
+    if complaint.status != 'new':
+        messages.warning(request, 'لا يمكن بدء العمل على هذه الشكوى - الحالة الحالية: ' + complaint.get_status_display())
+        return redirect('complaints:complaint_detail', pk=pk)
+    
+    # تحديث حالة الشكوى إلى قيد المعالجة
+    old_status = complaint.status
+    complaint.status = 'in_progress'
+    
+    # تعيين الشكوى للمستخدم الحالي إذا لم تكن مُعيّنة
+    if not complaint.assigned_to:
+        complaint.assigned_to = request.user
+    
+    complaint.save()
+    
+    # إنشاء سجل تحديث
+    ComplaintUpdate.objects.create(
+        complaint=complaint,
+        update_type='status_change',
+        title='بدء العمل على الشكوى',
+        description=f'بدأ {request.user.get_full_name() or request.user.username} العمل على الشكوى\nتم تغيير الحالة من "جديدة" إلى "قيد المعالجة"',
+        old_status=old_status,
+        new_status='in_progress',
+        created_by=request.user,
+        is_visible_to_customer=True
+    )
+    
+    messages.success(request, f'تم بدء العمل على الشكوى رقم {complaint.complaint_number} بنجاح')
     return redirect('complaints:complaint_detail', pk=pk)
 
 
@@ -818,12 +936,64 @@ def complaint_add_update(request, pk):
 
 @login_required
 def complaint_escalate(request, pk):
-    """تصعيد الشكوى"""
+    """تصعيد الشكوى مع تحسين التحقق من الصلاحيات"""
     complaint = get_object_or_404(Complaint, pk=pk)
+    user = request.user
+
+    # التحقق من الصلاحيات بشكل شامل
+    has_permission = False
+
+    # 1. التحقق من كون المستخدم مشرف النظام
+    if user.is_superuser:
+        has_permission = True
+    
+    # 2. التحقق من المجموعات
+    elif user.groups.filter(name__in=[
+        'Complaints_Managers',
+        'Complaints_Supervisors',
+        'Managers',
+        'Department_Managers'  # إضافة مدراء الأقسام
+    ]).exists():
+        has_permission = True
+    
+    # 3. التحقق من الصلاحيات المباشرة
+    elif user.has_perm('complaints.escalate_complaint'):
+        has_permission = True
+    
+    # 4. التحقق من سجل الصلاحيات المخصص (إذا كان موجوداً)
+    try:
+        if hasattr(user, 'complaint_permissions'):
+            user_permissions = user.complaint_permissions
+            if user_permissions.is_active and user_permissions.can_escalate_complaints:
+                has_permission = True
+    except:
+        pass
+    
+    # 5. التحقق من كون المستخدم هو المسؤول عن الشكوى
+    if complaint.assigned_to == user:
+        has_permission = True
+
+    if not has_permission:
+        messages.error(request, 'ليس لديك صلاحية لتصعيد الشكاوى')
+        return redirect('complaints:complaint_detail', pk=pk)
 
     if request.method == 'POST':
         form = ComplaintEscalationForm(request.POST)
         if form.is_valid():
+            # التحقق من صلاحيات المستخدم المستهدف
+            escalated_to = form.cleaned_data['escalated_to']
+            try:
+                target_permissions = escalated_to.complaint_permissions
+                if not target_permissions.is_active or not target_permissions.can_receive_escalations:
+                    messages.error(request, 'المستخدم المحدد لا يمكن تصعيد الشكاوى إليه')
+                    return redirect('complaints:complaint_detail', pk=pk)
+            except:
+                # إذا لم يكن لديه سجل صلاحيات، نتحقق من المجموعات
+                if not (escalated_to.is_superuser or
+                        escalated_to.groups.filter(name__in=['Complaints_Managers', 'Complaints_Supervisors']).exists()):
+                    messages.error(request, 'المستخدم المحدد لا يمكن تصعيد الشكاوى إليه')
+                    return redirect('complaints:complaint_detail', pk=pk)
+
             # حفظ الحالة القديمة
             old_status = complaint.status
 

@@ -421,17 +421,26 @@ class ComplaintAssignmentForm(forms.ModelForm):
         fields = ['assigned_to', 'assigned_department']
 
 
+from django.db.models import Q
+
 class ComplaintEscalationForm(forms.ModelForm):
     """نموذج تصعيد الشكوى"""
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # فلترة الموظفين النشطين فقط
-        self.fields['escalated_to'].queryset = User.objects.filter(
+        # فلترة الموظفين المسموح لهم باستلام التصعيدات
+        eligible_users = User.objects.filter(
             is_active=True,
             is_staff=True
-        )
+        ).filter(
+            Q(complaint_permissions__is_active=True, 
+              complaint_permissions__can_receive_escalations=True) |
+            Q(is_superuser=True) |
+            Q(groups__name__in=['Complaints_Managers', 'Complaints_Supervisors'])
+        ).distinct()
+        
+        self.fields['escalated_to'].queryset = eligible_users
         
         # إضافة CSS classes
         for field_name, field in self.fields.items():

@@ -19,6 +19,7 @@ urlpatterns = [
     
     # إجراءات الشكوى
     path('<int:pk>/status/', views.complaint_status_update, name='complaint_status_update'),
+    path('<int:pk>/start-working/', views.start_working_on_complaint, name='start_working_on_complaint'),
     path('<int:pk>/assign/', views.complaint_assignment, name='complaint_assignment'),
     path('<int:pk>/update/', views.complaint_add_update, name='complaint_add_update'),
     path('<int:pk>/escalate/', views.complaint_escalate, name='complaint_escalate'),

@@ -5,14 +5,16 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 WHITE='\033[1;37m'
 CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
-PROJECT_DIR="/home/xhunterx/homeupdate"
+PROJECT_DIR="/home/zakee/homeupdate"
 
 print_status() { echo -e "${GREEN}$1${NC}"; }
 print_error() { echo -e "${RED}$1${NC}"; }
 print_info() { echo -e "${WHITE}$1${NC}"; }
 print_dev() { echo -e "${CYAN}$1${NC}"; }
+print_warning() { echo -e "${YELLOW}$1${NC}"; }
 
 if [ ! -d "$PROJECT_DIR" ]; then print_error "مجلد المشروع غير موجود: $PROJECT_DIR"; exit 1; fi
 cd "$PROJECT_DIR"

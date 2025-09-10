@@ -295,33 +295,44 @@ class ComplaintEscalationView(View):
         Check if user has permission to escalate complaint
         Enhanced to use the new permission system
         """
-        # Check user's complaint permissions
+        # 1. التحقق من كون المستخدم مشرف النظام
+        if user.is_superuser:
+            return True
+        
+        # 2. التحقق من المجموعات
+        if user.groups.filter(name__in=[
+            'Complaints_Managers',
+            'Complaints_Supervisors', 
+            'Managers',
+            'Department_Managers'
+        ]).exists():
+            return True
+        
+        # 3. التحقق من الصلاحيات المباشرة
+        if user.has_perm('complaints.escalate_complaint'):
+            return True
+        
+        # 4. التحقق من سجل الصلاحيات المخصص (إذا كان موجوداً)
         try:
-            permissions = user.complaint_permissions
-            if not permissions.is_active:
-                return False
-            # Check if user has escalation permission
-            if not permissions.can_escalate_complaints:
-                return False
+            if hasattr(user, 'complaint_permissions'):
+                permissions = user.complaint_permissions
+                if permissions.is_active and permissions.can_escalate_complaints:
+                    return True
         except:
-            # If no permissions record, fall back to group-based permissions
             pass
-
-        # المسؤول المعين يمكنه التصعيد
+        
+        # 5. المسؤول المعين يمكنه التصعيد
         if complaint.assigned_to == user:
             return True
 
-        # مدير القسم يمكنه التصعيد
+        # 6. منشئ الشكوى يمكنه التصعيد
+        if complaint.created_by == user:
+            return True
+
+        # 7. مدير القسم يمكنه التصعيد
         if (complaint.assigned_department and
+            hasattr(complaint.assigned_department, 'manager') and
             complaint.assigned_department.manager == user):
-            return True
-
-        # المشرفون يمكنهم التصعيد
-        if user.groups.filter(name='Complaints_Supervisors').exists():
-            return True
-
-        # المدراء يمكنهم التصعيد
-        if user.groups.filter(name='Managers').exists():
             return True
 
         return False
