@@ -336,12 +336,47 @@ def order_create(request):
                         selected_products = json.loads(selected_products_json)
                         print("selected_products:", selected_products)
                         for product_data in selected_products:
+                            # تحسين معالجة القيم العشرية لحل مشكلة الاقتطاع في الهواتف المحمولة
+                            from decimal import Decimal, InvalidOperation
+
+                            # معالجة آمنة للكمية
+                            try:
+                                quantity = Decimal(str(product_data['quantity']))
+                                if quantity < 0:
+                                    print(f"تحذير: كمية سالبة تم تجاهلها: {quantity}")
+                                    continue
+                            except (InvalidOperation, ValueError, TypeError) as e:
+                                print(f"خطأ في تحويل الكمية: {product_data.get('quantity', 'غير محدد')} - {e}")
+                                continue
+
+                            # معالجة آمنة لسعر الوحدة
+                            try:
+                                unit_price = Decimal(str(product_data['unit_price']))
+                                if unit_price < 0:
+                                    print(f"تحذير: سعر سالب تم تجاهله: {unit_price}")
+                                    continue
+                            except (InvalidOperation, ValueError, TypeError) as e:
+                                print(f"خطأ في تحويل سعر الوحدة: {product_data.get('unit_price', 'غير محدد')} - {e}")
+                                continue
+
+                            # معالجة آمنة لنسبة الخصم
+                            try:
+                                discount_percentage = Decimal(str(product_data.get('discount_percentage', 0)))
+                                if discount_percentage < 0 or discount_percentage > 100:
+                                    print(f"تحذير: نسبة خصم غير صالحة: {discount_percentage}% - تم تعيينها إلى 0%")
+                                    discount_percentage = Decimal('0')
+                            except (InvalidOperation, ValueError, TypeError) as e:
+                                print(f"خطأ في تحويل نسبة الخصم: {product_data.get('discount_percentage', 'غير محدد')} - {e}")
+                                discount_percentage = Decimal('0')
+
+                            print(f"إنشاء عنصر طلب: المنتج={product_data['product_id']}, الكمية={quantity}, السعر={unit_price}, الخصم={discount_percentage}%")
+
                             item = OrderItem.objects.create(
                                 order=order,
                                 product_id=product_data['product_id'],
-                                quantity=product_data['quantity'],
-                                unit_price=product_data['unit_price'],
-                                discount_percentage=product_data.get('discount_percentage', 0),
+                                quantity=quantity,
+                                unit_price=unit_price,
+                                discount_percentage=discount_percentage,
                                 item_type=product_data.get('item_type', 'product'),
                                 notes=product_data.get('notes', '')
                             )

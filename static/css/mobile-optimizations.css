@@ -28,8 +28,50 @@
         border: 2px solid #e9ecef;
         transition: border-color 0.2s ease;
     }
-    
+
     .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+        outline: none;
+    }
+
+    /* تحسينات خاصة لحقول الأرقام العشرية على الهواتف المحمولة */
+    input[type="number"] {
+        font-size: 16px !important; /* منع التكبير في iOS */
+        -webkit-appearance: none;
+        -moz-appearance: textfield;
+        appearance: none;
+        /* تحسين دعم القيم العشرية */
+        inputmode: decimal;
+    }
+
+    /* إزالة الأسهم من حقول الأرقام على الهواتف */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* تحسين حقول الكمية والأسعار */
+    .item-quantity,
+    .item-price,
+    #selected-quantity {
+        font-size: 16px !important;
+        text-align: center;
+        font-weight: 600;
+        color: #2c3e50;
+        background-color: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px 15px;
+        /* تحسين دعم القيم العشرية */
+        inputmode: decimal;
+    }
+
+    .item-quantity:focus,
+    .item-price:focus,
+    #selected-quantity:focus {
+        background-color: #ffffff;
         border-color: #007bff;
         box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
         outline: none;

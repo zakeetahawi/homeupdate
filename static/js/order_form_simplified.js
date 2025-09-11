@@ -690,35 +690,77 @@ function showAddItemModal() {
         width: '600px',
         preConfirm: () => {
             const selectedProduct = Swal.getPopup().selectedProduct;
-            const quantity = parseFloat(document.getElementById('selected-quantity').value) || 1;
+            const quantityInput = document.getElementById('selected-quantity');
             const notes = document.getElementById('selected-notes').value || '';
-            
+
             if (!selectedProduct) {
                 Swal.showValidationMessage('يرجى اختيار منتج أولاً');
                 return false;
             }
-            
-            if (quantity < 1) {
-                Swal.showValidationMessage('يرجى إدخال كمية صحيحة');
+
+            // تحسين معالجة الكمية لحل مشكلة الاقتطاع في الهواتف المحمولة
+            let quantity;
+            try {
+                const quantityStr = quantityInput.value.trim();
+                if (!quantityStr) {
+                    Swal.showValidationMessage('يرجى إدخال الكمية');
+                    return false;
+                }
+
+                // استخدام Number بدلاً من parseFloat للحصول على دقة أفضل
+                quantity = Number(quantityStr);
+
+                // التحقق من صحة القيمة
+                if (isNaN(quantity) || !isFinite(quantity)) {
+                    Swal.showValidationMessage('يرجى إدخال كمية صحيحة');
+                    return false;
+                }
+
+                if (quantity <= 0) {
+                    Swal.showValidationMessage('يجب أن تكون الكمية أكبر من صفر');
+                    return false;
+                }
+
+                // التحقق من الحد الأقصى المعقول للكمية
+                if (quantity > 999999) {
+                    Swal.showValidationMessage('الكمية كبيرة جداً');
+                    return false;
+                }
+
+                // التأكد من أن الكمية لها دقة مناسبة (حتى 3 منازل عشرية)
+                const decimalPlaces = (quantityStr.split('.')[1] || '').length;
+                if (decimalPlaces > 3) {
+                    Swal.showValidationMessage('الكمية يمكن أن تحتوي على 3 منازل عشرية كحد أقصى');
+                    return false;
+                }
+
+                console.log(`✅ تم التحقق من الكمية: ${quantityStr} → ${quantity}`);
+
+            } catch (error) {
+                console.error('خطأ في معالجة الكمية:', error);
+                Swal.showValidationMessage('خطأ في معالجة الكمية');
                 return false;
             }
-            
+
             // التحقق من عدم تكرار المنتج
             const exists = document.orderItems.find(x => x.product_id === selectedProduct.id);
             if (exists) {
                 Swal.showValidationMessage('تمت إضافة هذا المنتج بالفعل!');
                 return false;
             }
-            
-            // إضافة العنصر
+
+            // حساب الإجمالي بدقة
+            const total = Number((selectedProduct.price * quantity).toFixed(2));
+
+            // إضافة العنصر مع الحفاظ على دقة القيم العشرية
             document.orderItems.push({
                 product_id: selectedProduct.id,
                 name: selectedProduct.name,
                 code: selectedProduct.code || '',
                 unit_price: selectedProduct.price,
-                quantity: quantity,
+                quantity: quantity, // استخدام القيمة المحولة بدقة
                 discount_percentage: 0, // خصم افتراضي 0%
-                total: (selectedProduct.price * quantity),
+                total: total,
                 notes: notes
             });
             
@@ -836,16 +878,36 @@ function setupTotalCalculation() {
     }
 }
 
-// دالة تحديث الإجمالي
+// دالة تحديث الإجمالي مع معالجة محسنة للقيم العشرية
 function updateTotal() {
     const selectedProduct = Swal.getPopup().selectedProduct;
     const totalInput = document.getElementById('selected-total');
-    
-    if (selectedProduct && totalInput) {
-        const quantity = parseFloat(document.getElementById('selected-quantity').value) || 1;
-        const total = selectedProduct.price * quantity;
-        
-        totalInput.value = total.toFixed(2) + ' ج.م';
+    const quantityInput = document.getElementById('selected-quantity');
+
+    if (selectedProduct && totalInput && quantityInput) {
+        try {
+            const quantityStr = quantityInput.value.trim();
+            if (!quantityStr) {
+                totalInput.value = '0.00 ج.م';
+                return;
+            }
+
+            // استخدام Number بدلاً من parseFloat للحصول على دقة أفضل
+            const quantity = Number(quantityStr);
+
+            if (isNaN(quantity) || !isFinite(quantity) || quantity < 0) {
+                totalInput.value = '0.00 ج.م';
+                return;
+            }
+
+            // حساب الإجمالي بدقة
+            const total = Number((selectedProduct.price * quantity).toFixed(2));
+            totalInput.value = total.toFixed(2) + ' ج.م';
+
+        } catch (error) {
+            console.error('خطأ في حساب الإجمالي:', error);
+            totalInput.value = '0.00 ج.م';
+        }
     }
 }
 
@@ -1335,8 +1397,74 @@ window.addEventListener('unhandledrejection', function(e) {
     }
 });
 
+// دالة لتحسين معالجة القيم العشرية على الهواتف المحمولة
+function setupMobileDecimalSupport() {
+    // التحقق من كون الجهاز محمول
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                     window.innerWidth <= 768;
+
+    if (isMobile) {
+        console.log('🔧 تطبيق تحسينات الهواتف المحمولة للقيم العشرية...');
+
+        // تحسين جميع حقول الأرقام
+        const numberInputs = document.querySelectorAll('input[type="number"]');
+        numberInputs.forEach(input => {
+            // إضافة inputmode للحصول على لوحة مفاتيح عشرية
+            input.setAttribute('inputmode', 'decimal');
+
+            // إضافة مستمع للتحقق من القيم العشرية
+            input.addEventListener('input', function(e) {
+                const value = e.target.value;
+
+                // السماح بالقيم العشرية والأرقام فقط
+                if (value && !/^\d*\.?\d*$/.test(value)) {
+                    // إزالة الأحرف غير المسموحة
+                    e.target.value = value.replace(/[^\d.]/g, '');
+                }
+
+                // منع أكثر من نقطة عشرية واحدة
+                const parts = e.target.value.split('.');
+                if (parts.length > 2) {
+                    e.target.value = parts[0] + '.' + parts.slice(1).join('');
+                }
+
+                // تحديد عدد المنازل العشرية حسب نوع الحقل
+                if (e.target.classList.contains('item-quantity') || e.target.id === 'selected-quantity') {
+                    // حقول الكمية: 3 منازل عشرية كحد أقصى
+                    if (parts[1] && parts[1].length > 3) {
+                        e.target.value = parts[0] + '.' + parts[1].substring(0, 3);
+                    }
+                } else if (e.target.classList.contains('item-price')) {
+                    // حقول السعر: منزلتان عشريتان كحد أقصى
+                    if (parts[1] && parts[1].length > 2) {
+                        e.target.value = parts[0] + '.' + parts[1].substring(0, 2);
+                    }
+                }
+            });
+
+            // إضافة مستمع للتحقق عند فقدان التركيز
+            input.addEventListener('blur', function(e) {
+                const value = parseFloat(e.target.value);
+                if (!isNaN(value) && isFinite(value)) {
+                    // تنسيق القيمة حسب نوع الحقل
+                    if (e.target.classList.contains('item-quantity') || e.target.id === 'selected-quantity') {
+                        e.target.value = value.toFixed(3).replace(/\.?0+$/, '');
+                    } else if (e.target.classList.contains('item-price')) {
+                        e.target.value = value.toFixed(2);
+                    }
+                }
+            });
+        });
+
+        console.log(`✅ تم تطبيق تحسينات الهواتف المحمولة على ${numberInputs.length} حقل رقمي`);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('تهيئة نموذج الطلب المبسط...');
+
+    // تطبيق تحسينات الهواتف المحمولة
+    setupMobileDecimalSupport();
 
     // تهيئة Select2
     initializeCustomerSearch();

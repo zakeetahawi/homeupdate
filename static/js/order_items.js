@@ -4,6 +4,30 @@
 // تعريف مصفوفة العناصر العامة
 window.orderItems = window.orderItems || [];
 
+// دالة لتنسيق القيم العشرية بشكل صحيح (حل مشكلة الاقتطاع في الهواتف المحمولة)
+function formatDecimalQuantity(quantity) {
+    try {
+        if (quantity === null || quantity === undefined) {
+            return '0';
+        }
+
+        // تحويل إلى رقم للتأكد من صحة القيمة
+        const numValue = Number(quantity);
+
+        if (isNaN(numValue) || !isFinite(numValue)) {
+            return '0';
+        }
+
+        // تنسيق القيمة مع إزالة الأصفار الزائدة
+        const formatted = numValue.toFixed(3).replace(/\.?0+$/, '');
+        return formatted || '0';
+
+    } catch (error) {
+        console.error('خطأ في تنسيق الكمية:', error, 'القيمة:', quantity);
+        return '0';
+    }
+}
+
 // تحديث جدول العناصر المختارة
 window.updateLiveOrderItemsTable = function() {
     const tableDiv = document.getElementById('live-order-items-table');
@@ -65,7 +89,7 @@ window.updateLiveOrderItemsTable = function() {
                     ${item.code ? `<br><small class="text-muted">كود: ${item.code}</small>` : ''}
                     ${item.notes ? `<br><small class="text-info"><i class="fas fa-sticky-note me-1"></i>${item.notes}</small>` : ''}
                 </td>
-                <td><span class="badge bg-info">${parseFloat(item.quantity).toFixed(3).replace(/\.?0+$/, '')}</span></td>
+                <td><span class="badge bg-info">${formatDecimalQuantity(item.quantity)}</span></td>
                 <td>${item.unit_price} ج.م</td>
                 <td>
                     <select class="form-select form-select-sm discount-select" 
@@ -239,20 +263,37 @@ window.getOrderItemByProductId = function(productId) {
     return window.orderItems.find(item => item.product_id === productId);
 };
 
-// دالة لتحديث كمية عنصر موجود
+// دالة لتحديث كمية عنصر موجود مع معالجة محسنة للقيم العشرية
 window.updateOrderItemQuantity = function(productId, newQuantity) {
     const item = window.orderItems.find(x => x.product_id === productId);
-    if (item && newQuantity > 0) {
-        item.quantity = newQuantity;
-        item.total = item.unit_price * newQuantity;
-        window.updateLiveOrderItemsTable();
-        
-        // تحديث الحقول المخفية إذا كانت متوفرة
-        if (typeof syncOrderItemsToFormFields === 'function') {
-            syncOrderItemsToFormFields();
+    if (item) {
+        try {
+            // تحويل الكمية الجديدة إلى رقم مع التحقق من صحتها
+            const quantity = Number(newQuantity);
+
+            if (isNaN(quantity) || !isFinite(quantity) || quantity <= 0) {
+                console.error('كمية غير صالحة:', newQuantity);
+                return false;
+            }
+
+            // تحديث الكمية والإجمالي بدقة
+            item.quantity = quantity;
+            item.total = Number((item.unit_price * quantity).toFixed(2));
+
+            window.updateLiveOrderItemsTable();
+
+            // تحديث الحقول المخفية إذا كانت متوفرة
+            if (typeof syncOrderItemsToFormFields === 'function') {
+                syncOrderItemsToFormFields();
+            }
+
+            console.log(`✅ تم تحديث كمية المنتج ${productId}: ${quantity}`);
+            return true;
+
+        } catch (error) {
+            console.error('خطأ في تحديث كمية العنصر:', error);
+            return false;
         }
-        
-        return true;
     }
     return false;
 };
