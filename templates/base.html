@@ -2203,7 +2203,7 @@
             console.log('🔧 للاختبار: clearComplaintsNotifications() لمسح الإشعارات مباشرة');
             console.log('🔧 للاختبار: updateComplaintsNotificationCount() لتحديث العداد مباشرة');
 
-            // تحديث دوري كل 30 ثانية
+            // تحديث دوري كل 60 ثانية (تحسين الأداء)
             setInterval(function() {
                 updateNotificationCount();
                 updateComplaintsNotificationCount();
@@ -2211,7 +2211,7 @@
                 updateRecentNotifications();
                 checkAssignedComplaints(); // فحص الشكاوى المسندة دورياً
                 checkEscalatedComplaints(); // فحص الشكاوى المصعدة دورياً
-            }, 30000);
+            }, 60000);
         });
     </script>
     {% endif %}
@@ -2444,10 +2444,10 @@
                 $('body').css('padding-right', '');
             });
 
-            // إزالة backdrop كل ثانية (حل قوي)
+            // إزالة backdrop كل 5 ثواني (تحسين الأداء)
             setInterval(function() {
                 $('.modal-backdrop').remove();
-            }, 1000);
+            }, 5000);
         });
     </script>
 

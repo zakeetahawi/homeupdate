@@ -6,11 +6,24 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
+from django.db.models import Count, Q
 
 User = get_user_model()
 
 # تمت إزالة استيراد Order لتجنب الاعتماد الدائري
 # سيتم استخدام الإشارة النصية 'orders.Order' بدلاً من ذلك
+
+
+class ManufacturingOrderManager(models.Manager):
+    """Manager محسن لأوامر التصنيع"""
+
+    def with_items_count(self):
+        """إضافة عدد العناصر والعناصر المستلمة"""
+        return self.annotate(
+            total_items_count=Count('items'),
+            received_items_count=Count('items', filter=Q(items__fabric_received=True)),
+            pending_items_count=Count('items', filter=Q(items__fabric_received=False))
+        )
 
 
 class ManufacturingOrder(models.Model):
@@ -185,6 +198,9 @@ class ManufacturingOrder(models.Model):
         verbose_name='تاريخ التحديث'
     )
     
+    # إضافة المدير المحسن
+    objects = ManufacturingOrderManager()
+
     class Meta:
         verbose_name = 'أمر تصنيع'
         verbose_name_plural = 'أوامر التصنيع'

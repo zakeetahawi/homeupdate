@@ -135,6 +135,14 @@ class CustomUserAdmin(UserAdmin):
         'username', 'email', 'branch', 'first_name', 'last_name', 'is_staff',
         'get_user_role_display', 'get_roles', 'has_manufacturing_approval'
     )
+
+    def get_queryset(self, request):
+        """تحسين الاستعلامات لتقليل N+1 queries"""
+        return super().get_queryset(request).select_related(
+            'branch'
+        ).prefetch_related(
+            'user_roles__role'  # حل مشكلة N+1 في get_roles فقط
+        )
     list_filter = (
         'is_staff', 'is_superuser', 'is_active', 'branch',
         'is_inspection_technician', 'is_salesperson', 'is_branch_manager', 

@@ -70,6 +70,21 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
     list_per_page = 15  # تقليل من 25 إلى 15 لتحسين الأداء
     list_max_show_all = 50  # تقليل من 100 إلى 50
     show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
+
+    def get_queryset(self, request):
+        """تحسين الاستعلامات لتقليل N+1 queries"""
+        return super().get_queryset(request).select_related(
+            'order__customer',
+            'order__branch',
+            'production_line',
+            'created_by'
+        ).with_items_count().only(
+            'id', 'manufacturing_code', 'status', 'created_at',
+            'expected_delivery_date', 'completion_date',
+            'order__id', 'order__order_number', 'order__contract_number',
+            'order__customer__name', 'order__order_date',
+            'production_line__name'
+        )
     list_display = [
         'manufacturing_code',
         'contract_number',

@@ -23,15 +23,16 @@ def handle_user_login(sender, request, user, **kwargs):
         # تحديث أو إنشاء سجل المستخدم النشط
         OnlineUser.update_user_activity(user, request)
         
-        # تسجيل النشاط
+        # تسجيل النشاط مع ضمان وجود قيم صالحة
+        ip_address = OnlineUser.get_client_ip(request)
         UserActivityLog.log_activity(
             user=user,
             action_type='login',
-            description=f'تسجيل دخول من {OnlineUser.get_client_ip(request)}',
-            ip_address=OnlineUser.get_client_ip(request),
+            description=f'تسجيل دخول من {ip_address}',
+            ip_address=ip_address,
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
-            url_path=request.path,
-            http_method=request.method,
+            url_path=request.path if request.path else '/',
+            http_method=request.method if request.method else 'GET',
             success=True
         )
     except Exception as e:

@@ -66,13 +66,15 @@ def create_cutting_orders_on_order_save(sender, instance, created, **kwargs):
                     notes=f'أمر تقطيع تلقائي للطلب {instance.contract_number or instance.id}'
                 )
                 
-                # إنشاء عناصر التقطيع
-                for item in items:
-                    CuttingOrderItem.objects.create(
+                # إنشاء عناصر التقطيع باستخدام bulk_create لتحسين الأداء
+                cutting_items = [
+                    CuttingOrderItem(
                         cutting_order=cutting_order,
                         order_item=item,
                         status='pending'
-                    )
+                    ) for item in items
+                ]
+                CuttingOrderItem.objects.bulk_create(cutting_items)
                 
                 logger.info(f"✅ تم إنشاء أمر تقطيع {cutting_order.cutting_code} للمستودع {warehouse.name} مع {len(items)} عنصر")
     

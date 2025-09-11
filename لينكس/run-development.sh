@@ -8,7 +8,7 @@ CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-PROJECT_DIR="/home/zakee/homeupdate"
+PROJECT_DIR="/home/xhunterx/homeupdate"
 
 print_status() { echo -e "${GREEN}$1${NC}"; }
 print_error() { echo -e "${RED}$1${NC}"; }

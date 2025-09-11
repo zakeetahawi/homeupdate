@@ -176,6 +176,18 @@ class InstallationScheduleAdmin(admin.ModelAdmin):
         'installation_code', 'customer_name', 'scheduled_date', 'scheduled_time',
         'team', 'status_display', 'created_at'
     ]
+
+    def get_queryset(self, request):
+        """تحسين الاستعلامات لتقليل N+1 queries"""
+        return super().get_queryset(request).select_related(
+            'order__customer',
+            'team',
+            'created_by'
+        ).only(
+            'id', 'installation_code', 'status', 'scheduled_date', 'scheduled_time',
+            'created_at', 'order__id', 'order__customer__name',
+            'team__id', 'team__name'
+        )
     list_filter = [
         'status',
         InstallationOrderTypeFilter,  # فلتر مخصص لنوع الطلب (من Order)

@@ -131,6 +131,27 @@ class OrderAdmin(admin.ModelAdmin):
     list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
     list_max_show_all = 50  # تقليل من 100 إلى 50
     show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
+
+    def get_queryset(self, request):
+        """تحسين الاستعلامات لتقليل N+1 queries"""
+        return super().get_queryset(request).select_related(
+            'customer',
+            'salesperson__user',  # حل مشكلة N+1 في salesperson
+            'branch',
+            'created_by',
+            'related_inspection'
+        ).prefetch_related(
+            'items__product',
+            'payments'
+        ).only(
+            'id', 'order_number', 'status', 'tracking_status', 'order_status',
+            'final_price', 'payment_verified', 'expected_delivery_date',
+            'order_date', 'created_at', 'delivery_type',
+            'customer__id', 'customer__name',
+            'salesperson__id', 'salesperson__user__username',
+            'branch__id', 'branch__name',
+            'created_by__id', 'created_by__username'
+        )
     list_display = (
         'order_number_display', 
         'customer', 
