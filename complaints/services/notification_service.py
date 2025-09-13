@@ -252,8 +252,8 @@ class ComplaintNotificationService:
                 message=message
             )
             
-            # Send real-time notification via WebSocket
-            self._send_websocket_notification(recipient, notification)
+            # WebSocket notifications disabled - chat system removed
+            # self._send_websocket_notification(recipient, notification)
             
             # Send email if requested
             if send_email and hasattr(recipient, 'email') and recipient.email:
@@ -264,26 +264,11 @@ class ComplaintNotificationService:
     
     def _send_websocket_notification(self, recipient, notification):
         """
-        Send real-time notification via WebSocket
+        WebSocket notifications disabled - chat system removed
         """
-        try:
-            if self.channel_layer:
-                async_to_sync(self.channel_layer.group_send)(
-                    f"user_{recipient.id}_notifications",
-                    {
-                        "type": "notification.message",
-                        "notification": {
-                            "id": notification.id,
-                            "type": notification.notification_type,
-                            "title": notification.title,
-                            "message": notification.message,
-                            "url": notification.url,
-                            "created_at": notification.created_at.isoformat()
-                        }
-                    }
-                )
-        except Exception as e:
-            logger.error(f"Error sending WebSocket notification: {str(e)}")
+        # Chat system has been completely removed
+        # This method is kept for compatibility but does nothing
+        pass
     
     def _send_email_notification(self, recipient, complaint, title, message):
         """
@@ -342,8 +327,40 @@ class ComplaintNotificationService:
             else:
                 logger.info(f"ℹ️ لا توجد إشعارات قديمة لإخفائها للمسؤول {old_assignee.username} للشكوى {complaint.complaint_number}")
 
+            # إضافة تنظيف شامل للإشعارات غير المتطابقة
+            self._cleanup_mismatched_assignment_notifications()
+
         except Exception as e:
             logger.error(f"Error hiding old assignment notifications: {str(e)}")
+
+    def _cleanup_mismatched_assignment_notifications(self):
+        """
+        تنظيف شامل للإشعارات غير المتطابقة - إخفاء الإشعارات للمستخدمين الذين لم يعودوا مسؤولين
+        """
+        try:
+            from complaints.models import ComplaintNotification, Complaint
+
+            # البحث عن الإشعارات غير المقروءة للتعيين
+            assignment_notifications = ComplaintNotification.objects.filter(
+                notification_type__in=['assignment', 'new_complaint'],
+                is_read=False,
+                complaint__status__in=['new', 'in_progress', 'escalated']
+            ).select_related('complaint')
+
+            cleaned_count = 0
+            for notification in assignment_notifications:
+                # إذا كان المستلم للإشعار ليس هو المسؤول الحالي عن الشكوى
+                if notification.complaint.assigned_to != notification.recipient:
+                    notification.is_read = True
+                    notification.save()
+                    cleaned_count += 1
+                    logger.info(f"🧹 تم إخفاء إشعار غير متطابق: الشكوى {notification.complaint.complaint_number} للمستخدم {notification.recipient.username}")
+
+            if cleaned_count > 0:
+                logger.info(f"✅ تم تنظيف {cleaned_count} إشعار غير متطابق")
+
+        except Exception as e:
+            logger.error(f"Error cleaning up mismatched assignment notifications: {str(e)}")
 
     def _hide_old_notifications_for_resolved_complaint(self, complaint):
         """
@@ -392,9 +409,10 @@ class ComplaintNotificationService:
 
             for complaint in active_complaints:
                 if complaint.assigned_to:
-                    # إخفاء جميع الإشعارات للمستخدمين الآخرين (عدا المسؤول الحالي)
+                    # إخفاء إشعارات التعيين للمستخدمين الآخرين (عدا المسؤول الحالي)
                     old_notifications = ComplaintNotification.objects.filter(
                         complaint=complaint,
+                        notification_type__in=['assignment', 'new_complaint'],
                         is_read=False
                     ).exclude(recipient=complaint.assigned_to)
 

@@ -6,16 +6,6 @@ import subprocess
 import time
 import signal
 import atexit
-import threading
-
-# متغيرات عامة لتتبع العمليات
-redis_process = None
-celery_worker_process = None
-celery_beat_process = None
-db_backup_process = None
-db_backup_log_fh = None
-db_backup_tail_process = None
-db_backup_tail_thread = None
 
 def print_colored(message, color='green'):
     """طباعة رسائل ملونة"""
@@ -29,29 +19,10 @@ def print_colored(message, color='green'):
     }
     print(f"{colors.get(color, colors['green'])}✅ {message}{colors['reset']}")
 
-def check_redis_installed():
-    """فحص تثبيت Redis/Valkey"""
-    try:
-        # فحص Valkey أولاً
-        result = subprocess.run(['which', 'valkey-server'], capture_output=True, text=True)
-        if result.returncode == 0:
-            return 'valkey-server', 'valkey-cli'
-
-        # فحص Redis التقليدي
-        result = subprocess.run(['which', 'redis-server'], capture_output=True, text=True)
-        if result.returncode == 0:
-            return 'redis-server', 'redis-cli'
-
-        return None, None
-    except Exception:
-        return None, None
-
 def start_redis():
     """تشغيل Redis/Valkey"""
-    global redis_process
-
-    # فحص إذا كان يعمل بالفعل
     try:
+        # فحص إذا كان يعمل بالفعل
         result = subprocess.run(['pgrep', '-x', 'valkey-server|redis-server'],
                               capture_output=True, text=True, shell=True)
         if result.returncode == 0:
@@ -60,188 +31,108 @@ def start_redis():
     except Exception:
         pass
 
-    # فحص التثبيت
-    server_cmd, cli_cmd = check_redis_installed()
-    if not server_cmd:
-        print_colored("Redis/Valkey غير مثبت. قم بتثبيته: sudo pacman -S valkey", 'red')
-        return False
-
+    # محاولة تشغيل Valkey أولاً
     try:
-        # تشغيل الخادم
-        print_colored(f"تشغيل {server_cmd}...", 'blue')
-        redis_process = subprocess.Popen([
-            server_cmd, '--daemonize', 'yes', '--port', '6379', '--dir', '/tmp'
-        ])
+        result = subprocess.run(['which', 'valkey-server'], capture_output=True, text=True)
+        if result.returncode == 0:
+            print_colored("تشغيل valkey-server...", 'blue')
+            subprocess.Popen(['valkey-server', '--daemonize', 'yes', '--port', '6379'])
+            time.sleep(2)
+            return True
+    except Exception:
+        pass
 
-        # انتظار قصير للتأكد من التشغيل
+    # محاولة تشغيل Redis التقليدي
+    try:
+        result = subprocess.run(['which', 'redis-server'], capture_output=True, text=True)
+        if result.returncode == 0:
+            print_colored("تشغيل redis-server...", 'blue')
+            subprocess.Popen(['redis-server', '--daemonize', 'yes', '--port', '6379'])
+            time.sleep(2)
+            return True
+    except Exception:
+        pass
+
+    print_colored("تحذير: Redis/Valkey غير متاح", 'yellow')
+    return False
+
+def start_celery():
+    """تشغيل Celery Worker و Beat"""
+    try:
+        # فحص إذا كان Celery Worker يعمل بالفعل
+        worker_pid_file = '/tmp/celery_worker_dev.pid'
+        beat_pid_file = '/tmp/celery_beat_dev.pid'
+
+        worker_running = False
+        beat_running = False
+
+        # فحص Worker
+        if os.path.exists(worker_pid_file):
+            try:
+                with open(worker_pid_file, 'r') as f:
+                    pid = int(f.read().strip())
+                os.kill(pid, 0)  # فحص إذا كان العملية تعمل
+                worker_running = True
+                print_colored("Celery Worker يعمل بالفعل", 'cyan')
+            except (OSError, ValueError):
+                os.remove(worker_pid_file)
+
+        # فحص Beat
+        if os.path.exists(beat_pid_file):
+            try:
+                with open(beat_pid_file, 'r') as f:
+                    pid = int(f.read().strip())
+                os.kill(pid, 0)  # فحص إذا كان العملية تعمل
+                beat_running = True
+                print_colored("Celery Beat يعمل بالفعل", 'cyan')
+            except (OSError, ValueError):
+                os.remove(beat_pid_file)
+
+        # تشغيل Worker إذا لم يكن يعمل
+        if not worker_running:
+            print_colored("تشغيل Celery Worker...", 'blue')
+            worker_name = f"worker-{os.getpid()}"
+            subprocess.Popen([
+                'celery', '-A', 'crm', 'worker',
+                '--loglevel=info', '--detach',
+                f'--hostname={worker_name}@%h',
+                f'--pidfile={worker_pid_file}',
+                '--logfile=/tmp/celery_worker_dev.log'
+            ])
+
+        # تشغيل Beat إذا لم يكن يعمل
+        if not beat_running:
+            print_colored("تشغيل Celery Beat...", 'blue')
+            subprocess.Popen([
+                'celery', '-A', 'crm', 'beat',
+                '--loglevel=info', '--detach',
+                f'--pidfile={beat_pid_file}',
+                '--logfile=/tmp/celery_beat_dev.log',
+                '--schedule=/tmp/celerybeat-schedule-dev'
+            ])
+
         time.sleep(2)
-
-        # اختبار الاتصال
-        test_result = subprocess.run([cli_cmd, 'ping'],
-                                   capture_output=True, text=True, timeout=5)
-        if test_result.returncode == 0 and 'PONG' in test_result.stdout:
-            print_colored(f"{server_cmd} يعمل بنجاح", 'green')
-            return True
-        else:
-            print_colored(f"فشل في اختبار {server_cmd}", 'red')
-            return False
+        print_colored("Celery Worker و Beat يعملان", 'green')
+        return True
 
     except Exception as e:
-        print_colored(f"خطأ في تشغيل Redis: {str(e)}", 'red')
-        return False
-
-def start_celery_worker():
-    """تشغيل Celery Worker"""
-    global celery_worker_process
-
-    try:
-        print_colored("تشغيل Celery Worker...", 'blue')
-
-        # حذف ملف PID القديم إذا وجد
-        pid_file = '/tmp/celery_worker_dev.pid'
-        if os.path.exists(pid_file):
-            os.remove(pid_file)
-
-        celery_worker_process = subprocess.Popen([
-            'celery', '-A', 'crm', 'worker',
-            '--loglevel=info',
-            '--detach',
-            f'--pidfile={pid_file}',
-            '--logfile=/tmp/celery_worker_dev.log'
-        ])
-
-        # انتظار قصير للتأكد من التشغيل
-        time.sleep(3)
-
-        if os.path.exists(pid_file):
-            print_colored("Celery Worker يعمل بنجاح", 'green')
-            return True
-        else:
-            print_colored("فشل في تشغيل Celery Worker", 'red')
-            return False
-
-    except Exception as e:
-        print_colored(f"خطأ في تشغيل Celery Worker: {str(e)}", 'red')
-        return False
-
-def start_celery_beat():
-    """تشغيل Celery Beat"""
-    global celery_beat_process
-
-    try:
-        print_colored("تشغيل Celery Beat...", 'blue')
-
-        # حذف ملفات PID والجدولة القديمة
-        pid_file = '/tmp/celery_beat_dev.pid'
-        schedule_file = '/tmp/celerybeat-schedule-dev'
-
-        # قتل أي عملية beat موجودة
-        try:
-            subprocess.run(['pkill', '-f', 'celery.*beat'], capture_output=True)
-            time.sleep(1)
-        except Exception:
-            pass
-
-        for file_path in [pid_file, schedule_file, f"{schedule_file}.db"]:
-            if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except Exception:
-                    pass
-
-        celery_beat_process = subprocess.Popen([
-            'celery', '-A', 'crm', 'beat',
-            '--loglevel=info',
-            '--detach',
-            f'--pidfile={pid_file}',
-            '--logfile=/tmp/celery_beat_dev.log',
-            f'--schedule={schedule_file}'
-        ])
-
-        # انتظار أطول للتأكد من التشغيل
-        time.sleep(5)
-
-        if os.path.exists(pid_file):
-            print_colored("Celery Beat يعمل بنجاح", 'green')
-            return True
-        else:
-            print_colored("فشل في تشغيل Celery Beat", 'red')
-            return False
-
-    except Exception as e:
-        print_colored(f"خطأ في تشغيل Celery Beat: {str(e)}", 'red')
+        print_colored(f"تحذير: مشكلة في Celery - {str(e)}", 'yellow')
         return False
 
 def cleanup_processes():
     """تنظيف العمليات عند الإغلاق"""
     print_colored("إيقاف العمليات...", 'yellow')
 
-    # إيقاف Celery Worker
-    pid_file = '/tmp/celery_worker_dev.pid'
-    if os.path.exists(pid_file):
-        try:
-            with open(pid_file, 'r') as f:
-                pid = int(f.read().strip())
-            os.kill(pid, signal.SIGTERM)
-            os.remove(pid_file)
-            print_colored("تم إيقاف Celery Worker", 'green')
-        except Exception:
-            pass
-
-    # إيقاف Celery Beat
-    pid_file = '/tmp/celery_beat_dev.pid'
-    if os.path.exists(pid_file):
-        try:
-            with open(pid_file, 'r') as f:
-                pid = int(f.read().strip())
-            os.kill(pid, signal.SIGTERM)
-            os.remove(pid_file)
-            # حذف ملف الجدولة
-            schedule_file = '/tmp/celerybeat-schedule-dev'
-            if os.path.exists(schedule_file):
-                os.remove(schedule_file)
-            print_colored("تم إيقاف Celery Beat", 'green')
-        except Exception:
-            pass
-
-    # إيقاف DB Backup process
-    global db_backup_process, db_backup_log_fh
-    try:
-        if db_backup_process is not None:
+    # إيقاف Celery
+    for pid_file in ['/tmp/celery_worker_dev.pid', '/tmp/celery_beat_dev.pid']:
+        if os.path.exists(pid_file):
             try:
-                db_backup_process.terminate()
+                with open(pid_file, 'r') as f:
+                    pid = int(f.read().strip())
+                os.kill(pid, signal.SIGTERM)
+                os.remove(pid_file)
             except Exception:
                 pass
-            db_backup_process = None
-            print_colored("تم إيقاف خدمة النسخ الاحتياطي", 'green')
-    except Exception:
-        pass
-    try:
-        if db_backup_log_fh is not None:
-            try:
-                db_backup_log_fh.close()
-            except Exception:
-                pass
-            db_backup_log_fh = None
-    except Exception:
-        pass
-    # إيقاف tail الخاص بسجل النسخ الاحتياطي
-    try:
-        global db_backup_tail_process, db_backup_tail_thread
-        if db_backup_tail_process is not None:
-            try:
-                db_backup_tail_process.terminate()
-            except Exception:
-                pass
-            db_backup_tail_process = None
-        if db_backup_tail_thread is not None:
-            try:
-                db_backup_tail_thread.join(timeout=1)
-            except Exception:
-                pass
-            db_backup_tail_thread = None
-    except Exception:
-        pass
 
 # تسجيل دالة التنظيف
 atexit.register(cleanup_processes)
@@ -250,15 +141,23 @@ signal.signal(signal.SIGTERM, lambda s, f: cleanup_processes())
 
 def main():
     """Run administrative tasks."""
-    # إعداد متغيرات البيئة لقاعدة البيانات
-    if 'DATABASE_URL' in os.environ:
-        # تم تعديل هذا الجزء لتجنب طباعة كلمة المرور في السجلات
-        db_url = os.environ.get('DATABASE_URL')
-        masked_url = db_url.replace(db_url.split('@')[0].split('://')[1], '****:****')
-        # print(f"استخدام قاعدة البيانات: {masked_url}")  # معلومات حساسة
-        # print("تم تكوين قاعدة البيانات من DATABASE_URL")  # معلومات غير ضرورية
-
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
+
+    # تشغيل الخدمات عند runserver
+    if len(sys.argv) > 1 and sys.argv[1] == 'runserver':
+        print_colored("🚀 بدء تشغيل النظام", 'cyan')
+
+        # تشغيل Redis
+        start_redis()
+
+        # تشغيل Celery
+        start_celery()
+
+        print_colored("=" * 50, 'cyan')
+        print_colored("🎉 النظام جاهز للعمل!", 'green')
+        print_colored("🌐 الموقع: http://localhost:8000", 'blue')
+        print_colored("=" * 50, 'cyan')
+
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -267,126 +166,6 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
-
-    # تشغيل Redis و Celery تلقائياً عند تشغيل runserver
-    if len(sys.argv) > 1 and sys.argv[1] == 'runserver':
-        print_colored("🚀 بدء تشغيل النظام مع Redis و Celery", 'cyan')
-
-        # تشغيل Redis
-        if not start_redis():
-            print_colored("تحذير: فشل في تشغيل Redis. قد لا تعمل المهام الخلفية", 'yellow')
-
-        # تشغيل Celery Worker
-        if not start_celery_worker():
-            print_colored("تحذير: فشل في تشغيل Celery Worker. قد لا تعمل المهام الخلفية", 'yellow')
-
-        # تشغيل Celery Beat
-        if not start_celery_beat():
-            print_colored("تحذير: فشل في تشغيل Celery Beat. قد لا تعمل المهام الدورية", 'yellow')
-
-        # تشغيل خدمة النسخ الاحتياطي المحلية عند تشغيل الخادم التطويري
-        try:
-            backup_script = os.path.join(os.path.dirname(__file__), 'لينكس', 'db-backup.sh')
-            if os.path.exists(backup_script):
-                log_file = '/tmp/db_backup.log'
-                print_colored(f"تشغيل خدمة النس الاحتياطي: {backup_script} (logs: {log_file})", 'blue')
-                # Kill any existing db-backup.sh processes so we always start fresh
-                try:
-                    subprocess.run(['pkill', '-f', 'db-backup.sh'], check=False)
-                except Exception:
-                    pass
-                # small pause to let previous procs exit
-                time.sleep(1)
-                # start new backup process (always): ensure executable
-                try:
-                    os.chmod(backup_script, 0o755)
-                except Exception:
-                    pass
-                global db_backup_process, db_backup_log_fh
-                # close previous fh if any
-                try:
-                    if db_backup_log_fh is not None:
-                        try:
-                            db_backup_log_fh.close()
-                        except Exception:
-                            pass
-                        db_backup_log_fh = None
-                except Exception:
-                    pass
-                try:
-                    db_backup_log_fh = open(log_file, 'a')
-                    db_backup_process = subprocess.Popen([backup_script], stdout=db_backup_log_fh, stderr=subprocess.STDOUT)
-                    print_colored("خدمة النسخ الاحتياطي بدأت (تمت إعادة التشغيل)", 'green')
-                except Exception as e:
-                    print_colored(f"فشل في تشغيل خدمة النسخ الاحتياطي: {e}", 'red')
-            else:
-                print_colored(f"ملف النسخ الاحتياطي غير موجود: {backup_script}", 'yellow')
-        except Exception as e:
-            print_colored(f"فشل في تهيئة خدمة النسخ الاحتياطي: {e}", 'red')
-
-        print_colored("📊 مراقبة Celery: tail -f /tmp/celery_worker_dev.log", 'blue')
-        print_colored("⏰ مراقبة المهام الدورية: tail -f /tmp/celery_beat_dev.log", 'blue')
-
-        # Start background tail to forward backup success messages to server stdout
-        try:
-            log_path = '/tmp/db_backup.log'
-            def tail_backup_log():
-                import time
-                try:
-                    # Wait until file exists
-                    while not os.path.exists(log_path):
-                        time.sleep(0.5)
-                    with open(log_path, 'r') as fh:
-                        # seek to end
-                        fh.seek(0, 2)
-                        while True:
-                            line = fh.readline()
-                            if not line:
-                                time.sleep(0.5)
-                                continue
-                            if 'تم إنشاء نسخة احتياطية بنجاح' in line or 'تم إنشاء نسخة احتياطية بنجاح' in line:
-                                print_colored(line.strip(), 'green')
-                except Exception:
-                    pass
-
-            global db_backup_tail_thread
-            db_backup_tail_thread = threading.Thread(target=tail_backup_log, daemon=True)
-            db_backup_tail_thread.start()
-        except Exception:
-            pass
-
-    # تنفيذ الترحيلات تلقائياً عند تشغيل الخادم (محسن ومبسط)
-    if len(sys.argv) > 1 and sys.argv[1] == 'runserver' and not os.environ.get('AUTO_MIGRATE_EXECUTED'):
-        try:
-            import django
-            django.setup()
-
-            from django.core.management import call_command
-            print_colored("جاري تنفيذ الترحيلات تلقائياً...", 'blue')
-
-            call_command('migrate', verbosity=0)  # تقليل الإخراج
-            print_colored("تم تنفيذ الترحيلات بنجاح", 'green')
-
-            os.environ['AUTO_MIGRATE_EXECUTED'] = '1'
-        except Exception as e:
-            print_colored(f"حدث خطأ أثناء تنفيذ الترحيلات التلقائية: {str(e)}", 'red')
-
-    # رسالة ترحيب محسنة لـ runserver
-    if len(sys.argv) > 1 and sys.argv[1] == 'runserver':
-        print_colored("=" * 60, 'cyan')
-        print_colored("🎉 النظام جاهز للعمل مع جميع الخدمات!", 'green')
-        print_colored("🌐 الموقع: http://localhost:8000", 'blue')
-        print_colored("👤 المستخدم: admin | كلمة المرور: admin123", 'blue')
-        print_colored("🔄 Redis/Valkey: يعمل", 'green')
-        print_colored("⚙️ Celery Worker: يعمل", 'green')
-        print_colored("⏰ Celery Beat: يعمل", 'green')
-        print_colored("=" * 60, 'cyan')
-        print_colored("💡 نصيحة: لإصلاح تحذير الذاكرة، شغل:", 'yellow')
-        print_colored("   sudo sysctl vm.overcommit_memory=1", 'yellow')
-        print_colored("استخدم Ctrl+C لإيقاف جميع الخدمات", 'yellow')
-        print()
-
-    # تنفيذ الأمر
     execute_from_command_line(sys.argv)
 
 

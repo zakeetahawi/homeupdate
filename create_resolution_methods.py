@@ -5,7 +5,7 @@ import django
 
 # إعداد Django
 sys.path.append('/home/xhunterx/homeupdate')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'homeupdate.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
 django.setup()
 
 from complaints.models import ResolutionMethod

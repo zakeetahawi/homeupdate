@@ -10,7 +10,7 @@ from django.conf import settings
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
 
 # إنشاء تطبيق Celery
-app = Celery('homeupdate')
+app = Celery('crm')
 
 # استخدام إعدادات Django لـ Celery
 app.config_from_object('django.conf:settings', namespace='CELERY')

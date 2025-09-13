@@ -87,4 +87,5 @@ urlpatterns = [
     path('api/users-for-assignment/', api_views.UsersForAssignmentView.as_view(), name='api_users_for_assignment'),
     path('api/unresolved-stats/', api_views.UnresolvedComplaintsStatsView.as_view(), name='api_unresolved_stats'),
     path('api/complaint-type/<int:complaint_type_id>/responsible-staff/', api_views.get_complaint_type_responsible_staff, name='api_complaint_type_responsible_staff'),
+    path('api/department/<int:department_id>/staff/', views.get_department_staff, name='api_department_staff'),
 ]

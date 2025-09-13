@@ -1161,7 +1161,12 @@ def start_action_on_escalated_complaint(request, pk):
 def close_complaint(request, pk):
     """إغلاق الشكوى بعد التقييم"""
     complaint = get_object_or_404(Complaint, pk=pk)
-    
+
+    # التحقق من صلاحية المستخدم لإغلاق الشكوى
+    if not complaint.can_be_closed_by_user(request.user):
+        messages.error(request, 'ليس لديك صلاحية لإغلاق هذه الشكوى. فقط منشئ الشكوى أو المدراء يمكنهم إغلاقها.')
+        return redirect('complaints:complaint_detail', pk=pk)
+
     # التحقق من أن الشكوى محلولة
     if complaint.status != 'resolved':
         messages.warning(request, 'لا يمكن إغلاق الشكوى - يجب أن تكون محلولة أولاً')
@@ -1913,73 +1918,150 @@ def get_customer_orders(request, customer_id):
 
 @login_required
 def get_complaint_type_fields(request, type_id):
-    """جلب الحقول المطلوبة لنوع الشكوى"""
+    """جلب الحقول المطلوبة لنوع الشكوى مع مراعاة الصلاحيات وإعدادات لوحة التحكم"""
     try:
         complaint_type = get_object_or_404(ComplaintType, id=type_id)
-        
-        # قائمة الموظفين المتاحين للتعيين
+
+        # قائمة الموظفين المتاحين للتعيين بناءً على إعدادات نوع الشكوى والصلاحيات
         available_staff = []
-        if (hasattr(complaint_type, 'responsible_department') and
-                complaint_type.responsible_department):
-            # جلب موظفي القسم المختص
+
+        # أولاً: التحقق من الموظفين المسؤولين المحددين في نوع الشكوى
+        if complaint_type.responsible_staff.exists():
+            # استخدام الموظفين المحددين مسبقاً في نوع الشكوى (بغض النظر عن الصلاحيات)
+            # لأن المدير حددهم بشكل صريح في لوحة التحكم
+            responsible_staff = complaint_type.responsible_staff.filter(
+                is_active=True
+            ).distinct()
+
+            for user in responsible_staff:
+                available_staff.append({
+                    'id': user.id,
+                    'name': user.get_full_name() or user.username,
+                    'username': user.username,
+                    'is_default': user == complaint_type.default_assignee,
+                    'department': user.departments.first().name if user.departments.exists() else None,
+                    'source': 'responsible_staff'  # لتتبع مصدر المستخدم
+                })
+
+        # ثانياً: إذا لم يكن هناك موظفين محددين، استخدم موظفي القسم المسؤول
+        elif complaint_type.responsible_department:
             from accounts.models import User
-            staff_users = User.objects.filter(
+            # جلب جميع موظفي القسم النشطين
+            dept_staff = User.objects.filter(
                 departments=complaint_type.responsible_department,
                 is_active=True
-            ).values('id', 'first_name', 'last_name', 'username')
-            
-            for user in staff_users:
-                full_name = f"{user['first_name']} {user['last_name']}".strip()
-                if not full_name:
-                    full_name = user['username']
+            ).distinct()
+
+            for user in dept_staff:
+                # التحقق من الصلاحيات (اختياري للموظفين في القسم المحدد)
+                has_permissions = hasattr(user, 'complaint_permissions') and \
+                                user.complaint_permissions.can_be_assigned_complaints
+
                 available_staff.append({
-                    'id': user['id'],
-                    'name': full_name
+                    'id': user.id,
+                    'name': user.get_full_name() or user.username,
+                    'username': user.username,
+                    'is_default': user == complaint_type.default_assignee,
+                    'department': complaint_type.responsible_department.name,
+                    'source': 'department_staff',
+                    'has_permissions': has_permissions
                 })
+
+        # ثالثاً: إذا لم يكن هناك قسم محدد، استخدم المستخدمين المؤهلين فقط
         else:
-            # جلب جميع المستخدمين النشطين
             from accounts.models import User
-            staff_users = User.objects.filter(
-                is_active=True
-            ).values('id', 'first_name', 'last_name', 'username')
-            
-            for user in staff_users:
-                full_name = f"{user['first_name']} {user['last_name']}".strip()
-                if not full_name:
-                    full_name = user['username']
+            # في هذه الحالة، نتطلب وجود صلاحيات صريحة
+            all_qualified_staff = User.objects.filter(
+                is_active=True,
+                complaint_permissions__can_be_assigned_complaints=True,
+                complaint_permissions__is_active=True
+            ).distinct()
+
+            for user in all_qualified_staff:
                 available_staff.append({
-                    'id': user['id'],
-                    'name': full_name
+                    'id': user.id,
+                    'name': user.get_full_name() or user.username,
+                    'username': user.username,
+                    'is_default': user == complaint_type.default_assignee,
+                    'department': user.departments.first().name if user.departments.exists() else None,
+                    'source': 'qualified_staff',
+                    'has_permissions': True
                 })
-        
-        # قائمة الأقسام المتاحة
+
+        # قائمة الأقسام المتاحة (فقط الأقسام النشطة)
         departments = []
-        all_departments = Department.objects.filter(is_active=True).values('id', 'name')
+        all_departments = Department.objects.filter(is_active=True)
         for dept in all_departments:
             departments.append({
-                'id': dept['id'],
-                'name': dept['name']
+                'id': dept.id,
+                'name': dept.name,
+                'is_default': dept == complaint_type.responsible_department
             })
-        
+
         # تحديد القسم الافتراضي
         default_dept = None
-        if (hasattr(complaint_type, 'responsible_department') and
-                complaint_type.responsible_department):
+        default_assignee = None
+        if complaint_type.responsible_department:
             default_dept = complaint_type.responsible_department.id
-        
+        if complaint_type.default_assignee:
+            default_assignee = complaint_type.default_assignee.id
+
         return JsonResponse({
+            'success': True,
             'name': complaint_type.name,
             'description': complaint_type.description or 'لا يوجد وصف',
             'staff': available_staff,
             'departments': departments,
             'default_department': default_dept,
+            'default_assignee': default_assignee,
+            'default_priority': complaint_type.default_priority,
+            'default_deadline_hours': complaint_type.default_deadline_hours,
+            'business_hours_start': complaint_type.business_hours_start.strftime('%H:%M'),
+            'business_hours_end': complaint_type.business_hours_end.strftime('%H:%M'),
+            'working_days': complaint_type.working_days.split(',') if complaint_type.working_days else [],
             'expected_resolution_hours': getattr(
-                complaint_type, 'expected_resolution_hours', 24
+                complaint_type, 'expected_resolution_hours', complaint_type.default_deadline_hours
             ),
         })
         
     except ComplaintType.DoesNotExist:
         return JsonResponse({'error': 'نوع الشكوى غير موجود'}, status=404)
+
+
+@login_required
+def get_department_staff(request, department_id):
+    """جلب موظفي قسم معين"""
+    try:
+        from accounts.models import Department, User
+
+        department = get_object_or_404(Department, id=department_id)
+
+        # جلب موظفي القسم
+        staff_users = User.objects.filter(
+            departments=department,
+            is_active=True
+        ).values('id', 'first_name', 'last_name', 'username')
+
+        staff_list = []
+        for user in staff_users:
+            full_name = f"{user['first_name']} {user['last_name']}".strip()
+            if not full_name:
+                full_name = user['username']
+
+            staff_list.append({
+                'id': user['id'],
+                'name': full_name
+            })
+
+        return JsonResponse({
+            'staff': staff_list,
+            'department_name': department.name
+        })
+
+    except Department.DoesNotExist:
+        return JsonResponse({'error': 'القسم غير موجود'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 # Import export functions

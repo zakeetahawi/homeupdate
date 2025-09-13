@@ -894,57 +894,78 @@
         $('#id_complaint_type').change(function() {
             const typeId = $(this).val();
             console.log('تم اختيار نوع الشكوى:', typeId);
-            
+
+            // حفظ نوع الشكوى المختار للاستخدام في تغيير القسم
+            window.selectedComplaintType = typeId;
+
             if (typeId) {
                 $.ajax({
                     url: `/complaints/api/complaint-types/${typeId}/`,
                     method: 'GET',
                     success: function(data) {
                         console.log('تم جلب معلومات نوع الشكوى بنجاح:', data);
-                        
-                        // تحديث بطاقة معلومات نوع الشكوى
-                        const selectedTypeName = $('#id_complaint_type option:selected').text();
-                        $('#complaint-type-details').html(`
-                            <h6 class="mb-2">${selectedTypeName}</h6>
-                            <p class="mb-1"><i class="fas fa-info-circle me-1"></i> ${data.description || 'لا يوجد وصف'}</p>
-                            <p class="mb-1"><i class="fas fa-users me-1"></i> الموظفين المتاحين: ${data.staff ? data.staff.length : 0}</p>
-                            <p class="mb-0"><i class="fas fa-building me-1"></i> الأقسام المتاحة: ${data.departments ? data.departments.length : 0}</p>
-                        `);
-                        $('#complaint-type-info').show();
-                        $('#no-type-selected').hide();
-                        
-                        // تحديث قائمة الموظفين
-                        const assignedToSelect = $('#id_assigned_to');
-                        assignedToSelect.empty();
-                        assignedToSelect.append('<option value="">اختر الموظف المسؤول</option>');
-                        
-                        if (data.staff && data.staff.length > 0) {
-                            data.staff.forEach(function(staff) {
-                                assignedToSelect.append(`<option value="${staff.id}">${staff.name}</option>`);
-                            });
-                            console.log('تم تحديث قائمة الموظفين:', data.staff.length, 'موظف');
+
+                        if (data.success) {
+                            // تحديث بطاقة معلومات نوع الشكوى
+                            const selectedTypeName = $('#id_complaint_type option:selected').text();
+                            $('#complaint-type-details').html(`
+                                <h6 class="mb-2">${selectedTypeName}</h6>
+                                <p class="mb-1"><i class="fas fa-info-circle me-1"></i> ${data.description || 'لا يوجد وصف'}</p>
+                                <p class="mb-1"><i class="fas fa-users me-1"></i> الموظفين المتاحين: ${data.staff ? data.staff.length : 0}</p>
+                                <p class="mb-1"><i class="fas fa-building me-1"></i> الأقسام المتاحة: ${data.departments ? data.departments.length : 0}</p>
+                                <p class="mb-1"><i class="fas fa-clock me-1"></i> المهلة الافتراضية: ${data.default_deadline_hours} ساعة</p>
+                                <p class="mb-0"><i class="fas fa-flag me-1"></i> الأولوية الافتراضية: ${data.default_priority}</p>
+                            `);
+                            $('#complaint-type-info').show();
+                            $('#no-type-selected').hide();
+
+                            // تحديث قائمة الموظفين
+                            const assignedToSelect = $('#id_assigned_to');
+                            const currentAssignedValue = assignedToSelect.val();
+                            assignedToSelect.empty();
+                            assignedToSelect.append('<option value="">اختر الموظف المسؤول</option>');
+
+                            if (data.staff && data.staff.length > 0) {
+                                data.staff.forEach(function(staff) {
+                                    const isSelected = staff.is_default && !currentAssignedValue ? 'selected' : '';
+                                    const departmentInfo = staff.department ? ` (${staff.department})` : '';
+                                    assignedToSelect.append(`<option value="${staff.id}" ${isSelected}>${staff.name}${departmentInfo}</option>`);
+                                });
+                                console.log('تم تحديث قائمة الموظفين:', data.staff.length, 'موظف');
+                            } else {
+                                console.log('لا توجد موظفين متاحين');
+                            }
+
+                            // تحديث قائمة الأقسام
+                            const deptSelect = $('#id_assigned_department');
+                            const currentDeptValue = deptSelect.val();
+                            deptSelect.empty();
+                            deptSelect.append('<option value="">اختر القسم المختص</option>');
+
+                            if (data.departments && data.departments.length > 0) {
+                                data.departments.forEach(function(dept) {
+                                    const isSelected = dept.is_default && !currentDeptValue ? 'selected' : '';
+                                    deptSelect.append(`<option value="${dept.id}" ${isSelected}>${dept.name}</option>`);
+                                });
+                                console.log('تم تحديث قائمة الأقسام:', data.departments.length, 'قسم');
+                            } else {
+                                console.log('لا توجد أقسام متاحة');
+                            }
+
+                            // تطبيق الإعدادات الافتراضية
+                            if (data.default_priority && !$('#id_priority').val()) {
+                                $('#id_priority').val(data.default_priority);
+                            }
+
+                            // تحديث الموعد النهائي بناءً على المهلة الافتراضية
+                            if (data.default_deadline_hours && !$('#id_deadline').val()) {
+                                const now = new Date();
+                                now.setHours(now.getHours() + data.default_deadline_hours);
+                                const deadlineStr = now.toISOString().slice(0, 16);
+                                $('#id_deadline').val(deadlineStr);
+                            }
                         } else {
-                            console.log('لا توجد موظفين متاحين');
-                        }
-                        
-                        // تحديث قائمة الأقسام
-                        const deptSelect = $('#id_assigned_department');
-                        deptSelect.empty();
-                        deptSelect.append('<option value="">اختر القسم المختص</option>');
-                        
-                        if (data.departments && data.departments.length > 0) {
-                            data.departments.forEach(function(dept) {
-                                deptSelect.append(`<option value="${dept.id}">${dept.name}</option>`);
-                            });
-                            console.log('تم تحديث قائمة الأقسام:', data.departments.length, 'قسم');
-                        } else {
-                            console.log('لا توجد أقسام متاحة');
-                        }
-                        
-                        // تعيين القسم الافتراضي إذا كان متوفراً
-                        if (data.default_department) {
-                            deptSelect.val(data.default_department);
-                            console.log('تم تعيين القسم الافتراضي:', data.default_department);
+                            console.error('فشل في جلب معلومات نوع الشكوى:', data.error || 'خطأ غير معروف');
                         }
                     },
                     error: function(xhr, status, error) {
@@ -960,9 +981,33 @@
                 });
             } else {
                 console.log('لم يتم اختيار نوع شكوى');
+                // مسح نوع الشكوى المحفوظ
+                window.selectedComplaintType = null;
                 // إعادة تعيين القوائم إلى الحالة الافتراضية
                 $('#id_assigned_to').empty().append('<option value="">اختر الموظف المسؤول</option>');
                 $('#id_assigned_department').empty().append('<option value="">اختر القسم المختص</option>');
+            }
+        });
+
+        // تحديث الموظفين عند تغيير القسم مع مراعاة نوع الشكوى
+        $('#id_assigned_department').change(function() {
+            const departmentId = $(this).val();
+            const complaintTypeId = window.selectedComplaintType;
+
+            console.log('تم تغيير القسم إلى:', departmentId);
+            console.log('نوع الشكوى المحدد:', complaintTypeId);
+
+            if (departmentId && complaintTypeId) {
+                // إذا كان هناك نوع شكوى محدد، استخدم منطق نوع الشكوى مع فلترة القسم
+                updateStaffForComplaintTypeAndDepartment(complaintTypeId, departmentId);
+            } else if (departmentId) {
+                // إذا لم يكن هناك نوع شكوى، استخدم منطق القسم العادي
+                updateStaffByDepartment(departmentId);
+            } else {
+                // مسح قائمة الموظفين
+                const assignedToSelect = $('#id_assigned_to');
+                assignedToSelect.empty();
+                assignedToSelect.append('<option value="">اختر الموظف المسؤول</option>');
             }
         });
 
@@ -973,6 +1018,9 @@
         const initialCustomer = $('#id_customer').val();
         const initialComplaintType = $('#id_complaint_type').val();
         const initialPriority = $('#id_priority').val();
+
+        // تهيئة متغير نوع الشكوى المختار
+        window.selectedComplaintType = initialComplaintType || null;
         
         console.log('القيم الأولية:');
         console.log('- العميل:', initialCustomer);
@@ -1204,7 +1252,7 @@
 
                     // مسح الخيارات الحالية
                     assignedToSelect.empty();
-                    assignedToSelect.append('<option value="">اختر الموظف المسؤول</option>');
+                    assignedToSelect.append('<option value="">اختر الموظف المختص</option>');
 
                     // إضافة الموظفين المسؤولين
                     response.staff.forEach(function(staff) {
@@ -1223,6 +1271,121 @@
             },
             error: function(xhr, status, error) {
                 console.error('خطأ في جلب الموظفين المسؤولين:', error);
+            }
+        });
+    };
+
+    // دالة تحديث الموظفين بناءً على نوع الشكوى والقسم معاً
+    window.updateStaffForComplaintTypeAndDepartment = function(complaintTypeId, departmentId) {
+        console.log('تحديث الموظفين لنوع الشكوى:', complaintTypeId, 'والقسم:', departmentId);
+
+        $.ajax({
+            url: `/complaints/api/complaint-types/${complaintTypeId}/`,
+            method: 'GET',
+            success: function(data) {
+                console.log('بيانات نوع الشكوى:', data);
+
+                if (data.success) {
+                    const assignedToSelect = $('#id_assigned_to');
+                    const currentValue = assignedToSelect.val();
+
+                    // مسح الخيارات الحالية
+                    assignedToSelect.empty();
+                    assignedToSelect.append('<option value="">اختر الموظف المسؤول</option>');
+
+                    // فلترة الموظفين حسب القسم المختار
+                    if (data.staff && data.staff.length > 0) {
+                        const selectedDepartmentName = $('#id_assigned_department option:selected').text();
+                        console.log('القسم المختار:', selectedDepartmentName);
+
+                        const filteredStaff = data.staff.filter(function(staff) {
+                            // إذا كان الموظف من responsible_staff المحددين صراحة، أظهره دائماً
+                            if (staff.source === 'responsible_staff') {
+                                console.log('موظف مسؤول مخصص:', staff.name);
+                                return true;
+                            }
+                            // إذا كان من موظفي القسم، تحقق من تطابق القسم
+                            if (staff.department && selectedDepartmentName &&
+                                staff.department.trim() === selectedDepartmentName.trim()) {
+                                console.log('موظف من القسم المطابق:', staff.name, staff.department);
+                                return true;
+                            }
+                            console.log('موظف مستبعد:', staff.name, 'قسمه:', staff.department, 'القسم المطلوب:', selectedDepartmentName);
+                            return false;
+                        });
+
+                        if (filteredStaff.length > 0) {
+                            filteredStaff.forEach(function(staff) {
+                                const isSelected = staff.is_default && !currentValue ? 'selected' : '';
+                                const departmentInfo = staff.department ? ` (${staff.department})` : '';
+                                const sourceInfo = staff.source === 'responsible_staff' ? ' [مسؤول مخصص]' : '';
+                                assignedToSelect.append(`<option value="${staff.id}" ${isSelected}>${staff.name}${departmentInfo}${sourceInfo}</option>`);
+                            });
+                            console.log('تم تحديث قائمة الموظفين المفلترة:', filteredStaff.length, 'موظف');
+                        } else {
+                            assignedToSelect.append('<option value="" disabled>لا يوجد موظفين مناسبين لهذا القسم</option>');
+                            console.log('لا توجد موظفين مناسبين للقسم المختار');
+                        }
+                    } else {
+                        assignedToSelect.append('<option value="" disabled>لا يوجد موظفين متاحين</option>');
+                        console.log('لا توجد موظفين متاحين لنوع الشكوى');
+                    }
+
+                    // استعادة القيمة المحددة سابقاً إذا كانت متاحة
+                    if (currentValue) {
+                        assignedToSelect.val(currentValue);
+                    }
+                } else {
+                    console.error('فشل في جلب بيانات نوع الشكوى:', data.error);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('خطأ في جلب بيانات نوع الشكوى:', error);
+                // في حالة الخطأ، استخدم منطق القسم العادي
+                updateStaffByDepartment(departmentId);
+            }
+        });
+    };
+
+    // دالة تحديث الموظفين بناءً على القسم المختار فقط
+    window.updateStaffByDepartment = function(departmentId) {
+        if (!departmentId) {
+            // إذا لم يتم اختيار قسم، عرض جميع الموظفين
+            const assignedToSelect = $('#id_assigned_to');
+            assignedToSelect.empty();
+            assignedToSelect.append('<option value="">اختر الموظف المختص</option>');
+            return;
+        }
+
+        $.ajax({
+            url: `/complaints/api/department/${departmentId}/staff/`,
+            method: 'GET',
+            success: function(data) {
+                const assignedToSelect = $('#id_assigned_to');
+                const currentValue = assignedToSelect.val();
+
+                // مسح الخيارات الحالية
+                assignedToSelect.empty();
+                assignedToSelect.append('<option value="">اختر الموظف المختص</option>');
+
+                // إضافة موظفي القسم
+                if (data.staff && data.staff.length > 0) {
+                    data.staff.forEach(function(staff) {
+                        assignedToSelect.append(`<option value="${staff.id}">${staff.name}</option>`);
+                    });
+                } else {
+                    assignedToSelect.append('<option value="" disabled>لا يوجد موظفين في هذا القسم</option>');
+                }
+
+                // استعادة القيمة المحددة سابقاً إذا كانت متاحة
+                if (currentValue) {
+                    assignedToSelect.val(currentValue);
+                }
+
+                console.log(`تم تحديث قائمة الموظفين للقسم ${departmentId}`);
+            },
+            error: function(xhr, status, error) {
+                console.error('خطأ في جلب موظفي القسم:', error);
             }
         });
     };

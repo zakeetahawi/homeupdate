@@ -139,10 +139,10 @@ print_info "📊 مراقبة Celery Worker: tail -f /tmp/celery_worker_dev.log"
 print_info "⏰ مراقبة Celery Beat: tail -f /tmp/celery_beat_dev.log"
 print_info "Ctrl+C للإيقاف"
 
-# تشغيل Daphne للتطوير مع WebSocket
-daphne -b 0.0.0.0 -p 8000 crm.asgi:application &
+# تشغيل خادم Django للتطوير
+python manage.py runserver 0.0.0.0:8000 &
 DJANGO_PID=$!
-print_status "خادم التطوير مع WebSocket يعمل (PID: $DJANGO_PID)"
+print_status "خادم التطوير يعمل (PID: $DJANGO_PID)"
 
 # مراقبة العمليات
 while true; do

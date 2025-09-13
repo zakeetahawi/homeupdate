@@ -1054,12 +1054,13 @@ class AssignmentNotificationsView(View):
     def get(self, request):
         """Get assignment notifications for current user"""
         try:
-            # Get assignment notifications for current user (only unread and for active complaints)
+            # Get assignment notifications for current user (only unread, for active complaints, and still assigned to user)
             assignment_notifications = ComplaintNotification.objects.filter(
                 recipient=request.user,
                 notification_type__in=['assignment', 'new_complaint'],
                 is_read=False,
-                complaint__status__in=['new', 'in_progress', 'escalated']  # فقط الشكاوى النشطة
+                complaint__status__in=['new', 'in_progress', 'escalated'],  # فقط الشكاوى النشطة
+                complaint__assigned_to=request.user  # فقط الشكاوى المسندة حالياً للمستخدم
             ).select_related('complaint', 'complaint__customer').order_by('-created_at')[:5]
 
             notifications_data = []
@@ -1290,30 +1291,53 @@ class UnresolvedComplaintsStatsView(View):
 @require_http_methods(["GET"])
 def get_complaint_type_responsible_staff(request, complaint_type_id):
     """
-    API endpoint to get responsible staff for a specific complaint type
+    API endpoint to get responsible staff for a specific complaint type with permissions
     """
     try:
         complaint_type = get_object_or_404(ComplaintType, pk=complaint_type_id)
 
         # Get responsible staff for this complaint type
-        responsible_staff = complaint_type.responsible_staff.filter(is_active=True)
+        # أولاً: الموظفين المحددين صراحة (بغض النظر عن الصلاحيات)
+        responsible_staff = complaint_type.responsible_staff.filter(
+            is_active=True
+        ).distinct()
 
-        # If no specific responsible staff, get all active staff
+        # If no specific responsible staff, get staff from responsible department
+        if not responsible_staff.exists() and complaint_type.responsible_department:
+            responsible_staff = User.objects.filter(
+                departments=complaint_type.responsible_department,
+                is_active=True
+            ).distinct()
+
+        # If still no staff, get all qualified staff (with permissions required)
         if not responsible_staff.exists():
-            responsible_staff = User.objects.filter(is_active=True)
+            responsible_staff = User.objects.filter(
+                is_active=True,
+                complaint_permissions__can_be_assigned_complaints=True,
+                complaint_permissions__is_active=True
+            ).distinct()
 
         staff_data = []
         for staff in responsible_staff.order_by('first_name', 'last_name'):
             full_name = staff.get_full_name() or staff.username
+            department = staff.departments.first().name if staff.departments.exists() else None
             staff_data.append({
                 'id': staff.id,
                 'name': full_name,
-                'username': staff.username
+                'username': staff.username,
+                'department': department,
+                'is_default': staff == complaint_type.default_assignee,
+                'email': staff.email
             })
 
         return JsonResponse({
             'success': True,
-            'staff': staff_data
+            'staff': staff_data,
+            'complaint_type': {
+                'name': complaint_type.name,
+                'default_assignee': complaint_type.default_assignee.id if complaint_type.default_assignee else None,
+                'responsible_department': complaint_type.responsible_department.id if complaint_type.responsible_department else None
+            }
         })
 
     except Exception as e:

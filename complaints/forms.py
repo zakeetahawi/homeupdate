@@ -30,9 +30,9 @@ class ComplaintForm(forms.ModelForm):
     # حقول التعيين والمسؤولية
     assigned_to = forms.ModelChoiceField(
         queryset=User.objects.none(),
-        label='الموظف المسؤول',
+        label='إسناد إلى',
         required=False,
-        empty_label='اختر الموظف المسؤول',
+        empty_label='اختر الموظف المختص',
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     
@@ -106,9 +106,12 @@ class ComplaintForm(forms.ModelForm):
             is_active=True
         ).order_by('first_name', 'last_name')
 
-        # إضافة JavaScript لتحديث قائمة الموظفين بناءً على نوع الشكوى
+        # إضافة JavaScript لتحديث قائمة الموظفين بناءً على نوع الشكوى والقسم
         self.fields['complaint_type'].widget.attrs.update({
             'onchange': 'updateResponsibleStaff(this.value)'
+        })
+        self.fields['assigned_department'].widget.attrs.update({
+            'onchange': 'updateStaffByDepartment(this.value)'
         })
         
         # تحديث queryset للفروع
