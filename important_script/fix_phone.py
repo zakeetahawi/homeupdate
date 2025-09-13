@@ -7,7 +7,7 @@ import sys
 import django
 
 # إعداد Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'homeupdate.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
 # إضافة مجلد المشروع الرئيسي إلى sys.path ليعمل السكريبت من أي موقع
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:

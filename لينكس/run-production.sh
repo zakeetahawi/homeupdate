@@ -9,7 +9,7 @@ BLUE='\033[0;34m'
 BOLD_BLUE='\033[1;34m'
 NC='\033[0m'
 
-PROJECT_DIR="/home/zakee/homeupdate"
+PROJECT_DIR="/home/xhunterx/homeupdate"
 
 # تقليل مستوى التسجيل للتشغيل السلس
 export DEBUG=False
@@ -283,19 +283,15 @@ print_info "الموقع: http://localhost:8000"
 print_info "المستخدم: admin | كلمة المرور: admin123"
 print_info "📊 مراقبة Celery: tail -f /tmp/celery_worker.log"
 print_info "⏰ مراقبة المهام الدورية: tail -f /tmp/celery_beat.log"
-print_info "🔌 دعم WebSocket للدردشة الفورية"
+print_info "🔌 دعم المهام الخلفية المحسنة"
 print_info "🗄️ تحسينات قاعدة البيانات: تقليل الاتصالات بنسبة 97.5%"
 print_info "🔔 إشعارات محسنة: إخفاء تلقائي عند تغيير المسؤول"
 print_info "🔍 مراقبة دورية لحالة قاعدة البيانات كل 5 دقائق"
 print_info "Ctrl+C للإيقاف"
 
-# استخدام Daphne مع الإعدادات المحسنة لقاعدة البيانات
+# استخدام خادم Django مع الإعدادات المحسنة لقاعدة البيانات
 print_info "تشغيل خادم الويب مع الإعدادات المحسنة..."
-daphne -b 0.0.0.0 -p 8000 \
-    --access-log /tmp/daphne_access.log \
-    --proxy-headers \
-    --verbosity 1 \
-    crm.asgi:application 2>&1 | while read line; do
+python manage.py runserver 0.0.0.0:8000 2>&1 | while read line; do
         # تطبيق فلتر logs محسن لتقليل الرسائل غير المهمة
         # تجاهل رسائل gunicorn access logs التي تبدأ بـ [[
         if [[ "$line" =~ ^\[\[.*\]\] ]]; then
@@ -315,8 +311,7 @@ daphne -b 0.0.0.0 -p 8000 \
            [[ "$line" == *"/complaints/api/escalated/"* ]] || \
            [[ "$line" == *"/complaints/api/notifications/"* ]] || \
            [[ "$line" == *"/complaints/api/assignment-notifications/"* ]] || \
-           [[ "$line" == *"/modern-chat/api/active-users/"* ]] || \
-           [[ "$line" == *"/modern-chat/api/check-new-messages/"* ]] || \
+
            [[ "$line" == *"/inventory/api/product-autocomplete/"* ]] || \
            [[ "$line" == *"/media/users/"* ]] || \
            [[ "$line" == *"/media/"* ]] || \

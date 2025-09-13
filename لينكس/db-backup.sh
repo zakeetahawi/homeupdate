@@ -16,7 +16,7 @@ fi
 echo $$ > "$PIDFILE"
 trap 'rm -f "$PIDFILE"' EXIT INT TERM
 
-TARGET_DIR="/home/zakee/homeupdate/media/backups"
+TARGET_DIR="/home/xhunterx/homeupdate/media/backups"
 mkdir -p "$TARGET_DIR"
 
 # Read DB connection from environment or fall back to project settings defaults

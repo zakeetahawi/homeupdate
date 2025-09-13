@@ -12,7 +12,7 @@ from decimal import Decimal, InvalidOperation
 
 # Setup Django environment
 sys.path.append('/home/xhunterx/homeupdate')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'homeupdate.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
 django.setup()
 
 from orders.models import Order, OrderItem

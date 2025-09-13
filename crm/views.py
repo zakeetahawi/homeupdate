@@ -3,6 +3,7 @@
 """
 
 from django.shortcuts import render, redirect
+from django.http import HttpResponseGone
 from django.utils import timezone
 from django.db.models import Count, Sum, F, Q
 from django.contrib import messages
@@ -702,3 +703,221 @@ def monitoring_dashboard(request):
         'title': 'لوحة مراقبة النظام',
         'page_title': 'مراقبة النظام وقاعدة البيانات',
     })
+
+
+def chat_gone_view(request):
+    """
+    إرجاع 410 Gone لطلبات الدردشة القديمة مع headers لمنع إعادة المحاولة
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # تسجيل معلومات الطلب لتتبع المصدر
+    user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')
+    referer = request.META.get('HTTP_REFERER', 'No referer')
+    remote_addr = request.META.get('REMOTE_ADDR', 'Unknown IP')
+
+    logger.info(f"🚫 WebSocket request blocked - IP: {remote_addr}, User-Agent: {user_agent[:50]}..., Referer: {referer}")
+
+    response = HttpResponseGone("Chat system has been permanently removed. Please clear your browser cache.")
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    response['Retry-After'] = '86400'  # لا تحاول مرة أخرى لمدة 24 ساعة
+    response['X-Chat-Status'] = 'PERMANENTLY_REMOVED'
+    response['X-WebSocket-Status'] = 'DISABLED'
+    return response
+
+def test_minimal_view(request):
+    """صفحة اختبار نظيفة تماماً بدون أي JavaScript"""
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>اختبار نظيف</title>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        <h1>صفحة اختبار نظيفة</h1>
+        <p>هذه الصفحة لا تحتوي على أي JavaScript أو مراجع خارجية</p>
+        <p>إذا رأيت طلبات WebSocket هنا، فهي من extension المتصفح</p>
+        <script>
+            console.log('✅ صفحة نظيفة - لا توجد دردشة');
+            console.log('🔍 إذا رأيت طلبات WebSocket، فهي من browser extension');
+        </script>
+    </body>
+    </html>
+    """
+    return HttpResponse(html)
+
+
+def clear_cache_view(request):
+    """أداة لمسح cache المتصفح وإيقاف طلبات WebSocket"""
+    html = """
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>مسح Cache المتصفح</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 50px;
+                background: #f5f5f5;
+                direction: rtl;
+            }
+            .container {
+                background: white;
+                padding: 30px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            h1 {
+                color: #333;
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            .step {
+                padding: 15px;
+                margin: 15px 0;
+                border-radius: 5px;
+                border-left: 4px solid #007bff;
+                background: #f8f9fa;
+            }
+            .warning {
+                background: #fff3cd;
+                border-left-color: #ffc107;
+                color: #856404;
+            }
+            .success {
+                background: #d4edda;
+                border-left-color: #28a745;
+                color: #155724;
+            }
+            .button {
+                background: #007bff;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                margin: 10px 5px;
+                text-decoration: none;
+                display: inline-block;
+            }
+            .button:hover {
+                background: #0056b3;
+            }
+            .danger {
+                background: #dc3545;
+            }
+            .danger:hover {
+                background: #c82333;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🧹 أداة مسح Cache المتصفح</h1>
+
+            <div class="warning">
+                <h3>⚠️ سبب طلبات WebSocket المستمرة:</h3>
+                <p>طلبات WebSocket تأتي من <strong>cache المتصفح</strong> أو <strong>Browser Extensions</strong> وليس من الكود.</p>
+            </div>
+
+            <div class="step">
+                <h3>🔧 الخطوة 1: مسح Cache المتصفح</h3>
+                <p>اضغط على الأزرار التالية لمسح cache المتصفح:</p>
+                <button class="button" onclick="clearBrowserCache()">مسح Cache تلقائياً</button>
+                <button class="button" onclick="clearLocalStorage()">مسح Local Storage</button>
+                <button class="button" onclick="clearSessionStorage()">مسح Session Storage</button>
+            </div>
+
+            <div class="step">
+                <h3>🔧 الخطوة 2: مسح Cache يدوياً</h3>
+                <p><strong>Chrome/Edge:</strong> Ctrl+Shift+Delete → اختر "All time" → مسح</p>
+                <p><strong>Firefox:</strong> Ctrl+Shift+Delete → اختر "Everything" → مسح</p>
+                <p><strong>Safari:</strong> Cmd+Option+E → مسح Cache</p>
+            </div>
+
+            <div class="step">
+                <h3>🔧 الخطوة 3: تعطيل Extensions</h3>
+                <p>افتح المتصفح في وضع <strong>Incognito/Private</strong> أو عطل جميع Extensions مؤقتاً</p>
+                <button class="button" onclick="openIncognito()">فتح نافذة خاصة</button>
+            </div>
+
+            <div class="step">
+                <h3>🔧 الخطوة 4: إعادة تشغيل المتصفح</h3>
+                <p>أغلق المتصفح تماماً وافتحه مرة أخرى</p>
+                <button class="button danger" onclick="closeBrowser()">إغلاق المتصفح</button>
+            </div>
+
+            <div class="success">
+                <h3>✅ النتيجة المتوقعة:</h3>
+                <p>بعد تطبيق هذه الخطوات، ستتوقف طلبات WebSocket نهائياً.</p>
+                <p>النظام يرد بـ <strong>410 Gone</strong> بشكل صحيح.</p>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/" class="button">العودة للصفحة الرئيسية</a>
+                <a href="/test-clean/" class="button">اختبار الصفحة النظيفة</a>
+            </div>
+        </div>
+
+        <script>
+            function clearBrowserCache() {
+                if ('caches' in window) {
+                    caches.keys().then(names => {
+                        names.forEach(name => {
+                            caches.delete(name);
+                        });
+                    });
+                }
+                alert('✅ تم مسح Cache المتصفح');
+            }
+
+            function clearLocalStorage() {
+                localStorage.clear();
+                alert('✅ تم مسح Local Storage');
+            }
+
+            function clearSessionStorage() {
+                sessionStorage.clear();
+                alert('✅ تم مسح Session Storage');
+            }
+
+            function openIncognito() {
+                alert('افتح نافذة جديدة في وضع Incognito/Private وجرب الموقع');
+            }
+
+            function closeBrowser() {
+                if (confirm('هل تريد إغلاق المتصفح؟')) {
+                    window.close();
+                }
+            }
+
+            console.log('🔍 مراقبة طلبات WebSocket...');
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    if (registrations.length > 0) {
+                        console.warn('🚨 Service Workers موجودة:', registrations);
+                        registrations.forEach(reg => {
+                            console.log('📍 Service Worker:', reg.scope);
+                            reg.unregister().then(() => {
+                                console.log('✅ تم إلغاء تسجيل Service Worker:', reg.scope);
+                            });
+                        });
+                    } else {
+                        console.log('✅ لا توجد Service Workers');
+                    }
+                });
+            }
+        </script>
+    </body>
+    </html>
+    """
+    return HttpResponse(html)

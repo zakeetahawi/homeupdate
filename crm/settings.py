@@ -70,6 +70,11 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': False,
         },
+        'websocket_blocker': {
+            'handlers': ['slow_queries_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
     },
 }
 
@@ -147,6 +152,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'core',  # التطبيق الأساسي للـ template tags المشتركة
     'crm.apps.CrmConfig',
     'accounts',
     'user_activity.apps.UserActivityConfig',  # تطبيق نشاط المستخدمين
@@ -162,8 +168,8 @@ INSTALLED_APPS = [
     'notifications.apps.NotificationsConfig',  # نظام الإشعارات المتكامل
     'odoo_db_manager.apps.OdooDbManagerConfig',
     'backup_system.apps.BackupSystemConfig',  # نظام النسخ الاحتياطي والاستعادة الجديد
-    'modern_chat.apps.ModernChatConfig',  # نظام الدردشة الحديث
-    'channels',  # دعم WebSocket للدردشة الفورية
+
+
     'corsheaders',
     'django_apscheduler',
     'dbbackup',
@@ -193,7 +199,7 @@ MIDDLEWARE = [
     # إزالة middleware مؤقتاً لحل المشكلة
     # 'accounts.middleware.RoleBasedPermissionsMiddleware',
     # إزالة middleware الثقيل مؤقتاً لحل أزمة الاتصالات
-    # 'accounts.middleware.LogTerminalActivityMiddleware',  
+    # 'accounts.middleware.LogTerminalActivityMiddleware',
     # 'crm.settings.QueryPerformanceLoggingMiddleware',
 ]
 
@@ -239,19 +245,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'crm.wsgi.application'
 
-# إعدادات WebSocket و Channels للدردشة الحديثة
-ASGI_APPLICATION = 'crm.asgi.application'
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
-            "capacity": 1500,
-            "expiry": 60,
-        },
-    },
-}
 
 # --- قاعدة البيانات ---
 # استخدام الإعدادات المباشرة بدلاً من DATABASE_URL لتبسيط التكوين

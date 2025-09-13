@@ -59,13 +59,13 @@ if command -v redis-server > /dev/null 2>&1; then
     
     # اختبار Redis
     if redis-cli ping > /dev/null 2>&1; then
-        print_status "Redis يعمل - WebSocket متاح"
+        print_status "Redis يعمل - للمهام الخلفية"
         USE_REDIS=true
     else
-        print_warning "Redis لا يعمل - سيتم استخدام وضع بدون WebSocket"
+        print_warning "Redis لا يعمل - المهام الخلفية معطلة"
     fi
 else
-    print_warning "Redis غير مثبت - سيتم استخدام وضع بدون WebSocket"
+    print_warning "Redis غير مثبت - المهام الخلفية معطلة"
 fi
 
 # تطبيق migrations
@@ -128,10 +128,10 @@ print_info "الموقع: http://localhost:8000"
 print_info "المستخدم: admin | كلمة المرور: admin123"
 
 if [ "$USE_REDIS" = true ]; then
-    print_info "🔌 WebSocket متاح (مع Redis)"
-    print_info "📊 مراقبة السجلات: tail -f /tmp/daphne_access.log"
+    print_info "🔌 المهام الخلفية متاحة (مع Redis)"
+    print_info "📊 مراقبة السجلات: tail -f /tmp/server_access.log"
 else
-    print_warning "⚠️ WebSocket غير متاح (بدون Redis)"
+    print_warning "⚠️ المهام الخلفية غير متاحة (بدون Redis)"
 fi
 
 print_info "Ctrl+C للإيقاف"
@@ -144,25 +144,22 @@ echo "✅ تسجيل الدخول يعمل"
 echo "✅ واجهة المستخدم محسنة"
 
 if [ "$USE_REDIS" = true ]; then
-    echo "✅ الدردشة الفورية تعمل"
-    echo "✅ مؤشر 'يكتب الآن' يعمل"
-    echo "✅ إشعارات فورية"
+    echo "✅ المهام الخلفية تعمل"
+    echo "✅ النسخ الاحتياطي التلقائي"
+    echo "✅ إشعارات النظام"
 else
-    echo "⚠️ الدردشة الفورية معطلة"
+    echo "⚠️ المهام الخلفية معطلة"
 fi
 
 echo "✅ عرض ملف المستخدم"
-echo "✅ حذف المحادثات"
-echo "✅ حظر المستخدمين"
+echo "✅ إدارة الطلبات"
+echo "✅ إدارة المستخدمين"
 echo ""
 
 # تشغيل الخادم المناسب
 if [ "$USE_REDIS" = true ]; then
-    # تشغيل Daphne مع WebSocket
-    exec daphne -b 0.0.0.0 -p 8000 \
-        --access-log /tmp/daphne_access.log \
-        --proxy-headers \
-        crm.asgi:application
+    # تشغيل خادم Django العادي
+    exec python manage.py runserver 0.0.0.0:8000
 else
     # تشغيل Django العادي
     exec python manage.py runserver 0.0.0.0:8000

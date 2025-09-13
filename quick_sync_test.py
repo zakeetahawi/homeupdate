@@ -7,7 +7,7 @@ import os
 import django
 
 # إعداد Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'homeupdate.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
 django.setup()
 
 def test_imports():

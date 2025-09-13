@@ -180,7 +180,7 @@ APP_CONFIG = {
             'installations',
             'corsheaders',
             'rest_framework',
-            'channels',
+
         ],
         'MIDDLEWARE': [
             'corsheaders.middleware.CorsMiddleware',
@@ -205,7 +205,7 @@ APP_CONFIG = {
             'installations',
             'corsheaders',
             'rest_framework',
-            'channels',
+
         ],
         'MIDDLEWARE': [
             'corsheaders.middleware.CorsMiddleware',

@@ -224,7 +224,7 @@ class Complaint(models.Model):
         null=True,
         blank=True,
         related_name='assigned_complaints',
-        verbose_name='مسؤول المتابعة'
+        verbose_name='إسناد إلى'
     )
     assigned_department = models.ForeignKey(
         'accounts.Department',
@@ -323,8 +323,12 @@ class Complaint(models.Model):
         if self.complaint_type:
             if not self.assigned_department and self.complaint_type.responsible_department:
                 self.assigned_department = self.complaint_type.responsible_department
-            if not self.assigned_to and self.complaint_type.default_assignee:
-                self.assigned_to = self.complaint_type.default_assignee
+            # جعل منشئ الشكوى هو المسؤول الافتراضي
+            if not self.assigned_to:
+                if self.created_by:
+                    self.assigned_to = self.created_by
+                elif self.complaint_type.default_assignee:
+                    self.assigned_to = self.complaint_type.default_assignee
             if not self.priority:
                 self.priority = self.complaint_type.default_priority
         
@@ -464,6 +468,18 @@ class Complaint(models.Model):
     def can_be_closed(self):
         """هل يمكن إغلاق الشكوى؟"""
         return self.status == 'pending_evaluation' and self.is_evaluated
+
+    def can_be_closed_by_user(self, user):
+        """هل يمكن للمستخدم إغلاق الشكوى؟"""
+        # فقط منشئ الشكوى يمكنه إغلاقها
+        if self.created_by == user:
+            return True
+
+        # المدراء والمشرفين يمكنهم إغلاق أي شكوى
+        if user.is_superuser or user.groups.filter(name__in=['Managers', 'Complaints_Supervisors']).exists():
+            return True
+
+        return False
 
     @property
     def is_fully_completed(self):
@@ -1025,25 +1041,25 @@ class ComplaintNotification(models.Model):
             url=url
         )
 
-        # إرسال الإشعار عبر WebSocket
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
-        
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"user_{recipient.id}_notifications",
-            {
-                "type": "notification.message",
-                "notification": {
-                    "id": notification.id,
-                    "type": notification.notification_type,
-                    "title": notification.title,
-                    "message": notification.message,
-                    "url": notification.url,
-                    "created_at": notification.created_at.isoformat()
-                }
-            }
-        )
+        # WebSocket notifications disabled - chat system removed
+        # from channels.layers import get_channel_layer
+        # from asgiref.sync import async_to_sync
+        #
+        # channel_layer = get_channel_layer()
+        # async_to_sync(channel_layer.group_send)(
+        #     f"user_{recipient.id}_notifications",
+        #     {
+        #         "type": "notification.message",
+        #         "notification": {
+        #             "id": notification.id,
+        #             "type": notification.notification_type,
+        #             "title": notification.title,
+        #             "message": notification.message,
+        #             "url": notification.url,
+        #             "created_at": notification.created_at.isoformat()
+        #         }
+        #     }
+        # )
 
         return notification
 

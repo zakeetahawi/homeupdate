@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
-from django.views.generic import RedirectView
+from django.views.generic import RedirectView, TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 from . import views
@@ -94,8 +94,7 @@ urlpatterns = [
     ),
     # نظام النسخ الاحتياطي والاستعادة الجديد
     path("backup-system/", include("backup_system.urls", namespace="backup_system")),
-    # نظام الدردشة الحديث (API فقط)
-    path("modern-chat/", include("modern_chat.urls", namespace="modern_chat")),
+
 
     # لوحة مراقبة النظام
     path("monitoring/", views.monitoring_dashboard, name="monitoring_dashboard"),
@@ -108,6 +107,19 @@ urlpatterns = [
     path("api/monitoring/actions/", api_monitoring.DatabaseActionsView.as_view(), name="database_actions"),
     path("api/monitoring/health/", api_monitoring.health_check, name="health_check"),
     path("api/monitoring/alerts/", api_monitoring.alerts, name="monitoring_alerts"),
+
+    # صفحة اختبار نظيفة
+    path("test-clean/", TemplateView.as_view(template_name="test_clean.html"), name="test_clean"),
+    path("test-minimal/", views.test_minimal_view, name="test_minimal"),
+
+    # صفحة اختبار نوع الشكوى
+    path("test-complaint-type/", TemplateView.as_view(template_name="test_complaint_type_debug.html"), name="test_complaint_type_debug"),
+
+    # أداة مسح cache المتصفح
+    path("clear-cache/", views.clear_cache_view, name="clear_cache"),
+
+    # إنهاء طلبات الدردشة القديمة
+    re_path(r'^ws/chat/.*$', views.chat_gone_view, name="chat_gone"),
 
 ]
 
