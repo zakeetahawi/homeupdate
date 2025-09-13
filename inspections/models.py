@@ -482,7 +482,9 @@ class Inspection(models.Model):
                 file_path=self.inspection_file.path,
                 inspection=self
             )
-            if result.get('success'):
+
+            # التحقق من نجاح الرفع (result يحتوي على file_id إذا نجح)
+            if result and result.get('file_id'):
                 # تحديث بيانات المعاينة
                 self.google_drive_file_id = result.get('file_id')
                 self.google_drive_file_url = result.get('view_url')
@@ -503,7 +505,7 @@ class Inspection(models.Model):
                 logger.info(f"تم رفع ملف المعاينة {self.id} بنجاح إلى Google Drive")
                 return True
             else:
-                logger.error(f"فشل في رفع ملف المعاينة {self.id}: {result.get('message')}")
+                logger.error(f"فشل في رفع ملف المعاينة {self.id}: {result}")
                 return False
         except Exception as e:
             import logging

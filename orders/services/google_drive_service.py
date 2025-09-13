@@ -109,37 +109,47 @@ class ContractGoogleDriveService:
     def _get_or_create_contracts_folder(self):
         """الحصول على مجلد العقود أو إنشاؤه"""
         try:
-            # البحث عن مجلد العقود
+            # استخدام مجلد العقود المحدد في الإعدادات المركزية أولاً
+            if self.config.contracts_folder_id:
+                # التحقق من وجود المجلد المحدد
+                try:
+                    folder_info = self.service.files().get(
+                        fileId=self.config.contracts_folder_id,
+                        fields='id,name'
+                    ).execute()
+                    logger.info(f"استخدام مجلد العقود المحدد: {folder_info.get('name')} ({self.config.contracts_folder_id})")
+                    return self.config.contracts_folder_id
+                except Exception as e:
+                    logger.warning(f"المجلد المحدد غير متاح: {e}")
+
+            # البحث عن مجلد العقود أو إنشاؤه
             folder_name = "العقود - Contracts"
-            
-            # البحث في المجلد الجذر أو مجلد المعاينات
-            parent_folder = self.config.inspections_folder_id or 'root'
-            
+
+            # البحث في المجلد الجذر
             query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-            if parent_folder != 'root':
-                query += f" and '{parent_folder}' in parents"
-            
+
             results = self.service.files().list(q=query, fields="files(id, name)").execute()
             folders = results.get('files', [])
 
             if folders:
                 # المجلد موجود
-                return folders[0]['id']
+                folder_id = folders[0]['id']
+                logger.info(f"وجد مجلد العقود الموجود: {folder_id}")
+                return folder_id
             else:
-                # إنشاء المجلد
+                # إنشاء المجلد في الجذر
                 folder_metadata = {
                     'name': folder_name,
-                    'mimeType': 'application/vnd.google-apps.folder',
-                    'parents': [parent_folder] if parent_folder != 'root' else []
+                    'mimeType': 'application/vnd.google-apps.folder'
                 }
-                
+
                 folder = self.service.files().create(body=folder_metadata, fields='id').execute()
-                logger.info(f"تم إنشاء مجلد العقود: {folder.get('id')}")
+                logger.info(f"تم إنشاء مجلد العقود الجديد: {folder.get('id')}")
                 return folder.get('id')
 
         except Exception as e:
             logger.error(f"خطأ في إنشاء مجلد العقود: {str(e)}")
-            # استخدام مجلد المعاينات كبديل
+            # استخدام مجلد المعاينات كبديل فقط في حالة الطوارئ
             return self.config.inspections_folder_id
 
     def _generate_contract_filename(self, order):

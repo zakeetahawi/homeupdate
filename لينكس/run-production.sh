@@ -1,5 +1,5 @@
 #!/bin/bash
-# 🚀 تشغيل النظام للإنتاج مع مراقبة مبسطة
+# 🚀 تشغيل النظام للإنتاج مع نظام الرفع المحسن
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -7,6 +7,7 @@ WHITE='\033[1;37m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 BOLD_BLUE='\033[1;34m'
+PURPLE='\033[0;35m'
 NC='\033[0m'
 
 PROJECT_DIR="/home/zakee/homeupdate"
@@ -21,6 +22,7 @@ print_info() { echo -e "${WHITE}$1${NC}"; }
 print_warning() { echo -e "${YELLOW}$1${NC}"; }
 print_tunnel() { echo -e "${BLUE}$1${NC}"; }
 print_login() { echo -e "${BOLD_BLUE}$1${NC}"; }
+print_upload() { echo -e "${PURPLE}$1${NC}"; }
 
 # متغيرات لمراقبة التانل
 TUNNEL_STATUS="unknown"
@@ -62,6 +64,10 @@ print_info "تشغيل التحديثات..."
 python manage.py migrate --noinput
 print_status "✔️ تم تطبيق التحديثات"
 
+print_upload "🚀 نظام الرفع المحسن جاهز للعمل!"
+print_upload "📤 سيتم رفع الملفات المعلقة تلقائياً كل 10 دقائق"
+print_upload "🔧 تم إصلاح مشكلة Celery queues"
+
 # فحص وتنظيف الإشعارات القديمة
 print_info "تنظيف الإشعارات القديمة..."
 python manage.py cleanup_notifications
@@ -94,21 +100,22 @@ else
     print_status "✔️ Redis يعمل بالفعل"
 fi
 
-# تشغيل Celery Worker مع جميع قوائم الانتظار والإعدادات المحسنة
-print_info "تشغيل Celery Worker مع جميع قوائم الانتظار والإعدادات المحسنة..."
+# تشغيل Celery Worker مع نظام الرفع المحسن
+print_info "تشغيل Celery Worker مع نظام الرفع المحسن..."
+print_upload "📤 سيتم دعم رفع العقود والمعاينات بشكل صحيح"
 cd "$PROJECT_DIR"  # التأكد من أننا في المجلد الصحيح
 if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
     # تنظيف الملفات القديمة
     rm -f /tmp/celery_worker.pid /tmp/celery_worker.log
 
-    # تشغيل Celery Worker مع إعدادات طارئة لتقليل استخدام قاعدة البيانات
+    # تشغيل Celery Worker مع جميع الـ queues (مُصلح)
     celery -A crm worker \
         --loglevel=error \
-        --queues=celery \
+        --queues=celery,file_uploads \
         --pidfile=/tmp/celery_worker.pid \
         --logfile=/tmp/celery_worker.log \
         --pool=solo \
-        --concurrency=1 \
+        --concurrency=2 \
         --max-tasks-per-child=50 \
         --detach
 
@@ -118,6 +125,7 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
         CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid)
         if ps -p $CELERY_WORKER_PID > /dev/null; then
             print_status "✔️ تم تشغيل Celery Worker بنجاح (PID: $CELERY_WORKER_PID)"
+            print_upload "📤 نظام الرفع جاهز: العقود والمعاينات"
         else
             print_error "❌ فشل في تشغيل Celery Worker - راجع السجل في /tmp/celery_worker.log"
             tail -n 20 /tmp/celery_worker.log
@@ -426,6 +434,16 @@ while true; do
         LAST_NOTIFICATION_CLEANUP=$CURRENT_TIME
     fi
 
+    # رفع تلقائي للملفات المعلقة (كل 10 دقائق)
+    if [ $((CURRENT_TIME - ${LAST_UPLOAD_CHECK:-0})) -ge 600 ]; then
+        print_upload "📤 رفع تلقائي للملفات المعلقة..."
+        if [ -f "auto_upload_system.py" ]; then
+            UPLOAD_RESULT=$(python auto_upload_system.py single 2>/dev/null | tail -2)
+            print_upload "$UPLOAD_RESULT"
+        fi
+        LAST_UPLOAD_CHECK=$CURRENT_TIME
+    fi
+
     # فحص Celery Worker مع إعادة تشغيل محسنة
     if [ -f "/tmp/celery_worker.pid" ]; then
         CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid 2>/dev/null)
@@ -433,7 +451,7 @@ while true; do
             print_warning "⚠️ Celery Worker توقف - إعادة تشغيل مع الإعدادات المحسنة..."
             celery -A crm worker \
                 --loglevel=info \
-                --queues=celery,file_uploads,maintenance,calculations,status_updates \
+                --queues=celery,file_uploads \
                 --pool=prefork \
                 --concurrency=2 \
                 --max-tasks-per-child=100 \
@@ -499,4 +517,5 @@ while true; do
     fi
 done
 
+print_upload "📤 تم إيقاف نظام الرفع التلقائي"
 cleanup
