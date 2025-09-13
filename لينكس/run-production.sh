@@ -12,7 +12,7 @@ NC='\033[0m'
 PROJECT_DIR="/home/xhunterx/homeupdate"
 
 # تقليل مستوى التسجيل للتشغيل السلس
-export DEBUG=False
+export DEBUG=True
 export DJANGO_LOG_LEVEL=ERROR
 
 print_status() { echo -e "${GREEN}$1${NC}"; }
