@@ -672,44 +672,8 @@ class BranchMessageAdmin(admin.ModelAdmin):
         css = {
             'all': ('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',)
         }
+    
 
-# تم إلغاء إدارة إعدادات السنة الافتراضية
-# @admin.register(DashboardYearSettings)
-# class DashboardYearSettingsAdmin(admin.ModelAdmin):
-#     """إدارة إعدادات السنوات في الداش بورد - تم إلغاؤها"""
-#     pass
-    
-    actions = ['activate_years', 'deactivate_years', 'set_as_default']
-    
-    def activate_years(self, request, queryset):
-        """تفعيل السنوات المحددة"""
-        updated = queryset.update(is_active=True)
-        self.message_user(request, f'تم تفعيل {updated} سنة بنجاح')
-    activate_years.short_description = 'تفعيل السنوات المحددة'
-    
-    def deactivate_years(self, request, queryset):
-        """إلغاء تفعيل السنوات المحددة"""
-        updated = queryset.update(is_active=False)
-        self.message_user(request, f'تم إلغاء تفعيل {updated} سنة بنجاح')
-    deactivate_years.short_description = 'إلغاء تفعيل السنوات المحددة'
-    
-    def set_as_default(self, request, queryset):
-        """تعيين السنة المحددة كافتراضية"""
-        if queryset.count() != 1:
-            self.message_user(request, 'يرجى تحديد سنة واحدة فقط', level='ERROR')
-            return
-        
-        year = queryset.first()
-        year.is_default = True
-        year.save()
-        self.message_user(request, f'تم تعيين سنة {year.year} كافتراضية بنجاح')
-    set_as_default.short_description = 'تعيين كافتراضية'
-    
-    def has_delete_permission(self, request, obj=None):
-        """منع حذف السنة الافتراضية"""
-        if obj and obj.is_default:
-            return False
-        return super().has_delete_permission(request, obj)
 
 
 @admin.register(YearFilterExemption)
@@ -743,6 +707,47 @@ class YearFilterExemptionAdmin(admin.ModelAdmin):
             messages.success(request, f'تم إعفاء قسم {obj.get_section_display()} من فلتر السنة الافتراضية')
         else:
             messages.success(request, f'تم إلغاء إعفاء قسم {obj.get_section_display()} - سيطبق فلتر السنة الافتراضية')
+
+
+
+@admin.register(DashboardYearSettings)
+class DashboardYearSettingsAdmin(admin.ModelAdmin):
+    """إدارة إعدادات السنوات في داش بورد الإدارة"""
+    list_display = ('year', 'is_active', 'is_default', 'description')
+    list_filter = ('is_active', 'is_default')
+    search_fields = ('year', 'description')
+    actions = ['activate_years', 'deactivate_years', 'set_as_default']
+
+    def activate_years(self, request, queryset):
+        """تفعيل السنوات المحددة"""
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'تم تفعيل {updated} سنة بنجاح')
+    activate_years.short_description = 'تفعيل السنوات المحددة'
+
+    def deactivate_years(self, request, queryset):
+        """إلغاء تفعيل السنوات المحددة"""
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'تم إلغاء تفعيل {updated} سنة بنجاح')
+    deactivate_years.short_description = 'إلغاء تفعيل السنوات المحددة'
+
+    def set_as_default(self, request, queryset):
+        """تعيين السنة المحددة كافتراضية"""
+        if queryset.count() != 1:
+            self.message_user(request, 'يرجى تحديد سنة واحدة فقط', level=messages.ERROR)
+            return
+
+        year = queryset.first()
+        year.is_default = True
+        year.save()
+        self.message_user(request, f'تم تعيين سنة {year.year} كافتراضية بنجاح')
+    set_as_default.short_description = 'تعيين كافتراضية'
+
+    def has_delete_permission(self, request, obj=None):
+        """منع حذف السنة الافتراضية"""
+        if obj and getattr(obj, 'is_default', False):
+            return False
+        return super().has_delete_permission(request, obj)
+
 
 
 
