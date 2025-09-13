@@ -10,7 +10,7 @@ BOLD_BLUE='\033[1;34m'
 PURPLE='\033[0;35m'
 NC='\033[0m'
 
-PROJECT_DIR="/home/xhunterx/homeupdate"
+PROJECT_DIR="/home/zakee/homeupdate"
 
 # تقليل مستوى التسجيل للتشغيل السلس
 export DEBUG=True
@@ -291,15 +291,32 @@ print_info "الموقع: http://localhost:8000"
 print_info "المستخدم: admin | كلمة المرور: admin123"
 print_info "📊 مراقبة Celery: tail -f /tmp/celery_worker.log"
 print_info "⏰ مراقبة المهام الدورية: tail -f /tmp/celery_beat.log"
-print_info "🔌 دعم المهام الخلفية المحسنة"
+print_info "🔌 دعم المهام الخلفية المحسنة + خادم إنتاج Gunicorn"
 print_info "🗄️ تحسينات قاعدة البيانات: تقليل الاتصالات بنسبة 97.5%"
 print_info "🔔 إشعارات محسنة: إخفاء تلقائي عند تغيير المسؤول"
 print_info "🔍 مراقبة دورية لحالة قاعدة البيانات كل 5 دقائق"
 print_info "Ctrl+C للإيقاف"
 
-# استخدام خادم Django مع الإعدادات المحسنة لقاعدة البيانات
-print_info "تشغيل خادم الويب مع الإعدادات المحسنة..."
-python manage.py runserver 0.0.0.0:8000 2>&1 | while read line; do
+# استخدام Gunicorn للإنتاج مع الإعدادات المحسنة لقاعدة البيانات
+print_info "تشغيل خادم الويب للإنتاج مع الإعدادات المحسنة..."
+print_warning "⚠️ استخدام Gunicorn للإنتاج - أداء أفضل وأمان أعلى"
+
+# استخدام Gunicorn مع إعدادات محسنة للإنتاج
+gunicorn crm.wsgi:application \
+    --bind 0.0.0.0:8000 \
+    --workers 2 \
+    --worker-class sync \
+    --worker-connections 25 \
+    --max-requests 100 \
+    --max-requests-jitter 20 \
+    --timeout 60 \
+    --keep-alive 2 \
+    --preload \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info \
+    --pid /tmp/gunicorn.pid \
+    --access-logformat '[%(t)s] "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' 2>&1 | while read line; do
         # تطبيق فلتر logs محسن لتقليل الرسائل غير المهمة
         # تجاهل رسائل gunicorn access logs التي تبدأ بـ [[
         if [[ "$line" =~ ^\[\[.*\]\] ]]; then
