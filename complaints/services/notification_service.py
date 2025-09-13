@@ -174,9 +174,105 @@ class ComplaintNotificationService:
                     message=f'يتبقى {hours_remaining} ساعة على الموعد النهائي لحل الشكوى',
                     send_email=True
                 )
-                
+
         except Exception as e:
             logger.error(f"Error sending deadline notifications: {str(e)}")
+
+    def notify_overdue_to_escalation_users(self, complaint):
+        """
+        إرسال تنبيهات للمستخدمين الذين يمكن التصعيد إليهم عند تجاوز الشكوى للموعد النهائي
+        """
+        try:
+            from complaints.models import ComplaintUserPermissions
+            from accounts.models import User
+            from django.contrib.auth.models import Group
+
+            # البحث عن المستخدمين الذين يمكن التصعيد إليهم
+            escalation_users = []
+
+            # 1. المستخدمون مع صلاحية استقبال التصعيد
+            users_with_escalation_permission = User.objects.filter(
+                complaint_permissions__can_receive_escalations=True,
+                complaint_permissions__is_active=True
+            )
+            escalation_users.extend(users_with_escalation_permission)
+
+            # 2. مدراء الأقسام
+            if complaint.assigned_department and hasattr(complaint.assigned_department, 'manager'):
+                if complaint.assigned_department.manager:
+                    escalation_users.append(complaint.assigned_department.manager)
+
+            # 3. المستخدمون في المجموعات الإدارية
+            admin_groups = Group.objects.filter(
+                name__in=['Complaints_Managers', 'Complaints_Supervisors', 'Managers']
+            )
+            for group in admin_groups:
+                escalation_users.extend(group.user_set.all())
+
+            # إزالة التكرار والمستخدم المسؤول الحالي
+            escalation_users = list(set(escalation_users))
+            if complaint.assigned_to in escalation_users:
+                escalation_users.remove(complaint.assigned_to)
+
+            # إرسال التنبيهات
+            for user in escalation_users:
+                self._send_notification(
+                    complaint=complaint,
+                    recipient=user,
+                    notification_type='escalation_alert',
+                    title=f'شكوى متأخرة تحتاج تصعيد: {complaint.complaint_number}',
+                    message=f'الشكوى {complaint.complaint_number} تجاوزت الموعد النهائي وتحتاج إلى تصعيد أو تدخل إداري',
+                    send_email=True
+                )
+
+            logger.info(f"تم إرسال تنبيهات التصعيد لـ {len(escalation_users)} مستخدم للشكوى {complaint.complaint_number}")
+
+        except Exception as e:
+            logger.error(f"Error sending escalation notifications: {str(e)}")
+
+    def notify_overdue_complaints_daily(self):
+        """
+        إرسال تنبيهات يومية للشكاوى المتأخرة
+        """
+        try:
+            from complaints.models import Complaint
+            from django.utils import timezone
+
+            # البحث عن الشكاوى المتأخرة
+            overdue_complaints = Complaint.objects.filter(
+                deadline__lt=timezone.now(),
+                status__in=['new', 'in_progress', 'overdue']
+            ).select_related('customer', 'complaint_type', 'assigned_to', 'assigned_department')
+
+            if not overdue_complaints.exists():
+                logger.info("لا توجد شكاوى متأخرة")
+                return
+
+            # إرسال تنبيه لكل شكوى متأخرة
+            for complaint in overdue_complaints:
+                # تحديث حالة الشكوى إلى متأخرة إذا لم تكن كذلك
+                if complaint.status != 'overdue':
+                    complaint.status = 'overdue'
+                    complaint.save()
+
+                # إرسال تنبيه للمسؤول الحالي
+                if complaint.assigned_to:
+                    self._send_notification(
+                        complaint=complaint,
+                        recipient=complaint.assigned_to,
+                        notification_type='overdue_reminder',
+                        title=f'تذكير: شكوى متأخرة {complaint.complaint_number}',
+                        message=f'الشكوى متأخرة منذ {(timezone.now() - complaint.deadline).days} يوم',
+                        send_email=True
+                    )
+
+                # إرسال تنبيه للمستخدمين الذين يمكن التصعيد إليهم
+                self.notify_overdue_to_escalation_users(complaint)
+
+            logger.info(f"تم إرسال تنبيهات يومية لـ {overdue_complaints.count()} شكوى متأخرة")
+
+        except Exception as e:
+            logger.error(f"Error sending daily overdue notifications: {str(e)}")
     
     def notify_overdue(self, complaint):
         """

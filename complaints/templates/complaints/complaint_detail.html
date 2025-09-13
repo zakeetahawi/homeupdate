@@ -538,11 +538,17 @@
 
                     <div class="d-grid gap-2">
 
-                        {% if complaint.status not in 'resolved,pending_evaluation,closed' %}
+                        <!-- تعديل الشكوى متاح فقط للشكاوى الجديدة -->
+                        {% if complaint.status == 'new' %}
                         <a href="{% url 'complaints:complaint_edit' complaint.pk %}" class="btn btn-outline-primary">
                             <i class="fas fa-edit me-2"></i>
                             تعديل الشكوى
                         </a>
+                        {% else %}
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>ملاحظة:</strong> لا يمكن تعديل محتوى الشكوى بعد بدء العمل عليها، لكن يمكن إدارتها (تغيير الحالة، الإسناد، التصعيد)
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -657,6 +663,43 @@
                                     إغلاق الشكوى نهائياً
                                 </button>
                             {% endif %}
+
+                        {% elif complaint.status == 'overdue' %}
+                            <!-- شكوى متأخرة -->
+                            <div class="alert alert-danger alert-sm mb-3">
+                                <i class="fas fa-clock me-1"></i>
+                                <strong>شكوى متأخرة:</strong> تجاوزت الموعد النهائي - تحتاج إجراء فوري
+                            </div>
+
+                            <button data-quick-action="status"
+                                    data-complaint-id="{{ complaint.pk }}"
+                                    data-value="in_progress"
+                                    class="btn btn-warning">
+                                <i class="fas fa-play me-2"></i>
+                                استئناف العمل
+                            </button>
+
+                            <button data-quick-action="status"
+                                    data-complaint-id="{{ complaint.pk }}"
+                                    data-value="resolved"
+                                    class="btn btn-success">
+                                <i class="fas fa-check me-2"></i>
+                                حل الشكوى
+                            </button>
+
+                            <button data-quick-action="assign"
+                                    data-complaint-id="{{ complaint.pk }}"
+                                    class="btn btn-info">
+                                <i class="fas fa-user-edit me-2"></i>
+                                إعادة إسناد
+                            </button>
+
+                            <button data-quick-action="escalate"
+                                    data-complaint-id="{{ complaint.pk }}"
+                                    class="btn btn-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                تصعيد الشكوى
+                            </button>
 
                         {% elif complaint.status == 'escalated' %}
                             <!-- شكوى مصعدة -->
@@ -773,6 +816,21 @@
                                 class="btn btn-outline-secondary">
                             <i class="fas fa-sticky-note me-2"></i>
                             إضافة ملاحظة
+                        </button>
+
+                        <!-- إجراءات الإدارة متاحة دائماً -->
+                        <button data-quick-action="status"
+                                data-complaint-id="{{ complaint.pk }}"
+                                class="btn btn-outline-info">
+                            <i class="fas fa-exchange-alt me-2"></i>
+                            تغيير الحالة
+                        </button>
+
+                        <button data-quick-action="assign"
+                                data-complaint-id="{{ complaint.pk }}"
+                                class="btn btn-outline-warning">
+                            <i class="fas fa-user-cog me-2"></i>
+                            إعادة الإسناد
                         </button>
                     </div>
                 </div>

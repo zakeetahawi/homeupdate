@@ -140,6 +140,19 @@ def check_complaint_deadlines():
         deadline__lt=timezone.now()
     )
 
+    # إرسال تنبيهات للشكاوى المتأخرة
+    from complaints.services.notification_service import ComplaintNotificationService
+    notification_service = ComplaintNotificationService()
+
+    for complaint in overdue:
+        # تحديث حالة الشكوى إلى متأخرة
+        if complaint.status != 'overdue':
+            complaint.status = 'overdue'
+            complaint.save()
+
+        # إرسال تنبيهات للمستخدمين الذين يمكن التصعيد إليهم
+        notification_service.notify_overdue_to_escalation_users(complaint)
+
     for complaint in overdue:
         recipients = set()
         if complaint.assigned_to:

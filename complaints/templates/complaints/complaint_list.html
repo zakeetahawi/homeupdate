@@ -874,40 +874,52 @@
 <script>
     // Initialize enhanced dropdowns
     $(document).ready(function() {
-        // Initialize Select2 for all multi-select fields
+        // Initialize Select2 for all filter fields
         $('#id_status').select2({
             theme: 'bootstrap-5',
-            placeholder: 'اختر الحالات...',
+            placeholder: 'اختر الحالة...',
             allowClear: true,
-            dir: 'rtl'
+            dir: 'rtl',
+            width: '100%'
         });
 
         $('#id_priority').select2({
             theme: 'bootstrap-5',
-            placeholder: 'اختر الأولويات...',
+            placeholder: 'اختر الأولوية...',
             allowClear: true,
-            dir: 'rtl'
+            dir: 'rtl',
+            width: '100%'
         });
 
         $('#id_complaint_type').select2({
             theme: 'bootstrap-5',
-            placeholder: 'اختر الأنواع...',
+            placeholder: 'اختر النوع...',
             allowClear: true,
-            dir: 'rtl'
+            dir: 'rtl',
+            width: '100%'
         });
 
         $('#id_assigned_to').select2({
             theme: 'bootstrap-5',
-            placeholder: 'اختر الموظفين...',
+            placeholder: 'اختر الموظف...',
             allowClear: true,
-            dir: 'rtl'
+            dir: 'rtl',
+            width: '100%'
         });
 
         $('#id_assigned_department').select2({
             theme: 'bootstrap-5',
-            placeholder: 'اختر الأقسام...',
+            placeholder: 'اختر القسم...',
             allowClear: true,
-            dir: 'rtl'
+            dir: 'rtl',
+            width: '100%'
+        });
+
+        // Auto-submit on filter change
+        $('#filterForm select').on('change', function() {
+            if (validateFilterForm()) {
+                $('#filterForm').submit();
+            }
         });
     });
 

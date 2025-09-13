@@ -389,6 +389,13 @@
             </div>
         </div>
         <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <i class="fas fa-times-circle stats-icon"></i>
+                <div class="stats-number">{{ closed_complaints }}</div>
+                <div class="stats-label">مغلقة</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
             <div class="stats-card text-center" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-left: 4px solid #f39c12;">
                 <i class="fas fa-star-half-alt stats-icon text-warning"></i>
                 <div class="stats-number text-warning">{{ pending_evaluation_complaints }}</div>
@@ -400,6 +407,16 @@
                 <i class="fas fa-exclamation-triangle stats-icon"></i>
                 <div class="stats-number">{{ overdue_complaints }}</div>
                 <div class="stats-label">متأخرة</div>
+                {% if actual_overdue_count != overdue_complaints %}
+                <small class="text-muted">(فعلياً: {{ actual_overdue_count }})</small>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card text-center">
+                <i class="fas fa-arrow-up stats-icon"></i>
+                <div class="stats-number">{{ escalated_complaints|default:0 }}</div>
+                <div class="stats-label">مصعدة</div>
             </div>
         </div>
         <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
@@ -552,11 +569,11 @@
                     </div>
                     <div class="metric-item">
                         <div class="metric-value">
-                            <span class="badge bg-success text-white fs-4 px-3 py-2">{{ performance_stats.resolved_complaints_30d }}</span>
+                            <span class="badge bg-success text-white fs-4 px-3 py-2">{{ performance_stats.total_resolved_and_closed_30d }}</span>
                         </div>
                         <div class="metric-label mt-2">
                             <span class="badge bg-success text-white">
-                                <i class="fas fa-check-circle me-1"></i>شكاوى محلولة
+                                <i class="fas fa-check-circle me-1"></i>منتهية (محلولة + مغلقة)
                             </span>
                         </div>
                     </div>
@@ -567,6 +584,16 @@
                         <div class="metric-label mt-2">
                             <span class="badge bg-warning text-dark">
                                 <i class="fas fa-clock me-1"></i>متوسط وقت الحل (ساعة)
+                            </span>
+                        </div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">
+                            <span class="badge bg-info text-white fs-4 px-3 py-2">{{ performance_stats.resolution_rate_30d }}%</span>
+                        </div>
+                        <div class="metric-label mt-2">
+                            <span class="badge bg-info text-white">
+                                <i class="fas fa-percentage me-1"></i>معدل الإنجاز
                             </span>
                         </div>
                     </div>
@@ -803,7 +830,9 @@ document.addEventListener('DOMContentLoaded', function() {
         'شكاوى جديدة': 'الشكاوى التي لم يتم البدء في حلها بعد',
         'قيد الحل': 'الشكاوى التي يتم العمل على حلها حالياً',
         'محلولة': 'الشكاوى التي تم حلها بنجاح',
+        'مغلقة': 'الشكاوى التي تم إغلاقها نهائياً',
         'متأخرة': 'الشكاوى التي تجاوزت الموعد النهائي المحدد',
+        'مصعدة': 'الشكاوى التي تم تصعيدها للإدارة العليا',
         'متوسط الرضا': 'متوسط تقييم العملاء للخدمة المقدمة'
     };
 

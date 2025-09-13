@@ -559,51 +559,54 @@ class ComplaintCustomerRatingForm(forms.ModelForm):
 
 
 class ComplaintFilterForm(forms.Form):
-    """نموذج فلترة الشكاوى مع دعم التحديد المتعدد"""
+    """نموذج فلترة الشكاوى المحسن مع دعم single selection"""
 
-    status = forms.MultipleChoiceField(
-        choices=Complaint.STATUS_CHOICES,
+    status = forms.ChoiceField(
+        choices=[('', 'جميع الحالات')] + list(Complaint.STATUS_CHOICES),
         required=False,
-        widget=forms.SelectMultiple(attrs={
+        label='الحالة',
+        widget=forms.Select(attrs={
             'class': 'form-select',
-            'data-placeholder': 'اختر الحالات...',
-            'multiple': True
+            'data-placeholder': 'اختر الحالة...'
         })
     )
-    priority = forms.MultipleChoiceField(
-        choices=Complaint.PRIORITY_CHOICES,
+    priority = forms.ChoiceField(
+        choices=[('', 'جميع الأولويات')] + list(Complaint.PRIORITY_CHOICES),
         required=False,
-        widget=forms.SelectMultiple(attrs={
+        label='الأولوية',
+        widget=forms.Select(attrs={
             'class': 'form-select',
-            'data-placeholder': 'اختر الأولويات...',
-            'multiple': True
+            'data-placeholder': 'اختر الأولوية...'
         })
     )
-    complaint_type = forms.ModelMultipleChoiceField(
+    complaint_type = forms.ModelChoiceField(
         queryset=ComplaintType.objects.filter(is_active=True),
         required=False,
-        widget=forms.SelectMultiple(attrs={
+        empty_label='جميع الأنواع',
+        label='نوع الشكوى',
+        widget=forms.Select(attrs={
             'class': 'form-select',
-            'data-placeholder': 'اختر الأنواع...',
-            'multiple': True
+            'data-placeholder': 'اختر النوع...'
         })
     )
-    assigned_to = forms.ModelMultipleChoiceField(
+    assigned_to = forms.ModelChoiceField(
         queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
         required=False,
-        widget=forms.SelectMultiple(attrs={
+        empty_label='جميع الموظفين',
+        label='المسؤول',
+        widget=forms.Select(attrs={
             'class': 'form-select',
-            'data-placeholder': 'اختر الموظفين...',
-            'multiple': True
+            'data-placeholder': 'اختر الموظف...'
         })
     )
-    assigned_department = forms.ModelMultipleChoiceField(
+    assigned_department = forms.ModelChoiceField(
         queryset=Department.objects.filter(is_active=True),
         required=False,
-        widget=forms.SelectMultiple(attrs={
+        empty_label='جميع الأقسام',
+        label='القسم',
+        widget=forms.Select(attrs={
             'class': 'form-select',
-            'data-placeholder': 'اختر الأقسام...',
-            'multiple': True
+            'data-placeholder': 'اختر القسم...'
         })
     )
     date_from = forms.DateField(
@@ -624,6 +627,18 @@ class ComplaintFilterForm(forms.Form):
             'placeholder': 'ابحث في رقم الشكوى، العميل، العنوان، أو الوصف...'
         })
     )
+
+    def clean(self):
+        """تنظيف وتحقق من صحة البيانات"""
+        cleaned_data = super().clean()
+        date_from = cleaned_data.get('date_from')
+        date_to = cleaned_data.get('date_to')
+
+        # التحقق من صحة التواريخ
+        if date_from and date_to and date_from > date_to:
+            raise forms.ValidationError('تاريخ البداية يجب أن يكون قبل تاريخ النهاية')
+
+        return cleaned_data
 
 
 class ComplaintBulkActionForm(forms.Form):

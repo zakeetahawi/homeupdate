@@ -523,6 +523,18 @@ class ComplaintAdmin(admin.ModelAdmin):
 
         # إذا كان هناك كائن محدد، فحص إذا كان المستخدم مسؤولاً عنه
         if obj:
+            # السماح بتعديل الشكاوى المتأخرة للمسؤولين والمدراء
+            if obj.is_overdue:
+                # المدراء والمشرفين يمكنهم تعديل الشكاوى المتأخرة
+                if user.groups.filter(name__in=['Complaints_Managers', 'Complaints_Supervisors', 'Managers']).exists():
+                    return True
+                # المستخدمون مع صلاحية استقبال التصعيد يمكنهم تعديل الشكاوى المتأخرة
+                try:
+                    if hasattr(user, 'complaint_permissions') and user.complaint_permissions.can_receive_escalations:
+                        return True
+                except:
+                    pass
+
             return obj.assigned_to == user or obj.created_by == user
 
         return False

@@ -83,10 +83,36 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
         now = timezone.now()
         overdue_complaints_list = Complaint.objects.filter(
             deadline__lt=now,
-            status__in=['new', 'in_progress']
+            status__in=['new', 'in_progress', 'overdue']
         ).select_related(
             'customer', 'complaint_type', 'assigned_to', 'assigned_department'
         ).order_by('deadline')[:10]
+
+        # تحديث إحصائيات الشكاوى المتأخرة الفعلية
+        actual_overdue_count = Complaint.objects.filter(
+            deadline__lt=now,
+            status__in=['new', 'in_progress', 'overdue']
+        ).count()
+
+        # تحديث حالة الشكاوى المتأخرة
+        overdue_to_update = Complaint.objects.filter(
+            deadline__lt=now,
+            status__in=['new', 'in_progress']
+        )
+        if overdue_to_update.exists():
+            overdue_to_update.update(status='overdue')
+            # إعادة حساب الإحصائيات بعد التحديث
+            status_stats = Complaint.objects.aggregate(
+                total_complaints=Count('id'),
+                new_complaints=Count(Case(When(status='new', then=1), output_field=IntegerField())),
+                in_progress_complaints=Count(Case(When(status='in_progress', then=1), output_field=IntegerField())),
+                resolved_complaints=Count(Case(When(status='resolved', then=1), output_field=IntegerField())),
+                pending_evaluation_complaints=Count(Case(When(status='pending_evaluation', then=1), output_field=IntegerField())),
+                closed_complaints=Count(Case(When(status='closed', then=1), output_field=IntegerField())),
+                overdue_complaints=Count(Case(When(status='overdue', then=1), output_field=IntegerField())),
+                escalated_complaints=Count(Case(When(status='escalated', then=1), output_field=IntegerField())),
+                avg_rating=Avg('customer_rating')
+            )
 
         # إحصائيات الأداء (آخر 30 يوم) مع تحسين الاستعلام
         thirty_days_ago = now - timedelta(days=30)
@@ -95,10 +121,26 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
         ).aggregate(
             new_complaints_30d=Count('id'),
             resolved_complaints_30d=Count(Case(
-                When(resolved_at__gte=thirty_days_ago, then=1),
+                When(status='resolved', resolved_at__gte=thirty_days_ago, then=1),
+                output_field=IntegerField()
+            )),
+            closed_complaints_30d=Count(Case(
+                When(status='closed', closed_at__gte=thirty_days_ago, then=1),
                 output_field=IntegerField()
             ))
         )
+
+        # إضافة إحصائيات إضافية للأداء
+        performance_stats.update({
+            'total_resolved_and_closed_30d': (
+                performance_stats['resolved_complaints_30d'] +
+                performance_stats['closed_complaints_30d']
+            ),
+            'resolution_rate_30d': round(
+                (performance_stats['resolved_complaints_30d'] + performance_stats['closed_complaints_30d']) /
+                max(performance_stats['new_complaints_30d'], 1) * 100, 1
+            ) if performance_stats['new_complaints_30d'] > 0 else 0
+        })
 
         # حساب متوسط وقت الحل بشكل محسن
         performance_stats['avg_resolution_time'] = self.calculate_avg_resolution_time()
@@ -112,6 +154,7 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
             'pending_evaluation_complaints': status_stats['pending_evaluation_complaints'],
             'closed_complaints': status_stats['closed_complaints'],
             'overdue_complaints': status_stats['overdue_complaints'],
+            'escalated_complaints': status_stats.get('escalated_complaints', 0),
             'complaints_by_type': list(complaints_by_type),
             'complaints_by_priority': list(complaints_by_priority),
             'complaints_by_assignee': list(complaints_by_assignee),
@@ -119,6 +162,7 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
             'overdue_complaints_list': overdue_complaints_list,
             'avg_rating': round(status_stats['avg_rating'] or 0, 2),
             'performance_stats': performance_stats,
+            'actual_overdue_count': actual_overdue_count,
         }
 
         context.update(dashboard_data)
@@ -165,29 +209,23 @@ class ComplaintListView(LoginRequiredMixin, ListView):
         # تطبيق صلاحيات الوصول للشكاوى
         queryset = self.apply_complaint_permissions(queryset)
 
-        # تطبيق الفلاتر مع دعم التحديد المتعدد
+        # تطبيق الفلاتر المحسنة
         form = ComplaintFilterForm(self.request.GET)
         if form.is_valid():
-            if form.cleaned_data['status']:
-                queryset = queryset.filter(status__in=form.cleaned_data['status'])
+            if form.cleaned_data.get('status'):
+                queryset = queryset.filter(status=form.cleaned_data['status'])
 
-            if form.cleaned_data['priority']:
-                queryset = queryset.filter(priority__in=form.cleaned_data['priority'])
+            if form.cleaned_data.get('priority'):
+                queryset = queryset.filter(priority=form.cleaned_data['priority'])
 
-            if form.cleaned_data['complaint_type']:
-                queryset = queryset.filter(
-                    complaint_type__in=form.cleaned_data['complaint_type']
-                )
+            if form.cleaned_data.get('complaint_type'):
+                queryset = queryset.filter(complaint_type=form.cleaned_data['complaint_type'])
 
-            if form.cleaned_data['assigned_to']:
-                queryset = queryset.filter(
-                    assigned_to__in=form.cleaned_data['assigned_to']
-                )
+            if form.cleaned_data.get('assigned_to'):
+                queryset = queryset.filter(assigned_to=form.cleaned_data['assigned_to'])
 
             if form.cleaned_data.get('assigned_department'):
-                queryset = queryset.filter(
-                    assigned_department__in=form.cleaned_data['assigned_department']
-                )
+                queryset = queryset.filter(assigned_department=form.cleaned_data['assigned_department'])
             
             if form.cleaned_data['date_from']:
                 queryset = queryset.filter(
@@ -308,29 +346,23 @@ class AdminComplaintListView(LoginRequiredMixin, ListView):
             status__in=['resolved', 'closed']
         ).order_by('-created_at', '-priority')
 
-        # تطبيق الفلاتر
+        # تطبيق الفلاتر المحسنة
         form = ComplaintFilterForm(self.request.GET)
         if form.is_valid():
-            if form.cleaned_data['status']:
-                queryset = queryset.filter(status__in=form.cleaned_data['status'])
+            if form.cleaned_data.get('status'):
+                queryset = queryset.filter(status=form.cleaned_data['status'])
 
-            if form.cleaned_data['priority']:
-                queryset = queryset.filter(priority__in=form.cleaned_data['priority'])
+            if form.cleaned_data.get('priority'):
+                queryset = queryset.filter(priority=form.cleaned_data['priority'])
 
-            if form.cleaned_data['complaint_type']:
-                queryset = queryset.filter(
-                    complaint_type__in=form.cleaned_data['complaint_type']
-                )
+            if form.cleaned_data.get('complaint_type'):
+                queryset = queryset.filter(complaint_type=form.cleaned_data['complaint_type'])
 
-            if form.cleaned_data['assigned_to']:
-                queryset = queryset.filter(
-                    assigned_to__in=form.cleaned_data['assigned_to']
-                )
+            if form.cleaned_data.get('assigned_to'):
+                queryset = queryset.filter(assigned_to=form.cleaned_data['assigned_to'])
 
             if form.cleaned_data.get('assigned_department'):
-                queryset = queryset.filter(
-                    assigned_department__in=form.cleaned_data['assigned_department']
-                )
+                queryset = queryset.filter(assigned_department=form.cleaned_data['assigned_department'])
 
             if form.cleaned_data['date_from']:
                 queryset = queryset.filter(
@@ -727,17 +759,40 @@ class ComplaintCreateView(LoginRequiredMixin, CreateView):
 
 
 class ComplaintUpdateView(LoginRequiredMixin, UpdateView):
-    """تحديث الشكوى"""
+    """تحديث الشكوى - متاح فقط للشكاوى الجديدة"""
     model = Complaint
     form_class = ComplaintForm
     template_name = 'complaints/complaint_form.html'
-    
+
+    def dispatch(self, request, *args, **kwargs):
+        """التحقق من إمكانية التعديل قبل عرض الصفحة"""
+        complaint = self.get_object()
+
+        # منع التعديل بعد بدء الحل (فقط الشكاوى الجديدة يمكن تعديلها)
+        if complaint.status != 'new':
+            messages.error(
+                request,
+                'لا يمكن تعديل محتوى الشكوى بعد بدء العمل عليها. '
+                'يمكنك تغيير الحالة أو الإسناد أو التصعيد من صفحة تفاصيل الشكوى.'
+            )
+            return redirect('complaints:complaint_detail', pk=complaint.pk)
+
+        return super().dispatch(request, *args, **kwargs)
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['request'] = self.request
         return kwargs
 
     def form_valid(self, form):
+        # التحقق مرة أخرى من الحالة قبل الحفظ
+        if self.object.status != 'new':
+            messages.error(
+                self.request,
+                'لا يمكن تعديل الشكوى بعد بدء العمل عليها'
+            )
+            return redirect('complaints:complaint_detail', pk=self.object.pk)
+
         response = super().form_valid(form)
         messages.success(self.request, 'تم تحديث الشكوى بنجاح')
         return response
