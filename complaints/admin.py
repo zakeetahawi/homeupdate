@@ -3,6 +3,7 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.db.models import Count, Q
+from django.db import models
 from django.utils import timezone
 from accounts.models import Department
 from .models import (
@@ -286,18 +287,19 @@ class ComplaintUserPermissionsAdmin(admin.ModelAdmin):
 class ComplaintUpdateInline(admin.TabularInline):
     model = ComplaintUpdate
     extra = 0
+    max_num = 10  # حد أقصى لعدد التحديثات المعروضة
     readonly_fields = ('created_at', 'created_by')
     fields = (
         'update_type', 'title', 'description', 'is_visible_to_customer',
         'old_status', 'new_status', 'old_assignee', 'new_assignee',
         'resolution_method', 'created_by', 'created_at'
     )
-    
+
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(
-            'created_by', 'old_assignee', 'new_assignee'
-        )
-    
+            'created_by', 'old_assignee', 'new_assignee', 'resolution_method'
+        ).order_by('-created_at')[:10]  # أحدث 10 تحديثات فقط
+
     def has_delete_permission(self, request, obj=None):
         return False  # منع حذف التحديثات للحفاظ على سجل التغييرات
 
@@ -305,14 +307,15 @@ class ComplaintUpdateInline(admin.TabularInline):
 class ComplaintAttachmentInline(admin.TabularInline):
     model = ComplaintAttachment
     extra = 0
-    readonly_fields = ('uploaded_at', 'file_size', 'uploaded_by', 'filename')
+    max_num = 5  # حد أقصى للمرفقات المعروضة
+    readonly_fields = ('uploaded_at', 'file_size', 'uploaded_by', 'filename', 'file_size_display')
     fields = ('file', 'filename', 'description', 'uploaded_by', 'uploaded_at', 'file_size_display')
-    
+
     def file_size_display(self, obj):
         """عرض حجم الملف بتنسيق مناسب"""
         if not obj.file_size:
             return '-'
-        
+
         if obj.file_size < 1024:
             return f'{obj.file_size} بايت'
         elif obj.file_size < 1024 * 1024:
@@ -320,9 +323,9 @@ class ComplaintAttachmentInline(admin.TabularInline):
         else:
             return f'{obj.file_size / (1024 * 1024):.1f} ميجابايت'
     file_size_display.short_description = 'حجم الملف'
-    
+
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('uploaded_by')
+        return super().get_queryset(request).select_related('uploaded_by').order_by('-uploaded_at')
 
 
 
@@ -330,7 +333,8 @@ class ComplaintAttachmentInline(admin.TabularInline):
 
 @admin.register(Complaint)
 class ComplaintAdmin(admin.ModelAdmin):
-    list_per_page = 50  # عرض 50 صف كافتراضي
+    list_per_page = 25  # تقليل العدد لتحسين الأداء
+    list_max_show_all = 100  # حد أقصى للعرض الكامل
     list_display = [
         'complaint_number', 'customer_name', 'complaint_type',
         'status_display', 'priority_display', 'assigned_to',
@@ -348,6 +352,10 @@ class ComplaintAdmin(admin.ModelAdmin):
         'closed_at', 'last_activity_at', 'is_overdue_display',
         'time_remaining_display', 'resolution_time_display'
     ]
+
+    # تحسين الأداء
+    list_select_related = ['customer', 'complaint_type', 'assigned_to', 'assigned_department', 'created_by']
+    autocomplete_fields = ['customer', 'assigned_to']
     
     fieldsets = (
         ('معلومات الشكوى', {
@@ -388,6 +396,10 @@ class ComplaintAdmin(admin.ModelAdmin):
     inlines = [
         ComplaintUpdateInline, ComplaintAttachmentInline
     ]
+
+    # تحسين الأداء للنماذج
+    save_on_top = True
+    preserve_filters = True
     
     def customer_name(self, obj):
         return obj.customer.name
@@ -449,12 +461,92 @@ class ComplaintAdmin(admin.ModelAdmin):
     resolution_time_display.short_description = 'وقت الحل'
     
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
+        """تحسين الاستعلامات لتقليل وقت التحميل"""
+        queryset = super().get_queryset(request)
+
+        # تحسين العلاقات
+        queryset = queryset.select_related(
             'customer', 'complaint_type', 'assigned_to',
-            'assigned_department', 'created_by'
+            'assigned_department', 'created_by', 'branch'
+        )
+
+        # تطبيق صلاحيات الوصول
+        user = request.user
+
+        # مدير النظام يرى جميع الشكاوى
+        if user.is_superuser:
+            return queryset
+
+        # فحص المجموعات الإدارية
+        admin_groups = ['Complaints_Managers', 'Complaints_Supervisors', 'Managers']
+        if user.groups.filter(name__in=admin_groups).exists():
+            return queryset
+
+        # فحص صلاحيات الشكاوى المخصصة
+        try:
+            permissions = user.complaint_permissions
+            if permissions.is_active and permissions.can_view_all_complaints:
+                return queryset
+        except:
+            pass
+
+        # المستخدمون العاديون يرون الشكاوى المسندة إليهم أو التي أنشأوها
+        return queryset.filter(
+            models.Q(assigned_to=user) | models.Q(created_by=user)
         )
     
     actions = ['mark_as_resolved', 'escalate_complaints', 'export_as_csv', 'export_as_excel']
+
+    def has_change_permission(self, request, obj=None):
+        """فحص صلاحية التعديل"""
+        if not super().has_change_permission(request, obj):
+            return False
+
+        user = request.user
+
+        # مدير النظام يمكنه التعديل
+        if user.is_superuser:
+            return True
+
+        # فحص المجموعات الإدارية
+        admin_groups = ['Complaints_Managers', 'Complaints_Supervisors', 'Managers']
+        if user.groups.filter(name__in=admin_groups).exists():
+            return True
+
+        # فحص صلاحيات الشكاوى المخصصة
+        try:
+            permissions = user.complaint_permissions
+            if permissions.is_active and permissions.can_edit_all_complaints:
+                return True
+        except:
+            pass
+
+        # إذا كان هناك كائن محدد، فحص إذا كان المستخدم مسؤولاً عنه
+        if obj:
+            return obj.assigned_to == user or obj.created_by == user
+
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """فحص صلاحية الحذف"""
+        if not super().has_delete_permission(request, obj):
+            return False
+
+        user = request.user
+
+        # مدير النظام يمكنه الحذف
+        if user.is_superuser:
+            return True
+
+        # فحص صلاحيات الحذف المخصصة
+        try:
+            permissions = user.complaint_permissions
+            if permissions.is_active and permissions.can_delete_complaints:
+                return True
+        except:
+            pass
+
+        return False
     
     def mark_as_resolved(self, request, queryset):
         updated = queryset.filter(
