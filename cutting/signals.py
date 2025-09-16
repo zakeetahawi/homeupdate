@@ -225,10 +225,11 @@ def handle_order_item_creation(sender, instance, created, **kwargs):
             create_cutting_orders_on_order_save(Order, order, created=True)
 
             # تحديث حالة الطلب إلى قيد التنفيذ للمنتجات
-            if order.status != 'in_progress':
-                order.status = 'in_progress'
-                order.save()
-                logger.info(f"📋 تم تحديث حالة الطلب {order.order_number} إلى قيد التنفيذ")
+            # استخدم الحقل canonical `order_status` بدلاً من `status` حتى لا نكتب فوق علم VIP
+            if order.order_status != 'in_progress':
+                order.order_status = 'in_progress'
+                order.save(update_fields=['order_status'])
+                logger.info(f"📋 تم تحديث order_status للطلب {order.order_number} إلى in_progress")
 
 
 @receiver(post_save, sender=CuttingOrderItem)
@@ -391,9 +392,10 @@ def update_order_status_based_on_cutting_orders(order):
         new_status = 'in_progress'  # قيد التنفيذ (للمنتجات)
 
     # تحديث حالة الطلب إذا تغيرت
-    if order.status != new_status:
-        old_status = order.status
-        order.status = new_status
-        order.save()
+    # اكتب في الحقل canonical `order_status` بدلاً من `status` لتجنب حذف وسم الـ VIP
+    if order.order_status != new_status:
+        old_status = order.order_status
+        order.order_status = new_status
+        order.save(update_fields=['order_status'])
 
-        logger.info(f"📋 تم تحديث حالة الطلب {order.order_number} من {old_status} إلى {new_status}")
+        logger.info(f"📋 تم تحديث order_status للطلب {order.order_number} من {old_status} إلى {new_status}")

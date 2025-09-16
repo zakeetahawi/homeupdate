@@ -2451,6 +2451,16 @@
         });
     </script>
 
+    <!-- Online Users Sidebar - Only for authenticated users -->
+    {% if user.is_authenticated %}
+    {% include 'includes/online_users_sidebar.html' %}
+
+    <!-- Online Users Sidebar CSS -->
+    <link rel="stylesheet" href="{% static 'css/online_users_sidebar.css' %}">
+
+    <!-- Online Users Sidebar JS -->
+    <script src="{% static 'js/online_users_sidebar.js' %}"></script>
+    {% endif %}
 
 </body>
 </html>

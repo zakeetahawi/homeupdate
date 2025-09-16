@@ -35,12 +35,11 @@ from .models import ManufacturingOrder, ManufacturingOrderItem, FabricReceipt, F
 from orders.models import Order
 from accounts.models import Department
 from accounts.utils import apply_default_year_filter
-from core.mixins import PaginationFixMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = ManufacturingOrder
     template_name = 'manufacturing/manufacturingorder_list.html'
     context_object_name = 'manufacturing_orders'
@@ -118,65 +117,45 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
                 status__in=['pending_approval', 'pending', 'in_progress']
             )
 
-        # البحث النصي المحسن
+        # البحث النصي مع اختيار أعمدة البحث
         search = self.request.GET.get('search')
+        search_columns = self.request.GET.getlist('search_columns')
 
         if search:
-            search = search.strip()
-            # بحث ذكي شامل مع إعطاء الأولوية لأرقام العقود والفواتير
-            search_query = Q()
-            
-            # الأولوية الأولى: البحث في أرقام العقود (جميع الحقول)
-            search_query |= Q(contract_number__icontains=search)
-            search_query |= Q(order__contract_number__icontains=search)
-            search_query |= Q(order__contract_number_2__icontains=search)
-            search_query |= Q(order__contract_number_3__icontains=search)
-            
-            # الأولوية الثانية: البحث في أرقام الفواتير (جميع الحقول)
-            search_query |= Q(invoice_number__icontains=search)
-            search_query |= Q(order__invoice_number__icontains=search)
-            search_query |= Q(order__invoice_number_2__icontains=search)
-            search_query |= Q(order__invoice_number_3__icontains=search)
-            
-            # الأولوية الثالثة: البحث في أرقام الطلبات ومعرفات النظام
-            search_query |= Q(order__id__icontains=search)
-            search_query |= Q(order__order_number__icontains=search)
-            search_query |= Q(id__icontains=search)
-            
-            # الأولوية الرابعة: البحث في تصاريح الخروج والتسليم
-            search_query |= Q(exit_permit_number__icontains=search)
-            search_query |= Q(delivery_permit_number__icontains=search)
-            
-            # البحث في معلومات العميل
-            search_query |= Q(order__customer__name__icontains=search)
-            search_query |= Q(order__customer__phone__icontains=search)
-            search_query |= Q(order__customer__email__icontains=search)
-            
-            # البحث في معلومات البائع والفرع
-            search_query |= Q(order__salesperson__name__icontains=search)
-            search_query |= Q(order__branch__name__icontains=search)
-            
-            # البحث في الملاحظات والتفاصيل
-            search_query |= Q(notes__icontains=search)
-            search_query |= Q(order__notes__icontains=search)
-            
-            # البحث في نوع الطلب والحالة
-            search_query |= Q(order_type__icontains=search)
-            search_query |= Q(status__icontains=search)
-            
-            # البحث في خط الإنتاج
-            search_query |= Q(production_line__name__icontains=search)
-            
-            # البحث في التواريخ (تنسيق مرن)
-            search_query |= Q(order_date__icontains=search)
-            search_query |= Q(expected_delivery_date__icontains=search)
-            
-            # إذا كان البحث رقمي، ابحث في الحقول الرقمية أيضاً
-            if search.isdigit():
-                search_query |= Q(order__id__exact=int(search))
-                search_query |= Q(id__exact=int(search))
-            
-            queryset = queryset.filter(search_query)
+            # إذا لم يحدد المستخدم أعمدة أو اختار 'all'، نفذ البحث الشامل كما كان
+            if not search_columns or 'all' in search_columns:
+                queryset = queryset.filter(
+                    Q(order__id__icontains=search) |
+                    Q(order__order_number__icontains=search) |
+                    Q(contract_number__icontains=search) |
+                    Q(invoice_number__icontains=search) |
+                    Q(exit_permit_number__icontains=search) |
+                    Q(order__customer__name__icontains=search) |
+                    Q(order__salesperson__name__icontains=search) |
+                    Q(order__branch__name__icontains=search) |
+                    Q(notes__icontains=search) |
+                    Q(order_type__icontains=search) |
+                    Q(status__icontains=search) |
+                    Q(order_date__icontains=search) |
+                    Q(expected_delivery_date__icontains=search)
+                )
+            else:
+                # خريطة الأعمدة المدعومة إلى شروط Q
+                column_map = {
+                    'order_number': Q(order__order_number__icontains=search),
+                    'customer_name': Q(order__customer__name__icontains=search),
+                    'contract_number': Q(contract_number__icontains=search),
+                    'invoice_number': Q(invoice_number__icontains=search),
+                    'branch': Q(order__branch__name__icontains=search),
+                }
+
+                custom_q = Q()
+                for col in search_columns:
+                    if col in column_map:
+                        custom_q |= column_map[col]
+
+                if custom_q:
+                    queryset = queryset.filter(custom_q)
 
         # فلتر التواريخ
         date_from = self.request.GET.get('date_from')
@@ -312,6 +291,7 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
             'production_line_filters': self.request.GET.getlist('production_line'),
             'overdue_filter': self.request.GET.get('overdue', ''),
             'search_query': self.request.GET.get('search', ''),
+            'search_columns': self.request.GET.getlist('search_columns'),
             'date_from': self.request.GET.get('date_from', ''),
             'date_to': self.request.GET.get('date_to', ''),
             'page_size': self.request.GET.get('page_size', 25),
@@ -371,6 +351,35 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
             'active_display_settings': active_display_settings,
             'display_settings_applied': not has_manual_filters and active_display_settings is not None,
         })
+
+        # Build human-readable display values for selected filters (Arabic labels)
+        try:
+            # status choices map code -> display
+            status_choices_map = dict(ManufacturingOrder.STATUS_CHOICES)
+        except Exception:
+            status_choices_map = {}
+
+        # branch id -> name map (branches already in context)
+        branch_map = {str(b.id): b.name for b in context.get('branches', [])}
+
+        # order types map from context 'order_types' (list of tuples)
+        order_types_map = {str(code): name for code, name in context.get('order_types', [])}
+
+        # column labels for search_columns
+        column_labels = {
+            'all': 'الكل',
+            'order_number': 'رقم الطلب',
+            'customer_name': 'اسم العميل',
+            'contract_number': 'رقم العقد',
+            'invoice_number': 'رقم الفاتورة',
+            'branch': 'الفرع',
+        }
+
+        # compute display lists
+        context['status_filters_display'] = [status_choices_map.get(s, s) for s in context.get('status_filters', [])]
+        context['branch_filters_display'] = [branch_map.get(bid, bid) for bid in context.get('branch_filters', [])]
+        context['order_type_filters_display'] = [order_types_map.get(code, code) for code in context.get('order_type_filters', [])]
+        context['search_columns_display'] = [column_labels.get(col, col) for col in context.get('search_columns', [])]
 
         return context
     
@@ -462,7 +471,7 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
         return available_statuses
 
 
-class VIPOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class VIPOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """عرض طلبات VIP فقط"""
     model = ManufacturingOrder
     template_name = 'manufacturing/vip_orders_list.html'
@@ -2048,7 +2057,7 @@ def manufacturing_order_detail_redirect(request, pk):
     return redirect('manufacturing:order_detail_by_code', manufacturing_code=manufacturing_order.manufacturing_code)
 
 
-class OverdueOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """عرض أوامر التصنيع المتأخرة"""
     model = ManufacturingOrder
     template_name = 'manufacturing/overdue_orders.html'
@@ -2076,8 +2085,7 @@ class OverdueOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRe
                 Q(order__id__icontains=search) |
                 Q(order__order_number__icontains=search) |
                 Q(contract_number__icontains=search) |
-                Q(order__customer__name__icontains=search) |
-                Q(order__customer__phone__icontains=search)
+                Q(order__customer__name__icontains=search)
             )
 
         if branch:
@@ -2178,8 +2186,7 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
         if search:
             manufacturing_orders = manufacturing_orders.filter(
                 Q(order__contract_number__icontains=search) |
-                Q(order__customer__name__icontains=search) |
-                Q(order__customer__phone__icontains=search)
+                Q(order__customer__name__icontains=search)
             )
 
         context.update({
@@ -2362,8 +2369,7 @@ class FabricReceiptView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(cutting_code__icontains=search) |
                 Q(order__contract_number__icontains=search) |
-                Q(order__customer__name__icontains=search) |
-                Q(order__customer__phone__icontains=search)
+                Q(order__customer__name__icontains=search)
             )
 
         return queryset

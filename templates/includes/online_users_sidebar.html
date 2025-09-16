@@ -1,0 +1,74 @@
+{% load static %}
+{% load complaints_permissions %}
+
+<!-- Professional Online Users Sidebar -->
+<div id="online-users-sidebar" class="online-users-sidebar collapsed">
+    <!-- Sidebar Header -->
+    <div class="sidebar-header">
+        <div class="header-content">
+            <i class="fas fa-users"></i>
+            <span class="header-title">المستخدمون</span>
+            <div class="user-counts">
+                <span class="online-count" id="online-count" title="متصل">0</span>
+                <span class="total-count" id="total-count" title="إجمالي">0</span>
+            </div>
+        </div>
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="قائمة المستخدمين">
+            <i class="fas fa-chevron-right"></i>
+            <span class="external-badge" id="external-online-badge" title="المتصلون">0</span>
+        </button>
+    </div>
+
+    <!-- Users List Container -->
+    <div class="users-list-container">
+        <div class="users-list" id="users-list">
+            <!-- Users will be loaded here via JavaScript -->
+            <div class="loading-indicator">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">جاري التحميل...</span>
+                </div>
+                <span class="loading-text">جاري تحديث البيانات...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+        <div class="last-update">
+            <small id="last-update-time">آخر تحديث: الآن</small>
+        </div>
+        <button class="refresh-btn" id="refresh-users">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+    </div>
+</div>
+
+<!-- User Activities Modal -->
+<div class="modal fade user-activities-modal" id="userActivitiesModal" tabindex="-1" aria-labelledby="userActivitiesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userActivitiesModalLabel">
+                    <i class="fas fa-history"></i>
+                    آخر النشاطات
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body" id="user-activities-content">
+                <!-- Activities will be loaded here -->
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar Toggle Button (when collapsed) -->
+<button class="sidebar-collapsed-toggle" id="sidebar-collapsed-toggle">
+    <i class="fas fa-users"></i>
+    <span class="collapsed-badge" id="collapsed-online-badge" title="المتصلون">0</span>
+    <span class="toggle-tooltip">المستخدمون النشطون</span>
+</button>
