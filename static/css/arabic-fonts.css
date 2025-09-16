@@ -1,0 +1,267 @@
+/* تحسين الخطوط العربية */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
+
+/* تطبيق الخط العربي على جميع العناصر */
+body, html {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر البطاقات الحديث */
+.card { 
+    border-radius: 12px; 
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    font-family: 'Cairo', sans-serif !important;
+} 
+
+/* تحسين مظهر البادجات الحديث */
+.badge { 
+    font-size: 0.95em; 
+    font-weight: bold; 
+    border-radius: 8px; 
+    padding: 6px 14px; 
+    box-shadow: 0 2px 8px 0 rgba(0,0,0,0.10); 
+    border: 1.5px solid #e0e0e0; 
+    letter-spacing: 0.5px; 
+    font-family: 'Cairo', sans-serif !important;
+} 
+
+.badge-success, .badge-info, .badge-primary, .badge-warning, .badge-danger, .badge-secondary { 
+    color: #222 !important; 
+    background: linear-gradient(90deg, #fff 60%, rgba(0,0,0,0.03) 100%); 
+    border-width: 2px; 
+} 
+
+.badge-success { 
+    border-color: #28a745; 
+    color: #155724 !important; 
+    background: linear-gradient(90deg, #d4edda 60%, #c3e6cb 100%); 
+} 
+
+.badge-info { 
+    border-color: #17a2b8; 
+    color: #0c5460 !important; 
+    background: linear-gradient(90deg, #d1ecf1 60%, #bee5eb 100%); 
+} 
+
+.badge-primary { 
+    border-color: #007bff; 
+    color: #004085 !important; 
+    background: linear-gradient(90deg, #cce5ff 60%, #b8daff 100%); 
+} 
+
+.badge-warning { 
+    border-color: #ffc107; 
+    color: #856404 !important; 
+    background: linear-gradient(90deg, #fff3cd 60%, #ffeeba 100%); 
+} 
+
+.badge-danger { 
+    border-color: #dc3545; 
+    color: #721c24 !important; 
+    background: linear-gradient(90deg, #f8d7da 60%, #f5c6cb 100%); 
+} 
+
+.badge-secondary { 
+    border-color: #6c757d; 
+    color: #383d41 !important; 
+    background: linear-gradient(90deg, #e2e3e5 60%, #d6d8db 100%); 
+} 
+
+/* تحسين مظهر نماذج الفلاتر */
+.filter-card .form-label { 
+    font-weight: 600; 
+    color: #3c2415; 
+    margin-bottom: 0.25rem; 
+} 
+
+.filter-card .form-select, .filter-card .form-control { 
+    font-size: 1rem; 
+    padding: 0.375rem 0.75rem; 
+    border-radius: 0.375rem; 
+    min-width: 100px; 
+} 
+
+.filter-card .btn, .filter-card .btn-group .btn { 
+    font-size: 1rem; 
+    padding: 0.375rem 1rem; 
+    border-radius: 0.375rem; 
+} 
+
+.action-buttons { 
+    display: flex; 
+    gap: 0.1rem; 
+    justify-content: center; 
+    align-items: center; 
+}
+
+/* تحسين مظهر العناوين */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 600;
+}
+
+/* تحسين مظهر النصوص */
+.text-right {
+    text-align: right !important;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+/* تحسين مظهر البطاقات الإحصائية */
+.card-body .h5 {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 700;
+}
+
+.card-body .text-xs {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 500;
+}
+
+/* تحسين مظهر الأيقونات مع النصوص العربية */
+.fas, .far, .fab {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+/* تحسين مظهر الجداول */
+.table {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+.table thead th {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: bold;
+}
+
+.table tbody td {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر البطاقات الإحصائية */
+.border-right-primary,
+.border-right-success,
+.border-right-warning,
+.border-right-info,
+.border-right-danger,
+.border-right-secondary {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر الأزرار */
+.btn {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+.btn-sm {
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 0.8em;
+}
+
+/* تحسين مظهر البادجات */
+.badge {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 500;
+}
+
+/* تحسين مظهر النماذج */
+.form-control, .form-select {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر القوائم المنسدلة */
+.dropdown-menu {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر التنبيهات */
+.alert {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر النصوص في البطاقات */
+.card-body .text-gray-800 {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 600;
+}
+
+/* تحسين مظهر العناوين في البطاقات */
+.card-body .text-primary,
+.card-body .text-success,
+.card-body .text-warning,
+.card-body .text-info,
+.card-body .text-danger,
+.card-body .text-secondary {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 600;
+}
+
+/* تحسين مظهر الجداول في الـ modal */
+.modal-table {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+.modal-table th,
+.modal-table td {
+    font-family: 'Cairo', sans-serif !important;
+    vertical-align: middle;
+}
+
+/* تحسين مظهر الأزرار في البطاقات */
+.btn-group-sm .btn {
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 0.75rem;
+}
+
+/* تحسين مظهر البطاقات */
+.card-header {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+.modal-header {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+.modal-footer {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر النصوص العربية في البطاقات */
+.card-body {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر الأيقونات مع النصوص */
+.fa, .fas, .far, .fab {
+    font-family: 'Font Awesome 5 Free', 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر النصوص العربية في الجداول */
+.table-responsive {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* تحسين مظهر النصوص العربية في النماذج */
+.form-group label {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 500;
+}
+
+/* تحسين مظهر النصوص العربية في التنبيهات */
+.alert-heading {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 600;
+}
+
+/* تحسين مظهر النصوص العربية في البطاقات الإحصائية */
+.card-body .text-xs.font-weight-bold {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 600;
+}
+
+.card-body .h5.mb-0.font-weight-bold {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 700;
+} 

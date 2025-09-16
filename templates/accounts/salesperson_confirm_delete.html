@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}حذف بائع - نظام الخواجه{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0"><i class="fas fa-exclamation-triangle"></i> تأكيد حذف البائع</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-exclamation-circle"></i> تنبيه!</h5>
+                        <p>أنت على وشك حذف البائع التالي:</p>
+                        <p class="fw-bold">{{ salesperson.name }}</p>
+                        <p>هذا الإجراء لا يمكن التراجع عنه.</p>
+                    </div>
+
+                    {% if has_related_data %}
+                        <div class="alert alert-danger">
+                            <h5><i class="fas fa-times-circle"></i> لا يمكن الحذف!</h5>
+                            <p>هذا البائع مرتبط بسجلات في النظام (طلبات، معاينات، إلخ). قم بتعطيله بدلاً من حذفه.</p>
+                        </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'accounts:salesperson_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-right ml-1"></i> العودة
+                            </a>
+                            
+                            {% if not has_related_data %}
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash-alt ml-1"></i> تأكيد الحذف
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-danger" disabled>
+                                    <i class="fas fa-trash-alt ml-1"></i> تأكيد الحذف
+                                </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

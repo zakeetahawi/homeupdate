@@ -1,0 +1,216 @@
+{% extends "admin/base.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} change-list{% endblock %}
+
+{% if not is_popup %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; {{ opts.verbose_name_plural|capfirst }}
+</div>
+{% endblock %}
+{% endif %}
+
+{% block content %}
+<div class="module filtered" id="changelist">
+    {% block search %}{% search_form cl %}{% endblock %}
+    {% block date_hierarchy %}{% date_hierarchy cl %}{% endblock %}
+
+    <div class="results">
+        <table id="result_list">
+            <thead>
+                <tr>
+                    <th scope="col"><input type="checkbox" id="action-toggle"></th>
+                    <th scope="col">{{ _('Manufacturing Code') }}</th>
+                    <th scope="col">{{ _('Order Number') }}</th>
+                    <th scope="col">{{ _('Customer') }}</th>
+                    <th scope="col">{{ _('Type') }}</th>
+                    <th scope="col">{{ _('Status') }}</th>
+                    <th scope="col">{{ _('Installation Status') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                    <td>
+                        <input type="checkbox" name="{{ action_checkbox_name }}" value="{{ order.pk }}" class="action-select">
+                    </td>
+                    <td>{{ order.manufacturing_code }}</td>
+                    <td>{{ order.order.order_number }}</td>
+                    <td>{{ order.order.customer.name }}</td>
+                    <td>{{ order.get_order_type_display }}</td>
+                    <td>{{ order.get_status_display }}</td>
+                    <td>
+                        {% if order.order_type == 'installation' and order.order %}
+                            {{ order.order.get_installation_status_display }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <form action="" method="post" id="bulk-status-form">
+        {% csrf_token %}
+        <div class="actions">
+            <label>{{ _('Action') }}:</label>
+            <select name="action" required>
+                <option value="">---------</option>
+                <option value="bulk_update_status">{{ _('Update Status') }}</option>
+            </select>
+            <button type="submit" class="button" name="index" value="0">{{ _('Go') }}</button>
+        </div>
+
+        <div id="status-form-container" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px;">
+            <h3>{{ _('Update Status') }}</h3>
+            {{ form.as_p }}
+            <div class="submit-row">
+                <input type="submit" value="{{ _('Update Selected Orders') }}" class="default" name="apply">
+                <input type="button" value="{{ _('Cancel') }}" class="cancel" onclick="hideStatusForm()">
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// إظهار نموذج تحديث الحالة
+document.querySelector('select[name="action"]').addEventListener('change', function() {
+    const container = document.getElementById('status-form-container');
+    if (this.value === 'bulk_update_status') {
+        container.style.display = 'block';
+        // منع الإرسال التلقائي
+        event.preventDefault();
+        return false;
+    } else {
+        container.style.display = 'none';
+    }
+});
+
+// إخفاء النموذج
+function hideStatusForm() {
+    document.getElementById('status-form-container').style.display = 'none';
+    document.querySelector('select[name="action"]').value = '';
+}
+
+// تحديث الصفحة بعد النجاح
+document.getElementById('bulk-status-form').addEventListener('submit', function(e) {
+    const action = document.querySelector('select[name="action"]').value;
+    if (action === 'bulk_update_status' && document.querySelector('input[name="apply"]').clicked) {
+        // إضافة معالج لإعادة تحميل الصفحة فوراً بعد الإرسال
+        this.addEventListener('submit', function() {
+            setTimeout(function() {
+                // إعادة تحميل الصفحة الحالية مع إزالة معامل updated إذا كان موجود
+                let currentUrl = window.location.href;
+                // إزالة معامل updated السابق إن وجد
+                currentUrl = currentUrl.replace(/[?&]updated=1/, '');
+                // إضافة معامل updated جديد
+                const separator = currentUrl.includes('?') ? '&' : '?';
+                window.location.href = currentUrl + separator + 'updated=1';
+            }, 100);
+        });
+    }
+});
+
+// تتبع زر التطبيق
+document.querySelectorAll('input[type="submit"]').forEach(button => {
+    button.addEventListener('click', function() {
+        this.clicked = true;
+    });
+});
+
+// تحديد/إلغاء تحديد جميع الصناديق
+document.getElementById('action-toggle').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.action-select');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+</script>
+
+<style>
+.results table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.results th, .results td {
+    padding: 8px 12px;
+    text-align: right;
+    border-bottom: 1px solid #ddd;
+}
+
+.results th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.row1 {
+    background-color: #f9f9f9;
+}
+
+.row2 {
+    background-color: #fff;
+}
+
+.actions {
+    margin: 20px 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+}
+
+.actions label {
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.actions select {
+    margin-right: 10px;
+    padding: 5px;
+}
+
+.button {
+    background-color: #007cba;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.button:hover {
+    background-color: #005a87;
+}
+
+.submit-row {
+    margin-top: 15px;
+}
+
+.default {
+    background-color: #417690;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 3px;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.cancel {
+    background-color: #ba2121;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+</style>
+{% endblock %}

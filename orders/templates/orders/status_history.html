@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}سجل حالة الطلب - {{ order.order_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-history-container {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .status-history-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .status-log-item {
+        border-left: 4px solid #007bff;
+        margin: 15px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 0 8px 8px 0;
+        transition: all 0.3s ease;
+    }
+    
+    .status-log-item:hover {
+        background: #e9ecef;
+        transform: translateX(5px);
+    }
+    
+    .status-change {
+        font-weight: bold;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+    
+    .status-from {
+        color: #dc3545;
+    }
+    
+    .status-to {
+        color: #28a745;
+    }
+    
+    .status-arrow {
+        color: #6c757d;
+        margin: 0 10px;
+    }
+    
+    .user-info {
+        color: #6c757d;
+        font-size: 0.9em;
+        margin-top: 8px;
+    }
+    
+    .timestamp {
+        color: #868e96;
+        font-size: 0.8em;
+    }
+    
+    .notes {
+        background: #e3f2fd;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 8px;
+        border-right: 3px solid #2196f3;
+    }
+    
+    .filters-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .filter-group {
+        margin-bottom: 15px;
+    }
+    
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+        color: #007bff;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    .no-logs {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+    }
+    
+    .no-logs i {
+        font-size: 3em;
+        margin-bottom: 15px;
+        color: #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="status-history-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2><i class="fas fa-history"></i> سجل حالة الطلب</h2>
+                <p class="mb-0">رقم الطلب: <strong>{{ order.order_number }}</strong></p>
+                <p class="mb-0">العميل: <strong>{{ order.customer.name }}</strong></p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'orders:order_detail_by_number' order.order_number %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left"></i> العودة للطلب
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_logs }}</div>
+            <div class="stat-label">إجمالي التغييرات</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ order.status_logs.count }}</div>
+            <div class="stat-label">سجلات الحالة</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ users.count }}</div>
+            <div class="stat-label">مستخدمين قاموا بالتغيير</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ order.get_display_status_text }}</div>
+            <div class="stat-label">الحالة الحالية</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <form method="get" class="row">
+            <div class="col-md-4">
+                <div class="filter-group">
+                    <label for="search" class="form-label">البحث</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search_query }}" placeholder="البحث في الملاحظات أو اسم المستخدم">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="filter-group">
+                    <label for="status" class="form-label">الحالة</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">جميع الحالات</option>
+                        {% for status_code, status_name in status_choices %}
+                        <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>
+                            {{ status_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="filter-group">
+                    <label for="user" class="form-label">المستخدم</label>
+                    <select class="form-select" id="user" name="user">
+                        <option value="">جميع المستخدمين</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if user_filter == user.id|stringformat:"s" %}selected{% endif %}>
+                            {{ user.get_full_name|default:user.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="filter-group">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> بحث
+                        </button>
+                        <a href="{% url 'orders:status_history' order.id %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> مسح
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Status Logs -->
+    <div class="status-history-container">
+        {% if page_obj %}
+            {% for log in page_obj %}
+                {# Skip generic manufacturing-sync logs; prefer the explicit manufacturing log created in the manufacturing views #}
+                {% if not log.notes or "مزامنة حالة الطلب" not in log.notes %}
+                <div class="status-log-item">
+                    <div class="status-change">
+                        {% if log.notes and "تم تغيير حالة أمر التصنيع" in log.notes %}
+                            {{ log.notes }}
+                        {% else %}
+                            تم تبديل الحالة من
+                            <strong>{{ log.old_status_pretty }}</strong>
+                            إلى
+                            <strong>{{ log.new_status_pretty }}</strong>
+                        {% endif %}
+                    </div>
+
+                    {% if log.notes %}
+                    <div class="notes">
+                        <i class="fas fa-sticky-note"></i> {{ log.notes }}
+                    </div>
+                    {% endif %}
+
+                    <div class="user-info">
+                        <i class="fas fa-user"></i>
+                        {% if log.changed_by %}
+                            {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+                        {% else %}
+                            مستخدم غير محدد
+                        {% endif %}
+                    </div>
+
+                    <div class="timestamp">
+                        <i class="fas fa-clock"></i> {{ log.created_at|date:"Y-m-d H:i" }}
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="d-flex justify-content-center mt-4">
+                <nav>
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}">
+                                السابق
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}">
+                                التالي
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+            
+        {% else %}
+            <div class="no-logs">
+                <i class="fas fa-history"></i>
+                <h4>لا توجد سجلات تغيير حالة</h4>
+                <p>لم يتم تسجيل أي تغييرات في حالة هذا الطلب بعد.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-submit form when filters change
+    $('#status, #user').change(function() {
+        $(this).closest('form').submit();
+    });
+    
+    // Add loading indicator
+    $('form').submit(function() {
+        $(this).find('button[type="submit"]').html('<i class="fas fa-spinner fa-spin"></i> جاري البحث...');
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}إنشاء تقرير معاينات{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">إنشاء تقرير معاينات</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form.title.label_tag }}
+                    {{ form.title }}
+                    {{ form.title.errors }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form.report_type.label_tag }}
+                    {{ form.report_type }}
+                    {{ form.report_type.errors }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form.branch.label_tag }}
+                    {{ form.branch }}
+                    {{ form.branch.errors }}
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-3">
+                    {{ form.date_from.label_tag }}
+                    {{ form.date_from }}
+                    {{ form.date_from.errors }}
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-3">
+                    {{ form.date_to.label_tag }}
+                    {{ form.date_to }}
+                    {{ form.date_to.errors }}
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="mb-3">
+                    {{ form.notes.label_tag }}
+                    {{ form.notes }}
+                    {{ form.notes.errors }}
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success">إنشاء التقرير</button>
+        <a href="{% url 'inspections:inspection_list' %}" class="btn btn-secondary ms-2">إلغاء</a>
+    </form>
+</div>
+{% endblock %}

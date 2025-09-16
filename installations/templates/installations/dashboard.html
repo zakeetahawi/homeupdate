@@ -1,0 +1,1216 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}لوحة تحكم قسم التركيبات{% endblock %}
+
+{% block extra_css %}
+<style>
+/* تطبيق نفس الهوية البصرية لقسم المعاينات */
+.installation-card-hover {
+    transition: all 0.3s ease;
+    border-radius: 0.5rem;
+}
+
+.installation-card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.card {
+    border-radius: 0.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+/* تخصيص البطاقات الصغيرة */
+.col-lg-1-5 {
+    flex: 0 0 16.66%;
+    max-width: 16.66%;
+}
+
+@media (max-width: 1199px) {
+    .col-lg-1-5 {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+}
+
+@media (max-width: 767px) {
+    .col-lg-1-5 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}
+
+/* ألوان البطاقات */
+.border-primary {
+    border-color: #007bff !important;
+}
+
+.border-success {
+    border-color: #28a745 !important;
+}
+
+.border-warning {
+    border-color: #ffc107 !important;
+}
+
+.border-info {
+    border-color: #17a2b8 !important;
+}
+
+.border-danger {
+    border-color: #dc3545 !important;
+}
+
+.border-secondary {
+    border-color: #6c757d !important;
+}
+
+.border-purple {
+    border-color: #6f42c1 !important;
+}
+
+.border-dark {
+    border-color: #343a40 !important;
+}
+
+.border-teal {
+    border-color: #20c997 !important;
+}
+
+.border-orange {
+    border-color: #fd7e14 !important;
+}
+
+/* ألوان النصوص */
+.text-primary {
+    color: #007bff !important;
+}
+
+.text-success {
+    color: #28a745 !important;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+}
+
+.text-info {
+    color: #17a2b8 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.text-secondary {
+    color: #6c757d !important;
+}
+
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+.text-dark {
+    color: #343a40 !important;
+}
+
+.text-teal {
+    color: #20c997 !important;
+}
+
+.text-orange {
+    color: #fd7e14 !important;
+}
+
+.text-indigo {
+    color: #6610f2 !important;
+}
+
+.text-pink {
+    color: #e83e8c !important;
+}
+
+.border-indigo {
+    border-color: #6610f2 !important;
+}
+
+.border-pink {
+    border-color: #e83e8c !important;
+}
+
+/* تحسين أحجام البطاقات الصغيرة */
+.card-body.p-3 {
+    padding: 1rem !important;
+}
+
+.h6 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.fa-lg {
+    font-size: 2em;
+}
+
+/* تحسين النصوص في البطاقات الصغيرة */
+.text-xs {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* تحسين البطاقات المدمجة */
+.installation-card-hover .card-body {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.installation-card-hover .text-center {
+    width: 100%;
+}
+
+/* تحسين الأزرار */
+.btn {
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+/* تحسين الجداول */
+.table {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    font-weight: 600;
+    color: #495057;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.075);
+}
+
+/* تحسين البطاقات */
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* تحسين الإحصائيات */
+.dashboard-card-hover {
+    transition: all 0.3s ease;
+}
+
+.dashboard-card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* تحسين الألوان والنصوص */
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.font-weight-bold {
+    font-weight: 700 !important;
+}
+
+.text-uppercase {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.h5 {
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+/* تحسين الروابط */
+a.text-decoration-none:hover {
+    text-decoration: none !important;
+}
+
+/* تحسين الأيقونات */
+.fa-2x {
+    font-size: 2em;
+}
+
+.fa-3x {
+    font-size: 3em;
+}
+
+/* تحسين المساحات */
+.py-2 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.mb-1 {
+    margin-bottom: 0.25rem !important;
+}
+
+.mb-0 {
+    margin-bottom: 0 !important;
+}
+
+.mr-2 {
+    margin-right: 0.5rem !important;
+}
+
+/* تحسين الشبكة */
+.row.no-gutters {
+    margin-right: 0;
+    margin-left: 0;
+}
+
+.row.no-gutters > .col,
+.row.no-gutters > [class*="col-"] {
+    padding-right: 0;
+    padding-left: 0;
+}
+
+/* توافق مع الأجهزة المحمولة */
+@media (max-width: 768px) {
+    .col-lg-1-5 {
+        margin-bottom: 0.75rem;
+    }
+    
+    .h6 {
+        font-size: 1rem;
+    }
+    
+    .fa-lg {
+        font-size: 1.1em;
+    }
+    
+    .card-body.p-3 {
+        padding: 0.5rem !important;
+    }
+    
+    .installation-card-hover .card-body {
+        min-height: 90px;
+    }
+}
+
+/* تحسين الهوامش والتباعد */
+.mb-3 {
+    margin-bottom: 1rem !important;
+}
+
+/* تحسين الظلال */
+.shadow {
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+.installation-card-hover:hover {
+    box-shadow: 0 0.5rem 2rem rgba(58, 59, 69, 0.3) !important;
+}
+
+/* تحسين مظهر البادجات */
+.badge {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    border: none;
+    color: white !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.badge-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.badge-success {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+}
+
+.badge-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #212529 !important;
+}
+
+.badge-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+}
+
+.badge-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #bd2130 100%);
+}
+
+.badge-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+}
+
+.bg-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%) !important;
+    color: white !important;
+}
+
+.bg-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+    color: #212529 !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid">
+    <!-- قائمة التنقل -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            لوحة تحكم التركيبات
+            <small class="text-muted ms-2">
+                <i class="fas fa-calendar-alt"></i> السنة: {{ default_year }}
+            </small>
+        </h1>
+        <button class="btn btn-primary btn-sm" onclick="updateStats()" id="updateBtn">
+            <i class="fas fa-sync-alt"></i> تحديث الإحصائيات
+        </button>
+    </div>
+
+
+
+    <!-- روابط سريعة -->
+    <div class="row mb-4">
+        <div class="col-xl-2 col-md-4 mb-4">
+            <a href="{% url 'installations:installation_analytics' %}" class="btn btn-info btn-block">
+                <i class="fas fa-chart-line"></i> تحليل التركيبات الشهري
+            </a>
+        </div>
+        <div class="col-xl-2 col-md-4 mb-4">
+            <a href="{% url 'installations:modification_error_analysis' %}" class="btn btn-warning btn-block">
+                <i class="fas fa-exclamation-triangle"></i> تحليل أخطاء التعديلات
+            </a>
+        </div>
+        <div class="col-xl-2 col-md-4 mb-4">
+            <a href="{% url 'installations:installation_list' %}" class="btn btn-primary btn-block">
+                <i class="fas fa-list"></i> قائمة التركيبات
+            </a>
+        </div>
+        <div class="col-xl-2 col-md-4 mb-4">
+            <a href="{% url 'installations:team_management' %}" class="btn btn-success btn-block">
+                <i class="fas fa-users"></i> إدارة الفرق
+            </a>
+        </div>
+        <div class="col-xl-2 col-md-4 mb-4">
+            <a href="{% url 'installations:debt_orders_list' %}" class="btn btn-danger btn-block">
+                <i class="fas fa-credit-card"></i> جدول المديونية
+            </a>
+        </div>
+        <div class="col-xl-2 col-md-4 mb-4">
+            <a href="{% url 'installations:daily_schedule' %}" class="btn btn-secondary btn-block">
+                <i class="fas fa-calendar-day"></i> الجدولة اليومية
+            </a>
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة - البطاقات الديناميكية -->
+    <div class="row mb-4">
+        <div class="col-12 mb-3">
+            <h4 class="text-muted">
+                <i class="fas fa-chart-bar me-2"></i>
+                الإحصائيات السريعة - {{ default_year }}
+                <small class="text-muted">انقر على أي بطاقة لعرض التفاصيل</small>
+            </h4>
+        </div>
+        
+        <!-- الصف الأول -->
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="/admin/orders/order/?selected_types__icontains=installation" class="text-decoration-none">
+                <div class="card border-primary shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                إجمالي التركيبات في النظام
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ total_installations }}</div>
+                            <i class="fas fa-clipboard-check fa-lg text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="{% url 'installations:installation_list' %}?status=completed" class="text-decoration-none">
+                <div class="card border-success shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                تركيب مكتمل
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ completed_installations }}</div>
+                            <i class="fas fa-check-circle fa-lg text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="{% url 'installations:installation_list' %}?status=modification_required" class="text-decoration-none">
+                <div class="card border-warning shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                طلبات التعديل
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ total_modifications }}</div>
+                            <i class="fas fa-tools fa-lg text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="{% url 'installations:installation_list' %}?status=needs_scheduling" class="text-decoration-none">
+                <div class="card border-info shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                بانتظار الجدولة
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ orders_needing_scheduling_count }}</div>
+                            <i class="fas fa-clock fa-lg text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="{% url 'installations:installation_list' %}?status=scheduled" class="text-decoration-none">
+                <div class="card border-secondary shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                تركيب مجدول
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ scheduled_installations }}</div>
+                            <i class="fas fa-calendar-check fa-lg text-secondary"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="{% url 'installations:installation_list' %}?status=in_installation" class="text-decoration-none">
+                <div class="card border-purple shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-purple text-uppercase mb-1">
+                                قيد التركيب
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ in_installation_installations }}</div>
+                            <i class="fas fa-cogs fa-lg text-purple"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- الصف الثاني -->        
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="{% url 'installations:debt_orders_list' %}" class="text-decoration-none">
+                <div class="card border-danger shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                طلبات عليها مديونية
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ orders_with_debt }}</div>
+                            <i class="fas fa-credit-card fa-lg text-danger"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="/admin/manufacturing/manufacturingorder/?status__in=pending_approval,pending,in_progress&order_type=installation" class="text-decoration-none">
+                <div class="card border-dark shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                                طلبات تحت التصنيع
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ orders_in_manufacturing }}</div>
+                            <i class="fas fa-industry fa-lg text-dark"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="/admin/manufacturing/manufacturingorder/?status=delivered&order_type=installation" class="text-decoration-none">
+                <div class="card border-teal shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-teal text-uppercase mb-1">
+                                تم التسليم
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ delivered_manufacturing_orders }}</div>
+                            <i class="fas fa-truck fa-lg text-teal"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="{% url 'installations:installation_list' %}" class="text-decoration-none">
+                <div class="card border-orange shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-orange text-uppercase mb-1">
+                                معدل الإنجاز
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">
+                                {% if total_scheduled_installations %}
+                                    {{ completed_installations|floatformat:0 }}/{{ total_scheduled_installations }}
+                                {% else %}
+                                    0/0
+                                {% endif %}
+                            </div>
+                            <i class="fas fa-chart-pie fa-lg text-orange"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="{% url 'installations:team_management' %}" class="text-decoration-none">
+                <div class="card border-indigo shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-indigo text-uppercase mb-1">
+                                إدارة الفرق
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ teams_stats|length }}</div>
+                            <i class="fas fa-users fa-lg text-indigo"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
+            <a href="{% url 'installations:daily_schedule' %}" class="text-decoration-none">
+                <div class="card border-pink shadow h-100 py-1 installation-card-hover">
+                    <div class="card-body p-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-pink text-uppercase mb-1">
+                                الجدولة اليومية
+                            </div>
+                            <div class="h6 mb-1 font-weight-bold text-gray-800">{{ today_installations|length }}</div>
+                            <i class="fas fa-calendar-day fa-lg text-pink"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+
+    </div>
+
+    <div class="row">
+        <!-- التركيبات المجدولة اليوم -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-calendar-day"></i>
+                        التركيبات المجدولة اليوم
+                    </h6>
+                    <a href="{% url 'installations:daily_schedule' %}" class="btn btn-sm btn-primary">
+                        عرض الكل
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if today_installations %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>الموعد</th>
+                                        <th>رقم الطلب</th>
+                                        <th>العميل</th>
+                                        <th>البائع</th>
+                                        <th>رقم العقد</th>
+                                        <th>رقم الفاتورة</th>
+                                        <th>الفرع</th>
+                                        <th>الفريق</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for installation in today_installations %}
+                                    <tr>
+                                        <td>{{ installation.scheduled_time|time:"H:i" }}</td>
+                                        <td>
+                                            <a href="{% url 'installations:installation_detail' installation.id %}">
+                                                {{ installation.order.order_number }}
+                                            </a>
+                                        </td>
+                                        <td><strong>{{ installation.order.customer.name }}</strong></td>
+                                        <td>{{ installation.order.salesperson.name|default:"غير محدد" }}</td>
+                                        <td>
+                                            {{ installation.order.contract_number|default:"غير محدد" }}
+                                            {% if installation.order.contract_number_2 %}<br><small class="text-muted">{{ installation.order.contract_number_2 }}</small>{% endif %}
+                                            {% if installation.order.contract_number_3 %}<br><small class="text-muted">{{ installation.order.contract_number_3 }}</small>{% endif %}
+                                        </td>
+                                        <td>
+                                            {{ installation.order.invoice_number|default:"غير محدد" }}
+                                            {% if installation.order.invoice_number_2 %}<br><small class="text-muted">{{ installation.order.invoice_number_2 }}</small>{% endif %}
+                                            {% if installation.order.invoice_number_3 %}<br><small class="text-muted">{{ installation.order.invoice_number_3 }}</small>{% endif %}
+                                        </td>
+                                        <td>{{ installation.order.branch.name|default:"غير محدد" }}</td>
+                                        <td>{{ installation.team.name|default:"غير محدد" }}</td>
+                                        <td>
+                                            {% if installation.status == 'needs_scheduling' %}
+                                                <span class="badge badge-warning">
+                                                    <i class="fas fa-calendar-plus"></i> بحاجة جدولة
+                                                </span>
+                                            {% elif installation.status == 'scheduled' %}
+                                                <span class="badge badge-info">
+                                                    <i class="fas fa-calendar-check"></i> مجدول
+                                                </span>
+                                            {% elif installation.status == 'in_installation' %}
+                                                <span class="badge badge-primary">
+                                                    <i class="fas fa-tools"></i> قيد التركيب
+                                                </span>
+                                            {% elif installation.status == 'completed' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check-circle"></i> مكتمل
+                                                </span>
+                                            {% elif installation.status == 'cancelled' %}
+                                                <span class="badge badge-danger">
+                                                    <i class="fas fa-times-circle"></i> ملغي
+                                                </span>
+                                            {% elif installation.status == 'modification_required' %}
+                                                <span class="badge badge-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i> يحتاج تعديل
+                                                </span>
+                                            {% elif installation.status == 'modification_in_progress' %}
+                                                <span class="badge badge-info">
+                                                    <i class="fas fa-cogs"></i> التعديل قيد التنفيذ
+                                                </span>
+                                            {% elif installation.status == 'modification_completed' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check-circle"></i> التعديل مكتمل
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">
+                                                    {{ installation.get_status_display }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                               class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-times fa-3x text-gray-300 mb-3"></i>
+                            <p class="text-gray-500">لا توجد تركيبات مجدولة اليوم</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- التركيبات القادمة -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-calendar-alt"></i>
+                        التركيبات القادمة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_installations %}
+                        <div class="list-group list-group-flush">
+                            {% for installation in upcoming_installations %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1"><strong>{{ installation.order.customer.name }}</strong></h6>
+                                    <small class="text-muted">
+                                        {{ installation.scheduled_date|date:"Y-m-d" }} - 
+                                        {{ installation.scheduled_time|time:"H:i" }}
+                                    </small>
+                                </div>
+                                <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-check fa-3x text-gray-300 mb-3"></i>
+                            <p class="text-gray-500">لا توجد تركيبات قادمة</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- سجل الأحداث للطلبات الجديدة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-history"></i>
+                        سجل الأحداث - طلبات التركيب الجديدة (آخر 7 أيام)
+                    </h6>
+                    <span class="badge badge-primary">{{ recent_orders.count }}</span>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>رقم الطلب</th>
+                                        <th>العميل</th>
+                                        <th>تاريخ الطلب</th>
+                                        <th>تاريخ التركيب المتوقع</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in recent_orders %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'orders:order_detail' order.id %}" class="text-primary">
+                                                {{ order.order_number }}
+                                            </a>
+                                        </td>
+                                        <td>{{ order.customer.name }}</td>
+                                        <td>{{ order.created_at|date:"d/m/Y" }}</td>
+                                        <td>
+                                            {% with installation=order.installationschedule_set.first %}
+                                                {% if installation and installation.get_installation_date %}
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        {{ installation.get_installation_date|date:"Y-m-d" }}
+                                                    </span>
+                                                    {% if installation.scheduled_time %}
+                                                        <br><small class="text-muted">{{ installation.scheduled_time|time:"H:i" }}</small>
+                                                    {% endif %}
+                                                {% elif order.expected_delivery_date %}
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        {{ order.expected_delivery_date|date:"Y-m-d" }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">غير محدد</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>
+                                            {% with display_info=order.get_display_status %}
+                                                <span class="badge {{ order.get_display_status_badge_class }}">
+                                                    <i class="{{ order.get_display_status_icon }} me-1"></i>
+                                                    {{ order.get_display_status_text }}
+                                                </span>
+                                                {% if display_info.source != 'order' %}
+                                                    <br><small class="text-muted">
+                                                        {% if display_info.source == 'installation' %}
+                                                            <i class="fas fa-tools me-1"></i>تركيب
+                                                        {% elif display_info.source == 'manufacturing' %}
+                                                            <i class="fas fa-industry me-1"></i>مصنع
+                                                        {% endif %}
+                                                    </small>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>
+                                            {% if order.installationschedule_set.exists %}
+                                                <a href="{% url 'installations:installation_detail' order.installationschedule_set.first.id %}" 
+                                                   class="btn btn-sm btn-info">
+                                                    <i class="fas fa-tools"></i> تفاصيل التركيب
+                                                </a>
+                                            {% else %}
+                                                <a href="{% url 'orders:order_detail' order.id %}" 
+                                                   class="btn btn-sm btn-info">
+                                                    <i class="fas fa-tools"></i> تفاصيل التركيب
+                                                </a>
+                                            {% endif %}
+                                            
+                                            <!-- عرض حالة جاهز للتركيب -->
+                                            {% if order.is_manufacturing_order %}
+                                                {% if order.manufacturing_order.status == 'delivered' %}
+                                                    <span class="badge badge-info">
+                                                        <i class="fas fa-truck"></i> تم التسليم (جاهز للتركيب)
+                                                    </span>
+                                                {% elif order.manufacturing_order.status == 'ready_install' %}
+                                                    <span class="badge badge-warning">
+                                                        <i class="fas fa-industry"></i> جاهز للتركيب (أمر تصنيع)
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge badge-secondary">
+                                                        <i class="fas fa-cogs"></i> غير جاهز للتركيب
+                                                    </span>
+                                                {% endif %}
+                                            {% elif order.order_status == 'ready_install' or order.order_status == 'completed' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check-circle"></i> جاهز للتركيب
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">
+                                                    <i class="fas fa-clock"></i> في الانتظار
+                                                </span>
+                                            {% endif %}
+                                            
+                                            <!-- زر الجدولة -->
+                                            {% if not order.installationschedule_set.exists %}
+                                                {% if order.is_manufacturing_order %}
+                                                    {% if order.is_delivered_manufacturing_order %}
+                                                        <button 
+                                                           class="btn btn-sm btn-success schedule-installation-btn"
+                                                           data-order-id="{{ order.id }}"
+                                                           data-schedule-url="{% url 'installations:quick_schedule_installation' order.id %}">
+                                                            <i class="fas fa-calendar-plus"></i> جدولة تركيب
+                                                        </button>
+                                                    {% endif %}
+                                                {% elif order.order_status == 'ready_install' or order.order_status == 'completed' %}
+                                                    <button 
+                                                       class="btn btn-sm btn-success schedule-installation-btn"
+                                                       data-order-id="{{ order.id }}"
+                                                       data-schedule-url="{% url 'installations:quick_schedule_installation' order.id %}">
+                                                        <i class="fas fa-calendar-plus"></i> جدولة تركيب
+                                                    </button>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge badge-info">مجدول</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-check fa-3x text-success mb-3"></i>
+                            <p class="text-success">لا توجد طلبات جديدة في آخر 7 أيام</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- الطلبات التي تحتاج جدولة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        طلبات التركيب الجاهزة (تحتاج جدولة)
+                    </h6>
+                    <span class="badge badge-danger">{{ orders_needing_scheduling|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if orders_needing_scheduling %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>رقم الطلب</th>
+                                        <th>العميل</th>
+                                        <th>تاريخ الطلب</th>
+                                        <th>حالة الطلب</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in orders_needing_scheduling %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'orders:order_detail' order.id %}" class="text-primary">
+                                                {{ order.order_number }}
+                                            </a>
+                                        </td>
+                                        <td><strong>{{ order.customer.name }}</strong></td>
+                                        <td>{{ order.created_at|date:"d/m/Y" }}</td>
+                                        <td>
+                                            {% with display_info=order.get_display_status %}
+                                                <span class="badge {{ order.get_display_status_badge_class }}">
+                                                    <i class="{{ order.get_display_status_icon }} me-1"></i>
+                                                    {{ order.get_display_status_text }}
+                                                </span>
+                                                {% if display_info.source != 'order' %}
+                                                    <br><small class="text-muted">
+                                                        {% if display_info.source == 'installation' %}
+                                                            <i class="fas fa-tools me-1"></i>تركيب
+                                                        {% elif display_info.source == 'manufacturing' %}
+                                                            <i class="fas fa-industry me-1"></i>مصنع
+                                                        {% endif %}
+                                                    </small>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>
+                                            {% if order.installationschedule_set.exists %}
+                                                <a href="{% url 'installations:installation_detail' order.installationschedule_set.first.id %}"
+                                                   class="btn btn-sm btn-info">
+                                                    <i class="fas fa-tools"></i> تفاصيل التركيب
+                                                </a>
+                                            {% else %}
+                                                <a href="{% url 'orders:order_detail' order.id %}"
+                                                   class="btn btn-sm btn-info">
+                                                    <i class="fas fa-tools"></i> تفاصيل التركيب
+                                                </a>
+                                            {% endif %}
+                                            
+                                            <!-- عرض حالة جاهز للتركيب -->
+                                            {% if order.is_manufacturing_order %}
+                                                {% if order.is_delivered_manufacturing_order %}
+                                                    <span class="badge badge-info">
+                                                        <i class="fas fa-truck"></i> تم التسليم (جاهز للتركيب)
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge badge-warning">
+                                                        <i class="fas fa-industry"></i> جاهز للتركيب (أمر تصنيع)
+                                                    </span>
+                                                {% endif %}
+                                            {% elif order.order_status == 'ready_install' or order.order_status == 'completed' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check-circle"></i> جاهز للتركيب
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">
+                                                    <i class="fas fa-clock"></i> في الانتظار
+                                                </span>
+                                            {% endif %}
+                                            
+                                            <!-- زر الجدولة -->
+                                            {% if not order.installationschedule_set.exists %}
+                                                {% if order.is_manufacturing_order or order.order_status == 'ready_install' or order.order_status == 'completed' %}
+                                                    <button 
+                                                       class="btn btn-sm btn-success schedule-installation-btn"
+                                                       data-order-id="{{ order.id }}"
+                                                       data-schedule-url="{% url 'installations:quick_schedule_installation' order.id %}">
+                                                        <i class="fas fa-calendar-plus"></i> جدولة تركيب
+                                                    </button>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <p class="text-success">جميع الطلبات المكتملة تم جدولة تركيبها</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات الفرق -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-users"></i>
+                        إحصائيات الفرق
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if teams_stats %}
+                        <div class="row">
+                            {% for team in teams_stats %}
+                            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                                <div class="card border-primary shadow h-100 installation-card-hover">
+                                    <div class="card-body p-3">
+                                        <div class="text-center">
+                                            <h6 class="card-title text-primary mb-1">{{ team.name }}</h6>
+                                            <div class="h6 mb-1 font-weight-bold text-gray-800">
+                                                {{ team.installations_count }}
+                                            </div>
+                                            <small class="text-muted">تركيب</small>
+                                            <div class="mt-2">
+                                                <i class="fas fa-users fa-lg text-primary"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-users fa-3x text-gray-300 mb-3"></i>
+                            <p class="text-gray-500">لا توجد فرق مسجلة</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- نظام التحقق من المديونية - خاص بقسم التركيبات فقط -->
+<script src="{% static 'js/debt_check.js' %}"></script>
+<script>
+// تحديث الإحصائيات كل 5 دقائق (بدلاً من 30 ثانية لتقليل التضارب)
+setInterval(function() {
+    fetch('{% url "installations:installation_stats_api" %}')
+        .then(response => response.json())
+        .then(data => {
+            // تحديث إجمالي طلبات التركيب (البطاقة الأولى)
+            const totalInstallationsCard = document.querySelector('.card.border-primary .text-gray-800');
+            if (totalInstallationsCard) {
+                totalInstallationsCard.textContent = data.total_orders || 0;
+            }
+
+            // تحديث التركيبات المكتملة (البطاقة الثانية)
+            const completedInstallationsCard = document.querySelector('.card.border-success .text-gray-800');
+            if (completedInstallationsCard) {
+                completedInstallationsCard.textContent = data.completed || 0;
+            }
+
+            // تحديث الطلبات بانتظار الجدولة (البطاقة الرابعة)
+            const needsSchedulingCard = document.querySelector('.card.border-info .text-gray-800');
+            if (needsSchedulingCard) {
+                needsSchedulingCard.textContent = data.orders_needing_scheduling || 0;
+            }
+        })
+        .catch(error => {
+            console.log('خطأ في تحديث الإحصائيات:', error);
+        });
+}, 300000); // كل 5 دقائق
+
+// تم نقل وظائف الجدولة إلى debt_check.js
+// وظيفة إظهار الإشعارات
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // إزالة الإشعار بعد 5 ثواني
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// دالة التحديث اليدوي
+function updateStats() {
+    const updateBtn = document.getElementById('updateBtn');
+    const originalText = updateBtn.innerHTML;
+
+    // تغيير النص أثناء التحديث
+    updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+    updateBtn.disabled = true;
+
+    fetch('{% url "installations:installation_stats_api" %}')
+        .then(response => response.json())
+        .then(data => {
+            // تحديث إجمالي طلبات التركيب (البطاقة الأولى)
+            const totalInstallationsCard = document.querySelector('.card.border-primary .text-gray-800');
+            if (totalInstallationsCard) {
+                totalInstallationsCard.textContent = data.total_orders || 0;
+            }
+
+            // تحديث التركيبات المكتملة (البطاقة الثانية)
+            const completedInstallationsCard = document.querySelector('.card.border-success .text-gray-800');
+            if (completedInstallationsCard) {
+                completedInstallationsCard.textContent = data.completed || 0;
+            }
+
+            // تحديث الطلبات بانتظار الجدولة (البطاقة الرابعة)
+            const needsSchedulingCard = document.querySelector('.card.border-info .text-gray-800');
+            if (needsSchedulingCard) {
+                needsSchedulingCard.textContent = data.orders_needing_scheduling || 0;
+            }
+
+            // إظهار رسالة نجاح
+            showNotification('تم تحديث الإحصائيات بنجاح', 'success');
+        })
+        .catch(error => {
+            console.log('خطأ في تحديث الإحصائيات:', error);
+            showNotification('خطأ في تحديث الإحصائيات', 'error');
+        })
+        .finally(() => {
+            // إعادة النص الأصلي
+            updateBtn.innerHTML = originalText;
+            updateBtn.disabled = false;
+        });
+}
+
+// إضافة CSS للـ تأثيرات البطاقات التفاعلية
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('لوحة تحكم التركيبات جاهزة');
+});
+
+// إضافة CSS للـ تأثيرات البطاقات التفاعلية
+document.addEventListener('DOMContentLoaded', function() {
+    // لا حاجة للكود الإضافي هنا، التأثيرات موجودة في CSS
+});
+</script>
+{% endblock %}
+
+{% endblock %}

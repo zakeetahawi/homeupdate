@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+    .form-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+    }
+    .form-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+    .form-section h4 {
+        margin-bottom: 20px;
+        color: #007bff;
+    }
+    .form-footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        text-align: center;
+    }
+    .db-type-options {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    .db-type-option {
+        flex: 1;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .db-type-option:hover {
+        border-color: #007bff;
+    }
+    .db-type-option.active {
+        border-color: #007bff;
+        background-color: #f0f7ff;
+    }
+    .db-type-option img {
+        height: 50px;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="form-container">
+        <div class="form-header">
+            <h1>{{ title }}</h1>
+            <p class="lead">{% trans "أدخل معلومات قاعدة البيانات أدناه" %}</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-section">
+                <h4>{% trans "معلومات أساسية" %}</h4>
+
+                <div class="form-group">
+                    <label for="{{ form.name.id_for_label }}">{% trans "اسم قاعدة البيانات" %}</label>
+                    {{ form.name|add_class:"form-control" }}
+                    <small class="form-text text-muted">{% trans "اسم وصفي لقاعدة البيانات" %}</small>
+                    {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label>{% trans "نوع قاعدة البيانات" %}</label>
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-database fa-2x text-primary me-3"></i>
+                            <div>
+                                <h5 class="mb-1">PostgreSQL</h5>
+                                <p class="mb-0">{% trans "قاعدة بيانات قوية ومتقدمة" %}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group d-none">
+                        <input type="hidden" name="db_type" id="id_db_type" value="postgresql">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <div class="form-check">
+                                {{ form.is_active|add_class:"form-check-input" }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    {% trans "نشط" %}
+                                </label>
+                                <small class="form-text text-muted">{% trans "تمكين أو تعطيل قاعدة البيانات" %}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <div class="form-check">
+                                {{ form.is_default|add_class:"form-check-input" }}
+                                <label class="form-check-label" for="{{ form.is_default.id_for_label }}">
+                                    {% trans "افتراضي" %}
+                                </label>
+                                <small class="form-text text-muted">{% trans "تعيين كقاعدة البيانات الافتراضية" %}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="connection-details" class="form-section">
+                <h4>{% trans "تفاصيل الاتصال" %}</h4>
+
+                <div id="postgresql-mysql-fields">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.host.id_for_label }}">{% trans "المضيف" %}</label>
+                                {{ form.host|add_class:"form-control" }}
+                                <small class="form-text text-muted">{% trans "عنوان الخادم المستضيف لقاعدة البيانات (مثال: localhost)" %}</small>
+                                {% if form.host.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.host.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.port.id_for_label }}">{% trans "المنفذ" %}</label>
+                                {{ form.port|add_class:"form-control" }}
+                                <small class="form-text text-muted">{% trans "منفذ الاتصال بقاعدة البيانات (مثال: 5432 لـ PostgreSQL، 3306 لـ MySQL)" %}</small>
+                                {% if form.port.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.port.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="{{ form.database_name.id_for_label }}">{% trans "اسم قاعدة البيانات" %}</label>
+                                {{ form.database_name|add_class:"form-control" }}
+                                <small class="form-text text-muted">{% trans "اسم قاعدة البيانات التي تريد الاتصال بها" %}</small>
+                                {% if form.database_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.database_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.username.id_for_label }}">{% trans "اسم المستخدم" %}</label>
+                                {{ form.username|add_class:"form-control" }}
+                                <small class="form-text text-muted">{% trans "اسم المستخدم للاتصال بقاعدة البيانات" %}</small>
+                                {% if form.username.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.username.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.password.id_for_label }}">{% trans "كلمة المرور" %}</label>
+                                {{ form.password|add_class:"form-control" }}
+                                <small class="form-text text-muted">{{ form.password.help_text }}</small>
+                                {% if form.password.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.password.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sqlite-fields" class="d-none">
+                    <div class="form-group">
+                        <label for="{{ form.connection_string.id_for_label }}">{% trans "سلسلة الاتصال" %}</label>
+                        {{ form.connection_string|add_class:"form-control" }}
+                        <small class="form-text text-muted">{% trans "مسار ملف قاعدة بيانات SQLite (مثال: sqlite:///db.sqlite3)" %}</small>
+                        {% if form.connection_string.errors %}
+                            <div class="invalid-feedback d-block">{{ form.connection_string.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-footer">
+                <button type="submit" class="btn btn-primary btn-lg">{% trans "حفظ" %}</button>
+                <a href="{% url 'db_manager:database_list' %}" class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // إخفاء حقول SQLite
+        $('#sqlite-fields').addClass('d-none');
+    });
+</script>
+{% endblock %}

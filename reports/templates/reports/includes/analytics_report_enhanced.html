@@ -1,0 +1,457 @@
+{% load i18n report_math_filters %}
+
+<!-- Filters Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form id="analyticsFilters" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">{% trans 'نطاق التاريخ' %}</label>
+                        <select class="form-select" id="dateRange">
+                            <option value="7">{% trans 'آخر 7 أيام' %}</option>
+                            <option value="30" selected>{% trans 'آخر 30 يوم' %}</option>
+                            <option value="90">{% trans 'آخر 3 شهور' %}</option>
+                            <option value="180">{% trans 'آخر 6 شهور' %}</option>
+                            <option value="365">{% trans 'آخر سنة' %}</option>
+                            <option value="custom">{% trans 'مخصص' %}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">{% trans 'تجميع البيانات' %}</label>
+                        <select class="form-select" id="groupBy">
+                            <option value="day">{% trans 'يومي' %}</option>
+                            <option value="week">{% trans 'أسبوعي' %}</option>
+                            <option value="month" selected>{% trans 'شهري' %}</option>
+                            <option value="quarter">{% trans 'ربع سنوي' %}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">{% trans 'نوع التحليل' %}</label>
+                        <select class="form-select" id="analysisType">
+                            <option value="trend">{% trans 'تحليل الاتجاه' %}</option>
+                            <option value="comparison">{% trans 'تحليل مقارن' %}</option>
+                            <option value="forecast">{% trans 'التنبؤ' %}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-sync-alt"></i> {% trans 'تحديث التحليل' %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Analytics Dashboard -->
+<div class="row">
+    <!-- Sales Analysis with Predictions -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{% trans 'تحليل المبيعات والتنبؤات' %}</h5>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-secondary" data-chart-type="line">
+                        <i class="fas fa-chart-line"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" data-chart-type="bar">
+                        <i class="fas fa-chart-bar"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" data-chart-type="area">
+                        <i class="fas fa-chart-area"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="position-relative" style="height: 400px;">
+                    <canvas id="salesPredictionChart"></canvas>
+                </div>
+                <div class="mt-3">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h6>{% trans 'إجمالي المبيعات' %}</h6>
+                            <h4 class="text-primary">{{ data.sales_analysis.total_revenue|currency }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>{% trans 'عدد الطلبات' %}</h6>
+                            <h4>{{ data.sales_analysis.total_orders }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>{% trans 'متوسط قيمة الطلب' %}</h6>
+                            <h4 class="text-success">{{ data.sales_analysis.avg_order_value|currency }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>{% trans 'التنبؤ للشهر القادم' %}</h6>
+                            <h4 class="text-info">{{ data.sales_analysis.next_month_forecast|currency }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive KPI Dashboard -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans 'لوحة مؤشرات الأداء التفاعلية' %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="card h-100 cursor-pointer kpi-card" data-bs-toggle="modal" data-bs-target="#kpiDetailsModal" data-kpi="sales">
+                            <div class="card-body text-center">
+                                <div class="display-4 mb-2">
+                                    <i class="fas fa-chart-line text-primary"></i>
+                                </div>
+                                <h6>{% trans 'نمو المبيعات' %}</h6>
+                                <h3 class="mb-0 {{ data.kpi_metrics.sales_growth|growth_class }}">
+                                    {{ data.kpi_metrics.sales_growth|floatformat:1 }}%
+                                </h3>
+                                <small class="text-muted">{% trans 'مقارنة بالفترة السابقة' %}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100 cursor-pointer kpi-card" data-bs-toggle="modal" data-bs-target="#kpiDetailsModal" data-kpi="retention">
+                            <div class="card-body text-center">
+                                <div class="display-4 mb-2">
+                                    <i class="fas fa-user-check text-success"></i>
+                                </div>
+                                <h6>{% trans 'معدل الاحتفاظ' %}</h6>
+                                <h3 class="mb-0 {{ data.kpi_metrics.customer_retention|retention_class }}">
+                                    {{ data.kpi_metrics.customer_retention|floatformat:1 }}%
+                                </h3>
+                                <small class="text-muted">{% trans 'العملاء النشطين' %}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100 cursor-pointer kpi-card" data-bs-toggle="modal" data-bs-target="#kpiDetailsModal" data-kpi="fulfillment">
+                            <div class="card-body text-center">
+                                <div class="display-4 mb-2">
+                                    <i class="fas fa-clock text-warning"></i>
+                                </div>
+                                <h6>{% trans 'وقت الإتمام' %}</h6>
+                                <h3 class="mb-0">{{ data.kpi_metrics.avg_fulfillment_time|floatformat:1 }}</h3>
+                                <small class="text-muted">{% trans 'ساعة' %}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card h-100 cursor-pointer kpi-card" data-bs-toggle="modal" data-bs-target="#kpiDetailsModal" data-kpi="profit">
+                            <div class="card-body text-center">
+                                <div class="display-4 mb-2">
+                                    <i class="fas fa-percentage text-info"></i>
+                                </div>
+                                <h6>{% trans 'هامش الربح' %}</h6>
+                                <h3 class="mb-0 {{ data.kpi_metrics.profit_margin|margin_class }}">
+                                    {{ data.kpi_metrics.profit_margin|floatformat:1 }}%
+                                </h3>
+                                <small class="text-muted">{% trans 'متوسط الهامش' %}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Insights with Segmentation -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{% trans 'تحليل شرائح العملاء' %}</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-segment="all">{% trans 'جميع الشرائح' %}</a></li>
+                        <li><a class="dropdown-item" href="#" data-segment="vip">VIP</a></li>
+                        <li><a class="dropdown-item" href="#" data-segment="regular">{% trans 'منتظم' %}</a></li>
+                        <li><a class="dropdown-item" href="#" data-segment="occasional">{% trans 'عرضي' %}</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="position-relative" style="height: 300px;">
+                    <canvas id="customerSegmentsChart"></canvas>
+                </div>
+                <div class="mt-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{% trans 'الشريحة' %}</th>
+                                    <th>{% trans 'العدد' %}</th>
+                                    <th>{% trans 'متوسط الإنفاق' %}</th>
+                                    <th>{% trans 'معدل التكرار' %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>VIP</td>
+                                    <td>{{ data.customer_insights.customer_segments.summary.vip_count }}</td>
+                                    <td>{{ data.customer_insights.customer_segments.segments.vip.avg_spent|currency }}</td>
+                                    <td>{{ data.customer_insights.customer_segments.segments.vip.frequency }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{% trans 'منتظم' %}</td>
+                                    <td>{{ data.customer_insights.customer_segments.summary.regular_count }}</td>
+                                    <td>{{ data.customer_insights.customer_segments.segments.regular.avg_spent|currency }}</td>
+                                    <td>{{ data.customer_insights.customer_segments.segments.regular.frequency }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{% trans 'عرضي' %}</td>
+                                    <td>{{ data.customer_insights.customer_segments.summary.occasional_count }}</td>
+                                    <td>{{ data.customer_insights.customer_segments.segments.occasional.avg_spent|currency }}</td>
+                                    <td>{{ data.customer_insights.customer_segments.segments.occasional.frequency }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Health with Predictions -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{% trans 'الصحة المالية والتنبؤات' %}</h5>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-secondary active" data-view="cash-flow">
+                        {% trans 'التدفق النقدي' %}
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" data-view="predictions">
+                        {% trans 'التنبؤات' %}
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="position-relative" style="height: 300px;">
+                    <canvas id="financialHealthChart"></canvas>
+                </div>
+                <div class="mt-3">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h6>{% trans 'نمو الإيرادات' %}</h6>
+                            <h4 class="{{ data.financial_health.revenue_growth|growth_class }}">
+                                {{ data.financial_health.revenue_growth|floatformat:1 }}%
+                            </h4>
+                        </div>
+                        <div class="col-6">
+                            <h6>{% trans 'التنبؤ للربع القادم' %}</h6>
+                            <h4 class="text-info">{{ data.financial_health.next_quarter_forecast|currency }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Details Modal -->
+<div class="modal fade" id="kpiDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="kpiDetailsTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="position-relative" style="height: 300px;">
+                    <canvas id="kpiDetailsChart"></canvas>
+                </div>
+                <div class="mt-3" id="kpiDetailsContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all charts with custom configuration
+    const chartConfig = {
+        // ... (chart configuration code)
+    };
+
+    // Initialize interactive features
+    initializeFilters();
+    initializeCharts();
+    initializeKPICards();
+    setupRealTimeUpdates();
+});
+
+// Chart initialization functions
+function initializeCharts() {
+    // Sales Prediction Chart
+    const salesPredictionCtx = document.getElementById('salesPredictionChart').getContext('2d');
+    const salesPredictionChart = new Chart(salesPredictionCtx, {
+        type: 'line',
+        data: {
+            labels: {{ data.sales_analysis.monthly_trends|map:'month'|safe }},
+            datasets: [
+                {
+                    label: '{% trans "المبيعات الفعلية" %}',
+                    data: {{ data.sales_analysis.monthly_trends|map:'total_sales'|safe }},
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                },
+                {
+                    label: '{% trans "التنبؤات" %}',
+                    data: {{ data.sales_analysis.predictions|map:'value'|safe }},
+                    borderColor: 'rgb(255, 99, 132)',
+                    borderDash: [5, 5],
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toLocaleString('ar-SA', {
+                                style: 'currency',
+                                currency: 'SAR'
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Customer Segments Chart with drill-down
+    const customerSegmentsCtx = document.getElementById('customerSegmentsChart').getContext('2d');
+    const customerSegmentsChart = new Chart(customerSegmentsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['VIP', '{% trans "منتظم" %}', '{% trans "عرضي" %}'],
+            datasets: [{
+                data: [
+                    {{ data.customer_insights.customer_segments.summary.vip_count }},
+                    {{ data.customer_insights.customer_segments.summary.regular_count }},
+                    {{ data.customer_insights.customer_segments.summary.occasional_count }}
+                ],
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        let sum = 0;
+                        let dataArr = ctx.chart.data.datasets[0].data;
+                        dataArr.map(data => {
+                            sum += data;
+                        });
+                        let percentage = (value * 100 / sum).toFixed(1) + "%";
+                        return percentage;
+                    },
+                    color: '#fff',
+                }
+            }
+        }
+    });
+
+    // Financial Health Chart with toggle
+    const financialHealthCtx = document.getElementById('financialHealthChart').getContext('2d');
+    const financialHealthChart = new Chart(financialHealthCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ data.financial_health.cash_flow|map:'month'|safe }},
+            datasets: [{
+                label: '{% trans "التدفق النقدي" %}',
+                data: {{ data.financial_health.cash_flow|map:'net_flow'|safe }},
+                backgroundColor: function(context) {
+                    const value = context.dataset.data[context.dataIndex];
+                    return value < 0 ? 'rgba(255, 99, 132, 0.5)' : 'rgba(75, 192, 192, 0.5)';
+                }
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// Interactive features initialization
+function initializeFilters() {
+    document.getElementById('analyticsFilters').addEventListener('submit', function(e) {
+        e.preventDefault();
+        updateCharts();
+    });
+}
+
+function initializeKPICards() {
+    document.querySelectorAll('.kpi-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const kpiType = this.dataset.kpi;
+            showKPIDetails(kpiType);
+        });
+    });
+}
+
+// Real-time updates
+function setupRealTimeUpdates() {
+    setInterval(function() {
+        fetchLatestData();
+    }, 300000); // Update every 5 minutes
+}
+
+// Helper functions
+function updateCharts() {
+    const filters = {
+        dateRange: document.getElementById('dateRange').value,
+        groupBy: document.getElementById('groupBy').value,
+        analysisType: document.getElementById('analysisType').value
+    };
+
+    fetch(`/api/reports/analytics/data?${new URLSearchParams(filters)}`)
+        .then(response => response.json())
+        .then(data => {
+            updateChartsWithNewData(data);
+        });
+}
+
+function showKPIDetails(kpiType) {
+    // Fetch and display detailed KPI data
+    fetch(`/api/reports/kpi/${kpiType}/details`)
+        .then(response => response.json())
+        .then(data => {
+            updateKPIModal(kpiType, data);
+        });
+}
+
+function fetchLatestData() {
+    fetch('/api/reports/analytics/latest')
+        .then(response => response.json())
+        .then(data => {
+            updateChartsWithNewData(data);
+        });
+}
+</script>
+{% endblock %}

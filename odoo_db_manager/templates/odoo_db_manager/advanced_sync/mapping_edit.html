@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load mapping_tags %}
+
+{% block title %}تعديل التعيين - {{ mapping.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+<style>
+    .form-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .section-title {
+        color: #495057;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e9ecef;
+        font-weight: 600;
+    }
+
+    .arabic-text {
+        font-family: 'Segoe UI', 'Tahoma', 'Arial Unicode MS', 'Lucida Sans Unicode', sans-serif;
+        direction: rtl;
+        text-align: right;
+    }
+
+    .btn-save {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        font-size: 16px;
+        border-radius: 25px;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- شريط الأدوات -->
+    <div class="toolbar">
+        <h1>
+            <i class="fas fa-edit"></i>
+            تعديل التعيين: {{ mapping.name }}
+        </h1>
+        <div>
+            <a href="{% url 'odoo_db_manager:mapping_detail' mapping.id %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-right"></i>
+                العودة للتفاصيل
+            </a>
+        </div>
+    </div>
+
+    <!-- نموذج التعديل -->
+    <form method="post" class="arabic-text">
+        {% csrf_token %}
+        
+        <!-- معلومات أساسية -->
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-info-circle"></i>
+                المعلومات الأساسية
+            </h5>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">اسم التعيين</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ mapping.name }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="spreadsheet_id" class="form-label">معرف جدول البيانات</label>
+                        <input type="text" class="form-control" id="spreadsheet_id" name="spreadsheet_id" value="{{ mapping.spreadsheet_id }}" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="sheet_name" class="form-label">اسم الصفحة</label>
+                        <select class="form-select" id="sheet_name" name="sheet_name" required>
+                            <option value="{{ mapping.sheet_name }}" selected>{{ mapping.sheet_name }}</option>
+                            {% for sheet in available_sheets %}
+                                {% if sheet != mapping.sheet_name %}
+                                <option value="{{ sheet }}">{{ sheet }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="header_row" class="form-label">صف العناوين</label>
+                        <input type="number" class="form-control" id="header_row" name="header_row" value="{{ mapping.header_row }}" min="1" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="start_row" class="form-label">صف البداية</label>
+                        <input type="number" class="form-control" id="start_row" name="start_row" value="{{ mapping.start_row }}" min="1" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- إعدادات المزامنة -->
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-cogs"></i>
+                إعدادات المزامنة
+            </h5>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="auto_create_customers" name="auto_create_customers" {% if mapping.auto_create_customers %}checked{% endif %}>
+                        <label class="form-check-label" for="auto_create_customers">
+                            إنشاء العملاء تلقائياً
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="auto_create_orders" name="auto_create_orders" {% if mapping.auto_create_orders %}checked{% endif %}>
+                        <label class="form-check-label" for="auto_create_orders">
+                            إنشاء الطلبات تلقائياً
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="auto_create_inspections" name="auto_create_inspections" {% if mapping.auto_create_inspections %}checked{% endif %}>
+                        <label class="form-check-label" for="auto_create_inspections">
+                            إنشاء المعاينات تلقائياً
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+<div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="update_existing" name="update_existing" {% if mapping.update_existing %}checked{% endif %}>
+                        <label class="form-check-label" for="update_existing">
+                            تحديث البيانات الموجودة
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="enable_reverse_sync" name="enable_reverse_sync" {% if mapping.enable_reverse_sync %}checked{% endif %}>
+                        <label class="form-check-label" for="enable_reverse_sync">
+                            تفعيل المزامنة العكسية
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="conflict_resolution" class="form-label">حل التعارضات</label>
+                <select class="form-select" id="conflict_resolution" name="conflict_resolution">
+                    <option value="skip" {% if mapping.conflict_resolution == 'skip' %}selected{% endif %}>تجاهل التعارضات</option>
+                    <option value="overwrite" {% if mapping.conflict_resolution == 'overwrite' %}selected{% endif %}>الكتابة فوق البيانات</option>
+                    <option value="manual" {% if mapping.conflict_resolution == 'manual' %}selected{% endif %}>الحل اليدوي</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- تعيينات الأعمدة -->
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-columns"></i>
+                تعيينات الأعمدة
+            </h5>
+            
+            {% if sheet_columns %}
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>عمود Google Sheets</th>
+                            <th>حقل النظام</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for column in sheet_columns %}
+                        <tr>
+                            <td>{{ column }}</td>
+                            <td>
+                                <select class="form-select" name="column_{{ column }}">
+                                    <option value="ignore">تجاهل</option>
+                                    <optgroup label="بيانات العميل">
+                                        <option value="customer_code" {% is_column_mapped mapping.column_mappings column 'customer_code' as is_selected %}{% if is_selected %}selected{% endif %}>رقم العميل</option>
+                                        <option value="customer_name" {% is_column_mapped mapping.column_mappings column 'customer_name' as is_selected %}{% if is_selected %}selected{% endif %}>اسم العميل</option>
+                                        <option value="customer_phone" {% is_column_mapped mapping.column_mappings column 'customer_phone' as is_selected %}{% if is_selected %}selected{% endif %}>رقم الهاتف</option>
+                                        <option value="customer_phone2" {% is_column_mapped mapping.column_mappings column 'customer_phone2' as is_selected %}{% if is_selected %}selected{% endif %}>رقم الهاتف الثاني</option>
+                                        <option value="customer_email" {% is_column_mapped mapping.column_mappings column 'customer_email' as is_selected %}{% if is_selected %}selected{% endif %}>البريد الإلكتروني</option>
+                                        <option value="customer_address" {% is_column_mapped mapping.column_mappings column 'customer_address' as is_selected %}{% if is_selected %}selected{% endif %}>العنوان</option>
+                                    </optgroup>
+                                    <optgroup label="بيانات الطلب">
+                                        <option value="order_number" {% is_column_mapped mapping.column_mappings column 'order_number' as is_selected %}{% if is_selected %}selected{% endif %}>رقم الطلب</option>
+                                        <option value="invoice_number" {% is_column_mapped mapping.column_mappings column 'invoice_number' as is_selected %}{% if is_selected %}selected{% endif %}>رقم الفاتورة</option>
+                                        <option value="contract_number" {% is_column_mapped mapping.column_mappings column 'contract_number' as is_selected %}{% if is_selected %}selected{% endif %}>رقم العقد</option>
+                                        <option value="order_date" {% is_column_mapped mapping.column_mappings column 'order_date' as is_selected %}{% if is_selected %}selected{% endif %}>تاريخ الطلب</option>
+                                        <option value="order_type" {% is_column_mapped mapping.column_mappings column 'order_type' as is_selected %}{% if is_selected %}selected{% endif %}>نوع الطلب</option>
+                                        <option value="tracking_status" {% is_column_mapped mapping.column_mappings column 'tracking_status' as is_selected %}{% if is_selected %}selected{% endif %}>حالة التتبع</option>
+                                        <option value="total_amount" {% is_column_mapped mapping.column_mappings column 'total_amount' as is_selected %}{% if is_selected %}selected{% endif %}>المبلغ الإجمالي</option>
+                                        <option value="paid_amount" {% is_column_mapped mapping.column_mappings column 'paid_amount' as is_selected %}{% if is_selected %}selected{% endif %}>المبلغ المدفوع</option>
+                                        <option value="delivery_type" {% is_column_mapped mapping.column_mappings column 'delivery_type' as is_selected %}{% if is_selected %}selected{% endif %}>نوع التسليم</option>
+                                        <option value="delivery_address" {% is_column_mapped mapping.column_mappings column 'delivery_address' as is_selected %}{% if is_selected %}selected{% endif %}>عنوان التسليم</option>
+                                    </optgroup>
+                                    <optgroup label="بيانات المعاينة والتركيب">
+                                        <option value="inspection_date" {% is_column_mapped mapping.column_mappings column 'inspection_date' as is_selected %}{% if is_selected %}selected{% endif %}>تاريخ المعاينة</option>
+                                        <option value="inspection_result" {% is_column_mapped mapping.column_mappings column 'inspection_result' as is_selected %}{% if is_selected %}selected{% endif %}>نتيجة المعاينة</option>
+                                        <option value="installation_status" {% is_column_mapped mapping.column_mappings column 'installation_status' as is_selected %}{% if is_selected %}selected{% endif %}>حالة التركيب</option>
+                                        <option value="windows_count" {% is_column_mapped mapping.column_mappings column 'windows_count' as is_selected %}{% if is_selected %}selected{% endif %}>عدد الشبابيك</option>
+                                    </optgroup>
+                                    <optgroup label="بيانات أخرى">
+                                        <option value="notes" {% is_column_mapped mapping.column_mappings column 'notes' as is_selected %}{% if is_selected %}selected{% endif %}>ملاحظات</option>
+                                        <option value="branch" {% is_column_mapped mapping.column_mappings column 'branch' as is_selected %}{% if is_selected %}selected{% endif %}>الفرع</option>
+                                        <option value="salesperson" {% is_column_mapped mapping.column_mappings column 'salesperson' as is_selected %}{% if is_selected %}selected{% endif %}>البائع</option>
+                                    </optgroup>
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                لا يمكن جلب أعمدة الجدول. تأكد من صحة معرف الجدول واسم الصفحة.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- القيم الافتراضية -->
+        <div class="form-section">
+            <h5 class="section-title">
+                <i class="fas fa-sliders-h"></i>
+                القيم الافتراضية
+            </h5>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="default_customer_category" class="form-label">تصنيف العميل الافتراضي</label>
+                        <select class="form-select" id="default_customer_category" name="default_customer_category">
+                            <option value="">-- اختر التصنيف --</option>
+                            {% for category in customer_categories %}
+                            <option value="{{ category.id }}" {% if mapping.default_customer_category_id == category.id %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="default_customer_type" class="form-label">نوع العميل الافتراضي</label>
+                        <select class="form-select" id="default_customer_type" name="default_customer_type">
+                            <option value="">-- اختر النوع --</option>
+                            <option value="retail" {% if mapping.default_customer_type == 'retail' %}selected{% endif %}>أفراد</option>
+                            <option value="wholesale" {% if mapping.default_customer_type == 'wholesale' %}selected{% endif %}>جملة</option>
+                            <option value="corporate" {% if mapping.default_customer_type == 'corporate' %}selected{% endif %}>شركات</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="default_branch" class="form-label">الفرع الافتراضي</label>
+                        <select class="form-select" id="default_branch" name="default_branch">
+                            <option value="">-- اختر الفرع --</option>
+                            {% for branch in branches %}
+                            <option value="{{ branch.id }}" {% if mapping.default_branch_id == branch.id %}selected{% endif %}>
+                                {{ branch.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="use_current_date_as_created" name="use_current_date_as_created" {% if mapping.use_current_date_as_created %}checked{% endif %}>
+                        <label class="form-check-label" for="use_current_date_as_created">
+                            استخدام التاريخ الحالي كتاريخ الإضافة
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- أزرار الحفظ -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-save">
+                <i class="fas fa-save"></i>
+                حفظ التغييرات
+            </button>
+            <a href="{% url 'odoo_db_manager:mapping_detail' mapping.id %}" class="btn btn-outline-secondary ms-3">
+                <i class="fas fa-times"></i>
+                إلغاء
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// إضافة أنماط RTL لـ SweetAlert
+const style = document.createElement('style');
+style.textContent = `
+    .swal-rtl {
+        direction: rtl;
+        text-align: right;
+    }
+    .swal-rtl .swal2-title,
+    .swal-rtl .swal2-content {
+        text-align: right;
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

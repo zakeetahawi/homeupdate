@@ -1,0 +1,9 @@
+<span class="badge bg-{{ color_class }} me-2">
+    <i class="{{ icon_class }}"></i>
+    {{ notification.get_notification_type_display }}
+</span>
+{% if notification.priority != 'normal' %}
+<span class="badge {{ priority_class }} badge-sm">
+    {{ notification.get_priority_display }}
+</span>
+{% endif %}

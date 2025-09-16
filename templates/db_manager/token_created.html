@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "تم إنشاء رمز الإعداد" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .success-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+    .success-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+        text-align: center;
+    }
+    .success-header i {
+        font-size: 48px;
+        color: #28a745;
+        margin-bottom: 20px;
+    }
+    .success-content {
+        margin-bottom: 30px;
+    }
+    .success-footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        text-align: center;
+    }
+    .token-value {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 18px;
+        text-align: center;
+        margin: 20px 0;
+        word-break: break-all;
+    }
+    .setup-url {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+        word-break: break-all;
+    }
+    .copy-btn {
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="success-container">
+        <div class="success-header">
+            <i class="fas fa-check-circle"></i>
+            <h1>{% trans "تم إنشاء رمز الإعداد بنجاح" %}</h1>
+        </div>
+        
+        <div class="success-content">
+            <div class="alert alert-success">
+                <p>{% trans "تم إنشاء رمز الإعداد بنجاح. يمكنك استخدام هذا الرمز لإعداد النظام." %}</p>
+            </div>
+            
+            <h5>{% trans "رمز الإعداد:" %}</h5>
+            <div class="token-value">
+                {{ token.token }}
+            </div>
+            <button class="btn btn-sm btn-outline-primary copy-btn" id="copy-token">
+                <i class="fas fa-copy"></i> {% trans "نسخ الرمز" %}
+            </button>
+            
+            <h5 class="mt-4">{% trans "رابط الإعداد:" %}</h5>
+            <div class="setup-url">
+                <a href="{{ setup_url }}" target="_blank">{{ setup_url }}</a>
+            </div>
+            <button class="btn btn-sm btn-outline-primary copy-btn" id="copy-url">
+                <i class="fas fa-copy"></i> {% trans "نسخ الرابط" %}
+            </button>
+            
+            <div class="alert alert-warning mt-4">
+                <h5>{% trans "ملاحظة هامة:" %}</h5>
+                <p>{% trans "هذا الرمز صالح لمدة محدودة فقط. بعد ذلك، ستحتاج إلى إنشاء رمز جديد." %}</p>
+                <p>{% trans "يمكن استخدام هذا الرمز مرة واحدة فقط." %}</p>
+            </div>
+        </div>
+        
+        <div class="success-footer">
+            <a href="{{ setup_url }}" class="btn btn-primary btn-lg" target="_blank">{% trans "الانتقال إلى صفحة الإعداد" %}</a>
+            <a href="{% url 'db_manager:token_list' %}" class="btn btn-secondary btn-lg">{% trans "العودة إلى قائمة الرموز" %}</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // نسخ رمز الإعداد
+        $('#copy-token').click(function() {
+            var token = '{{ token.token }}';
+            
+            // إنشاء عنصر نصي مؤقت
+            var tempInput = $('<input>');
+            $('body').append(tempInput);
+            tempInput.val(token).select();
+            
+            // نسخ النص
+            document.execCommand('copy');
+            
+            // إزالة العنصر المؤقت
+            tempInput.remove();
+            
+            // تغيير نص الزر مؤقتًا
+            $(this).html('<i class="fas fa-check"></i> {% trans "تم النسخ" %}');
+            
+            // إعادة النص الأصلي بعد ثانيتين
+            var button = $(this);
+            setTimeout(function() {
+                button.html('<i class="fas fa-copy"></i> {% trans "نسخ الرمز" %}');
+            }, 2000);
+        });
+        
+        // نسخ رابط الإعداد
+        $('#copy-url').click(function() {
+            var url = '{{ setup_url }}';
+            
+            // إنشاء عنصر نصي مؤقت
+            var tempInput = $('<input>');
+            $('body').append(tempInput);
+            tempInput.val(url).select();
+            
+            // نسخ النص
+            document.execCommand('copy');
+            
+            // إزالة العنصر المؤقت
+            tempInput.remove();
+            
+            // تغيير نص الزر مؤقتًا
+            $(this).html('<i class="fas fa-check"></i> {% trans "تم النسخ" %}');
+            
+            // إعادة النص الأصلي بعد ثانيتين
+            var button = $(this);
+            setTimeout(function() {
+                button.html('<i class="fas fa-copy"></i> {% trans "نسخ الرابط" %}');
+            }, 2000);
+        });
+    });
+</script>
+{% endblock %}

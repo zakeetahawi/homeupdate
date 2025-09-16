@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}إدارة مديونية العميل - {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-exclamation-triangle text-danger"></i>
+            إدارة مديونية العميل
+        </h1>
+        <a href="{% url 'installations:dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            العودة للوحة التحكم
+        </a>
+    </div>
+
+    <!-- معلومات الطلب -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle"></i>
+                        معلومات الطلب
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>رقم الطلب:</strong> {{ order.order_number }}</p>
+                            <p><strong>العميل:</strong> {{ order.customer.name }}</p>
+                            <p><strong>تاريخ الطلب:</strong> {{ order.created_at|date:"Y-m-d" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                                            <p><strong>المبلغ الإجمالي:</strong> {{ order.total_amount|currency_format }}</p>
+                <p><strong>المبلغ المدفوع:</strong> {{ order.paid_amount|currency_format }}</p>
+                <p><strong>المتبقي:</strong> {{ order.total_amount|add:"-"|add:order.paid_amount|currency_format }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- معلومات المديونية -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        معلومات المديونية
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>مبلغ المديونية:</strong> {{ debt.debt_amount|currency_format }}</p>
+                            <p><strong>الحالة:</strong> 
+                                {% if debt.is_paid %}
+                                    <span class="badge badge-success">تم الدفع</span>
+                                {% else %}
+                                    <span class="badge badge-danger">غير مدفوع</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if debt.is_paid %}
+                                <p><strong>رقم إذن الاستلام:</strong> {{ debt.payment_receipt_number }}</p>
+                                <p><strong>اسم المستلم:</strong> {{ debt.payment_receiver_name }}</p>
+                                <p><strong>تاريخ الدفع:</strong> {{ debt.payment_date|date:"Y-m-d H:i" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تحديث المديونية -->
+    {% if not debt.is_paid %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-edit"></i>
+                        تحديث المديونية
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-exclamation-triangle"></i> يرجى تصحيح الأخطاء التالية:</h6>
+                                {{ form.errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.debt_amount.id_for_label }}">
+                                        <i class="fas fa-money-bill"></i>
+                                        {{ form.debt_amount.label }}
+                                    </label>
+                                    {{ form.debt_amount }}
+                                    {% if form.debt_amount.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ form.debt_amount.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.debt_amount.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.debt_amount.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="{{ form.notes.id_for_label }}">
+                                        <i class="fas fa-sticky-note"></i>
+                                        {{ form.notes.label }}
+                                    </label>
+                                    {{ form.notes }}
+                                    {% if form.notes.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ form.notes.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.notes.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.notes.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" name="update_debt" class="btn btn-warning btn-lg">
+                                    <i class="fas fa-save"></i>
+                                    تحديث المديونية
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- تسجيل الدفع -->
+    {% if not debt.is_paid %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-money-check-alt"></i>
+                        تسجيل دفع المديونية
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if payment_form.errors %}
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-exclamation-triangle"></i> يرجى تصحيح الأخطاء التالية:</h6>
+                                {{ payment_form.errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ payment_form.payment_receipt_number.id_for_label }}">
+                                        <i class="fas fa-receipt"></i>
+                                        {{ payment_form.payment_receipt_number.label }}
+                                    </label>
+                                    {{ payment_form.payment_receipt_number }}
+                                    {% if payment_form.payment_receipt_number.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ payment_form.payment_receipt_number.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if payment_form.payment_receipt_number.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ payment_form.payment_receipt_number.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ payment_form.payment_receiver_name.id_for_label }}">
+                                        <i class="fas fa-user"></i>
+                                        {{ payment_form.payment_receiver_name.label }}
+                                    </label>
+                                    {{ payment_form.payment_receiver_name }}
+                                    {% if payment_form.payment_receiver_name.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ payment_form.payment_receiver_name.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if payment_form.payment_receiver_name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ payment_form.payment_receiver_name.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="{{ payment_form.notes.id_for_label }}">
+                                        <i class="fas fa-sticky-note"></i>
+                                        {{ payment_form.notes.label }}
+                                    </label>
+                                    {{ payment_form.notes }}
+                                    {% if payment_form.notes.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ payment_form.notes.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if payment_form.notes.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ payment_form.notes.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" name="pay_debt" class="btn btn-success btn-lg">
+                                    <i class="fas fa-check"></i>
+                                    تسجيل الدفع
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom: none;
+}
+
+.form-control {
+    border-radius: 8px;
+    border: 2px solid #e3e6f0;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);
+    border: none;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    border: none;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.alert {
+    border-radius: 8px;
+    border: none;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.invalid-feedback {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.form-text {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.badge {
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
+}
+</style>
+{% endblock %} 

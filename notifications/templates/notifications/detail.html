@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ notification.title }} - تفاصيل الإشعار{% endblock %}
+
+{% block extra_head %}
+<style>
+.notification-detail-card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.notification-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px 10px 0 0;
+    padding: 30px;
+}
+
+.notification-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 20px;
+    font-size: 24px;
+}
+
+.priority-badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+
+.priority-urgent {
+    background-color: #dc3545;
+    color: white;
+}
+
+.priority-high {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.priority-normal {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.priority-low {
+    background-color: #6c757d;
+    color: white;
+}
+
+.related-object-card {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.meta-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.meta-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.meta-item:last-child {
+    border-bottom: none;
+}
+
+.action-buttons {
+    position: sticky;
+    top: 20px;
+    z-index: 100;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- أزرار العمل -->
+    <div class="action-buttons mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{% url 'notifications:list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right"></i>
+                العودة للإشعارات
+            </a>
+            
+            <div class="btn-group">
+                {% if notification.related_object %}
+                <a href="{{ notification.get_absolute_url }}" class="btn btn-primary">
+                    <i class="fas fa-external-link-alt"></i>
+                    عرض التفاصيل
+                </a>
+                {% endif %}
+                
+                <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+                    <i class="fas fa-print"></i>
+                    طباعة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقة الإشعار -->
+    <div class="card notification-detail-card">
+        <!-- رأس الإشعار -->
+        <div class="notification-header">
+            <div class="d-flex align-items-center">
+                <div class="notification-icon">
+                    <i class="{{ notification.get_icon_class }}"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h1 class="h3 mb-2">{{ notification.title }}</h1>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge bg-light text-dark">
+                            {{ notification.get_notification_type_display }}
+                        </span>
+                        <span class="priority-badge priority-{{ notification.priority }}">
+                            {{ notification.get_priority_display }}
+                        </span>
+                        <small class="opacity-75">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ notification.created_at|date:"Y-m-d H:i" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- محتوى الإشعار -->
+        <div class="card-body p-4">
+            <!-- الرسالة الرئيسية -->
+            <div class="mb-4">
+                <h5 class="mb-3">
+                    <i class="fas fa-comment-alt me-2 text-primary"></i>
+                    تفاصيل الإشعار
+                </h5>
+                <div class="alert alert-light border-start border-primary border-4 ps-4">
+                    {{ notification.message|linebreaks }}
+                </div>
+            </div>
+
+            <!-- معلومات إضافية -->
+            <div class="row">
+                <!-- المعلومات الأساسية -->
+                <div class="col-md-6">
+                    <div class="meta-info">
+                        <h6 class="mb-3">
+                            <i class="fas fa-info-circle me-2 text-info"></i>
+                            معلومات أساسية
+                        </h6>
+                        
+                        <div class="meta-item">
+                            <strong>نوع الإشعار:</strong>
+                            <span>{{ notification.get_notification_type_display }}</span>
+                        </div>
+                        
+                        <div class="meta-item">
+                            <strong>الأولوية:</strong>
+                            <span class="priority-badge priority-{{ notification.priority }}">
+                                {{ notification.get_priority_display }}
+                            </span>
+                        </div>
+                        
+                        <div class="meta-item">
+                            <strong>تاريخ الإنشاء:</strong>
+                            <span>{{ notification.created_at|date:"Y-m-d H:i:s" }}</span>
+                        </div>
+                        
+                        {% if notification.created_by %}
+                        <div class="meta-item">
+                            <strong>تم الإنشاء بواسطة:</strong>
+                            <span>{{ notification.created_by.get_full_name|default:notification.created_by.username }}</span>
+                        </div>
+                        {% elif notification.extra_data.changed_by %}
+                        <div class="meta-item">
+                            <strong>تم التغيير بواسطة:</strong>
+                            <span>{{ notification.extra_data.changed_by }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- حالة القراءة -->
+                <div class="col-md-6">
+                    <div class="meta-info">
+                        <h6 class="mb-3">
+                            <i class="fas fa-eye me-2 text-success"></i>
+                            حالة القراءة
+                        </h6>
+                        
+                        {% with visibility=notification.visibility_records.all|first %}
+                        <div class="meta-item">
+                            <strong>الحالة:</strong>
+                            {% if visibility.is_read %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check"></i> مقروء
+                            </span>
+                            {% else %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-eye-slash"></i> غير مقروء
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if visibility.read_at %}
+                        <div class="meta-item">
+                            <strong>تاريخ القراءة:</strong>
+                            <span>{{ visibility.read_at|date:"Y-m-d H:i:s" }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="meta-item">
+                            <strong>مدة الانتظار:</strong>
+                            <span>{{ notification.created_at|timesince }}</span>
+                        </div>
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- الكائن المرتبط -->
+            {% if notification.related_object %}
+            <div class="related-object-card">
+                <h6 class="mb-3">
+                    <i class="fas fa-link me-2 text-primary"></i>
+                    الكائن المرتبط
+                </h6>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>النوع:</strong> {{ notification.content_type.model|title }}
+                        <br>
+                        <strong>التفاصيل:</strong> {{ notification.related_object }}
+                    </div>
+                    
+                    <a href="{{ notification.get_absolute_url }}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-external-link-alt"></i>
+                        عرض التفاصيل
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- البيانات الإضافية -->
+            {% if notification.extra_data %}
+            <div class="mt-4">
+                <h6 class="mb-3">
+                    <i class="fas fa-database me-2 text-secondary"></i>
+                    بيانات إضافية
+                </h6>
+                
+                <div class="alert alert-secondary">
+                    <pre class="mb-0">{{ notification.extra_data|pprint }}</pre>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- إشعارات ذات صلة -->
+    {% if related_notifications %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0">
+                <i class="fas fa-bell me-2"></i>
+                إشعارات ذات صلة
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="list-group list-group-flush">
+                {% for related in related_notifications %}
+                <a href="{% url 'notifications:detail' related.pk %}" 
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="{{ related.get_icon_class }} me-2"></i>
+                        {{ related.title }}
+                        <small class="text-muted d-block">{{ related.created_at|timesince }}</small>
+                    </div>
+                    <span class="badge bg-secondary">{{ related.get_notification_type_display }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تحديث عداد الإشعارات في الـ navbar
+    updateNotificationCount();
+});
+
+function updateNotificationCount() {
+    fetch('{% url "notifications:ajax_count" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const badge = document.querySelector('#notification-count-badge');
+                if (badge) {
+                    if (data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'inline';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            }
+        })
+        .catch(error => console.error('Error updating notification count:', error));
+}
+</script>
+{% endblock %}

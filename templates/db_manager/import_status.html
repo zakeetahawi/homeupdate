@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "حالة الاستيراد" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+    .status-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+    }
+    .status-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+    .status-footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        text-align: center;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    .status-badge.pending {
+        background-color: #ffeeba;
+        color: #856404;
+    }
+    .status-badge.in-progress {
+        background-color: #b8daff;
+        color: #004085;
+    }
+    .status-badge.completed {
+        background-color: #c3e6cb;
+        color: #155724;
+    }
+    .status-badge.failed {
+        background-color: #f5c6cb;
+        color: #721c24;
+    }
+    .progress {
+        height: 20px;
+        margin-bottom: 20px;
+    }
+    .log-container {
+        background-color: #212529;
+        color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: monospace;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .log-container pre {
+        color: #f8f9fa;
+        margin: 0;
+    }
+    .spinner-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    .spinner-container .spinner-border {
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="status-container">
+        <div class="status-header">
+            <h1>{% trans "حالة الاستيراد" %}</h1>
+            <p class="lead">{% trans "متابعة حالة عملية استيراد البيانات" %}</p>
+        </div>
+
+        <div class="status-section">
+            <h4>{% trans "معلومات الاستيراد" %}</h4>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>{% trans "قاعدة البيانات:" %}</strong> {{ db_import.database_config.name }}</p>
+                    <p><strong>{% trans "تاريخ البدء:" %}</strong> {{ db_import.created_at|date:"Y-m-d H:i" }}</p>
+                    {% if db_import.completed_at %}
+                        <p><strong>{% trans "تاريخ الانتهاء:" %}</strong> {{ db_import.completed_at|date:"Y-m-d H:i" }}</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <p><strong>{% trans "الحالة:" %}</strong>
+                        <span class="status-badge {{ db_import.status }}">
+                            {% if db_import.status == 'pending' %}
+                                {% trans "قيد الانتظار" %}
+                            {% elif db_import.status == 'in_progress' %}
+                                {% trans "قيد التنفيذ" %}
+                            {% elif db_import.status == 'completed' %}
+                                {% trans "مكتمل" %}
+                            {% elif db_import.status == 'failed' %}
+                                {% trans "فشل" %}
+                            {% endif %}
+                        </span>
+                    </p>
+                    <p><strong>{% trans "الملف:" %}</strong> {{ db_import.file.name|default:"-" }}</p>
+                    <p><strong>{% trans "المستخدم:" %}</strong> {{ db_import.created_by.username|default:"-" }}</p>
+                </div>
+            </div>
+
+            {% if db_import.status == 'in_progress' %}
+                <div class="spinner-container">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">{% trans "جاري التنفيذ..." %}</span>
+                    </div>
+                    <span id="status-message">{% trans "جاري استيراد البيانات، يرجى الانتظار..." %}</span>
+                </div>
+
+                <div class="progress">
+                    <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <span>{% trans "قد تستغرق عملية الاستيراد وقتًا طويلاً اعتمادًا على حجم البيانات. يرجى عدم إغلاق هذه الصفحة." %}</span>
+                    <div class="mt-2">
+                        <small id="time-elapsed">{% trans "الوقت المنقضي:" %} 0 ثانية</small>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="status-section">
+            <h4>{% trans "سجل العملية" %}</h4>
+
+            <div class="log-container">
+                <pre id="log-content">{{ db_import.log|default:"لا توجد سجلات حتى الآن..." }}</pre>
+            </div>
+        </div>
+
+        <div class="status-footer">
+            {% if db_import.status == 'completed' %}
+                <div class="alert alert-success">
+                    <h4 class="alert-heading"><i class="fas fa-check-circle"></i> {% trans "تم استيراد البيانات بنجاح!" %}</h4>
+                    <p>{% trans "تم استيراد البيانات إلى قاعدة البيانات بنجاح. يمكنك الآن استخدام النظام بالبيانات الجديدة." %}</p>
+                    <hr>
+                    <p class="mb-0">{% trans "قاعدة البيانات:" %} <strong>{{ db_import.database_config.name }}</strong></p>
+                    <p class="mb-0">{% trans "تاريخ الاكتمال:" %} <strong>{{ db_import.completed_at|date:"Y-m-d H:i" }}</strong></p>
+                </div>
+
+                <div class="btn-group mt-3">
+                    <a href="{% url 'db_manager:database_list' %}" class="btn btn-primary btn-lg">{% trans "العودة إلى قائمة قواعد البيانات" %}</a>
+                    <a href="/" class="btn btn-success btn-lg">{% trans "الذهاب إلى الصفحة الرئيسية" %}</a>
+                </div>
+            {% elif db_import.status == 'failed' %}
+                <div class="alert alert-danger">
+                    <h4 class="alert-heading"><i class="fas fa-times-circle"></i> {% trans "فشل استيراد البيانات" %}</h4>
+                    <p>{% trans "حدث خطأ أثناء استيراد البيانات. يرجى التحقق من سجل العملية للحصول على مزيد من المعلومات." %}</p>
+                    <hr>
+                    <p class="mb-0">{% trans "يمكنك محاولة استيراد البيانات مرة أخرى أو الاتصال بمسؤول النظام للحصول على المساعدة." %}</p>
+                </div>
+
+                <div class="btn-group mt-3">
+                    <a href="{% url 'db_manager:database_list' %}" class="btn btn-primary btn-lg">{% trans "العودة إلى قائمة قواعد البيانات" %}</a>
+                    <a href="{% url 'db_manager:database_import' %}" class="btn btn-warning btn-lg">{% trans "محاولة مرة أخرى" %}</a>
+                </div>
+            {% else %}
+                <a href="{% url 'db_manager:database_list' %}" class="btn btn-primary btn-lg">{% trans "العودة إلى قائمة قواعد البيانات" %}</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        {% if db_import.status == 'in_progress' %}
+            // تحديث حالة الاستيراد كل 2 ثوانٍ
+            var statusInterval = setInterval(updateStatus, 2000);
+            var progressValue = 0;
+            var startTime = new Date();
+            var lastLogLength = 0;
+            var stagnantCount = 0;
+
+            // تحديث الوقت المنقضي كل ثانية
+            var timerInterval = setInterval(updateTimer, 1000);
+
+            function updateTimer() {
+                var now = new Date();
+                var elapsed = Math.floor((now - startTime) / 1000);
+                var hours = Math.floor(elapsed / 3600);
+                var minutes = Math.floor((elapsed % 3600) / 60);
+                var seconds = elapsed % 60;
+
+                var timeString = '';
+                if (hours > 0) {
+                    timeString += hours + ' ساعة ';
+                }
+                if (minutes > 0 || hours > 0) {
+                    timeString += minutes + ' دقيقة ';
+                }
+                timeString += seconds + ' ثانية';
+
+                $('#time-elapsed').text('الوقت المنقضي: ' + timeString);
+            }
+
+            function updateStatus() {
+                $.ajax({
+                    url: '{% url "db_manager:import_status" db_import.id %}',
+                    type: 'GET',
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(data) {
+                        // تحديث سجل العملية
+                        if (data.log) {
+                            $('#log-content').text(data.log);
+
+                            // تحقق من تقدم العملية
+                            var currentLogLength = data.log.length;
+                            if (currentLogLength > lastLogLength) {
+                                // هناك تقدم في السجل
+                                lastLogLength = currentLogLength;
+                                stagnantCount = 0;
+
+                                // تحديث رسالة الحالة بناءً على محتوى السجل
+                                if (data.log.includes('بدء استيراد ملف')) {
+                                    $('#status-message').text('بدء عملية الاستيراد...');
+                                } else if (data.log.includes('جاري الاستيراد')) {
+                                    var match = data.log.match(/جاري الاستيراد... \((\d+) سطر\)/);
+                                    if (match && match[1]) {
+                                        $('#status-message').text('جاري استيراد البيانات... (' + match[1] + ' سطر)');
+                                    }
+                                }
+                            } else {
+                                // لا يوجد تقدم في السجل
+                                stagnantCount++;
+                                if (stagnantCount > 5) {
+                                    // إذا لم يكن هناك تقدم لمدة 10 ثوانٍ، قم بتحديث الرسالة
+                                    $('#status-message').text('جاري معالجة البيانات... (قد تستغرق هذه العملية وقتًا طويلاً)');
+                                }
+                            }
+
+                            // تمرير إلى أسفل سجل العملية
+                            var logContainer = $('.log-container');
+                            logContainer.scrollTop(logContainer[0].scrollHeight);
+                        }
+
+                        // تحديث شريط التقدم بناءً على محتوى السجل
+                        if (data.log) {
+                            if (data.log.includes('بدء عملية الاستيراد')) {
+                                progressValue = Math.max(progressValue, 10);
+                            }
+                            if (data.log.includes('جاري التحضير لعملية الاستيراد')) {
+                                progressValue = Math.max(progressValue, 20);
+                            }
+                            if (data.log.includes('بدء استيراد ملف')) {
+                                progressValue = Math.max(progressValue, 30);
+                            }
+                            if (data.log.includes('الاتصال بقاعدة البيانات')) {
+                                progressValue = Math.max(progressValue, 40);
+                            }
+                            if (data.log.includes('تنفيذ الأمر')) {
+                                progressValue = Math.max(progressValue, 50);
+                            }
+                            if (data.log.includes('جاري الاستيراد')) {
+                                // زيادة التقدم تدريجيًا بناءً على عدد الأسطر
+                                var match = data.log.match(/جاري الاستيراد... \((\d+) سطر\)/);
+                                if (match && match[1]) {
+                                    var lines = parseInt(match[1]);
+                                    var lineProgress = Math.min(30, lines / 100); // الحد الأقصى 30%
+                                    progressValue = Math.max(progressValue, 50 + lineProgress);
+                                } else {
+                                    progressValue = Math.max(progressValue, 60);
+                                }
+                            }
+                            if (data.log.includes('تم استيراد ملف')) {
+                                progressValue = Math.max(progressValue, 90);
+                            }
+                            if (data.log.includes('اكتملت العملية بنجاح')) {
+                                progressValue = 100;
+                            }
+                        } else {
+                            // إذا لم يكن هناك سجل، زيادة التقدم ببطء
+                            if (progressValue < 80) {
+                                progressValue += 1;
+                            }
+                        }
+
+                        // تحديث شريط التقدم
+                        $('#progress-bar').css('width', progressValue + '%');
+                        $('#progress-bar').attr('aria-valuenow', progressValue);
+
+                        // التحقق من اكتمال العملية
+                        if (data.status === 'completed' || data.status === 'failed') {
+                            clearInterval(statusInterval);
+                            clearInterval(timerInterval);
+
+                            // تحديث شريط التقدم
+                            if (data.status === 'completed') {
+                                $('#progress-bar').css('width', '100%');
+                                $('#progress-bar').removeClass('progress-bar-animated').addClass('bg-success');
+
+                                // إضافة إشعار نجاح واضح
+                                $('.spinner-container').html('<div class="alert alert-success w-100 text-center py-3"><h4><i class="fas fa-check-circle fa-lg me-2"></i> تم استيراد البيانات بنجاح!</h4><p class="mb-0">سيتم تحديث الصفحة تلقائيًا خلال 3 ثوانٍ...</p></div>');
+
+                                // إضافة صوت تنبيه (اختياري)
+                                try {
+                                    var audio = new Audio('/static/sounds/success.mp3');
+                                    audio.play().catch(function(error) {
+                                        // تجاهل أخطاء تشغيل الصوت (قد لا يكون الملف موجودًا)
+                                        console.log('Could not play notification sound');
+                                    });
+                                } catch (e) {
+                                    console.log('Audio not supported');
+                                }
+                            } else {
+                                $('#progress-bar').removeClass('progress-bar-animated').addClass('bg-danger');
+
+                                // إضافة إشعار فشل واضح
+                                $('.spinner-container').html('<div class="alert alert-danger w-100 text-center py-3"><h4><i class="fas fa-times-circle fa-lg me-2"></i> فشل استيراد البيانات!</h4><p class="mb-0">سيتم تحديث الصفحة تلقائيًا خلال 3 ثوانٍ...</p></div>');
+                            }
+
+                            // إعادة تحميل الصفحة بعد 3 ثوانٍ
+                            setTimeout(function() {
+                                location.reload();
+                            }, 3000);
+                        }
+                    },
+                    error: function() {
+                        // في حالة حدوث خطأ، توقف التحديث التلقائي
+                        clearInterval(statusInterval);
+                        clearInterval(timerInterval);
+                    }
+                });
+            }
+
+            // تمرير إلى أسفل سجل العملية عند التحميل
+            var logContainer = $('.log-container');
+            logContainer.scrollTop(logContainer[0].scrollHeight);
+
+            // تنفيذ التحديث الأول فورًا
+            updateStatus();
+        {% endif %}
+    });
+</script>
+{% endblock %}

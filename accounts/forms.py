@@ -1,7 +1,16 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
-from .models import User, Branch, Department, CompanyInfo, FormField
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from .models import User, Branch, Department, CompanyInfo, FormField, Salesperson, Role, UserRole
+
+# Theme choices constant
+THEME_CHOICES = [
+    ('default', _('الثيم الإفتراضي')),
+    ('custom-theme', _('نسخة الثيم الإفتراضي القابلة للتعديل')),
+    ('modern-black', _('الثيم الأسود العصري'))
+]
 
 class CustomAuthenticationForm(AuthenticationForm):
     """
@@ -41,9 +50,16 @@ class UserUpdateForm(forms.ModelForm):
     """
     Form for updating user information
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['default_theme'].widget = forms.Select(
+            choices=THEME_CHOICES,
+            attrs={'class': 'form-select'}
+        )
+
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'phone', 'branch')
+        fields = ('username', 'first_name', 'last_name', 'email', 'phone', 'branch', 'default_theme')
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('اسم المستخدم')}),
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('الاسم الأول')}),
@@ -157,3 +173,94 @@ class FormFieldForm(forms.ModelForm):
             'help_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('نص المساعدة')}),
             'default_value': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('القيمة الافتراضية')}),
         }
+
+class SalespersonForm(forms.ModelForm):
+    """
+    نموذج لإنشاء وتحديث البائعين
+    """
+    class Meta:
+        model = Salesperson
+        fields = ('name', 'employee_number', 'branch', 'phone', 'email', 'address', 'is_active', 'notes')
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('اسم البائع')}),
+            'employee_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('الرقم الوظيفي')}),
+            'branch': forms.Select(attrs={'class': 'form-select'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('رقم الهاتف')}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('البريد الإلكتروني')}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'placeholder': _('العنوان'), 'rows': 3}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'placeholder': _('ملاحظات'), 'rows': 3}),
+        }
+
+class RoleForm(forms.ModelForm):
+    """نموذج إنشاء وتعديل الأدوار"""
+    
+    class Meta:
+        model = Role
+        fields = ['name', 'description', 'permissions']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'permissions': forms.SelectMultiple(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        # تغيير ترتيب الصلاحيات لتكون مجمعة حسب نوع المحتوى
+        super(RoleForm, self).__init__(*args, **kwargs)
+        
+        # تجميع الصلاحيات حسب نوع المحتوى
+        content_types = ContentType.objects.all().order_by('app_label', 'model')
+        
+        # قائمة الاختيارات المجمعة
+        grouped_permissions = []
+        
+        for ct in content_types:
+            # الحصول على الصلاحيات لنوع المحتوى الحالي
+            permissions = Permission.objects.filter(content_type=ct).order_by('codename')
+            
+            if permissions.exists():
+                # إضافة مجموعة الصلاحيات إلى القائمة
+                group_name = f"{ct.app_label} | {ct.model}"
+                group_permissions = [(p.id, p.name) for p in permissions]
+                grouped_permissions.append((group_name, group_permissions))
+        
+        # تعيين الاختيارات المجمعة كخيارات للحقل
+        self.fields['permissions'].choices = grouped_permissions
+
+
+class UserRoleForm(forms.ModelForm):
+    """نموذج إضافة دور للمستخدم"""
+    
+    class Meta:
+        model = UserRole
+        fields = ['role']
+        widgets = {
+            'role': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(UserRoleForm, self).__init__(*args, **kwargs)
+        
+        if user:
+            # استبعاد الأدوار التي يمتلكها المستخدم بالفعل
+            assigned_roles = UserRole.objects.filter(user=user).values_list('role', flat=True)
+            self.fields['role'].queryset = Role.objects.exclude(id__in=assigned_roles)
+
+
+class RoleAssignForm(forms.Form):
+    """نموذج لإسناد دور للمستخدمين"""
+    users = forms.ModelMultipleChoiceField(
+        queryset=User.objects.all(),
+        widget=forms.SelectMultiple(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+        label='المستخدمون'
+    )
+    
+    def __init__(self, *args, **kwargs):
+        role = kwargs.pop('role', None)
+        super(RoleAssignForm, self).__init__(*args, **kwargs)
+        
+        if role:
+            # استبعاد المستخدمين الذين لديهم الدور بالفعل
+            assigned_users = UserRole.objects.filter(role=role).values_list('user', flat=True)
+            self.fields['users'].queryset = User.objects.exclude(id__in=assigned_users).filter(is_active=True)

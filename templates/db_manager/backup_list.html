@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "النسخ الاحتياطية" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .backup-card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s;
+    }
+    .backup-card:hover {
+        transform: translateY(-5px);
+    }
+    .backup-card-header {
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eee;
+    }
+    .backup-card-body {
+        padding: 20px;
+    }
+    .backup-card-footer {
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-top: 1px solid #eee;
+    }
+    .backup-type {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+        margin-left: 10px;
+    }
+    .backup-type.full {
+        background-color: #c3e6cb;
+        color: #155724;
+    }
+    .backup-type.partial {
+        background-color: #ffeeba;
+        color: #856404;
+    }
+    .backup-actions {
+        display: flex;
+        gap: 10px;
+    }
+    .backup-empty {
+        text-align: center;
+        padding: 50px 20px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        margin-top: 30px;
+    }
+    .backup-empty i {
+        font-size: 48px;
+        color: #adb5bd;
+        margin-bottom: 20px;
+    }
+    .backup-filters {
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>{% trans "النسخ الاحتياطية" %}</h1>
+            {% if default_db %}
+                <p class="lead">
+                    <i class="fas fa-database text-primary"></i>
+                    {% trans "قاعدة البيانات الحالية:" %} <strong>{{ default_db.name }}</strong>
+                    <span class="badge badge-primary">PostgreSQL</span>
+                </p>
+            {% endif %}
+        </div>
+        <a href="{% url 'db_manager:backup_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> {% trans "إنشاء نسخة احتياطية جديدة" %}
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="backup-filters">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="filter-database">{% trans "قاعدة البيانات" %}</label>
+                            <select id="filter-database" class="form-control">
+                                <option value="">{% trans "الكل" %}</option>
+                                {% for db in databases %}
+                                    <option value="{{ db.id }}">{{ db.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="filter-type">{% trans "النوع" %}</label>
+                            <select id="filter-type" class="form-control">
+                                <option value="">{% trans "الكل" %}</option>
+                                <option value="full">{% trans "نسخة كاملة" %}</option>
+                                <option value="partial">{% trans "نسخة جزئية" %}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="filter-date">{% trans "التاريخ" %}</label>
+                            <select id="filter-date" class="form-control">
+                                <option value="">{% trans "الكل" %}</option>
+                                <option value="today">{% trans "اليوم" %}</option>
+                                <option value="week">{% trans "هذا الأسبوع" %}</option>
+                                <option value="month">{% trans "هذا الشهر" %}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if backups %}
+                <div class="row" id="backup-list">
+                    {% for backup in backups %}
+                        <div class="col-md-6 backup-item" data-database="{{ backup.database_config.id }}" data-type="{{ backup.backup_type }}">
+                            <div class="backup-card">
+                                <div class="backup-card-header d-flex justify-content-between align-items-center">
+                                    <h5>
+                                        {{ backup.name }}
+                                        <span class="backup-type {{ backup.backup_type }}">
+                                            {% if backup.backup_type == 'full' %}
+                                                {% trans "نسخة كاملة" %}
+                                            {% else %}
+                                                {% trans "نسخة جزئية" %}
+                                            {% endif %}
+                                        </span>
+                                    </h5>
+                                </div>
+                                <div class="backup-card-body">
+                                    <p><strong>{% trans "قاعدة البيانات:" %}</strong> {{ backup.database_config.name }}</p>
+                                    <p><strong>{% trans "الحجم:" %}</strong> {{ backup.size|filesizeformat }}</p>
+                                    <p><strong>{% trans "تاريخ الإنشاء:" %}</strong> {{ backup.created_at|date:"Y-m-d H:i" }}</p>
+                                    {% if backup.description %}
+                                        <p><strong>{% trans "الوصف:" %}</strong> {{ backup.description }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="backup-card-footer">
+                                    <div class="d-flex justify-content-center">
+                                        <a href="{% url 'db_manager:backup_download' backup.id %}" class="btn btn-link text-primary mx-1" title="{% trans 'تنزيل' %}">
+                                            <i class="fas fa-download fa-lg"></i>
+                                        </a>
+                                        <a href="{% url 'db_manager:backup_restore' backup.id %}" class="btn btn-link text-success mx-1" title="{% trans 'استعادة' %}">
+                                            <i class="fas fa-undo fa-lg"></i>
+                                        </a>
+                                        <a href="{% url 'db_manager:backup_delete' backup.id %}" class="btn btn-link text-danger mx-1" title="{% trans 'حذف' %}">
+                                            <i class="fas fa-trash fa-lg"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="backup-empty">
+                    <i class="fas fa-save"></i>
+                    <h3>{% trans "لا توجد نسخ احتياطية" %}</h3>
+                    <p>{% trans "لم يتم إنشاء أي نسخ احتياطية بعد. انقر على زر 'إنشاء نسخة احتياطية جديدة' لإنشاء واحدة." %}</p>
+                    <a href="{% url 'db_manager:backup_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> {% trans "إنشاء نسخة احتياطية جديدة" %}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>{% trans "معلومات" %}</h5>
+                </div>
+                <div class="card-body">
+                    <p>{% trans "النسخ الاحتياطية تساعدك على حماية بياناتك من الفقدان أو التلف. يمكنك إنشاء نسخ احتياطية يدويًا أو جدولتها لتتم تلقائيًا." %}</p>
+
+                    <h6 class="mt-4">{% trans "إحصائيات" %}</h6>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {% trans "إجمالي النسخ الاحتياطية" %}
+                            <span class="badge badge-primary badge-pill">{{ backups|length }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {% trans "النسخ الكاملة" %}
+                            <span class="badge badge-success badge-pill" id="full-backups-count">0</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {% trans "النسخ الجزئية" %}
+                            <span class="badge badge-warning badge-pill" id="partial-backups-count">0</span>
+                        </li>
+                    </ul>
+
+                    <div class="mt-4">
+                        <a href="{% url 'db_manager:database_list' %}" class="btn btn-outline-secondary btn-block">
+                            <i class="fas fa-database"></i> {% trans "إدارة قواعد البيانات" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // حساب عدد النسخ الاحتياطية حسب النوع
+        function countBackupsByType() {
+            var fullCount = 0;
+            var partialCount = 0;
+
+            $('.backup-item').each(function() {
+                var type = $(this).data('type');
+                if (type === 'full') {
+                    fullCount++;
+                } else if (type === 'partial') {
+                    partialCount++;
+                }
+            });
+
+            $('#full-backups-count').text(fullCount);
+            $('#partial-backups-count').text(partialCount);
+        }
+
+        // تصفية النسخ الاحتياطية
+        function filterBackups() {
+            var databaseFilter = $('#filter-database').val();
+            var typeFilter = $('#filter-type').val();
+            var dateFilter = $('#filter-date').val();
+
+            $('.backup-item').each(function() {
+                var show = true;
+
+                // تصفية حسب قاعدة البيانات
+                if (databaseFilter && $(this).data('database') != databaseFilter) {
+                    show = false;
+                }
+
+                // تصفية حسب النوع
+                if (typeFilter && $(this).data('type') != typeFilter) {
+                    show = false;
+                }
+
+                // تصفية حسب التاريخ (هذا يتطلب معالجة إضافية في الخلفية)
+
+                if (show) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+
+            // عرض رسالة إذا لم يتم العثور على نتائج
+            if ($('.backup-item:visible').length === 0) {
+                if ($('#no-results-message').length === 0) {
+                    $('#backup-list').after('<div id="no-results-message" class="alert alert-info">{% trans "لا توجد نتائج تطابق معايير التصفية." %}</div>');
+                }
+            } else {
+                $('#no-results-message').remove();
+            }
+        }
+
+        // تطبيق التصفية عند تغيير أي من عناصر التصفية
+        $('#filter-database, #filter-type, #filter-date').change(filterBackups);
+
+        // حساب عدد النسخ الاحتياطية عند تحميل الصفحة
+        countBackupsByType();
+    });
+</script>
+{% endblock %}

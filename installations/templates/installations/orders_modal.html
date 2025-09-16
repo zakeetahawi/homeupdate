@@ -1,0 +1,323 @@
+{% load custom_filters %}
+<!-- معلومات التصحيح -->
+{% if debug_info %}
+<div class="alert alert-info">
+    <strong>معلومات التصحيح:</strong><br>
+    نوع الطلب: {{ debug_info.order_type }}<br>
+    عدد الطلبات: {{ debug_info.orders_count }}<br>
+    عدد أوامر التصنيع: {{ debug_info.manufacturing_orders_count }}
+</div>
+{% endif %}
+
+{% if orders or manufacturing_orders %}
+    <!-- أزرار الفلترة -->
+    <div class="mb-3">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary btn-sm filter-btn" data-filter="all">
+                <i class="fas fa-list"></i> جميع الطلبات
+            </button>
+            <button type="button" class="btn btn-outline-success btn-sm filter-btn" data-filter="completed">
+                <i class="fas fa-check-circle"></i> مكتمل
+            </button>
+            <button type="button" class="btn btn-outline-warning btn-sm filter-btn" data-filter="in_progress">
+                <i class="fas fa-cogs"></i> قيد التصنيع
+            </button>
+            <button type="button" class="btn btn-outline-info btn-sm filter-btn" data-filter="pending">
+                <i class="fas fa-clock"></i> في الانتظار
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="cancelled">
+                <i class="fas fa-times-circle"></i> ملغي
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover modal-table" width="100%" cellspacing="0">
+            <thead style="background-color: #6c757d !important;">
+                <tr>
+                    <th style="color: white !important;">رقم الطلب</th>
+                    <th style="color: white !important;">رقم العقد</th>
+                    <th style="color: white !important;">العميل</th>
+                    <th style="color: white !important;">البائع</th>
+                    <th style="color: white !important;">الفرع</th>
+                    <th style="color: white !important;">تاريخ الطلب</th>
+                    <th style="color: white !important;">تاريخ التركيب المتوقع</th>
+                    <th style="color: white !important;">المبلغ الإجمالي</th>
+                    <th style="color: white !important;">المبلغ المدفوع</th>
+                    <th style="color: white !important;">المتبقي</th>
+                    <th style="color: white !important;">حالة الطلب</th>
+                    <th style="color: white !important;">حالة التركيب</th>
+                    {% if order_type == 'delivered_manufacturing' %}
+                        <th style="color: white !important;">المستلم</th>
+                        <th style="color: white !important;">رقم الإذن</th>
+                    {% endif %}
+                    <th style="color: white !important;">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white">
+                {% for order in orders %}
+                <tr class="border-bottom order-row" data-status="{{ order.order_status }}">
+                    <td class="text-dark">
+                        {% if order.installationschedule_set.exists %}
+                            <a href="{% url 'installations:installation_detail' order.installationschedule_set.first.id %}" class="text-primary font-weight-bold">
+                                {{ order.order_number }}
+                            </a>
+                        {% elif 'installation' in order.selected_types %}
+                            <span class="text-muted">لا يوجد تفاصيل تركيب بعد</span>
+                        {% else %}
+                            <a href="{% url 'orders:order_detail' order.id %}" class="text-primary font-weight-bold">
+                                {{ order.order_number }}
+                            </a>
+                        {% endif %}
+                    </td>
+                    <td class="text-dark">
+                        {% if order.contract_number %}
+                            <span class="badge badge-info">{{ order.contract_number }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                        {% if order.contract_number_2 %}
+                            <br><span class="badge badge-secondary">{{ order.contract_number_2 }}</span>
+                        {% endif %}
+                        {% if order.contract_number_3 %}
+                            <br><span class="badge badge-secondary">{{ order.contract_number_3 }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-dark font-weight-bold">{{ order.customer.name }}</td>
+                    <td class="text-dark">
+                        {% if order.salesperson %}
+                            {{ order.salesperson.name }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-dark">
+                        {% if order.branch %}
+                            <span class="badge badge-secondary">{{ order.branch.name }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-dark">{{ order.created_at|date:"Y-m-d" }}</td>
+                    <td class="text-dark">
+                        {% if order.expected_delivery_date %}
+                            <span class="badge badge-info">{{ order.expected_delivery_date|date:"Y-m-d" }}</span>
+                        {% else %}
+                            <span class="text-muted">غير محدد</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-dark font-weight-bold">{{ order.total_amount|currency_format }}</td>
+                    <td class="text-dark">{{ order.paid_amount|currency_format }}</td>
+                    <td>
+                        {% if order.remaining_amount > 0 %}
+                            <span class="badge badge-danger font-weight-bold">{{ order.remaining_amount|currency_format }}</span>
+                        {% else %}
+                            <span class="badge badge-success">{{ 0|currency_format }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if order.manufacturing_order %}
+                            {% if order.manufacturing_order.status == 'pending' %}
+                                <span class="badge badge-info font-weight-bold">
+                                    <i class="fas fa-clock"></i> قيد الانتظار (أمر تصنيع)
+                                </span>
+                            {% elif order.manufacturing_order.status == 'in_progress' %}
+                                <span class="badge badge-warning font-weight-bold">
+                                    <i class="fas fa-cogs"></i> قيد التصنيع (أمر تصنيع)
+                                </span>
+                            {% elif order.manufacturing_order.status == 'ready_install' %}
+                                <span class="badge badge-success font-weight-bold">
+                                    <i class="fas fa-check-circle"></i> جاهز للتركيب (أمر تصنيع)
+                                </span>
+                            {% elif order.manufacturing_order.status == 'delivered' %}
+                                <span class="badge badge-info font-weight-bold">
+                                    <i class="fas fa-truck"></i> تم التسليم (أمر تصنيع)
+                                </span>
+                            {% elif order.manufacturing_order.status == 'completed' %}
+                                <span class="badge badge-success font-weight-bold">
+                                    <i class="fas fa-check-circle"></i> مكتمل (أمر تصنيع)
+                                </span>
+                            {% else %}
+                                <span class="badge badge-secondary font-weight-bold">
+                                    {{ order.manufacturing_order.get_status_display }}
+                                </span>
+                            {% endif %}
+                        {% else %}
+                            {% if order.order_status == 'completed' %}
+                                <span class="badge badge-success font-weight-bold">
+                                    <i class="fas fa-check-circle"></i> مكتمل
+                                </span>
+                            {% elif order.order_status == 'in_progress' %}
+                                <span class="badge badge-warning font-weight-bold">
+                                    <i class="fas fa-cogs"></i> قيد التصنيع
+                                </span>
+                            {% elif order.order_status == 'pending' %}
+                                <span class="badge badge-info font-weight-bold">
+                                    <i class="fas fa-clock"></i> في الانتظار
+                                </span>
+                            {% elif order.order_status == 'cancelled' %}
+                                <span class="badge badge-secondary font-weight-bold">
+                                    <i class="fas fa-times-circle"></i> ملغي
+                                </span>
+                            {% elif order.order_status == 'ready_install' %}
+                                <span class="badge badge-success font-weight-bold">
+                                    <i class="fas fa-check-circle"></i> جاهز للتركيب
+                                </span>
+                            {% else %}
+                                <span class="badge badge-secondary font-weight-bold">
+                                    {{ order.get_order_status_display }}
+                                </span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if order.installationschedule_set.exists %}
+                            {% with installation=order.installationschedule_set.first %}
+                                {% if installation.status == 'needs_scheduling' %}
+                                    <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff; font-family: 'Cairo', sans-serif;">بحاجة جدولة</span>
+                                {% elif installation.status == 'pending' %}
+                                    <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-family: 'Cairo', sans-serif;">في الانتظار</span>
+                                {% elif installation.status == 'scheduled' %}
+                                    <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-family: 'Cairo', sans-serif;">مجدول</span>
+                                {% elif installation.status == 'in_installation' %}
+                                    <span class="badge badge-primary" style="background-color: #007bff; color: #fff; font-family: 'Cairo', sans-serif;">قيد التركيب</span>
+                                {% elif installation.status == 'completed' %}
+                                    <span class="badge badge-success" style="background-color: #28a745; color: #fff; font-family: 'Cairo', sans-serif;">مكتمل</span>
+                                {% elif installation.status == 'cancelled' %}
+                                    <span class="badge badge-danger" style="background-color: #dc3545; color: #fff; font-family: 'Cairo', sans-serif;">ملغي</span>
+                                {% elif installation.status == 'modification_required' %}
+                                    <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff; font-family: 'Cairo', sans-serif;">يحتاج تعديل</span>
+                                {% elif installation.status == 'modification_in_progress' %}
+                                    <span class="badge badge-info" style="background-color: #6f42c1; color: #fff; font-family: 'Cairo', sans-serif;">التعديل قيد التنفيذ</span>
+                                {% elif installation.status == 'modification_completed' %}
+                                    <span class="badge badge-success" style="background-color: #20c997; color: #fff; font-family: 'Cairo', sans-serif;">التعديل مكتمل</span>
+                                {% else %}
+                                    <span class="badge badge-secondary" style="background-color: #6c757d; color: #fff; font-family: 'Cairo', sans-serif;">{{ installation.get_status_display }}</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="badge badge-light" style="background-color: #f8f9fa; color: #6c757d; font-family: 'Cairo', sans-serif;">غير مجدول</span>
+                        {% endif %}
+                    </td>
+                    {% if order_type == 'delivered_manufacturing' %}
+                        <td class="text-dark">
+                            {% if order.is_manufacturing_order and order.manufacturing_order.delivery_recipient_name %}
+                                <span class="badge badge-success">
+                                    <i class="fas fa-user"></i> {{ order.manufacturing_order.delivery_recipient_name }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">غير محدد</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-dark">
+                            {% if order.is_manufacturing_order and order.manufacturing_order.delivery_permit_number %}
+                                <span class="badge badge-info">
+                                    <i class="fas fa-file-alt"></i> {{ order.manufacturing_order.delivery_permit_number }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">غير محدد</span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                    <td>
+                        <div class="btn-group" role="group">
+                            {% if order.installationschedule_set.exists %}
+                                <a href="{% url 'installations:installation_detail' order.installationschedule_set.first.id %}"
+                                   class="btn btn-sm btn-info">
+                                    <i class="fas fa-tools"></i> تفاصيل التركيب
+                                </a>
+                            {% else %}
+                                <a href="{% url 'orders:order_detail' order.id %}"
+                                   class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i> عرض الطلب
+                                </a>
+                            {% endif %}
+                            
+                            {% if not order.installationschedule_set.exists %}
+                                {% if order.is_manufacturing_order and order.manufacturing_order.status == 'delivered' %}
+                                    <a href="{% url 'installations:quick_schedule_installation' order.id %}"
+                                       class="btn btn-sm btn-success">
+                                        <i class="fas fa-calendar-plus"></i> جدولة يدوي
+                                    </a>
+                                {% elif order.is_manufacturing_order and order.manufacturing_order.status == 'ready_install' %}
+                                    <a href="{% url 'installations:quick_schedule_installation' order.id %}"
+                                       class="btn btn-sm btn-success">
+                                        <i class="fas fa-calendar-plus"></i> جدولة يدوي
+                                    </a>
+                                {% elif order.is_manufacturing_order and order.manufacturing_order.status == 'completed' %}
+                                    <a href="{% url 'installations:quick_schedule_installation' order.id %}"
+                                       class="btn btn-sm btn-success">
+                                        <i class="fas fa-calendar-plus"></i> جدولة يدوي
+                                    </a>
+                                {% elif 'installation' in order.selected_types and order.order_status == 'ready_install' %}
+                                    <a href="{% url 'installations:quick_schedule_installation' order.id %}"
+                                       class="btn btn-sm btn-success">
+                                        <i class="fas fa-calendar-plus"></i> جدولة يدوي
+                                    </a>
+                                {% elif 'installation' in order.selected_types and order.order_status == 'completed' %}
+                                    <a href="{% url 'installations:quick_schedule_installation' order.id %}"
+                                       class="btn btn-sm btn-success">
+                                        <i class="fas fa-calendar-plus"></i> جدولة يدوي
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                            
+                            {% if order_type == 'debt' %}
+                                <a href="{% url 'installations:manage_customer_debt' order.id %}"
+                                   class="btn btn-sm btn-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> إدارة المديونية
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- JavaScript للفلترة -->
+    <script>
+        $(document).ready(function() {
+            $('.filter-btn').click(function() {
+                var filter = $(this).data('filter');
+
+                // إزالة الفئة النشطة من جميع الأزرار
+                $('.filter-btn').removeClass('btn-primary').addClass('btn-outline-primary');
+                $('.filter-btn').removeClass('btn-success').addClass('btn-outline-success');
+                $('.filter-btn').removeClass('btn-warning').addClass('btn-outline-warning');
+                $('.filter-btn').removeClass('btn-info').addClass('btn-outline-info');
+                $('.filter-btn').removeClass('btn-secondary').addClass('btn-outline-secondary');
+
+                // إضافة الفئة النشطة للزر المحدد
+                if (filter === 'all') {
+                    $(this).removeClass('btn-outline-primary').addClass('btn-primary');
+                    $('.order-row').show();
+                } else if (filter === 'completed') {
+                    $(this).removeClass('btn-outline-success').addClass('btn-success');
+                    $('.order-row').hide();
+                    $('.order-row[data-status="completed"]').show();
+                } else if (filter === 'in_progress') {
+                    $(this).removeClass('btn-outline-warning').addClass('btn-warning');
+                    $('.order-row').hide();
+                    $('.order-row[data-status="in_progress"]').show();
+                } else if (filter === 'pending') {
+                    $(this).removeClass('btn-outline-info').addClass('btn-info');
+                    $('.order-row').hide();
+                    $('.order-row[data-status="pending"]').show();
+                } else if (filter === 'cancelled') {
+                    $(this).removeClass('btn-outline-secondary').addClass('btn-secondary');
+                    $('.order-row').hide();
+                    $('.order-row[data-status="cancelled"]').show();
+                }
+            });
+            
+            // لا نحتاج لنظام التحقق من المديونية هنا - مخصص فقط لقسم التركيبات
+        });
+    </script>
+{% else %}
+    <div class="text-center py-4">
+        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+        <p class="text-muted font-weight-bold">لا توجد طلبات في هذه الفئة</p>
+    </div>
+{% endif %}

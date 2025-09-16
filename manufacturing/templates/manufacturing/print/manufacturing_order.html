@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>أمر تصنيع - {{ manufacturing_order.order.order_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            direction: rtl;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .company-info {
+            margin-bottom: 30px;
+        }
+        .order-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .order-details {
+            width: 60%;
+        }
+        .customer-info {
+            width: 35%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: right;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .signature {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .signature div {
+            width: 45%;
+            text-align: center;
+            border-top: 1px solid #333;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>أمر تصنيع</h1>
+        <p>رقم: {{ manufacturing_order.order.order_number }}</p>
+        <p>التاريخ: {{ manufacturing_order.order_date|date:"Y/m/d" }}</p>
+    </div>
+
+    <div class="order-info">
+        <div class="order-details">
+            <h3>تفاصيل الطلب:</h3>
+            <p><strong>نوع الطلب:</strong> {{ manufacturing_order.get_order_type_display }}</p>
+            <p><strong>رقم العقد:</strong> {{ manufacturing_order.contract_number|default:"-" }}</p>
+            {% if manufacturing_order.order.contract_number_2 %}
+            <p><strong>رقم العقد الإضافي 2:</strong> {{ manufacturing_order.order.contract_number_2 }}</p>
+            {% endif %}
+            {% if manufacturing_order.order.contract_number_3 %}
+            <p><strong>رقم العقد الإضافي 3:</strong> {{ manufacturing_order.order.contract_number_3 }}</p>
+            {% endif %}
+            <p><strong>رقم الفاتورة:</strong> {{ manufacturing_order.invoice_number|default:"-" }}</p>
+            {% if manufacturing_order.order.invoice_number_2 %}
+            <p><strong>رقم الفاتورة الإضافي 2:</strong> {{ manufacturing_order.order.invoice_number_2 }}</p>
+            {% endif %}
+            {% if manufacturing_order.order.invoice_number_3 %}
+            <p><strong>رقم الفاتورة الإضافي 3:</strong> {{ manufacturing_order.order.invoice_number_3 }}</p>
+            {% endif %}
+            <p><strong>تاريخ التسليم المتوقع:</strong> {{ manufacturing_order.expected_delivery_date|date:"Y/m/d" }}</p>
+        </div>
+        <div class="customer-info">
+            <h3>بيانات العميل:</h3>
+            <p><strong>الاسم:</strong> {{ manufacturing_order.order.customer.name }}</p>
+            <p><strong>الهاتف:</strong> {{ manufacturing_order.order.customer.phone }}</p>
+            <p><strong>العنوان:</strong> {{ manufacturing_order.order.customer.address|default:"-" }}</p>
+        </div>
+    </div>
+
+    <h3>المنتجات:</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>المنتج</th>
+                <th>الكمية</th>
+                <th>الملاحظات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.notes|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if manufacturing_order.notes %}
+    <div class="notes">
+        <h3>ملاحظات:</h3>
+        <p>{{ manufacturing_order.notes }}</p>
+    </div>
+    {% endif %}
+
+    <div class="signature">
+        <div>
+            <p>توقيع المسؤول</p>
+        </div>
+        <div>
+            <p>توقيع العميل</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>تم الإنشاء في: {{ now|date:"Y/m/d H:i" }}</p>
+        <p>شركة {{ company_name }}</p>
+    </div>
+</body>
+</html>

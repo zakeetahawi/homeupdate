@@ -1,0 +1,6 @@
+starting optimized sync
+to_update_from_mfg: 0
+processed_mfg_total: 0
+orders_to_fix_without_mfg: 894
+processed_orders_without_mfg_total: 0
+sync finished

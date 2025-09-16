@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .complaint-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-right: 4px solid #667eea;
+        }
+        
+        .complaint-info h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .label {
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .value {
+            color: #333;
+        }
+        
+        .action-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-new { background: #007bff; color: white; }
+        .status-in_progress { background: #ffc107; color: #333; }
+        .status-resolved { background: #28a745; color: white; }
+        .status-overdue { background: #dc3545; color: white; }
+        .status-escalated { background: #6f42c1; color: white; }
+        .status-closed { background: #6c757d; color: white; }
+        
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-right: 10px;
+        }
+        
+        .priority-low { background: #17a2b8; color: white; }
+        .priority-medium { background: #ffc107; color: #333; }
+        .priority-high { background: #fd7e14; color: white; }
+        .priority-urgent { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ title }}</h1>
+        </div>
+        
+        <div class="content">
+            <p>مرحباً {{ recipient.get_full_name|default:recipient.username }}،</p>
+            
+            <p>{{ message }}</p>
+            
+            <div class="complaint-info">
+                <h3>تفاصيل الشكوى</h3>
+                
+                <div class="info-row">
+                    <span class="label">رقم الشكوى:</span>
+                    <span class="value">{{ complaint.complaint_number }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="label">العميل:</span>
+                    <span class="value">{{ complaint.customer.name }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="label">نوع الشكوى:</span>
+                    <span class="value">{{ complaint.complaint_type.name }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="label">الحالة:</span>
+                    <span class="value">
+                        <span class="status-badge status-{{ complaint.status }}">
+                            {{ complaint.get_status_display }}
+                        </span>
+                    </span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="label">الأولوية:</span>
+                    <span class="value">
+                        <span class="priority-badge priority-{{ complaint.priority }}">
+                            {{ complaint.get_priority_display }}
+                        </span>
+                    </span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="label">تاريخ الإنشاء:</span>
+                    <span class="value">{{ complaint.created_at|date:"d/m/Y H:i" }}</span>
+                </div>
+                
+                {% if complaint.deadline %}
+                <div class="info-row">
+                    <span class="label">الموعد النهائي:</span>
+                    <span class="value">{{ complaint.deadline|date:"d/m/Y H:i" }}</span>
+                </div>
+                {% endif %}
+                
+                {% if complaint.assigned_to %}
+                <div class="info-row">
+                    <span class="label">المسؤول:</span>
+                    <span class="value">{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{ complaint_url }}" class="action-button">
+                    عرض تفاصيل الشكوى
+                </a>
+            </div>
+            
+            <p style="margin-top: 30px; color: #666; font-size: 14px;">
+                يمكنك الوصول إلى النظام في أي وقت لمتابعة الشكاوى وإدارتها.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>هذا إشعار تلقائي من نظام إدارة الشكاوى</p>
+            <p>© {{ "now"|date:"Y" }} نظام الخواجه - جميع الحقوق محفوظة</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,366 @@
+{% extends 'inventory/inventory_base.html' %}
+{% load static %}
+
+{% block inventory_title %}المستودعات{% endblock %}
+
+{% block inventory_content %}
+<div class="warehouse-list-container">
+    <!-- بطاقة إضافة مستودع جديد -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">إضافة مستودع جديد</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'inventory:warehouse_create' %}">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">اسم المستودع</label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="code" class="form-label">رمز المستودع</label>
+                                    <input type="text" class="form-control" id="code" name="code" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="branch" class="form-label">الفرع</label>
+                                    <select class="form-select" id="branch" name="branch">
+                                        <option value="">اختر الفرع (اختياري)</option>
+                                        {% for branch in branches %}
+                                        <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="manager" class="form-label">المدير</label>
+                                    <select class="form-select" id="manager" name="manager">
+                                        <option value="">بدون مدير</option>
+                                        {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="address" class="form-label">العنوان</label>
+                                    <textarea class="form-control" id="address" name="address" rows="2"></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="notes" class="form-label">ملاحظات</label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
+                            <label class="form-check-label" for="is_active">نشط</label>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> إضافة مستودع
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قائمة المستودعات -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="data-table">
+                <div class="data-table-header">
+                    <h4 class="data-table-title">
+                        المستودعات
+                        {% if warehouses %}
+                        <span class="badge bg-primary">{{ warehouses|length }}</span>
+                        {% endif %}
+                    </h4>
+                    <div class="data-table-actions">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" data-filter="all">الكل</button>
+                            <button type="button" class="btn btn-outline-success" data-filter="active">نشط</button>
+                            <button type="button" class="btn btn-outline-danger" data-filter="inactive">غير نشط</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="data-table-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>اسم المستودع</th>
+                                    <th>الرمز</th>
+                                    <th>الفرع</th>
+                                    <th>المدير</th>
+                                    <th>العنوان</th>
+                                    <th>عدد المنتجات</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for warehouse in warehouses %}
+                                <tr class="warehouse-row {% if not warehouse.is_active %}inactive{% else %}active{% endif %}">
+                                    <td>
+                                        <strong>{{ warehouse.name }}</strong>
+                                    </td>
+                                    <td>{{ warehouse.code }}</td>
+                                    <td>{{ warehouse.branch.name|default:"-" }}</td>
+                                    <td>{{ warehouse.manager.get_full_name|default:"-" }}</td>
+                                    <td>{{ warehouse.address|default:"-" }}</td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ warehouse.product_count|default:0 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if warehouse.is_active %}
+                                        <span class="badge bg-success">نشط</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">غير نشط</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'inventory:warehouse_update' warehouse.id %}" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-danger btn-sm delete-warehouse-btn" 
+                                                    data-warehouse-id="{{ warehouse.id }}" 
+                                                    data-warehouse-name="{{ warehouse.name }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            <a href="{% url 'inventory:warehouse_detail' warehouse.id %}" class="btn btn-info btn-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">لا توجد مستودعات مضافة</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات المستودعات -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h4 class="chart-title">توزيع المنتجات حسب المستودعات</h4>
+                </div>
+                <div class="chart-body">
+                    <canvas id="warehouseProductsChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h4 class="chart-title">حالة المستودعات</h4>
+                </div>
+                <div class="chart-body">
+                    <canvas id="warehouseStatusChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            // معالجة أزرار حذف المستودع
+            const deleteButtons = document.querySelectorAll('.delete-warehouse-btn');
+            deleteButtons.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const warehouseId = this.getAttribute('data-warehouse-id');
+                    const warehouseName = this.getAttribute('data-warehouse-name');
+                    
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'تأكيد الحذف',
+                            html: `
+                                <p>هل أنت متأكد من حذف المستودع "<strong>${warehouseName}</strong>"؟</p>
+                                <div class="alert alert-warning mt-3" style="font-size: 14px;">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>تحذير:</strong> سيتم التحقق من وجود منتجات أو طلبات شراء مرتبطة بالمستودع قبل الحذف.
+                                </div>
+                            `,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#dc3545',
+                            cancelButtonColor: '#6c757d',
+                            confirmButtonText: 'نعم، احذف',
+                            cancelButtonText: 'إلغاء',
+                            reverseButtons: true,
+                            width: '500px'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // إرسال طلب الحذف
+                                const deleteUrl = `/inventory/warehouse/${warehouseId}/delete/`;
+                                
+                                const form = document.createElement('form');
+                                form.method = 'POST';
+                                form.action = deleteUrl;
+                                
+                                const csrfToken = document.createElement('input');
+                                csrfToken.type = 'hidden';
+                                csrfToken.name = 'csrfmiddlewaretoken';
+                                csrfToken.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                                form.appendChild(csrfToken);
+                                
+                                document.body.appendChild(form);
+                                form.submit();
+                            }
+                        });
+                    } else {
+                        // fallback للمتصفحات التي لا تدعم SweetAlert
+                        if (confirm(`هل أنت متأكد من حذف المستودع "${warehouseName}"؟\n\nتحذير: سيتم التحقق من وجود بيانات مرتبطة قبل الحذف.`)) {
+                            const deleteUrl = `/inventory/warehouse/${warehouseId}/delete/`;
+                            
+                            const form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = deleteUrl;
+                            
+                            const csrfToken = document.createElement('input');
+                            csrfToken.type = 'hidden';
+                            csrfToken.name = 'csrfmiddlewaretoken';
+                            csrfToken.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                            form.appendChild(csrfToken);
+                            
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    }
+                });
+            });
+
+        // فلترة المستودعات
+        const filterButtons = document.querySelectorAll('[data-filter]');
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const filter = this.getAttribute('data-filter');
+                const rows = document.querySelectorAll('.warehouse-row');
+                
+                // تحديث حالة الأزرار
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                
+                // تطبيق الفلتر
+                rows.forEach(row => {
+                    if (filter === 'all') {
+                        row.style.display = 'table-row';
+                    } else if (filter === 'active' && row.classList.contains('active')) {
+                        row.style.display = 'table-row';
+                    } else if (filter === 'inactive' && row.classList.contains('inactive')) {
+                        row.style.display = 'table-row';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        });
+        
+        // رسم بياني لتوزيع المنتجات حسب المستودعات
+        const productsCtx = document.getElementById('warehouseProductsChart');
+        if (productsCtx) {
+            try {
+                const warehouseProductsChart = new Chart(productsCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: [{% for warehouse in warehouses %}'{{ warehouse.name|escapejs }}',{% endfor %}],
+                        datasets: [{
+                            label: 'عدد المنتجات',
+                            data: [{% for warehouse in warehouses %}{{ warehouse.product_count|default:0 }},{% endfor %}],
+                            backgroundColor: '#4e73df',
+                            borderColor: '#4e73df',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            } catch (chartError) {
+                console.error('خطأ في رسم الجدول البياني للمنتجات:', chartError);
+            }
+        }
+        
+        // رسم بياني لحالة المستودعات
+        const statusCtx = document.getElementById('warehouseStatusChart');
+        if (statusCtx) {
+            try {
+                const warehouseStatusChart = new Chart(statusCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['نشط', 'غير نشط'],
+                        datasets: [{
+                            data: [
+                                {{ active_warehouses_count|default:0 }},
+                                {{ inactive_warehouses_count|default:0 }}
+                            ],
+                            backgroundColor: ['#1cc88a', '#e74a3b'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                rtl: true
+                            }
+                        }
+                    }
+                });
+            } catch (chartError) {
+                console.error('خطأ في رسم الجدول البياني للحالة:', chartError);
+            }
+        }
+        } catch (error) {
+            console.error('خطأ في JavaScript:', error);
+        }
+    });
+</script>
+{% endblock %}

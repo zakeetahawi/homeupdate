@@ -1,0 +1,734 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}الجدول اليومي - قسم التركيبات{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .no-print { display: none !important; }
+        .print-only { display: block !important; }
+        .table { font-size: 10px; width: 100%; }
+        .card { border: none !important; box-shadow: none !important; }
+        .btn { display: none !important; }
+        body { margin: 0; padding: 0; }
+        .container-fluid { width: 100%; max-width: none; }
+        .table-responsive { overflow: visible; }
+        .table th, .table td { padding: 4px 2px; }
+        @page { size: landscape; margin: 10mm; }
+    }
+    .print-only { display: none; }
+    .filter-section { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    .filter-row { margin-bottom: 15px; }
+    .status-badge { 
+        font-size: 0.8em; 
+        font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 4px;
+        display: inline-block;
+        margin: 2px;
+    }
+    
+    /* تخصيص ألوان الحالات */
+    .badge-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+        border: 1px solid #e0a800;
+    }
+    
+    .badge-info {
+        background-color: #17a2b8 !important;
+        color: white !important;
+        border: 1px solid #138496;
+    }
+    
+    .badge-primary {
+        background-color: #007bff !important;
+        color: white !important;
+        border: 1px solid #0056b3;
+    }
+    
+    .badge-success {
+        background-color: #28a745 !important;
+        color: white !important;
+        border: 1px solid #1e7e34;
+    }
+    
+    .badge-danger {
+        background-color: #dc3545 !important;
+        color: white !important;
+        border: 1px solid #c82333;
+    }
+    
+    .badge-secondary {
+        background-color: #6c757d !important;
+        color: white !important;
+        border: 1px solid #545b62;
+    }
+    
+    .table-responsive { overflow-x: auto; }
+    .installation-details { font-size: 0.9em; }
+    
+    /* جعل الجدول أكبر */
+    .table { font-size: 0.9em; }
+    .table th, .table td { padding: 8px 4px; }
+    .table-responsive { min-width: 100%; }
+    
+    /* تحسين عرض الجدول */
+    .table-container { 
+        width: 100%; 
+        overflow-x: auto; 
+        margin-bottom: 20px; 
+    }
+    
+    /* إخفاء البطاقات في الطباعة */
+    @media print {
+        .summary-cards { display: none !important; }
+    }
+    
+    /* نافذة خيارات الطباعة */
+    .print-options-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .print-options-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .print-options-content h3 {
+        color: #333;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    
+    .print-option {
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .print-option:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .print-option.selected {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .print-options-buttons {
+        text-align: center;
+        margin-top: 20px;
+    }
+    
+    .print-options-buttons button {
+        margin: 0 10px;
+        padding: 8px 20px;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .print-options-buttons .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .print-options-buttons .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+    
+    /* أنماط الطباعة المضغوطة */
+    .print-compact .badge {
+        background-color: #f8f9fa !important;
+        color: #333 !important;
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+    
+    .print-compact .btn {
+        display: none !important;
+    }
+    
+    .print-compact .no-print {
+        display: none !important;
+    }
+    
+    /* أنماط الطباعة الملخصة */
+    .print-summary th:nth-child(n+8),
+    .print-summary td:nth-child(n+8) {
+        display: none !important;
+    }
+    
+    .print-summary th:nth-child(1),
+    .print-summary td:nth-child(1),
+    .print-summary th:nth-child(2),
+    .print-summary td:nth-child(2),
+    .print-summary th:nth-child(3),
+    .print-summary td:nth-child(3),
+    .print-summary th:nth-child(4),
+    .print-summary td:nth-child(4),
+    .print-summary th:nth-child(5),
+    .print-summary td:nth-child(5),
+    .print-summary th:nth-child(6),
+    .print-summary td:nth-child(6),
+    .print-summary th:nth-child(7),
+    .print-summary td:nth-child(7) {
+        display: table-cell !important;
+    }
+    
+    /* أنماط الطباعة الطولية والعرضية */
+    @media print {
+        .print-portrait {
+            size: A4 portrait;
+        }
+        
+        .print-landscape {
+            size: A4 landscape;
+        }
+        
+        /* إخفاء جميع العناصر غير المطلوبة للطباعة */
+        .no-print,
+        .btn,
+        .card-header,
+        .card-tools,
+        .form-inline,
+        .btn-group {
+            display: none !important;
+        }
+        
+        /* عرض الجدول فقط */
+        .table-container {
+            display: block !important;
+        }
+        
+        /* تحسين عرض الجدول للطباعة */
+        .table {
+            width: 100% !important;
+            font-size: 10px !important;
+        }
+        
+        .table th,
+        .table td {
+            padding: 4px 6px !important;
+            border: 1px solid #000 !important;
+        }
+        
+        /* إخفاء الروابط في الطباعة */
+        .table a {
+            color: #000 !important;
+            text-decoration: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- عنوان الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-calendar-day text-primary"></i>
+            الجدول اليومي للتركيبات
+        </h1>
+        <div class="btn-group">
+            <a href="{% url 'installations:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+            </a>
+            <button onclick="showPrintOptions()" class="btn btn-outline-primary">
+                <i class="fas fa-print"></i> طباعة الجدول
+            </button>
+            <button onclick="printWithFilters()" class="btn btn-outline-info">
+                <i class="fas fa-print"></i> طباعة مع الفلاتر
+            </button>
+            <button onclick="exportToExcel()" class="btn btn-outline-success">
+                <i class="fas fa-file-excel"></i> تصدير Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- نموذج الفلترة المحسن -->
+    <div class="card shadow mb-4 no-print">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-filter"></i>
+                فلاتر احترافية للجدول
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                <div class="col-md-2">
+                    {{ form.date.label_tag }}
+                    {{ form.date }}
+                </div>
+                <div class="col-md-2">
+                    {{ form.status.label_tag }}
+                    {{ form.status }}
+                </div>
+                <div class="col-md-2">
+                    {{ form.team.label_tag }}
+                    {{ form.team }}
+                </div>
+                <div class="col-md-2">
+                    {{ form.salesperson.label_tag }}
+                    {{ form.salesperson }}
+                </div>
+                <div class="col-md-2">
+                    {{ form.branch.label_tag }}
+                    {{ form.branch }}
+                </div>
+                <div class="col-md-2">
+                    {{ form.search.label_tag }}
+                    {{ form.search }}
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> عرض الجدول
+                    </button>
+                    <button type="button" onclick="clearFilters()" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> مسح الفلاتر
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- معلومات الطباعة -->
+    <div class="print-only text-center mb-4">
+        <h2>جدول التركيبات اليومي</h2>
+        <h4>{{ form.date.value|date:"d/m/Y" }}</h4>
+        <p>تاريخ الطباعة: {% now "d/m/Y H:i" %}</p>
+    </div>
+
+    <!-- الجدول اليومي المحسن -->
+    {% if installations %}
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 no-print">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-table"></i>
+                الجدول اليومي - {{ form.date.value|date:"Y-m-d" }}
+                <span class="badge badge-info ml-2">{{ installations.count }} تركيب</span>
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="table-container">
+                <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>الموعد</th>
+                            <th>رقم الطلب</th>
+                            <th>اسم العميل</th>
+                            <th>رقم العقد</th>
+                            <th>رقم الفاتورة</th>
+                            <th>العنوان</th>
+                            <th>المكان</th>
+                            <th>رقم الهاتف</th>
+                            <th>اسم البائع</th>
+                            <th>عدد الشبابيك</th>
+                            <th>اسم الفني/الفريق</th>
+                            <th>اسم السائق</th>
+                            <th>الحالة</th>
+                            <th class="no-print">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for installation in installations %}
+                        <tr>
+                            <td class="font-weight-bold text-primary">
+                                {{ installation.scheduled_time|time:"H:i" }}
+                            </td>
+                            <td>
+                                <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                   class="font-weight-bold text-primary no-print">
+                                    {{ installation.order.order_number }}
+                                </a>
+                                <span class="print-only">{{ installation.order.order_number }}</span>
+                            </td>
+                            <td class="font-weight-bold">{{ installation.order.customer.name }}</td>
+                            <td>
+                                {{ installation.order.contract_number|default:"غير محدد" }}
+                                {% if installation.order.contract_number_2 %}<br><small class="text-muted">{{ installation.order.contract_number_2 }}</small>{% endif %}
+                                {% if installation.order.contract_number_3 %}<br><small class="text-muted">{{ installation.order.contract_number_3 }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {{ installation.order.invoice_number|default:"غير محدد" }}
+                                {% if installation.order.invoice_number_2 %}<br><small class="text-muted">{{ installation.order.invoice_number_2 }}</small>{% endif %}
+                                {% if installation.order.invoice_number_3 %}<br><small class="text-muted">{{ installation.order.invoice_number_3 }}</small>{% endif %}
+                            </td>
+                            <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
+                            <td>
+                                {% if installation.location_type %}
+                                    {% if installation.location_type == 'open' %}
+                                        <span class="badge badge-success" style="background-color: #28a745; color: #fff; font-size: 0.8em;">
+                                            <i class="fas fa-door-open"></i> مفتوح
+                                        </span>
+                                    {% elif installation.location_type == 'compound' %}
+                                        <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-size: 0.8em;">
+                                            <i class="fas fa-building"></i> كومبوند
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ installation.order.customer.phone }}</td>
+                            <td>{{ installation.order.salesperson.name|default:"غير محدد" }}</td>
+                            <td>
+                                {% if installation.order.windows_count %}
+                                    {{ installation.order.windows_count }}
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if installation.team %}
+                                    <div>
+                                        <strong>{{ installation.team.name }}</strong>
+                                        {% for technician in installation.team.technicians.all %}
+                                            <br><small class="text-muted">فني: {{ technician.name }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if installation.team.driver %}
+                                    {{ installation.team.driver.name }}
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if installation.status == 'needs_scheduling' %}
+                                    <span class="badge status-badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                        <i class="fas fa-calendar-plus"></i> بحاجة جدولة
+                                    </span>
+                                {% elif installation.status == 'scheduled' %}
+                                    <span class="badge status-badge badge-info" style="background-color: #17a2b8; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                        <i class="fas fa-calendar-check"></i> مجدول
+                                    </span>
+                                {% elif installation.status == 'in_installation' %}
+                                    <span class="badge status-badge badge-primary" style="background-color: #007bff; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                        <i class="fas fa-tools"></i> قيد التركيب
+                                    </span>
+                                {% elif installation.status == 'completed' %}
+                                    <span class="badge status-badge badge-success" style="background-color: #28a745; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                        <i class="fas fa-check-circle"></i> مكتمل
+                                    </span>
+                                {% elif installation.status == 'cancelled' %}
+                                    <span class="badge status-badge badge-danger" style="background-color: #dc3545; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                        <i class="fas fa-times-circle"></i> ملغي
+                                    </span>
+                                {% elif installation.status == 'modification_required' %}
+                                    <span class="badge status-badge badge-warning" style="background-color: #fd7e14; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                        <i class="fas fa-exclamation-triangle"></i> يحتاج تعديل
+                                    </span>
+                                {% elif installation.status == 'modification_in_progress' %}
+                                    <span class="badge status-badge badge-info" style="background-color: #6f42c1; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                        <i class="fas fa-cogs"></i> التعديل قيد التنفيذ
+                                    </span>
+                                {% elif installation.status == 'modification_completed' %}
+                                    <span class="badge status-badge badge-success" style="background-color: #20c997; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                        <i class="fas fa-check-circle"></i> التعديل مكتمل
+                                    </span>
+                                {% else %}
+                                    <span class="badge status-badge badge-secondary" style="background-color: #6c757d; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                        {{ installation.get_status_display }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="no-print">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                       class="btn btn-sm btn-info" title="عرض التفاصيل">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if installation.status != 'completed' and installation.status != 'cancelled' %}
+                                        <select class="form-control form-control-sm status-select" 
+                                                onchange="updateInstallationStatus('{{ installation.installation_code }}', this.value)"
+                                                style="width: auto; display: inline-block;">
+                                            <option value="">تحديث الحالة</option>
+                                            <option value="pending" {% if installation.status == 'pending' %}selected{% endif %}>في الانتظار</option>
+                                            <option value="scheduled" {% if installation.status == 'scheduled' %}selected{% endif %}>مجدول</option>
+                                            <option value="in_installation" {% if installation.status == 'in_installation' %}selected{% endif %}>قيد التركيب</option>
+                                            <option value="in_progress" {% if installation.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
+                                            <option value="completed" {% if installation.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                                            <option value="cancelled" {% if installation.status == 'cancelled' %}selected{% endif %}>ملغي</option>
+                                            <option value="modification_required" {% if installation.status == 'modification_required' %}selected{% endif %}>يحتاج تعديل</option>
+                                            <option value="modification_in_progress" {% if installation.status == 'modification_in_progress' %}selected{% endif %}>التعديل قيد التنفيذ</option>
+                                            <option value="modification_completed" {% if installation.status == 'modification_completed' %}selected{% endif %}>التعديل مكتمل</option>
+                                        </select>
+                                    {% endif %}
+                                    {% if installation.status == 'scheduled' %}
+                                        <button type="button" class="btn btn-sm btn-primary update-status" 
+                                                data-installation-id="{{ installation.installation_code }}" 
+                                                data-status="in_installation" title="بدء التركيب">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                    {% endif %}
+                                    {% if installation.status == 'in_installation' %}
+                                        <button type="button" class="btn btn-sm btn-success update-status" 
+                                                data-installation-id="{{ installation.installation_code }}" 
+                                                data-status="completed" title="إكمال التركيب">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card shadow mb-4">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-calendar-times fa-4x text-gray-300 mb-3"></i>
+            <h4 class="text-gray-500">لا توجد تركيبات مجدولة لهذا اليوم</h4>
+            <p class="text-gray-400">جرب تغيير التاريخ أو الفلاتر</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- نافذة خيارات الطباعة -->
+<div id="printOptionsModal" class="print-options-modal">
+    <div class="print-options-content">
+        <h3><i class="fas fa-print"></i> خيارات الطباعة</h3>
+        <div class="print-option" onclick="selectPrintOption('full')">
+            <strong>طباعة كاملة</strong><br>
+            <small>طباعة جميع التفاصيل مع الألوان والتصميم</small>
+        </div>
+        <div class="print-option" onclick="selectPrintOption('compact')">
+            <strong>طباعة مضغوطة</strong><br>
+            <small>طباعة النص فقط بدون ألوان أو تصميم</small>
+        </div>
+        <div class="print-option" onclick="selectPrintOption('summary')">
+            <strong>طباعة ملخصة</strong><br>
+            <small>طباعة المعلومات الأساسية فقط</small>
+        </div>
+        
+        <hr>
+        <h5>توجيه الطباعة:</h5>
+        <div class="print-option" onclick="selectPrintOrientation('portrait')">
+            <strong>طولية (Portrait)</strong><br>
+            <small>مناسبة للجداول الطويلة</small>
+        </div>
+        <div class="print-option" onclick="selectPrintOrientation('landscape')">
+            <strong>عرضية (Landscape)</strong><br>
+            <small>مناسبة للجداول العريضة</small>
+        </div>
+        <div class="print-options-buttons">
+            <button class="btn-primary" onclick="executePrint()">طباعة</button>
+            <button class="btn-secondary" onclick="closePrintOptions()">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+let selectedPrintOption = 'full';
+let selectedPrintOrientation = 'portrait';
+
+function showPrintOptions() {
+    document.getElementById('printOptionsModal').style.display = 'block';
+}
+
+function closePrintOptions() {
+    document.getElementById('printOptionsModal').style.display = 'none';
+}
+
+function selectPrintOption(option) {
+    selectedPrintOption = option;
+    
+    // إزالة التحديد من جميع خيارات النوع
+    document.querySelectorAll('.print-option').forEach(el => {
+        if (!el.querySelector('h5')) { // لا تلمس عناوين التوجيه
+            el.classList.remove('selected');
+        }
+    });
+    
+    // تحديد الخيار المختار
+    event.target.closest('.print-option').classList.add('selected');
+}
+
+function selectPrintOrientation(orientation) {
+    selectedPrintOrientation = orientation;
+    
+    // إزالة التحديد من جميع خيارات التوجيه
+    document.querySelectorAll('.print-option').forEach(el => {
+        if (el.textContent.includes('طولية') || el.textContent.includes('عرضية')) {
+            el.classList.remove('selected');
+        }
+    });
+    
+    // تحديد الخيار المختار
+    event.target.closest('.print-option').classList.add('selected');
+}
+
+function executePrint() {
+    // تطبيق أنماط الطباعة حسب الخيار المختار
+    if (selectedPrintOption === 'compact') {
+        document.body.classList.add('print-compact');
+    } else if (selectedPrintOption === 'summary') {
+        document.body.classList.add('print-summary');
+    } else {
+        document.body.classList.remove('print-compact', 'print-summary');
+    }
+    
+    // تطبيق التوجيه
+    document.body.classList.remove('print-portrait', 'print-landscape');
+    document.body.classList.add(`print-${selectedPrintOrientation}`);
+    
+    // إغلاق النافذة
+    closePrintOptions();
+    
+    // طباعة الصفحة
+    window.print();
+    
+    // إزالة الأنماط بعد الطباعة
+    setTimeout(() => {
+        document.body.classList.remove('print-compact', 'print-summary', 'print-portrait', 'print-landscape');
+    }, 1000);
+}
+
+function printSchedule() {
+    window.print();
+}
+
+function printWithFilters() {
+    const form = document.querySelector('form');
+    const formData = new FormData(form);
+    const url = window.location.pathname + '?';
+
+    formData.forEach((value, key) => {
+        if (value) {
+            url += `${key}=${value}&`;
+        }
+    });
+
+    window.open(url, '_blank');
+}
+
+function clearFilters() {
+    document.querySelectorAll('select, input[type="date"], input[type="text"]').forEach(function(element) {
+        if (element.type === 'date') {
+            element.value = new Date().toISOString().split('T')[0];
+        } else if (element.type === 'text') {
+            element.value = '';
+        } else {
+            element.selectedIndex = 0;
+        }
+    });
+}
+
+function exportToExcel() {
+    // إنشاء جدول Excel
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // إضافة العنوان
+    csvContent += "جدول التركيبات اليومي," + "{{ form.date.value|date:'d/m/Y' }}" + "\n";
+    csvContent += "تاريخ الطباعة," + "{% now 'd/m/Y H:i' %}" + "\n\n";
+    
+    // إضافة رؤوس الأعمدة مع جميع التفاصيل
+    csvContent += "الموعد,رقم الطلب,اسم العميل,رقم العقد,رقم الفاتورة,العنوان,المكان,رقم الهاتف,اسم البائع,عدد الشبابيك,اسم الفني/الفريق,اسم السائق,الحالة\n";
+    
+    // إضافة البيانات مع جميع التفاصيل
+    {% for installation in installations %}
+    csvContent += "{{ installation.scheduled_time|time:'H:i' }},{{ installation.order.order_number }},{{ installation.order.customer.name }},{{ installation.order.contract_number|default:'غير محدد' }},{{ installation.order.invoice_number|default:'غير محدد' }},{{ installation.order.customer.address|default:'غير محدد' }},{{ installation.location_type|default:'غير محدد' }},{{ installation.order.customer.phone }},{{ installation.order.salesperson.name|default:'غير محدد' }},{{ installation.order.windows_count|default:'غير محدد' }},{{ installation.team.name|default:'غير محدد' }},{{ installation.team.driver.name|default:'غير محدد' }},{{ installation.get_status_display }}\n";
+    {% endfor %}
+    
+    // تحميل الملف
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "جدول_التركيبات_{{ form.date.value|date:'Y-m-d' }}.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function updateInstallationStatus(installationId, newStatus) {
+    if (!newStatus) return;
+    
+    // الحصول على CSRF token
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+    
+    // إنشاء FormData بدلاً من JSON
+    const formData = new FormData();
+    formData.append('status', newStatus);
+    formData.append('csrfmiddlewaretoken', csrfToken);
+    
+    fetch(`/installations/installation/${installationId}/update-status/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // إظهار رسالة نجاح
+            Swal.fire({
+                title: 'تم التحديث!',
+                text: data.message || 'تم تحديث الحالة بنجاح',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                location.reload();
+            });
+        } else {
+            Swal.fire('خطأ', data.error || 'حدث خطأ في تحديث الحالة', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('خطأ', 'حدث خطأ في تحديث الحالة: ' + error.message, 'error');
+    });
+}
+
+// تحديث الحالة عند النقر على الأزرار
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.update-status').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const installationId = this.getAttribute('data-installation-id');
+            const status = this.getAttribute('data-status');
+            updateInstallationStatus(installationId, status);
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %} 

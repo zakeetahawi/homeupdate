@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .select2-container--default .select2-selection--multiple {
+        border: 1px solid #d1d3e2;
+        border-radius: 0.35rem;
+        min-height: 38px;
+    }
+    .permission-group-title {
+        font-weight: bold;
+        color: #4e73df;
+        margin-top: 10px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
+            <a href="{% url 'accounts:role_list' %}" class="btn btn-sm btn-secondary">
+                <i class="fas fa-arrow-left"></i> العودة إلى قائمة الأدوار
+            </a>
+        </div>
+        <div class="card-body">
+            <form method="post" action="">
+                {% csrf_token %}
+                
+                <!-- رسائل الخطأ -->
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>هناك أخطاء في النموذج:</strong>
+                    <ul>
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">اسم الدور <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.help_text %}
+                            <small class="form-text text-muted">{{ form.name.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {% if not role or not role.is_system_role %}
+                            <label for="{{ form.is_system_role.id_for_label }}" class="form-label">دور نظامي؟</label>
+                            <div class="form-check">
+                                {{ form.is_system_role }}
+                                <label class="form-check-label" for="{{ form.is_system_role.id_for_label }}">
+                                    هذا دور نظامي (لا يمكن حذفه)
+                                </label>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">وصف الدور</label>
+                    {{ form.description }}
+                    <small class="form-text text-muted">وصف مختصر لهذا الدور والغرض منه</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.permissions.id_for_label }}" class="form-label">الصلاحيات</label>
+                    {{ form.permissions }}
+                    <small class="form-text text-muted">اختر الصلاحيات التي سيتم منحها لهذا الدور</small>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> حفظ الدور
+                    </button>
+                    <a href="{% url 'accounts:role_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> إلغاء
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            placeholder: "اختر الصلاحيات...",
+            allowClear: true
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}قائمة الشكاوى{% endblock %}
+
+{% block extra_css %}
+<style>
+    .complaints-page {
+        padding: 20px 0;
+    }
+    
+    .complaint-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 15px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .complaint-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .complaint-card.unread {
+        background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+        border-left-color: #dc3545;
+    }
+    
+    .complaint-card.read {
+        opacity: 0.8;
+        border-left-color: #6c757d;
+    }
+    
+    .complaint-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .complaint-icon {
+        font-size: 24px;
+        margin-right: 15px;
+    }
+    
+    .complaint-title {
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .complaint-meta {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .meta-badge {
+        background: #dc3545;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .complaint-time {
+        color: #6c757d;
+        font-size: 12px;
+    }
+    
+    .priority-high {
+        border-left-color: #ffc107 !important;
+    }
+    
+    .priority-critical {
+        border-left-color: #dc3545 !important;
+    }
+    
+    .no-complaints {
+        text-align: center;
+        padding: 50px;
+        color: #6c757d;
+    }
+    
+    .filter-tabs {
+        margin-bottom: 20px;
+    }
+    
+    .filter-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-bottom: 2px solid transparent;
+    }
+    
+    .filter-tabs .nav-link.active {
+        color: #dc3545;
+        border-bottom-color: #dc3545;
+        background: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid complaints-page">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>📢 قائمة الشكاوى</h2>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-danger">{{ unread_count }} غير مقروء</span>
+                    <span class="badge bg-secondary">{{ total_count }} إجمالي</span>
+                </div>
+            </div>
+            
+            <!-- تبويبات الفلترة -->
+            <ul class="nav nav-tabs filter-tabs" id="complaintTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                        جميع الشكاوى
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="unread-tab" data-bs-toggle="tab" data-bs-target="#unread" type="button" role="tab">
+                        غير مقروءة ({{ unread_count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="read-tab" data-bs-toggle="tab" data-bs-target="#read" type="button" role="tab">
+                        مقروءة
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- محتوى التبويبات -->
+            <div class="tab-content" id="complaintTabsContent">
+                <div class="tab-pane fade show active" id="all" role="tabpanel">
+                    {% if complaints %}
+                        {% for complaint in complaints %}
+                        <div class="complaint-card {% if not complaint.is_read %}unread{% else %}read{% endif %} priority-{{ complaint.priority }}" 
+                             data-complaint-id="{{ complaint.id }}">
+                            <div class="complaint-header">
+                                <div class="d-flex align-items-center">
+                                    <span class="complaint-icon">{{ complaint.get_icon }}</span>
+                                    <div>
+                                        <div class="complaint-title">{{ complaint.title }}</div>
+                                        <div class="complaint-meta">
+                                            <span class="meta-badge">{{ complaint.complaint_number }}</span>
+                                            <span class="meta-badge" style="background: #28a745;">{{ complaint.get_complaint_type_display }}</span>
+                                            <span class="meta-badge" style="background: #6c757d;">{{ complaint.get_priority_display }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="complaint-time">{{ complaint.get_time_ago }}</div>
+                                    {% if not complaint.is_read %}
+                                        <button class="btn btn-sm btn-outline-danger mark-read-btn" 
+                                                data-complaint-id="{{ complaint.id }}">
+                                            تحديد كمقروء
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-complaints">
+                            📢 لا توجد شكاوى
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="tab-pane fade" id="unread" role="tabpanel">
+                    {% for complaint in complaints %}
+                        {% if not complaint.is_read %}
+                        <div class="complaint-card unread priority-{{ complaint.priority }}" 
+                             data-complaint-id="{{ complaint.id }}">
+                            <div class="complaint-header">
+                                <div class="d-flex align-items-center">
+                                    <span class="complaint-icon">{{ complaint.get_icon }}</span>
+                                    <div>
+                                        <div class="complaint-title">{{ complaint.title }}</div>
+                                        <div class="complaint-meta">
+                                            <span class="meta-badge">{{ complaint.complaint_number }}</span>
+                                            <span class="meta-badge" style="background: #28a745;">{{ complaint.get_complaint_type_display }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="complaint-time">{{ complaint.get_time_ago }}</div>
+                                    <button class="btn btn-sm btn-outline-danger mark-read-btn" 
+                                            data-complaint-id="{{ complaint.id }}">
+                                        تحديد كمقروء
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% empty %}
+                        <div class="no-complaints">
+                            ✅ جميع الشكاوى مقروءة
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="tab-pane fade" id="read" role="tabpanel">
+                    {% for complaint in complaints %}
+                        {% if complaint.is_read %}
+                        <div class="complaint-card read">
+                            <div class="complaint-header">
+                                <div class="d-flex align-items-center">
+                                    <span class="complaint-icon">{{ complaint.get_icon }}</span>
+                                    <div>
+                                        <div class="complaint-title">{{ complaint.title }}</div>
+                                        <div class="complaint-meta">
+                                            <span class="meta-badge">{{ complaint.complaint_number }}</span>
+                                            <span class="meta-badge" style="background: #28a745;">{{ complaint.get_complaint_type_display }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="complaint-time">{{ complaint.get_time_ago }}</div>
+                                    <span class="badge bg-success">✅ مقروء</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% empty %}
+                        <div class="no-complaints">
+                            📢 لا توجد شكاوى مقروءة
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تحديد الشكوى كمقروءة
+    document.querySelectorAll('.mark-read-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const complaintId = this.dataset.complaintId;
+            
+            // الحصول على CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+
+            if (csrfToken) {
+                headers['X-CSRFToken'] = csrfToken.value;
+            }
+
+            fetch(`/accounts/notifications/complaint/${complaintId}/mark-read/`, {
+                method: 'POST',
+                headers: headers,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

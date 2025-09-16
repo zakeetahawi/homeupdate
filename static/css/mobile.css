@@ -1,0 +1,350 @@
+/* 
+ * Estilos específicos para dispositivos móviles
+ * Este archivo contiene estilos que se aplicarán solo en dispositivos móviles
+ */
+
+/* Estilos generales para móviles */
+@media (max-width: 767.98px) {
+    /* Ajustes de texto */
+    body {
+        font-size: 14px;
+    }
+    
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        font-size: 1.3rem;
+    }
+    
+    /* Ajustes de espaciado */
+    .container, .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .row {
+        margin-left: -5px;
+        margin-right: -5px;
+    }
+    
+    .col, .col-1, .col-2, .col-3, .col-4, .col-5, .col-6, 
+    .col-7, .col-8, .col-9, .col-10, .col-11, .col-12, 
+    .col-sm, .col-sm-1, .col-sm-2, .col-sm-3, .col-sm-4, 
+    .col-sm-5, .col-sm-6, .col-sm-7, .col-sm-8, .col-sm-9, 
+    .col-sm-10, .col-sm-11, .col-sm-12 {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    
+    /* Ajustes de márgenes */
+    .mb-4 {
+        margin-bottom: 1rem !important;
+    }
+    
+    .mt-4 {
+        margin-top: 1rem !important;
+    }
+    
+    /* Ajustes de padding */
+    .p-4 {
+        padding: 1rem !important;
+    }
+    
+    .py-4 {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+    
+    .px-4 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    
+    /* Ajustes de tarjetas */
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    /* Ajustes de tablas */
+    .table {
+        font-size: 0.85rem;
+    }
+    
+    .table th, .table td {
+        padding: 0.5rem;
+    }
+    
+    /* Ajustes de formularios */
+    .form-control {
+        font-size: 0.9rem;
+        height: calc(1.5em + 0.75rem + 2px);
+    }
+    
+    .form-label {
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Ajustes de botones */
+    .btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    /* Ajustes de navegación */
+    .navbar {
+        padding: 0.5rem 1rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+    
+    /* Ajustes de breadcrumb */
+    .breadcrumb {
+        padding: 0.5rem 1rem;
+        margin-bottom: 1rem;
+    }
+}
+
+/* Estilos específicos para el módulo de inventario en móviles */
+@media (max-width: 767.98px) {
+    /* Ajustes del contenedor principal */
+    .inventory-container {
+        padding: 0.5rem;
+    }
+    
+    /* Ajustes de las tarjetas de estadísticas */
+    .stats-cards-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .stat-card {
+        padding: 0.75rem;
+    }
+    
+    .stat-card-icon {
+        font-size: 1.5rem;
+        width: 40px;
+        height: 40px;
+    }
+    
+    .stat-card-title {
+        font-size: 0.8rem;
+    }
+    
+    .stat-card-value {
+        font-size: 1.2rem;
+    }
+    
+    .stat-card-change {
+        font-size: 0.7rem;
+    }
+    
+    /* Ajustes de las tarjetas de iconos */
+    .icon-cards-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .icon-card {
+        padding: 0.75rem;
+    }
+    
+    .icon-card-icon {
+        font-size: 1.5rem;
+        width: 40px;
+        height: 40px;
+    }
+    
+    .icon-card-title {
+        font-size: 0.9rem;
+    }
+    
+    .icon-card-subtitle {
+        font-size: 0.7rem;
+    }
+    
+    /* Ajustes de las tablas de datos */
+    .data-table-container {
+        margin-bottom: 1rem;
+    }
+    
+    .data-table-header {
+        padding: 0.75rem;
+    }
+    
+    .data-table-title {
+        font-size: 1rem;
+    }
+    
+    .data-table-actions {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .data-table-actions .btn {
+        margin-top: 0.5rem;
+    }
+    
+    /* Ajustes de los filtros */
+    .filters-container {
+        margin-bottom: 1rem;
+    }
+    
+    /* Ajustes de los gráficos */
+    .chart-container {
+        margin-bottom: 1rem;
+    }
+    
+    .chart-header {
+        padding: 0.75rem;
+    }
+    
+    .chart-title {
+        font-size: 1rem;
+    }
+    
+    .chart-body {
+        padding: 0.75rem;
+    }
+    
+    /* Ajustes del menú superior */
+    .top-navbar {
+        padding: 0.5rem;
+    }
+    
+    .top-navbar .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .top-navbar .search-box {
+        max-width: 150px;
+    }
+    
+    /* Ajustes de los modales */
+    .modal-header {
+        padding: 0.75rem;
+    }
+    
+    .modal-body {
+        padding: 0.75rem;
+    }
+    
+    .modal-footer {
+        padding: 0.75rem;
+    }
+    
+    /* Ajustes del footer */
+    .footer {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Ajustes de las notificaciones */
+    .dropdown-menu {
+        width: 280px;
+    }
+    
+    .notification-item {
+        padding: 0.5rem;
+    }
+    
+    /* Ajustes de los botones de acción rápida */
+    .quick-actions {
+        flex-wrap: wrap;
+    }
+    
+    .quick-actions .btn {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Ajustes de las páginas de detalle */
+    .product-detail-container {
+        padding: 0.5rem;
+    }
+    
+    .product-info {
+        flex-direction: column;
+    }
+    
+    .product-image {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .product-details {
+        width: 100%;
+    }
+    
+    /* Ajustes de las pestañas */
+    .nav-tabs .nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Ajustes de los acordeones */
+    .accordion-button {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .accordion-body {
+        padding: 0.75rem;
+    }
+}
+
+/* Estilos para dispositivos muy pequeños */
+@media (max-width: 575.98px) {
+    /* Ajustes de las tarjetas de estadísticas */
+    .stats-cards-container {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Ajustes de las tarjetas de iconos */
+    .icon-cards-container {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Ocultar columnas menos importantes en tablas */
+    .table-responsive .table th:nth-child(n+4),
+    .table-responsive .table td:nth-child(n+4) {
+        display: none;
+    }
+    
+    /* Mostrar solo las columnas esenciales */
+    .table-responsive .table th:nth-child(-n+3),
+    .table-responsive .table td:nth-child(-n+3),
+    .table-responsive .table th:last-child,
+    .table-responsive .table td:last-child {
+        display: table-cell;
+    }
+    
+    /* Ajustes de los botones de acción */
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.25rem;
+        border-radius: 0.25rem !important;
+    }
+}

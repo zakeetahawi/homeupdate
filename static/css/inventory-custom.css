@@ -1,0 +1,110 @@
+/**
+ * أنماط مخصصة للمخزون للدمج مع القوالب الجديدة
+ */
+
+/* تخطيط المخزون داخل القالب الأساسي */
+.inventory-dashboard-container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 56px - 56px); /* ارتفاع المحتوى مع الأخذ في الاعتبار الرأس والتذييل */
+  padding: 0;
+  background-color: var(--bg-color-secondary);
+}
+
+/* شريط التنقل */
+.dashboard-breadcrumb {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: var(--bg-color-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dashboard-breadcrumb .breadcrumb {
+  margin: 0;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* محتوى لوحة التحكم */
+.dashboard-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* أيقونات المخزون */
+.icon-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.icon-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 15px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  text-align: center;
+  color: var(--text-color);
+}
+
+.icon-card:hover {
+  background-color: rgba(78, 115, 223, 0.1); /* نفس لون بطاقة إجمالي المنتجات ولكن مع شفافية */
+  transform: scale(1.05);
+  text-decoration: none;
+  color: var(--text-color);
+}
+
+.icon-card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba(78, 115, 223, 0.1); /* نفس لون بطاقة إجمالي المنتجات ولكن مع شفافية */
+}
+
+.icon-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.icon-card-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-color-muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* تكيف للأجهزة المحمولة */
+@media (max-width: 768px) {
+  .icon-cards-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-breadcrumb {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .quick-actions {
+    align-self: flex-start;
+  }
+}

@@ -1,0 +1,265 @@
+{% extends 'backup_system/base.html' %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'backup_system:backup_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>
+        إنشاء نسخة احتياطية
+    </a>
+    <a href="{% url 'backup_system:restore_upload' %}" class="btn btn-success">
+        <i class="fas fa-upload me-1"></i>
+        استعادة من ملف
+    </a>
+</div>
+{% endblock %}
+
+{% block backup_content %}
+<!-- إحصائيات سريعة -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card primary">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="text-muted mb-1">إجمالي النسخ</h5>
+                    <h2 class="mb-0">{{ total_backups }}</h2>
+                </div>
+                <div class="text-primary">
+                    <i class="fas fa-database fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stats-card success">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="text-muted mb-1">النسخ المكتملة</h5>
+                    <h2 class="mb-0">{{ completed_backups }}</h2>
+                </div>
+                <div class="text-success">
+                    <i class="fas fa-check-circle fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stats-card warning">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="text-muted mb-1">قيد التنفيذ</h5>
+                    <h2 class="mb-0">{{ running_backups }}</h2>
+                </div>
+                <div class="text-warning">
+                    <i class="fas fa-spinner fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stats-card danger">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="text-muted mb-1">النسخ الفاشلة</h5>
+                    <h2 class="mb-0">{{ failed_backups }}</h2>
+                </div>
+                <div class="text-danger">
+                    <i class="fas fa-exclamation-triangle fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- معلومات إضافية -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="backup-card">
+            <div class="backup-card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    معلومات النظام
+                </h5>
+            </div>
+            <div class="backup-card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <strong>إجمالي حجم النسخ:</strong>
+                    </div>
+                    <div class="col-6 file-size">
+                        {{ total_size }}
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-6">
+                        <strong>معدل النجاح:</strong>
+                    </div>
+                    <div class="col-6">
+                        {% if total_backups > 0 %}
+                            {% widthratio completed_backups total_backups 100 %}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="backup-card">
+            <div class="backup-card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    توزيع الحالات
+                </h5>
+            </div>
+            <div class="backup-card-body">
+                <div class="progress mb-2" style="height: 20px;">
+                    {% if total_backups > 0 %}
+                        <div class="progress-bar bg-success" style="width: {% widthratio completed_backups total_backups 100 %}%">
+                            مكتمل
+                        </div>
+                        <div class="progress-bar bg-warning" style="width: {% widthratio running_backups total_backups 100 %}%">
+                            قيد التنفيذ
+                        </div>
+                        <div class="progress-bar bg-danger" style="width: {% widthratio failed_backups total_backups 100 %}%">
+                            فاشل
+                        </div>
+                    {% else %}
+                        <div class="progress-bar bg-secondary" style="width: 100%">
+                            لا توجد بيانات
+                        </div>
+                    {% endif %}
+                </div>
+                <small class="text-muted">
+                    <span class="badge bg-success">{{ completed_backups }}</span>
+                    <span class="badge bg-warning">{{ running_backups }}</span>
+                    <span class="badge bg-danger">{{ failed_backups }}</span>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- آخر النسخ الاحتياطية -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="backup-card">
+            <div class="backup-card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>
+                    آخر النسخ الاحتياطية
+                </h5>
+                <a href="{% url 'backup_system:backup_list' %}" class="btn btn-sm btn-outline-primary">
+                    عرض الكل
+                </a>
+            </div>
+            <div class="backup-card-body">
+                {% if recent_backups %}
+                    <div class="list-group list-group-flush">
+                        {% for backup in recent_backups %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'backup_system:backup_detail' backup.id %}" class="text-decoration-none">
+                                            {{ backup.name }}
+                                        </a>
+                                    </h6>
+                                    <small class="text-muted" data-time="{{ backup.created_at|date:'c' }}">
+                                        {{ backup.created_at|timesince }}
+                                    </small>
+                                </div>
+                                <div>
+                                    {% if backup.status == 'completed' %}
+                                        <span class="badge bg-success">مكتمل</span>
+                                    {% elif backup.status == 'running' %}
+                                        <span class="badge bg-warning">قيد التنفيذ</span>
+                                    {% elif backup.status == 'failed' %}
+                                        <span class="badge bg-danger">فاشل</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ backup.get_status_display }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>لا توجد نسخ احتياطية بعد</p>
+                        <a href="{% url 'backup_system:backup_create' %}" class="btn btn-primary">
+                            إنشاء أول نسخة احتياطية
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="backup-card">
+            <div class="backup-card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-undo me-2"></i>
+                    آخر عمليات الاستعادة
+                </h5>
+                <a href="{% url 'backup_system:restore_list' %}" class="btn btn-sm btn-outline-success">
+                    عرض الكل
+                </a>
+            </div>
+            <div class="backup-card-body">
+                {% if recent_restores %}
+                    <div class="list-group list-group-flush">
+                        {% for restore in recent_restores %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'backup_system:restore_detail' restore.id %}" class="text-decoration-none">
+                                            {{ restore.name }}
+                                        </a>
+                                    </h6>
+                                    <small class="text-muted" data-time="{{ restore.created_at|date:'c' }}">
+                                        {{ restore.created_at|timesince }}
+                                    </small>
+                                </div>
+                                <div>
+                                    {% if restore.status == 'completed' %}
+                                        <span class="badge bg-success">مكتمل</span>
+                                    {% elif restore.status == 'running' %}
+                                        <span class="badge bg-warning">قيد التنفيذ</span>
+                                    {% elif restore.status == 'failed' %}
+                                        <span class="badge bg-danger">فاشل</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ restore.get_status_display }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-history fa-3x mb-3"></i>
+                        <p>لا توجد عمليات استعادة بعد</p>
+                        <a href="{% url 'backup_system:restore_upload' %}" class="btn btn-success">
+                            بدء أول استعادة
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تحديث الإحصائيات كل 30 ثانية
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+</script>
+{% endblock %}

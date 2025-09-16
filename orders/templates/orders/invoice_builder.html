@@ -1,0 +1,1313 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<!-- Quill Rich Text Editor CSS -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<style>
+  /* إصلاح تضارب شرائط التمرير */
+  html { 
+    height: 100%; 
+    overflow-x: hidden;
+  }
+  
+  body { 
+    direction: rtl; 
+    margin: 0; 
+    padding: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* المحتوى الرئيسي */
+  #main-content { 
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* الفوتر الرئيسي - ثابت في الأسفل */
+  #main-footer { 
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: #fff;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  }
+  
+  /* الحاوي الرئيسي */
+  .container.py-3 {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: calc(100vh - 120px);
+  }
+  
+  /* استوديو التصميم */
+  .studio { 
+    display: grid; 
+    grid-template-columns: 1fr 380px; 
+    gap: 16px; 
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  /* تصميم اللوحات */
+  .panel { 
+    background: #fff; 
+    border: 1px solid #e9ecef; 
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+  }
+  
+  .panel .panel-header { 
+    padding: 12px 16px; 
+    border-bottom: 1px solid #e9ecef; 
+    font-weight: 600;
+    flex-shrink: 0;
+    background: #f8f9fa;
+  }
+  
+  .panel .panel-body { 
+    padding: 16px; 
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #ccc #f1f1f1;
+  }
+  
+  /* تخصيص شريط التمرير */
+  .panel .panel-body::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .panel .panel-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  .panel .panel-body::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+  }
+  
+  .panel .panel-body::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+  }
+  
+  /* منطقة المعاينة */
+  .preview { 
+    background: #f8f9fa; 
+    padding: 16px;
+    height: 100%;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .preview::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  .preview::-webkit-scrollbar-track {
+    background: #e9ecef;
+    border-radius: 5px;
+  }
+  
+  .preview::-webkit-scrollbar-thumb {
+    background: #007bff;
+    border-radius: 5px;
+  }
+  
+  .preview::-webkit-scrollbar-thumb:hover {
+    background: #0056b3;
+  }
+  
+  /* صفحة A4 */
+  .a4 { 
+    width: 210mm; 
+    min-height: 297mm; 
+    background: #fff; 
+    margin: 0 auto; 
+    box-shadow: 0 0 12px rgba(0,0,0,.08); 
+    padding: 20mm;
+    flex-shrink: 0;
+  }
+        @media print { 
+        .panel, .actions { display:none !important; } 
+        .a4 { box-shadow:none; margin:0; padding:10mm; } 
+        @page { size:A4; margin:10mm; }
+        /* تحسين الطباعة للوغو الخلفية */
+        body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .bg-logo { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .bg-logo img { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      }
+  .form-label { font-size: 13px; color:#495057; }
+  .small { font-size: 12px; color:#6c757d; }
+  
+  /* منع التمرير الأفقي العام */
+  * {
+    box-sizing: border-box;
+  }
+  
+  /* تحسين العرض على الشاشات الصغيرة */
+  @media (max-width: 1200px) {
+    .studio {
+      grid-template-columns: 1fr 350px;
+    }
+  }
+  
+  @media (max-width: 992px) {
+    .studio {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+    }
+    
+    .container.py-3 {
+      max-height: calc(100vh - 100px);
+    }
+  }
+  
+  /* إصلاح الفوتر للشاشات الصغيرة */
+  @media (max-width: 768px) {
+    #main-footer {
+      position: relative;
+      margin-top: auto;
+    }
+    
+    .container.py-3 {
+      max-height: none;
+    }
+  }
+  
+  /* Rich Text Editor Styles */
+  .rich-editor-container { margin-bottom: 1rem; }
+  .rich-editor { height: 120px; }
+  .rich-editor.small { height: 80px; }
+  .ql-editor { font-family: 'Cairo', Arial, sans-serif !important; direction: rtl; text-align: right; }
+  .ql-toolbar { border-top: 1px solid #ccc; border-left: 1px solid #ccc; border-right: 1px solid #ccc; }
+  .ql-container { border-bottom: 1px solid #ccc; border-left: 1px solid #ccc; border-right: 1px solid #ccc; }
+  
+  /* RTL Support for Quill */
+  .ql-editor.ql-blank::before { left: auto; right: 15px; }
+  .ql-toolbar .ql-formats { margin-right: 15px; margin-left: 0; }
+  .ql-toolbar .ql-formats:first-child { margin-right: 0; }
+  
+  /* Custom toolbar styling */
+  .ql-toolbar.ql-snow { border-radius: 6px 6px 0 0; background: #f8f9fa; }
+  .ql-container.ql-snow { border-radius: 0 0 6px 6px; }
+  
+  /* Custom font styles */
+  .ql-font-Cairo { font-family: 'Cairo', Arial, sans-serif; }
+  .ql-font-Tajawal { font-family: 'Tajawal', Arial, sans-serif; }
+  .ql-font-Arial { font-family: Arial, sans-serif; }
+  .ql-font-Helvetica { font-family: Helvetica, Arial, sans-serif; }
+  
+  /* Custom size styles */
+  .ql-size-10px { font-size: 10px; }
+  .ql-size-12px { font-size: 12px; }
+  .ql-size-14px { font-size: 14px; }
+  .ql-size-16px { font-size: 16px; }
+  .ql-size-18px { font-size: 18px; }
+  .ql-size-20px { font-size: 20px; }
+  .ql-size-24px { font-size: 24px; }
+  .ql-size-32px { font-size: 32px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="m-0">{{ page_title }}</h3>
+    <div class="actions d-flex gap-2 align-items-center">
+      <select id="template_style" class="form-select form-select-sm" style="width: 220px;">
+        <option value="classic">القالب الكلاسيكي</option>
+        <option value="modern">القالب الحديث</option>
+        <option value="pro">القالب الاحترافي</option>
+        <option value="custom">قالب محفوظ</option>
+      </select>
+      <button id="set-default" class="btn btn-outline-primary btn-sm" {% if not template_id %}disabled{% endif %}>تعيين كافتراضي</button>
+      <button id="save-template" class="btn btn-success">حفظ القالب</button>
+      <a class="btn btn-secondary" href="{% url 'orders:template_list' %}">رجوع</a>
+    </div>
+  </div>
+
+  <div class="studio">
+    <div class="panel preview">
+      <div class="panel-body">
+        <div id="preview" class="a4"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">الإعدادات</div>
+      <div class="panel-body">
+        <div class="mb-2">
+          <label class="form-label">عنوان الفاتورة</label>
+          <input type="text" id="invoice_title" class="form-control" value="فاتورة">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">تسمية رقم الفاتورة</label>
+          <input type="text" id="label_invoice_number" class="form-control" value="رقم الفاتورة">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">تسمية التاريخ</label>
+          <input type="text" id="label_date" class="form-control" value="التاريخ">
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label">اللون الأساسي</label>
+            <input type="color" id="primary_color" class="form-control form-control-color" value="#0d6efd">
+          </div>
+          <div class="col-6">
+            <label class="form-label">لون إبراز</label>
+            <input type="color" id="accent_color" class="form-control form-control-color" value="#ffc107">
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">الخط</label>
+          <select id="font_family" class="form-select">
+            <option value="Cairo, Arial, sans-serif">Cairo</option>
+            <option value="Tajawal, Arial, sans-serif">Tajawal</option>
+            <option value="Arial, sans-serif">Arial</option>
+          </select>
+        </div>
+        <hr>
+        <div class="mb-2">
+          <label class="form-label">عنوان قسم العميل</label>
+          <input type="text" id="label_customer_section" class="form-control" value="بيانات العميل">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">عنوان قسم الشركة</label>
+          <input type="text" id="label_company_section" class="form-control" value="بيانات الشركة">
+        </div>
+        <hr>
+        <div class="mb-2">
+          <label class="form-label">اسم الشركة</label>
+          <input type="text" id="company_name" class="form-control" value="{{ company_info.name|default_if_none:'اسم الشركة' }}">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">الهاتف</label>
+          <input type="text" id="company_phone" class="form-control" value="{{ company_info.phone|default_if_none:'' }}">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">العنوان</label>
+          <input type="text" id="company_address" class="form-control" value="{{ company_info.address|default_if_none:'العنوان' }}">
+        </div>
+        <hr>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label">عنوان عمود الوصف</label>
+            <input type="text" id="th_desc" class="form-control" value="الوصف">
+          </div>
+          <div class="col-6">
+            <label class="form-label">عنوان عمود الكمية</label>
+            <input type="text" id="th_qty" class="form-control" value="الكمية">
+          </div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label">عنوان عمود السعر</label>
+            <input type="text" id="th_price" class="form-control" value="السعر">
+          </div>
+          <div class="col-6">
+            <label class="form-label">عنوان عمود المجموع</label>
+            <input type="text" id="th_total" class="form-control" value="المجموع">
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">عنوان عمود نسبة الخصم</label>
+          <input type="text" id="th_discount" class="form-control" value="نسبة الخصم">
+        </div>
+
+        <div class="rich-editor-container">
+          <label class="form-label">ملاحظات أسفل الفاتورة</label>
+          <div id="notes_editor" class="rich-editor"></div>
+          <textarea id="notes_text" style="display:none;"></textarea>
+          <div class="small mt-1">سوف تظهر أسفل الصفحة.</div>
+        </div>
+        <div class="rich-editor-container">
+          <label class="form-label">الشروط والأحكام</label>
+          <div id="terms_editor" class="rich-editor"></div>
+          <textarea id="terms_text" style="display:none;"></textarea>
+        </div>
+        <hr>
+        <h6 class="mb-2">التحكم في البطاقات</h6>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="show_customer" checked>
+          <label class="form-check-label" for="show_customer">إظهار بطاقة بيانات العميل</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="show_company" checked>
+          <label class="form-check-label" for="show_company">إظهار بطاقة بيانات الشركة</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="show_order_info" checked>
+          <label class="form-check-label" for="show_order_info">إظهار بطاقة بيانات الطلب</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="show_table" checked>
+          <label class="form-check-label" for="show_table">إظهار جدول العناصر</label>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="show_totals" checked>
+          <label class="form-check-label" for="show_totals">إظهار بطاقة المجاميع</label>
+        </div>
+        <hr>
+        <h6 class="mb-2">إعدادات اللوغو</h6>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="show_logo_header" checked>
+          <label class="form-check-label" for="show_logo_header">إظهار لوغو الشركة في الهيدر</label>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">حجم لوغو الهيدر (بكسل)</label>
+          <input type="number" id="logo_size" class="form-control" value="60" min="20" max="200" step="10">
+          <div class="small mt-1">الحد الأدنى: 20px، الحد الأقصى: 200px</div>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="show_bg_logo">
+          <label class="form-check-label" for="show_bg_logo">إظهار شعار الشركة كخلفية خفيفة</label>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">شفافية لوغو الخلفية (%)</label>
+          <input type="range" id="bg_logo_opacity" class="form-range" min="3" max="15" value="8" step="1">
+          <div class="small mt-1">القيمة الحالية: <span id="opacity_value">8%</span></div>
+        </div>
+        <hr>
+        <h6 class="mb-2">إعدادات التذييل</h6>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="show_footer" checked>
+          <label class="form-check-label" for="show_footer">إظهار تذييل الصفحة</label>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">رقم الهوت لاين</label>
+          <input type="text" id="hotline_number" class="form-control" value="{{ company_info.phone|default_if_none:'' }}" placeholder="رقم الهوت لاين">
+        </div>
+        <div class="rich-editor-container">
+          <label class="form-label">ملاحظة التذييل</label>
+          <div id="footer_note_editor" class="rich-editor small"></div>
+          <textarea id="footer_note" style="display:none;">شكراً لثقتكم بنا</textarea>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label">لون أيقونة الهاتف</label>
+            <input type="color" id="phone_icon_color" class="form-control form-control-color" value="#28a745">
+          </div>
+          <div class="col-6">
+            <label class="form-label">لون رقم الهاتف</label>
+            <input type="color" id="phone_text_color" class="form-control form-control-color" value="#0d6efd">
+          </div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label">لون أيقونة الملاحظة</label>
+            <input type="color" id="note_icon_color" class="form-control form-control-color" value="#6c757d">
+          </div>
+          <div class="col-6">
+            <label class="form-label">لون نص الملاحظة</label>
+            <input type="color" id="note_text_color" class="form-control form-control-color" value="#495057">
+          </div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label">حجم أيقونة الهاتف</label>
+            <select id="phone_icon_size" class="form-select">
+              <option value="16px">صغير (16px)</option>
+              <option value="18px" selected>متوسط (18px)</option>
+              <option value="20px">كبير (20px)</option>
+              <option value="24px">كبير جداً (24px)</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">حجم أيقونة الملاحظة</label>
+            <select id="note_icon_size" class="form-select">
+              <option value="14px">صغير (14px)</option>
+              <option value="16px" selected>متوسط (16px)</option>
+              <option value="18px">كبير (18px)</option>
+              <option value="20px">كبير جداً (20px)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ saved_meta_content|json_script:"saved-meta" }}
+{{ saved_html_content|json_script:"saved-html" }}
+
+<!-- Quill Rich Text Editor JS -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+<script>
+  const TEMPLATE_ID = {% if template_id %}{{ template_id }}{% else %}null{% endif %};
+  const SAVED_HTML = JSON.parse(document.getElementById('saved-html').textContent || '""');
+  const META = JSON.parse(document.getElementById('saved-meta').textContent || '{}');
+  const COMPANY_LOGO_URL = "{% if company_info.logo %}{{ company_info.logo.url|escapejs }}{% else %}{% endif %}";
+
+  // Rich Text Editors
+  let notesEditor, termsEditor, footerNoteEditor;
+
+  // Sample data used only for editor preview / print preview inside the template editor.
+  // These values are not saved to templates; they're for a realistic preview only.
+  const PREVIEW_SAMPLE = {
+    order: {
+      invoice_number: 'INV-1001',
+      order_date: new Date().toISOString().slice(0,10),
+      order_number: 'ORD-1001',
+      type: 'بيع',
+      expected_delivery_date: new Date(Date.now()+3*24*3600*1000).toISOString().slice(0,10),
+  total_amount: '5702.40',
+  // sample: 10% discount on the line
+  total_discount_amount: '570.24',
+  final_price_after_discount: '5132.16',
+  paid_amount: '0',
+  remaining_amount: '5132.16',
+  // items_table contains: desc | qty | price | discount% | line total (after discount)
+  items_table: '<tr><td>منتج تجريبي</td><td style="text-align:center;">1</td><td style="text-align:center;">5702.40</td><td style="text-align:center;">10%</td><td style="text-align:center;">5132.16</td></tr>'
+    },
+    customer: { name: 'أحمد علي', phone: '01001234567', address: 'القاهرة - مصر' },
+    branch: { name: 'الفرع الرئيسي' },
+    salesperson: { name: 'محمد' },
+    systemSettings: { currency_symbol: 'ج.م' }
+  };
+
+  function injectSampleData(html) {
+    if (!html) return html;
+    // Replace order.* placeholders
+    html = html.replace(/\$\{order\.([a-zA-Z0-9_]+)\}/g, function(_, key){
+      return PREVIEW_SAMPLE.order[key] !== undefined ? PREVIEW_SAMPLE.order[key] : '';
+    });
+    // Replace customer, branch, salesperson, systemSettings placeholders
+    html = html.replace(/\$\{customer\.([a-zA-Z0-9_]+)\}/g, function(_, k){ return PREVIEW_SAMPLE.customer[k] || ''; });
+    html = html.replace(/\$\{branch\.([a-zA-Z0-9_]+)\}/g, function(_, k){ return PREVIEW_SAMPLE.branch[k] || ''; });
+    html = html.replace(/\$\{salesperson\.([a-zA-Z0-9_]+)\}/g, function(_, k){ return PREVIEW_SAMPLE.salesperson[k] || ''; });
+    html = html.replace(/\$\{systemSettings\.([a-zA-Z0-9_]+)\}/g, function(_, k){ return PREVIEW_SAMPLE.systemSettings[k] || ''; });
+    return html;
+  }
+
+  // Initialize Rich Text Editors
+  function initializeEditors() {
+    // Register custom fonts
+    const Font = Quill.import('formats/font');
+    Font.whitelist = ['Cairo', 'Tajawal', 'Arial', 'Helvetica', 'Times New Roman'];
+    Quill.register(Font, true);
+
+    // Register custom sizes
+    const Size = Quill.import('formats/size');
+    Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '24px', '32px'];
+    Quill.register(Size, true);
+
+    // Custom toolbar configuration
+    const toolbarOptions = [
+      [{ 'font': ['Cairo', 'Tajawal', 'Arial', 'Helvetica', 'Times New Roman'] }],
+      [{ 'size': ['10px', '12px', '14px', '16px', '18px', '20px', '24px', '32px'] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'align': ['', 'center', 'right', 'justify'] }],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'indent': '-1'}, { 'indent': '+1' }],
+      [{ 'direction': 'rtl' }],
+      ['link'],
+      ['clean']
+    ];
+
+    // Notes Editor
+    notesEditor = new Quill('#notes_editor', {
+      theme: 'snow',
+      placeholder: 'أي ملاحظات إضافية...',
+      modules: {
+        toolbar: toolbarOptions
+      }
+    });
+
+    // Terms Editor
+    termsEditor = new Quill('#terms_editor', {
+      theme: 'snow',
+      placeholder: 'الشروط والأحكام...',
+      modules: {
+        toolbar: toolbarOptions
+      }
+    });
+
+    // Footer Note Editor (smaller toolbar)
+    const smallToolbar = [
+      ['bold', 'italic', 'underline'],
+      [{ 'color': [] }],
+      [{ 'align': [] }]
+    ];
+
+    footerNoteEditor = new Quill('#footer_note_editor', {
+      theme: 'snow',
+      placeholder: 'ملاحظة التذييل...',
+      modules: {
+        toolbar: smallToolbar
+      }
+    });
+
+    // Set default content for footer note
+    footerNoteEditor.root.innerHTML = 'شكراً لثقتكم بنا';
+    document.getElementById('footer_note').value = 'شكراً لثقتكم بنا';
+
+    // Sync editors with hidden textareas
+    notesEditor.on('text-change', function() {
+      document.getElementById('notes_text').value = notesEditor.root.innerHTML;
+      updatePreview();
+    });
+
+    termsEditor.on('text-change', function() {
+      document.getElementById('terms_text').value = termsEditor.root.innerHTML;
+      updatePreview();
+    });
+
+    footerNoteEditor.on('text-change', function() {
+      document.getElementById('footer_note').value = footerNoteEditor.root.innerHTML;
+      updatePreview();
+    });
+  }
+
+  function buildHtml() {
+    const title = document.getElementById('invoice_title').value || 'فاتورة';
+    const labelInvoice = document.getElementById('label_invoice_number').value || 'رقم الفاتورة';
+    const labelDate = document.getElementById('label_date').value || 'التاريخ';
+    const primary = document.getElementById('primary_color').value || '#0d6efd';
+    const accent = document.getElementById('accent_color').value || '#ffc107';
+    const font = document.getElementById('font_family').value;
+    const cname = document.getElementById('company_name').value || 'اسم الشركة';
+    const cphone = document.getElementById('company_phone').value || '';
+    const caddr = document.getElementById('company_address').value || '';
+    const notes = document.getElementById('notes_text').value || '';
+    const terms = document.getElementById('terms_text').value || '';
+    const bg = document.getElementById('show_bg_logo').checked;
+    const bgOpacity = document.getElementById('bg_logo_opacity').value;
+    const showLogoHeader = document.getElementById('show_logo_header').checked;
+    const logoSize = document.getElementById('logo_size').value;
+    const showCustomer = document.getElementById('show_customer').checked;
+    const showCompany = document.getElementById('show_company').checked;
+    const showOrderInfo = document.getElementById('show_order_info').checked;
+    const showTable = document.getElementById('show_table').checked;
+    const showTotals = document.getElementById('show_totals').checked;
+    const showFooter = document.getElementById('show_footer').checked;
+    const hotlineNumber = document.getElementById('hotline_number').value || '';
+    const footerNote = document.getElementById('footer_note').value || '';
+    const phoneIconColor = document.getElementById('phone_icon_color').value || '#28a745';
+    const phoneTextColor = document.getElementById('phone_text_color').value || '#0d6efd';
+    const phoneIconSize = document.getElementById('phone_icon_size').value || '18px';
+    const noteIconColor = document.getElementById('note_icon_color').value || '#6c757d';
+    const noteTextColor = document.getElementById('note_text_color').value || '#495057';
+    const noteIconSize = document.getElementById('note_icon_size').value || '16px';
+    const labelCustomerSec = document.getElementById('label_customer_section').value || 'بيانات العميل';
+    const labelCompanySec = document.getElementById('label_company_section').value || 'بيانات الشركة';
+    const thDesc = document.getElementById('th_desc').value || 'الوصف';
+    const thQty = document.getElementById('th_qty').value || 'الكمية';
+    const thPrice = document.getElementById('th_price').value || 'السعر';
+  const thTotal = document.getElementById('th_total').value || 'المجموع';
+  const thDiscount = document.getElementById('th_discount') ? document.getElementById('th_discount').value || 'نسبة الخصم' : 'نسبة الخصم';
+
+    const styleSel = document.getElementById('template_style');
+    const style = styleSel ? styleSel.value : 'classic';
+
+    const classic = `
+    <style>
+      :root { --primary-color:${primary}; --accent-color:${accent}; }
+      body { font-family:${font}; }
+      .items-table{ width:100%; border-collapse: collapse; table-layout: fixed; }
+      .items-table th, .items-table td{ padding:10px; border:1px solid #ddd; }
+      .items-table th{ background: var(--primary-color); color:#fff; }
+      .items-table td:first-child{ text-align:right; word-break: break-word; }
+      .items-table td:nth-child(2), .items-table td:nth-child(3), .items-table td:nth-child(4){ text-align:center; }
+      .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; }
+      .bg-logo img{ max-width:60%; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); }
+      .content{ position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column; }
+      .main-content{ flex:1; }
+      .totals{ background:#f8f9fa; padding:12px; border-radius:8px; margin-top:16px; }
+      .totals .row{ display:flex; justify-content:space-between; margin-bottom:6px; }
+      .footer{ 
+        margin-top: auto; 
+        padding: 20px; 
+        background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+        border-radius: 0 0 15px 15px; 
+        text-align: center; 
+        border: none;
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+        page-break-inside: avoid;
+        color: white;
+        position: relative;
+      }
+      
+      .footer::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        pointer-events: none;
+      }
+      
+      .footer .phone-section{ 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        margin-bottom: 15px; 
+        font-size: 16px; 
+        font-weight: 600;
+        color: white;
+        position: relative;
+        z-index: 2;
+      }
+      
+      .footer .phone-icon{ 
+        display: inline-block;
+        margin-left: 8px; 
+      }
+      
+
+      
+      .footer .phone-icon::before{ 
+        content: '📞';
+        font-size: 18px;
+      }
+      
+      .footer .note-section{ 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 14px; 
+        color: rgba(255, 255, 255, 0.9);
+        position: relative;
+        z-index: 2;
+      }
+      
+      .footer .note-icon{ 
+        width: 40px; 
+        height: 40px; 
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        border-radius: 50%; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        margin-left: 12px; 
+        box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+        backdrop-filter: blur(8px);
+        transition: all 0.3s ease;
+      }
+      
+      .footer .note-icon:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+      }
+      
+      .footer .note-icon::before{ 
+        content: '📝';
+        font-size: 18px;
+        filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
+      }
+      @media print { 
+        .bg-logo{ 
+          display:${bg?'block':'none'} !important; 
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          opacity: ${bgOpacity/100} !important;
+          z-index: -1 !important;
+          pointer-events: none !important;
+          width: 100% !important;
+          height: 100% !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .bg-logo img{ 
+          max-width: 60% !important; 
+          position: absolute !important; 
+          top: 40% !important; 
+          left: 50% !important; 
+          transform: translate(-50%,-50%) !important;
+          width: auto !important;
+          height: auto !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    </style>
+    <div class="bg-logo">
+      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+    </div>
+    <div class="content">
+      <div class="main-content">
+        <div style="text-align:center; border-bottom: 2px solid var(--primary-color); padding-bottom:10px; margin-bottom:18px;">
+          ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;"/>` : ''}
+          <h1 style="color:var(--primary-color); margin:0;">${title}</h1>
+          <div>${labelInvoice}: \${order.invoice_number} — ${labelDate}: \${order.order_date}</div>
+        </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:16px; margin-bottom:16px;">
+        ${showCustomer ? `
+        <div style=\"background:#f8f9fa; padding:12px; border-right:4px solid var(--accent-color);\">
+          <div style=\"font-weight:600; margin-bottom:8px;\">${labelCustomerSec}</div>
+          <div>الاسم: \${customer.name} </div>
+          <div>الهاتف: \${customer.phone} </div>
+          <div>العنوان: \${customer.address} </div>
+        </div>` : ''}
+        ${showOrderInfo ? `
+        <div style=\"background:#fff3cd; padding:12px; border-right:4px solid var(--accent-color);\">
+          <div style=\"font-weight:600; margin-bottom:8px;\">بيانات الطلب</div>
+          <div>الفرع: \${branch.name} </div>
+          <div>اسم البائع: \${salesperson.name} </div>
+          <div>رقم الطلب: \${order.order_number} </div>
+          <div>نوع الطلب: \${order.type} </div>
+          <div>تسليم متوقع: \${order.expected_delivery_date} </div>
+        </div>` : ''}
+        ${showCompany ? `
+        <div style=\"background:#f8f9fa; padding:12px; border-right:4px solid var(--accent-color);\">
+          <div style=\"font-weight:600; margin-bottom:8px;\">${labelCompanySec}</div>
+          <div>${cname}</div>
+          <div>${cphone}</div>
+          <div>${caddr}</div>
+        </div>` : ''}
+      </div>
+      ${showTable ? `
+      <table class="items-table">
+        <thead>
+          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thDiscount}</th><th>${thTotal}</th></tr>
+        </thead>
+        <tbody>\${order.items_table} </tbody>
+      </table>` : ''}
+      ${showTotals ? `
+      <div class="totals">
+        <div class="row"><span>المجموع قبل الخصم:</span><span><strong>\${order.total_amount} \${systemSettings.currency_symbol}</strong></span></div>
+        <div class="row"><span>إجمالي الخصم:</span><span style="color:#dc3545;">-\${order.total_discount_amount} \${systemSettings.currency_symbol}</span></div>
+        <div class="row"><span>الإجمالي النهائي:</span><span style="color:#198754;"><strong>\${order.final_price_after_discount} \${systemSettings.currency_symbol}</strong></span></div>
+        <div class="row"><span>المبلغ المدفوع:</span><span style="color:#198754;">\${order.paid_amount} \${systemSettings.currency_symbol}</span></div>
+        <div class="row"><span>المبلغ المتبقي:</span><span style="color:#dc3545;">\${order.remaining_amount} \${systemSettings.currency_symbol}</span></div>
+      </div>` : ''}
+        ${notes ? `<div style=\"margin-top:14px; color:#6c757d;\">${notes}</div>` : ''}
+        ${terms ? `<div style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
+      </div>
+      ${showFooter ? `
+      <div class=\"footer\">
+        ${hotlineNumber ? `<div class=\"phone-section\"><div class=\"phone-icon\" style=\"color:${phoneIconColor}; font-size:${phoneIconSize};\"></div><span style=\"color:${phoneTextColor}\">${hotlineNumber}</span></div>` : ''}
+        ${footerNote ? `<div class=\"note-section\"><div class=\"note-icon\" style=\"color:${noteIconColor}; font-size:${noteIconSize};\"></div><span style=\"color:${noteTextColor}\">${footerNote}</span></div>` : ''}
+      </div>` : ''}
+    </div>`;
+
+    const modern = `
+    <style>
+      :root { --primary-color:${primary}; --accent-color:${accent}; }
+      body { font-family:${font}; }
+      .hero{ 
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); 
+        color: #fff; 
+        padding: 25px; 
+        border-radius: 15px 15px 0 0; 
+        text-align: center; 
+        position: relative;
+        overflow: hidden;
+      }
+      .hero::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+        pointer-events: none;
+      }
+      .card{ background:#fff; border:1px solid #eee; border-radius:10px; padding:12px; }
+      .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+      .items-table{ width:100%; border-collapse: collapse; margin-top:10px; }
+      .items-table th{ background:#f1f3f5; }
+      .items-table th,.items-table td{ padding:10px; border-bottom:1px solid #eee; }
+      .items-table td:first-child{ text-align:right; word-break:break-word; }
+      .items-table td:nth-child(2), .items-table td:nth-child(3), .items-table td:nth-child(4){ text-align:center; }
+      .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; }
+      .bg-logo img{ max-width:60%; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); }
+      .totals{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-top:12px; }
+      .totals .t{ background:#f8f9fa; border:1px solid #eee; border-radius:10px; padding:12px; text-align:center; }
+      .content{ position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column; }
+      .main-content{ flex:1; }
+      .footer{ 
+        margin-top: auto; 
+        padding: 25px 30px; 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px; 
+        text-align: center; 
+        border: none;
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        page-break-inside: avoid;
+        position: relative;
+        overflow: hidden;
+      }
+      .footer::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        pointer-events: none;
+      }
+      .footer .phone-section{ 
+        display: flex; align-items: center; justify-content: center; 
+        margin-bottom: 15px; font-size: 16px; font-weight: 600;
+        color: white; position: relative; z-index: 2;
+      }
+      .footer .phone-icon{ 
+        display: inline-block;
+        margin-left: 8px; 
+      }
+      .footer .phone-icon::before{ content: '📞'; font-size: 20px; }
+      .footer .note-section{ 
+        display: flex; align-items: center; justify-content: center; 
+        font-size: 14px; color: rgba(255, 255, 255, 0.9);
+        position: relative; z-index: 2;
+      }
+      .footer .note-icon{ 
+        width: 40px; height: 40px; 
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+        margin-left: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+        backdrop-filter: blur(8px); transition: all 0.3s ease;
+      }
+      .footer .note-icon::before{ content: '📝'; font-size: 18px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3)); }
+      @media print { 
+        .bg-logo{ 
+          display:${bg?'block':'none'} !important; 
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          opacity: ${bgOpacity/100} !important;
+          z-index: -1 !important;
+          pointer-events: none !important;
+          width: 100% !important;
+          height: 100% !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .bg-logo img{ 
+          max-width: 60% !important; 
+          position: absolute !important; 
+          top: 40% !important; 
+          left: 50% !important; 
+          transform: translate(-50%,-50%) !important;
+          width: auto !important;
+          height: auto !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    </style>
+    <div class="bg-logo">
+      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+    </div>
+    <div class="main-content">
+      <div class="hero">
+        ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto; border-radius: 8px;"/>` : ''}
+        <h2 style="margin:0;">${title}</h2>
+  <div class="small">${labelInvoice}: \${order.invoice_number} — ${labelDate}: \${order.order_date}</div>
+      </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:12px; margin-top:12px;">
+      ${showCustomer ? `
+      <div class=\"card\">
+        <div style=\"font-weight:600; margin-bottom:6px;\">${labelCustomerSec}</div>
+  <div>الاسم: \${customer.name} </div>
+  <div>الهاتف: \${customer.phone} </div>
+  <div>العنوان: \${customer.address} </div>
+      </div>`: ''}
+      ${showOrderInfo ? `
+      <div class=\"card\" style=\"background:#fff3cd;\">
+        <div style=\"font-weight:600; margin-bottom:6px;\">بيانات الطلب</div>
+  <div>الفرع: \${branch.name} </div>
+  <div>اسم البائع: \${salesperson.name} </div>
+  <div>رقم الطلب: \${order.order_number} </div>
+  <div>نوع الطلب: \${order.type} </div>
+  <div>تسليم متوقع: \${order.expected_delivery_date} </div>
+      </div>`: ''}
+      ${showCompany ? `
+      <div class=\"card\">
+        <div style=\"font-weight:600; margin-bottom:6px;\">${labelCompanySec}</div>
+        <div>${cname}</div>
+        <div>${cphone}</div>
+        <div>${caddr}</div>
+      </div>`: ''}
+    </div>
+    ${showTable ? `
+    <div class=\"card\" style=\"margin-top:12px;\">
+      <table class=\"items-table\">
+        <thead>
+          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thDiscount}</th><th>${thTotal}</th></tr>
+        </thead>
+  <tbody>\${order.items_table} </tbody>
+      </table>
+    </div>`: ''}
+    ${showTotals ? `
+    <div class=\"totals\">
+  <div class=\"t\"><div style=\"color:#666;\">المجموع قبل الخصم</div><strong>\${order.total_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#dc3545;\">إجمالي الخصم</div><strong style=\"color:#dc3545;\">-\${order.total_discount_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#198754;\">الإجمالي النهائي</div><strong style=\"color:#198754;\">\${order.final_price_after_discount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#198754;\">المبلغ المدفوع</div><strong>\${order.paid_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#dc3545;\">المبلغ المتبقي</div><strong>\${order.remaining_amount} \${systemSettings.currency_symbol}</strong></div>
+    </div>`: ''}
+      ${notes ? `<div class=\"card\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''}
+      ${terms ? `<div class=\"card\" style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
+    </div>
+    ${showFooter ? `
+    <div class=\"footer\">
+      ${hotlineNumber ? `<div class=\"phone-section\"><div class=\"phone-icon\" style=\"color:${phoneIconColor}; font-size:${phoneIconSize};\"></div><span style=\"color:${phoneTextColor}\">${hotlineNumber}</span></div>` : ''}
+      ${footerNote ? `<div class=\"note-section\"><div class=\"note-icon\" style=\"color:${noteIconColor}; font-size:${noteIconSize};\"></div><span style=\"color:${noteTextColor}\">${footerNote}</span></div>` : ''}
+    </div>` : ''}
+    `;
+
+    const pro = `
+    <style>
+      :root { --primary-color:${primary}; --accent-color:${accent}; }
+      body { font-family:${font}; }
+      .header{ display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:3px solid var(--primary-color); }
+      .company{ text-align:right; }
+      .logo{ height:${logoSize}px; max-width:${logoSize * 2}px; object-fit:contain; }
+      .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+      .box{ background:#fff; border:1px solid #e9ecef; border-radius:10px; padding:12px; }
+      .box h4{ margin:0 0 8px; color:var(--primary-color); font-size:16px; }
+      .items-table{ width:100%; border-collapse: collapse; margin-top:14px; table-layout: fixed; }
+      .items-table thead th{ background:#fafbfc; border-bottom:2px solid var(--primary-color); }
+      .items-table th,.items-table td{ padding:10px; border-bottom:1px solid #eee; }
+      .totals{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-top:14px; }
+      .totals .t{ background:#f8f9fa; border:1px solid #eee; border-radius:10px; padding:12px; text-align:center; }
+      .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; }
+      .bg-logo img{ max-width:60%; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); }
+      .content{ position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column; }
+      .main-content{ flex:1; }
+      .footer{ 
+        margin-top: auto; 
+        padding: 15px 20px; 
+        background: transparent;
+        border-top: 2px solid var(--primary-color);
+        text-align: center; 
+        page-break-inside: avoid;
+      }
+      .footer .phone-section{ 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 16px; 
+        font-weight: 600;
+        color: var(--primary-color);
+      }
+      .footer .phone-icon{ 
+        display: inline-block;
+        margin-left: 8px; 
+        color: var(--primary-color);
+      }
+      .footer .phone-icon::before{ 
+        content: '📞'; 
+        font-size: 18px; 
+      }
+      @media print { 
+        .bg-logo{ 
+          display:${bg?'block':'none'} !important; 
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          opacity: ${bgOpacity/100} !important;
+          z-index: -1 !important;
+          pointer-events: none !important;
+          width: 100% !important;
+          height: 100% !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .bg-logo img{ 
+          max-width: 60% !important; 
+          position: absolute !important; 
+          top: 40% !important; 
+          left: 50% !important; 
+          transform: translate(-50%,-50%) !important;
+          width: auto !important;
+          height: auto !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    </style>
+    <div class="bg-logo">
+      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+    </div>
+    <div class="main-content">
+      <div class="header">
+        <div class="company">
+          <div style="font-size:22px; font-weight:700; color:var(--primary-color);">${cname}</div>
+          <div class="small">${caddr}</div>
+          <div class="small">${cphone}</div>
+        </div>
+        ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img class=\"logo\" src=\"${COMPANY_LOGO_URL}\" style=\"max-height: ${logoSize}px; max-width: ${logoSize}px;\"/>` : ''}
+      </div>
+    <div class="small" style="margin-top:6px;">
+      ${labelInvoice}: \${order.invoice_number} • ${labelDate}: \${order.order_date}
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:14px;">
+      ${showCustomer ? `
+      <div class=\"box\">
+        <h4>${labelCustomerSec}</h4>
+  <div>الاسم: \${customer.name} </div>
+  <div>الهاتف: \${customer.phone} </div>
+  <div>العنوان: \${customer.address} </div>
+      </div>`: ''}
+      ${showOrderInfo ? `
+      <div class=\"box\" style=\"background:#fff3cd;\">
+        <h4>بيانات الطلب</h4>
+  <div>الفرع: \${branch.name} </div>
+  <div>اسم البائع: \${salesperson.name} </div>
+  <div>رقم الطلب: \${order.order_number} </div>
+  <div>نوع الطلب: \${order.type} </div>
+  <div>تسليم متوقع: \${order.expected_delivery_date} </div>
+      </div>`: ''}
+      ${showCompany ? `
+      <div class=\"box\">
+        <h4>${labelCompanySec}</h4>
+        <div>${cname}</div>
+        <div>${cphone}</div>
+        <div>${caddr}</div>
+      </div>`: ''}
+    </div>
+    ${showTable ? `
+    <div class=\"box\" style=\"margin-top:12px;\">
+      <table class=\"items-table\">
+        <thead>
+          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thDiscount}</th><th>${thTotal}</th></tr>
+        </thead>
+  <tbody>\${order.items_table} </tbody>
+      </table>
+    </div>`: ''}
+    ${showTotals ? `
+    <div class=\"totals\">
+  <div class=\"t\"><div style=\"color:#666; font-size:12px;\">المجموع قبل الخصم</div><strong style=\"font-size:18px;\">\${order.total_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">إجمالي الخصم</div><strong style=\"color:#dc3545; font-size:18px;\">-\${order.total_discount_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#198754; font-size:12px;\">الإجمالي النهائي</div><strong style=\"color:#198754; font-size:18px;\">\${order.final_price_after_discount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#198754; font-size:12px;\">المبلغ المدفوع</div><strong style=\"color:#198754; font-size:18px;\">\${order.paid_amount} \${systemSettings.currency_symbol}</strong></div>
+  <div class=\"t\"><div style=\"color:#dc3545; font-size:12px;\">المبلغ المتبقي</div><strong style=\"color:#dc3545; font-size:18px;\">\${order.remaining_amount} \${systemSettings.currency_symbol}</strong></div>
+    </div>`: ''}
+      ${notes ? `<div class=\"box\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''}
+      ${terms ? `<div class=\"box\" style=\"margin-top:12px; color:#6c757d;\">${terms}</div>` : ''}
+    </div>
+    ${showFooter ? `
+    <div class=\"footer\">
+      ${hotlineNumber ? `<div class=\"phone-section\"><div class=\"phone-icon\" style=\"color:${phoneIconColor}; font-size:${phoneIconSize};\"></div><span style=\"color:${phoneTextColor}\">${hotlineNumber}</span></div>` : ''}
+      ${footerNote ? `<div style=\"margin-top: 10px; font-size: 14px; color: #666; font-style: italic;\">${footerNote}</div>` : ''}
+    </div>` : ''}
+    `;
+
+    if (style === 'pro') return pro;
+    if (style === 'modern') return modern;
+    if (style === 'classic') return classic;
+    if (SAVED_HTML && SAVED_HTML.length > 0) return SAVED_HTML;
+    return classic;
+  }
+
+  function updatePreview() {
+  const html = buildHtml();
+  // inject sample data so the editor preview / print preview shows realistic values
+  document.getElementById('preview').innerHTML = injectSampleData(html);
+  }
+
+  function loadSaved() {
+    const s = META?.settings || {};
+    if (s.primary_color) document.getElementById('primary_color').value = s.primary_color;
+    if (s.accent_color) document.getElementById('accent_color').value = s.accent_color;
+    if (s.font_family) document.getElementById('font_family').value = s.font_family;
+    const ci = META?.company_info || {};
+    if (ci.name) document.getElementById('company_name').value = ci.name;
+    if (ci.phone) document.getElementById('company_phone').value = ci.phone;
+    if (ci.address) document.getElementById('company_address').value = ci.address;
+    const adv = META?.advanced_settings || {};
+    if (adv.invoice_title) document.getElementById('invoice_title').value = adv.invoice_title;
+    if (adv.label_invoice_number) document.getElementById('label_invoice_number').value = adv.label_invoice_number;
+    if (adv.label_date) document.getElementById('label_date').value = adv.label_date;
+    if (adv.label_customer_section) document.getElementById('label_customer_section').value = adv.label_customer_section;
+    if (adv.label_company_section) document.getElementById('label_company_section').value = adv.label_company_section;
+    if (adv.th_desc) document.getElementById('th_desc').value = adv.th_desc;
+    if (adv.th_qty) document.getElementById('th_qty').value = adv.th_qty;
+    if (adv.th_price) document.getElementById('th_price').value = adv.th_price;
+  if (adv.th_total) document.getElementById('th_total').value = adv.th_total;
+  if (adv.th_discount) document.getElementById('th_discount').value = adv.th_discount;
+    if (adv.notes_text) {
+      document.getElementById('notes_text').value = adv.notes_text;
+      if (notesEditor) notesEditor.root.innerHTML = adv.notes_text;
+    }
+    if (adv.terms_text) {
+      document.getElementById('terms_text').value = adv.terms_text;
+      if (termsEditor) termsEditor.root.innerHTML = adv.terms_text;
+    }
+    if (adv.show_background_logo) document.getElementById('show_bg_logo').checked = !!adv.show_background_logo;
+    if (typeof adv.show_logo_header !== 'undefined') document.getElementById('show_logo_header').checked = !!adv.show_logo_header;
+    if (typeof adv.show_customer !== 'undefined') document.getElementById('show_customer').checked = !!adv.show_customer;
+    if (typeof adv.show_company !== 'undefined') document.getElementById('show_company').checked = !!adv.show_company;
+    if (typeof adv.show_order_info !== 'undefined') document.getElementById('show_order_info').checked = !!adv.show_order_info;
+    if (typeof adv.show_table !== 'undefined') document.getElementById('show_table').checked = !!adv.show_table;
+    if (typeof adv.show_totals !== 'undefined') document.getElementById('show_totals').checked = !!adv.show_totals;
+    if (typeof adv.show_footer !== 'undefined') document.getElementById('show_footer').checked = !!adv.show_footer;
+    if (adv.logo_size) document.getElementById('logo_size').value = adv.logo_size;
+    if (adv.bg_logo_opacity) document.getElementById('bg_logo_opacity').value = adv.bg_logo_opacity;
+    if (adv.hotline_number) document.getElementById('hotline_number').value = adv.hotline_number;
+    if (adv.footer_note) {
+      document.getElementById('footer_note').value = adv.footer_note;
+      if (footerNoteEditor) footerNoteEditor.root.innerHTML = adv.footer_note;
+    }
+    if (adv.phone_icon_color) document.getElementById('phone_icon_color').value = adv.phone_icon_color;
+    if (adv.phone_text_color) document.getElementById('phone_text_color').value = adv.phone_text_color;
+    if (adv.phone_icon_size) document.getElementById('phone_icon_size').value = adv.phone_icon_size;
+    if (adv.note_icon_color) document.getElementById('note_icon_color').value = adv.note_icon_color;
+    if (adv.note_text_color) document.getElementById('note_text_color').value = adv.note_text_color;
+    if (adv.note_icon_size) document.getElementById('note_icon_size').value = adv.note_icon_size;
+    if (adv.template_style) document.getElementById('template_style').value = adv.template_style;
+    // Update opacity display
+    document.getElementById('opacity_value').textContent = document.getElementById('bg_logo_opacity').value + '%';
+    updatePreview();
+  }
+
+  document.addEventListener('input', (e)=>{
+    if (['invoice_title','primary_color','accent_color','font_family','company_name','company_phone','company_address','logo_size','hotline_number','phone_icon_color','phone_text_color','phone_icon_size','note_icon_color','note_text_color','note_icon_size'].includes(e.target.id)) {
+      updatePreview();
+    }
+  });
+
+  document.addEventListener('change', (e)=>{
+    if (['show_bg_logo','show_logo_header','show_customer','show_company','show_order_info','show_table','show_totals','show_footer'].includes(e.target.id)) {
+      updatePreview();
+    }
+  });
+
+  // Update opacity value display
+  document.getElementById('bg_logo_opacity').addEventListener('input', function() {
+    document.getElementById('opacity_value').textContent = this.value + '%';
+    updatePreview();
+  });
+
+  document.getElementById('template_style').addEventListener('change', ()=>{
+    updatePreview();
+  });
+
+  // Initialize editors first, then load saved data
+  initializeEditors();
+  
+  // Wait a bit for editors to be ready, then load saved data
+  setTimeout(() => {
+    loadSaved();
+  }, 100);
+
+  // Ensure print dialog shows the injected sample data (in case user prints quickly)
+  window.addEventListener('beforeprint', function() {
+    try {
+      document.getElementById('preview').innerHTML = injectSampleData(buildHtml());
+    } catch (e) {
+      console.error('beforeprint injection failed', e);
+    }
+  });
+
+  // After printing, re-render the interactive preview (keeps editors in sync)
+  window.addEventListener('afterprint', function() {
+    try { updatePreview(); } catch(e) { /* no-op */ }
+  });
+
+  document.getElementById('save-template').onclick = async () => {
+    // Save the template source (with placeholders) — do NOT save the preview-injected demo values
+    const html_content = buildHtml();
+    const payload = {
+      template_id: TEMPLATE_ID,
+      template_data: {
+        name: META?.name || 'قالب مخصص',
+        template_type: 'custom',
+        html_content,
+        css_styles: '',
+        settings: {
+          primary_color: document.getElementById('primary_color').value,
+          secondary_color: META?.settings?.secondary_color || '#198754',
+          accent_color: document.getElementById('accent_color').value,
+          font_family: document.getElementById('font_family').value,
+          font_size: META?.settings?.font_size || 14,
+          page_size: 'A4',
+          page_margins: 20,
+        },
+        company_info: {
+          name: document.getElementById('company_name').value,
+          phone: document.getElementById('company_phone').value,
+          address: document.getElementById('company_address').value,
+        },
+        content_settings: META?.content_settings || {},
+        advanced_settings: {
+          ...(META?.advanced_settings || {}),
+          invoice_title: document.getElementById('invoice_title').value,
+          label_invoice_number: document.getElementById('label_invoice_number').value,
+          label_date: document.getElementById('label_date').value,
+          label_customer_section: document.getElementById('label_customer_section').value,
+          label_company_section: document.getElementById('label_company_section').value,
+          th_desc: document.getElementById('th_desc').value,
+          th_qty: document.getElementById('th_qty').value,
+          th_price: document.getElementById('th_price').value,
+          th_total: document.getElementById('th_total').value,
+          th_discount: document.getElementById('th_discount') ? document.getElementById('th_discount').value : 'نسبة الخصم',
+          notes_text: document.getElementById('notes_text').value,
+          terms_text: document.getElementById('terms_text').value,
+          show_background_logo: document.getElementById('show_bg_logo').checked,
+          show_logo_header: document.getElementById('show_logo_header').checked,
+          show_customer: document.getElementById('show_customer').checked,
+          show_company: document.getElementById('show_company').checked,
+          show_order_info: document.getElementById('show_order_info').checked,
+          show_table: document.getElementById('show_table').checked,
+          show_totals: document.getElementById('show_totals').checked,
+          show_footer: document.getElementById('show_footer').checked,
+          logo_size: document.getElementById('logo_size').value,
+          bg_logo_opacity: document.getElementById('bg_logo_opacity').value,
+          hotline_number: document.getElementById('hotline_number').value,
+          footer_note: document.getElementById('footer_note').value,
+          phone_icon_color: document.getElementById('phone_icon_color').value,
+          phone_text_color: document.getElementById('phone_text_color').value,
+          phone_icon_size: document.getElementById('phone_icon_size').value,
+          note_icon_color: document.getElementById('note_icon_color').value,
+          note_text_color: document.getElementById('note_text_color').value,
+          note_icon_size: document.getElementById('note_icon_size').value,
+          template_style: document.getElementById('template_style').value,
+        }
+      }
+    };
+
+    const resp = await fetch('{% url "orders:save_template" %}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (data.success) {
+      alert('تم الحفظ بنجاح');
+      if (!TEMPLATE_ID && data.template_id) {
+        window.location.href = `/orders/invoice-editor/${data.template_id}/`;
+      }
+    } else {
+      alert('فشل الحفظ: ' + (data.error || 'خطأ غير معروف'));
+    }
+  };
+
+  document.getElementById('set-default').onclick = async ()=>{
+    if (!TEMPLATE_ID) return;
+    const resp = await fetch(`/orders/api/templates/${TEMPLATE_ID}/set-default/`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } });
+    const data = await resp.json().catch(()=>({success:false}));
+    if (data.success) alert('تم تعيين القالب كافتراضي'); else alert('تعذر التعيين كافتراضي');
+  };
+</script>
+{% endblock %}
+

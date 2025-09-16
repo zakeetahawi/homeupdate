@@ -1,114 +1,215 @@
-from django.contrib.contenttypes.models import ContentType
-from django.utils.translation import gettext_lazy as _
-from .models import Notification, Department, User
+"""
+دوال مساعدة لتطبيق إعدادات السنوات في جميع أنحاء النظام
+"""
+from django.db.models import Q
+from django.utils import timezone
+from .models import DashboardYearSettings
 
-def send_notification(
-    title, 
-    message, 
-    sender, 
-    sender_department_code, 
-    target_department_code, 
-    target_branch=None, 
-    priority='medium', 
-    related_object=None
-):
+
+def apply_default_year_filter(queryset, request, date_field='created_at', section_name=None):
     """
-    Send a notification from one department to another
+    تطبيق فلتر السنة الافتراضية على أي استعلام مع دعم الاستثناءات
+
+    Args:
+        queryset: الاستعلام المراد تطبيق الفلتر عليه
+        request: كائن الطلب للحصول على المعاملات
+        date_field: اسم حقل التاريخ (افتراضي: created_at)
+        section_name: اسم القسم للتحقق من الاستثناء (اختياري)
+
+    Returns:
+        queryset مفلتر حسب السنة (إذا لم يكن القسم معفى)
+    """
+    # التحقق من إعفاء القسم من فلتر السنة
+    if section_name:
+        from .models import YearFilterExemption
+        if YearFilterExemption.is_section_exempt(section_name):
+            return queryset
+    
+    # الحصول على السنوات المحددة من المعاملات
+    selected_years = request.GET.getlist('years')
+    year_filter = request.GET.get('year', '')
+    
+    # إذا تم تحديد سنوات متعددة
+    if selected_years:
+        try:
+            year_filters = Q()
+            for year_str in selected_years:
+                if year_str != 'all':
+                    year = int(year_str)
+                    year_filters |= Q(**{f'{date_field}__year': year})
+            
+            if year_filters:
+                queryset = queryset.filter(year_filters)
+        except (ValueError, TypeError):
+            pass
+    # إذا تم تحديد سنة واحدة فقط
+    elif year_filter and year_filter != 'all':
+        try:
+            year = int(year_filter)
+            queryset = queryset.filter(**{f'{date_field}__year': year})
+        except (ValueError, TypeError):
+            pass
+    # إذا لم يتم تحديد أي سنة، استخدم السنة الافتراضية من الإعدادات
+    else:
+        default_year = DashboardYearSettings.get_default_year()
+        queryset = queryset.filter(**{f'{date_field}__year': default_year})
+    
+    return queryset
+
+
+def apply_year_filter_for_customers(queryset, request, date_field='created_at'):
+    """
+    تطبيق فلتر السنة للعملاء (بدون سنة افتراضية)
     
     Args:
-        title (str): Notification title
-        message (str): Notification message
-        sender (User): User sending the notification
-        sender_department_code (str): Code of the sender's department
-        target_department_code (str): Code of the target department
-        target_branch (Branch, optional): Target branch. Defaults to None.
-        priority (str, optional): Notification priority. Defaults to 'medium'.
-        related_object (Model, optional): Related object. Defaults to None.
+        queryset: الاستعلام المراد تطبيق الفلتر عليه
+        request: كائن الطلب للحصول على المعاملات
+        date_field: اسم حقل التاريخ (افتراضي: created_at)
     
     Returns:
-        Notification: The created notification
+        queryset مفلتر حسب السنة (إذا تم تحديدها)
+    """
+    # الحصول على السنوات المحددة من المعاملات
+    selected_years = request.GET.getlist('years')
+    year_filter = request.GET.get('year', '')
+    
+    # إذا تم تحديد سنوات متعددة
+    if selected_years:
+        try:
+            year_filters = Q()
+            for year_str in selected_years:
+                if year_str != 'all':
+                    year = int(year_str)
+                    year_filters |= Q(**{f'{date_field}__year': year})
+            
+            if year_filters:
+                queryset = queryset.filter(year_filters)
+        except (ValueError, TypeError):
+            pass
+    # إذا تم تحديد سنة واحدة فقط
+    elif year_filter and year_filter != 'all':
+        try:
+            year = int(year_filter)
+            queryset = queryset.filter(**{f'{date_field}__year': year})
+        except (ValueError, TypeError):
+            pass
+    # إذا لم يتم تحديد أي سنة، لا تطبق أي فلتر (إظهار جميع العملاء)
+    
+    return queryset
+
+
+def get_dashboard_year_context(request):
+    """
+    الحصول على معلومات السنة للسياق
+    
+    Args:
+        request: كائن الطلب
+    
+    Returns:
+        dict: معلومات السنة للسياق
+    """
+    available_years = DashboardYearSettings.get_available_years()
+    default_year = DashboardYearSettings.get_default_year()
+    selected_year = request.GET.get('year', '')
+    selected_years = request.GET.getlist('years')
+    current_year = timezone.now().year
+    
+    return {
+        'available_years': list(available_years),
+        'default_year': default_year,
+        'selected_year': selected_year,
+        'selected_years': selected_years,
+        'current_year': current_year,
+    }
+
+
+def get_active_dashboard_years():
+    """
+    الحصول على السنوات النشطة في الداشبورد
+    
+    Returns:
+        QuerySet: السنوات النشطة
+    """
+    return DashboardYearSettings.objects.filter(is_active=True).order_by('-year')
+
+
+def set_default_dashboard_year(year):
+    """
+    تعيين سنة افتراضية جديدة
+    
+    Args:
+        year: السنة المراد تعيينها كافتراضية
+    
+    Returns:
+        bool: True إذا تم التعيين بنجاح
     """
     try:
-        # Get departments
-        sender_department = Department.objects.get(code=sender_department_code)
-        target_department = Department.objects.get(code=target_department_code)
+        # إلغاء الافتراضية من جميع السنوات
+        DashboardYearSettings.objects.update(is_default=False)
         
-        # Create notification
-        notification = Notification(
-            title=title,
-            message=message,
-            priority=priority,
-            sender=sender,
-            sender_department=sender_department,
-            target_department=target_department,
-            target_branch=target_branch
+        # تعيين السنة الجديدة كافتراضية
+        year_setting, created = DashboardYearSettings.objects.get_or_create(
+            year=year,
+            defaults={'is_active': True, 'is_default': True}
         )
         
-        # Add related object if provided
-        if related_object:
-            content_type = ContentType.objects.get_for_model(related_object)
-            notification.content_type = content_type
-            notification.object_id = related_object.pk
+        if not created:
+            year_setting.is_default = True
+            year_setting.is_active = True
+            year_setting.save()
         
-        notification.save()
-        return notification
-    
-    except Department.DoesNotExist:
-        # Log error
-        print(f"Error: Department not found. Sender: {sender_department_code}, Target: {target_department_code}")
-        return None
-    except Exception as e:
-        # Log error
-        print(f"Error sending notification: {str(e)}")
-        return None
+        return True
+    except Exception:
+        return False
 
-def get_user_notifications(user, department_code=None, unread_only=False, limit=None):
+
+def ensure_current_year_exists():
     """
-    Get notifications for a user
+    التأكد من وجود السنة الحالية في الإعدادات
+    """
+    current_year = timezone.now().year
+    
+    # التحقق من وجود السنة الحالية
+    if not DashboardYearSettings.objects.filter(year=current_year).exists():
+        # إنشاء السنة الحالية
+        DashboardYearSettings.objects.create(
+            year=current_year,
+            is_active=True,
+            is_default=True,
+            description=f'السنة الحالية {current_year}'
+        )
+    
+    # التأكد من وجود سنة افتراضية
+    if not DashboardYearSettings.objects.filter(is_default=True).exists():
+        # تعيين السنة الحالية كافتراضية
+        year_setting = DashboardYearSettings.objects.filter(year=current_year).first()
+        if year_setting:
+            year_setting.is_default = True
+            year_setting.save()
+
+
+def get_year_filter_display(request):
+    """
+    الحصول على نص وصفي للفلتر المطبق حالياً
     
     Args:
-        user (User): User to get notifications for
-        department_code (str, optional): Filter by department code. Defaults to None.
-        unread_only (bool, optional): Only return unread notifications. Defaults to False.
-        limit (int, optional): Limit number of notifications. Defaults to None.
+        request: كائن الطلب
     
     Returns:
-        QuerySet: Notifications for the user
+        str: النص الوصفي للفلتر
     """
-    # Base query - get notifications for user's departments
-    if user.is_superuser:
-        # Superuser can see all notifications
-        notifications = Notification.objects.all()
+    selected_years = request.GET.getlist('years')
+    year_filter = request.GET.get('year', '')
+    
+    if selected_years:
+        if len(selected_years) == 1:
+            return f"السنة: {selected_years[0]}"
+        else:
+            return f"السنوات: {', '.join(selected_years)}"
+    elif year_filter and year_filter != 'all':
+        return f"السنة: {year_filter}"
     else:
-        # Regular user can only see notifications for their departments
-        user_departments = user.departments.filter(is_active=True)
-        notifications = Notification.objects.filter(target_department__in=user_departments)
-        
-        # If user has a branch, also filter by branch
-        if user.branch:
-            branch_notifications = Notification.objects.filter(
-                target_branch=user.branch
-            )
-            # Combine department and branch notifications
-            notifications = (notifications | branch_notifications).distinct()
-    
-    # Apply filters
-    if department_code:
-        try:
-            department = Department.objects.get(code=department_code)
-            notifications = notifications.filter(target_department=department)
-        except Department.DoesNotExist:
-            # Return empty queryset if department doesn't exist
-            return Notification.objects.none()
-    
-    if unread_only:
-        notifications = notifications.filter(is_read=False)
-    
-    # Order by created_at (newest first)
-    notifications = notifications.order_by('-created_at')
-    
-    # Apply limit if provided
-    if limit:
-        notifications = notifications[:limit]
-    
-    return notifications
+        default_year = DashboardYearSettings.get_default_year()
+        return f"السنة الافتراضية: {default_year}"
+
+

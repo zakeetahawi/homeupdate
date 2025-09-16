@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
-
 class Report(models.Model):
     """
     Base model for all reports
@@ -11,9 +10,10 @@ class Report(models.Model):
         ('production', _('تقرير الإنتاج')),
         ('inventory', _('تقرير المخزون')),
         ('financial', _('تقرير مالي')),
+    ('analytics', _('تقرير تحليلي')),
+    ('seller_activity', _('تقرير نشاط البائعين')),
         ('custom', _('تقرير مخصص')),
     ]
-    
     title = models.CharField(_('عنوان التقرير'), max_length=200)
     report_type = models.CharField(_('نوع التقرير'), max_length=20, choices=REPORT_TYPE_CHOICES)
     description = models.TextField(_('وصف التقرير'), blank=True)
@@ -27,15 +27,12 @@ class Report(models.Model):
     )
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
-    
     class Meta:
         verbose_name = _('تقرير')
         verbose_name_plural = _('التقارير')
         ordering = ['-created_at']
-    
     def __str__(self):
         return self.title
-
 class SavedReport(models.Model):
     """
     Model for saved report results
@@ -57,15 +54,12 @@ class SavedReport(models.Model):
         verbose_name=_('تم الإنشاء بواسطة')
     )
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
-    
     class Meta:
         verbose_name = _('تقرير محفوظ')
         verbose_name_plural = _('التقارير المحفوظة')
         ordering = ['-created_at']
-    
     def __str__(self):
         return f"{self.name} - {self.report.title}"
-
 class ReportSchedule(models.Model):
     """
     Model for scheduling reports
@@ -76,7 +70,6 @@ class ReportSchedule(models.Model):
         ('monthly', _('شهري')),
         ('quarterly', _('ربع سنوي')),
     ]
-    
     report = models.ForeignKey(
         Report,
         on_delete=models.CASCADE,
@@ -101,11 +94,9 @@ class ReportSchedule(models.Model):
     )
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
-    
     class Meta:
         verbose_name = _('جدولة تقرير')
         verbose_name_plural = _('جدولات التقارير')
         ordering = ['-created_at']
-    
     def __str__(self):
         return f"{self.name} - {self.report.title} ({self.get_frequency_display()})"

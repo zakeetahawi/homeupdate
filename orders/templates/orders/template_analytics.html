@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  body { direction: rtl; }
+  .analytics-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+  .analytics-card .card-header { background: linear-gradient(135deg, #0d6efd, #6c5ce7); color: white; border-radius: 12px 12px 0 0; padding: 1rem 1.5rem; }
+  .stat-box { background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 8px; padding: 1.5rem; text-align: center; margin-bottom: 1rem; }
+  .stat-number { font-size: 2rem; font-weight: 700; color: #0d6efd; margin-bottom: 0.5rem; }
+  .stat-label { color: #6c757d; font-size: 0.9rem; }
+  .usage-bar { background: #e9ecef; border-radius: 10px; height: 8px; overflow: hidden; margin-top: 0.5rem; }
+  .usage-progress { background: linear-gradient(90deg, #0d6efd, #6c5ce7); height: 100%; border-radius: 10px; transition: width 0.3s ease; }
+  .template-item { padding: 1rem; border-bottom: 1px solid #e9ecef; }
+  .template-item:last-child { border-bottom: none; }
+  .template-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+  .badge-classic { background: #e3f2fd; color: #1976d2; }
+  .badge-modern { background: #f3e5f5; color: #7b1fa2; }
+  .badge-pro { background: #fff3e0; color: #f57c00; }
+  .badge-custom { background: #e8f5e8; color: #388e3c; }
+  .print-log { font-size: 0.9rem; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; margin-bottom: 0.5rem; }
+  .chart-container { position: relative; height: 300px; margin: 1rem 0; }
+  .type-stat { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f8f9fa; border-radius: 6px; margin-bottom: 0.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-chart-bar me-2"></i>{{ page_title }}</h2>
+    <a href="{% url 'orders:template_list' %}" class="btn btn-outline-primary">
+      <i class="fas fa-arrow-right me-1"></i>العودة للقوالب
+    </a>
+  </div>
+
+  <!-- الإحصائيات العامة -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="stat-box">
+        <div class="stat-number">{{ total_templates }}</div>
+        <div class="stat-label">إجمالي القوالب</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-box">
+        <div class="stat-number">{{ active_templates }}</div>
+        <div class="stat-label">القوالب النشطة</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-box">
+        <div class="stat-number">{{ total_usage }}</div>
+        <div class="stat-label">إجمالي مرات الاستخدام</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-box">
+        <div class="stat-number">{{ recent_prints|length }}</div>
+        <div class="stat-label">عمليات الطباعة الأخيرة</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- أكثر القوالب استخداماً -->
+    <div class="col-lg-6">
+      <div class="analytics-card">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>أكثر القوالب استخداماً</h5>
+        </div>
+        <div class="card-body">
+          {% if most_used %}
+            {% for template in most_used %}
+            <div class="template-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ template.name }}</strong>
+                  <span class="template-badge badge-{{ template.template_type }}">
+                    {{ template.get_template_type_display }}
+                  </span>
+                  {% if template.is_default %}
+                    <span class="badge bg-success">افتراضي</span>
+                  {% endif %}
+                </div>
+                <div class="text-end">
+                  <div class="fw-bold text-primary">{{ template.usage_count }}</div>
+                  <small class="text-muted">مرة</small>
+                </div>
+              </div>
+              <div class="usage-bar">
+                <div class="usage-progress" style="width: {{ template.usage_count|floatformat:0|add:'0'|mul:'100'|div:total_usage|floatformat:1 }}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center text-muted py-4">
+              <i class="fas fa-file-alt fa-3x mb-3"></i>
+              <p>لا توجد بيانات استخدام متاحة</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- إحصائيات حسب النوع -->
+    <div class="col-lg-6">
+      <div class="analytics-card">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>إحصائيات حسب النوع</h5>
+        </div>
+        <div class="card-body">
+          {% for type_name, stats in type_stats.items %}
+          <div class="type-stat">
+            <div>
+              <strong>{{ type_name }}</strong>
+              <div class="small text-muted">{{ stats.count }} قالب</div>
+            </div>
+            <div class="text-end">
+              <div class="fw-bold text-primary">{{ stats.usage }}</div>
+              <small class="text-muted">استخدام</small>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- سجلات الطباعة الأخيرة -->
+  <div class="analytics-card">
+    <div class="card-header">
+      <h5 class="mb-0"><i class="fas fa-print me-2"></i>عمليات الطباعة الأخيرة</h5>
+    </div>
+    <div class="card-body">
+      {% if recent_prints %}
+        <div class="row">
+          {% for print_log in recent_prints %}
+          <div class="col-md-6 mb-3">
+            <div class="print-log">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <strong>{{ print_log.order.order_number }}</strong>
+                  <div class="small text-muted">{{ print_log.template.name }}</div>
+                </div>
+                <small class="text-muted">{{ print_log.printed_at|date:"d/m/Y H:i" }}</small>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                  <i class="fas fa-user me-1"></i>{{ print_log.printed_by.get_full_name|default:print_log.printed_by.username }}
+                </small>
+                <span class="template-badge badge-{{ print_log.template.template_type }}">
+                  {{ print_log.template.get_template_type_display }}
+                </span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center text-muted py-4">
+          <i class="fas fa-print fa-3x mb-3"></i>
+          <p>لا توجد عمليات طباعة مسجلة</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- جميع القوالب -->
+  <div class="analytics-card">
+    <div class="card-header">
+      <h5 class="mb-0"><i class="fas fa-list me-2"></i>جميع القوالب</h5>
+    </div>
+    <div class="card-body">
+      {% if templates %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>اسم القالب</th>
+                <th>النوع</th>
+                <th>الحالة</th>
+                <th>مرات الاستخدام</th>
+                <th>تاريخ الإنشاء</th>
+                <th>آخر تحديث</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for template in templates %}
+              <tr>
+                <td>
+                  <strong>{{ template.name }}</strong>
+                  {% if template.is_default %}
+                    <span class="badge bg-success ms-1">افتراضي</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="template-badge badge-{{ template.template_type }}">
+                    {{ template.get_template_type_display }}
+                  </span>
+                </td>
+                <td>
+                  {% if template.is_active %}
+                    <span class="badge bg-success">نشط</span>
+                  {% else %}
+                    <span class="badge bg-secondary">غير نشط</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="fw-bold text-primary">{{ template.usage_count }}</span>
+                </td>
+                <td>
+                  <small class="text-muted">{{ template.created_at|date:"d/m/Y" }}</small>
+                </td>
+                <td>
+                  <small class="text-muted">{{ template.updated_at|date:"d/m/Y" }}</small>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center text-muted py-4">
+          <i class="fas fa-file-alt fa-3x mb-3"></i>
+          <p>لا توجد قوالب متاحة</p>
+          <a href="{% url 'orders:template_list' %}" class="btn btn-primary mt-2">
+            إنشاء قالب جديد
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+// حساب النسب المئوية للاستخدام
+document.addEventListener('DOMContentLoaded', function() {
+    const totalUsage = {{ total_usage|default:1 }};
+    const progressBars = document.querySelectorAll('.usage-progress');
+    
+    progressBars.forEach(function(bar, index) {
+        const usageCount = parseInt(bar.parentElement.parentElement.querySelector('.text-primary').textContent);
+        const percentage = totalUsage > 0 ? (usageCount / totalUsage * 100) : 0;
+        bar.style.width = percentage + '%';
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}قائمة استلامات الأقمشة{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-card {
+        transition: all 0.3s ease;
+        border-radius: 10px;
+    }
+    .receipt-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .stats-card {
+        border-radius: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .badge-custom {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-receipt"></i>
+            قائمة استلامات الأقمشة
+        </h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'manufacturing:fabric_receipt' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> استلام جديد
+            </a>
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                إجمالي الاستلامات
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_receipts }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-receipt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                استلامات اليوم
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ today_receipts }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                استلامات الأسبوع
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ this_week_receipts }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-week fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                متوسط يومي
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ daily_average }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول الاستلامات -->
+    <div class="card shadow">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-table"></i>
+                تفاصيل الاستلامات
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="12%">كود الاستلام</th>
+                            <th width="18%">اسم العميل</th>
+                            <th width="12%">الفرع</th>
+                            <th width="15%">رقم الإذن</th>
+                            <th width="12%">المستلم</th>
+                            <th width="12%">تاريخ الاستلام</th>
+                            <th width="12%">رقم الشنطة</th>
+                            <th width="7%">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for receipt in fabric_receipts %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'manufacturing:fabric_receipt_detail' receipt.id %}" 
+                                   class="text-primary font-weight-bold">
+                                    {{ receipt.receipt_code }}
+                                </a>
+                            </td>
+                            <td>
+                                <div class="fw-bold">{{ receipt.customer_name }}</div>
+                                <small class="text-muted">{{ receipt.order_number }}</small>
+                            </td>
+                            <td>
+                                <span class="text-muted">
+                                    {{ receipt.order.customer.branch.name|default:"الفرع الرئيسي" }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ receipt.permit_number|default:"غير محدد" }}</div>
+                                    {% if receipt.cutting_order %}
+                                        <small class="text-muted">من التقطيع</small>
+                                    {% elif receipt.manufacturing_order %}
+                                        <small class="text-muted">من التصنيع</small>
+                                    {% else %}
+                                        <small class="text-muted">مباشر</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ receipt.received_by_name|default:"غير محدد" }}</div>
+                                    <small class="text-muted">{{ receipt.received_by.username|default:"" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ receipt.receipt_date|date:"d/m/Y" }}</div>
+                                    <small class="text-muted">{{ receipt.receipt_date|date:"H:i" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge badge-custom bg-warning text-dark">
+                                    {{ receipt.bag_number }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <a href="{% url 'manufacturing:fabric_receipt_detail' receipt.id %}" 
+                                       class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                لا توجد استلامات مسجلة
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="d-flex justify-content-center mt-4">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">الأولى</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">السابقة</a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">التالية</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">الأخيرة</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

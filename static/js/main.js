@@ -1,119 +1,111 @@
-// Theme Management
+/**
+ * Theme Management System
+ * نظام إدارة الثيمات الموحد
+ */
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Get theme selector element
+    // الحصول على عنصر اختيار الثيم
     const themeSelector = document.getElementById('themeSelector');
     if (!themeSelector) return;
 
-    // Load saved theme from localStorage
-    const savedTheme = localStorage.getItem('selectedTheme') || 'default';
-    themeSelector.value = savedTheme;
-    applyTheme(savedTheme);
+    // تحديث حالة select لتطابق الثيم الحالي
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'default';
+    themeSelector.value = currentTheme;
 
-    // Listen for theme changes
+    // الاستماع لتغييرات الثيم
     themeSelector.addEventListener('change', function(e) {
         const selectedTheme = e.target.value;
         applyTheme(selectedTheme);
         localStorage.setItem('selectedTheme', selectedTheme);
-    });
-});
 
-function applyTheme(theme) {
-    document.body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
-    
-    // Remove any existing theme
-    document.body.removeAttribute('data-theme');
-    
-    // Apply new theme if it's not the default
-    if (theme !== 'default') {
-        document.body.setAttribute('data-theme', theme);
-    }
-
-    // Store the theme preference
-    localStorage.setItem('selectedTheme', theme);
-
-    // Remove transition after it's complete
-    setTimeout(() => {
-        document.body.style.transition = '';
-    }, 300);
-}
-
-// Generic alert dismissal
-document.addEventListener('DOMContentLoaded', function() {
-    // Auto-hide alerts after 5 seconds
-    setTimeout(function() {
-        const alerts = document.querySelectorAll('.alert');
-        alerts.forEach(function(alert) {
-            const dismissBtn = new bootstrap.Alert(alert);
-            dismissBtn.close();
-        });
-    }, 5000);
-});
-
-// Form validation
-document.addEventListener('DOMContentLoaded', function() {
-    const forms = document.querySelectorAll('.needs-validation');
-    
-    Array.from(forms).forEach(function(form) {
-        form.addEventListener('submit', function(event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            form.classList.add('was-validated');
-        }, false);
-    });
-});
-
-// Initialize tooltips and popovers
-document.addEventListener('DOMContentLoaded', function() {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function(tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-    popoverTriggerList.map(function(popoverTriggerEl) {
-        return new bootstrap.Popover(popoverTriggerEl);
-    });
-});
-
-// Responsive table handling
-document.addEventListener('DOMContentLoaded', function() {
-    const tables = document.querySelectorAll('.table-responsive table');
-    tables.forEach(table => {
-        if (table.offsetWidth > table.parentElement.offsetWidth) {
-            table.parentElement.classList.add('table-scroll');
+        // حفظ الثيم في قاعدة البيانات إذا كان المستخدم مسجل
+        if (document.body.dataset.userAuthenticated === 'true') {
+            fetch('/accounts/set_default_theme/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: JSON.stringify({ theme: selectedTheme })
+            });
         }
+        
+        // تطبيق تأثير التحول السلس
+        addTransitionEffect();
+        
+        // لتحديث أي مكونات تحتاج تحديثاً خاصاً مع تغيير الثيم
+        updateComponentsOnThemeChange();
     });
+    
+    // التطبيق الأولي للثيم - يضمن تحديث جميع العناصر
+    updateComponentsOnThemeChange();
 });
 
-// Dynamic form fields
-function addFormField(containerId, template) {
-    const container = document.getElementById(containerId);
-    const newRow = template.cloneNode(true);
-    container.appendChild(newRow);
+/**
+ * تطبيق الثيم المحدد على عنصر body
+ * @param {string} theme - اسم الثيم المراد تطبيقه
+ */
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme);
 }
 
-// Format currency in Egyptian Pounds
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('ar-EG', { 
-        style: 'currency', 
-        currency: 'EGP' 
-    }).format(amount);
-}
-
-// Function to toggle password visibility
-function togglePasswordVisibility(inputId, iconId) {
-    var passwordInput = document.getElementById(inputId);
-    var icon = document.getElementById(iconId);
+/**
+ * إضافة تأثير انتقالي سلس عند تغيير الثيم
+ */
+function addTransitionEffect() {
+    const transitionElement = document.createElement('div');
+    transitionElement.className = 'theme-transition-overlay';
+    document.body.appendChild(transitionElement);
     
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    } else {
-        passwordInput.type = 'password';
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
+    // إزالة عنصر التحول بعد انتهاء التأثير
+    setTimeout(() => {
+        transitionElement.classList.add('fade-out');
+        setTimeout(() => {
+            if (transitionElement.parentNode) {
+                transitionElement.parentNode.removeChild(transitionElement);
+            }
+        }, 300);
+    }, 50);
+}
+
+/**
+ * تحديث المكونات التي قد تحتاج تحديثاً خاصاً عند تغيير الثيم
+ */
+function updateComponentsOnThemeChange() {
+    // تحديث مخططات البيانات إذا وجدت
+    updateCharts();
+    
+    // تحديث الجداول إذا وجدت
+    updateTables();
+    
+    // إرسال حدث تغيير الثيم لاستخدامه في المكونات الأخرى
+    const event = new CustomEvent('themeChanged', { 
+        detail: { theme: document.body.getAttribute('data-theme') } 
+    });
+    document.dispatchEvent(event);
+}
+
+/**
+ * تحديث مخططات البيانات عند تغيير الثيم
+ */
+function updateCharts() {
+    // إذا كانت مكتبة Chart.js متاحة، قم بتحديث الألوان
+    if (window.Chart && window.Chart.instances) {
+        Object.values(window.Chart.instances).forEach(chart => {
+            if (chart.config && chart.update) {
+                chart.update();
+            }
+        });
+    }
+}
+
+/**
+ * تحديث تنسيقات الجداول عند تغيير الثيم
+ */
+function updateTables() {
+    // إذا كانت مكتبة DataTables متاحة، قم بتحديث الجداول
+    if (window.$.fn && window.$.fn.dataTable) {
+        window.$.fn.dataTable.tables({ visible: true, api: true }).draw();
     }
 }

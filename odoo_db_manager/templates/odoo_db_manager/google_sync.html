@@ -1,0 +1,766 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load odoo_filters %}
+
+{% block title %}مزامنة غوغل{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light.css" />
+<!-- SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
+<style>
+    .google-sync-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .sync-card {
+        border-radius: 18px;
+        box-shadow: 0 6px 24px rgba(66,133,244,0.08), 0 1.5px 6px rgba(52,168,83,0.07);
+        border: 1px solid #e3e7ed;
+        background: #fff;
+        transition: box-shadow 0.3s, transform 0.2s;
+        margin-bottom: 32px;
+    }
+    .sync-card:hover {
+        box-shadow: 0 12px 36px rgba(66,133,244,0.13), 0 3px 12px rgba(52,168,83,0.10);
+        transform: translateY(-3px) scale(1.01);
+    }
+    .sync-header {
+        background: linear-gradient(90deg, #4285F4 0%, #34A853 100%);
+        color: #fff;
+        border-radius: 18px 18px 0 0;
+        padding: 18px 24px;
+        font-size: 1.15rem;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .sync-body {
+        padding: 28px 24px 18px 24px;
+    }
+    .sync-footer {
+        background: #f5f7fa;
+        border-radius: 0 0 18px 18px;
+        padding: 18px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #e3e7ed;
+    }
+    .google-logo {
+        width: 28px;
+        height: 28px;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+    .sync-status {
+        font-size: 15px;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+    }
+    .sync-status-success {
+        background-color: #e6f4ea;
+        color: #137333;
+    }
+    .sync-status-error {
+        background-color: #fce8e6;
+        color: #a50e0e;
+    }
+    .sync-status-warning {
+        background-color: #fef7e0;
+        color: #a05e03;
+    }
+    .sync-options label {
+        font-weight: normal;
+        cursor: pointer;
+    }
+    .sync-options .form-check {
+        margin-bottom: 12px;
+    }
+    .sync-options .form-check-input:checked {
+        background-color: #4285F4;
+        border-color: #4285F4;
+    }
+    .sync-options .form-check-input:focus {
+        box-shadow: 0 0 0 0.15rem rgba(66,133,244,0.25);
+    }
+    .sync-details {
+        padding: 10px;
+    }
+    .sync-detail-item {
+        margin-bottom: 10px;
+        padding: 8px;
+        border-radius: 6px;
+        background-color: #f8f9fa;
+    }
+    .sync-detail-item .title {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .sync-detail-item .badge {
+        margin-left: 5px;
+    }
+    .sync-detail-item .message {
+        margin-top: 5px;
+    }
+    .sync-detail-item .count {
+        color: #666;
+        font-size: 0.9em;
+        margin-top: 3px;
+    }
+    .odoo-toolbar {
+        margin-bottom: 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .odoo-toolbar-left h1 {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #4285F4;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .odoo-toolbar-right .btn {
+        margin-left: 10px;
+    }
+    .swal2-popup pre {
+        text-align: left;
+        direction: ltr;
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px 10px;
+        font-size: 1em;
+        font-family: 'Consolas', 'monospace';
+        white-space: pre-wrap;
+        word-break: break-all;
+        margin: 0;
+    }
+    .swal2-details-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+        background: #f8f9fa;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 1.05em;
+    }
+    .swal2-details-table th, .swal2-details-table td {
+        padding: 8px 14px;
+        border-bottom: 1px solid #e3e7ed;
+        text-align: right;
+    }
+    .swal2-details-table th {
+        background: #e3e7ed;
+        color: #4285F4;
+        font-weight: bold;
+    }
+    .swal2-details-table tr:last-child td {
+        border-bottom: none;
+    }
+    .swal2-details-table .status-success {
+        color: #137333;
+        font-weight: bold;
+    }
+    .swal2-details-table .status-error {
+        color: #a50e0e;
+        font-weight: bold;
+    }
+    .swal2-details-table .status-warning {
+        color: #a05e03;
+        font-weight: bold;
+    }
+    .details-btn {
+        background: linear-gradient(90deg, #4285F4 0%, #34A853 100%);
+        color: #fff !important;
+        border: none;
+        border-radius: 6px;
+        padding: 5px 18px;
+        font-size: 1em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 8px rgba(66,133,244,0.07);
+    }
+    .details-btn:hover {
+        background: linear-gradient(90deg, #34A853 0%, #4285F4 100%);
+        color: #fff;
+        box-shadow: 0 4px 16px rgba(66,133,244,0.13);
+    }
+    .pagination {
+        display: flex;
+        justify-content: center;
+        margin-top: 1.5rem;
+        margin-bottom: 1.5rem;
+        gap: 0.5rem;
+    }
+    .pagination .page-link {
+        color: #4285F4;
+        border: 1px solid #e3e7ed;
+        border-radius: 6px;
+        padding: 6px 14px;
+        background: #fff;
+        transition: background 0.2s;
+    }
+    .pagination .page-link.active, .pagination .page-link:active {
+        background: #4285F4;
+        color: #fff;
+        border-color: #4285F4;
+    }
+    .pagination .page-link.disabled {
+        color: #bbb;
+        pointer-events: none;
+        background: #f8f9fa;
+    }
+    @media (max-width: 768px) {
+        .sync-card, .sync-header, .sync-footer, .sync-body {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+        .odoo-toolbar {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .odoo-toolbar-right {
+            width: 100%;
+            display: flex;
+            gap: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="google-sync-container">
+    <!-- شريط الأدوات العلوي -->
+    <div class="odoo-toolbar mb-4">
+        <div class="odoo-toolbar-left">
+            <h1>
+                <img src="{% static 'img/google-sheets-icon.png' %}" alt="Google Sheets" class="google-logo">
+                مزامنة غوغل
+            </h1>
+        </div>
+        <div class="odoo-toolbar-right">
+            <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> العودة للوحة التحكم
+            </a>
+            <a href="{% url 'odoo_db_manager:google_sync_config' %}" class="btn btn-primary">
+                <i class="fas fa-cog"></i> إعدادات المزامنة
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- بطاقة حالة المزامنة -->
+        <div class="col-md-6 mb-4">
+            <div class="card sync-card">
+                <div class="sync-header">
+                    <i class="fas fa-sync-alt me-2"></i> حالة المزامنة
+                </div>
+                <div class="sync-body">
+                    {% if config %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>الإعداد النشط:</span>
+                        <strong>{{ config.name }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>آخر مزامنة:</span>
+                        <strong>{{ config.last_sync|date:"Y-m-d H:i"|default:"لم تتم المزامنة بعد" }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>تكرار المزامنة:</span>
+                        <strong>كل {{ config.sync_frequency }} ساعة</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>المزامنة التالية:</span>
+                        {% if config.last_sync %}
+                        <strong>{{ next_sync|date:"Y-m-d H:i" }}</strong>
+                        {% else %}
+                        <strong>غير محدد</strong>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>حالة الاتصال:</span>
+                        {% if connection_status %}
+                        <span class="badge sync-status sync-status-success">متصل</span>
+                        {% else %}
+                        <span class="badge sync-status sync-status-error">غير متصل</span>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        لم يتم تكوين إعدادات المزامنة بعد. يرجى إنشاء إعداد جديد.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="sync-footer">
+                    <a href="{% url 'odoo_db_manager:google_sync_test' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-vial"></i> اختبار الاتصال
+                    </a>
+                    <a href="{% url 'odoo_db_manager:google_sync_now' %}" class="btn btn-success">
+                        <i class="fas fa-sync-alt"></i> مزامنة الآن
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة خيارات المزامنة -->
+        <div class="col-md-6 mb-4">
+            <div class="card sync-card">
+                <div class="sync-header">
+                    <i class="fas fa-sliders-h me-2"></i> خيارات المزامنة
+                </div>
+                <div class="sync-body">
+                    {% if config %}
+                    <form id="sync-options-form" method="post" action="{% url 'odoo_db_manager:google_sync_now' %}">
+                        {% csrf_token %}
+                        <div class="sync-options">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="full_backup" id="full_backup" checked>
+                                <label class="form-check-label fw-bold" for="full_backup">
+                                    <i class="fas fa-database me-1"></i> مزامنة شاملة (نسخ كل الجداول دفعة واحدة)
+                                </label>
+                            </div>
+                            <div class="mb-2 text-muted" style="font-size: 0.95em;">
+                                إذا اخترت أي جدول منفصل بالأسفل سيتم إلغاء المزامنة الشاملة.
+                            </div>
+
+                            <!-- المزامنة الشاملة -->
+                            <div class="mb-3">
+                                <h6 class="text-primary mb-2"><i class="fas fa-layer-group me-1"></i> المزامنة الشاملة</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="comprehensive_customers" id="sync_comprehensive_customers">
+                                            <label class="form-check-label fw-bold text-success" for="sync_comprehensive_customers">
+                                                <i class="fas fa-users-cog me-1"></i> العملاء الشامل
+                                            </label>
+                                            <small class="d-block text-muted">العملاء + طلباتهم + معايناتهم + أوامر التصنيع</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="comprehensive_users" id="sync_comprehensive_users">
+                                            <label class="form-check-label fw-bold text-success" for="sync_comprehensive_users">
+                                                <i class="fas fa-user-shield me-1"></i> المستخدمين الشامل
+                                            </label>
+                                            <small class="d-block text-muted">المستخدمين + البائعين + الموظفين</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="comprehensive_inventory" id="sync_comprehensive_inventory">
+                                            <label class="form-check-label fw-bold text-success" for="sync_comprehensive_inventory">
+                                                <i class="fas fa-boxes me-1"></i> المنتجات والمخزون الشامل
+                                            </label>
+                                            <small class="d-block text-muted">المنتجات + الكميات + قيمة المخزون</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="comprehensive_system" id="sync_comprehensive_system">
+                                            <label class="form-check-label fw-bold text-success" for="sync_comprehensive_system">
+                                                <i class="fas fa-cogs me-1"></i> إعدادات النظام الشامل
+                                            </label>
+                                            <small class="d-block text-muted">الفروع + الموردين + الفنيين + فرق التركيب</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- دورة حياة الطلبات الكاملة -->
+                                <div class="mb-3">
+                                    <h6 class="text-warning mb-2"><i class="fas fa-project-diagram me-1"></i> دورة حياة الطلبات الكاملة</h6>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="form-check">
+                                                <input class="form-check-input sync-table-checkbox" type="checkbox" name="selected_tables" value="complete_orders_lifecycle" id="sync_complete_orders_lifecycle">
+                                                <label class="form-check-label fw-bold text-warning" for="sync_complete_orders_lifecycle">
+                                                    <i class="fas fa-sitemap me-1"></i> دورة حياة الطلبات الكاملة
+                                                </label>
+                                                <small class="d-block text-muted">الطلب + التصنيع + التركيب + المعاينة + التسليم في صفحة واحدة شاملة</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- تم إزالة الجداول الأساسية لتجنب التضارب في المزامنة -->
+                        </div>
+                        <div class="mt-3">
+                            <div class="form-group">
+                                <label for="sync_frequency">تكرار المزامنة (بالساعات):</label>
+                                <input type="number" class="form-control" id="sync_frequency" name="sync_frequency" value="{{ config.sync_frequency }}" min="1" max="168">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success mt-3" id="sync-now-btn">
+                            <i class="fas fa-sync-alt"></i> مزامنة الآن
+                        </button>
+                    </form>
+
+                    <!-- المزامنة العكسية -->
+                    <div class="mt-4 pt-4 border-top">
+                        <h6 class="text-danger mb-3">
+                            <i class="fas fa-download me-1"></i> المزامنة العكسية
+                            <small class="text-muted d-block">استقبال البيانات من Google Sheets إلى النظام</small>
+                        </h6>
+
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>تحذير:</strong> هذه العملية تتطلب كلمة مرور المدير وقد تؤثر على البيانات الموجودة.
+                        </div>
+
+                        <form id="reverse-sync-form">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="admin_password" class="form-label">
+                                    <i class="fas fa-key me-1"></i> كلمة مرور المدير
+                                </label>
+                                <input type="password" class="form-control" id="admin_password" name="admin_password" required>
+                                <small class="text-muted">مطلوبة للتحقق من الهوية قبل تنفيذ المزامنة العكسية</small>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="delete_old_data" name="delete_old_data">
+                                <label class="form-check-label text-danger" for="delete_old_data">
+                                    <i class="fas fa-trash me-1"></i> حذف البيانات القديمة قبل الاستيراد
+                                </label>
+                                <small class="d-block text-muted">
+                                    إذا تم تفعيل هذا الخيار، سيتم حذف جميع البيانات الموجودة قبل استيراد البيانات الجديدة
+                                </small>
+                            </div>
+
+                            <button type="submit" class="btn btn-danger" id="reverse-sync-btn">
+                                <i class="fas fa-download"></i> تنفيذ المزامنة العكسية
+                            </button>
+                        </form>
+                    </div>
+                    <script>
+                        // تعطيل full_backup إذا تم اختيار أي جدول منفصل والعكس
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const fullBackupCheckbox = document.getElementById('full_backup');
+                            const tableCheckboxes = document.querySelectorAll('.sync-table-checkbox');
+                            function updateFullBackupState() {
+                                let anyChecked = false;
+                                tableCheckboxes.forEach(cb => {
+                                    if (cb.checked) anyChecked = true;
+                                });
+                                fullBackupCheckbox.checked = !anyChecked;
+                                fullBackupCheckbox.disabled = anyChecked;
+                            }
+                            tableCheckboxes.forEach(cb => {
+                                cb.addEventListener('change', updateFullBackupState);
+                            });
+                            fullBackupCheckbox.addEventListener('change', function() {
+                                if (fullBackupCheckbox.checked) {
+                                    tableCheckboxes.forEach(cb => cb.checked = false);
+                                    fullBackupCheckbox.disabled = false;
+                                }
+                            });
+                        });
+                    </script>
+                    {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        لم يتم تكوين إعدادات المزامنة بعد. يرجى إنشاء إعداد جديد.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- سجل المزامنة -->
+    <div id="sync-log-container">
+        <h2>سجل المزامنة</h2>
+        <table id="sync-log-table" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>الحالة</th>
+                    <th>الرسالة</th>
+                    <th>تفاصيل</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in sync_logs %}
+                <tr>
+                    <td>{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        {% if log.status == 'success' %}
+                            <span class="badge sync-status sync-status-success">نجاح</span>
+                        {% elif log.status == 'error' %}
+                            <span class="badge sync-status sync-status-error">خطأ</span>
+                        {% else %}
+                            <span class="badge sync-status sync-status-warning">تحذير</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.message|truncatechars:120 }}</td>
+                    <td>
+                        {% if log.details %}
+                        <button class="details-btn" type="button"
+                            onclick="showLogDetailsSwal({{ forloop.counter0 }})">
+                            <i class="fas fa-eye"></i> عرض التفاصيل
+                        </button>
+                        <script type="application/json" id="json-data-{{ forloop.counter0 }}">
+                            {{ log.details|safe|escapejs }}
+                        </script>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted">لا يوجد سجلات مزامنة بعد.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <!-- Pagination -->
+        {% if paginator.num_pages > 1 %}
+        <nav class="pagination">
+            {% if sync_logs.has_previous %}
+                <a class="page-link" href="?page={{ sync_logs.previous_page_number }}">السابق</a>
+            {% else %}
+                <span class="page-link disabled">السابق</span>
+            {% endif %}
+            {% for num in paginator.page_range %}
+                {% if sync_logs.number == num %}
+                    <span class="page-link active">{{ num }}</span>
+                {% else %}
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            {% if sync_logs.has_next %}
+                <a class="page-link" href="?page={{ sync_logs.next_page_number }}">التالي</a>
+            {% else %}
+                <span class="page-link disabled">التالي</span>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </div>
+
+    <!-- معلومات جدول البيانات -->
+    {% if config %}
+    <div class="card sync-card">
+        <div class="sync-header">
+            <i class="fas fa-table me-2"></i> معلومات جدول البيانات
+        </div>
+        <div class="sync-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="fw-bold">معرف جدول البيانات:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="{{ config.spreadsheet_id }}" readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('{{ config.spreadsheet_id }}')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold">رابط جدول البيانات:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="https://docs.google.com/spreadsheets/d/{{ config.spreadsheet_id }}" readonly>
+                            <a href="https://docs.google.com/spreadsheets/d/{{ config.spreadsheet_id }}" target="_blank" class="btn btn-outline-primary">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i> معلومات مفيدة:</h6>
+                        <ul class="mb-0">
+                            <li>يتم إنشاء ورقة عمل منفصلة لكل نوع من البيانات.</li>
+                            <li>يتم تحديث البيانات تلقائياً وفقاً لجدول المزامنة.</li>
+                            <li>يمكنك مشاركة جدول البيانات مع الآخرين من خلال إعدادات المشاركة في Google Sheets.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="sync-footer">
+                    <a href="https://docs.google.com/spreadsheets/d/{{ config.spreadsheet_id }}" target="_blank" class="btn btn-outline-success">
+                        <i class="fas fa-external-link-alt me-1"></i> فتح في Google Sheets
+                    </a>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#resetModal">
+                        <i class="fas fa-trash-alt me-1"></i> إعادة تعيين البيانات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal إعادة تعيين البيانات -->
+    <div class="modal fade" id="resetModal" tabindex="-1" aria-labelledby="resetModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resetModalLabel">تأكيد إعادة تعيين البيانات</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تحذير:</strong> سيؤدي هذا الإجراء إلى حذف جميع البيانات الموجودة في جدول البيانات وإعادة مزامنتها من البداية. هل أنت متأكد من رغبتك في المتابعة؟
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <a href="{% url 'odoo_db_manager:google_sync_reset' %}" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-1"></i> نعم، إعادة تعيين البيانات
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function showLogDetailsSwal(idx) {
+    var script = document.getElementById('json-data-' + idx);
+    if (!script) return;
+    var jsonText = script.textContent || script.innerText;
+    var jsonObj;
+    try {
+        // معالجة التفاصيل إذا كانت string وليست JSON حقيقي (مثلاً: {users: ...})
+        if (typeof jsonText === 'string' && jsonText.trim().startsWith('{') && !jsonText.trim().startsWith('{"')) {
+            // أضف علامات اقتباس حول المفاتيح
+            jsonText = jsonText.replace(/([{,]\s*)([a-zA-Z0-9_ء-ي]+)\s*:/g, '$1"$2":');
+        }
+        jsonObj = JSON.parse(jsonText);
+    } catch (e) {
+        jsonObj = jsonText;
+    }
+
+    // إذا كان jsonObj هو كائن النتائج المتوقع (dict of dicts)
+    if (typeof jsonObj === 'object' && jsonObj !== null && !Array.isArray(jsonObj)) {
+        let htmlContent = `<table class="swal2-details-table"><thead><tr><th>الجدول</th><th>الحالة</th><th>الرسالة</th></tr></thead><tbody>`;
+        for (const [key, value] of Object.entries(jsonObj)) {
+            let status = value.status || '';
+            let statusClass = '';
+            if (status === 'success') statusClass = 'status-success';
+            else if (status === 'error') statusClass = 'status-error';
+            else if (status === 'warning') statusClass = 'status-warning';
+            htmlContent += `<tr>
+                <td>${key}</td>
+                <td class="${statusClass}">${status}</td>
+                <td>${value.message || ''}</td>
+            </tr>`;
+        }
+        htmlContent += `</tbody></table>`;
+        Swal.fire({
+            title: 'تفاصيل السجل',
+            html: htmlContent,
+            width: 800,
+            confirmButtonText: 'إغلاق',
+            customClass: {
+                popup: 'swal2-details-popup'
+            }
+        });
+    } else {
+        // fallback: عرض كـ JSON عادي
+        let htmlContent = `<pre>${typeof jsonObj === 'object' ? JSON.stringify(jsonObj, null, 2) : jsonObj}</pre>`;
+        Swal.fire({
+            title: 'تفاصيل السجل',
+            html: htmlContent,
+            width: 800,
+            confirmButtonText: 'إغلاق',
+            customClass: {
+                popup: 'swal2-details-popup'
+            }
+        });
+    }
+}
+
+// المزامنة العكسية
+document.getElementById('reverse-sync-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const adminPassword = document.getElementById('admin_password').value;
+    const deleteOldData = document.getElementById('delete_old_data').checked;
+    const submitBtn = document.getElementById('reverse-sync-btn');
+
+    if (!adminPassword) {
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'يرجى إدخال كلمة مرور المدير'
+        });
+        return;
+    }
+
+    // تأكيد العملية
+    let confirmText = 'هل أنت متأكد من تنفيذ المزامنة العكسية؟';
+    if (deleteOldData) {
+        confirmText = 'تحذير: سيتم حذف جميع البيانات القديمة! هل أنت متأكد من المتابعة؟';
+    }
+
+    Swal.fire({
+        title: 'تأكيد المزامنة العكسية',
+        text: confirmText,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، تنفيذ المزامنة',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // تعطيل الزر وإظهار التحميل
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التنفيذ...';
+
+            // إرسال الطلب
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            formData.append('admin_password', adminPassword);
+            formData.append('delete_old_data', deleteOldData);
+
+            fetch('{% url "odoo_db_manager:reverse_sync" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'نجحت المزامنة العكسية',
+                        text: data.message
+                    });
+                    // مسح النموذج
+                    document.getElementById('admin_password').value = '';
+                    document.getElementById('delete_old_data').checked = false;
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'فشلت المزامنة العكسية',
+                        text: data.message
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ في الشبكة',
+                    text: 'حدث خطأ أثناء الاتصال بالخادم'
+                });
+            })
+            .finally(() => {
+                // إعادة تفعيل الزر
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-download"></i> تنفيذ المزامنة العكسية';
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

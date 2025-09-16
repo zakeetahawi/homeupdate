@@ -1,0 +1,369 @@
+{% extends 'base.html' %}
+{% load pagination_tags %}
+
+{% block title %}إدارة الشكاوى - وصول المدراء{% endblock %}
+
+{% block extra_css %}
+<!-- Select2 CSS for enhanced dropdowns -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+<style>
+    .admin-header {
+        background: linear-gradient(135deg, #dc3545 0%, #6f42c1 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stats-card.urgent { border-left-color: #dc3545; }
+    .stats-card.overdue { border-left-color: #fd7e14; }
+    .stats-card.escalated { border-left-color: #6f42c1; }
+    .stats-card.unassigned { border-left-color: #6c757d; }
+    
+    .complaint-row {
+        background: white;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+    
+    .complaint-row:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .complaint-row.new { border-left-color: #007bff; }
+    .complaint-row.in_progress { border-left-color: #ffc107; }
+    .complaint-row.overdue { border-left-color: #dc3545; }
+    .complaint-row.escalated { border-left-color: #6f42c1; }
+    
+    .filter-card {
+        background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .admin-badge {
+        background: linear-gradient(45deg, #dc3545, #6f42c1);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Admin Header -->
+    <div class="admin-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    إدارة الشكاوى - وصول المدراء
+                </h2>
+                <p class="mb-0">عرض شامل لجميع الشكاوى غير المحلولة في النظام</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <span class="admin-badge">
+                    <i class="fas fa-crown me-1"></i>
+                    صلاحيات إدارية
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card urgent">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="text-danger">{{ stats.urgent_count }}</h4>
+                        <p class="mb-0">شكاوى عاجلة</p>
+                    </div>
+                    <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card overdue">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="text-warning">{{ stats.overdue_count }}</h4>
+                        <p class="mb-0">شكاوى متأخرة</p>
+                    </div>
+                    <i class="fas fa-clock fa-2x text-warning"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card escalated">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="text-purple">{{ stats.escalated_count }}</h4>
+                        <p class="mb-0">شكاوى مصعدة</p>
+                    </div>
+                    <i class="fas fa-arrow-up fa-2x" style="color: #6f42c1;"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card unassigned">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="text-secondary">{{ stats.unassigned_count }}</h4>
+                        <p class="mb-0">غير معينة</p>
+                    </div>
+                    <i class="fas fa-user-slash fa-2x text-secondary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <a href="{% url 'complaints:complaint_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list me-1"></i>
+                العرض العادي
+            </a>
+            <a href="{% url 'complaints:complaint_create' %}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i>
+                شكوى جديدة
+            </a>
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="btn-group">
+                <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-download me-1"></i>
+                    تصدير البيانات
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel me-1"></i>Excel
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf me-1"></i>PDF
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Filters -->
+    <div class="filter-card">
+        <h5 class="mb-3"><i class="fas fa-filter me-2"></i>فلاتر البحث المتقدمة</h5>
+        <form method="get" class="row g-3" id="filterForm">
+            <div class="col-md-3">
+                <label for="{{ filter_form.status.id_for_label }}" class="form-label text-white">
+                    <i class="fas fa-tasks me-1"></i>{{ filter_form.status.label }}
+                </label>
+                {{ filter_form.status }}
+            </div>
+            <div class="col-md-3">
+                <label for="{{ filter_form.priority.id_for_label }}" class="form-label text-white">
+                    <i class="fas fa-exclamation-triangle me-1"></i>{{ filter_form.priority.label }}
+                </label>
+                {{ filter_form.priority }}
+            </div>
+            <div class="col-md-3">
+                <label for="{{ filter_form.complaint_type.id_for_label }}" class="form-label text-white">
+                    <i class="fas fa-tags me-1"></i>{{ filter_form.complaint_type.label }}
+                </label>
+                {{ filter_form.complaint_type }}
+            </div>
+            <div class="col-md-3">
+                <label for="{{ filter_form.assigned_to.id_for_label }}" class="form-label text-white">
+                    <i class="fas fa-user me-1"></i>{{ filter_form.assigned_to.label }}
+                </label>
+                {{ filter_form.assigned_to }}
+            </div>
+            <div class="col-md-3">
+                <label for="{{ filter_form.assigned_department.id_for_label }}" class="form-label text-white">
+                    <i class="fas fa-building me-1"></i>{{ filter_form.assigned_department.label }}
+                </label>
+                {{ filter_form.assigned_department }}
+            </div>
+            <div class="col-md-2">
+                <label for="{{ filter_form.date_from.id_for_label }}" class="form-label text-white">
+                    <i class="fas fa-calendar me-1"></i>{{ filter_form.date_from.label }}
+                </label>
+                {{ filter_form.date_from }}
+            </div>
+            <div class="col-md-2">
+                <label for="{{ filter_form.date_to.id_for_label }}" class="form-label text-white">
+                    <i class="fas fa-calendar me-1"></i>{{ filter_form.date_to.label }}
+                </label>
+                {{ filter_form.date_to }}
+            </div>
+            <div class="col-md-5">
+                <label for="{{ filter_form.search.id_for_label }}" class="form-label text-white">
+                    <i class="fas fa-search me-1"></i>{{ filter_form.search.label }}
+                </label>
+                {{ filter_form.search }}
+            </div>
+            <div class="col-md-12 d-flex justify-content-center gap-2 mt-3">
+                <button type="submit" class="btn btn-light btn-lg">
+                    <i class="fas fa-search me-2"></i>
+                    تطبيق الفلاتر
+                </button>
+                <a href="{% url 'complaints:admin_complaint_list' %}" class="btn btn-outline-light btn-lg">
+                    <i class="fas fa-undo me-2"></i>
+                    إعادة تعيين
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Total Count -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>إجمالي الشكاوى غير المحلولة: <span class="badge bg-primary">{{ stats.total_unresolved }}</span></h5>
+        <div>
+            {% if complaints %}
+                عرض {{ complaints|length }} من أصل {{ paginator.count }} شكوى
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Complaints List -->
+    {% if complaints %}
+        {% for complaint in complaints %}
+        <div class="complaint-row {{ complaint.status }}">
+            <div class="row align-items-center">
+                <div class="col-md-2">
+                    <h6 class="mb-1">
+                        <a href="{% url 'complaints:complaint_detail' complaint.pk %}" class="text-decoration-none">
+                            {{ complaint.complaint_number }}
+                        </a>
+                    </h6>
+                    <small class="text-muted">{{ complaint.created_at|date:"Y-m-d H:i" }}</small>
+                </div>
+                <div class="col-md-2">
+                    <div class="mb-1">{{ complaint.customer.name }}</div>
+                    <small class="text-muted">{{ complaint.customer.phone }}</small>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-1">{{ complaint.title|truncatechars:40 }}</div>
+                    <small class="text-muted">{{ complaint.complaint_type.name }}</small>
+                </div>
+                <div class="col-md-1 text-center">
+                    <span class="badge bg-{{ complaint.get_priority_badge_class }}">
+                        {{ complaint.get_priority_display }}
+                    </span>
+                </div>
+                <div class="col-md-2 text-center">
+                    <span class="badge bg-{{ complaint.get_status_badge_class }}">
+                        {{ complaint.get_status_display }}
+                    </span>
+                    {% if complaint.escalations.exists %}
+                    <br>
+                    <small class="text-warning">
+                        <i class="fas fa-arrow-up me-1"></i>
+                        مصعدة
+                    </small>
+                    {% endif %}
+                </div>
+                <div class="col-md-2">
+                    {% if complaint.assigned_to %}
+                        <small class="text-muted">معين إلى:</small><br>
+                        {{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}
+                    {% else %}
+                        <span class="text-danger">غير معين</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+            {% render_pagination page_obj %}
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+            <h4>ممتاز! لا توجد شكاوى غير محلولة</h4>
+            <p class="text-muted">جميع الشكاوى تم حلها أو إغلاقها</p>
+        </div>
+    {% endif %}
+</div>
+
+{% csrf_token %}
+{% endblock %}
+
+{% block extra_js %}
+<!-- Select2 JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    // Initialize enhanced dropdowns
+    $(document).ready(function() {
+        // Initialize Select2 for all multi-select fields
+        $('#id_status').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر الحالات...',
+            allowClear: true,
+            dir: 'rtl'
+        });
+        
+        $('#id_priority').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر الأولويات...',
+            allowClear: true,
+            dir: 'rtl'
+        });
+        
+        $('#id_complaint_type').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر الأنواع...',
+            allowClear: true,
+            dir: 'rtl'
+        });
+        
+        $('#id_assigned_to').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر الموظفين...',
+            allowClear: true,
+            dir: 'rtl'
+        });
+        
+        $('#id_assigned_department').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر الأقسام...',
+            allowClear: true,
+            dir: 'rtl'
+        });
+    });
+
+    // Export functions
+    function exportToExcel() {
+        window.location.href = '{% url "complaints:admin_complaint_list" %}?export=excel&' + window.location.search.substring(1);
+    }
+
+    function exportToPDF() {
+        window.location.href = '{% url "complaints:admin_complaint_list" %}?export=pdf&' + window.location.search.substring(1);
+    }
+</script>
+{% endblock %}

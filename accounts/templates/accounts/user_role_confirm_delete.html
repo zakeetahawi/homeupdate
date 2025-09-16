@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block styles %}
+<style>
+    .delete-warning {
+        color: #721c24;
+    }
+    .user-role-info {
+        background-color: #f8f9fc;
+        padding: 15px;
+        border-radius: 0.35rem;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
+            <a href="{% url 'accounts:user_roles' user_obj.id %}" class="btn btn-sm btn-secondary">
+                <i class="fas fa-arrow-left"></i> العودة إلى أدوار المستخدم
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> تحذير!</h5>
+                <p>هل أنت متأكد من أنك تريد إزالة دور <strong>{{ role.name }}</strong> من المستخدم <strong>{{ user_obj.username }}</strong>؟</p>
+                <p>هذا الإجراء سيؤدي إلى:</p>
+                <ul class="delete-warning">
+                    <li>إزالة جميع الصلاحيات المتعلقة بهذا الدور من المستخدم (ما لم تكن موجودة في أدوار أخرى)</li>
+                    <li>قد يفقد المستخدم القدرة على الوصول إلى بعض وظائف النظام</li>
+                </ul>
+            </div>
+            
+            <!-- معلومات المستخدم والدور -->
+            <div class="user-role-info">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-user"></i> معلومات المستخدم</h5>
+                        <dl class="row">
+                            <dt class="col-sm-4">اسم المستخدم:</dt>
+                            <dd class="col-sm-8">{{ user_obj.username }}</dd>
+                            
+                            <dt class="col-sm-4">الاسم الكامل:</dt>
+                            <dd class="col-sm-8">
+                                {{ user_obj.first_name }} {{ user_obj.last_name }}
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-user-tag"></i> معلومات الدور</h5>
+                        <dl class="row">
+                            <dt class="col-sm-4">اسم الدور:</dt>
+                            <dd class="col-sm-8">{{ role.name }}</dd>
+                            
+                            <dt class="col-sm-4">عدد الصلاحيات:</dt>
+                            <dd class="col-sm-8">{{ role.permissions.count }}</dd>
+                            
+                            <dt class="col-sm-4">نوع الدور:</dt>
+                            <dd class="col-sm-8">
+                                {% if role.is_system_role %}
+                                <span class="badge bg-primary">نظام</span>
+                                {% else %}
+                                <span class="badge bg-secondary">مخصص</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="post" action="" class="text-center">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash-alt"></i> تأكيد إزالة الدور
+                </button>
+                <a href="{% url 'accounts:user_roles' user_obj.id %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> إلغاء
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

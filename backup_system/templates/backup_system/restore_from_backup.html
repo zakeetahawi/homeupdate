@@ -1,0 +1,222 @@
+{% extends 'backup_system/base.html' %}
+
+{% block backup_content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="row">
+            <!-- معلومات النسخة الاحتياطية -->
+            <div class="col-md-4">
+                <div class="backup-card mb-4">
+                    <div class="backup-card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            النسخة الاحتياطية المصدر
+                        </h5>
+                    </div>
+                    <div class="backup-card-body">
+                        <div class="mb-3">
+                            <strong>الاسم:</strong>
+                            <p>{{ backup.name }}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>النوع:</strong>
+                            <p>
+                                <span class="badge bg-info">{{ backup.get_backup_type_display }}</span>
+                            </p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>تاريخ الإنشاء:</strong>
+                            <p>{{ backup.created_at|date:"Y-m-d H:i" }}</p>
+                        </div>
+                        
+                        {% if backup.compressed_size %}
+                        <div class="mb-3">
+                            <strong>حجم الملف:</strong>
+                            <p class="file-size">{{ backup.compressed_size_display }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if backup.total_records %}
+                        <div class="mb-3">
+                            <strong>عدد السجلات:</strong>
+                            <p>{{ backup.total_records|floatformat:0 }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if backup.description %}
+                        <div class="mb-3">
+                            <strong>الوصف:</strong>
+                            <p>{{ backup.description }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- نموذج الاستعادة -->
+            <div class="col-md-8">
+                <div class="backup-card">
+                    <div class="backup-card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-undo me-2"></i>
+                            إعدادات الاستعادة
+                        </h5>
+                    </div>
+                    <div class="backup-card-body">
+                        <form method="post" id="restoreForm">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    {{ form.name.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.name.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">
+                                    {{ form.description.label }}
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.description.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    {{ form.clear_existing_data }}
+                                    <label class="form-check-label" for="{{ form.clear_existing_data.id_for_label }}">
+                                        {{ form.clear_existing_data.label }}
+                                    </label>
+                                </div>
+                                <div class="form-text text-danger">
+                                    {{ form.clear_existing_data.help_text }}
+                                </div>
+                                {% if form.clear_existing_data.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.clear_existing_data.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- معلومات إضافية -->
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle me-2"></i>معلومات مهمة:</h6>
+                                <ul class="mb-0">
+                                    <li>سيتم استعادة البيانات من النسخة الاحتياطية المحددة</li>
+                                    <li>العملية قد تستغرق عدة دقائق حسب حجم البيانات</li>
+                                    <li>سيتم إشعارك عند اكتمال العملية</li>
+                                    <li>يمكنك متابعة تقدم العملية في صفحة التفاصيل</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- تحذير حذف البيانات -->
+                            <div class="alert alert-warning" id="clearDataWarning" style="display: none;">
+                                <h6><i class="fas fa-exclamation-triangle me-2"></i>تحذير مهم:</h6>
+                                <p class="mb-0">
+                                    لقد اخترت حذف البيانات الموجودة قبل الاستعادة. 
+                                    هذا يعني أن جميع البيانات الحالية في النظام ستُحذف نهائياً ولا يمكن استرجاعها.
+                                    يُنصح بشدة بإنشاء نسخة احتياطية من البيانات الحالية قبل المتابعة.
+                                </p>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'backup_system:backup_detail' backup.id %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-right me-1"></i>
+                                    إلغاء
+                                </a>
+                                <button type="submit" class="btn btn-success" id="submitBtn">
+                                    <i class="fas fa-undo me-1"></i>
+                                    بدء الاستعادة
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// إظهار/إخفاء تحذير حذف البيانات
+document.getElementById('{{ form.clear_existing_data.id_for_label }}').addEventListener('change', function() {
+    const warning = document.getElementById('clearDataWarning');
+    if (this.checked) {
+        warning.style.display = 'block';
+    } else {
+        warning.style.display = 'none';
+    }
+});
+
+// معالجة إرسال النموذج
+document.getElementById('restoreForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const nameField = document.getElementById('{{ form.name.id_for_label }}');
+    const clearDataField = document.getElementById('{{ form.clear_existing_data.id_for_label }}');
+    
+    // التحقق من صحة البيانات
+    if (!nameField.value.trim()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'يرجى إدخال اسم عملية الاستعادة'
+        });
+        return;
+    }
+    
+    // تأكيد الاستعادة
+    let confirmText = 'هل أنت متأكد من بدء عملية الاستعادة من النسخة الاحتياطية "{{ backup.name }}"؟';
+    if (clearDataField.checked) {
+        confirmText = 'تحذير: سيتم حذف جميع البيانات الموجودة قبل الاستعادة! هل أنت متأكد من المتابعة؟';
+    }
+    
+    Swal.fire({
+        title: 'تأكيد الاستعادة',
+        text: confirmText,
+        icon: clearDataField.checked ? 'warning' : 'question',
+        showCancelButton: true,
+        confirmButtonColor: clearDataField.checked ? '#dc3545' : '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، ابدأ الاستعادة',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // تعطيل الزر ومنع الإرسال المتكرر
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري بدء الاستعادة...';
+            
+            // إرسال النموذج
+            this.submit();
+            
+            // إظهار رسالة التقدم
+            Swal.fire({
+                title: 'جاري بدء عملية الاستعادة',
+                text: 'يرجى الانتظار... سيتم تحويلك لصفحة التفاصيل',
+                icon: 'info',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

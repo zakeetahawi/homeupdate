@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/inventory-dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/mobile.css' %}">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+{% endblock %}
+
+{% block content %}
+<div class="inventory-dashboard-container">
+    <!-- شريط العنوان -->
+    <div class="dashboard-header">
+        <div class="header-title">
+            <h1>{% block inventory_title %}لوحة تحكم المخزون{% endblock %}</h1>
+        </div>
+        <div class="header-actions">
+            <div class="search-box">
+                <form action="{% url 'inventory:product_list' %}" method="get">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control" placeholder="بحث عن منتج...">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="notifications">
+                <div class="dropdown">
+                    <button class="btn btn-link dropdown-toggle" type="button" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-bell"></i>
+                        {% if alerts_count > 0 %}
+                        <span class="badge bg-danger">{{ alerts_count }}</span>
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown">
+                        <li><h6 class="dropdown-header">التنبيهات</h6></li>
+                        {% if recent_alerts %}
+                            {% for alert in recent_alerts %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'inventory:alert_list' %}">
+                                    <div class="notification-item">
+                                        <div class="notification-icon {% if alert.priority == 'high' %}text-danger{% elif alert.priority == 'medium' %}text-warning{% else %}text-info{% endif %}">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                        </div>
+                                        <div class="notification-content">
+                                            <div class="notification-title">{{ alert.message }}</div>
+                                            <div class="notification-time">{{ alert.created_at|timesince }}</div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+                            {% endfor %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-center" href="{% url 'inventory:alert_list' %}">عرض جميع التنبيهات</a></li>
+                        {% else %}
+                            <li><a class="dropdown-item text-center" href="#">لا توجد تنبيهات جديدة</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            <div class="user-menu">
+                <div class="dropdown">
+                    <button class="btn btn-link dropdown-toggle" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user-circle"></i>
+                        <span>{{ request.user.get_full_name }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user"></i> الملف الشخصي</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> الإعدادات</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- شريط التنقل -->
+    <div class="dashboard-breadcrumb">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">الرئيسية</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">المخزون</a></li>
+                {% block breadcrumb_items %}
+                <li class="breadcrumb-item active" aria-current="page">لوحة التحكم</li>
+                {% endblock %}
+            </ol>
+        </nav>
+        <div class="quick-actions">
+            {% block quick_actions %}
+            <a href="{% url 'inventory:product_create' %}" class="btn btn-success btn-sm">
+                <i class="fas fa-plus"></i> منتج جديد
+            </a>
+            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-shopping-cart"></i> طلبات الشراء
+            </a>
+            {% endblock %}
+        </div>
+    </div>
+
+    <!-- محتوى الصفحة -->
+    <div class="dashboard-content">
+        {% block inventory_content %}{% endblock %}
+    </div>
+
+    <!-- شريط التذييل -->
+    <div class="dashboard-footer">
+        <div class="footer-info">
+            <p>© {{ current_year }} نظام إدارة المخزون. جميع الحقوق محفوظة.</p>
+        </div>
+        <div class="footer-links">
+            <a href="#">المساعدة</a>
+            <a href="#">سياسة الخصوصية</a>
+            <a href="#">شروط الاستخدام</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/inventory-dashboard.js' %}"></script>
+<script src="{% static 'js/drag-drop.js' %}"></script>
+{% endblock %}

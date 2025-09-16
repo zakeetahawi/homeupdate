@@ -1,0 +1,58 @@
+{% extends 'inventory/inventory_base.html' %}
+{% load static %}
+
+{% block inventory_title %}
+{% if category %}تعديل الفئة: {{ category.name }}{% else %}إضافة فئة جديدة{% endif %}
+{% endblock %}
+
+{% block inventory_content %}
+<div class="category-form-container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        {% if category %}تعديل الفئة: {{ category.name }}{% else %}إضافة فئة جديدة{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% if category %}{% url 'inventory:category_update' category.id %}{% else %}{% url 'inventory:category_create' %}{% endif %}">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">اسم الفئة</label>
+                                    <input type="text" class="form-control" id="name" name="name" value="{{ category.name|default:'' }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="parent" class="form-label">الفئة الأب</label>
+                                    <select class="form-select" id="parent" name="parent">
+                                        <option value="">بدون فئة أب</option>
+                                        {% for cat in categories %}
+                                        <option value="{{ cat.id }}" {% if category.parent and category.parent.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">الوصف</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ category.description|default:'' }}</textarea>
+                        </div>
+                        <div class="text-end">
+                            <a href="{% url 'inventory:category_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> إلغاء
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> حفظ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

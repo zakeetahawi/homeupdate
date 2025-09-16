@@ -1,0 +1,178 @@
+/**
+ * إصلاح شامل لجميع القوائم المنسدلة في تطبيق المصنع
+ * نفس منطق قوائم خطوط الإنتاج: position: absolute + top: 100% + left: 0
+ */
+
+/* قوائم الفلاتر المنسدلة - فقط للقوائم المخصصة */
+[id$="FilterDropdown"] {
+    position: fixed !important;
+    z-index: 2147483647 !important; /* أعلى z-index ممكن */
+    min-width: 200px;
+    max-width: 95vw;
+    background: #fff !important;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    border: 1px solid #eee;
+    font-family: inherit;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none; /* مخفية بشكل افتراضي */
+}
+
+/* قوائم خطوط الإنتاج - تستخدم position: absolute */
+[id^="productionLineMenu_"] {
+    position: absolute !important;
+    z-index: 1050 !important;
+    min-width: 200px;
+    max-width: 95vw;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    border: 1px solid #eee;
+    top: 100% !important;
+    left: 0 !important;
+    font-family: inherit;
+}
+
+/* القوائم المخصصة الأخرى */
+.custom-dropdown-menu {
+    position: fixed !important;
+    z-index: 1050 !important;
+    min-width: 200px;
+    max-width: 95vw;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    border: 1px solid #eee;
+    font-family: inherit;
+}
+
+/* عناصر القوائم */
+[id$="FilterDropdown"] .dropdown-item,
+[id$="FilterDropdown"] label.dropdown-item,
+[id^="productionLineMenu_"] .dropdown-item,
+.custom-dropdown-menu .dropdown-item {
+    padding: 0.5rem 1rem !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    border: none !important;
+    background: none !important;
+    width: 100% !important;
+    text-align: right !important;
+    color: #333 !important;
+    text-decoration: none !important;
+    transition: background-color 0.15s ease-in-out !important;
+    margin: 0 !important;
+}
+
+/* تأثير hover */
+[id$="FilterDropdown"] .dropdown-item:hover,
+[id^="productionLineMenu_"] .dropdown-item:hover,
+.custom-dropdown-menu .dropdown-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* رؤوس القوائم */
+[id$="FilterDropdown"] .dropdown-header,
+[id^="productionLineMenu_"] .dropdown-header,
+.custom-dropdown-menu .dropdown-header {
+    font-weight: bold;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 0.5rem;
+}
+
+/* فواصل القوائم */
+[id$="FilterDropdown"] hr,
+[id^="productionLineMenu_"] hr,
+.custom-dropdown-menu hr {
+    margin: 0.5rem 0;
+    border-color: #eee;
+}
+
+/* checkboxes في القوائم */
+[id$="FilterDropdown"] input[type="checkbox"],
+[id^="productionLineMenu_"] input[type="checkbox"],
+.custom-dropdown-menu input[type="checkbox"] {
+    margin-left: 0.5rem !important;
+    margin-right: 0 !important;
+    cursor: pointer !important;
+}
+
+/* تحسين مظهر labels مع checkboxes */
+[id$="FilterDropdown"] label.dropdown-item {
+    cursor: pointer !important;
+    user-select: none !important;
+}
+
+/* الحاويات التي تحتوي على القوائم */
+.position-relative {
+    position: relative !important;
+}
+
+/* إصلاح Bootstrap dropdowns العادية كبديل احتياطي */
+.dropdown-menu {
+    z-index: 1050 !important;
+}
+
+/* ضمان أن الحاويات لها position: relative */
+[id$="FilterDropdownBtn"],
+[id^="productionLineBtn_"] {
+    position: relative;
+}
+
+[id$="FilterDropdownBtn"]:not(.position-relative),
+[id^="productionLineBtn_"]:not(.position-relative) {
+    position: relative !important;
+}
+
+/* إخفاء القوائم بشكل افتراضي */
+[id$="FilterDropdown"],
+[id^="productionLineMenu_"] {
+    display: none;
+}
+
+/* عرض القوائم عند الحاجة */
+[id$="FilterDropdown"].show,
+[id^="productionLineMenu_"].show {
+    display: block !important;
+}
+
+/* تحسينات للشاشات الصغيرة */
+@media (max-width: 768px) {
+    [id$="FilterDropdown"],
+    [id^="productionLineMenu_"],
+    .custom-dropdown-menu {
+        max-width: 90vw;
+        min-width: 180px;
+    }
+}
+
+/* تحسينات للثيم الأسود */
+[data-theme="modern-black"] [id$="FilterDropdown"],
+[data-theme="modern-black"] [id^="productionLineMenu_"],
+[data-theme="modern-black"] .custom-dropdown-menu {
+    background: #2d3748 !important;
+    border-color: #4a5568 !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="modern-black"] [id$="FilterDropdown"] .dropdown-item,
+[data-theme="modern-black"] [id^="productionLineMenu_"] .dropdown-item,
+[data-theme="modern-black"] .custom-dropdown-menu .dropdown-item {
+    color: #e2e8f0 !important;
+}
+
+[data-theme="modern-black"] [id$="FilterDropdown"] .dropdown-item:hover,
+[data-theme="modern-black"] [id^="productionLineMenu_"] .dropdown-item:hover,
+[data-theme="modern-black"] .custom-dropdown-menu .dropdown-item:hover {
+    background-color: #4a5568 !important;
+}
+
+[data-theme="modern-black"] [id$="FilterDropdown"] .dropdown-header,
+[data-theme="modern-black"] [id^="productionLineMenu_"] .dropdown-header,
+[data-theme="modern-black"] .custom-dropdown-menu .dropdown-header {
+    color: #e2e8f0 !important;
+    border-color: #4a5568 !important;
+}

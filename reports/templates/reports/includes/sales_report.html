@@ -1,0 +1,102 @@
+{% load i18n report_math_filters %}
+
+<div class="row">
+    <!-- Summary Cards -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans 'ملخص المبيعات' %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center">
+                            <h6>{% trans 'إجمالي الطلبات' %}</h6>
+                            <h3 class="mb-0">{{ data.total_orders }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 text-center">
+                            <h6>{% trans 'إجمالي الإيرادات' %}</h6>
+                            <h3 class="mb-0">{{ data.total_revenue|floatformat:2 }} {% trans 'جنيه' %}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders by Status -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans 'الطلبات حسب الحالة' %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>{% trans 'الحالة' %}</th>
+                                <th>{% trans 'عدد الطلبات' %}</th>
+                                <th>{% trans 'النسبة' %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for status in data.orders_by_status %}
+                            <tr>
+                                <td>{{ status.status }}</td>
+                                <td>{{ status.count }}</td>
+                                <td>{{ status.count|div:data.total_orders|mul:100|floatformat:1 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Customers -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans 'أفضل العملاء' %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>{% trans 'العميل' %}</th>
+                                <th>{% trans 'عدد الطلبات' %}</th>
+                                <th>{% trans 'إجمالي المشتريات' %}</th>
+                                <th>{% trans 'متوسط قيمة الطلب' %}</th>
+                                <th>{% trans 'النسبة من الإيرادات' %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in data.top_customers %}
+                            <tr>
+                                <td><strong>{{ customer.name }}</strong></td>
+                                <td>{{ customer.total_orders }}</td>
+                                <td>{{ customer.total_spent|floatformat:2 }} {% trans 'جنيه' %}</td>
+                                <td>{{ customer.total_spent|div:customer.total_orders|floatformat:2 }} {% trans 'جنيه' %}</td>
+                                <td>{{ customer.total_spent|div:data.total_revenue|mul:100|floatformat:1 }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Initialize any charts or interactive elements here
+    });
+</script>
+{% endblock %}

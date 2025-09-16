@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}إكمال التركيب - {{ installation.order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-check-circle"></i>
+                        إكمال التركيب - {{ installation.order.order_number }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- معلومات الطلب -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> معلومات الطلب:</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>رقم الطلب:</strong> {{ installation.order.order_number }}<br>
+                                <strong>العميل:</strong> {{ installation.order.customer.name }}<br>
+                                <strong>الهاتف:</strong> {{ installation.order.customer.phone }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>العنوان:</strong> {{ installation.order.customer.address|default:"غير محدد" }}<br>
+                                <strong>الفريق:</strong> {{ installation.team.name|default:"غير محدد" }}<br>
+                                <strong>تاريخ التركيب:</strong> {{ installation.scheduled_date|date:"Y-m-d" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- تحذير مهم -->
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> تحذير مهم:</h6>
+                        <ul class="mb-0">
+                            <li>تأكد من اكتمال جميع مراحل التركيب</li>
+                            <li>تأكد من استلام المبالغ المتبقية من العميل</li>
+                            <li>تأكد من رفع مذكرة استلام العميل</li>
+                            <li>بعد الإكمال سيتم نقل التركيب إلى الأرشيف</li>
+                        </ul>
+                    </div>
+
+                    <!-- قائمة التحقق -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-list-check"></i> قائمة التحقق</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check1">
+                                <label class="form-check-label" for="check1">
+                                    تم إكمال التركيب بنجاح
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check2">
+                                <label class="form-check-label" for="check2">
+                                    تم استلام المبالغ المتبقية
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check3">
+                                <label class="form-check-label" for="check3">
+                                    تم رفع مذكرة استلام العميل
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check4">
+                                <label class="form-check-label" for="check4">
+                                    العميل راضٍ عن التركيب
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- نموذج الإكمال -->
+                    <form method="post" id="complete-form">
+                        {% csrf_token %}
+                        
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-info-circle"></i> ملاحظات:</h6>
+                            <p class="mb-0">
+                                عند الضغط على "إكمال التركيب" سيتم:
+                                <ul class="mb-0">
+                                    <li>تغيير حالة التركيب إلى "مكتمل"</li>
+                                    <li>نقل التركيب إلى الأرشيف</li>
+                                    <li>إرسال إشعار للعميل</li>
+                                </ul>
+                            </p>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-right"></i> إلغاء
+                            </a>
+                            <button type="submit" class="btn btn-success" id="complete-btn" disabled>
+                                <i class="fas fa-check-circle"></i> إكمال التركيب
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// التحقق من قائمة التحقق
+function checkAllCompleted() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    const completeBtn = document.getElementById('complete-btn');
+    let allChecked = true;
+    
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.checked) {
+            allChecked = false;
+        }
+    });
+    
+    completeBtn.disabled = !allChecked;
+}
+
+// إضافة مستمع الأحداث لكل checkbox
+document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+    checkbox.addEventListener('change', checkAllCompleted);
+});
+
+// تأكيد الإكمال
+document.getElementById('complete-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    Swal.fire({
+        title: 'تأكيد إكمال التركيب',
+        text: 'هل أنت متأكد من إكمال التركيب؟ هذا الإجراء لا يمكن التراجع عنه.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، إكمال التركيب',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            this.submit();
+        }
+    });
+});
+</script>
+{% endblock %} 

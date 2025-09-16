@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="page-header">{{ title }}</h1>
+            
+            <!-- الإحصائيات -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">إجمالي الأدوار</h5>
+                            <h2 class="card-text">{{ total_roles }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">المستخدمين النشطين</h5>
+                            <h2 class="card-text">{{ total_users }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- أدوات التصفية -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-auto">
+                            <select name="type" class="form-select" onchange="this.form.submit()">
+                                <option value="">كل الأدوار</option>
+                                <option value="system" {% if role_type == 'system' %}selected{% endif %}>أدوار النظام</option>
+                                <option value="custom" {% if role_type == 'custom' %}selected{% endif %}>أدوار مخصصة</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <a href="{% url 'accounts:role_create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> إضافة دور جديد
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- قائمة الأدوار -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الدور</th>
+                                    <th>الوصف</th>
+                                    <th>نوع الدور</th>
+                                    <th>عدد المستخدمين</th>
+                                    <th>تاريخ الإنشاء</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for role in page_obj %}
+                                <tr>
+                                    <td>{{ role.name }}</td>
+                                    <td>{{ role.description|default:"-" }}</td>
+                                    <td>
+                                        {% if role.is_system_role %}
+                                            <span class="badge bg-info">دور نظام</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">دور مخصص</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ role.user_roles.count }}</td>
+                                    <td>{{ role.created_at|date:"Y-m-d" }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'accounts:role_update' role.pk %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'accounts:role_assign' role.pk %}" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-user-plus"></i>
+                                            </a>
+                                            {% if not role.is_system_role %}
+                                            <a href="{% url 'accounts:role_delete' role.pk %}" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">لا توجد أدوار.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if page_obj.has_other_pages %}
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if role_type %}&type={{ role_type }}{% endif %}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                            <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+                                <a class="page-link" href="?page={{ num }}{% if role_type %}&type={{ role_type }}{% endif %}">{{ num }}</a>
+                            </li>
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if role_type %}&type={{ role_type }}{% endif %}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

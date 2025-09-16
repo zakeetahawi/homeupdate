@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار تحسينات validation رقم الهاتف</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-title {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .test-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            background: #f8f9fa;
+        }
+        .success {
+            border-left-color: #27ae60;
+            background: #d5f4e6;
+        }
+        .warning {
+            border-left-color: #f39c12;
+            background: #fef9e7;
+        }
+        .error {
+            border-left-color: #e74c3c;
+            background: #fadbd8;
+        }
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #2980b9;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            margin: 10px 0;
+            direction: ltr;
+        }
+        .form-control.border-danger {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15);
+        }
+        .form-control.border-warning {
+            border-color: #ffc107;
+            box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.15);
+        }
+        .form-control.border-success {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.15);
+        }
+        .phone-validation {
+            font-size: 12px;
+            margin-top: 5px;
+            padding: 5px 8px;
+            border-radius: 4px;
+            border-left: 3px solid;
+        }
+        .phone-validation.text-danger {
+            border-left-color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+        .phone-validation.text-warning {
+            border-left-color: #ffc107;
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #856404;
+        }
+        .phone-validation.text-success {
+            border-left-color: #28a745;
+            background-color: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+        .log {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 اختبار تحسينات validation رقم الهاتف</h1>
+    
+    <div class="test-container">
+        <h2 class="test-title">1. اختبار صيغة رقم الهاتف</h2>
+        <div class="test-item">
+            <label>رقم الهاتف الأول:</label>
+            <input type="text" class="form-control" id="phone1" placeholder="01234567890" maxlength="11">
+            <div id="phone1-validation"></div>
+        </div>
+        <div class="test-item">
+            <label>رقم الهاتف الثاني:</label>
+            <input type="text" class="form-control" id="phone2" placeholder="01234567890" maxlength="11">
+            <div id="phone2-validation"></div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">2. اختبار حالات مختلفة</h2>
+        <button class="test-button" onclick="testCase('01234567890', 'صحيح')">رقم صحيح</button>
+        <button class="test-button" onclick="testCase('0123456789', 'ناقص رقم')">ناقص رقم</button>
+        <button class="test-button" onclick="testCase('012345678901', 'زائد رقم')">زائد رقم</button>
+        <button class="test-button" onclick="testCase('02234567890', 'لا يبدأ بـ01')">لا يبدأ بـ01</button>
+        <button class="test-button" onclick="testCase('0123456789a', 'يحتوي حروف')">يحتوي حروف</button>
+        <button class="test-button" onclick="testCase('', 'فارغ')">فارغ</button>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">3. اختبار التحقق من التكرار</h2>
+        <div class="test-item">
+            <p>سيتم محاكاة فحص التكرار مع الخادم</p>
+            <button class="test-button" onclick="testDuplicateCheck('01234567890')">فحص رقم مكرر</button>
+            <button class="test-button" onclick="testDuplicateCheck('01987654321')">فحص رقم جديد</button>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2 class="test-title">📋 سجل الاختبارات</h2>
+        <div class="log" id="testLog"></div>
+        <button class="test-button" onclick="clearLog()">مسح السجل</button>
+        <button class="test-button" onclick="runAllTests()">تشغيل جميع الاختبارات</button>
+    </div>
+
+    <script>
+        // دالة لإضافة رسائل للسجل
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString('ar-EG');
+            const color = type === 'success' ? '#27ae60' : 
+                         type === 'error' ? '#e74c3c' : 
+                         type === 'warning' ? '#f39c12' : '#3498db';
+            
+            logElement.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('testLog').innerHTML = '';
+        }
+
+        // دوال التحقق من صحة الرقم (نسخة من النموذج)
+        function showPhoneValidationError(inputElement, message, type = 'error') {
+            clearPhoneValidation(inputElement);
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = `phone-validation ${type === 'warning' ? 'text-warning' : 'text-danger'}`;
+            errorDiv.innerHTML = `<i class="fas fa-${type === 'warning' ? 'exclamation-triangle' : 'times-circle'}"></i> ${message}`;
+            
+            const validationContainer = document.getElementById(inputElement.id + '-validation');
+            validationContainer.appendChild(errorDiv);
+            inputElement.classList.add(type === 'warning' ? 'border-warning' : 'border-danger');
+        }
+
+        function showPhoneValidationSuccess(inputElement, message) {
+            clearPhoneValidation(inputElement);
+            
+            const successDiv = document.createElement('div');
+            successDiv.className = 'phone-validation text-success';
+            successDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            
+            const validationContainer = document.getElementById(inputElement.id + '-validation');
+            validationContainer.appendChild(successDiv);
+            inputElement.classList.add('border-success');
+        }
+
+        function clearPhoneValidation(inputElement) {
+            const validationContainer = document.getElementById(inputElement.id + '-validation');
+            validationContainer.innerHTML = '';
+            inputElement.classList.remove('border-danger', 'border-warning', 'border-success');
+        }
+
+        // دالة التحقق من رقم الهاتف (نسخة مبسطة)
+        function validatePhone(phone, inputElement) {
+            phone = phone.replace(/[^\d]/g, '');
+            
+            clearPhoneValidation(inputElement);
+            
+            if (phone.length === 0) {
+                return;
+            }
+            
+            if (phone.length > 0 && phone.length < 11) {
+                if (phone.length >= 2 && !phone.startsWith('01')) {
+                    showPhoneValidationError(inputElement, 'رقم الهاتف يجب أن يبدأ بـ 01');
+                    return false;
+                }
+                return null; // لا نفحص إلا إذا كان مكتمل
+            }
+            
+            if (phone.length === 11) {
+                if (!/^01[0-9]{9}$/.test(phone)) {
+                    showPhoneValidationError(inputElement, 'رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 01');
+                    return false;
+                }
+                showPhoneValidationSuccess(inputElement, 'رقم الهاتف صحيح');
+                return true;
+            } else if (phone.length > 11) {
+                showPhoneValidationError(inputElement, 'رقم الهاتف يجب أن يكون 11 رقم فقط');
+                return false;
+            }
+        }
+
+        // اختبار حالة معينة
+        function testCase(phone, description) {
+            log(`🧪 اختبار: ${description} - الرقم: "${phone}"`, 'info');
+            
+            const testInput = document.getElementById('phone1');
+            testInput.value = phone;
+            
+            const result = validatePhone(phone, testInput);
+            
+            if (result === true) {
+                log(`✅ نجح: ${description}`, 'success');
+            } else if (result === false) {
+                log(`❌ فشل: ${description}`, 'error');
+            } else {
+                log(`⏳ غير مكتمل: ${description}`, 'warning');
+            }
+        }
+
+        // اختبار فحص التكرار (محاكاة)
+        function testDuplicateCheck(phone) {
+            log(`🔍 فحص التكرار للرقم: ${phone}`, 'info');
+            
+            // محاكاة استجابة الخادم
+            setTimeout(() => {
+                if (phone === '01234567890') {
+                    log(`⚠️ الرقم ${phone} مستخدم بالفعل للعميل: أحمد محمد`, 'warning');
+                    const testInput = document.getElementById('phone1');
+                    testInput.value = phone;
+                    showPhoneValidationError(testInput, 'رقم الهاتف مستخدم بالفعل للعميل: أحمد محمد', 'warning');
+                } else {
+                    log(`✅ الرقم ${phone} متاح للاستخدام`, 'success');
+                    const testInput = document.getElementById('phone1');
+                    testInput.value = phone;
+                    showPhoneValidationSuccess(testInput, 'رقم الهاتف متاح للاستخدام');
+                }
+            }, 500);
+        }
+
+        // تشغيل جميع الاختبارات
+        function runAllTests() {
+            log('🚀 بدء تشغيل جميع الاختبارات...', 'info');
+            clearLog();
+            
+            const testCases = [
+                ['01234567890', 'رقم صحيح'],
+                ['0123456789', 'ناقص رقم'],
+                ['012345678901', 'زائد رقم'],
+                ['02234567890', 'لا يبدأ بـ01'],
+                ['0123456789a', 'يحتوي حروف'],
+                ['', 'فارغ']
+            ];
+            
+            testCases.forEach((testCase, index) => {
+                setTimeout(() => {
+                    testCase(testCase[0], testCase[1]);
+                }, index * 500);
+            });
+            
+            setTimeout(() => {
+                log('🏁 انتهاء جميع الاختبارات', 'success');
+                log('💡 تحقق من النتائج أعلاه للتأكد من عمل جميع التحسينات', 'info');
+            }, testCases.length * 500 + 1000);
+        }
+
+        // إضافة مستمعي الأحداث للحقول
+        document.addEventListener('DOMContentLoaded', function() {
+            const phone1Input = document.getElementById('phone1');
+            const phone2Input = document.getElementById('phone2');
+            
+            phone1Input.addEventListener('input', function(e) {
+                validatePhone(e.target.value, phone1Input);
+            });
+            
+            phone2Input.addEventListener('input', function(e) {
+                validatePhone(e.target.value, phone2Input);
+            });
+            
+            log('📋 صفحة اختبار validation رقم الهاتف جاهزة', 'info');
+            log('💡 اكتب أرقام في الحقول أو اضغط على "تشغيل جميع الاختبارات"', 'info');
+        });
+    </script>
+</body>
+</html>

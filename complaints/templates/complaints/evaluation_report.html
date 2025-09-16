@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}تقرير تقييمات الشكاوى{% endblock %}
+
+{% block extra_css %}
+<style>
+.evaluation-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.rating-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.rating-card:hover {
+    transform: translateY(-5px);
+}
+
+.rating-stars {
+    color: #ffc107;
+    font-size: 1.2rem;
+}
+
+.rating-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.rating-label {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.recommendation-badge {
+    font-size: 1.1rem;
+    padding: 10px 20px;
+    border-radius: 25px;
+}
+
+.evaluation-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-left: 4px solid #007bff;
+}
+
+.no-data-container {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.no-data-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="evaluation-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-2">
+                            <i class="fas fa-star me-3"></i>تقرير تقييمات الشكاوى
+                        </h2>
+                        <p class="mb-0 opacity-75">تحليل شامل لتقييمات العملاء ومستوى رضاهم</p>
+                    </div>
+                    <div class="text-end">
+                        <a href="{% url 'complaints:complaint_list' %}" class="btn btn-light btn-lg">
+                            <i class="fas fa-arrow-right me-2"></i>العودة للشكاوى
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if has_data %}
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="rating-card text-center">
+                <div class="rating-number text-primary">{{ avg_stats.total_evaluations }}</div>
+                <div class="rating-label">إجمالي التقييمات</div>
+                <i class="fas fa-chart-bar text-primary mt-2" style="font-size: 1.5rem;"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="rating-card text-center">
+                <div class="rating-stars mb-2">
+                    {% for i in "12345" %}
+                        {% if avg_stats.avg_overall >= i|add:0 %}
+                            <i class="fas fa-star"></i>
+                        {% else %}
+                            <i class="far fa-star"></i>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="rating-number text-warning">{{ avg_stats.avg_overall|floatformat:1 }}</div>
+                <div class="rating-label">متوسط التقييم العام</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="rating-card text-center">
+                <div class="rating-number text-success">{{ avg_stats.avg_response_time|floatformat:1 }}</div>
+                <div class="rating-label">سرعة الاستجابة</div>
+                <i class="fas fa-clock text-success mt-2" style="font-size: 1.5rem;"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="rating-card text-center">
+                <div class="rating-number text-info">{{ recommendation_percentage }}%</div>
+                <div class="rating-label">نسبة التوصية</div>
+                <i class="fas fa-thumbs-up text-info mt-2" style="font-size: 1.5rem;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- تفاصيل التقييمات -->
+    <div class="row">
+        <!-- توزيع التقييمات -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-pie me-2"></i>توزيع التقييمات
+                </h5>
+                <div class="row">
+                    {% for rating in rating_distribution %}
+                    <div class="col-6 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="rating-stars me-2">
+                                {% for i in "12345" %}
+                                    {% if rating.overall_rating >= i|add:0 %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-warning" 
+                                         style="width: {{ rating.count|mul:100|div:avg_stats.total_evaluations }}%"></div>
+                                </div>
+                            </div>
+                            <span class="ms-2 fw-bold">{{ rating.count }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- التقييمات حسب نوع الشكوى -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-tags me-2"></i>التقييمات حسب نوع الشكوى
+                </h5>
+                {% for type_rating in by_complaint_type %}
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                    <div>
+                        <strong>{{ type_rating.complaint__complaint_type__name }}</strong>
+                        <small class="text-muted d-block">{{ type_rating.count }} تقييم</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="rating-stars">
+                            {% for i in "12345" %}
+                                {% if type_rating.avg_rating >= i|add:0 %}
+                                    <i class="fas fa-star"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">{{ type_rating.avg_rating|floatformat:1 }}/5</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- التقييمات الحديثة -->
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-clock me-2"></i>التقييمات الحديثة
+                </h5>
+                {% for evaluation in recent_evaluations %}
+                <div class="evaluation-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-2">
+                                <a href="{% url 'complaints:complaint_detail' evaluation.complaint.pk %}" 
+                                   class="text-decoration-none">
+                                    {{ evaluation.complaint.complaint_number }}
+                                </a>
+                                - {{ evaluation.complaint.title|truncatechars:50 }}
+                            </h6>
+                            <div class="rating-stars mb-2">
+                                {% for i in "12345" %}
+                                    {% if evaluation.overall_rating >= i|add:0 %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                                <span class="ms-2 text-muted">{{ evaluation.overall_rating }}/5</span>
+                            </div>
+                            {% if evaluation.positive_feedback %}
+                                <p class="mb-1 text-success">
+                                    <i class="fas fa-thumbs-up me-1"></i>
+                                    {{ evaluation.positive_feedback|truncatechars:100 }}
+                                </p>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted">{{ evaluation.evaluation_date|date:"Y-m-d H:i" }}</small>
+                            {% if evaluation.would_recommend %}
+                                <div class="mt-1">
+                                    <span class="badge bg-success">ينصح بالخدمة</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- لا توجد بيانات -->
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-container">
+                <div class="no-data-container">
+                    <i class="fas fa-star no-data-icon"></i>
+                    <h4>لا توجد تقييمات بعد</h4>
+                    <p class="text-muted">لم يتم تقييم أي شكوى حتى الآن</p>
+                    <a href="{% url 'complaints:complaint_list' %}" class="btn btn-primary">
+                        <i class="fas fa-list me-2"></i>عرض الشكاوى
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// تحديث الصفحة كل 5 دقائق
+setTimeout(function() {
+    location.reload();
+}, 300000);
+</script>
+{% endblock %}

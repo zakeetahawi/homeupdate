@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}نشاط المستخدم {{ target_user.username }} - نظام الخواجة{% endblock %}
+
+{% block extra_css %}
+<style>
+    .user-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .user-avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .activity-item {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+    
+    .activity-item:hover {
+        background: #f8f9fa;
+        transform: translateX(5px);
+    }
+    
+    .activity-item.success {
+        border-left-color: #28a745;
+    }
+    
+    .activity-item.warning {
+        border-left-color: #ffc107;
+    }
+    
+    .activity-item.danger {
+        border-left-color: #dc3545;
+    }
+    
+    .activity-icon {
+        font-size: 1.5rem;
+        margin-right: 15px;
+    }
+    
+    .activity-time {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    
+    .filter-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 8px 12px;
+        background: white;
+        transition: border-color 0.3s ease;
+    }
+    
+    .filter-select:focus {
+        border-color: #667eea;
+        outline: none;
+    }
+    
+    .apply-filters-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    
+    .apply-filters-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .online-badge {
+        background: #28a745;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        animation: pulse 2s infinite;
+    }
+    
+    .offline-badge {
+        background: #6c757d;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- User Header -->
+    <div class="user-header">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                {% if target_user.image %}
+                    <img src="{{ target_user.image.url }}" alt="{{ target_user.username }}" class="user-avatar-large">
+                {% else %}
+                    <div class="user-avatar-large bg-white bg-opacity-25 d-flex align-items-center justify-content-center text-white" style="font-size: 2rem;">
+                        {{ target_user.username|first|upper }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="col">
+                <h1 class="h3 mb-2">{{ target_user.get_full_name|default:target_user.username }}</h1>
+                <p class="mb-2">{{ target_user.get_user_role_display }}</p>
+                <div class="d-flex align-items-center">
+                    {% if user_stats.is_online %}
+                        <span class="online-badge me-3">
+                            <i class="fas fa-circle me-1"></i>
+                            متصل الآن
+                        </span>
+                    {% else %}
+                        <span class="offline-badge me-3">
+                            <i class="fas fa-circle me-1"></i>
+                            غير متصل
+                        </span>
+                    {% endif %}
+                    
+                    {% if user_stats.last_login %}
+                    <span class="text-white-50">
+                        <i class="fas fa-clock me-1"></i>
+                        آخر دخول: {{ user_stats.last_login.login_time|timesince }} مضت
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-value text-primary">{{ user_stats.total_activities }}</div>
+                <div class="stat-label">إجمالي الأنشطة</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-value text-success">{{ user_stats.login_count }}</div>
+                <div class="stat-label">عدد تسجيلات الدخول</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-value text-info">{{ activities.paginator.count }}</div>
+                <div class="stat-label">الأنشطة المفلترة</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="stat-value text-warning">{{ activities.paginator.num_pages }}</div>
+                <div class="stat-label">عدد الصفحات</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+        <h5 class="mb-3">
+            <i class="fas fa-filter me-2"></i>
+            فلاتر البحث
+        </h5>
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">الفترة الزمنية:</label>
+                <select name="date" class="filter-select form-select">
+                    <option value="today" {% if current_filters.date == 'today' %}selected{% endif %}>اليوم</option>
+                    <option value="week" {% if current_filters.date == 'week' %}selected{% endif %}>هذا الأسبوع</option>
+                    <option value="month" {% if current_filters.date == 'month' %}selected{% endif %}>هذا الشهر</option>
+                    <option value="all" {% if current_filters.date == 'all' %}selected{% endif %}>جميع الفترات</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">نوع النشاط:</label>
+                <select name="type" class="filter-select form-select">
+                    <option value="">جميع الأنواع</option>
+                    {% for type_code, type_name in activity_types %}
+                        <option value="{{ type_code }}" {% if current_filters.type == type_code %}selected{% endif %}>
+                            {{ type_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="apply-filters-btn">
+                    <i class="fas fa-search me-2"></i>
+                    تطبيق الفلاتر
+                </button>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <a href="{% url 'accounts:user_activity_detail' target_user.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>
+                    إزالة الفلاتر
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Activities List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="filter-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        سجل الأنشطة ({{ activities.paginator.count }})
+                    </h5>
+                    <div class="text-muted small">
+                        صفحة {{ activities.number }} من {{ activities.paginator.num_pages }}
+                    </div>
+                </div>
+
+                {% if activities %}
+                    {% for activity in activities %}
+                    <div class="activity-item {{ activity.get_color_class }}">
+                        <div class="d-flex align-items-start">
+                            <span class="activity-icon">{{ activity.get_icon }}</span>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">{{ activity.get_action_type_display }}</h6>
+                                        <p class="mb-1">{{ activity.description }}</p>
+                                        {% if activity.url_path %}
+                                        <div class="text-muted small">
+                                            <i class="fas fa-link me-1"></i>
+                                            {{ activity.url_path }}
+                                        </div>
+                                        {% endif %}
+                                        {% if activity.error_message %}
+                                        <div class="text-danger small">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            {{ activity.error_message }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="activity-time">{{ activity.timestamp|date:"Y-m-d H:i:s" }}</div>
+                                        <div class="activity-time">{{ activity.timestamp|timesince }} مضت</div>
+                                        {% if not activity.success %}
+                                        <span class="badge bg-danger mt-1">فشل</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                {% if activity.extra_data %}
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        {% if activity.extra_data.page_title %}
+                                            <i class="fas fa-file me-1"></i>
+                                            {{ activity.extra_data.page_title }}
+                                        {% endif %}
+                                        {% if activity.extra_data.status_code %}
+                                            <span class="badge bg-secondary ms-2">{{ activity.extra_data.status_code }}</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Pagination -->
+                    {% if activities.has_other_pages %}
+                    <nav aria-label="تنقل الصفحات" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if activities.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ activities.previous_page_number }}{% if current_filters.date %}&date={{ current_filters.date }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}">
+                                        السابق
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in activities.paginator.page_range %}
+                                {% if activities.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > activities.number|add:'-3' and num < activities.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% if current_filters.date %}&date={{ current_filters.date }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if activities.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ activities.next_page_number }}{% if current_filters.date %}&date={{ current_filters.date }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}">
+                                        التالي
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-history fa-3x mb-3"></i>
+                        <h5>لا توجد أنشطة</h5>
+                        <p>لم يتم العثور على أنشطة للمستخدم في الفترة المحددة</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

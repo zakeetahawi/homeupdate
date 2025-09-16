@@ -4,18 +4,23 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
+<div class="container-fluid">
 <div class="row">
     <div class="col-md-8 mx-auto">
         <div class="card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">عن النظام</h5>
+                <h5 class="mb-0">{{ title|default:"عن النظام" }}</h5>
             </div>
             <div class="card-body">
                 <div class="text-center mb-4">
-                    <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="img-fluid" style="max-width: 150px;">
+                    {% if company_info and company_info.logo %}
+                        <img src="{{ company_info.logo.url }}?v={{ company_info.logo.url|length }}" alt="شعار الشركة" class="img-fluid" style="max-width: 150px;" id="about-logo">
+                    {% else %}
+                        <img src="{% static 'img/logo.png' %}" alt="شعار الشركة" class="img-fluid" style="max-width: 150px;" id="about-logo">
+                    {% endif %}
                 </div>
                 
-                <h4 class="text-center mb-4">نظام إدارة المصنع والعملاء</h4>
+                <h4 class="text-center mb-4">{{ subtitle|default:"نظام إدارة المصنع والعملاء" }}</h4>
                 
                 <div class="mb-4">
                     <h5>مميزات النظام</h5>
@@ -52,19 +57,19 @@
                     <table class="table">
                         <tr>
                             <th>إصدار النظام:</th>
-                            <td>{{ company_info.version|default:'1.0.0' }}</td>
+                            <td>{{ system_version|default:'1.0.0' }}</td>
                         </tr>
                         <tr>
                             <th>تاريخ الإطلاق:</th>
-                            <td>{{ company_info.release_date|default:'2025' }}</td>
+                            <td>{{ system_release_date|default:'2025' }}</td>
                         </tr>
                         <tr>
                             <th>المطور:</th>
-                            <td>{{ company_info.developer|default:company_info.name|default:'شركة الخواجة للبرمجيات' }}</td>
+                            <td>{{ system_developer|default:'zakee tahawi' }}</td>
                         </tr>
                         <tr>
                             <th>عن النظام:</th>
-                            <td>{{ company_info.description|default:'نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون' }}</td>
+                            <td>{{ system_description|default:'نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون' }}</td>
                         </tr>
                     </table>
                 </div>
@@ -79,5 +84,6 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 {% endblock %}

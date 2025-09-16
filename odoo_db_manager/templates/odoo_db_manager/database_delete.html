@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="odoo-dashboard">
+    <!-- شريط الأدوات العلوي -->
+    <div class="odoo-toolbar">
+        <div class="odoo-toolbar-left">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="odoo-toolbar-right">
+            <a href="{% url 'odoo_db_manager:database_detail' database.id %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> العودة
+            </a>
+        </div>
+    </div>
+
+    <!-- نموذج حذف قاعدة البيانات -->
+    <div class="odoo-form">
+        <div class="alert alert-danger">
+            <h4 class="alert-heading">تحذير!</h4>
+            <p>أنت على وشك حذف قاعدة البيانات <strong>{{ database.name }}</strong>. هذا الإجراء لا يمكن التراجع عنه.</p>
+            <p>سيتم حذف قاعدة البيانات من النظام وجميع النسخ الاحتياطية المرتبطة بها.</p>
+            {% if database.is_active %}
+            <p class="mb-0"><strong>تنبيه:</strong> قاعدة البيانات هذه نشطة حالياً. حذفها قد يؤثر على عمل النظام.</p>
+            {% endif %}
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="confirm" name="confirm" required>
+                <label class="form-check-label" for="confirm">أنا أفهم أن هذا الإجراء لا يمكن التراجع عنه</label>
+            </div>
+            
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-danger">حذف قاعدة البيانات</button>
+                <a href="{% url 'odoo_db_manager:database_detail' database.id %}" class="btn btn-secondary">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,2123 @@
+{% extends 'base.html' %}
+{% load decimal_filters %}
+
+{% block title %}تفاصيل الطلب - نظام الخواجه{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-shopping-cart"></i> تفاصيل الطلب #{{ order.order_number }}</h2>
+        <div>
+            <a href="{% url 'orders:order_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-right"></i> العودة للقائمة
+            </a>
+            <a href="{% url 'orders:order_update' order.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> تعديل الطلب
+            </a>
+            <button type="button" class="btn btn-success" onclick="printInvoice('{{ order.order_number }}')">
+                <i class="fas fa-print"></i> طباعة الفاتورة
+            </button>
+            <a href="{% url 'orders:order_delete' order.pk %}" class="btn btn-danger">
+                <i class="fas fa-trash"></i> حذف الطلب
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Order Details -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">معلومات الطلب</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 40%">رقم الطلب</th>
+                            <td>{{ order.order_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>العميل</th>
+                            <td>
+                                <a href="{% url 'customers:customer_detail' order.customer.pk %}">
+                                    {{ order.customer.name }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>البائع</th>
+                            <td>
+                                {% if order.salesperson %}
+                                    {{ order.salesperson.name }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>تاريخ الطلب</th>
+                            <td>{{ order.order_date|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% with types_list=order.get_selected_types_list %}
+                        {% if types_list and types_list|length == 1 %}
+                            {% if types_list.0 == 'inspection' %}
+                                {# لا تعرض رقم العقد وملف العقد والمعاينة المرتبطة #}
+                            {% else %}
+                                <tr>
+                                    <th>رقم العقد</th>
+                                    <td>{{ order.contract_number|default:'-' }}</td>
+                                </tr>
+                                {% if order.contract_number_2 %}
+                                <tr>
+                                    <th>رقم العقد الإضافي 2</th>
+                                    <td>{{ order.contract_number_2 }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if order.contract_number_3 %}
+                                <tr>
+                                    <th>رقم العقد الإضافي 3</th>
+                                    <td>{{ order.contract_number_3 }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <th>ملف العقد</th>
+                                    <td>
+                                        {% if order.contract_file %}
+                                            <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-success">
+                                                <i class="fas fa-file-pdf"></i> عرض ملف العقد
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">لم يتم رفع ملف العقد</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>المعاينة المرتبطة</th>
+                                    <td>
+                                        {% if order.related_inspection_type == 'customer_side' %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-user me-1"></i>طرف العميل
+                                            </span>
+                                            <br><small class="text-muted">
+                                                تم تحديد المعاينة كطرف العميل
+                                            </small>
+                                        {% elif order.related_inspection %}
+                                            <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye me-1"></i>عرض تفاصيل المعاينة
+                                            </a>
+                                            <br>
+                                            <span class="badge {% if order.related_inspection.status == 'completed' %}bg-success{% elif order.related_inspection.status == 'scheduled' %}bg-warning text-dark{% elif order.related_inspection.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                <i class="fas fa-clipboard-check me-1"></i>
+                                                {{ order.related_inspection.get_status_display }}
+                                            </span>
+                                            <br><small class="text-muted">
+                                                {% if order.related_inspection.contract_number %}
+                                                    {{ order.related_inspection.contract_number }}
+                                                {% else %}
+                                                    {{ order.related_inspection.inspection_code }}
+                                                {% endif %} - {{ order.related_inspection.created_at|date:"Y-m-d" }}
+                                            </small>
+                                        {% else %}
+                                            <span class="text-muted">لا توجد معاينة مرتبطة</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% else %}
+                            <tr>
+                                <th>رقم العقد</th>
+                                <td>{{ order.contract_number|default:'-' }}</td>
+                            </tr>
+                            {% if order.contract_number_2 %}
+                            <tr>
+                                <th>رقم العقد الإضافي 2</th>
+                                <td>{{ order.contract_number_2 }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if order.contract_number_3 %}
+                            <tr>
+                                <th>رقم العقد الإضافي 3</th>
+                                <td>{{ order.contract_number_3 }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th>ملف العقد</th>
+                                <td>
+                                    {% if order.contract_file %}
+                                        <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-success">
+                                            <i class="fas fa-file-pdf"></i> عرض ملف العقد
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">لم يتم رفع ملف العقد</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>المعاينة المرتبطة</th>
+                                <td>
+                                    {% if order.related_inspection_type == 'customer_side' %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-user me-1"></i>طرف العميل
+                                        </span>
+                                        <br><small class="text-muted">
+                                            تم تحديد المعاينة كطرف العميل
+                                        </small>
+                                    {% elif order.related_inspection %}
+                                        <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye me-1"></i>عرض تفاصيل المعاينة
+                                        </a>
+                                        <br>
+                                        <span class="badge {% if order.related_inspection.status == 'completed' %}bg-success{% elif order.related_inspection.status == 'scheduled' %}bg-warning text-dark{% elif order.related_inspection.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            <i class="fas fa-clipboard-check me-1"></i>
+                                            {{ order.related_inspection.get_status_display }}
+                                        </span>
+                                        <br><small class="text-muted">
+                                            {% if order.related_inspection.contract_number %}
+                                                {{ order.related_inspection.contract_number }}
+                                            {% else %}
+                                                {{ order.related_inspection.inspection_code }}
+                                            {% endif %} - {{ order.related_inspection.created_at|date:"Y-m-d" }}
+                                        </small>
+                                    {% else %}
+                                        <span class="text-muted">لا توجد معاينة مرتبطة</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                        {% endwith %}
+                        <!-- Show different date info for inspection vs other orders -->
+                        {% with types_list=order.get_selected_types_list %}
+                        {% if 'inspection' in types_list or 'inspection' in order.selected_types %}
+                            <!-- For inspection orders, show inspection date -->
+                            {% with inspection=order.inspections.first %}
+                                {% if inspection %}
+                                    {% if inspection.status == 'completed' %}
+                                    <tr>
+                                        <th>حالة المعاينة</th>
+                                        <td>
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>
+                                                مكتملة
+                                            </span>
+                                            {% if inspection.updated_at %}
+                                                <br><small class="text-muted">
+                                                    آخر تحديث: {{ inspection.updated_at|date:"Y-m-d H:i" }}
+                                                </small>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% elif inspection.scheduled_date %}
+                                    <tr>
+                                        <th>تاريخ المعاينة المجدولة</th>
+                                        <td>
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                {{ inspection.scheduled_date|date:"Y-m-d" }}
+                                            </span>
+                                            <br><small class="text-muted">
+                                                الحالة: {{ inspection.get_status_display }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <th>حالة المعاينة</th>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-hourglass-half me-1"></i>
+                                                في انتظار الجدولة
+                                            </span>
+                                            <br><small class="text-muted">
+                                                تاريخ الطلب: {{ inspection.request_date|date:"Y-m-d" }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                {% else %}
+                                <tr>
+                                    <th>حالة المعاينة</th>
+                                    <td>
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            لم يتم إنشاء المعاينة بعد
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% endwith %}
+
+                            <!-- بطاقة أمر التقطيع -->
+                            {% if order.get_selected_types_list|length > 0 and 'inspection' not in order.get_selected_types_list %}
+                                {% if order.cutting_orders.exists %}
+                                {% for cutting_order in order.cutting_orders.all %}
+                                <tr>
+                                    <th>{% if forloop.first %}أوامر التقطيع{% else %}{% endif %}</th>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge
+                                                {% if cutting_order.status == 'completed' %}bg-success
+                                                {% elif cutting_order.status == 'in_progress' %}bg-info
+                                                {% elif cutting_order.status == 'partially_completed' %}bg-warning text-dark
+                                                {% else %}bg-secondary{% endif %} me-2">
+                                                <i class="fas fa-cut me-1"></i>
+                                                {{ cutting_order.cutting_code }}
+                                            </span>
+                                            <span class="badge
+                                                {% if cutting_order.status == 'completed' %}bg-success
+                                                {% elif cutting_order.status == 'in_progress' %}bg-info
+                                                {% elif cutting_order.status == 'partially_completed' %}bg-warning text-dark
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ cutting_order.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-warehouse me-1"></i>
+                                                المستودع: {{ cutting_order.warehouse.name }}
+                                            </small>
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                تاريخ الإنشاء: {{ cutting_order.created_at|date:"d/m/Y H:i" }}
+                                            </small>
+                                            {% if cutting_order.assigned_to %}
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-user-tie me-1"></i>
+                                                المسؤول: {{ cutting_order.assigned_to.get_full_name|default:cutting_order.assigned_to.username }}
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="mt-2">
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar
+                                                    {% if cutting_order.completion_percentage == 100 %}bg-success
+                                                    {% elif cutting_order.completion_percentage > 50 %}bg-info
+                                                    {% else %}bg-warning{% endif %}"
+                                                     role="progressbar"
+                                                     style="width: {{ cutting_order.completion_percentage }}%">
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">
+                                                التقدم: {{ cutting_order.completion_percentage|floatformat:0 }}%
+                                                ({{ cutting_order.completed_items }}/{{ cutting_order.total_items }} عنصر)
+                                            </small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <a href="{% url 'cutting:order_detail' cutting_order.pk %}"
+                                               class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i> عرض التفاصيل
+                                            </a>
+                                            {% if cutting_order.status == 'pending' %}
+                                            <button class="btn btn-sm btn-success ms-1"
+                                                    onclick="startCutting({{ cutting_order.pk }})">
+                                                <i class="fas fa-play"></i> بدء التقطيع
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <th>أمر التقطيع</th>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            لم يتم إنشاء أمر التقطيع بعد
+                                        </span>
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-primary" onclick="createCuttingOrder({{ order.id }})">
+                                                <i class="fas fa-plus"></i> إنشاء أمر تقطيع
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% endif %}
+
+                            <!-- Show expected inspection date -->
+                            {% with types_list=order.get_selected_types_list %}
+                            {% if types_list|length == 1 and 'inspection' in types_list and order.expected_delivery_date %}
+                                <tr>
+                                    <th>موعد المعاينة المتوقع</th>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ order.expected_delivery_date|date:"Y-m-d" }}
+                                        </span>
+                                        <br><small class="text-muted">
+                                            هذا الموعد هو 48 ساعة من تاريخ الطلب
+                                        </small>
+                                    </td>
+                                </tr>
+                            {% elif order.get_smart_delivery_date %}
+                                <tr>
+                                    <th>{{ order.get_delivery_date_label }}</th>
+                                    <td>
+                                        <span class="badge {% if order.order_status == 'delivered' %}bg-success{% elif order.order_status == 'completed' or order.order_status == 'ready_install' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            {{ order.get_smart_delivery_date|date:"Y-m-d" }}
+                                        </span>
+                                        {% if order.status == 'vip' %}
+                                            <small class="text-warning ms-2">
+                                                <i class="fas fa-star"></i> VIP - أولوية عالية
+                                            </small>
+                                        {% endif %}
+                                        {% if order.order_status in 'completed,ready_install,delivered' %}
+                                            <br><small class="text-muted">
+                                                {% if order.order_status == 'delivered' %}
+                                                    تم التسليم فعلياً
+                                                {% elif order.order_status == 'completed' %}
+                                                    تم الإكمال في المصنع
+                                                {% elif order.order_status == 'ready_install' %}
+                                                    جاهز للتركيب
+                                                {% endif %}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <!-- إضافة تاريخ التركيب المتوقع للطلبات التي تحتوي على تركيب -->
+                                {% if 'installation' in order.get_selected_types_list %}
+                                <tr>
+                                    <th>{{ order.get_installation_date_label }}</th>
+                                    <td>
+                                        {% if order.get_installation_date %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-tools me-1"></i>
+                                                {{ order.get_installation_date|date:"Y-m-d" }}
+                                            </span>
+                                            <br><small class="text-muted">
+                                                {% if order.get_installation_date %}
+                                                    تاريخ مجدول للتركيب
+                                                {% else %}
+                                                    تاريخ متوقع للتركيب
+                                                {% endif %}
+                                            </small>
+                                        {% else %}
+                                            <span class="text-muted">لم يتم تحديد موعد التركيب</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% endif %}
+                        {% endwith %}
+                        {% else %}
+                            <!-- For other orders, show smart delivery date -->
+                            {% if order.get_smart_delivery_date %}
+                            <tr>
+                                <th>{{ order.get_delivery_date_label }}</th>
+                                <td>
+                                    <span class="badge {% if order.order_status == 'delivered' %}bg-success{% elif order.order_status == 'completed' or order.order_status == 'ready_install' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        {{ order.get_smart_delivery_date|date:"Y-m-d" }}
+                                    </span>
+                                    {% if order.status == 'vip' %}
+                                        <small class="text-warning ms-2">
+                                            <i class="fas fa-star"></i> VIP - أولوية عالية
+                                        </small>
+                                    {% endif %}
+                                    {% if order.order_status in 'completed,ready_install,delivered' %}
+                                        <br><small class="text-muted">
+                                            {% if order.order_status == 'delivered' %}
+                                                تم التسليم فعلياً
+                                            {% elif order.order_status == 'completed' %}
+                                                تم الإكمال في المصنع
+                                            {% elif order.order_status == 'ready_install' %}
+                                                جاهز للتركيب
+                                            {% endif %}
+                                        </small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endif %}
+                        {% endwith %}
+                        <tr>
+                            <th>حالة الطلب</th>
+                            <td>
+                                {% with display_info=order.get_display_status %}
+                                    <span class="badge {{ order.get_display_status_badge_class }}" style="font-size: 0.9rem;">
+                                        <i class="{{ order.get_display_status_icon }} me-1"></i>
+                                        {{ order.get_display_status_text }}
+                                    </span>
+                                    
+                                    <!-- إظهار مصدر الحالة إذا كان مختلفاً عن الحالة الأساسية -->
+                                    {% if display_info.source != 'order' %}
+                                        <br><small class="text-muted" style="font-size: 0.75rem;">
+                                            {% if display_info.source == 'installation' %}
+                                                <i class="fas fa-tools me-1"></i>تركيب
+                                            {% elif display_info.source == 'manufacturing' %}
+                                                <i class="fas fa-industry me-1"></i>مصنع
+                                            {% endif %}
+                                        </small>
+                                    {% endif %}
+                                    
+                                    <!-- إظهار اسم المستلم إذا كانت الحالة تم التسليم -->
+                                    {% if order.get_display_status_text == 'تم التسليم' and order.delivery_recipient_name %}
+                                        <br><small class="text-muted" style="font-size: 0.75rem;">
+                                            <i class="fas fa-user me-1"></i>المستلم: {{ order.delivery_recipient_name }}
+                                        </small>
+                                    {% endif %}
+                                    
+                                    <!-- رابط سجل الحالة -->
+                                    <br><small>
+                                        <a href="{% url 'orders:status_history' order.id %}" class="text-info">
+                                            <i class="fas fa-history me-1"></i>عرض سجل الحالة
+                                        </a>
+                                    </small>
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        
+                        <!-- إضافة حالة المصنع إذا كان هناك أمر تصنيع -->
+                        {% if order.manufacturing_order %}
+                        <tr>
+                            <th>حالة المصنع</th>
+                            <td>
+                                {% with manufacturing_order=order.manufacturing_order %}
+                                    {% if manufacturing_order.status == 'pending_approval' %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-clock me-1"></i> قيد الموافقة
+                                    </span>
+                                    {% elif manufacturing_order.status == 'pending' %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-hourglass-half me-1"></i> قيد الانتظار
+                                    </span>
+                                    {% elif manufacturing_order.status == 'in_progress' %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-cogs me-1"></i> قيد التصنيع
+                                    </span>
+                                    {% elif manufacturing_order.status == 'ready_install' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-tools me-1"></i> جاهز للتركيب
+                                    </span>
+                                    {% elif manufacturing_order.status == 'completed' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i> مكتمل
+                                    </span>
+                                    {% elif manufacturing_order.status == 'delivered' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-truck me-1"></i> تم التسليم
+                                    </span>
+                                    {% elif manufacturing_order.status == 'rejected' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times me-1"></i> مرفوض
+                                    </span>
+                                    {% elif manufacturing_order.status == 'cancelled' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-ban me-1"></i> ملغي
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ manufacturing_order.get_status_display }}</span>
+                                    {% endif %}
+                                    
+                                    {% if manufacturing_order.updated_at %}
+                                    <br><small class="text-muted">
+                                        آخر تحديث: {{ manufacturing_order.updated_at|date:"Y-m-d H:i" }}
+                                    </small>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        
+                        <!-- إضافة حالة التركيب إذا كان نوع الطلب تركيب -->
+                        {% if 'installation' in order.get_selected_types_list %}
+                        <tr>
+                            <th>حالة التركيب</th>
+                            <td>
+                                {% if order.installation_status == 'not_scheduled' %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-clock me-1"></i> غير مجدول
+                                </span>
+                                <br><small class="text-muted">
+                                    لم يتم جدولة التركيب بعد
+                                </small>
+                                {% elif order.installation_status == 'pending' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-hourglass-half me-1"></i> في الانتظار
+                                </span>
+                                <br><small class="text-muted">
+                                    تم جدولة التركيب
+                                </small>
+                                {% elif order.installation_status == 'scheduled' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-calendar me-1"></i> مجدول
+                                </span>
+                                <br><small class="text-muted">
+                                    تم تحديد موعد التركيب
+                                </small>
+                                {% elif order.installation_status == 'in_progress' %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-tools me-1"></i> قيد التنفيذ
+                                </span>
+                                <br><small class="text-muted">
+                                    الفريق يعمل على التركيب
+                                </small>
+                                {% elif order.installation_status == 'completed' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i> مكتمل
+                                </span>
+                                <br><small class="text-muted">
+                                    تم الانتهاء من التركيب
+                                </small>
+                                {% elif order.installation_status == 'cancelled' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times me-1"></i> ملغي
+                                </span>
+                                <br><small class="text-muted">
+                                    تم إلغاء التركيب
+                                </small>
+                                {% elif order.installation_status == 'modification_required' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> يحتاج تعديل
+                                </span>
+                                <br><small class="text-muted">
+                                    الطلب يحتاج تعديلات
+                                </small>
+                                {% elif order.installation_status == 'modification_in_progress' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-wrench me-1"></i> التعديل قيد التنفيذ
+                                </span>
+                                <br><small class="text-muted">
+                                    الفريق يعمل على التعديلات
+                                </small>
+                                {% elif order.installation_status == 'modification_completed' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-double me-1"></i> التعديل مكتمل
+                                </span>
+                                <br><small class="text-muted">
+                                    تم الانتهاء من التعديلات
+                                </small>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-question me-1"></i> {{ order.get_installation_status_display }}
+                                </span>
+                                {% endif %}
+                                
+                                <!-- إضافة تاريخ التركيب إذا كان مجدولاً -->
+                                {% with installation=order.installationschedule_set.first %}
+                                    {% if installation and installation.get_installation_date %}
+                                    <br><div class="mt-2 p-2 bg-light rounded">
+                                        <strong><i class="fas fa-calendar me-1"></i>{{ installation.get_installation_date_label }}:</strong>
+                                        <span class="text-primary">{{ installation.get_installation_date|date:"d/m/Y" }}</span>
+                                        {% if installation.scheduled_time %}
+                                            <span class="text-muted">في الساعة {{ installation.scheduled_time|time:"H:i" }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- إضافة رابط لتفاصيل التركيب إذا كان موجوداً -->
+                                    {% if installation %}
+                                    <br><a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-sm btn-outline-primary mt-2">
+                                        <i class="fas fa-eye me-1"></i> عرض تفاصيل التركيب
+                                    </a>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        
+                        <!-- إضافة تفاصيل التسليم من المصنع عند التسليم -->
+                        {% if order.manufacturing_order and order.manufacturing_order.status == 'delivered' %}
+                        {% with manufacturing_order=order.manufacturing_order %}
+                            {% if manufacturing_order.delivery_recipient_name or manufacturing_order.delivery_permit_number %}
+                            <tr>
+                                <th>تفاصيل التسليم</th>
+                                <td>
+                                    <div class="delivery-details">
+                                        {% if manufacturing_order.delivery_recipient_name %}
+                                        <div class="mb-2">
+                                            <strong><i class="fas fa-user me-2"></i>اسم المستلم:</strong>
+                                            <span class="text-primary">{{ manufacturing_order.delivery_recipient_name }}</span>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if manufacturing_order.delivery_permit_number %}
+                                        <div class="mb-2">
+                                            <strong><i class="fas fa-file-alt me-2"></i>رقم إذن التسليم:</strong>
+                                            <span class="text-info">{{ manufacturing_order.delivery_permit_number }}</span>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if manufacturing_order.delivery_date %}
+                                        <div class="mb-2">
+                                            <strong><i class="fas fa-calendar me-2"></i>تاريخ التسليم:</strong>
+                                            <span class="text-success">{{ manufacturing_order.delivery_date|date:"Y-m-d H:i" }}</span>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if manufacturing_order.exit_permit_number %}
+                                        <div class="mb-2">
+                                            <strong><i class="fas fa-sign-out-alt me-2"></i>رقم إذن الخروج:</strong>
+                                            <span class="text-warning">{{ manufacturing_order.exit_permit_number }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endwith %}
+                        {% endif %}
+                        
+                        <!-- إضافة تفاصيل الرفض إذا كان الطلب مرفوضاً (من الطلب أو من مصنع التصنيع) -->
+                        {% if order.order_status == 'rejected' or order.manufacturing_order and order.manufacturing_order.status == 'rejected' %}
+                        {% with manufacturing_order=order.manufacturing_order %}
+                            {% if manufacturing_order and manufacturing_order.rejection_reason %}
+                            <tr>
+                                <th>سبب الرفض</th>
+                                <td>
+                                    <div class="alert alert-danger mb-2">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        {{ manufacturing_order.rejection_reason }}
+                                    </div>
+                                    
+                                    <!-- عرض الرد إذا كان موجوداً -->
+                                    {% if manufacturing_order.rejection_reply %}
+                                        <div class="alert alert-info mb-2">
+                                            <strong><i class="fas fa-reply me-2"></i>ردك على الرفض:</strong>
+                                            <div class="mt-2">{{ manufacturing_order.rejection_reply }}</div>
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ manufacturing_order.rejection_reply_date|date:"Y-m-d H:i" }}
+                                            </small>
+                                        </div>
+                                        {% else %}
+                                        <!-- زر الرد على الرفض إذا لم يتم الرد بعد -->
+                                        {% if order.created_by_id == user.id %}
+                                            <div class="mt-2">
+                                                <button class="btn btn-outline-primary btn-sm"
+                                                        onclick="showReplyToRejectionModal({{ manufacturing_order.id }})">
+                                                    <i class="fas fa-reply me-1"></i>
+                                                    الرد على الرفض
+                                                </button>
+                                            </div>
+                                        {% else %}
+                                            <!-- Diagnostic hint for why reply button is hidden -->
+                                            <div class="mt-2 text-muted small">
+                                                الزر مخفي لأنك لست منشئ الطلب.
+                                                <br>معرف منشئ الطلب: <strong>{{ order.created_by_id }}</strong>
+                                                — معرف المستخدم الحالي: <strong>{{ user.id }}</strong>
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endwith %}
+                        {% endif %}
+                        <tr>
+                            <th>المبلغ الإجمالي</th>
+                            <td>
+                                {% if computed_total_amount is not None %}
+                                    {{ computed_total_amount|clean_decimal_currency:currency_symbol }}
+                                {% else %}
+                                    {{ order.total_amount|clean_decimal_currency:currency_symbol }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>المبلغ المدفوع</th>
+                            <td>{{ order.paid_amount|clean_decimal_currency:currency_symbol }}</td>
+                        </tr>
+                        <tr>
+                            <th>المبلغ المتبقي</th>
+                            <td>
+                                {% if computed_remaining_amount is not None %}
+                                    {{ computed_remaining_amount|clean_decimal_currency:currency_symbol }}
+                                {% else %}
+                                    {{ order.remaining_amount|clean_decimal_currency:currency_symbol }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>تم الإنشاء بواسطة</th>
+                            <td>
+                                {% if order.created_by %}
+                                    {{ order.created_by.get_full_name|default:order.created_by.username }}
+                                {% else %}
+                                    غير محدد
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>تاريخ الإنشاء</th>
+                            <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>تاريخ التحديث</th>
+                            <td>{{ order.updated_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Information -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">معلومات العميل</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 40%">الاسم</th>
+                            <td>{{ order.customer.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>رقم الهاتف</th>
+                            <td>{{ order.customer.phone }}</td>
+                        </tr>
+                        <tr>
+                            <th>البريد الإلكتروني</th>
+                            <td>{{ order.customer.email|default:"غير متوفر" }}</td>
+                        </tr>
+                        <tr>
+                            <th>العنوان</th>
+                            <td>{{ order.customer.address|default:"غير متوفر" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">ملاحظات الطلب</h5>
+                </div>
+                <div class="card-body">
+                    {% if order.notes %}
+                    <p class="mb-0">{{ order.notes|linebreaks }}</p>
+                    {% else %}
+                    <p class="text-muted mb-0">لا توجد ملاحظات</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Customer Notes -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sticky-note me-2"></i>ملاحظات العميل
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if customer_notes %}
+                        <div class="customer-notes-list">
+                            {% for note in customer_notes %}
+                            <div class="note-item border-bottom pb-2 mb-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <p class="mb-1">{{ note.note|linebreaks }}</p>
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i>{{ note.created_by.get_full_name|default:note.created_by.username }}
+                                            <i class="fas fa-clock me-1 ms-2"></i>{{ note.created_at|date:"Y-m-d H:i" }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'customers:customer_detail' order.customer.pk %}" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-eye me-1"></i>عرض جميع ملاحظات العميل
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-sticky-note fa-2x mb-2"></i>
+                            <p class="mb-2">لا توجد ملاحظات للعميل</p>
+                            <a href="{% url 'customers:customer_detail' order.customer.pk %}" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-plus me-1"></i>إضافة ملاحظة للعميل
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Order Modification Logs -->
+            {% if order.modification_logs.exists and order.modification_logs.count > 0 %}
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>تعديلات الطلب
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for log in order.modification_logs.all %}
+                    <div class="alert alert-info mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="alert-heading mb-0">
+                                <i class="fas fa-pencil-alt me-2"></i>{{ log.modification_type }}
+                            </h6>
+                            <small class="text-muted">
+                                {{ log.modified_at|date:"Y-m-d H:i" }}
+                            </small>
+                        </div>
+                        
+                        <!-- تفاصيل التعديل -->
+                        <div class="modification-content">
+                            {% if log.details %}
+                            <p class="mb-2"><strong>{{ log.details }}</strong></p>
+                            {% endif %}
+                            
+                            <!-- المبالغ -->
+                            {% if log.old_total_amount or log.new_total_amount %}
+                            <div class="row mb-2">
+                                <div class="col-md-6">
+                                    <i class="fas fa-money-bill-wave text-success me-1"></i>
+                                    <strong>المبلغ السابق:</strong> {{ log.get_clean_old_total }}
+                                </div>
+                                <div class="col-md-6">
+                                    <i class="fas fa-money-bill-wave text-primary me-1"></i>
+                                    <strong>المبلغ الجديد:</strong> {{ log.get_clean_new_total }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- ملاحظات -->
+                            {% if log.notes %}
+                            <p class="mb-2"><em><i class="fas fa-sticky-note me-1"></i>{{ log.notes }}</em></p>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- المستخدم والتاريخ -->
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>
+                                بواسطة: {% if log.modified_by %}{{ log.modified_by.get_full_name|default:log.modified_by.username }}{% else %}مدير النظام{% endif %}
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ log.modified_at|date:"Y-m-d H:i" }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Order Type Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">معلومات نوع الطلب</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 40%">نوع الطلب</th>
+                            <td>
+                                {% with types_list=order.get_selected_types_list %}
+                                    {% if types_list %}
+                                        {% for type in types_list %}
+                                            {% if type == 'accessory' %}
+                                                <span class="badge bg-primary me-2">
+                                                    <i class="fas fa-gem me-1"></i> إكسسوار
+                                                </span>
+                                            {% elif type == 'installation' %}
+                                                <span class="badge bg-warning me-2">
+                                                    <i class="fas fa-tools me-1"></i> تركيب
+                                                </span>
+                                            {% elif type == 'inspection' %}
+                                                <span class="badge bg-info me-2">
+                                                    <i class="fas fa-eye me-1"></i> معاينة
+                                                </span>
+                                            {% elif type == 'tailoring' %}
+                                                <span class="badge bg-success me-2">
+                                                    <i class="fas fa-cut me-1"></i> تفصيل
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary me-2">{{ type }}</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+
+                        <!-- Inspection Status for inspection orders -->
+                        {% with types_list=order.get_selected_types_list %}
+                        {% if 'inspection' in types_list or 'inspection' in order.selected_types %}
+                        <tr>
+                            <th>حالة المعاينة</th>
+                            <td>
+                                {% with inspection=order.inspections.first %}
+                                    {% if inspection %}
+                                        <span class="badge {% if inspection.status == 'pending' %}bg-warning text-dark
+                                                       {% elif inspection.status == 'scheduled' %}bg-info
+                                                       {% elif inspection.status == 'completed' %}bg-success
+                                                       {% else %}bg-danger{% endif %} me-2">
+                                            {% if inspection.status == 'pending' %}
+                                                <i class="fas fa-clock me-1"></i> في الانتظار
+                                            {% elif inspection.status == 'scheduled' %}
+                                                <i class="fas fa-calendar-check me-1"></i> مجدولة
+                                            {% elif inspection.status == 'completed' %}
+                                                <i class="fas fa-check me-1"></i> مكتملة
+                                            {% else %}
+                                                <i class="fas fa-times me-1"></i> ملغية
+                                            {% endif %}
+                                        </span>
+
+                                        {% if inspection.result %}
+                                            <span class="badge {% if inspection.result == 'passed' %}bg-success
+                                                           {% else %}bg-danger{% endif %}">
+                                                {% if inspection.result == 'passed' %}
+                                                    <i class="fas fa-thumbs-up me-1"></i> نجحت
+                                                {% else %}
+                                                    <i class="fas fa-thumbs-down me-1"></i> فشلت
+                                                {% endif %}
+                                            </span>
+                                        {% endif %}
+
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                آخر تحديث: {{ inspection.updated_at|date:"Y-m-d H:i" }}
+                                            </small>
+                                        </div>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> لم يتم إنشاء المعاينة بعد
+                                        </span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endwith %}
+
+                        {% if order.goods_type %}
+                        <tr>
+                            <th>نوع البضاعة</th>
+                            <td>{{ order.get_goods_type_display }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.service_types %}
+                        <tr>
+                            <th>أنواع الخدمات</th>
+                            <td>
+                                {% for service_type in order.service_types %}
+                                    {% if service_type == 'installation' %}
+                                        <span class="badge bg-info">تركيب</span>
+                                    {% elif service_type == 'inspection' %}
+                                        <span class="badge bg-primary">معاينة</span>
+                                    {% elif service_type == 'transport' %}
+                                        <span class="badge bg-secondary">نقل</span>
+                                    {% elif service_type == 'tailoring' %}
+                                        <span class="badge bg-warning">تفصيل</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if order.invoice_number %}
+                        <tr>
+                            <th>رقم الفاتورة</th>
+                            <td>{{ order.invoice_number }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.invoice_number_2 %}
+                        <tr>
+                            <th>رقم الفاتورة الإضافي 2</th>
+                            <td>{{ order.invoice_number_2 }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.invoice_number_3 %}
+                        <tr>
+                            <th>رقم الفاتورة الإضافي 3</th>
+                            <td>{{ order.invoice_number_3 }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.contract_number %}
+                        <tr>
+                            <th>رقم العقد</th>
+                            <td>{{ order.contract_number }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.contract_number_2 %}
+                        <tr>
+                            <th>رقم العقد الإضافي 2</th>
+                            <td>{{ order.contract_number_2 }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.contract_number_3 %}
+                        <tr>
+                            <th>رقم العقد الإضافي 3</th>
+                            <td>{{ order.contract_number_3 }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>تم التحقق من الدفع</th>
+                            <td>
+                                {% load order_extras %}
+                                {% if order.payment_verified %}
+                                    <span class="badge bg-success">نعم</span>
+                                {% else %}
+                                    <span class="badge bg-danger">لا</span>
+                                {% endif %}
+                                <span class="ms-2 text-muted">( {% paid_percentage order %} )</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>الفرع</th>
+                            <td>{{ order.branch.name }}</td>
+                        </tr>
+                        {% if 'inspection' in order.service_types and order.inspections.exists %}
+                        <tr>
+                            <th>ملف المعاينة</th>
+                            <td>
+                                {% for inspection in order.inspections.all %}
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        {% if inspection.inspection_file %}
+                                            <!-- الملف المحلي -->
+                                            <a href="{{ inspection.inspection_file.url }}" target="_blank"
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="عرض ملف المعاينة {{ forloop.counter }} محلياً">
+                                                <i class="fas fa-file-pdf me-1"></i>
+                                                عرض محلي
+                                            </a>
+                                        {% endif %}
+
+                                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                            <!-- رابط Google Drive -->
+                                            <a href="{{ inspection.google_drive_file_url }}" target="_blank"
+                                               class="btn btn-sm btn-success"
+                                               title="عرض ملف المعاينة {{ forloop.counter }} في Google Drive">
+                                                <i class="fas fa-cloud me-1"></i>
+                                                Google Drive
+                                            </a>
+                                        {% elif inspection.inspection_file %}
+                                            <!-- جاري الرفع -->
+                                            <span class="badge bg-warning text-dark"
+                                                  title="جاري رفع ملف المعاينة {{ forloop.counter }} إلى Google Drive">
+                                                <i class="fas fa-clock me-1"></i>
+                                                جاري الرفع
+                                            </span>
+                                        {% endif %}
+
+                                        {% if not inspection.inspection_file %}
+                                            <span class="text-muted">
+                                                <i class="fas fa-file-slash me-1"></i>
+                                                لم يتم رفع ملف المعاينة {{ forloop.counter }} بعد
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+    <!-- سجل حذف أوامر التصنيع -->
+    {% if order.manufacturing_deletion_logs.exists %}
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-trash-alt me-2"></i>
+                سجل حذف أوامر التصنيع
+            </h5>
+            <small>تفاصيل أوامر التصنيع المحذوفة لهذا الطلب</small>
+        </div>
+        <div class="card-body">
+            {% for deletion_log in order.manufacturing_deletion_logs.all %}
+            <div class="alert alert-danger d-flex align-items-start mb-3">
+                <div class="flex-shrink-0 me-3">
+                    <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-2">
+                        <i class="fas fa-trash-alt me-1"></i>
+                        تم حذف أمر التصنيع #{{ deletion_log.manufacturing_order_id }}
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1">
+                                <strong>تاريخ الحذف:</strong> 
+                                {{ deletion_log.deleted_at|date:"Y-m-d H:i" }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>تم الحذف بواسطة:</strong> 
+                                {% if deletion_log.deleted_by %}
+                                    <span class="badge bg-dark">
+                                        {{ deletion_log.deleted_by.get_full_name|default:deletion_log.deleted_by.username }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">نظام</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if deletion_log.manufacturing_order_data.status_display %}
+                            <p class="mb-1">
+                                <strong>حالة أمر التصنيع قبل الحذف:</strong> 
+                                <span class="badge bg-secondary">{{ deletion_log.manufacturing_order_data.status_display }}</span>
+                            </p>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                    {% if deletion_log.reason %}
+                    <div class="mt-2">
+                        <strong>السبب:</strong>
+                        <p class="mb-0 mt-1 p-2 bg-light rounded">{{ deletion_log.reason }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- تفاصيل إضافية قابلة للطي -->
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#deletionDetails{{ deletion_log.id }}" aria-expanded="false">
+                            <i class="fas fa-info-circle me-1"></i>
+                            عرض تفاصيل أمر التصنيع المحذوف
+                        </button>
+                        <div class="collapse mt-2" id="deletionDetails{{ deletion_log.id }}">
+                            <div class="card card-body bg-light">
+                                <div class="row">
+                                    {% if deletion_log.manufacturing_order_data.contract_number %}
+                                    <div class="col-md-4">
+                                        <strong>رقم العقد:</strong> {{ deletion_log.manufacturing_order_data.contract_number }}
+                                    </div>
+                                    {% endif %}
+                                    {% if deletion_log.manufacturing_order_data.invoice_number %}
+                                    <div class="col-md-4">
+                                        <strong>رقم الفاتورة:</strong> {{ deletion_log.manufacturing_order_data.invoice_number }}
+                                    </div>
+                                    {% endif %}
+                                    {% if deletion_log.manufacturing_order_data.order_date %}
+                                    <div class="col-md-4">
+                                        <strong>تاريخ الطلب:</strong> {{ deletion_log.manufacturing_order_data.order_date|date:"Y-m-d" }}
+                                    </div>
+                                    {% endif %}
+                                    {% if deletion_log.manufacturing_order_data.expected_delivery_date %}
+                                    <div class="col-md-4">
+                                        <strong>تاريخ التسليم المتوقع:</strong> {{ deletion_log.manufacturing_order_data.expected_delivery_date|date:"Y-m-d" }}
+                                    </div>
+                                    {% endif %}
+                                    {% if deletion_log.manufacturing_order_data.created_by %}
+                                    <div class="col-md-4">
+                                        <strong>تم الإنشاء بواسطة:</strong> {{ deletion_log.manufacturing_order_data.created_by }}
+                                    </div>
+                                    {% endif %}
+                                    {% if deletion_log.manufacturing_order_data.created_at %}
+                                    <div class="col-md-4">
+                                        <strong>تاريخ الإنشاء:</strong> {{ deletion_log.manufacturing_order_data.created_at|date:"Y-m-d H:i" }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% if deletion_log.manufacturing_order_data.notes %}
+                                <div class="mt-2">
+                                    <strong>ملاحظات أمر التصنيع:</strong>
+                                    <p class="mb-0 mt-1">{{ deletion_log.manufacturing_order_data.notes }}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Order Items - Hidden for inspection orders -->
+    {% with types_list=order.get_selected_types_list %}
+    {% if 'inspection' not in types_list and 'inspection' not in order.selected_types %}
+    {% if order_items|length == 0 %}
+    <div class="alert alert-danger text-center fw-bold my-4" style="font-size:1.3rem;">
+        طلب بدون عناصر - تم إنشاء هذا الطلب بمسؤولية المستخدم:
+        <span class="text-primary">
+          {% if order.created_by %}
+            {{ order.created_by.get_full_name|default:order.created_by.username }}
+          {% else %}
+            <span class="text-danger">مستخدم غير معروف</span>
+          {% endif %}
+        </span>
+    </div>
+    {% else %}
+    <div class="card mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">عناصر الطلب</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المنتج</th>
+                            <th>الكمية</th>
+                            <th>سعر الوحدة</th>
+                            <th>نسبة الخصم</th>
+                            <th>مبلغ الخصم</th>
+                            <th>السعر بعد الخصم</th>
+                            <th>ملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order_items %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ item.product.name }}</td>
+                            <td>{{ item.quantity|clean_decimal }}</td>
+                            <td>{{ item.unit_price|clean_decimal_currency:currency_symbol }}</td>
+                            <td>
+                                {% if item.discount_percentage and item.discount_percentage > 0 %}
+                                    <span class="badge bg-warning text-dark">{{ item.get_clean_discount_display }}%</span>
+                                {% else %}
+                                    <span class="text-muted">0%</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.discount_amount and item.discount_amount > 0 %}
+                                    <span class="text-danger">-{{ item.discount_amount|clean_decimal_currency:currency_symbol }}</span>
+                                {% else %}
+                                    <span class="text-muted">0.00 {{ currency_symbol }}</span>
+                                {% endif %}
+                            </td>
+                            <td><strong class="text-success">{{ item.total_after_discount|clean_decimal_currency:currency_symbol }}</strong></td>
+                            <td>{{ item.notes|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-3">لا توجد عناصر في هذا الطلب</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light">
+                            <th colspan="4" class="text-start">المجموع قبل الخصم</th>
+                            <th colspan="2">
+                                {% if computed_total_amount is not None %}
+                                    {{ computed_total_amount|clean_decimal_currency:currency_symbol }}
+                                {% else %}
+                                    {{ order.total_amount|clean_decimal_currency:currency_symbol }}
+                                {% endif %}
+                            </th>
+                            <td></td>
+                        </tr>
+                        <tr class="table-warning">
+                            <th colspan="4" class="text-start">إجمالي الخصم</th>
+                            <th colspan="2">
+                                {% if computed_total_discount_amount is not None %}
+                                    {{ computed_total_discount_amount|clean_decimal_currency:currency_symbol }}
+                                {% else %}
+                                    {{ order.total_discount_amount|clean_decimal_currency:currency_symbol }}
+                                {% endif %}
+                            </th>
+                            <td></td>
+                        </tr>
+                        <tr class="table-success">
+                            <th colspan="4" class="text-start">الإجمالي النهائي بعد الخصم</th>
+                            <th colspan="2">
+                                {% if computed_final_price_after_discount is not None %}
+                                    {{ computed_final_price_after_discount|clean_decimal_currency:currency_symbol }}
+                                {% else %}
+                                    {{ order.final_price_after_discount|clean_decimal_currency:currency_symbol }}
+                                {% endif %}
+                            </th>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% endwith %}
+
+    <!-- Cutting Orders Details -->
+    {% with types_list=order.get_selected_types_list %}
+    {% if 'products' in types_list or 'installation' in types_list %}
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-cut me-2"></i>
+                بطاقة تتبع التقطيع
+            </h5>
+            <small>معلومات شاملة عن حالة التقطيع المرتبطة بهذا الطلب</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-warning">
+                        <tr>
+                            <th width="25%">أسماء المنتجات</th>
+                            <th width="15%">المستودع</th>
+                            <th width="10%">العناصر</th>
+                            <th width="15%">تاريخ الإنشاء</th>
+                            <th width="15%">تاريخ الإكمال</th>
+                            <th width="10%">الحالة</th>
+                            <th width="10%">عرض</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cutting_order in order.cutting_orders.all %}
+                        <tr class="{% if cutting_order.status == 'completed' %}table-success{% elif cutting_order.status == 'in_progress' %}table-info{% elif cutting_order.status == 'rejected' %}table-danger{% else %}table-light{% endif %}">
+                            <td>
+                                <div class="product-names">
+                                    {% for item in cutting_order.items.all %}
+                                        <div class="mb-1">
+                                            <span class="badge bg-primary me-1">{{ forloop.counter }}</span>
+                                            <strong>{{ item.order_item.product.name|default:"منتج غير محدد" }}</strong>
+                                            {% if item.order_item.product.code %}
+                                                <small class="text-muted">({{ item.order_item.product.code }})</small>
+                                            {% endif %}
+                                        </div>
+                                    {% empty %}
+                                        <span class="text-muted">لا توجد عناصر</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ cutting_order.warehouse.name }}</div>
+                                    <small class="text-muted">{{ cutting_order.warehouse.address|default:"" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ cutting_order.items.count }}</div>
+                                    <small class="text-muted">عنصر</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ cutting_order.created_at|date:"Y-m-d" }}</div>
+                                    <small class="text-muted">{{ cutting_order.created_at|date:"H:i" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                {% if cutting_order.completed_at %}
+                                    <div class="text-center">
+                                        <div class="fw-bold text-success">{{ cutting_order.completed_at|date:"Y-m-d" }}</div>
+                                        <small class="text-muted">{{ cutting_order.completed_at|date:"H:i" }}</small>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center">
+                                        <span class="text-muted">غير مكتمل</span>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    {% if cutting_order.status == 'completed' %}
+                                        <span class="badge bg-success">مكتمل</span>
+                                    {% elif cutting_order.status == 'in_progress' %}
+                                        <span class="badge bg-primary">قيد التقطيع</span>
+                                    {% elif cutting_order.status == 'rejected' %}
+                                        <span class="badge bg-danger">مرفوض</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">قيد الانتظار</span>
+                                    {% endif %}
+
+                                    {% if cutting_order.status == 'rejected' and cutting_order.rejection_reason %}
+                                        <div class="mt-1">
+                                            <small class="text-danger">{{ cutting_order.rejection_reason|truncatechars:50 }}</small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <a href="{% url 'cutting:order_detail' cutting_order.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                لا توجد أوامر تقطيع لهذا الطلب
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- معلومات الاستلام لطلبات المنتجات -->
+    {% with types_list=order.get_selected_types_list %}
+    {% if 'products' in types_list %}
+        {% with product_receipts=order.product_receipts.all %}
+        {% if product_receipts %}
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    معلومات الاستلام من المخزن
+                </h5>
+                <small>تفاصيل استلام المنتجات من المخزن</small>
+            </div>
+            <div class="card-body">
+                {% for receipt in product_receipts %}
+                <div class="row mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <div class="col-md-6">
+                        <h6 class="text-success">
+                            <i class="fas fa-warehouse"></i>
+                            رقم الإذن: {{ receipt.permit_number }}
+                        </h6>
+                        <p class="mb-1">
+                            <strong>رقم الشنطة:</strong>
+                            <span class="badge bg-warning text-dark">{{ receipt.bag_number }}</span>
+                        </p>
+                        <p class="mb-1">
+                            <strong>تاريخ الاستلام:</strong>
+                            <span class="text-muted">{{ receipt.receipt_date|date:"d/m/Y H:i" }}</span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <strong>اسم المستلم:</strong>
+                            <span class="text-info">{{ receipt.received_by_name }}</span>
+                        </p>
+                        <p class="mb-1">
+                            <strong>المستخدم المسجل:</strong>
+                            <span class="text-muted">{{ receipt.received_by_user.get_full_name|default:receipt.received_by_user.username }}</span>
+                        </p>
+                        {% if receipt.notes %}
+                        <p class="mb-1">
+                            <strong>ملاحظات:</strong>
+                            <span class="text-muted">{{ receipt.notes }}</span>
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+    {% endif %}
+    {% endwith %}
+
+    {% with types_list=order.get_selected_types_list %}
+    {% if 'inspection' in types_list or 'inspection' in order.selected_types %}
+    <!-- Inspection Details -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-eye me-2"></i>
+                بطاقة تتبع المعاينة
+            </h5>
+            <small>معلومات شاملة عن حالة المعاينة المرتبطة بهذا الطلب</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-info">
+                        <tr>
+                            <th width="8%">رقم المعاينة</th>
+                            <th width="12%">تاريخ الطلب</th>
+                            <th width="12%">تاريخ التنفيذ</th>
+                            <th width="8%">عدد الشبابيك</th>
+                            <th width="15%">فني المعاينة</th>
+                            <th width="10%">الحالة</th>
+                            <th width="10%">النتيجة</th>
+                            <th width="8%">ملف المعاينة</th>
+                            <th width="12%">البائع المسؤول</th>
+                            <th width="5%">عرض</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inspection in inspections %}
+                        <tr class="{% if inspection.status == 'completed' %}table-success{% elif inspection.status == 'scheduled' %}table-info{% elif inspection.status == 'pending' %}table-warning{% endif %}">
+                            <td>
+                                <strong class="text-primary">{{ inspection.inspection_code }}</strong>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ inspection.request_date|date:"Y-m-d" }}</div>
+                                    <small class="text-muted">تاريخ الطلب</small>
+                                </div>
+                            </td>
+                            <td>
+                                {% if inspection.scheduled_date %}
+                                    <div class="text-center">
+                                        <div class="fw-bold">{{ inspection.scheduled_date|date:"Y-m-d" }}</div>
+                                        <small class="text-muted">مجدولة</small>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center">
+                                        <span class="text-muted">غير محدد</span>
+                                        <br><small class="text-muted">لم تُجدول بعد</small>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if inspection.windows_count %}
+                                    <span class="badge bg-secondary">{{ inspection.windows_count }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if inspection.inspector %}
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-user-hard-hat me-2 text-primary"></i>
+                                        <div>
+                                            <div class="fw-bold">
+                                                {% if inspection.inspector.get_full_name %}
+                                                    {{ inspection.inspector.get_full_name }}
+                                                {% else %}
+                                                    {{ inspection.inspector.username }}
+                                                {% endif %}
+                                            </div>
+                                            <small class="text-muted">فني معاينة</small>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-user-slash me-1"></i>
+                                        غير محدد
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge {% if inspection.status == 'pending' %}bg-warning text-dark
+                                           {% elif inspection.status == 'scheduled' %}bg-info
+                                           {% elif inspection.status == 'completed' %}bg-success
+                                           {% else %}bg-danger{% endif %} px-3 py-2">
+                                    {% if inspection.status == 'pending' %}
+                                        <i class="fas fa-clock me-1"></i> في الانتظار
+                                    {% elif inspection.status == 'scheduled' %}
+                                        <i class="fas fa-calendar-check me-1"></i> مجدولة
+                                    {% elif inspection.status == 'completed' %}
+                                        <i class="fas fa-check me-1"></i> مكتملة
+                                    {% else %}
+                                        <i class="fas fa-times me-1"></i> ملغية
+                                    {% endif %}
+                                </span>
+                                {% if inspection.status == 'completed' and inspection.updated_at %}
+                                    <br><small class="text-muted mt-1">{{ inspection.updated_at|date:"Y-m-d H:i" }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if inspection.result %}
+                                    <span class="badge {% if inspection.result == 'passed' %}bg-success
+                                               {% else %}bg-danger{% endif %} px-3 py-2">
+                                        {% if inspection.result == 'passed' %}
+                                            <i class="fas fa-thumbs-up me-1"></i> نجحت
+                                        {% else %}
+                                            <i class="fas fa-thumbs-down me-1"></i> فشلت
+                                        {% endif %}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-hourglass-half me-1"></i>
+                                        في الانتظار
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if inspection.inspection_file %}
+                                    <div class="d-flex flex-column gap-1">
+                                        <!-- الملف المحلي -->
+                                        <a href="{{ inspection.inspection_file.url }}" target="_blank"
+                                           class="btn btn-sm btn-outline-primary"
+                                           title="عرض ملف المعاينة محلياً">
+                                            <i class="fas fa-file-pdf me-1"></i>
+                                            محلي
+                                        </a>
+
+                                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                            <!-- رابط Google Drive -->
+                                            <a href="{{ inspection.google_drive_file_url }}" target="_blank"
+                                               class="btn btn-sm btn-success"
+                                               title="عرض ملف المعاينة في Google Drive">
+                                                <i class="fas fa-cloud me-1"></i>
+                                                Drive
+                                            </a>
+                                        {% else %}
+                                            <!-- جاري الرفع -->
+                                            <span class="badge bg-warning text-dark"
+                                                  title="جاري رفع الملف إلى Google Drive">
+                                                <i class="fas fa-clock me-1"></i>
+                                                جاري الرفع
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-file-slash me-1"></i>
+                                        لا يوجد ملف
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if inspection.responsible_employee %}
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-user-tie me-2 text-success"></i>
+                                        <div>
+                                            <div class="fw-bold">{{ inspection.responsible_employee }}</div>
+                                            <small class="text-muted">بائع مسؤول</small>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-user-slash me-1"></i>
+                                        غير محدد
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'inspections:inspection_detail' inspection.pk %}"
+                                   class="btn btn-sm btn-outline-info"
+                                   title="عرض تفاصيل المعاينة">
+                                    <i class="fas fa-eye me-1"></i>
+                                    عرض
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-3">لم يتم إنشاء معاينة لهذا الطلب بعد</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Payments -->
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">الدفعات</h5>
+            <a href="{% url 'orders:payment_create' order.pk %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus"></i> تسجيل دفعة
+            </a>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المبلغ</th>
+                            <th>طريقة الدفع</th>
+                            <th>تاريخ الدفع</th>
+                            <th>رقم الفاتورة</th>
+                            <th>ملاحظات</th>
+                            <th>تم الإنشاء بواسطة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ payment.amount|clean_decimal_currency:currency_symbol }}</td>
+                            <td>{{ payment.get_payment_method_display }}</td>
+                            <td>{{ payment.payment_date|date:"Y-m-d H:i" }}</td>
+                            <td>{{ payment.order.invoice_number|default:"-" }}</td>
+                            <td>{{ payment.notes|default:"-" }}</td>
+                            <td>
+                                {% if payment.created_by %}
+                                    {{ payment.created_by.get_full_name|default:payment.created_by.username }}
+                                {% else %}
+                                    غير محدد
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'orders:payment_delete' payment.pk %}" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-3">لا توجد دفعات مسجلة لهذا الطلب</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light">
+                            <th colspan="7" class="text-start">المجموع المدفوع</th>
+                            <th>{{ order.paid_amount|clean_decimal_currency:currency_symbol }}</th>
+                        </tr>
+                        <tr class="table-light">
+                            <th colspan="7" class="text-start">المبلغ المتبقي</th>
+                            <th>{{ order.remaining_amount|clean_decimal_currency:currency_symbol }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<!-- Modal for Reply to Rejection -->
+<div class="modal fade" id="replyToRejectionModal" tabindex="-1" aria-labelledby="replyToRejectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="replyToRejectionModalLabel">
+                    <i class="fas fa-reply me-2"></i>الرد على رفض الطلب
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    يمكنك الرد على سبب الرفض وتقديم التوضيحات المطلوبة. سيتم إرسال ردك للإدارة للمراجعة.
+                </div>
+                <form id="replyToRejectionForm">
+                    <input type="hidden" id="manufacturingOrderId" name="manufacturing_order_id">
+                    <div class="mb-3">
+                        <label for="reply_to_rejection_message" class="form-label">
+                            <i class="fas fa-comment me-1"></i>ردك على الرفض:
+                        </label>
+                        <textarea class="form-control" 
+                                  id="reply_to_rejection_message" 
+                                  name="reply_to_rejection_message" 
+                                  rows="4" 
+                                  placeholder="اكتب ردك على سبب الرفض هنا..."
+                                  required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>إلغاء
+                </button>
+                <button type="button" class="btn btn-primary" id="submitReplyToRejectionBtn">
+                    <i class="fas fa-paper-plane me-1"></i>إرسال الرد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Modal fixes to prevent black screen */
+.modal-backdrop {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+body.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+body:not(.modal-open) .modal-backdrop {
+    display: none !important;
+}
+
+.swal2-container {
+    z-index: 10000 !important;
+}
+
+.swal2-shown {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+/* Timeline styling */
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 40px;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #007bff;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #007bff;
+}
+
+.timeline-item:not(:last-child):before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 12px;
+    height: calc(100% + 8px);
+    width: 2px;
+    background-color: #e9ecef;
+}
+
+.timeline-content {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// عرض مودال الرد على الرفض
+function showReplyToRejectionModal(manufacturingOrderId) {
+    $('#manufacturingOrderId').val(manufacturingOrderId);
+    $('#reply_to_rejection_message').val('');
+    $('#replyToRejectionModal').modal('show');
+}
+
+$(document).ready(function() {
+    // إضافة دالة تنظيف المودال
+    function forceCleanModal() {
+        // إزالة جميع آثار المودال
+        $('.modal-backdrop').remove();
+        $('.modal-backdrop.show').remove();
+        $('.modal-backdrop.fade').remove();
+        $('body').removeClass('modal-open');
+        $('html').removeClass('modal-open');
+        $('body').css({
+            'overflow': 'auto',
+            'padding-right': '0',
+            'margin-right': '0'
+        });
+    }
+    
+    // معالجة إرسال الرد على الرفض
+    $('#submitReplyToRejectionBtn').on('click', function() {
+        const manufacturingOrderId = $('#manufacturingOrderId').val();
+        const replyMessage = $('#reply_to_rejection_message').val().trim();
+        
+        if (!replyMessage) {
+            Swal.fire('خطأ', 'يرجى كتابة رد قبل الإرسال.', 'error');
+            return;
+        }
+        
+        // إخفاء المودال فوراً قبل إرسال الطلب
+        $('#replyToRejectionModal').modal('hide');
+        // تنظيف قوي للمودال وإزالة backdrop
+        setTimeout(() => {
+            forceCleanModal();
+        }, 100);
+        
+        // إظهار loading
+        Swal.fire({
+            title: 'جاري إرسال الرد...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+        
+        $.ajax({
+            url: `/manufacturing/send_reply/${manufacturingOrderId}/`,
+            method: 'POST',
+            data: JSON.stringify({
+                'reply_message': replyMessage
+            }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: 'تم بنجاح!',
+                        text: 'تم إرسال ردك للإدارة بنجاح',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    $('#reply_to_rejection_message').val('');
+                    // إعادة تحميل الصفحة لإظهار الرد
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء إرسال الرد', 'error');
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'حدث خطأ غير متوقع';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                Swal.fire('خطأ!', errorMessage, 'error');
+            }
+        });
+    });
+    
+    // تنظيف مودال الرد على الرفض عند إغلاقه
+    $('#replyToRejectionModal').on('hidden.bs.modal', function () {
+        forceCleanModal();
+        $('#reply_to_rejection_message').val('');
+    });
+    
+    // معالجة النقر على زر X أو خارج مودال الرد على الرفض
+    $('#replyToRejectionModal .btn-close, #replyToRejectionModal [data-bs-dismiss="modal"]').on('click', function() {
+        forceCleanModal();
+    });
+    
+    // معالجة النقر على الخلفية (backdrop) لمودال الرد على الرفض
+    $('#replyToRejectionModal').on('click', function(e) {
+        if (e.target === this) {
+            forceCleanModal();
+        }
+    });
+});
+
+// دالة طباعة الفاتورة المباشرة
+function printInvoice(orderNumber) {
+    // إظهار رسالة تحميل
+    Swal.fire({
+        title: 'جاري التحضير للطباعة...',
+        text: 'يرجى الانتظار',
+        icon: 'info',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // إنشاء iframe مخفي للطباعة المباشرة
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    document.body.appendChild(iframe);
+    
+    // معالج تحميل الإطار
+    iframe.onload = function() {
+        setTimeout(() => {
+            Swal.close();
+            // محاولة الطباعة
+            try {
+                iframe.contentWindow.print();
+            } catch (e) {
+                console.log('طباعة تلقائية:', e);
+                // فتح في نافذة جديدة كبديل
+                window.open(`/orders/order/${orderNumber}/invoice/`, '_blank');
+            }
+        }, 1000);
+    };
+    
+    // معالج الخطأ
+    iframe.onerror = function() {
+        Swal.close();
+        Swal.fire({
+            title: 'خطأ!',
+            text: 'حدث خطأ في تحميل الفاتورة',
+            icon: 'error'
+        });
+    };
+    
+    // تحميل محتوى الفاتورة
+    iframe.src = `/orders/order/${orderNumber}/invoice/`;
+    
+    // إزالة الـ iframe بعد الطباعة
+    setTimeout(() => {
+        if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+        }
+    }, 10000);
+}
+
+// وظائف أمر التقطيع
+function startCutting(orderId) {
+    Swal.fire({
+        title: 'بدء التقطيع',
+        text: 'هل تريد بدء عملية التقطيع لهذا الأمر؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، ابدأ',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/cutting/orders/${orderId}/start/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم!', 'تم بدء عملية التقطيع بنجاح', 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('خطأ!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
+}
+
+function createCuttingOrder(orderId) {
+    Swal.fire({
+        title: 'إنشاء أمر تقطيع',
+        text: 'هل تريد إنشاء أمر تقطيع لهذا الطلب؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#007bff',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، أنشئ',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/cutting/orders/create-from-order/${orderId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم!', 'تم إنشاء أمر التقطيع بنجاح', 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('خطأ!', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
+}
+</script>
+{% endblock %}

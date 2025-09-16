@@ -1,0 +1,467 @@
+/* تعزيزات الثيم المخصص - أيقونات ملونة وإشعاعية وتأثيرات حركية 
+   Custom Theme Enhancements - Glowing colored icons and animations */
+
+/* تأثيرات الأيقونات الملونة والمشعة في الهيدر */
+[data-theme="custom-theme"] .navbar .nav-link {
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 0.5rem 0.7rem !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa,
+[data-theme="custom-theme"] .navbar .fas,
+[data-theme="custom-theme"] .navbar .far,
+[data-theme="custom-theme"] .navbar .fab,
+[data-theme="custom-theme"] .navbar .fal {
+    font-size: 1.5rem !important;
+    margin: 0 0 0.15rem 0 !important;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    background-clip: text;
+    -webkit-background-clip: text;
+    position: relative;
+}
+
+/* ألوان مخصصة ومتنوعة للأيقونات */
+[data-theme="custom-theme"] .navbar .nav-item {
+    display: flex !important;
+    align-items: center !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-user,
+[data-theme="custom-theme"] .navbar .fa-user-circle {
+    color: #ffffff !important; /* ذهبي مشرق */
+}
+
+[data-theme="custom-theme"] .navbar .fa-bell,
+[data-theme="custom-theme"] .navbar .fa-bell-slash {
+    color: #e0ee7a !important; /* برتقالي مشرق */
+}
+
+[data-theme="custom-theme"] .navbar .fa-cog,
+[data-theme="custom-theme"] .navbar .fa-cogs {
+    color: #E0E0E0 !important; /* فضي مشرق */
+}
+
+[data-theme="custom-theme"] .navbar .fa-home {
+    color: #98FB98 !important; /* أخضر مشرق */
+}
+
+[data-theme="custom-theme"] .navbar .fa-users {
+    color: #00CED1 !important; /* تركواز مشرق */
+}
+
+[data-theme="custom-theme"] .navbar .fa-chart-line,
+[data-theme="custom-theme"] .navbar .fa-chart-bar {
+    color: #87CEEB !important; /* أزرق سماوي مشرق */
+}
+
+[data-theme="custom-theme"] .navbar .fa-file,
+[data-theme="custom-theme"] .navbar .fa-file-alt {
+    color: #1E90FF !important; /* أزرق مشرق */
+}
+
+[data-theme="custom-theme"] .navbar .fa-folder,
+[data-theme="custom-theme"] .navbar .fa-folder-open {
+    color: #FFB347 !important; /* برتقالي فاتح مشرق */
+}
+
+/* أيقونات الأقسام الإضافية */
+[data-theme="custom-theme"] .navbar .fa-shopping-cart,
+[data-theme="custom-theme"] .navbar .fa-cart-plus {
+    color: #FFB6C1 !important; /* وردي فاتح مشرق - للطلبات */
+}
+
+[data-theme="custom-theme"] .navbar .fa-boxes,
+[data-theme="custom-theme"] .navbar .fa-box {
+    color: #90EE90 !important; /* أخضر فاتح مشرق - للمخزون */
+}
+
+[data-theme="custom-theme"] .navbar .fa-search,
+[data-theme="custom-theme"] .navbar .fa-clipboard-check {
+    color: #87CEFA !important; /* أزرق فاتح مشرق - للمعاينات */
+}
+
+[data-theme="custom-theme"] .navbar .fa-tools,
+[data-theme="custom-theme"] .navbar .fa-wrench {
+    color: #DDA0DD !important; /* بنفسجي فاتح مشرق - للتركيبات */
+}
+
+[data-theme="custom-theme"] .navbar .fa-industry,
+[data-theme="custom-theme"] .navbar .fa-factory {
+    color: #98FB98 !important; /* أخضر مشرق - للمصنع */
+}
+
+[data-theme="custom-theme"] .navbar .fa-database,
+[data-theme="custom-theme"] .navbar .fa-server {
+    color: #B0C4DE !important; /* أزرق فاتح مشرق - لإدارة البيانات */
+}
+
+/* تأثير التوهج عند التحويم (hover) */
+[data-theme="custom-theme"] .navbar .fa:hover,
+[data-theme="custom-theme"] .navbar .fas:hover,
+[data-theme="custom-theme"] .navbar .far:hover,
+[data-theme="custom-theme"] .navbar .fab:hover,
+[data-theme="custom-theme"] .navbar .fal:hover {
+    transform: translateY(-3px) scale(1.1);
+    text-shadow: 0 0 15px currentColor;
+    filter: brightness(1.2);
+}
+
+/* مظهر الأيقونات في القوائم المنسدلة */
+[data-theme="custom-theme"] .dropdown-item i {
+    font-size: 1rem !important;
+    width: 20px !important;
+    height: 20px !important;
+    text-align: center !important;
+    margin-left: 10px !important;
+    transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+}
+
+[data-theme="custom-theme"] .dropdown-item:hover i {
+    transform: translateX(-5px) scale(1.1) !important;
+    text-shadow: 0 0 8px currentColor !important;
+}
+
+/* تقليص المسافات في شريط التنقل */
+[data-theme="custom-theme"] .navbar-nav {
+    gap: 0;
+    margin-right: 0 !important;
+}
+
+[data-theme="custom-theme"] .navbar-nav .nav-link {
+    font-size: 0.75rem !important;
+    white-space: nowrap !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 0.5rem 0.7rem !important;
+}
+
+/* تأثيرات متحركة للبطاقات */
+[data-theme="custom-theme"] .card {
+    transition: var(--transition-bounce) !important;
+    box-shadow: var(--shadow-light) !important;
+    border-radius: var(--radius) !important;
+    overflow: hidden !important;
+    transform-origin: center bottom !important;
+}
+
+[data-theme="custom-theme"] .card:hover {
+    box-shadow: var(--shadow-hover) !important;
+    transform: translateY(-5px) !important;
+}
+
+/* تأثير حركي للبطاقات عند التحميل */
+@keyframes cardAppear {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+[data-theme="custom-theme"] .card {
+    animation: cardAppear 0.4s ease-out forwards;
+}
+
+/* تأخير متتالي للبطاقات المتعددة */
+[data-theme="custom-theme"] .card:nth-child(1) { animation-delay: 0.1s; }
+[data-theme="custom-theme"] .card:nth-child(2) { animation-delay: 0.2s; }
+[data-theme="custom-theme"] .card:nth-child(3) { animation-delay: 0.3s; }
+[data-theme="custom-theme"] .card:nth-child(4) { animation-delay: 0.4s; }
+[data-theme="custom-theme"] .card:nth-child(5) { animation-delay: 0.5s; }
+
+/* تأثيرات للجداول */
+[data-theme="custom-theme"] .table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border-radius: var(--radius) !important;
+    overflow: hidden !important;
+    box-shadow: var(--shadow-light) !important;
+}
+
+[data-theme="custom-theme"] .table thead th {
+    background-color: rgba(106, 87, 67, 0.1) !important;
+    border-bottom: 2px solid var(--primary) !important;
+    font-weight: 600 !important;
+    transition: var(--transition) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+[data-theme="custom-theme"] .table thead th::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(to right, var(--primary), var(--secondary), var(--primary));
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s ease-out;
+}
+
+[data-theme="custom-theme"] .table:hover thead th::after {
+    transform: scaleX(1);
+}
+
+/* تأثير حركي للصفوف عند التحويم */
+[data-theme="custom-theme"] .table tbody tr {
+    transition: var(--transition) !important;
+    transform-origin: center !important;
+}
+
+[data-theme="custom-theme"] .table tbody tr:hover {
+    background-color: rgba(106, 87, 67, 0.05) !important;
+    transform: scale(1.01) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    z-index: 1 !important;
+    position: relative !important;
+}
+
+/* تأثيرات للخلايا */
+[data-theme="custom-theme"] .table td {
+    transition: var(--transition) !important;
+    border-top-color: var(--border) !important;
+}
+
+[data-theme="custom-theme"] .table-hover tbody tr:hover td {
+    border-top-color: var(--primary) !important;
+    border-bottom-color: var(--primary) !important;
+}
+
+/* تأثيرات للحقول والأزرار */
+[data-theme="custom-theme"] .form-control,
+[data-theme="custom-theme"] .form-select,
+[data-theme="custom-theme"] .btn {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border-radius: var(--radius) !important;
+}
+
+[data-theme="custom-theme"] .form-control:focus,
+[data-theme="custom-theme"] .form-select:focus {
+    box-shadow: 0 0 0 3px rgba(106, 87, 67, 0.25) !important;
+    transform: translateY(-2px) !important;
+}
+
+[data-theme="custom-theme"] .btn {
+    position: relative;
+    overflow: hidden;
+}
+
+/* تأثير الموجة عند النقر على الأزرار */
+[data-theme="custom-theme"] .btn::after {
+    content: '';
+    display: block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.3) 10%, transparent 10.01%);
+    background-repeat: no-repeat;
+    background-position: 50%;
+    transform: scale(10, 10);
+    opacity: 0;
+    transition: transform 0.5s, opacity 0.8s;
+}
+
+[data-theme="custom-theme"] .btn:active::after {
+    transform: scale(0, 0);
+    opacity: 0.3;
+    transition: 0s;
+}
+
+/* تأثير تحويم الأزرار */
+[data-theme="custom-theme"] .btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+}
+
+[data-theme="custom-theme"] .btn:active {
+    transform: translateY(1px);
+}
+
+/* تأثيرات للعناوين الرئيسية */
+[data-theme="custom-theme"] h1, 
+[data-theme="custom-theme"] h2, 
+[data-theme="custom-theme"] h3 {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 15px;
+}
+
+[data-theme="custom-theme"] h1::after,
+[data-theme="custom-theme"] h2::after,
+[data-theme="custom-theme"] h3::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 50%;
+    height: 3px;
+    background: linear-gradient(to right, var(--primary), transparent);
+    border-radius: 2px;
+}
+
+/* تأثيرات للنافذة المنبثقة - modals */
+[data-theme="custom-theme"] .modal-content {
+    border-radius: var(--radius-large) !important;
+    box-shadow: var(--shadow-hover) !important;
+    animation: modalAppear 0.3s ease-out forwards !important;
+    border: none !important;
+    overflow: hidden !important;
+}
+
+@keyframes modalAppear {
+    from { opacity: 0; transform: scale(0.9) translateY(-20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+[data-theme="custom-theme"] .modal-header {
+    border-bottom: 2px solid var(--separator) !important;
+    padding-bottom: 10px !important;
+    background: linear-gradient(to right, rgba(106, 87, 67, 0.05), transparent) !important;
+}
+
+[data-theme="custom-theme"] .modal-footer {
+    border-top: 2px solid var(--separator) !important;
+    padding-top: 10px !important;
+    background: linear-gradient(to right, rgba(106, 87, 67, 0.05), transparent) !important;
+}
+
+/* تأثيرات القوائم */
+[data-theme="custom-theme"] .list-group-item {
+    transition: var(--transition) !important;
+    border-left: 0 solid var(--primary) !important;
+}
+
+[data-theme="custom-theme"] .list-group-item:hover {
+    border-left: 4px solid var(--primary) !important;
+    padding-left: calc(1.25rem - 4px) !important;
+    background-color: rgba(106, 87, 67, 0.05) !important;
+}
+
+/* تأثيرات للشارات - badges */
+[data-theme="custom-theme"] .badge {
+    transition: var(--transition-bounce) !important;
+}
+
+[data-theme="custom-theme"] .badge:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+}
+
+/* التنبيهات - alerts */
+[data-theme="custom-theme"] .alert {
+    border-radius: var(--radius) !important;
+    box-shadow: var(--shadow-light) !important;
+    border-right: 5px solid currentColor !important;
+    animation: alertAppear 0.5s ease-out forwards !important;
+}
+
+@keyframes alertAppear {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* المؤشر المتحرك للصفحات النشطة - active page indicators */
+[data-theme="custom-theme"] .page-item.active .page-link {
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="custom-theme"] .page-item.active .page-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0.3),
+        rgba(255, 255, 255, 0)
+    );
+    animation: pageShine 2s infinite;
+}
+
+@keyframes pageShine {
+    100% { left: 100%; }
+}
+
+/* تأثيرات لعناصر التنقل الرئيسية */
+[data-theme="custom-theme"] .nav-link {
+    position: relative;
+    z-index: 1;
+}
+
+[data-theme="custom-theme"] .nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: currentColor;
+    opacity: 0.1;
+    border-radius: 5px;
+    z-index: -1;
+    transform: scale(0.7, 0);
+    transform-origin: bottom;
+    transition: all 0.25s ease-out;
+}
+
+[data-theme="custom-theme"] .nav-link:hover::before,
+[data-theme="custom-theme"] .nav-link.active::before {
+    transform: scale(1, 1);
+}
+
+/* تأثيرات التقسيمات والفواصل */
+[data-theme="custom-theme"] hr {
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--separator), transparent);
+    border: none;
+    margin: 1.5rem 0;
+}
+
+/* تعزيزات الوحدات المختلفة في التطبيق */
+[data-theme="custom-theme"] .section-container {
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 25px;
+    background-color: var(--card-bg);
+    box-shadow: var(--shadow-light);
+    transition: var(--transition);
+}
+
+[data-theme="custom-theme"] .section-container:hover {
+    box-shadow: var(--shadow);
+}
+
+/* تأثير التحميل المتتالي للعناصر داخل الصفحة */
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+[data-theme="custom-theme"] .animate-on-load {
+    animation: slideUp 0.5s ease-out forwards;
+    opacity: 0;
+}
+
+/* تطبيق التأثير المتتالي على العناصر المختلفة */
+[data-theme="custom-theme"] .row > div:nth-child(1) .animate-on-load { animation-delay: 0.1s; }
+[data-theme="custom-theme"] .row > div:nth-child(2) .animate-on-load { animation-delay: 0.2s; }
+[data-theme="custom-theme"] .row > div:nth-child(3) .animate-on-load { animation-delay: 0.3s; }
+[data-theme="custom-theme"] .row > div:nth-child(4) .animate-on-load { animation-delay: 0.4s; }
+[data-theme="custom-theme"] .row > div:nth-child(5) .animate-on-load { animation-delay: 0.5s; }

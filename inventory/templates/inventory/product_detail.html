@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}تفاصيل المنتج: {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">تفاصيل المنتج #{{ product.id }}</h2>
+            <div class="btn-group">
+                <a href="{% url 'inventory:dashboard' %}" class="btn btn-light">
+                    <i class="fas fa-tachometer-alt"></i> لوحة التحكم
+                </a>
+                <a href="{% url 'inventory:product_list' %}" class="btn btn-light">
+                    <i class="fas fa-list"></i> قائمة المنتجات
+                </a>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="row">
+                <!-- Product Information -->
+                <div class="col-md-6">
+                    <h4>معلومات المنتج</h4>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="35%">اسم المنتج:</th>
+                            <td>{{ product.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>الكود:</th>
+                            <td>{{ product.code|default:"غير محدد" }}</td>
+                        </tr>
+                        <tr>
+                            <th>الصنف:</th>
+                            <td>{{ product.category.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>الوصف:</th>
+                            <td>{{ product.description|default:"لا يوجد وصف" }}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Stock Information -->
+                <div class="col-md-6">
+                    <h4>معلومات المخزون</h4>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th width="35%">المخزون الحالي:</th>
+                            <td>
+                                <span class="{% if product.current_stock <= product.minimum_stock %}text-danger{% endif %}">
+                                    {{ product.current_stock }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>الحد الأدنى:</th>
+                            <td>{{ product.minimum_stock }}</td>
+                        </tr>
+                        <tr>
+                            <th>السعر:</th>
+                            <td>{{ product.price }}</td>
+                        </tr>
+                        <tr>
+                            <th>حالة المخزون:</th>
+                            <td>
+                                {% if product.current_stock == 0 %}
+                                    <span class="badge bg-danger">نفذ من المخزون</span>
+                                {% elif product.current_stock <= product.minimum_stock %}
+                                    <span class="badge bg-warning">مخزون منخفض</span>
+                                {% else %}
+                                    <span class="badge bg-success">متوفر</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="mt-4">
+                <h4>إجراءات سريعة</h4>
+                <div class="btn-group">
+                    <a href="{% url 'inventory:product_update' product.id %}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> تعديل المنتج
+                    </a>
+                    <a href="{% url 'inventory:transaction_create' product.id %}" class="btn btn-success">
+                        <i class="fas fa-exchange-alt"></i> إضافة معاملة
+                    </a>
+                    {% if user.is_superuser %}
+                        <a href="{% url 'inventory:product_delete' product.id %}" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> حذف المنتج
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Transaction History -->
+            <div class="mt-4">
+                <h4>سجل المعاملات</h4>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>نوع المعاملة</th>
+                                <th>الكمية</th>
+                                <th>الملاحظات</th>
+                                <th>بواسطة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in product.transactions.all %}
+                                <tr>
+                                    <td>{{ transaction.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if transaction.transaction_type == 'in' %}
+                                            <span class="badge bg-success">وارد</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">صادر</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.quantity }}</td>
+                                    <td>{{ transaction.notes|default:"-" }}</td>
+                                    <td>{{ transaction.created_by.get_full_name }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">لا توجد معاملات سابقة</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer">
+            <small class="text-muted">
+                تم الإنشاء: {{ product.created_at|date:"Y-m-d H:i" }}
+                | آخر تحديث: {{ product.updated_at|date:"Y-m-d H:i" }}
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block after_field_sets %}
+{{ block.super }}
+
+{% if show_roles_management %}
+<div class="module aligned">
+    <h2>{% trans "إدارة الأدوار" %}</h2>
+    <div class="form-row">
+        <div>
+            <p>
+                {% trans "يمكنك إدارة أدوار المستخدم من خلال القسم أدناه. إذا كنت ترغب في إنشاء دور جديد أو تعديل الأدوار الموجودة، استخدم الروابط التالية:" %}
+            </p>
+            <p>
+                <a href="{{ add_role_url }}" class="button" target="_blank">{% trans "إنشاء دور جديد" %}</a>
+                <a href="{{ roles_list_url }}" class="button" target="_blank">{% trans "إدارة الأدوار الموجودة" %}</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script type="text/javascript">
+(function($) {
+    // إضافة عنوان توضيحي لقسم أدوار المستخدم
+    $(document).ready(function() {
+        var $inlineGroup = $('.inline-group');
+        $inlineGroup.each(function() {
+            var $this = $(this);
+            if ($this.find('h2').text().indexOf('أدوار المستخدم') !== -1) {
+                $this.before('<div class="help"><p>{% trans "يمكنك إضافة أو إزالة أدوار للمستخدم من هنا. إذا كنت بحاجة إلى إنشاء دور جديد، استخدم زر \"إنشاء دور جديد\" أعلاه." %}</p></div>');
+            }
+        });
+    });
+})(django.jQuery);
+</script>
+{% endblock %}

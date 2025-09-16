@@ -1,0 +1,499 @@
+{% load static %}
+{% load i18n %}
+
+<div class="container-fluid">
+{% csrf_token %}
+    <!-- الطلبات الجاهزة للتركيب -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-white">
+            <h6 class="mb-0">
+                <i class="fas fa-clock"></i>
+                الطلبات الجاهزة للتركيب ({{ ready_orders.count }})
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if ready_orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead style="background-color: #6c757d !important;">
+                            <tr>
+                                <th style="color: white !important;">رقم الطلب</th>
+                                <th style="color: white !important;">رقم العقد</th>
+                                <th style="color: white !important;">العميل</th>
+                                <th style="color: white !important;">عنوان العميل</th>
+                                <th style="color: white !important;">البائع</th>
+                                <th style="color: white !important;">الفرع</th>
+                                <th style="color: white !important;">التاريخ</th>
+                                <th style="color: white !important;">المبلغ الإجمالي</th>
+                                <th style="color: white !important;">المدفوع</th>
+                                <th style="color: white !important;">المتبقي</th>
+                                <th style="color: white !important;">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in ready_orders %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'orders:order_detail' order.id %}" class="text-primary font-weight-bold">
+                                            {{ order.order_number }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if order.contract_number %}
+                                            <span class="badge badge-info">{{ order.contract_number }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                        {% if order.contract_number_2 %}
+                                            <br><span class="badge badge-secondary">{{ order.contract_number_2 }}</span>
+                                        {% endif %}
+                                        {% if order.contract_number_3 %}
+                                            <br><span class="badge badge-secondary">{{ order.contract_number_3 }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.customer.name }}</td>
+                                    <td>{% if order.customer.address %}{{ order.customer.address }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                    <td>
+                                        {% if order.salesperson %}
+                                            {{ order.salesperson.name }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if order.branch %}
+                                            <span class="badge badge-secondary">{{ order.branch.name }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.created_at|date:"Y-m-d" }}</td>
+                                    <td>{{ order.total_amount|currency_format }}</td>
+                                    <td>{{ order.paid_amount|currency_format }}</td>
+                                    <td>
+                                        {% if order.paid_amount < order.total_amount %}
+                                            <span class="badge badge-danger">
+                                                {{ order.total_amount|add:"-"|add:order.paid_amount|currency_format }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-success">مكتمل الدفع</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            {% if order.is_manufacturing_order %}
+                                                {% if order.is_delivered_manufacturing_order %}
+                                                    <a href="{% url 'installations:quick_schedule_installation' order.id %}"
+                                                       class="btn btn-primary btn-sm">
+                                                        <i class="fas fa-calendar-plus"></i> جدولة
+                                                    </a>
+                                                {% endif %}
+                                            {% elif order.order_status == 'ready_install' or order.order_status == 'completed' %}
+                                                <a href="{% url 'installations:quick_schedule_installation' order.id %}"
+                                                   class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-calendar-plus"></i> جدولة
+                                                </a>
+                                            {% endif %}
+                                            {% if order.paid_amount < order.total_amount %}
+                                                <a href="{% url 'installations:manage_customer_debt' order.id %}" 
+                                                   class="btn btn-warning btn-sm">
+                                                    <i class="fas fa-money-bill"></i> إدارة الدين
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>لا توجد طلبات جاهزة للتركيب</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- الطلبات المجدولة للتركيب -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h6 class="mb-0">
+                <i class="fas fa-calendar-check"></i>
+                الطلبات المجدولة للتركيب ({{ scheduled_installations.count }})
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if scheduled_installations %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead style="background-color: #6c757d !important;">
+                            <tr>
+                                <th style="color: white !important;">رقم الطلب</th>
+                                <th style="color: white !important;">رقم العقد</th>
+                                <th style="color: white !important;">العميل</th>
+                                <th style="color: white !important;">عنوان العميل</th>
+                                <th style="color: white !important;">البائع</th>
+                                <th style="color: white !important;">الفرع</th>
+                                <th style="color: white !important;">التاريخ المجدول</th>
+                                <th style="color: white !important;">الوقت</th>
+                                <th style="color: white !important;">الفريق</th>
+                                <th style="color: white !important;">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for installation in scheduled_installations %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'installations:installation_detail' installation.id %}" class="text-primary font-weight-bold">
+                                            {{ installation.order.order_number }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if installation.order.contract_number %}
+                                            <span class="badge badge-info">{{ installation.order.contract_number }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                        {% if installation.order.contract_number_2 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_2 }}</span>
+                                        {% endif %}
+                                        {% if installation.order.contract_number_3 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_3 }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ installation.order.customer.name }}</td>
+                                    <td>{% if installation.order.customer.address %}{{ installation.order.customer.address }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                    <td>
+                                        {% if installation.order.salesperson %}
+                                            {{ installation.order.salesperson.name }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if installation.order.branch %}
+                                            <span class="badge badge-secondary">{{ installation.order.branch.name }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ installation.scheduled_date|date:"Y-m-d" }}</td>
+                                    <td>{{ installation.scheduled_time|time:"H:i" }}</td>
+                                    <td>
+                                        {% if installation.team %}
+                                            <span class="badge badge-info">{{ installation.team.name }}</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                               class="btn btn-info btn-sm">
+                                                <i class="fas fa-eye"></i> عرض
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-success btn-sm update-status"
+                                                    data-installation-id="{{ installation.installation_code }}"
+                                                    data-status="in_installation">
+                                                <i class="fas fa-play"></i> بدء التركيب
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-calendar fa-3x mb-3"></i>
+                    <p>لا توجد طلبات مجدولة للتركيب</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- الطلبات قيد التنفيذ -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0">
+                <i class="fas fa-tools"></i>
+                الطلبات قيد التنفيذ ({{ in_progress_installations.count }})
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if in_progress_installations %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead style="background-color: #6c757d !important;">
+                            <tr>
+                                <th style="color: white !important;">رقم الطلب</th>
+                                <th style="color: white !important;">رقم العقد</th>
+                                <th style="color: white !important;">العميل</th>
+                                <th style="color: white !important;">عنوان العميل</th>
+                                <th style="color: white !important;">البائع</th>
+                                <th style="color: white !important;">الفرع</th>
+                                <th style="color: white !important;">التاريخ المجدول</th>
+                                <th style="color: white !important;">الوقت</th>
+                                <th style="color: white !important;">الفريق</th>
+                                <th style="color: white !important;">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for installation in in_progress_installations %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'installations:installation_detail' installation.id %}" class="text-primary font-weight-bold">
+                                            {{ installation.order.order_number }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if installation.order.contract_number %}
+                                            <span class="badge badge-info">{{ installation.order.contract_number }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                        {% if installation.order.contract_number_2 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_2 }}</span>
+                                        {% endif %}
+                                        {% if installation.order.contract_number_3 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_3 }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ installation.order.customer.name }}</td>
+                                    <td>{% if installation.order.customer.address %}{{ installation.order.customer.address }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                    <td>
+                                        {% if installation.order.salesperson %}
+                                            {{ installation.order.salesperson.name }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if installation.order.branch %}
+                                            <span class="badge badge-secondary">{{ installation.order.branch.name }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ installation.scheduled_date|date:"Y-m-d" }}</td>
+                                    <td>{{ installation.scheduled_time|time:"H:i" }}</td>
+                                    <td>
+                                        {% if installation.team %}
+                                            <span class="badge badge-primary">{{ installation.team.name }}</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                               class="btn btn-info btn-sm">
+                                                <i class="fas fa-eye"></i> عرض
+                                            </a>
+                                            <a href="{% url 'installations:complete_installation' installation.id %}" 
+                                               class="btn btn-success btn-sm">
+                                                <i class="fas fa-check"></i> إكمال التركيب
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-tools fa-3x mb-3"></i>
+                    <p>لا توجد طلبات قيد التنفيذ</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- الطلبات المكتملة -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h6 class="mb-0">
+                <i class="fas fa-check-circle"></i>
+                الطلبات المكتملة ({{ completed_installations.count }})
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if completed_installations %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead style="background-color: #6c757d !important;">
+                            <tr>
+                                <th style="color: white !important;">رقم الطلب</th>
+                                <th style="color: white !important;">رقم العقد</th>
+                                <th style="color: white !important;">العميل</th>
+                                <th style="color: white !important;">عنوان العميل</th>
+                                <th style="color: white !important;">البائع</th>
+                                <th style="color: white !important;">الفرع</th>
+                                <th style="color: white !important;">تاريخ الإكمال</th>
+                                <th style="color: white !important;">الفريق</th>
+                                <th style="color: white !important;">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for installation in completed_installations %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'installations:installation_detail' installation.id %}" class="text-primary font-weight-bold">
+                                            {{ installation.order.order_number }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if installation.order.contract_number %}
+                                            <span class="badge badge-info">{{ installation.order.contract_number }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                        {% if installation.order.contract_number_2 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_2 }}</span>
+                                        {% endif %}
+                                        {% if installation.order.contract_number_3 %}
+                                            <br><span class="badge badge-secondary">{{ installation.order.contract_number_3 }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ installation.order.customer.name }}</td>
+                                    <td>{% if installation.order.customer.address %}{{ installation.order.customer.address }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                    <td>
+                                        {% if installation.order.salesperson %}
+                                            {{ installation.order.salesperson.name }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if installation.order.branch %}
+                                            <span class="badge badge-secondary">{{ installation.order.branch.name }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ installation.completed_date|date:"Y-m-d" }}</td>
+                                    <td>
+                                        {% if installation.team %}
+                                            <span class="badge badge-success">{{ installation.team.name }}</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'installations:installation_detail' installation.id %}" 
+                                               class="btn btn-info btn-sm">
+                                                <i class="fas fa-eye"></i> عرض التفاصيل
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-check-circle fa-3x mb-3"></i>
+                    <p>لا توجد طلبات مكتملة</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// معالجة زر بدء التركيب
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.update-status').forEach(button => {
+        button.addEventListener('click', function() {
+            const installationId = this.dataset.installationId;
+            const newStatus = this.dataset.status;
+            
+            if (!installationId || !newStatus) {
+                Swal.fire('خطأ', 'بيانات غير صحيحة', 'error');
+                return;
+            }
+            
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            if (!csrfToken) {
+                Swal.fire('خطأ', 'خطأ في الحصول على رمز الأمان', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: 'تأكيد بدء التركيب',
+                text: 'هل أنت متأكد من بدء التركيب؟',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، بدء التركيب',
+                cancelButtonText: 'إلغاء',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                // إظهار مؤشر التحميل
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+                this.disabled = true;
+                
+                // إنشاء FormData
+                const formData = new FormData();
+                formData.append('status', newStatus);
+                
+                fetch(`/installations/installation/${installationId}/update-status/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // إظهار رسالة نجاح
+                        Swal.fire({
+                            title: 'تم بنجاح!',
+                            text: data.message || 'تم بدء التركيب بنجاح',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        // إظهار رسالة خطأ
+                        Swal.fire('خطأ', data.error || 'حدث خطأ أثناء بدء التركيب', 'error');
+                        // إعادة تعيين الزر
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('خطأ', 'حدث خطأ أثناء بدء التركيب: ' + error.message, 'error');
+                    // إعادة تعيين الزر
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                });
+            });
+        });
+    });
+    
+    // لا نحتاج لنظام التحقق من المديونية هنا - مخصص فقط لقسم التركيبات
+});
+</script> 

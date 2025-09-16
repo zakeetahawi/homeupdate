@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "جدولة النسخ الاحتياطية" %} | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* أنماط الأيقونات */
+    .btn-link {
+        border: none;
+        background: none;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-link:hover {
+        transform: scale(1.1);
+        text-decoration: none;
+    }
+
+    .btn-link i {
+        transition: all 0.3s ease;
+    }
+
+    .btn-link:hover i {
+        filter: brightness(1.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header pb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6>{% trans "جدولة النسخ الاحتياطية" %}</h6>
+                        <div>
+                            <a href="{% url 'odoo_db_manager:scheduler_status' %}" class="btn btn-sm btn-info me-2">
+                                <i class="fas fa-cogs"></i> حالة المجدول
+                            </a>
+                            <a href="{% url 'odoo_db_manager:schedule_create' %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus"></i> {% trans "إنشاء جدولة جديدة" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body px-0 pt-0 pb-2">
+                    <div class="table-responsive p-0">
+                        {% if schedules %}
+                        <table class="table align-items-center mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">{% trans "الاسم" %}</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">{% trans "قاعدة البيانات" %}</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">{% trans "النوع" %}</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">{% trans "التكرار" %}</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">{% trans "الحالة" %}</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">{% trans "آخر تشغيل" %}</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">{% trans "التشغيل القادم" %}</th>
+                                    <th class="text-secondary opacity-7"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for schedule in schedules %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex px-2 py-1">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-sm">{{ schedule.name }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <p class="text-xs font-weight-bold mb-0">{{ schedule.database.name }}</p>
+                                    </td>
+                                    <td>
+                                        <p class="text-xs font-weight-bold mb-0">{{ schedule.get_backup_type_display }}</p>
+                                    </td>
+                                    <td>
+                                        <p class="text-xs font-weight-bold mb-0">{{ schedule.get_frequency_display }}</p>
+                                        <p class="text-xs text-secondary mb-0">
+                                            {% if schedule.frequency == 'hourly' %}
+                                                {% trans "كل ساعة" %}
+                                            {% elif schedule.frequency == 'daily' %}
+                                                {% trans "الساعة" %} {{ schedule.hour }}:{{ schedule.minute|stringformat:"02d" }}
+                                            {% elif schedule.frequency == 'weekly' %}
+                                                {{ schedule.get_day_of_week_display }} {% trans "الساعة" %} {{ schedule.hour }}:{{ schedule.minute|stringformat:"02d" }}
+                                            {% elif schedule.frequency == 'monthly' %}
+                                                {% trans "يوم" %} {{ schedule.day_of_month }} {% trans "الساعة" %} {{ schedule.hour }}:{{ schedule.minute|stringformat:"02d" }}
+                                            {% endif %}
+                                        </p>
+                                    </td>
+                                    <td>
+                                        {% if schedule.is_active %}
+                                        <span class="badge badge-sm bg-gradient-success">{% trans "نشط" %}</span>
+                                        {% else %}
+                                        <span class="badge badge-sm bg-gradient-secondary">{% trans "غير نشط" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if schedule.last_run %}
+                                        <p class="text-xs font-weight-bold mb-0">{{ schedule.last_run|date:"Y-m-d" }}</p>
+                                        <p class="text-xs text-secondary mb-0">{{ schedule.last_run|time:"H:i" }}</p>
+                                        {% else %}
+                                        <p class="text-xs text-secondary mb-0">{% trans "لم يتم التشغيل بعد" %}</p>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if schedule.next_run %}
+                                        <p class="text-xs font-weight-bold mb-0">{{ schedule.next_run|date:"Y-m-d" }}</p>
+                                        <p class="text-xs text-secondary mb-0">{{ schedule.next_run|time:"H:i" }}</p>
+                                        {% else %}
+                                        <p class="text-xs text-secondary mb-0">{% trans "غير محدد" %}</p>
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <a href="{% url 'odoo_db_manager:schedule_detail' pk=schedule.pk %}" class="btn btn-link text-info p-1" title="{% trans 'عرض التفاصيل' %}">
+                                                <i class="fas fa-eye fa-lg"></i>
+                                            </a>
+                                            <a href="{% url 'odoo_db_manager:schedule_update' pk=schedule.pk %}" class="btn btn-link text-warning p-1" title="{% trans 'تعديل' %}">
+                                                <i class="fas fa-edit fa-lg"></i>
+                                            </a>
+                                            <a href="{% url 'odoo_db_manager:schedule_toggle' pk=schedule.pk %}" class="btn btn-link {% if schedule.is_active %}text-secondary{% else %}text-success{% endif %} p-1" title="{% if schedule.is_active %}{% trans 'إيقاف' %}{% else %}{% trans 'تشغيل' %}{% endif %}">
+                                                <i class="fas {% if schedule.is_active %}fa-pause{% else %}fa-play{% endif %} fa-lg"></i>
+                                            </a>
+                                            <a href="{% url 'odoo_db_manager:schedule_run_now' pk=schedule.pk %}" class="btn btn-link text-primary p-1" title="{% trans 'تشغيل الآن' %}">
+                                                <i class="fas fa-play-circle fa-lg"></i>
+                                            </a>
+                                            <a href="{% url 'odoo_db_manager:schedule_delete' pk=schedule.pk %}" class="btn btn-link text-danger p-1" title="{% trans 'حذف' %}">
+                                                <i class="fas fa-trash fa-lg"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <p>{% trans "لا توجد جدولات نسخ احتياطية حتى الآن." %}</p>
+                            <a href="{% url 'odoo_db_manager:schedule_create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> {% trans "إنشاء جدولة جديدة" %}
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

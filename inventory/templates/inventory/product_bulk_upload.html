@@ -1,0 +1,260 @@
+{% extends 'inventory/inventory_base_custom.html' %}
+{% load static %}
+
+{% block inventory_title %}رفع المنتجات بالجملة{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:product_list' %}">المنتجات</a></li>
+<li class="breadcrumb-item active" aria-current="page">رفع المنتجات بالجملة</li>
+{% endblock %}
+
+{% block quick_actions %}
+<a href="{% url 'inventory:download_excel_template' %}" class="btn btn-info btn-sm">
+    <i class="fas fa-download"></i> تحميل القالب
+</a>
+<a href="{% url 'inventory:product_list' %}" class="btn btn-secondary btn-sm">
+    <i class="fas fa-arrow-left"></i> العودة للقائمة
+</a>
+{% endblock %}
+
+{% block inventory_content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-upload"></i>
+                    رفع المنتجات من ملف إكسل
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.excel_file.id_for_label }}" class="form-label">
+                            {{ form.excel_file.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.excel_file }}
+                        {% if form.excel_file.help_text %}
+                            <div class="form-text">{{ form.excel_file.help_text }}</div>
+                        {% endif %}
+                        {% if form.excel_file.errors %}
+                            <div class="text-danger">
+                                {% for error in form.excel_file.errors %}
+                                    <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.warehouse.id_for_label }}" class="form-label">
+                            {{ form.warehouse.label }}
+                            <span class="text-muted">(اختياري)</span>
+                        </label>
+                        {{ form.warehouse }}
+                        {% if form.warehouse.help_text %}
+                            <div class="form-text">{{ form.warehouse.help_text }}</div>
+                        {% endif %}
+                        {% if form.warehouse.errors %}
+                            <div class="text-danger">
+                                {% for error in form.warehouse.errors %}
+                                    <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.overwrite_existing }}
+                            <label class="form-check-label" for="{{ form.overwrite_existing.id_for_label }}">
+                                {{ form.overwrite_existing.label }}
+                            </label>
+                        </div>
+                        {% if form.overwrite_existing.help_text %}
+                            <div class="form-text">{{ form.overwrite_existing.help_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="fas fa-upload"></i>
+                            رفع وإضافة المنتجات
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- تعليمات الاستخدام -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle"></i>
+                    تعليمات الاستخدام
+                </h6>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li class="mb-2">قم بتحميل قالب ملف الإكسل</li>
+                    <li class="mb-2">املأ البيانات حسب الأعمدة المطلوبة</li>
+                    <li class="mb-2">أضف أسماء المستودعات في عمود "المستودع"</li>
+                    <li class="mb-2">تأكد من صحة البيانات قبل الرفع</li>
+                    <li class="mb-2">اختر المستودع الافتراضي (اختياري)</li>
+                    <li>اضغط على "رفع وإضافة المنتجات"</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- الأعمدة المطلوبة -->
+        <div class="card mt-3">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                    <i class="fas fa-table"></i>
+                    الأعمدة المطلوبة
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li><strong>اسم المنتج:</strong> <span class="text-danger">مطلوب</span></li>
+                    <li><strong>الكود:</strong> اختياري</li>
+                    <li><strong>الفئة:</strong> اسم الفئة</li>
+                    <li><strong>السعر:</strong> <span class="text-danger">مطلوب</span></li>
+                    <li><strong>الكمية:</strong> الكمية الابتدائية</li>
+                    <li><strong>المستودع:</strong> <span class="text-success">جديد!</span> اسم المستودع</li>
+                    <li><strong>الوصف:</strong> اختياري</li>
+                    <li><strong>الحد الأدنى:</strong> للتنبيهات</li>
+                    <li><strong>العملة:</strong> EGP, USD, EUR</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ميزة جديدة -->
+        <div class="card mt-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-star"></i>
+                    ميزة جديدة: إنشاء المستودعات تلقائياً
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <i class="fas fa-magic text-success"></i>
+                    يمكن الآن إضافة عمود "المستودع" في ملف الإكسل
+                </p>
+                <p class="mb-2">
+                    <i class="fas fa-warehouse text-info"></i>
+                    سيتم إنشاء المستودعات تلقائياً إذا لم تكن موجودة
+                </p>
+                <p class="mb-0">
+                    <i class="fas fa-chart-line text-warning"></i>
+                    يمكن تتبع المخزون لكل مستودع منفصل
+                </p>
+            </div>
+        </div>
+
+        <!-- نصائح -->
+        <div class="card mt-3">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb"></i>
+                    نصائح مهمة
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li class="mb-1">تأكد من عدم تكرار الأكواد</li>
+                    <li class="mb-1">استخدم أرقام صحيحة للكميات والأسعار</li>
+                    <li class="mb-1">الحد الأقصى لحجم الملف 10 ميجابايت</li>
+                    <li>يمكن إنشاء فئات جديدة تلقائياً</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- إضافة ملف آخر للتحديث المجمع -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit"></i>
+                    تحديث سريع للمخزون
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">
+                    إذا كنت تريد فقط تحديث كميات المنتجات الموجودة دون إضافة منتجات جديدة،
+                    يمكنك استخدام الرابط التالي:
+                </p>
+                <a href="{% url 'inventory:bulk_stock_update' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-sync-alt"></i>
+                    تحديث المخزون بالجملة
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('uploadForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const fileInput = document.getElementById('{{ form.excel_file.id_for_label }}');
+    
+    // تغيير النص عند اختيار ملف
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const fileName = this.files[0].name;
+            const fileSize = (this.files[0].size / 1024 / 1024).toFixed(2);
+            
+            // إظهار معلومات الملف
+            let fileInfo = document.getElementById('fileInfo');
+            if (!fileInfo) {
+                fileInfo = document.createElement('div');
+                fileInfo.id = 'fileInfo';
+                fileInfo.className = 'alert alert-info mt-2';
+                this.parentNode.appendChild(fileInfo);
+            }
+            
+            fileInfo.innerHTML = `
+                <i class="fas fa-file-excel"></i>
+                <strong>الملف المحدد:</strong> ${fileName} (${fileSize} ميجابايت)
+            `;
+        }
+    });
+    
+    // تأكيد قبل الإرسال
+    form.addEventListener('submit', function(e) {
+        if (!fileInput.files || !fileInput.files[0]) {
+            e.preventDefault();
+            alert('يرجى اختيار ملف إكسل أولاً');
+            return;
+        }
+        
+        const confirmed = confirm('هل أنت متأكد من رفع هذا الملف؟ سيتم إضافة جميع المنتجات الموجودة فيه.');
+        if (!confirmed) {
+            e.preventDefault();
+            return;
+        }
+        
+        // تعطيل الزر وإظهار loader
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+            جاري المعالجة...
+        `;
+    });
+});
+</script>
+{% endblock %}

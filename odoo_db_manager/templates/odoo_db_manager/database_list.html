@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+<style>
+    /* أنماط الأيقونات */
+    .btn-link {
+        border: none;
+        background: none;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-link:hover {
+        transform: scale(1.1);
+        text-decoration: none;
+    }
+
+    .btn-link i {
+        transition: all 0.3s ease;
+    }
+
+    .btn-link:hover i {
+        filter: brightness(1.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="odoo-dashboard">
+    <!-- شريط الأدوات العلوي -->
+    <div class="odoo-toolbar">
+        <div class="odoo-toolbar-left">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="odoo-toolbar-right">
+            <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> العودة
+            </a>
+            <a href="{% url 'odoo_db_manager:database_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> إنشاء قاعدة بيانات
+            </a>
+        </div>
+    </div>
+
+    <!-- قائمة قواعد البيانات -->
+    <div class="odoo-list-view">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>اسم قاعدة البيانات</th>
+                    <th>النوع</th>
+                    <th>الحالة</th>
+                    <th>تاريخ الإنشاء</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for db in databases %}
+                <tr>
+                    <td>
+                        <strong>{{ db.name }}</strong>
+                        {% if db.connection_info.NAME %}
+                            <small class="text-muted d-block">{{ db.connection_info.NAME }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ db.get_db_type_display }}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            {% if db.is_active %}
+                            <span class="badge bg-primary me-1">نشطة</span>
+                            {% endif %}
+                            
+                            {% if db.status %}
+                            <span class="badge bg-success" title="متصلة">
+                                <i class="fas fa-plug"></i>
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger" title="غير متصلة">
+                                <i class="fas fa-times-circle"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>{{ db.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="{% url 'odoo_db_manager:database_detail' db.id %}" class="btn btn-link text-info p-1" title="عرض التفاصيل">
+                                <i class="fas fa-eye fa-lg"></i>
+                            </a>
+                            {% if not db.is_active %}
+                            <a href="#" onclick="confirmActivateDatabase('{% url 'odoo_db_manager:activate_database' db.id %}', '{{ db.name }}')" class="btn btn-link text-warning p-1" title="تنشيط قاعدة البيانات">
+                                <i class="fas fa-power-off fa-lg"></i>
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'odoo_db_manager:delete_database' db.id %}" class="btn btn-link text-danger p-1" title="حذف قاعدة البيانات">
+                                <i class="fas fa-trash fa-lg"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">لا توجد قواعد بيانات</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // عرض رسالة نجاح تنشيط قاعدة البيانات إذا كان ضروريًا
+    {% if show_activation_success %}
+    document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+            title: 'تم تنشيط قاعدة البيانات بنجاح!',
+            html: `
+                <div style="text-align: right; direction: rtl;">
+                    <p>تم تنشيط قاعدة البيانات <strong>{{ activated_db_name }}</strong> بنجاح.</p>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i>
+                        يرجى إعادة تشغيل السيرفر لتطبيق التغييرات.
+                    </div>
+                </div>
+            `,
+            icon: 'success',
+            confirmButtonText: 'تم',
+            customClass: {
+                popup: 'rtl-popup',
+                title: 'rtl-title',
+                content: 'rtl-content'
+            }
+        });
+    });
+    {% endif %}
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // إضافة تأثيرات hover للأيقونات
+        const actionButtons = document.querySelectorAll('.btn-link');
+
+        actionButtons.forEach(button => {
+            button.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.1)';
+            });
+
+            button.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    });
+    
+    // دالة تأكيد تنشيط قاعدة البيانات باستخدام SweetAlert
+    function confirmActivateDatabase(url, dbName) {
+        Swal.fire({
+            title: 'تنشيط قاعدة البيانات',
+            html: `هل أنت متأكد من تنشيط قاعدة البيانات <strong>${dbName}</strong>؟<br><br>
+                  <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    ملاحظة: سيتم إعادة تشغيل السيرفر لتطبيق التغييرات.
+                  </div>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'نعم، قم بالتنشيط',
+            cancelButtonText: 'إلغاء',
+            customClass: {
+                popup: 'rtl-popup',
+                title: 'rtl-title',
+                content: 'rtl-content'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // عرض مؤشر التحميل
+                Swal.fire({
+                    title: 'جاري تنشيط قاعدة البيانات...',
+                    html: 'يرجى الانتظار...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // الانتقال إلى صفحة التنشيط
+                window.location.href = url;
+            }
+        });
+    }
+</script>
+{% endblock %}

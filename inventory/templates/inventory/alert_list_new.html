@@ -1,0 +1,367 @@
+{% extends 'inventory/inventory_base_custom.html' %}
+{% load static %}
+
+{% block inventory_title %}تنبيهات المخزون{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
+<li class="breadcrumb-item active" aria-current="page">تنبيهات المخزون</li>
+{% endblock %}
+
+{% block quick_actions %}
+<button type="button" class="btn btn-success btn-sm" id="resolveAllBtn">
+    <i class="fas fa-check-double"></i> حل التنبيهات المحددة
+</button>
+<a href="{% url 'inventory:product_list' %}?filter=low_stock" class="btn btn-primary btn-sm">
+    <i class="fas fa-box"></i> المنتجات منخفضة المخزون
+</a>
+{% endblock %}
+
+{% block inventory_content %}
+<div class="alert-list-container">
+    <!-- إحصائيات سريعة -->
+    <div class="stats-cards-container">
+        <div class="stat-card">
+            <div class="stat-card-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-card-content">
+                <div class="stat-card-title">تنبيهات نشطة</div>
+                <div class="stat-card-value">{{ active_alerts_count }}</div>
+                <div class="stat-card-change negative">
+                    <i class="fas fa-arrow-up"></i> 15% منذ الأسبوع الماضي
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-icon">
+                <i class="fas fa-box"></i>
+            </div>
+            <div class="stat-card-content">
+                <div class="stat-card-title">مخزون منخفض</div>
+                <div class="stat-card-value">{{ low_stock_alerts_count }}</div>
+                <div class="stat-card-change negative">
+                    <i class="fas fa-arrow-up"></i> 8% منذ الأسبوع الماضي
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-icon">
+                <i class="fas fa-calendar-times"></i>
+            </div>
+            <div class="stat-card-content">
+                <div class="stat-card-title">منتجات قاربت على الانتهاء</div>
+                <div class="stat-card-value">{{ expiry_alerts_count }}</div>
+                <div class="stat-card-change negative">
+                    <i class="fas fa-arrow-up"></i> 5% منذ الشهر الماضي
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-card-content">
+                <div class="stat-card-title">تنبيهات تم حلها</div>
+                <div class="stat-card-value">{{ resolved_alerts_count }}</div>
+                <div class="stat-card-change positive">
+                    <i class="fas fa-arrow-up"></i> 12% منذ الأسبوع الماضي
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلاتر البحث -->
+    <div class="filters-container mb-4">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="alert_type" class="form-label">نوع التنبيه</label>
+                        <select class="form-select" id="alert_type" name="alert_type">
+                            <option value="">جميع الأنواع</option>
+                            <option value="low_stock" {% if selected_type == 'low_stock' %}selected{% endif %}>مخزون منخفض</option>
+                            <option value="expiry" {% if selected_type == 'expiry' %}selected{% endif %}>قرب انتهاء الصلاحية</option>
+                            <option value="overstock" {% if selected_type == 'overstock' %}selected{% endif %}>فائض في المخزون</option>
+                            <option value="price_change" {% if selected_type == 'price_change' %}selected{% endif %}>تغير في السعر</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">الحالة</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">جميع الحالات</option>
+                            <option value="active" {% if selected_status == 'active' %}selected{% endif %}>نشط</option>
+                            <option value="resolved" {% if selected_status == 'resolved' %}selected{% endif %}>تم الحل</option>
+                            <option value="ignored" {% if selected_status == 'ignored' %}selected{% endif %}>تم التجاهل</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="priority" class="form-label">الأولوية</label>
+                        <select class="form-select" id="priority" name="priority">
+                            <option value="">جميع الأولويات</option>
+                            <option value="high" {% if selected_priority == 'high' %}selected{% endif %}>عالية</option>
+                            <option value="medium" {% if selected_priority == 'medium' %}selected{% endif %}>متوسطة</option>
+                            <option value="low" {% if selected_priority == 'low' %}selected{% endif %}>منخفضة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_range" class="form-label">الفترة الزمنية</label>
+                        <select class="form-select" id="date_range" name="date_range">
+                            <option value="">جميع الفترات</option>
+                            <option value="today" {% if selected_date_range == 'today' %}selected{% endif %}>اليوم</option>
+                            <option value="week" {% if selected_date_range == 'week' %}selected{% endif %}>هذا الأسبوع</option>
+                            <option value="month" {% if selected_date_range == 'month' %}selected{% endif %}>هذا الشهر</option>
+                        </select>
+                    </div>
+                    <div class="col-12 mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> بحث
+                        </button>
+                        <a href="{% url 'inventory:alert_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> إعادة تعيين
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- قائمة التنبيهات -->
+    <div class="data-table-container">
+        <div class="data-table-header">
+            <h4 class="data-table-title">
+                تنبيهات المخزون
+                {% if alerts %}
+                <span class="badge bg-primary">{{ alerts|length }}</span>
+                {% endif %}
+            </h4>
+            <div class="data-table-actions">
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-download"></i> تصدير
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel"></i> Excel</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf"></i> PDF</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-print"></i> طباعة</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="data-table-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAll">
+                                </div>
+                            </th>
+                            <th>التاريخ</th>
+                            <th>نوع التنبيه</th>
+                            <th>المنتج</th>
+                            <th>الوصف</th>
+                            <th>الأولوية</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alert in alerts %}
+                        <tr class="{% if alert.status == 'active' %}{% if alert.priority == 'high' %}table-danger{% elif alert.priority == 'medium' %}table-warning{% else %}table-info{% endif %}{% endif %}">
+                            <td>
+                                <div class="form-check">
+                                    <input class="form-check-input alert-checkbox" type="checkbox" value="{{ alert.id }}">
+                                </div>
+                            </td>
+                            <td>{{ alert.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if alert.alert_type == 'low_stock' %}
+                                <span class="badge bg-warning">مخزون منخفض</span>
+                                {% elif alert.alert_type == 'expiry' %}
+                                <span class="badge bg-danger">قرب انتهاء الصلاحية</span>
+                                {% elif alert.alert_type == 'overstock' %}
+                                <span class="badge bg-info">فائض في المخزون</span>
+                                {% elif alert.alert_type == 'price_change' %}
+                                <span class="badge bg-primary">تغير في السعر</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'inventory:product_detail' alert.product.id %}">{{ alert.product.name }}</a>
+                            </td>
+                            <td>{{ alert.description }}</td>
+                            <td>
+                                {% if alert.priority == 'high' %}
+                                <span class="badge bg-danger">عالية</span>
+                                {% elif alert.priority == 'medium' %}
+                                <span class="badge bg-warning">متوسطة</span>
+                                {% elif alert.priority == 'low' %}
+                                <span class="badge bg-info">منخفضة</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if alert.status == 'active' %}
+                                <span class="badge bg-danger">نشط</span>
+                                {% elif alert.status == 'resolved' %}
+                                <span class="badge bg-success">تم الحل</span>
+                                {% elif alert.status == 'ignored' %}
+                                <span class="badge bg-secondary">تم التجاهل</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    {% if alert.status == 'active' %}
+                                    <a href="{% url 'inventory:alert_resolve' alert.id %}" class="btn btn-success btn-sm" title="حل">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:alert_ignore' alert.id %}" class="btn btn-secondary btn-sm" title="تجاهل">
+                                        <i class="fas fa-ban"></i>
+                                    </a>
+                                    {% endif %}
+                                    <a href="{% url 'inventory:product_detail' alert.product.id %}" class="btn btn-info btn-sm" title="عرض المنتج">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if alert.alert_type == 'low_stock' %}
+                                    <a href="{% url 'inventory:transaction_create' alert.product.id %}" class="btn btn-primary btn-sm" title="إضافة مخزون">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">لا توجد تنبيهات مطابقة للبحث</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- الصفحات -->
+        {% if page_obj.has_other_pages %}
+        <div class="data-table-footer">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if selected_type %}&alert_type={{ selected_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}{% if selected_date_range %}&date_range={{ selected_date_range }}{% endif %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_type %}&alert_type={{ selected_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}{% if selected_date_range %}&date_range={{ selected_date_range }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in page_obj.paginator.page_range %}
+                        {% if page_obj.number == i %}
+                        <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                        {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ i }}{% if selected_type %}&alert_type={{ selected_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}{% if selected_date_range %}&date_range={{ selected_date_range }}{% endif %}">{{ i }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_type %}&alert_type={{ selected_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}{% if selected_date_range %}&date_range={{ selected_date_range }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_type %}&alert_type={{ selected_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}{% if selected_date_range %}&date_range={{ selected_date_range }}{% endif %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // تحديد/إلغاء تحديد جميع التنبيهات
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const alertCheckboxes = document.querySelectorAll('.alert-checkbox');
+        
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            alertCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+        });
+        
+        // حل جميع التنبيهات المحددة
+        document.getElementById('resolveAllBtn').addEventListener('click', function() {
+            const selectedAlerts = [];
+            alertCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selectedAlerts.push(checkbox.value);
+                }
+            });
+            
+            if (selectedAlerts.length === 0) {
+                alert('الرجاء تحديد تنبيه واحد على الأقل');
+                return;
+            }
+            
+            if (confirm('هل أنت متأكد من حل ' + selectedAlerts.length + ' تنبيه؟')) {
+                // إرسال طلب لحل التنبيهات المحددة
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{% url "inventory:alert_resolve_multiple" %}';
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = '{{ csrf_token }}';
+                form.appendChild(csrfInput);
+                
+                const alertsInput = document.createElement('input');
+                alertsInput.type = 'hidden';
+                alertsInput.name = 'alert_ids';
+                alertsInput.value = selectedAlerts.join(',');
+                form.appendChild(alertsInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    });
+</script>
+{% endblock %}

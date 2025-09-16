@@ -1,0 +1,75 @@
+{% extends "admin/change_list.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // فحص إذا كانت الصفحة تم إعادة تحميلها بعد تحديث
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('updated') || urlParams.has('_refresh')) {
+        // إزالة المعاملات من URL لتنظيفه
+        const cleanUrl = window.location.pathname + '?' + 
+            Array.from(urlParams.entries())
+                .filter(([key]) => !['updated', '_refresh'].includes(key))
+                .map(([key, value]) => `${key}=${value}`)
+                .join('&');
+        
+        // تحديث URL بدون إعادة تحميل
+        window.history.replaceState({}, '', cleanUrl || window.location.pathname);
+        
+        // إضافة رسالة تأكيد
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'alert alert-success';
+        messageDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; color: #155724;';
+        messageDiv.innerHTML = '✅ تم تحديث البيانات بنجاح';
+        document.body.appendChild(messageDiv);
+        
+        setTimeout(() => {
+            messageDiv.remove();
+        }, 3000);
+    }
+    
+    // معالج النموذج المخصص للتحديث المجمع
+    const actionForm = document.getElementById('changelist-form');
+    if (actionForm) {
+        actionForm.addEventListener('submit', function(e) {
+            const actionSelect = document.querySelector('select[name="action"]');
+            if (actionSelect && actionSelect.value === 'bulk_update_status') {
+                // إضافة مؤشر التحميل
+                const submitButton = document.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '⏳ جاري التحديث...';
+                }
+                
+                // إضافة معالج لإعادة التحميل بعد النجاح
+                setTimeout(() => {
+                    // إعادة تحميل الصفحة مع إضافة timestamp
+                    const url = new URL(window.location);
+                    url.searchParams.set('updated', Date.now());
+                    url.searchParams.set('_refresh', '1');
+                    window.location.href = url.toString();
+                }, 1000);
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.alert {
+    animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
+{% endblock %}

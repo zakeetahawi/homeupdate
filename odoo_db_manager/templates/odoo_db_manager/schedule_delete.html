@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "حذف جدولة النسخ الاحتياطية" %} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header pb-0">
+                    <h6>{% trans "حذف جدولة النسخ الاحتياطية" %}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h4 class="alert-heading">{% trans "تأكيد الحذف" %}</h4>
+                        <p>{% trans "هل أنت متأكد من رغبتك في حذف جدولة النسخ الاحتياطية التالية؟" %}</p>
+                        <hr>
+                        <p class="mb-0"><strong>{{ schedule.name }}</strong></p>
+                        <p class="mb-0">{% trans "قاعدة البيانات" %}: {{ schedule.database.name }}</p>
+                        <p class="mb-0">{% trans "التكرار" %}: {{ schedule.get_frequency_display }}</p>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="delete_backups" id="delete_backups">
+                            <label class="form-check-label" for="delete_backups">
+                                {% trans "حذف جميع النسخ الاحتياطية المرتبطة بهذه الجدولة" %}
+                            </label>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-danger">{% trans "نعم، قم بالحذف" %}</button>
+                            <a href="{% url 'odoo_db_manager:schedule_detail' pk=schedule.pk %}" class="btn btn-secondary">{% trans "إلغاء" %}</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+    .form-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+    }
+    .form-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+    .form-section h4 {
+        margin-bottom: 20px;
+        color: #007bff;
+    }
+    .form-footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        text-align: center;
+    }
+    .backup-type-options {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    .backup-type-option {
+        flex: 1;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .backup-type-option:hover {
+        border-color: #007bff;
+    }
+    .backup-type-option.active {
+        border-color: #007bff;
+        background-color: #f0f7ff;
+    }
+    .backup-type-option i {
+        font-size: 24px;
+        margin-bottom: 10px;
+        color: #007bff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="form-container">
+        <div class="form-header">
+            <h1>{{ title }}</h1>
+            <p class="lead">{% trans "قم بإنشاء نسخة احتياطية جديدة لقاعدة البيانات" %}</p>
+            {% if default_db %}
+                <div class="alert alert-info">
+                    <i class="fas fa-database"></i>
+                    {% trans "قاعدة البيانات الحالية:" %} <strong>{{ default_db.name }}</strong>
+                    <span class="badge badge-primary">PostgreSQL</span>
+                </div>
+            {% endif %}
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-section">
+                <h4>{% trans "معلومات أساسية" %}</h4>
+
+                <div class="form-group">
+                    <label for="{{ form.name.id_for_label }}">{% trans "اسم النسخة الاحتياطية" %}</label>
+                    {{ form.name|add_class:"form-control" }}
+                    <small class="form-text text-muted">{% trans "اسم وصفي للنسخة الاحتياطية" %}</small>
+                    {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">{% trans "الوصف" %}</label>
+                    {{ form.description|add_class:"form-control" }}
+                    <small class="form-text text-muted">{% trans "وصف اختياري للنسخة الاحتياطية" %}</small>
+                    {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>{% trans "نوع النسخة الاحتياطية" %}</h4>
+
+                <div class="backup-type-options">
+                    <div class="backup-type-option active" data-type="full">
+                        <i class="fas fa-database"></i>
+                        <h5>{% trans "نسخة كاملة" %}</h5>
+                        <p>{% trans "نسخة احتياطية كاملة لجميع البيانات" %}</p>
+                    </div>
+                    <div class="backup-type-option" data-type="partial">
+                        <i class="fas fa-table"></i>
+                        <h5>{% trans "نسخة جزئية" %}</h5>
+                        <p>{% trans "نسخة احتياطية لجزء محدد من البيانات" %}</p>
+                    </div>
+                </div>
+
+                <div class="form-group d-none">
+                    {{ form.backup_type }}
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>{% trans "قاعدة البيانات" %}</h4>
+
+                <div class="form-group">
+                    <label for="{{ form.database_config.id_for_label }}">{% trans "قاعدة البيانات" %}</label>
+                    {% if default_db %}
+                        <div class="alert alert-primary mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-database me-2"></i>
+                                <div>
+                                    <strong>{% trans "قاعدة البيانات الحالية:" %} {{ default_db.name }}</strong>
+                                    <div><small>{% trans "تم تحديد قاعدة البيانات الافتراضية تلقائيًا" %}</small></div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {{ form.database_config|add_class:"form-control" }}
+                    <small class="form-text text-muted">{% trans "اختر قاعدة البيانات التي تريد إنشاء نسخة احتياطية منها" %}</small>
+                    {% if form.database_config.errors %}
+                        <div class="invalid-feedback d-block">{{ form.database_config.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-footer">
+                <button type="submit" class="btn btn-primary btn-lg">{% trans "إنشاء نسخة احتياطية" %}</button>
+                <a href="{% url 'db_manager:backup_list' %}" class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // تحديد نوع النسخة الاحتياطية
+        $('.backup-type-option').click(function() {
+            $('.backup-type-option').removeClass('active');
+            $(this).addClass('active');
+
+            var backupType = $(this).data('type');
+            $('#id_backup_type').val(backupType);
+        });
+
+        // تحديد نوع النسخة الاحتياطية الحالي
+        var currentBackupType = $('#id_backup_type').val();
+        $('.backup-type-option[data-type="' + currentBackupType + '"]').click();
+    });
+</script>
+{% endblock %}

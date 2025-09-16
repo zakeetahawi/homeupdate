@@ -1,0 +1,474 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load order_extras %}
+
+{% block title %}قائمة الطلبات التي عليها مديونية{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+    /* تطبيق نفس الهوية البصرية لقسم المعاينات */
+    .status-badge {
+        padding: 0.375rem 0.5rem;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-align: center;
+        color: white;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .status-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+    }
+    
+    .status-pending_approval {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .status-approved {
+        background-color: #17a2b8;
+    }
+    
+    .status-ready_install {
+        background-color: #28a745;
+    }
+    
+    .status-completed {
+        background-color: #007bff;
+    }
+    
+    .status-delivered {
+        background-color: #6c757d;
+    }
+    
+    .debt-amount {
+        background-color: #dc3545;
+        color: white;
+        font-weight: 700;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.375rem;
+        border: 1px solid rgba(220, 53, 69, 0.2);
+    }
+    
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .card-header {
+        background-color: #f8f9fa;
+        color: #495057;
+        border: none;
+        border-radius: 0.5rem 0.5rem 0 0;
+        padding: 1.25rem;
+        font-weight: 600;
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+        border: none;
+        font-weight: 600;
+        color: #495057;
+        padding: 1rem;
+    }
+    
+    .table td {
+        border: none;
+        padding: 1rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(0, 123, 255, 0.075);
+        transform: scale(1.01);
+        transition: all 0.2s ease;
+    }
+    
+    .btn {
+        border-radius: 0.375rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.15s ease-in-out;
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .btn-outline-secondary {
+        color: #6c757d;
+        border-color: #6c757d;
+    }
+    
+    .btn-outline-secondary:hover {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: white;
+    }
+    
+    .btn-debt-action {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-debt-action:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+        transform: translateY(-2px);
+        box-shadow: 0 0.25rem 0.5rem rgba(220, 53, 69, 0.3);
+        color: white;
+    }
+    
+    .stats-card {
+        background-color: #007bff;
+        color: white;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        margin-bottom: 1.25rem;
+        transition: all 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .stats-card h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .filter-form {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 0.375rem;
+        border: 1px solid #ced4da;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        transition: all 0.15s ease-in-out;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .pagination {
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+    
+    .page-link {
+        border-radius: 0.375rem;
+        margin: 0 0.125rem;
+        border: 1px solid #dee2e6;
+        color: #007bff;
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        transition: all 0.15s ease-in-out;
+    }
+    
+    .page-link:hover {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+        color: #0056b3;
+        transform: translateY(-1px);
+    }
+    
+    .page-item.active .page-link {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+
+    /* تحسين الألوان للإحصائيات */
+    .stats-card:nth-child(2) {
+        background-color: #dc3545;
+    }
+    
+    .stats-card:nth-child(3) {
+        background-color: #17a2b8;
+    }
+    
+    /* تحسين عرض البيانات */
+    .text-primary {
+        color: #007bff !important;
+    }
+    
+    .text-success {
+        color: #28a745 !important;
+    }
+    
+    .text-muted {
+        color: #6c757d !important;
+    }
+    
+    /* تحسين النصوص العربية */
+    body, .table, .form-control, .btn {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h3>{{ total_count }}</h3>
+                <p class="mb-0">إجمالي الطلبات</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);">
+                <h3>{{ total_debt|currency_format }}</h3>
+                <p class="mb-0">إجمالي المديونية</p>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <h5 class="mb-3">توزيع المديونية حسب الحالة</h5>
+                <div class="row">
+                    {% for stat in status_stats %}
+                    <div class="col-6 mb-2">
+                        <small>{{ stat.order_status|get_status_display }}: {{ stat.debt_sum|currency_format }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقة الفلاتر -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-search me-2"></i>
+                فلاتر البحث
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="filter-form">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">حالة الطلب</label>
+                        <select name="order_status" class="form-select">
+                            {% for value, label in order_status_choices %}
+                            <option value="{{ value }}" {% if value == current_filters.order_status %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">البحث</label>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="رقم الطلب، اسم العميل، رقم الهاتف..." 
+                               value="{{ current_filters.search }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">عدد النتائج</label>
+                        <select name="page_size" class="form-select">
+                            <option value="25" {% if current_filters.page_size == 25 %}selected{% endif %}>25</option>
+                            <option value="50" {% if current_filters.page_size == 50 %}selected{% endif %}>50</option>
+                            <option value="100" {% if current_filters.page_size == 100 %}selected{% endif %}>100</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-gradient me-2">
+                            <i class="fas fa-search"></i> بحث
+                        </button>
+                        {% if has_filters %}
+                        <a href="{% url 'installations:debt_orders_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> مسح الفلاتر
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- جدول النتائج -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-credit-card me-2"></i>
+                قائمة الطلبات التي عليها مديونية
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if debt_orders %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>رقم الطلب</th>
+                            <th>العميل</th>
+                            <th>الحالة</th>
+                            <th>المبلغ الإجمالي</th>
+                            <th>المبلغ المدفوع</th>
+                            <th>المبلغ المتبقي</th>
+                            <th>تاريخ الطلب</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in debt_orders %}
+                        <tr>
+                            <td>
+                                <strong class="text-primary">#{{ order.order_number }}</strong>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ order.customer.name }}</strong><br>
+                                    <small class="text-muted">{{ order.customer.phone }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ order.order_status }}">
+                                    {{ order.get_order_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <strong>{{ order.total_amount|currency_format }}</strong>
+                            </td>
+                            <td>
+                                <span class="text-success">{{ order.paid_amount|currency_format }}</span>
+                            </td>
+                            <td>
+                                <span class="debt-amount">
+                                    {{ order.debt_amount|currency_format }}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ order.created_at|date:"d/m/Y" }}</small>
+                            </td>
+                            <td>
+                                <button class="btn btn-debt-action btn-sm" 
+                                        onclick="showDebtWarning('{{ order.customer.name }}', '{{ order.debt_amount|currency_format }}', {{ order.id }})">
+                                    <i class="fas fa-exclamation-triangle"></i> إدارة المديونية
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ترقيم الصفحات -->
+            {% if page_obj.has_other_pages %}
+            <div class="d-flex justify-content-center mt-4 mb-3">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ page_obj.previous_page_number }}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ page_obj.next_page_number }}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">لا توجد طلبات عليها مديونية</h5>
+                {% if has_filters %}
+                <p class="text-muted">جرب تغيير المرشحات للعثور على نتائج</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function showDebtWarning(customerName, debtAmount, orderId) {
+    Swal.fire({
+        title: `تحذير مديونية`,
+        html: `
+            <div style="text-align: right; direction: rtl;">
+                <h5>العميل: <span style="color: #667eea;">${customerName}</span></h5>
+                <h4>المبلغ المستحق: <span style="color: #ff6b6b; font-weight: bold;">${debtAmount}</span></h4>
+                <hr>
+                <p>يرجى التنسيق مع العميل لتسوية المديونية قبل المتابعة</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'إدارة الدفع',
+        cancelButtonText: 'إغلاق',
+        confirmButtonColor: '#667eea',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true,
+        customClass: {
+            popup: 'text-end'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // توجيه لصفحة إدارة الدفع
+            window.location.href = `/installations/order/${orderId}/manage-debt/`;
+        }
+    });
+}
+</script>
+{% endblock %}

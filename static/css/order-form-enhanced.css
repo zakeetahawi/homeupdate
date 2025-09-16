@@ -1,0 +1,374 @@
+/* ===================================
+   تحسينات نموذج الطلب المحسن
+   =================================== */
+
+/* مؤشر التقدم المحسن */
+.progress-container {
+    text-align: center;
+    padding: 20px;
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.step {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    opacity: 0.5;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.step.active {
+    opacity: 1;
+    color: #28a745;
+    transform: scale(1.05);
+}
+
+.step.completed {
+    opacity: 1;
+    color: #28a745;
+}
+
+.step i {
+    display: block;
+    font-size: 24px;
+    margin-bottom: 5px;
+    transition: all 0.3s ease;
+}
+
+.step.active i {
+    animation: pulse 1.5s infinite;
+}
+
+.step span {
+    font-size: 12px;
+    display: block;
+    font-weight: 500;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* تحسينات مؤشر التقدم */
+.progress-bar-striped.progress-bar-animated {
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+    0% { background-position: 1rem 0; }
+    100% { background-position: 0 0; }
+}
+
+/* تحسينات نتائج البحث */
+.product-search-item {
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    padding: 12px;
+    background: #fff;
+}
+
+.product-search-item:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.15);
+    transform: translateY(-1px);
+}
+
+.product-search-item:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0,123,255,0.2);
+}
+
+/* تحسينات جدول العناصر */
+.live-order-items-table .card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.live-order-items-table .card-header {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    padding: 15px 20px;
+}
+
+.live-order-items-table .card-footer {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    border: none;
+    padding: 15px 20px;
+}
+
+.live-order-items-table .table {
+    margin-bottom: 0;
+}
+
+.live-order-items-table .table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+    background-color: #f8f9fa;
+}
+
+.live-order-items-table .table td {
+    vertical-align: middle;
+    padding: 12px 8px;
+}
+
+/* تحسينات الأزرار */
+.btn-enhanced {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 10px 20px;
+}
+
+.btn-enhanced:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.btn-enhanced:active {
+    transform: translateY(0);
+}
+
+.btn-enhanced.disabled,
+.btn-enhanced:disabled {
+    transform: none;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
+/* تحسينات النماذج */
+.form-control-enhanced {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    padding: 12px 15px;
+}
+
+.form-control-enhanced:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    transform: translateY(-1px);
+}
+
+.form-control-enhanced.is-invalid {
+    border-color: #dc3545;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* تحسينات البطاقات */
+.card-enhanced {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.card-enhanced:hover {
+    box-shadow: 0 4px 25px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+/* تحسينات الشارات */
+.badge-enhanced {
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-weight: 500;
+    font-size: 0.85em;
+}
+
+/* تحسينات الإشعارات */
+.alert-enhanced {
+    border: none;
+    border-radius: 12px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.alert-enhanced .alert-heading {
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+/* تحسينات التحميل */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(5px);
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* تحسينات الجداول */
+.table-enhanced {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+}
+
+.table-enhanced thead th {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: none;
+    font-weight: 600;
+    color: #495057;
+    padding: 15px 12px;
+}
+
+.table-enhanced tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table-enhanced tbody tr:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.01);
+}
+
+/* تحسينات الأيقونات */
+.icon-enhanced {
+    transition: all 0.3s ease;
+}
+
+.icon-enhanced:hover {
+    transform: scale(1.2);
+    color: #007bff;
+}
+
+/* تحسينات responsive */
+@media (max-width: 768px) {
+    .progress-steps {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .step {
+        min-width: auto;
+        margin-bottom: 10px;
+    }
+    
+    .card-enhanced {
+        margin-bottom: 15px;
+    }
+    
+    .btn-enhanced {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .table-responsive {
+        border-radius: 12px;
+    }
+}
+
+/* تحسينات الطباعة */
+@media print {
+    .progress-container,
+    .btn-enhanced,
+    .loading-overlay {
+        display: none !important;
+    }
+    
+    .card-enhanced {
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+    }
+}
+
+/* تحسينات الوضع المظلم */
+@media (prefers-color-scheme: dark) {
+    .card-enhanced {
+        background-color: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .form-control-enhanced {
+        background-color: #4a5568;
+        border-color: #718096;
+        color: #e2e8f0;
+    }
+    
+    .table-enhanced thead th {
+        background: linear-gradient(135deg, #4a5568, #2d3748);
+        color: #e2e8f0;
+    }
+}
+
+/* تحسينات إضافية للأداء */
+.gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* تحسينات التفاعل */
+.interactive-element {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.interactive-element:active {
+    transform: scale(0.98);
+}
+
+/* تحسينات التركيز */
+.focus-enhanced:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+    border-color: #007bff;
+}
+
+/* تحسينات الانتقالات */
+.smooth-transition {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* تحسينات النصوص */
+.text-enhanced {
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+}
+
+.text-enhanced-heading {
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.5px;
+}

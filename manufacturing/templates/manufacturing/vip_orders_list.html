@@ -1,0 +1,631 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}طلبات VIP - التصنيع{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'manufacturing/css/manufacturing.css' %}">
+<style>
+/* تصميم خاص لطلبات VIP */
+.vip-header {
+    background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.vip-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transform: rotate(45deg);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.vip-stats-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 1rem;
+    margin: 0.5rem;
+    text-align: center;
+    color: #333;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.vip-table-row {
+    background: linear-gradient(90deg, rgba(255, 107, 107, 0.05) 0%, rgba(254, 202, 87, 0.05) 100%);
+    border-left: 4px solid #ff6b6b;
+}
+
+.vip-badge {
+    background: linear-gradient(135deg, #ff6b6b, #feca57);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.filter-section {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.btn-vip {
+    background: linear-gradient(135deg, #ff6b6b, #feca57);
+    border: none;
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-vip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- VIP Header -->
+    <div class="vip-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2" style="font-weight: bold;">
+                    <i class="fas fa-crown me-3" style="color: #ffd700;"></i>
+                    طلبات VIP - التصنيع
+                </h1>
+                <p class="mb-0" style="opacity: 0.9;">
+                    إدارة ومتابعة الطلبات المميزة والعاجلة
+                </p>
+            </div>
+            <div class="col-md-4">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="vip-stats-card">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #ff6b6b;">{{ total_vip_orders }}</div>
+                            <div style="font-size: 0.8rem;">إجمالي الطلبات</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="vip-stats-card">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #feca57;">{{ overdue_count }}</div>
+                            <div style="font-size: 0.8rem;">طلبات متأخرة</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">البحث</label>
+                <input type="text" name="search" class="form-control" 
+                       placeholder="رقم الطلب، اسم العميل، رقم العقد..." 
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">الحالة</label>
+                <select name="status" class="form-select">
+                    <option value="">جميع الحالات</option>
+                    {% for status_code, status_display in status_choices %}
+                        <option value="{{ status_code }}" 
+                                {% if status_code == current_status_filter %}selected{% endif %}>
+                            {{ status_display }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">نوع الطلب</label>
+                <select name="order_type" class="form-select">
+                    <option value="">جميع الأنواع</option>
+                    {% for type_code, type_display in order_type_choices %}
+                        <option value="{{ type_code }}" 
+                                {% if type_code == current_type_filter %}selected{% endif %}>
+                            {{ type_display }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-vip">
+                        <i class="fas fa-search me-2"></i>بحث
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Statistics Cards -->
+    {% if status_stats or type_stats %}
+    <div class="row mb-4">
+        {% if status_stats %}
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>توزيع حسب الحالة</h6>
+                </div>
+                <div class="card-body">
+                    {% for status_code, stat in status_stats.items %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>{{ stat.display }}</span>
+                        <span class="badge bg-primary">{{ stat.count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if type_stats %}
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-tags me-2"></i>توزيع حسب النوع</h6>
+                </div>
+                <div class="card-body">
+                    {% for type_code, stat in type_stats.items %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>{{ stat.display }}</span>
+                        <span class="badge bg-success">{{ stat.count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- VIP Orders Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-star me-2" style="color: #ffd700;"></i>
+                طلبات VIP
+                <span class="badge bg-warning text-dark ms-2">
+                    <i class="fas fa-list-ol me-1"></i>
+                    {{ vip_orders|length }} نتيجة
+                </span>
+            </h5>
+            <div>
+                <a href="{% url 'manufacturing:order_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-list me-2"></i>جميع الطلبات
+                </a>
+                <a href="{% url 'manufacturing:dashboard' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-tachometer-alt me-2"></i>لوحة التحكم
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if vip_orders %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>رقم الطلب</th>
+                            <th>العميل</th>
+                            <th>نوع الطلب</th>
+                            <th>الحالة</th>
+                            <th>تاريخ الطلب</th>
+                            <th>التسليم المتوقع</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in vip_orders %}
+                        <tr class="vip-table-row">
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="vip-badge me-2">
+                                        <i class="fas fa-crown"></i>VIP
+                                    </span>
+                                    <a href="{% url 'manufacturing:order_detail_by_code' order.manufacturing_code %}" 
+                                       class="text-decoration-none fw-bold">
+                                        {{ order.manufacturing_code }}
+                                    </a>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ order.order.customer.name }}</strong>
+                                    {% if order.order.customer.phone %}
+                                    <br><small class="text-muted">{{ order.order.customer.phone }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ order.get_order_type_display }}</span>
+                            </td>
+                            <td>
+                                {% if order.status == 'pending_approval' %}
+                                    <span class="badge bg-warning">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'in_progress' %}
+                                    <span class="badge bg-primary">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'completed' %}
+                                    <span class="badge bg-success">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'delivered' %}
+                                    <span class="badge bg-success">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'rejected' %}
+                                    <span class="badge bg-danger">{{ order.get_status_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ order.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ order.order_date|date:"Y-m-d" }}</td>
+                            <td>
+                                {% if order.expected_delivery_date %}
+                                    {{ order.expected_delivery_date|date:"Y-m-d" }}
+                                    {% now "Y-m-d" as today %}
+                                    {% if order.expected_delivery_date|date:"Y-m-d" < today and order.status != 'delivered' %}
+                                        <br><small class="text-danger"><i class="fas fa-exclamation-triangle"></i> متأخر</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'manufacturing:order_detail_by_code' order.manufacturing_code %}"
+                                       class="btn btn-outline-primary btn-sm" title="عرض التفاصيل">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if perms.manufacturing.change_manufacturingorder %}
+                                        <button type="button" class="btn btn-outline-warning btn-sm change-production-line-btn"
+                                                title="تبديل خط الإنتاج"
+                                                data-order-id="{{ order.id }}"
+                                                data-order-code="{{ order.manufacturing_code }}"
+                                                data-current-line="{{ order.production_line.name|default:'غير محدد' }}"
+                                                data-current-line-id="{{ order.production_line.id|default:'' }}">
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="d-flex justify-content-center mt-3 mb-3">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}{% if current_type_filter %}&order_type={{ current_type_filter }}{% endif %}">&laquo; الأولى</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}{% if current_type_filter %}&order_type={{ current_type_filter }}{% endif %}">السابقة</a>
+                            </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}{% if current_type_filter %}&order_type={{ current_type_filter }}{% endif %}">التالية</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status_filter %}&status={{ current_status_filter }}{% endif %}{% if current_type_filter %}&order_type={{ current_type_filter }}{% endif %}">الأخيرة &raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-crown fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">لا توجد طلبات VIP</h5>
+                <p class="text-muted">لم يتم العثور على أي طلبات VIP تطابق معايير البحث.</p>
+                <a href="{% url 'manufacturing:order_list' %}" class="btn btn-primary">
+                    <i class="fas fa-list me-2"></i>عرض جميع الطلبات
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- نافذة تبديل خط الإنتاج -->
+<div class="modal fade" id="changeProductionLineModal" tabindex="-1" aria-labelledby="changeProductionLineModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border-radius: 15px 15px 0 0;">
+                <h5 class="modal-title" id="changeProductionLineModalLabel">
+                    <i class="fas fa-exchange-alt me-2"></i>تبديل خط الإنتاج
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body" style="padding: 2rem;">
+                <div class="text-center mb-4">
+                    <div class="order-info-card" style="background: #f8f9fa; border-radius: 10px; padding: 1.5rem; border-left: 4px solid #007bff;">
+                        <h6 class="mb-2" style="color: #007bff; font-weight: bold;">
+                            <i class="fas fa-industry me-2"></i>طلب التصنيع
+                        </h6>
+                        <div id="orderCodeDisplay" class="h5 mb-2" style="color: #333;"></div>
+                        <div class="current-line-info">
+                            <small class="text-muted">خط الإنتاج الحالي:</small>
+                            <div id="currentLineDisplay" class="badge bg-info text-white mt-1" style="font-size: 0.9rem; padding: 0.5rem 1rem;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="changeProductionLineForm">
+                    <div class="mb-4">
+                        <label for="newProductionLine" class="form-label" style="font-weight: 600; color: #333;">
+                            <i class="fas fa-cogs me-2"></i>اختر خط الإنتاج الجديد
+                        </label>
+                        <select class="form-select" id="newProductionLine" name="production_line_id" required
+                                style="border-radius: 10px; border: 2px solid #e9ecef; padding: 0.75rem; font-size: 1rem;">
+                            <option value="">-- اختر خط الإنتاج --</option>
+                        </select>
+                        <div class="form-text mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            سيتم تبديل خط الإنتاج فوراً بعد التأكيد
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="changeReason" class="form-label" style="font-weight: 600; color: #333;">
+                            <i class="fas fa-comment me-2"></i>سبب التبديل (اختياري)
+                        </label>
+                        <textarea class="form-control" id="changeReason" name="reason" rows="3"
+                                  placeholder="اكتب سبب تبديل خط الإنتاج..."
+                                  style="border-radius: 10px; border: 2px solid #e9ecef; resize: none;"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e9ecef; padding: 1.5rem;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 0.5rem 1.5rem;">
+                    <i class="fas fa-times me-2"></i>إلغاء
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmChangeBtn" style="border-radius: 8px; padding: 0.5rem 1.5rem; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border: none;">
+                    <i class="fas fa-check me-2"></i>تأكيد التبديل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// متغيرات عامة لتبديل خط الإنتاج
+let currentOrderId = null;
+let productionLines = [];
+
+// تحميل خطوط الإنتاج عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    loadProductionLines();
+
+    // إضافة مستمع للأزرار
+    document.querySelectorAll('.change-production-line-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            openChangeProductionLineModal(this);
+        });
+    });
+
+    // مستمع زر التأكيد
+    const confirmBtn = document.getElementById('confirmChangeBtn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            changeProductionLine();
+        });
+    }
+});
+
+// تحميل خطوط الإنتاج من الخادم
+async function loadProductionLines() {
+    try {
+        console.log('بدء تحميل خطوط الإنتاج...');
+        const response = await fetch('/manufacturing/api/production-lines/');
+        console.log('استجابة API:', response.status, response.statusText);
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('البيانات المستلمة:', data);
+
+            if (Array.isArray(data)) {
+                productionLines = data;
+                console.log('تم تحميل خطوط الإنتاج بنجاح:', productionLines.length, 'خط');
+            } else if (data.error) {
+                console.error('خطأ من الخادم:', data.error);
+                productionLines = [];
+            } else {
+                console.error('تنسيق البيانات غير متوقع:', data);
+                productionLines = [];
+            }
+        } else {
+            console.error('فشل في تحميل خطوط الإنتاج:', response.status, response.statusText);
+            // استخدام بيانات افتراضية كبديل
+            productionLines = [
+                {id: 1, name: 'هاني رمسيس', description: ''},
+                {id: 2, name: 'ايهاب يوسف', description: ''},
+                {id: 3, name: 'ريمون فوزي', description: ''},
+                {id: 4, name: 'هاني رمسيس تسليم فروع', description: ''}
+            ];
+            console.log('استخدام بيانات افتراضية:', productionLines);
+        }
+    } catch (error) {
+        console.error('خطأ في تحميل خطوط الإنتاج:', error);
+        // استخدام بيانات افتراضية كبديل
+        productionLines = [
+            {id: 1, name: 'هاني رمسيس', description: ''},
+            {id: 2, name: 'ايهاب يوسف', description: ''},
+            {id: 3, name: 'ريمون فوزي', description: ''},
+            {id: 4, name: 'هاني رمسيس تسليم فروع', description: ''}
+        ];
+        console.log('استخدام بيانات افتراضية بسبب خطأ:', productionLines);
+    }
+}
+
+// فتح نافذة تبديل خط الإنتاج
+async function openChangeProductionLineModal(button) {
+    currentOrderId = button.dataset.orderId;
+    const orderCode = button.dataset.orderCode;
+    const currentLine = button.dataset.currentLine;
+    const currentLineId = button.dataset.currentLineId;
+
+    console.log('فتح نافذة تبديل خط الإنتاج:', {currentOrderId, orderCode, currentLine, currentLineId});
+
+    // إذا لم تكن خطوط الإنتاج محملة، نحملها الآن
+    if (!productionLines || productionLines.length === 0) {
+        console.log('إعادة تحميل خطوط الإنتاج...');
+        await loadProductionLines();
+    }
+
+    console.log('خطوط الإنتاج المتاحة:', productionLines);
+
+    // تحديث معلومات الطلب
+    document.getElementById('orderCodeDisplay').textContent = orderCode;
+    document.getElementById('currentLineDisplay').textContent = currentLine;
+
+    // تحديث قائمة خطوط الإنتاج
+    const select = document.getElementById('newProductionLine');
+    select.innerHTML = '<option value="">-- اختر خط الإنتاج --</option>';
+
+    if (productionLines && productionLines.length > 0) {
+        console.log('إضافة خطوط الإنتاج للقائمة... العدد:', productionLines.length);
+        productionLines.forEach((line, index) => {
+            console.log(`معالجة خط الإنتاج ${index + 1}:`, line.name, 'ID:', line.id, 'الحالي:', currentLineId);
+            const option = document.createElement('option');
+            option.value = line.id;
+
+            // إذا كان هذا هو خط الإنتاج الحالي، نضع علامة عليه
+            if (line.id == currentLineId) {
+                option.textContent = line.name + ' (الحالي)';
+                option.style.fontWeight = 'bold';
+                option.style.color = '#007bff';
+            } else {
+                option.textContent = line.name;
+            }
+
+            if (line.description) {
+                option.title = line.description;
+            }
+            select.appendChild(option);
+            console.log('تم إضافة خط الإنتاج:', line.name);
+        });
+    } else {
+        console.warn('لا توجد خطوط إنتاج متاحة، إضافة رسالة...');
+        // إضافة خيار يوضح عدم وجود خطوط إنتاج
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'لا توجد خطوط إنتاج متاحة - يرجى إضافة خطوط إنتاج من لوحة الإدارة';
+        option.disabled = true;
+        select.appendChild(option);
+    }
+
+    console.log('عدد الخيارات النهائي في القائمة:', select.options.length);
+
+    // إعادة تعيين النموذج
+    document.getElementById('changeProductionLineForm').reset();
+
+    // فتح النافذة
+    const modal = new bootstrap.Modal(document.getElementById('changeProductionLineModal'));
+    modal.show();
+}
+
+// تبديل خط الإنتاج
+async function changeProductionLine() {
+    const newLineId = document.getElementById('newProductionLine').value;
+    const reason = document.getElementById('changeReason').value;
+
+    if (!newLineId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'تحذير',
+            text: 'يرجى اختيار خط الإنتاج الجديد',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+
+    // إظهار مؤشر التحميل
+    const confirmBtn = document.getElementById('confirmChangeBtn');
+    const originalText = confirmBtn.innerHTML;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التبديل...';
+    confirmBtn.disabled = true;
+
+    try {
+        const response = await fetch(`/manufacturing/api/change-production-line/${currentOrderId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                production_line_id: newLineId,
+                reason: reason
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // إغلاق النافذة
+            bootstrap.Modal.getInstance(document.getElementById('changeProductionLineModal')).hide();
+
+            // إظهار رسالة نجاح
+            Swal.fire({
+                icon: 'success',
+                title: 'تم بنجاح!',
+                text: result.message,
+                confirmButtonText: 'حسناً'
+            }).then(() => {
+                // إعادة تحميل الصفحة لإظهار التغييرات
+                location.reload();
+            });
+        } else {
+            throw new Error(result.message || 'حدث خطأ غير متوقع');
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: error.message || 'حدث خطأ أثناء تبديل خط الإنتاج',
+            confirmButtonText: 'حسناً'
+        });
+    } finally {
+        // إعادة تعيين الزر
+        confirmBtn.innerHTML = originalText;
+        confirmBtn.disabled = false;
+    }
+}
+</script>
+
+{% endblock %}

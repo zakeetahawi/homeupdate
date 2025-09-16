@@ -1,0 +1,26 @@
+{{ title }}
+
+مرحباً {{ recipient.get_full_name|default:recipient.username }}،
+
+{{ message }}
+
+تفاصيل الشكوى:
+================
+
+رقم الشكوى: {{ complaint.complaint_number }}
+العميل: {{ complaint.customer.name }}
+نوع الشكوى: {{ complaint.complaint_type.name }}
+الحالة: {{ complaint.get_status_display }}
+الأولوية: {{ complaint.get_priority_display }}
+تاريخ الإنشاء: {{ complaint.created_at|date:"d/m/Y H:i" }}
+{% if complaint.deadline %}الموعد النهائي: {{ complaint.deadline|date:"d/m/Y H:i" }}{% endif %}
+{% if complaint.assigned_to %}المسؤول: {{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% endif %}
+
+للوصول إلى تفاصيل الشكوى:
+{{ complaint_url }}
+
+يمكنك الوصول إلى النظام في أي وقت لمتابعة الشكاوى وإدارتها.
+
+---
+هذا إشعار تلقائي من نظام إدارة الشكاوى
+© {{ "now"|date:"Y" }} نظام الخواجه - جميع الحقوق محفوظة

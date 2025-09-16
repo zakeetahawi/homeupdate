@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}قائمة البائعين - نظام الخواجه{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-user-tie"></i> قائمة البائعين</h2>
+        <a href="{% url 'accounts:salesperson_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus-circle"></i> إضافة بائع جديد
+        </a>
+    </div>
+
+    <!-- البحث والتصفية -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control" placeholder="بحث بالاسم أو الرقم أو الهاتف..." value="{{ search_query }}">
+                        <button class="btn btn-outline-secondary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="branch" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- جميع الفروع --</option>
+                        {% for branch in branches %}
+                            <option value="{{ branch.id }}" {% if branch_filter|stringformat:"s" == branch.id|stringformat:"s" %}selected{% endif %}>{{ branch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="is_active" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- الحالة --</option>
+                        <option value="true" {% if is_active == True %}selected{% endif %}>نشط</option>
+                        <option value="false" {% if is_active == False %}selected{% endif %}>غير نشط</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-outline-primary w-100">تصفية</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- جدول البائعين -->
+    <div class="card">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">قائمة البائعين ({{ total_salespersons }})</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">الاسم</th>
+                            <th scope="col">الرقم الوظيفي</th>
+                            <th scope="col">الفرع</th>
+                            <th scope="col">رقم الهاتف</th>
+                            <th scope="col">الحالة</th>
+                            <th scope="col" class="text-center">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for salesperson in page_obj %}
+                        <tr id="salesperson-row-{{ salesperson.id }}">
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ salesperson.name }}</td>
+                            <td>{{ salesperson.employee_number|default:"-" }}</td>
+                            <td>{{ salesperson.branch.name }}</td>
+                            <td>{{ salesperson.phone|default:"-" }}</td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input toggle-status" type="checkbox" id="status-{{ salesperson.id }}" 
+                                           data-id="{{ salesperson.id }}" {% if salesperson.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="status-{{ salesperson.id }}">
+                                        <span class="status-text-{{ salesperson.id }}">
+                                            {% if salesperson.is_active %}نشط{% else %}غير نشط{% endif %}
+                                        </span>
+                                    </label>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <a href="{% url 'accounts:salesperson_update' salesperson.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit"></i> تعديل
+                                    </a>
+                                    <a href="{% url 'accounts:salesperson_delete' salesperson.id %}" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash-alt"></i> حذف
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-info-circle me-2"></i> لا يوجد بائعين مطابقين لمعايير البحث
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-transparent">
+            {% include 'includes/pagination.html' with page_obj=page_obj %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // تفعيل/تعطيل البائع
+        $('.toggle-status').on('change', function() {
+            const salespersonId = $(this).data('id');
+            const csrfToken = '{{ csrf_token }}';
+            
+            $.ajax({
+                url: `/accounts/salespersons/${salespersonId}/toggle/`,
+                type: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                success: function(response) {
+                    if (response.success) {
+                        const status = response.is_active ? 'نشط' : 'غير نشط';
+                        $(`.status-text-${salespersonId}`).text(status);
+                    } else {
+                        // إذا كان هناك خطأ، قم بإعادة المفتاح إلى وضعه السابق
+                        $('#status-' + salespersonId).prop('checked', !$('#status-' + salespersonId).prop('checked'));
+                        alert('حدث خطأ أثناء تحديث حالة البائع.');
+                    }
+                },
+                error: function() {
+                    // إذا كان هناك خطأ، قم بإعادة المفتاح إلى وضعه السابق
+                    $('#status-' + salespersonId).prop('checked', !$('#status-' + salespersonId).prop('checked'));
+                    alert('حدث خطأ أثناء تحديث حالة البائع.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

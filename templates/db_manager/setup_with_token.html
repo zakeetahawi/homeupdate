@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}{% trans "إعداد النظام" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .setup-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+    .setup-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .setup-header img {
+        max-width: 150px;
+        margin-bottom: 20px;
+    }
+    .setup-steps {
+        margin-bottom: 30px;
+    }
+    .setup-step {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+        background-color: #f8f9fa;
+    }
+    .setup-step h4 {
+        margin-bottom: 15px;
+        color: #007bff;
+    }
+    .setup-footer {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .db-type-options {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    .db-type-option {
+        flex: 1;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .db-type-option:hover {
+        border-color: #007bff;
+    }
+    .db-type-option.active {
+        border-color: #007bff;
+        background-color: #f0f7ff;
+    }
+    .db-type-option img {
+        height: 50px;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="setup-container">
+        <div class="setup-header">
+            <img src="{% static 'img/logo.png' %}" alt="{% trans 'شعار النظام' %}" class="img-fluid">
+            <h1>{% trans "إعداد نظام الخواجه" %}</h1>
+            <p class="lead">{% trans "أكمل النموذج التالي لإعداد قاعدة البيانات وإنشاء مستخدم مسؤول" %}</p>
+
+            {% if existing_db %}
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    {% trans "تم اكتشاف قاعدة بيانات موجودة:" %} <strong>{{ existing_db.name }}</strong>
+                    <p class="mb-0 mt-2">{% trans "تم ملء النموذج ببيانات قاعدة البيانات الموجودة. يمكنك تعديلها إذا لزم الأمر." %}</p>
+                </div>
+            {% endif %}
+
+            {% if has_users %}
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    {% trans "يوجد مستخدمون في النظام بالفعل" %}
+                    <p class="mb-0 mt-2">{% trans "لن يتم إنشاء مستخدم مسؤول جديد لأن النظام يحتوي على مستخدمين بالفعل." %}</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="setup-steps">
+                <div class="setup-step">
+                    <h4>{% trans "1. اختر نوع قاعدة البيانات" %}</h4>
+
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-database fa-2x text-primary me-3"></i>
+                            <div>
+                                <h5 class="mb-1">PostgreSQL</h5>
+                                <p class="mb-0">{% trans "قاعدة بيانات قوية ومتقدمة" %}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group d-none">
+                        <input type="hidden" name="db_type" id="id_db_type" value="postgresql">
+                    </div>
+                </div>
+
+                <div id="postgresql-mysql-fields" class="setup-step">
+                    <h4>{% trans "2. تفاصيل الاتصال بقاعدة البيانات" %}</h4>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.host.id_for_label }}">{% trans "المضيف" %}</label>
+                                {{ form.host|add_class:"form-control" }}
+                                <small class="form-text text-muted">{{ form.host.help_text }}</small>
+                                {% if form.host.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.host.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.port.id_for_label }}">{% trans "المنفذ" %}</label>
+                                {{ form.port|add_class:"form-control" }}
+                                <small class="form-text text-muted">{{ form.port.help_text }}</small>
+                                {% if form.port.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.port.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="{{ form.database_name.id_for_label }}">{% trans "اسم قاعدة البيانات" %}</label>
+                                {{ form.database_name|add_class:"form-control" }}
+                                <small class="form-text text-muted">{{ form.database_name.help_text }}</small>
+                                {% if form.database_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.database_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.username.id_for_label }}">{% trans "اسم المستخدم" %}</label>
+                                {{ form.username|add_class:"form-control" }}
+                                <small class="form-text text-muted">{{ form.username.help_text }}</small>
+                                {% if form.username.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.username.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.password.id_for_label }}">{% trans "كلمة المرور" %}</label>
+                                {{ form.password|add_class:"form-control" }}
+                                <small class="form-text text-muted">{{ form.password.help_text }}</small>
+                                {% if form.password.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.password.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sqlite-fields" class="setup-step d-none">
+                    <h4>{% trans "2. ملف قاعدة بيانات SQLite" %}</h4>
+
+                    <div class="form-group">
+                        <label for="{{ form.sqlite_file.id_for_label }}">{% trans "ملف SQLite" %}</label>
+                        {{ form.sqlite_file|add_class:"form-control" }}
+                        <small class="form-text text-muted">{{ form.sqlite_file.help_text }}</small>
+                        {% if form.sqlite_file.errors %}
+                            <div class="invalid-feedback d-block">{{ form.sqlite_file.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <h4>{% trans "3. إنشاء مستخدم مسؤول" %}</h4>
+
+                    {% if has_users %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            {% trans "يوجد مستخدمون في النظام بالفعل" %}
+                            <p class="mb-0">{% trans "لن يتم إنشاء مستخدم مسؤول جديد لأن النظام يحتوي على مستخدمين بالفعل." %}</p>
+                        </div>
+                        <div class="form-group d-none">
+                            {{ form.create_superuser }}
+                            {{ form.admin_username }}
+                            {{ form.admin_email }}
+                            {{ form.admin_password }}
+                            {{ form.admin_password_confirm }}
+                        </div>
+                    {% else %}
+                        <div class="form-group">
+                            <div class="form-check">
+                                {{ form.create_superuser|add_class:"form-check-input" }}
+                                <label class="form-check-label" for="{{ form.create_superuser.id_for_label }}">
+                                    {% trans "إنشاء مستخدم مسؤول جديد" %}
+                                </label>
+                                <small class="form-text text-muted">{{ form.create_superuser.help_text }}</small>
+                            </div>
+                        </div>
+
+                        <div id="superuser-fields">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.admin_username.id_for_label }}">{% trans "اسم المستخدم" %}</label>
+                                        {{ form.admin_username|add_class:"form-control" }}
+                                        <small class="form-text text-muted">{{ form.admin_username.help_text }}</small>
+                                        {% if form.admin_username.errors %}
+                                            <div class="invalid-feedback d-block">{{ form.admin_username.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.admin_email.id_for_label }}">{% trans "البريد الإلكتروني" %}</label>
+                                        {{ form.admin_email|add_class:"form-control" }}
+                                        <small class="form-text text-muted">{{ form.admin_email.help_text }}</small>
+                                        {% if form.admin_email.errors %}
+                                            <div class="invalid-feedback d-block">{{ form.admin_email.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.admin_password.id_for_label }}">{% trans "كلمة المرور" %}</label>
+                                        {{ form.admin_password|add_class:"form-control" }}
+                                        <small class="form-text text-muted">{{ form.admin_password.help_text }}</small>
+                                        {% if form.admin_password.errors %}
+                                            <div class="invalid-feedback d-block">{{ form.admin_password.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.admin_password_confirm.id_for_label }}">{% trans "تأكيد كلمة المرور" %}</label>
+                                        {{ form.admin_password_confirm|add_class:"form-control" }}
+                                        <small class="form-text text-muted">{{ form.admin_password_confirm.help_text }}</small>
+                                        {% if form.admin_password_confirm.errors %}
+                                            <div class="invalid-feedback d-block">{{ form.admin_password_confirm.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="setup-footer">
+                <button type="submit" class="btn btn-primary btn-lg">{% trans "إعداد النظام" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // إظهار/إخفاء حقول المستخدم المسؤول
+        $('#id_create_superuser').change(function() {
+            if ($(this).is(':checked')) {
+                $('#superuser-fields').show();
+            } else {
+                $('#superuser-fields').hide();
+            }
+        }).trigger('change');
+
+        // إخفاء حقول SQLite
+        $('#sqlite-fields').addClass('d-none');
+    });
+</script>
+{% endblock %}

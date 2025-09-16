@@ -1,11 +1,28 @@
+"""
+تكوين WSGI للمشروع.
+"""
+
 import os
+import sys
+import atexit
+import logging
 from django.core.wsgi import get_wsgi_application
-from mangum import Mangum
+from whitenoise import WhiteNoise
+from .resource_tracker import cleanup_resources
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
 
-# Get the Django WSGI application we want to use
+# تسجيل دالة تنظيف الموارد لتشغيلها عند إيقاف التطبيق
+atexit.register(cleanup_resources)
+
+# تهيئة تطبيق WSGI
 application = get_wsgi_application()
 
-# Create a Mangum adapter for ASGI/WSGI support
-handler = Mangum(application, lifespan="off")
+# تم نقل تنفيذ الترحيلات التلقائية إلى ملف manage.py
+
+# إضافة دعم WhiteNoise للملفات الثابتة مع إعدادات محسنة
+application = WhiteNoise(application)
+# إضافة الملفات الثابتة
+application.add_files(os.path.join(os.path.dirname(__file__), '..', 'staticfiles'), prefix='/static/')
+# إضافة ملفات الوسائط
+application.add_files(os.path.join(os.path.dirname(__file__), '..', 'media'), prefix='/media/')

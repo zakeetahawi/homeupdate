@@ -1,0 +1,371 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}إعدادات مزامنة غوغل{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+<style>
+    .google-sync-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .sync-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .sync-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .sync-header {
+        background: linear-gradient(135deg, #4285F4, #34A853);
+        color: white;
+        border-radius: 10px 10px 0 0;
+        padding: 15px;
+    }
+    
+    .sync-body {
+        padding: 20px;
+    }
+    
+    .sync-footer {
+        background-color: #f8f9fa;
+        border-radius: 0 0 10px 10px;
+        padding: 15px;
+    }
+    
+    .google-logo {
+        width: 24px;
+        height: 24px;
+        margin-right: 8px;
+    }
+    
+    .setup-step {
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        background-color: #f8f9fa;
+    }
+    
+    .setup-step h5 {
+        margin-bottom: 15px;
+        color: #4285F4;
+    }
+    
+    .setup-step p {
+        margin-bottom: 10px;
+    }
+    
+    .setup-step img {
+        max-width: 100%;
+        border-radius: 5px;
+        margin: 10px 0;
+        border: 1px solid #ddd;
+    }
+    
+    .setup-step code {
+        background-color: #f1f3f4;
+        padding: 2px 5px;
+        border-radius: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="google-sync-container">
+    <!-- شريط الأدوات العلوي -->
+    <div class="odoo-toolbar mb-4">
+        <div class="odoo-toolbar-left">
+            <h1>
+                <img src="{% static 'img/google-sheets-icon.png' %}" alt="Google Sheets" class="google-logo">
+                إعدادات مزامنة غوغل
+            </h1>
+        </div>
+        <div class="odoo-toolbar-right">
+            <a href="{% url 'odoo_db_manager:google_sync' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> العودة لمزامنة غوغل
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- بطاقة إعدادات المزامنة -->
+        <div class="col-md-6 mb-4">
+            <div class="card sync-card">
+                <div class="sync-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i> إعدادات المزامنة
+                    </h5>
+                </div>
+                <div class="sync-body">
+                    <form method="post" action="{% url 'odoo_db_manager:google_sync_config_save' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="name" class="form-label">اسم الإعداد</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ config.name|default:'مزامنة غوغل الرئيسية' }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="spreadsheet_id" class="form-label">معرف جدول البيانات</label>
+                            <input type="text" class="form-control" id="spreadsheet_id" name="spreadsheet_id" value="{{ config.spreadsheet_id|default:'' }}" required>
+                            <small class="form-text text-muted">
+                                يمكنك الحصول على معرف جدول البيانات من الرابط. على سبيل المثال: https://docs.google.com/spreadsheets/d/<strong>1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms</strong>/edit
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="credentials_file" class="form-label">ملف بيانات الاعتماد</label>
+                            {% if config.credentials_file %}
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" value="{{ config.credentials_file.name }}" readonly>
+                                <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteCredentialsModal">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <input type="file" class="form-control" id="credentials_file" name="credentials_file">
+                            <small class="form-text text-muted">اترك هذا الحقل فارغًا إذا كنت لا ترغب في تغيير ملف بيانات الاعتماد الحالي.</small>
+                            {% else %}
+                            <input type="file" class="form-control" id="credentials_file" name="credentials_file" required>
+                            <small class="form-text text-muted">ملف JSON الذي تم تنزيله من Google Cloud Console.</small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="sync_frequency" class="form-label">تكرار المزامنة (بالساعات)</label>
+                            <input type="number" class="form-control" id="sync_frequency" name="sync_frequency" value="{{ config.sync_frequency|default:24 }}" min="1" max="168" required>
+                            <small class="form-text text-muted">عدد الساعات بين كل عملية مزامنة تلقائية.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if config.is_active|default:True %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">تفعيل المزامنة</label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save me-1"></i> حفظ الإعدادات
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Modal حذف بيانات الاعتماد -->
+            {% if config.credentials_file %}
+            <div class="modal fade" id="deleteCredentialsModal" tabindex="-1" aria-labelledby="deleteCredentialsModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteCredentialsModalLabel">تأكيد حذف بيانات الاعتماد</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                هل أنت متأكد من رغبتك في حذف ملف بيانات الاعتماد الحالي؟ سيتعين عليك تحميل ملف جديد لاستخدام المزامنة.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                            <a href="{% url 'odoo_db_manager:google_sync_delete_credentials' %}" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i> نعم، حذف بيانات الاعتماد
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- بطاقة دليل الإعداد -->
+        <div class="col-md-6 mb-4">
+            <div class="card sync-card">
+                <div class="sync-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-book me-2"></i> دليل الإعداد
+                    </h5>
+                </div>
+                <div class="sync-body">
+                    <div class="setup-step">
+                        <h5>1. إنشاء مشروع في Google Cloud Platform</h5>
+                        <p>قم بزيارة <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> وإنشاء مشروع جديد.</p>
+                    </div>
+                    
+                    <div class="setup-step">
+                        <h5>2. تفعيل Google Sheets API</h5>
+                        <p>من لوحة التحكم، انتقل إلى "APIs & Services" > "Library" وابحث عن "Google Sheets API" وقم بتفعيلها.</p>
+                    </div>
+                    
+                    <div class="setup-step">
+                        <h5>3. إنشاء حساب خدمة (Service Account)</h5>
+                        <p>انتقل إلى "APIs & Services" > "Credentials" وانقر على "Create Credentials" > "Service Account".</p>
+                        <p>1. أدخل اسم حساب الخدمة واترك باقي الإعدادات كما هي.</p>
+                        <p>2. انقر على حساب الخدمة الجديد، ثم اختر تبويب "KEYS".</p>
+                        <p>3. انقر على "ADD KEY" > "Create new key" واختر JSON.</p>
+                        <p>4. سيتم تنزيل ملف JSON - احتفظ به لتحميله في النموذج.</p>
+                        <p class="text-danger">ملاحظة مهمة: بعد تنزيل ملف JSON، قم بمشاركة جدول البيانات مع البريد الإلكتروني الموجود في الملف في حقل client_email.</p>
+                    </div>
+                    
+                    <div class="setup-step">
+                        <h5>4. إنشاء جدول بيانات Google Sheets</h5>
+                        <p>قم بزيارة <a href="https://docs.google.com/spreadsheets/" target="_blank">Google Sheets</a> وإنشاء جدول بيانات جديد.</p>
+                        <p>1. انسخ معرف جدول البيانات من الرابط (الجزء بين /d/ و /edit).</p>
+                        <p>2. انقر على زر المشاركة واضف البريد الإلكتروني لحساب الخدمة كمحرر.</p>
+                    </div>
+                    
+                    <div class="setup-step">
+                        <h5>5. تكوين الإعدادات</h5>
+                        <p>أدخل معرف جدول البيانات وقم بتحميل ملف بيانات الاعتماد في النموذج المجاور.</p>
+                        <p>اضبط تكرار المزامنة حسب احتياجاتك.</p>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>ملاحظة:</strong> في المرة الأولى التي تقوم فيها بالمزامنة، سيطلب منك تسجيل الدخول إلى حساب Google الخاص بك والموافقة على الأذونات المطلوبة.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- بطاقة الإعدادات المتقدمة -->
+    <div class="card sync-card mb-4">
+        <div class="sync-header">
+            <h5 class="mb-0">
+                <i class="fas fa-sliders-h me-2"></i> الإعدادات المتقدمة
+            </h5>
+        </div>
+        <div class="sync-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">جدولة المزامنة التلقائية</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="enable_scheduler" name="enable_scheduler" {% if scheduler_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="enable_scheduler">تفعيل المزامنة التلقائية</label>
+                        </div>
+                        <small class="form-text text-muted">
+                            عند التفعيل، سيتم تشغيل المزامنة تلقائيًا وفقًا لتكرار المزامنة المحدد.
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">حالة المجدول</label>
+                        {% if scheduler_status %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            المجدول نشط ويعمل بشكل صحيح.
+                            <div class="mt-2">
+                                <small>آخر تشغيل: {{ scheduler_last_run|date:"Y-m-d H:i:s"|default:"غير متوفر" }}</small>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            المجدول غير نشط أو يواجه مشكلة.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">إعدادات التخزين</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="keep_history" name="keep_history" {% if keep_history %}checked{% endif %}>
+                            <label class="form-check-label" for="keep_history">الاحتفاظ بسجل المزامنة</label>
+                        </div>
+                        <small class="form-text text-muted">
+                            عند التفعيل، سيتم الاحتفاظ بسجل كامل لعمليات المزامنة. قد يؤدي ذلك إلى زيادة حجم قاعدة البيانات مع مرور الوقت.
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="history_retention" class="form-label">فترة الاحتفاظ بالسجلات (بالأيام)</label>
+                        <input type="number" class="form-control" id="history_retention" name="history_retention" value="{{ history_retention|default:30 }}" min="1" max="365">
+                        <small class="form-text text-muted">
+                            عدد الأيام التي سيتم الاحتفاظ بسجلات المزامنة خلالها قبل حذفها تلقائيًا.
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <button type="button" class="btn btn-primary" id="saveAdvancedSettings">
+                    <i class="fas fa-save me-1"></i> حفظ الإعدادات المتقدمة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // حفظ الإعدادات المتقدمة
+    document.getElementById('saveAdvancedSettings').addEventListener('click', function() {
+        const enableScheduler = document.getElementById('enable_scheduler').checked;
+        const keepHistory = document.getElementById('keep_history').checked;
+        const historyRetention = document.getElementById('history_retention').value;
+        
+        // إرسال البيانات باستخدام Fetch API
+        fetch('{% url "odoo_db_manager:google_sync_advanced_settings" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                enable_scheduler: enableScheduler,
+                keep_history: keepHistory,
+                history_retention: historyRetention
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                Swal.fire({
+                    title: 'تم الحفظ!',
+                    text: 'تم حفظ الإعدادات المتقدمة بنجاح',
+                    icon: 'success',
+                    confirmButtonText: 'تم'
+                });
+            } else {
+                Swal.fire({
+                    title: 'خطأ!',
+                    text: data.message || 'حدث خطأ أثناء حفظ الإعدادات',
+                    icon: 'error',
+                    confirmButtonText: 'تم'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                title: 'خطأ!',
+                text: 'حدث خطأ أثناء الاتصال بالخادم',
+                icon: 'error',
+                confirmButtonText: 'تم'
+            });
+        });
+    });
+    
+    // عرض رسالة نجاح حفظ الإعدادات إذا كان ضروريًا
+    {% if config_saved %}
+    document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+            title: 'تم الحفظ!',
+            text: 'تم حفظ إعدادات مزامنة غوغل بنجاح',
+            icon: 'success',
+            confirmButtonText: 'تم'
+        });
+    });
+    {% endif %}
+</script>
+{% endblock %}

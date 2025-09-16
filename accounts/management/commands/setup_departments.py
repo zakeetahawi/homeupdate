@@ -57,11 +57,19 @@ class Command(BaseCommand):
                 'description': 'إدارة عمليات التركيب'
             },
             {
+                'name': 'الشكاوى',
+                'code': 'complaints',
+                'icon': 'fas fa-exclamation-triangle',
+                'url_name': 'complaints:dashboard',
+                'order': 7,
+                'description': 'إدارة الشكاوى وخدمة العملاء'
+            },
+            {
                 'name': 'التقارير',
                 'code': 'reports',
                 'icon': 'fas fa-chart-bar',
                 'url_name': 'reports:report_list',
-                'order': 7,
+                'order': 8,
                 'description': 'عرض وإنشاء التقارير'
             },
         ]

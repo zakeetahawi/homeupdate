@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}لوحة مراقبة النظام{% endblock %}
+
+{% block extra_css %}
+<style>
+    .monitoring-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    
+    .status-normal { background-color: #28a745; }
+    .status-warning { background-color: #ffc107; }
+    .status-critical { background-color: #dc3545; }
+    .status-emergency { background-color: #6f42c1; }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #e9ecef;
+        overflow: hidden;
+        margin-top: 5px;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+    
+    .alert-item {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        border-left: 4px solid;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        border-left-color: #ffc107;
+    }
+    
+    .alert-critical {
+        background-color: #f8d7da;
+        border-left-color: #dc3545;
+    }
+    
+    .alert-emergency {
+        background-color: #e2e3f0;
+        border-left-color: #6f42c1;
+    }
+    
+    .refresh-indicator {
+        display: inline-block;
+        margin-left: 10px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .refresh-indicator.active {
+        opacity: 1;
+    }
+    
+    .action-button {
+        margin: 5px;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    
+    .btn-cleanup {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .btn-emergency {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .btn-optimize {
+        background-color: #28a745;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1>
+                🔍 لوحة مراقبة النظام
+                <span class="refresh-indicator" id="refreshIndicator">
+                    <i class="fas fa-sync-alt fa-spin"></i>
+                </span>
+            </h1>
+            <p class="text-muted">مراقبة اتصالات قاعدة البيانات وأداء النظام في الوقت الفعلي</p>
+        </div>
+    </div>
+    
+    <!-- إحصائيات قاعدة البيانات -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="monitoring-card">
+                <div class="d-flex align-items-center">
+                    <span class="status-indicator" id="dbStatusIndicator"></span>
+                    <h5 class="mb-0">إجمالي الاتصالات</h5>
+                </div>
+                <div class="metric-value" id="totalConnections">--</div>
+                <div class="metric-label">من أصل 200 اتصال</div>
+                <div class="progress-bar-custom">
+                    <div class="progress-fill" id="connectionsProgress"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="monitoring-card">
+                <h5>الاتصالات النشطة</h5>
+                <div class="metric-value" id="activeConnections">--</div>
+                <div class="metric-label">قيد التنفيذ</div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="monitoring-card">
+                <h5>الاتصالات الخاملة</h5>
+                <div class="metric-value" id="idleConnections">--</div>
+                <div class="metric-label">في انتظار</div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="monitoring-card">
+                <h5>معلقة في معاملة</h5>
+                <div class="metric-value" id="idleInTransaction">--</div>
+                <div class="metric-label">تحتاج تنظيف</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- إحصائيات النظام -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="monitoring-card">
+                <h5>استخدام الذاكرة</h5>
+                <div class="metric-value" id="memoryUsage">--</div>
+                <div class="metric-label">من إجمالي الذاكرة</div>
+                <div class="progress-bar-custom">
+                    <div class="progress-fill" id="memoryProgress"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="monitoring-card">
+                <h5>استخدام المعالج</h5>
+                <div class="metric-value" id="cpuUsage">--</div>
+                <div class="metric-label">متوسط الاستخدام</div>
+                <div class="progress-bar-custom">
+                    <div class="progress-fill" id="cpuProgress"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="monitoring-card">
+                <h5>عدد الخيوط</h5>
+                <div class="metric-value" id="threadCount">--</div>
+                <div class="metric-label">خيط نشط</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- التحذيرات والإجراءات -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="monitoring-card">
+                <h5>التحذيرات النشطة</h5>
+                <div id="alertsContainer">
+                    <p class="text-muted">لا توجد تحذيرات نشطة</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="monitoring-card">
+                <h5>إجراءات سريعة</h5>
+                <div class="d-flex flex-column">
+                    <button class="action-button btn-cleanup" onclick="performAction('cleanup')">
+                        🧹 تنظيف الاتصالات الخاملة
+                    </button>
+                    <button class="action-button btn-emergency" onclick="performAction('emergency')">
+                        🚨 تنظيف طوارئ
+                    </button>
+                    <button class="action-button btn-optimize" onclick="performAction('optimize')">
+                        ⚡ تحسين قاعدة البيانات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- معلومات إضافية -->
+    <div class="row">
+        <div class="col-12">
+            <div class="monitoring-card">
+                <h5>معلومات النظام</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>آخر تحديث:</strong> <span id="lastUpdate">--</span></p>
+                        <p><strong>حالة المراقبة:</strong> <span id="monitoringStatus">--</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>وقت التشغيل:</strong> <span id="uptime">--</span></p>
+                        <p><strong>إجمالي التحذيرات:</strong> <span id="totalAlerts">--</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let refreshInterval;
+let isRefreshing = false;
+
+// بدء المراقبة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    loadMonitoringData();
+    startAutoRefresh();
+});
+
+// تحميل بيانات المراقبة
+async function loadMonitoringData() {
+    if (isRefreshing) return;
+    
+    isRefreshing = true;
+    showRefreshIndicator();
+    
+    try {
+        // تحميل إحصائيات قاعدة البيانات
+        const dbResponse = await fetch('/api/monitoring/database/');
+        const dbData = await dbResponse.json();
+        
+        if (dbData.success) {
+            updateDatabaseStats(dbData.data);
+        }
+        
+        // تحميل إحصائيات النظام
+        const systemResponse = await fetch('/api/monitoring/system/');
+        const systemData = await systemResponse.json();
+        
+        if (systemData.success) {
+            updateSystemStats(systemData.data);
+        }
+        
+        // تحميل التحذيرات
+        const alertsResponse = await fetch('/api/monitoring/alerts/');
+        const alertsData = await alertsResponse.json();
+        
+        if (alertsData.success) {
+            updateAlerts(alertsData.data);
+        }
+        
+        // تحديث وقت آخر تحديث
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleString('ar-EG');
+        
+    } catch (error) {
+        console.error('خطأ في تحميل بيانات المراقبة:', error);
+    } finally {
+        isRefreshing = false;
+        hideRefreshIndicator();
+    }
+}
+
+// تحديث إحصائيات قاعدة البيانات
+function updateDatabaseStats(data) {
+    document.getElementById('totalConnections').textContent = data.total_connections;
+    document.getElementById('activeConnections').textContent = data.active_connections;
+    document.getElementById('idleConnections').textContent = data.idle_connections;
+    document.getElementById('idleInTransaction').textContent = data.idle_in_transaction;
+    
+    // تحديث شريط التقدم
+    const percentage = (data.total_connections / 200) * 100;
+    const progressBar = document.getElementById('connectionsProgress');
+    progressBar.style.width = percentage + '%';
+    
+    // تحديث لون الحالة
+    const indicator = document.getElementById('dbStatusIndicator');
+    const statusClass = getStatusClass(data.status_level);
+    indicator.className = 'status-indicator ' + statusClass;
+    
+    // تحديث لون شريط التقدم
+    progressBar.className = 'progress-fill ' + getProgressColor(data.status_level);
+}
+
+// تحديث إحصائيات النظام
+function updateSystemStats(data) {
+    if (data.memory) {
+        document.getElementById('memoryUsage').textContent = data.memory.percent.toFixed(1) + '%';
+        document.getElementById('memoryProgress').style.width = data.memory.percent + '%';
+        document.getElementById('memoryProgress').className = 'progress-fill ' + getProgressColor(
+            data.memory.percent > 90 ? 'critical' : data.memory.percent > 70 ? 'warning' : 'normal'
+        );
+    }
+    
+    if (data.cpu) {
+        document.getElementById('cpuUsage').textContent = data.cpu.percent.toFixed(1) + '%';
+        document.getElementById('cpuProgress').style.width = data.cpu.percent + '%';
+        document.getElementById('cpuProgress').className = 'progress-fill ' + getProgressColor(
+            data.cpu.percent > 90 ? 'critical' : data.cpu.percent > 70 ? 'warning' : 'normal'
+        );
+    }
+    
+    if (data.process) {
+        document.getElementById('threadCount').textContent = data.process.num_threads;
+    }
+}
+
+// تحديث التحذيرات
+function updateAlerts(data) {
+    const container = document.getElementById('alertsContainer');
+    
+    if (data.active_alerts.length === 0) {
+        container.innerHTML = '<p class="text-muted">لا توجد تحذيرات نشطة</p>';
+    } else {
+        container.innerHTML = data.active_alerts.map(alert => `
+            <div class="alert-item alert-${alert.level}">
+                <strong>${alert.type}:</strong> ${alert.message}
+                <small class="d-block text-muted">${new Date(alert.timestamp).toLocaleString('ar-EG')}</small>
+            </div>
+        `).join('');
+    }
+    
+    document.getElementById('totalAlerts').textContent = data.total_alerts;
+}
+
+// تنفيذ إجراء
+async function performAction(action) {
+    const button = event.target;
+    const originalText = button.textContent;
+    
+    button.disabled = true;
+    button.textContent = 'جاري التنفيذ...';
+    
+    try {
+        const response = await fetch('/api/monitoring/actions/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                action: action === 'emergency' ? 'cleanup' : action,
+                force: action === 'emergency'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ ' + data.message);
+            loadMonitoringData(); // إعادة تحميل البيانات
+        } else {
+            alert('❌ خطأ: ' + data.error);
+        }
+        
+    } catch (error) {
+        alert('❌ خطأ في الاتصال: ' + error.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+}
+
+// دوال مساعدة
+function getStatusClass(level) {
+    switch (level) {
+        case 'emergency': return 'status-emergency';
+        case 'critical': return 'status-critical';
+        case 'warning': return 'status-warning';
+        default: return 'status-normal';
+    }
+}
+
+function getProgressColor(level) {
+    switch (level) {
+        case 'emergency': return 'bg-purple';
+        case 'critical': return 'bg-danger';
+        case 'warning': return 'bg-warning';
+        default: return 'bg-success';
+    }
+}
+
+function showRefreshIndicator() {
+    document.getElementById('refreshIndicator').classList.add('active');
+}
+
+function hideRefreshIndicator() {
+    document.getElementById('refreshIndicator').classList.remove('active');
+}
+
+function startAutoRefresh() {
+    refreshInterval = setInterval(loadMonitoringData, 30000); // كل 30 ثانية
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// إيقاف التحديث التلقائي عند مغادرة الصفحة
+window.addEventListener('beforeunload', function() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+});
+</script>
+{% endblock %}

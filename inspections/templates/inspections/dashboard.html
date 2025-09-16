@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}لوحة تحكم المعاينات{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Dashboard Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-2 mb-md-0"><i class="fas fa-clipboard-check"></i> لوحة تحكم المعاينات</h1>
+        <form method="get" class="d-flex align-items-center" id="branch-filter-form">
+            <label for="branch-select" class="me-2 fw-bold">الفرع:</label>
+            <select name="branch" id="branch-select" class="form-select" style="width: 200px;" onchange="this.form.submit()">
+                <option value="">كل الفروع</option>
+                {% for branch in branches %}
+                <option value="{{ branch.id }}" {% if branch.id|stringformat:'s' == selected_branch|stringformat:'s' %}selected{% endif %}>{{ branch.name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        <div class="d-flex gap-2">
+            <a href="{% url 'inspections:inspection_schedule' %}" class="btn btn-info">
+                <i class="fas fa-calendar-alt"></i> البرنامج اليومي
+            </a>
+            <a href="{% url 'inspections:inspection_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> معاينة جديدة
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <a href="{% url 'inspections:inspection_list' %}?status=new" style="text-decoration: none;">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">المعاينات الجديدة</h6>
+                                <h2 class="mb-0">{{ new_inspections_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-clipboard fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'inspections:inspection_list' %}?status=completed" style="text-decoration: none;">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">المعاينات المكتملة</h6>
+                                <h2 class="mb-0">{{ completed_inspections_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'inspections:inspection_list' %}?status=in_progress" style="text-decoration: none;">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">قيد المعاينة</h6>
+                                <h2 class="mb-0">{{ in_progress_inspections_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-clock fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'inspections:inspection_list' %}?overdue=1" style="text-decoration: none;">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">معاينات متأخرة</h6>
+                                <h2 class="mb-0">{{ overdue_inspections_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-exclamation-circle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Inspections and Statistics -->
+    <div class="row">
+        <!-- Recent Inspections -->
+        <div class="col-md-8 mb-4 mb-md-0">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list"></i> آخر المعاينات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>رقم المعاينة</th>
+                                    <th>رقم الطلب</th>
+                                    <th>العميل</th>
+                                    <th>تاريخ المعاينة</th>
+                                    <th>الحالة</th>
+                                    <th>المعاين</th>
+                                    <th>الملف</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inspection in recent_inspections %}
+                                <tr>
+                                    <td>{{ inspection.inspection_code }}</td>
+                                    <td>
+                                        {% if inspection.order %}
+                                            {% if inspection.order.order_number %}
+                                                {{ inspection.order.order_number }}
+                                            {% else %}
+                                                {{ inspection.order.pk }}
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td><strong>{{ inspection.customer.name|default:"عميل جديد" }}</strong></td>
+                                    <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ inspection.get_status_color }}">
+                                            {{ inspection.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ inspection.inspector.get_full_name }}</td>
+                                    <td>
+                                        {% if inspection.inspection_file %}
+                                            <div class="d-flex flex-column gap-1">
+                                                <!-- الملف المحلي -->
+                                                <a href="{{ inspection.inspection_file.url }}" target="_blank"
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="عرض ملف المعاينة محلياً">
+                                                    <i class="fas fa-file-pdf me-1"></i>
+                                                    محلي
+                                                </a>
+
+                                                {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                                    <!-- رابط Google Drive -->
+                                                    <a href="{{ inspection.google_drive_file_url }}" target="_blank"
+                                                       class="btn btn-sm btn-success"
+                                                       title="عرض ملف المعاينة في Google Drive"
+                                                       data-inspection-id="{{ inspection.inspection_code }}">
+                                                        <i class="fas fa-cloud me-1"></i>
+                                                        Drive
+                                                    </a>
+                                                {% else %}
+                                                    <!-- جاري الرفع -->
+                                                    <span class="badge bg-warning text-dark"
+                                                          title="جاري رفع الملف إلى Google Drive"
+                                                          data-inspection-id="{{ inspection.inspection_code }}"
+                                                          data-upload-pending="true">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        جاري الرفع
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">
+                                                <i class="fas fa-file-slash me-1"></i>
+                                                لا يوجد ملف
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'inspections:inspection_detail' inspection.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">لا توجد معاينات حديثة</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Monthly Statistics -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie"></i> إحصائيات الشهر
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyStats" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ new_inspections_count|default_if_none:0|json_script:"newCount" }}
+{{ completed_inspections_count|default_if_none:0|json_script:"completedCount" }}
+{{ in_progress_inspections_count|default_if_none:0|json_script:"inProgressCount" }}
+{{ overdue_inspections_count|default_if_none:0|json_script:"overdueCount" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'inspections/js/upload_status_checker.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chartData = {
+        newCount: JSON.parse(document.getElementById('newCount').textContent),
+        completedCount: JSON.parse(document.getElementById('completedCount').textContent),
+        inProgressCount: JSON.parse(document.getElementById('inProgressCount').textContent),
+        overdueCount: JSON.parse(document.getElementById('overdueCount').textContent)
+    };
+
+    const ctx = document.getElementById('monthlyStats').getContext('2d');
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['جديدة', 'مكتملة', 'قيد المعاينة', 'متأخرة'],
+            datasets: [{
+                data: [
+                    chartData.newCount,
+                    chartData.completedCount,
+                    chartData.inProgressCount,
+                    chartData.overdueCount
+                ],
+                backgroundColor: [
+                    '#0d6efd',
+                    '#198754',
+                    '#ffc107',
+                    '#dc3545'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

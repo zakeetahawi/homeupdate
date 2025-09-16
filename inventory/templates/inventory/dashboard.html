@@ -1,58 +1,334 @@
-{% extends 'base.html' %}
-{% block title %}لوحة تحكم المخزون{% endblock %}
-{% block content %}
-<div class="container">
-    <h2 class="my-4">لوحة تحكم المخزون</h2>
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h5 class="card-title">إجمالي المنتجات</h5>
-                    <p class="display-6">{{ total_products }}</p>
+{% extends 'inventory/inventory_base_custom.html' %}
+{% load static %}
+
+{% block inventory_title %}لوحة تحكم المخزون{% endblock %}
+
+{% block inventory_content %}
+<div class="dashboard-container">
+    <!-- بطاقات الأيقونات للتنقل -->
+    <div class="icon-cards-container">
+        <a href="{% url 'inventory:product_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #4e73df;">
+                <i class="fas fa-box"></i>
+            </div>
+            <div class="icon-card-title">المنتجات</div>
+            <div class="icon-card-subtitle">إدارة المنتجات والمخزون</div>
+        </a>
+        
+        <a href="{% url 'inventory:category_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #1cc88a;">
+                <i class="fas fa-tags"></i>
+            </div>
+            <div class="icon-card-title">التصنيفات</div>
+            <div class="icon-card-subtitle">إدارة فئات المنتجات</div>
+        </a>
+        
+        <a href="{% url 'inventory:transaction_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #36b9cc;">
+                <i class="fas fa-exchange-alt"></i>
+            </div>
+            <div class="icon-card-title">حركات المخزون</div>
+            <div class="icon-card-subtitle">تتبع حركة المنتجات</div>
+        </a>
+        
+        <a href="{% url 'inventory:adjustment_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #f6c23e;">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <div class="icon-card-title">تسويات المخزون</div>
+            <div class="icon-card-subtitle">ضبط وتعديل المخزون</div>
+        </a>
+        
+        <a href="{% url 'inventory:purchase_order_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #e74a3b;">
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+            <div class="icon-card-title">طلبات الشراء</div>
+            <div class="icon-card-subtitle">إدارة طلبات الشراء</div>
+        </a>
+        
+        <a href="{% url 'inventory:supplier_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #5a5c69;">
+                <i class="fas fa-truck"></i>
+            </div>
+            <div class="icon-card-title">الموردين</div>
+            <div class="icon-card-subtitle">إدارة الموردين</div>
+        </a>
+        
+        <a href="{% url 'inventory:warehouse_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #6f42c1;">
+                <i class="fas fa-warehouse"></i>
+            </div>
+            <div class="icon-card-title">المستودعات</div>
+            <div class="icon-card-subtitle">إدارة المستودعات</div>
+        </a>
+        
+        <a href="{% url 'inventory:warehouse_location_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #fd7e14;">
+                <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <div class="icon-card-title">مواقع التخزين</div>
+            <div class="icon-card-subtitle">إدارة مواقع التخزين</div>
+        </a>
+        
+        <a href="{% url 'inventory:report_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #20c9a6;">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="icon-card-title">التقارير</div>
+            <div class="icon-card-subtitle">تقارير المخزون</div>
+        </a>
+        
+        <a href="{% url 'inventory:product_bulk_upload' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #28a745;">
+                <i class="fas fa-upload"></i>
+            </div>
+            <div class="icon-card-title">رفع منتجات</div>
+            <div class="icon-card-subtitle">إضافة منتجات من إكسل</div>
+        </a>
+        
+        <a href="{% url 'inventory:bulk_stock_update' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #ffc107;">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+            <div class="icon-card-title">تحديث المخزون</div>
+            <div class="icon-card-subtitle">تحديث كميات بالجملة</div>
+        </a>
+        
+        <a href="{% url 'inventory:download_excel_template' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #17a2b8;">
+                <i class="fas fa-download"></i>
+            </div>
+            <div class="icon-card-title">تحميل القالب</div>
+            <div class="icon-card-subtitle">قالب ملف الإكسل</div>
+        </a>
+
+        <a href="{% url 'cutting:order_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #6f42c1;">
+                <i class="fas fa-cut"></i>
+            </div>
+            <div class="icon-card-title">أوامر التقطيع</div>
+            <div class="icon-card-subtitle">إدارة أوامر التقطيع والخصم</div>
+        </a>
+
+        <a href="{% url 'inventory:alert_list' %}" class="icon-card">
+            <div class="icon-card-icon" style="color: #e74a3b;">
+                <i class="fas fa-bell"></i>
+            </div>
+            <div class="icon-card-title">التنبيهات</div>
+            <div class="icon-card-subtitle">تنبيهات المخزون</div>
+        </a>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="stats-cards-container">
+        <div class="stat-card">
+            <div class="stat-card-icon">
+                <i class="fas fa-box"></i>
+            </div>
+            <div class="stat-card-content">
+                <div class="stat-card-title">إجمالي المنتجات</div>
+                <div class="stat-card-value">{{ total_products }}</div>
+                <div class="stat-card-change positive">
+                    <i class="fas fa-arrow-up"></i> 5% منذ الشهر الماضي
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h5 class="card-title">منتجات منخفضة المخزون</h5>
-                    <p class="display-6 text-danger">{{ low_stock_products_count }}</p>
+        
+        <div class="stat-card">
+            <div class="stat-card-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-card-content">
+                <div class="stat-card-title">منتجات منخفضة المخزون</div>
+                <div class="stat-card-value">{{ low_stock_products_count }}</div>
+                <div class="stat-card-change negative">
+                    <i class="fas fa-arrow-up"></i> 12% منذ الأسبوع الماضي
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h5 class="card-title">أصناف</h5>
-                    <p class="display-6">{{ total_categories }}</p>
+        
+        <div class="stat-card">
+            <div class="stat-card-icon">
+                <i class="fas fa-tags"></i>
+            </div>
+            <div class="stat-card-content">
+                <div class="stat-card-title">التصنيفات</div>
+                <div class="stat-card-value">{{ total_categories }}</div>
+                <div class="stat-card-change positive">
+                    <i class="fas fa-arrow-up"></i> 3% منذ الشهر الماضي
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-icon">
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+            <div class="stat-card-content">
+                <div class="stat-card-title">طلبات شراء معلقة</div>
+                <div class="stat-card-value">{{ pending_purchase_orders }}</div>
+                <div class="stat-card-change negative">
+                    <i class="fas fa-arrow-down"></i> 8% منذ الأسبوع الماضي
                 </div>
             </div>
         </div>
     </div>
-    <h4>أحدث المنتجات</h4>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>الاسم</th>
-                <th>الوصف</th>
-                <th>المخزون</th>
-                <th>الحد الأدنى</th>
-                <th>التصنيف</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for product in recent_products %}
-            <tr>
-                <td>{{ product.name }}</td>
-                <td>{{ product.description }}</td>
-                <td>{{ product.stock }}</td>
-                <td>{{ product.minimum_stock }}</td>
-                <td>{{ product.category }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5">لا يوجد منتجات حديثاً.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+    <!-- الرسوم البيانية -->
+    <div class="row">
+        <div class="col-xl-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h4 class="chart-title">المخزون حسب الفئة</h4>
+                    <div class="chart-actions">
+                        <button class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-download"></i> تصدير
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-body">
+                    <canvas id="stockByCategoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h4 class="chart-title">حركة المخزون (آخر 30 يوم)</h4>
+                    <div class="chart-actions">
+                        <button class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-download"></i> تصدير
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-body">
+                    <canvas id="stockMovementChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- المنتجات منخفضة المخزون -->
+    <div class="data-table-container">
+        <div class="data-table-header">
+            <h4 class="data-table-title">المنتجات منخفضة المخزون</h4>
+            <div class="data-table-actions">
+                <a href="{% url 'inventory:product_list' %}?filter=low_stock" class="btn btn-primary btn-sm">
+                    عرض الكل
+                </a>
+            </div>
+        </div>
+        <div class="data-table-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>المنتج</th>
+                            <th>الكود</th>
+                            <th>الفئة</th>
+                            <th>المخزون الحالي</th>
+                            <th>الحد الأدنى</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in low_stock_products %}
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.code }}</td>
+                            <td>{{ product.category }}</td>
+                            <td>
+                                <span class="badge bg-danger">{{ product.current_stock_level|default:0 }}</span>
+                            </td>
+                            <td>{{ product.minimum_stock }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'inventory:product_detail' product.id %}" class="btn btn-info btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:transaction_create' product.id %}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">لا توجد منتجات منخفضة المخزون</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- آخر حركات المخزون -->
+    <div class="data-table-container">
+        <div class="data-table-header">
+            <h4 class="data-table-title">آخر حركات المخزون</h4>
+            <div class="data-table-actions">
+                <a href="{% url 'inventory:stock_movement_report' %}" class="btn btn-primary btn-sm">
+                    عرض الكل
+                </a>
+            </div>
+        </div>
+        <div class="data-table-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>المنتج</th>
+                            <th>نوع الحركة</th>
+                            <th>الكمية</th>
+                            <th>السبب</th>
+                            <th>بواسطة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in recent_transactions %}
+                        <tr>
+                            <td>{{ transaction.date|date:"Y-m-d H:i" }}</td>
+                            <td>{{ transaction.product.name }}</td>
+                            <td>
+                                <span class="badge {% if transaction.transaction_type == 'in' %}bg-success{% elif transaction.transaction_type == 'out' %}bg-danger{% else %}bg-info{% endif %}">
+                                    {{ transaction.get_transaction_type_display }}
+                                </span>
+                            </td>
+                            <td>{{ transaction.quantity }}</td>
+                            <td>{{ transaction.get_reason_display }}</td>
+                            <td>{{ transaction.created_by.get_full_name }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">لا توجد حركات مخزون حديثة</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+    // بيانات الرسوم البيانية
+    const stockByCategoryData = {
+        labels: [{% for category in stock_by_category %}'{{ category.name }}',{% endfor %}],
+        data: [{% for category in stock_by_category %}{{ category.stock }},{% endfor %}]
+    };
+    
+    const stockMovementData = {
+        labels: [{% for date in stock_movement_dates %}'{{ date|date:"d/m" }}',{% endfor %}],
+        inData: [{% for value in stock_movement_in %}{{ value }},{% endfor %}],
+        outData: [{% for value in stock_movement_out %}{{ value }},{% endfor %}]
+    };
+</script>
+<script src="{% static 'js/inventory-dashboard.js' %}"></script>
 {% endblock %}

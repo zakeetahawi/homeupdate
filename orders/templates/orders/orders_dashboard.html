@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}داشبورد الطلبات - نظام الخواجه{% endblock %}
+
+{% block extra_css %}
+<style>
+.dashboard-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    height: 200px;
+    text-decoration: none;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    text-decoration: none;
+}
+
+.card-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.card-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.card-subtitle {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+/* ألوان البطاقات - مشابهة لقسم المعاينات */
+.inspection-card {
+    background: #0d6efd;
+    color: white;
+}
+
+.installation-card {
+    background: #198754;
+    color: white;
+}
+
+.accessory-card {
+    background: #ffc107;
+    color: white;
+}
+
+.tailoring-card {
+    background: #dc3545;
+    color: white;
+}
+
+/* بطاقات الإحصائيات العامة */
+.stats-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    text-align: center;
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.stats-card.total-orders {
+    border-left: 4px solid #0d6efd;
+}
+
+.stats-card.pending-orders {
+    border-left: 4px solid #ffc107;
+}
+
+.stats-card.completed-orders {
+    border-left: 4px solid #198754;
+}
+
+.stats-card.total-revenue {
+    border-left: 4px solid #dc3545;
+}
+
+.stats-section {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-top: 2rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #8B4513;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+}
+
+.recent-orders {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    margin-top: 2rem;
+}
+
+.order-item {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+}
+
+.order-item:hover {
+    background-color: #f8f9fa;
+}
+
+.order-item:last-child {
+    border-bottom: none;
+}
+
+.page-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #198754 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: 15px;
+}
+
+.action-btn {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #0d6efd 0%, #198754 100%);
+    color: white;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.year-filter {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header text-center">
+        <h1><i class="fas fa-tachometer-alt me-3"></i>داشبورد الطلبات</h1>
+        <p class="mb-0">نظرة شاملة على جميع أنواع الطلبات في النظام</p>
+        {% if user.get_user_role_display %}
+        <small class="d-block mt-2 text-white-50">
+            <i class="fas fa-user-tag me-1"></i>{{ user.get_user_role_display }}
+            {% if user.is_region_manager and user.managed_branches.exists %}
+                - مسؤول عن {{ user.managed_branches.count }} فرع
+            {% elif user.is_branch_manager and user.branch %}
+                - {{ user.branch.name }}
+            {% elif user.is_salesperson %}
+                - طلباتي الشخصية
+            {% endif %}
+        </small>
+        {% endif %}
+    </div>
+
+    <!-- Dashboard Cards -->
+    <div class="row mb-4">
+        <!-- بطاقة طلبات المعاينة -->
+        <div class="col-md-3">
+            <a href="{% url 'orders:inspection_orders' %}" style="text-decoration: none;">
+                <div class="card inspection-card text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">طلبات المعاينة</h6>
+                                <h2 class="mb-0">{{ inspection_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-search fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- بطاقة طلبات التركيب -->
+        <div class="col-md-3">
+            <a href="{% url 'orders:installation_orders' %}" style="text-decoration: none;">
+                <div class="card installation-card text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">طلبات التركيب</h6>
+                                <h2 class="mb-0">{{ installation_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-tools fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- بطاقة طلبات الإكسسوار -->
+        <div class="col-md-3">
+            <a href="{% url 'orders:accessory_orders' %}" style="text-decoration: none;">
+                <div class="card accessory-card text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">طلبات الإكسسوار</h6>
+                                <h2 class="mb-0">{{ accessory_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-gem fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- بطاقة طلبات التسليم -->
+        <div class="col-md-3">
+            <a href="{% url 'orders:tailoring_orders' %}" style="text-decoration: none;">
+                <div class="card tailoring-card text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">طلبات التسليم</h6>
+                                <h2 class="mb-0">{{ tailoring_count|default_if_none:0 }}</h2>
+                            </div>
+                            <i class="fas fa-shipping-fast fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="mb-4">
+        <h3 class="text-center mb-4"><i class="fas fa-chart-bar me-2"></i>إحصائيات عامة</h3>
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="stats-card total-orders">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">إجمالي الطلبات</h6>
+                            <h2 class="mb-0 text-primary">{{ total_orders|default_if_none:0 }}</h2>
+                        </div>
+                        <i class="fas fa-shopping-cart fa-2x text-primary opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="stats-card pending-orders">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">قيد الانتظار والموافقة</h6>
+                            <h2 class="mb-0 text-warning">{{ pending_orders|default_if_none:0 }}</h2>
+                        </div>
+                        <i class="fas fa-clock fa-2x text-warning opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="stats-card completed-orders">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">طلبات مكتملة</h6>
+                            <h2 class="mb-0 text-success">{{ completed_orders|default_if_none:0 }}</h2>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x text-success opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            {% if not hide_revenue %}
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="stats-card total-revenue">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">إجمالي الإيرادات</h6>
+                            <h2 class="mb-0 text-danger">{{ currency_symbol }}{{ total_revenue|floatformat:0|default_if_none:0 }}</h2>
+                        </div>
+                        <i class="fas fa-money-bill-wave fa-2x text-danger opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- بطاقات توضيحية للمعاينات -->
+        <div class="row mt-3">
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="stats-card border-info">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">معاينات قيد الانتظار</h6>
+                            <h3 class="mb-0 text-info">{{ pending_inspections_count|default_if_none:0 }}</h3>
+                            <small class="text-muted">من جدول المعاينات</small>
+                        </div>
+                        <i class="fas fa-search fa-2x text-info opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="stats-card border-warning">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">طلبات لها معاينات قيد الانتظار</h6>
+                            <h3 class="mb-0 text-warning">{{ orders_with_pending_inspections|default_if_none:0 }}</h3>
+                            <small class="text-muted">طلبات تحتاج معاينة</small>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-3">
+                <div class="stats-card border-secondary">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-1">الفرق</h6>
+                            <h3 class="mb-0 text-secondary">{{ orders_without_inspections|default_if_none:0 }}</h3>
+                            <small class="text-muted">طلبات بدون معاينات</small>
+                        </div>
+                        <i class="fas fa-minus fa-2x text-secondary opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders and Quick Actions -->
+    <div class="row mt-4">
+        <!-- Recent Orders -->
+        <div class="col-lg-8">
+            <div class="recent-orders">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4><i class="fas fa-clock me-2"></i>أحدث الطلبات</h4>
+                    <a href="{% url 'orders:order_list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-list me-1"></i>عرض الكل
+                    </a>
+                </div>
+                
+                {% if recent_orders %}
+                    {% for order in recent_orders %}
+                    <div class="order-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <strong>{{ order.order_number }}</strong>
+                                <br>
+                                <small class="text-muted">{{ order.customer.name }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                {% load order_extras %}
+                                {% with order_types=order.get_selected_types_list %}
+                                    {% if order_types %}
+                                        {% for type in order_types %}
+                                            {% get_order_type_badge type order %}
+                                            {% if not forloop.last %} {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                            <div class="col-md-3">
+                                {% with display_info=order.get_display_status %}
+                                    <span class="badge {{ order.get_display_status_badge_class }}">
+                                        <i class="{{ order.get_display_status_icon }} me-1"></i>
+                                        {{ order.get_display_status_text }}
+                                    </span>
+                                {% endwith %}
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <small class="text-muted">{{ order.created_at|date:"Y-m-d" }}</small>
+                                <br>
+                                <a href="{% url 'orders:order_detail' order.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">لا توجد طلبات حديثة</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-lg-4">
+            <div class="recent-orders">
+                <h4 class="mb-3"><i class="fas fa-bolt me-2"></i>إجراءات سريعة</h4>
+                
+                <div class="d-grid gap-2">
+                    {% if perms.orders.add_order %}
+                    <a href="{% url 'orders:order_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>إنشاء طلب جديد
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'orders:order_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-2"></i>عرض جميع الطلبات
+                    </a>
+                    
+                    {% if perms.orders.view_orders_reports %}
+                    <a href="#" class="btn btn-outline-info">
+                        <i class="fas fa-chart-line me-2"></i>التقارير والإحصائيات
+                    </a>
+                    {% endif %}
+                    
+                    {% if perms.orders.export_orders %}
+                    <a href="#" class="btn btn-outline-success">
+                        <i class="fas fa-download me-2"></i>تصدير البيانات
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Status Distribution -->
+                <div class="mt-4">
+                    <h5>توزيع الحالات</h5>
+                    <div class="row text-center">
+                        <div class="col-6 mb-2">
+                            <div class="badge bg-warning text-dark w-100 p-2">
+                                قيد الانتظار: {{ pending_orders }}
+                            </div>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <div class="badge bg-primary w-100 p-2">
+                                قيد التنفيذ: {{ in_progress_orders }}
+                            </div>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <div class="badge bg-success w-100 p-2">
+                                مكتمل: {{ completed_orders }}
+                            </div>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <div class="badge bg-info w-100 p-2">
+                                جاهز للتركيب: {{ ready_install_orders }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// إضافة تأثيرات تفاعلية للبطاقات
+document.addEventListener('DOMContentLoaded', function() {
+    // تأثير hover للبطاقات
+    const cards = document.querySelectorAll('.dashboard-card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container py-3" style="direction: rtl;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="m-0">{{ page_title }}</h3>
+    <div class="d-flex gap-2">
+      <a href="{% url 'orders:invoice_editor' %}" class="btn btn-primary">إنشاء قالب جديد</a>
+      <a href="{% url 'orders:template_analytics' %}" class="btn btn-outline-secondary">تحليلات الاستخدام</a>
+    </div>
+  </div>
+
+  <form method="get" class="card card-body mb-3" style="border:1px solid #e9ecef;">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">بحث بالاسم</label>
+        <input type="text" name="search" value="{{ search_query }}" class="form-control" placeholder="ابحث عن قالب...">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">نوع القالب</label>
+        <select name="type" class="form-select">
+          <option value="">الكل</option>
+          {% for code,label in template_types %}
+            <option value="{{ code }}" {% if template_type == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">الحالة</label>
+        <select name="active" class="form-select">
+          <option value="">الكل</option>
+          <option value="1" {% if is_active == '1' %}selected{% endif %}>نشط</option>
+          <option value="0" {% if is_active == '0' %}selected{% endif %}>غير نشط</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-grid">
+        <button class="btn btn-success">تصفية</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>النوع</th>
+          <th class="text-center">افتراضي</th>
+          <th class="text-center">نشط</th>
+          <th>آخر تحديث</th>
+          <th class="text-center">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if page_obj.object_list %}
+          {% for t in page_obj.object_list %}
+          <tr>
+            <td>{{ t.name }}</td>
+            <td>{{ t.get_template_type_display }}</td>
+            <td class="text-center">{% if t.is_default %}<span class="badge bg-primary">افتراضي</span>{% else %}-{% endif %}</td>
+            <td class="text-center">{% if t.is_active %}<span class="badge bg-success">نشط</span>{% else %}<span class="badge bg-secondary">موقوف</span>{% endif %}</td>
+            <td>{{ t.updated_at|date:"Y-m-d H:i" }}</td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm" role="group">
+                <a href="{% url 'orders:invoice_editor_edit' t.id %}" class="btn btn-outline-primary">تحرير</a>
+                {% if not t.is_default %}
+                <button class="btn btn-outline-success" onclick="return setDefault({{ t.id }})">تعيين كافتراضي</button>
+                {% else %}
+                <button class="btn btn-outline-success" disabled>افتراضي</button>
+                {% endif %}
+                <button class="btn btn-outline-secondary" onclick="return cloneTemplate({{ t.id }}, '{{ t.name|escapejs }}')">نسخ</button>
+                <button class="btn btn-outline-danger" onclick="return deleteTemplate({{ t.id }}, '{{ t.name|escapejs }}')">حذف</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted">لا توجد قوالب مطابقة.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <nav>
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&type={{ template_type }}&active={{ is_active }}">السابق</a></li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">السابق</span></li>
+      {% endif %}
+
+      <li class="page-item disabled"><span class="page-link">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span></li>
+
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&type={{ template_type }}&active={{ is_active }}">التالي</a></li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">التالي</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+
+<script>
+  const CSRF_TOKEN = '{{ csrf_token }}';
+
+  async function setDefault(id){
+    if (!confirm('تعيين هذا القالب كافتراضي؟')) return false;
+    const resp = await fetch(`/orders/api/templates/${id}/set-default/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
+    const data = await resp.json().catch(()=>({success:false}));
+    if (data.success){ location.reload(); }
+    else { alert(data.error || 'تعذر التعيين كافتراضي'); }
+    return false;
+  }
+
+  async function cloneTemplate(id, name){
+    const newName = prompt('اسم النسخة الجديدة:', name + ' - نسخة');
+    if (!newName) return false;
+    const resp = await fetch(`/orders/api/templates/${id}/clone/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
+    const data = await resp.json().catch(()=>({success:false}));
+    if (data.success){ location.reload(); }
+    else { alert(data.error || 'تعذر النسخ'); }
+    return false;
+  }
+
+  async function deleteTemplate(id, name){
+    if (!confirm(`هل تريد حذف القالب: ${name}؟`)) return false;
+    const resp = await fetch(`/orders/api/templates/${id}/delete/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
+    const data = await resp.json().catch(()=>({success:false}));
+    if (data.success){ location.reload(); }
+    else { alert(data.error || 'تعذر الحذف'); }
+    return false;
+  }
+</script>
+{% endblock %}

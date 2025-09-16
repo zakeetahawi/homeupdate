@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block styles %}
+<style>
+    .user-info {
+        background-color: #f8f9fc;
+        padding: 15px;
+        border-radius: 0.35rem;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
+            <div>
+                <a href="{% url 'accounts:add_user_role' user_obj.id %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> إضافة دور
+                </a>
+                <a href="{% url 'admin:accounts_user_change' user_obj.id %}" class="btn btn-sm btn-secondary">
+                    <i class="fas fa-user-edit"></i> تعديل المستخدم
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- معلومات المستخدم -->
+            <div class="user-info">
+                <h5><i class="fas fa-user"></i> معلومات المستخدم</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">اسم المستخدم:</dt>
+                            <dd class="col-sm-8">{{ user_obj.username }}</dd>
+                            
+                            <dt class="col-sm-4">الاسم الكامل:</dt>
+                            <dd class="col-sm-8">
+                                {{ user_obj.first_name }} {{ user_obj.last_name }}
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">البريد الإلكتروني:</dt>
+                            <dd class="col-sm-8">{{ user_obj.email|default:"-" }}</dd>
+                            
+                            <dt class="col-sm-4">الفرع:</dt>
+                            <dd class="col-sm-8">{{ user_obj.branch|default:"-" }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <dl class="row">
+                            <dt class="col-sm-2">الصلاحيات:</dt>
+                            <dd class="col-sm-10">
+                                {% if user_obj.is_superuser %}
+                                <span class="badge bg-danger">مدير النظام</span>
+                                {% endif %}
+                                {% if user_obj.is_staff %}
+                                <span class="badge bg-primary">مدير</span>
+                                {% endif %}
+                                {% if user_obj.is_inspection_technician %}
+                                <span class="badge bg-info">فني معاينة</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- جدول أدوار المستخدم -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="roles-table" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>الدور</th>
+                            <th>الوصف</th>
+                            <th>عدد الصلاحيات</th>
+                            <th>نوع الدور</th>
+                            <th>تاريخ الإسناد</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user_role in user_roles %}
+                        <tr>
+                            <td>{{ user_role.role.name }}</td>
+                            <td>{{ user_role.role.description|default:"-" }}</td>
+                            <td>{{ user_role.role.permissions.count }}</td>
+                            <td>
+                                {% if user_role.role.is_system_role %}
+                                <span class="badge bg-primary">نظام</span>
+                                {% else %}
+                                <span class="badge bg-secondary">مخصص</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user_role.assigned_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{% url 'accounts:remove_user_role' user_obj.id user_role.role.id %}" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash-alt"></i> إزالة
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">لا توجد أدوار مسندة لهذا المستخدم</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

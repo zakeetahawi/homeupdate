@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}تحديد جميع الإشعارات كمقروءة{% endblock %}
+
+{% block extra_css %}
+<style>
+.confirmation-card {
+    max-width: 500px;
+    margin: 2rem auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.confirmation-icon {
+    font-size: 4rem;
+    color: #ffc107;
+    margin-bottom: 1rem;
+}
+
+.btn-confirm {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    color: white;
+}
+
+.btn-cancel {
+    background: #6c757d;
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    color: white;
+}
+
+.stats-box {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+}
+
+.stats-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.loading-spinner {
+    display: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="confirmation-card card">
+        <div class="card-body text-center p-5">
+            <!-- أيقونة التحذير -->
+            <div class="confirmation-icon">
+                <i class="fas fa-question-circle"></i>
+            </div>
+            
+            <!-- العنوان -->
+            <h2 class="mb-4">تحديد جميع الإشعارات كمقروءة</h2>
+            
+            <!-- إحصائيات الإشعارات -->
+            <div class="stats-box">
+                <div class="stats-number">{{ unread_count }}</div>
+                <div>إشعار غير مقروء</div>
+            </div>
+            
+            <!-- رسالة التأكيد -->
+            <p class="lead mb-4">
+                هل أنت متأكد من أنك تريد تحديد جميع الإشعارات الـ <strong>{{ unread_count }}</strong> كمقروءة؟
+            </p>
+            
+            <p class="text-muted mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                لا يمكن التراجع عن هذا الإجراء
+            </p>
+            
+            <!-- نموذج التأكيد -->
+            <form method="post" action="{% url 'notifications:mark_all_read' %}" id="confirm-form">
+                {% csrf_token %}
+                
+                <div class="d-flex justify-content-center gap-3">
+                    <!-- زر التأكيد -->
+                    <button type="submit" class="btn btn-confirm" id="confirm-btn">
+                        <i class="fas fa-check me-2"></i>
+                        نعم، تحديد الكل كمقروء
+                    </button>
+                    
+                    <!-- زر الإلغاء -->
+                    <a href="{% url 'notifications:list' %}" class="btn btn-cancel">
+                        <i class="fas fa-times me-2"></i>
+                        إلغاء
+                    </a>
+                </div>
+                
+                <!-- مؤشر التحميل -->
+                <div class="loading-spinner mt-3" id="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                    <p class="mt-2">جاري تحديث الإشعارات...</p>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('confirm-form');
+    const confirmBtn = document.getElementById('confirm-btn');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    
+    form.addEventListener('submit', function(e) {
+        // إظهار مؤشر التحميل
+        confirmBtn.style.display = 'none';
+        loadingSpinner.style.display = 'block';
+        
+        // السماح بإرسال النموذج
+        return true;
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="odoo-dashboard">
+    <!-- شريط الأدوات العلوي -->
+    <div class="odoo-toolbar">
+        <div class="odoo-toolbar-left">
+            <h1>{{ database.name }}</h1>
+        </div>
+        <div class="odoo-toolbar-right">
+            <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> العودة
+            </a>
+            {% if not database.is_active %}
+            <a href="{% url 'odoo_db_manager:activate_database' database.id %}" class="btn btn-primary">
+                <i class="fas fa-check"></i> تنشيط
+            </a>
+            {% endif %}
+            <a href="{% url 'odoo_db_manager:delete_database' database.id %}" class="btn btn-danger">
+                <i class="fas fa-trash"></i> حذف
+            </a>
+        </div>
+    </div>
+
+    <!-- تفاصيل قاعدة البيانات -->
+    <div class="odoo-detail">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">معلومات قاعدة البيانات</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <tr>
+                                <th>الاسم</th>
+                                <td>{{ database.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>النوع</th>
+                                <td>{{ database.get_db_type_display }}</td>
+                            </tr>
+                            <tr>
+                                <th>الحالة</th>
+                                <td>
+                                    {% if database.is_active %}
+                                    <span class="badge bg-success">نشطة</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">غير نشطة</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>حالة الإنشاء</th>
+                                <td>
+                                    {% if database.status %}
+                                    <span class="badge bg-success">تم الإنشاء بنجاح</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">فشل الإنشاء</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if not database.status %}
+                            <tr>
+                                <th>رسالة الخطأ</th>
+                                <td>
+                                    <div class="alert alert-danger mb-0 py-1">{{ database.error_message }}</div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th>تاريخ الإنشاء</th>
+                                <td>{{ database.created_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <th>تاريخ التحديث</th>
+                                <td>{{ database.updated_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">معلومات الاتصال</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <tr>
+                                <th>المضيف</th>
+                                <td>{{ database.connection_info.HOST|default:"localhost" }}</td>
+                            </tr>
+                            <tr>
+                                <th>المنفذ</th>
+                                <td>{{ database.connection_info.PORT|default:"5432" }}</td>
+                            </tr>
+                            <tr>
+                                <th>اسم قاعدة البيانات</th>
+                                <td>
+                                    <strong>{{ database.name }}</strong>
+                                    {% if database.connection_info.NAME %}
+                                        <div class="mt-1">
+                                            <small class="text-muted">اسم الملف/قاعدة البيانات الفعلي:</small>
+                                            <code>{{ database.connection_info.NAME }}</code>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>اسم المستخدم</th>
+                                <td>{{ database.connection_info.USER|default:"" }}</td>
+                            </tr>
+                            <tr>
+                                <th>سلسلة الاتصال</th>
+                                <td><code>{{ database.connection_string }}</code></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تم حذف قسم النسخ الاحتياطية - استخدم backup_system بدلاً من ذلك -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// التحقق من نجاح إنشاء قاعدة البيانات وعرض رسالة SweetAlert
+{% if database_created_success %}
+$(document).ready(function() {
+    // عرض رسالة SweetAlert للنجاح
+    let htmlContent = `
+        <div class="text-right">
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                تم إنشاء قاعدة البيانات "<strong>{{ created_database_name }}</strong>" بنجاح!
+            </div>
+            
+            {% if migrations_applied %}
+            <div class="alert alert-info">
+                <i class="fas fa-database"></i>
+                تم تطبيق جداول قاعدة البيانات (migrations) بنجاح.
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                لم يتم تطبيق جداول قاعدة البيانات. قد تحتاج إلى تطبيق migrations يدوياً.
+            </div>
+            {% endif %}
+            
+            {% if default_user_created %}
+            <div class="alert alert-info">
+                <i class="fas fa-user-plus"></i>
+                تم إنشاء مستخدم افتراضي:
+                <ul class="mt-2 mb-0">
+                    <li><strong>اسم المستخدم:</strong> admin</li>
+                    <li><strong>كلمة المرور:</strong> admin123</li>
+                </ul>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                لم يتم إنشاء مستخدم افتراضي. قد تحتاج إلى إنشاء مستخدم يدوياً.
+            </div>
+            {% endif %}
+            
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle"></i>
+                يرجى حفظ بيانات المستخدم الافتراضي في مكان آمن.
+            </div>
+        </div>
+    `;
+    
+    Swal.fire({
+        title: 'تم إنشاء قاعدة البيانات بنجاح!',
+        html: htmlContent,
+        icon: 'success',
+        confirmButtonText: 'تم',
+        allowOutsideClick: false,
+        customClass: {
+            popup: 'rtl-popup swal-wide',
+            title: 'rtl-title',
+            content: 'rtl-content'
+        },
+        width: '600px'
+    });
+});
+{% endif %}
+</script>
+{% endblock %}

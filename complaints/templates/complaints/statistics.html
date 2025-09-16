@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}إحصائيات الشكاوى - نظام الخواجه{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    .stat-card h3 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .stat-card p {
+        font-size: 1rem;
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+    .chart-container {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">إحصائيات الشكاوى</h1>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card border-left-primary">
+                <h3>{{ stats.total }}</h3>
+                <p>إجمالي الشكاوى</p>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card border-left-info">
+                <h3>{{ stats.new }}</h3>
+                <p>شكاوى جديدة</p>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card border-left-warning">
+                <h3>{{ stats.in_progress }}</h3>
+                <p>قيد المعالجة</p>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card border-left-success">
+                <h3>{{ stats.resolved }}</h3>
+                <p>تم حلها</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row">
+        <div class="col-lg-7 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-4 text-center">الشكاوى حسب الشهر</h5>
+                <canvas id="complaintsByMonthChart"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-5 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-4 text-center">الشكاوى حسب النوع</h5>
+                <canvas id="complaintsByTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Data from Django
+    const byTypeData = {{ by_type|safe }};
+    const byMonthData = {{ by_month|safe }};
+
+    // Complaints by Type Chart (Pie Chart)
+    const typeLabels = byTypeData.map(item => item.complaint_type__name);
+    const typeCounts = byTypeData.map(item => item.count);
+
+    const complaintsByTypeCtx = document.getElementById('complaintsByTypeChart').getContext('2d');
+    new Chart(complaintsByTypeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: typeLabels,
+            datasets: [{
+                label: ' عدد الشكاوى',
+                data: typeCounts,
+                backgroundColor: [
+                    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69'
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            }
+        }
+    });
+
+    // Complaints by Month Chart (Line Chart)
+    const monthLabels = byMonthData.map(item => new Date(item.month).toLocaleDateString('ar-EG-u-nu-latn', { month: 'long', year: 'numeric' }));
+    const monthCounts = byMonthData.map(item => item.count);
+
+    const complaintsByMonthCtx = document.getElementById('complaintsByMonthChart').getContext('2d');
+    new Chart(complaintsByMonthCtx, {
+        type: 'line',
+        data: {
+            labels: monthLabels,
+            datasets: [{
+                label: 'عدد الشكاوى',
+                data: monthCounts,
+                fill: true,
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "تأكيد حذف قاعدة البيانات" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .confirm-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+    .confirm-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+        text-align: center;
+    }
+    .confirm-header i {
+        font-size: 48px;
+        color: #dc3545;
+        margin-bottom: 20px;
+    }
+    .confirm-content {
+        margin-bottom: 30px;
+    }
+    .confirm-footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        text-align: center;
+    }
+    .db-info {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="confirm-container">
+        <div class="confirm-header">
+            <i class="fas fa-trash-alt"></i>
+            <h1>{% trans "تأكيد حذف قاعدة البيانات" %}</h1>
+        </div>
+        
+        <div class="confirm-content">
+            <div class="alert alert-danger">
+                <p>{% trans "هل أنت متأكد من أنك تريد حذف إعداد قاعدة البيانات هذا؟" %}</p>
+                <p><strong>{% trans "تحذير:" %}</strong> {% trans "هذه العملية لا يمكن التراجع عنها!" %}</p>
+            </div>
+            
+            <div class="db-info">
+                <h5>{% trans "معلومات قاعدة البيانات:" %}</h5>
+                <p><strong>{% trans "الاسم:" %}</strong> {{ db_config.name }}</p>
+                <p><strong>{% trans "النوع:" %}</strong> {{ db_config.get_db_type_display }}</p>
+                {% if db_config.db_type != 'sqlite' %}
+                    <p><strong>{% trans "المضيف:" %}</strong> {{ db_config.host }}</p>
+                    <p><strong>{% trans "اسم قاعدة البيانات:" %}</strong> {{ db_config.database_name }}</p>
+                {% else %}
+                    <p><strong>{% trans "مسار الملف:" %}</strong> {{ db_config.connection_string|slice:"10:" }}</p>
+                {% endif %}
+                <p><strong>{% trans "الحالة:" %}</strong> 
+                    {% if db_config.is_active %}
+                        <span class="text-success">{% trans "نشط" %}</span>
+                    {% else %}
+                        <span class="text-danger">{% trans "غير نشط" %}</span>
+                    {% endif %}
+                </p>
+                <p><strong>{% trans "افتراضي:" %}</strong> 
+                    {% if db_config.is_default %}
+                        <span class="text-primary">{% trans "نعم" %}</span>
+                    {% else %}
+                        <span>{% trans "لا" %}</span>
+                    {% endif %}
+                </p>
+            </div>
+            
+            {% if db_config.is_default %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> {% trans "لا يمكن حذف قاعدة البيانات الافتراضية. يرجى تعيين قاعدة بيانات أخرى كافتراضية أولاً." %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="confirm-footer">
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-lg" {% if db_config.is_default %}disabled{% endif %}>{% trans "نعم، حذف قاعدة البيانات" %}</button>
+                <a href="{% url 'db_manager:database_list' %}" class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

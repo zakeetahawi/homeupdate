@@ -1,0 +1,450 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}جدولة سريعة للتركيب - {{ order.order_number }}{% endblock %}
+
+{% block extra_css %}
+<!-- SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<style>
+    .swal2-popup {
+        font-family: 'Cairo', sans-serif !important;
+        direction: rtl !important;
+    }
+    
+    .swal2-title {
+        font-family: 'Cairo', sans-serif !important;
+        font-weight: bold !important;
+    }
+    
+    .swal2-content {
+        font-family: 'Cairo', sans-serif !important;
+    }
+    
+    .swal2-confirm {
+        font-family: 'Cairo', sans-serif !important;
+        font-weight: bold !important;
+    }
+    
+    .swal2-cancel {
+        font-family: 'Cairo', sans-serif !important;
+        font-weight: bold !important;
+    }
+    
+    .card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom: none;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        border: 2px solid #e3e6f0;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .btn {
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    }
+
+    .btn-secondary {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        border: none;
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+    }
+
+    .alert {
+        border-radius: 8px;
+        border: none;
+    }
+
+    .alert-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+    }
+
+    .invalid-feedback {
+        color: #dc3545;
+        font-weight: 600;
+    }
+
+    .form-text {
+        color: #6c757d;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-calendar-plus"></i>
+            جدولة سريعة للتركيب
+        </h1>
+        <a href="{% url 'installations:dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            العودة للوحة التحكم
+        </a>
+    </div>
+
+    <!-- معلومات الطلب -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle"></i>
+                        معلومات الطلب
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>رقم الطلب:</strong> {{ order.order_number }}</p>
+                            <p><strong>العميل:</strong> {{ order.customer.name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>تاريخ الطلب:</strong> {{ order.created_at|date:"Y-m-d" }}</p>
+                            <p><strong>المبلغ الإجمالي:</strong> {{ order.total_amount|floatformat:2 }} ج.م</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج الجدولة -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-calendar-check"></i>
+                        جدولة التركيب
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-exclamation-triangle"></i> يرجى تصحيح الأخطاء التالية:</h6>
+                                {{ form.errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.scheduled_date.id_for_label }}">
+                                        <i class="fas fa-calendar"></i>
+                                        {{ form.scheduled_date.label }}
+                                    </label>
+                                    {{ form.scheduled_date }}
+                                    {% if form.scheduled_date.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ form.scheduled_date.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.scheduled_date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.scheduled_date.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.scheduled_time.id_for_label }}">
+                                        <i class="fas fa-clock"></i>
+                                        {{ form.scheduled_time.label }}
+                                    </label>
+                                    {{ form.scheduled_time }}
+                                    {% if form.scheduled_time.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ form.scheduled_time.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.scheduled_time.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.scheduled_time.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.team.id_for_label }}">
+                                        <i class="fas fa-users"></i>
+                                        {{ form.team.label }}
+                                    </label>
+                                    {{ form.team }}
+                                    {% if form.team.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ form.team.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.team.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.team.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.location_type.id_for_label }}">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        {{ form.location_type.label }}
+                                    </label>
+                                    {{ form.location_type }}
+                                    {% if form.location_type.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ form.location_type.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.location_type.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.location_type.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="{{ form.location_address.id_for_label }}">
+                                        <i class="fas fa-map"></i>
+                                        {{ form.location_address.label }}
+                                        <button type="button" class="btn btn-sm btn-outline-info ml-2" onclick="updateCustomerAddress()">
+                                            <i class="fas fa-sync-alt"></i>
+                                            تحديث من معلومات العميل
+                                        </button>
+                                    </label>
+                                    {{ form.location_address }}
+                                    {% if form.location_address.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ form.location_address.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.location_address.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.location_address.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="{{ form.notes.id_for_label }}">
+                                        <i class="fas fa-sticky-note"></i>
+                                        {{ form.notes.label }}
+                                    </label>
+                                    {{ form.notes }}
+                                    {% if form.notes.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ form.notes.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if form.notes.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.notes.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-calendar-plus"></i>
+                                    جدولة التركيب
+                                </button>
+                                <a href="{% url 'installations:dashboard' %}" class="btn btn-secondary btn-lg">
+                                    <i class="fas fa-times"></i>
+                                    إلغاء
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function updateCustomerAddress() {
+    // معلومات العميل من الطلب
+    const customerAddress = `{{ order.customer.address|default:"" }}`;
+    const customerLocationType = `{{ order.customer.location_type|default:"" }}`;
+    
+    let updatedAddress = customerAddress;
+    
+    // إضافة نوع المكان إذا كان متوفراً
+    if (customerLocationType) {
+        const locationTypeDisplay = customerLocationType === 'open' ? 'مفتوح' : 
+                                   customerLocationType === 'compound' ? 'كومبوند' : '';
+        if (locationTypeDisplay) {
+            updatedAddress = `${customerAddress}\nنوع المكان: ${locationTypeDisplay}`;
+        }
+    }
+    
+    // تحديث حقل العنوان
+    document.getElementById('{{ form.location_address.id_for_label }}').value = updatedAddress;
+    
+    // تحديث نوع المكان في القائمة المنسدلة
+    const locationTypeSelect = document.getElementById('{{ form.location_type.id_for_label }}');
+    if (locationTypeSelect) {
+        locationTypeSelect.value = customerLocationType;
+    }
+    
+    // رسالة تأكيد جميلة
+    Swal.fire({
+        title: 'تم التحديث بنجاح!',
+        text: 'تم تحديث العنوان من معلومات العميل',
+        icon: 'success',
+        confirmButtonText: 'حسناً',
+        confirmButtonColor: '#28a745',
+        timer: 2000,
+        timerProgressBar: true
+    });
+}
+
+// تحديث عنوان العميل عند تغيير العنوان
+function updateCustomerAddressFromForm() {
+    const addressField = document.getElementById('{{ form.location_address.id_for_label }}');
+    const locationTypeSelect = document.getElementById('{{ form.location_type.id_for_label }}');
+    
+    if (addressField && addressField.value.trim()) {
+        // إرسال طلب لتحديث عنوان العميل
+        const formData = new FormData();
+        formData.append('address', addressField.value.trim());
+        formData.append('location_type', locationTypeSelect ? locationTypeSelect.value : '');
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        fetch(`/customers/customer/{{ order.customer.id }}/update-address/`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    title: 'تم التحديث بنجاح!',
+                    text: 'تم تحديث عنوان العميل بناءً على العنوان الجديد',
+                    icon: 'success',
+                    confirmButtonText: 'حسناً',
+                    confirmButtonColor: '#28a745',
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+            } else {
+                Swal.fire({
+                    title: 'خطأ في التحديث',
+                    text: data.error || 'حدث خطأ أثناء تحديث عنوان العميل',
+                    icon: 'error',
+                    confirmButtonText: 'حسناً',
+                    confirmButtonColor: '#dc3545'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                title: 'خطأ في التحديث',
+                text: 'حدث خطأ أثناء تحديث عنوان العميل',
+                icon: 'error',
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#dc3545'
+            });
+        });
+    }
+}
+
+// تحديث العنوان تلقائياً عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    // إذا كان حقل العنوان فارغاً، قم بتحديثه من معلومات العميل
+    const addressField = document.getElementById('{{ form.location_address.id_for_label }}');
+    if (addressField && !addressField.value.trim()) {
+        updateCustomerAddress();
+    }
+    
+    // إضافة مستمع لتحديث عنوان العميل عند تغيير العنوان
+    if (addressField) {
+        addressField.addEventListener('blur', function() {
+            if (this.value.trim()) {
+                updateCustomerAddressFromForm();
+            }
+        });
+    }
+});
+
+// تأكيد إرسال النموذج
+document.querySelector('form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    Swal.fire({
+        title: 'تأكيد الجدولة',
+        text: 'هل أنت متأكد من جدولة التركيب؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، جدولة',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // إرسال النموذج
+            this.submit();
+        }
+    });
+});
+</script>
+{% endblock %}
+
+ 

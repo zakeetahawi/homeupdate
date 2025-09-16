@@ -10,20 +10,35 @@ from .models import (
     InspectionNotification
 )
 
-class InspectionEvaluationForm(forms.ModelForm):
-    class Meta:
-        model = InspectionEvaluation
-        fields = ['criteria', 'rating', 'notes']
-        widgets = {
-            'notes': forms.Textarea(attrs={'rows': 4}),
-        }
+class InspectionEvaluationForm(forms.Form):
+    # عرض جميع معايير التقييم دفعة واحدة
+    CRITERIA_CHOICES = [
+        ('location', _('الموقع')),
+        ('condition', _('الحالة')),
+        ('suitability', _('الملاءمة')),
+        ('safety', _('السلامة')),
+        ('accessibility', _('سهولة الوصول')),
+    ]
+    RATING_CHOICES = [
+        (1, _('ضعيف')),
+        (2, _('مقبول')),
+        (3, _('جيد')),
+        (4, _('جيد جداً')),
+        (5, _('ممتاز')),
+    ]
+    notes = forms.CharField(label=_('ملاحظات التقييم'), required=False, widget=forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}))
+    # إضافة حقل تقييم لكل معيار
+    location = forms.ChoiceField(label=_('الموقع'), choices=RATING_CHOICES, widget=forms.RadioSelect)
+    condition = forms.ChoiceField(label=_('الحالة'), choices=RATING_CHOICES, widget=forms.RadioSelect)
+    suitability = forms.ChoiceField(label=_('الملاءمة'), choices=RATING_CHOICES, widget=forms.RadioSelect)
+    safety = forms.ChoiceField(label=_('السلامة'), choices=RATING_CHOICES, widget=forms.RadioSelect)
+    accessibility = forms.ChoiceField(label=_('سهولة الوصول'), choices=RATING_CHOICES, widget=forms.RadioSelect)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields:
-            self.fields[field].widget.attrs.update({
-                'class': 'form-control'
-            })
+            if field != 'notes':
+                self.fields[field].widget.attrs.update({'class': 'form-check-input'})
 
 class InspectionReportForm(forms.ModelForm):
     class Meta:
@@ -109,59 +124,148 @@ class InspectionFilterForm(forms.Form):
     )
 
 class InspectionForm(forms.ModelForm):
+    responsible_employee = forms.ModelChoiceField(
+        queryset=None,
+        label=_('البائع'),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control select2'})
+    )
+    
+    # إضافة حقل تحديث عنوان العميل
+    update_customer_address = forms.CharField(
+        label=_('تحديث عنوان العميل'),
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': _('اتركه فارغاً إذا لم تريد تحديث عنوان العميل')
+        }),
+        help_text=_('إذا تم ملء هذا الحقل، سيتم تحديث العنوان الرئيسي للعميل')
+    )
+
     class Meta:
         model = Inspection
         fields = [
-            'contract_number',
-            'customer',
-            'inspector',
-            'branch',
-            'request_date',
-            'scheduled_date',
-            'status',
-            'result',
-            'notes'
+            'customer', 'inspector', 'request_date',
+            'scheduled_date', 'scheduled_time', 'windows_count', 'notes', 'inspection_file',
+            'branch', 'responsible_employee', 'status', 'result',
+            'update_customer_address'
         ]
         widgets = {
             'request_date': forms.DateInput(attrs={'type': 'date'}),
             'scheduled_date': forms.DateInput(attrs={'type': 'date'}),
+            'scheduled_time': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control',
+                'step': '300'  # 5 دقائق
+            }),
+            'expected_delivery_date': forms.DateInput(attrs={
+                'type': 'date',
+                'readonly': True,
+                'class': 'form-control form-control-sm'
+            }),
             'notes': forms.Textarea(attrs={'rows': 4}),
+            'inspection_file': forms.FileInput(attrs={'accept': '.pdf'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+            'result': forms.Select(attrs={'class': 'form-control'}),
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, order=None, customer=None, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Set inspector queryset to show only active users
-        self.fields['inspector'].queryset = User.objects.filter(is_active=True)
+        # Set inspector queryset - فنيو المعاينة النشطين فقط
+        self.fields['inspector'].queryset = User.objects.filter(
+            is_active=True,
+            is_inspection_technician=True
+        )
         
-        # Set default branch if user is not superuser
+        # Set responsible employee (salesperson) queryset
+        from accounts.models import Salesperson
+        self.fields['responsible_employee'].queryset = Salesperson.objects.filter(is_active=True)
+        
+        # Set branch if user is not superuser
         if user and not user.is_superuser:
             self.fields['branch'].initial = user.branch
             self.fields['branch'].widget.attrs['readonly'] = True
             self.fields['branch'].disabled = True
+            
+        # قفل تاريخ الطلب عند التعديل والحفاظ على قيمته
+        if self.instance.pk:  # في حالة تعديل معاينة موجودة
+            self.fields['request_date'].disabled = True
+            self.fields['request_date'].widget.attrs['readonly'] = True
+            self.initial['request_date'] = self.instance.request_date
+        else:  # في حالة إنشاء معاينة جديدة
+            today = timezone.now().date()
+            self.fields['request_date'].initial = today
+            self.initial['request_date'] = today
+            
+        # إعداد تسميات وخصائص حقول الحالة والنتيجة
+        self.fields['status'].label = _('حالة المعاينة')
+        self.fields['result'].label = _('نتيجة المعاينة')
+        self.fields['status'].widget.attrs.update({'class': 'form-control'})
+        self.fields['result'].widget.attrs.update({'class': 'form-control'})
+        self.fields['result'].required = False  # جعل حقل النتيجة غير إلزامي بشكل مبدئي
+
+        # سيناريو 1: إذا كان هناك طلب مرتبط جديد، قم بتعيين البائع تلقائياً
+        if order and order.salesperson:
+            self.initial['responsible_employee'] = order.salesperson.id
+            self.fields['responsible_employee'].initial = order.salesperson.id
+            self.fields['responsible_employee'].disabled = True
+            self.fields['responsible_employee'].widget.attrs['readonly'] = True
+            self.fields['responsible_employee'].help_text = _('تم تعيين البائع تلقائياً من الطلب المرتبط')
         
+        # سيناريو 2: إذا كانت المعاينة مرتبطة بطلب وتم حفظها
+        elif self.instance.pk and hasattr(self.instance, 'order') and self.instance.order and self.instance.order.salesperson:
+            # تعيين البائع الحالي من الطلب المرتبط
+            self.initial['responsible_employee'] = self.instance.order.salesperson.id
+            self.fields['responsible_employee'].initial = self.instance.order.salesperson.id
+            
+            # إذا لم يكن البائع معيناً بعد في المعاينة، استخدام بائع الطلب
+            if not self.instance.responsible_employee:
+                self.instance.responsible_employee = self.instance.order.salesperson
+            
+            self.fields['responsible_employee'].disabled = True
+            self.fields['responsible_employee'].widget.attrs['readonly'] = True
+            self.fields['responsible_employee'].help_text = _('تم تعيين البائع تلقائياً من الطلب المرتبط')
+        
+        # سيناريو 3: إذا كان البائع موجود بالفعل في المعاينة وهي من طلب
+        elif self.instance.pk and self.instance.is_from_orders:
+            # تأكد من إظهار قيمة البائع الحالية
+            if self.instance.responsible_employee:
+                self.initial['responsible_employee'] = self.instance.responsible_employee.id
+                self.fields['responsible_employee'].initial = self.instance.responsible_employee.id
+            
+            # إذا كان هناك طلب مرتبط لكن لم يتم تعيين البائع، حاول تعيينه من الطلب
+            elif hasattr(self.instance, 'order') and self.instance.order and self.instance.order.salesperson:
+                self.initial['responsible_employee'] = self.instance.order.salesperson.id
+                self.fields['responsible_employee'].initial = self.instance.order.salesperson.id
+                self.instance.responsible_employee = self.instance.order.salesperson
+            
+            self.fields['responsible_employee'].disabled = True
+            self.fields['responsible_employee'].widget.attrs['readonly'] = True
+            self.fields['responsible_employee'].help_text = _('لا يمكن تغيير البائع بعد إنشاء المعاينة من طلب')
+
+        # تثبيت العميل إذا تم تمريره
+        if customer:
+            self.fields['customer'].initial = customer.pk
+            self.fields['customer'].widget.attrs['readonly'] = True
+            self.fields['customer'].disabled = True
+
         # Make fields optional as needed
         self.fields['notes'].required = False
-        self.fields['result'].required = False
         self.fields['customer'].required = False
-        self.fields['contract_number'].required = False
         self.fields['inspector'].required = True
-        
-        # Add Bootstrap classes
-        for field in self.fields:
-            self.fields[field].widget.attrs.update({
-                'class': 'form-control'
-            })
 
-        # Custom labels in Arabic
-        self.fields['contract_number'].label = _('رقم العقد')
+        # Custom labels
         self.fields['customer'].label = _('العميل')
         self.fields['inspector'].label = _('المعاين')
         self.fields['branch'].label = _('الفرع')
         self.fields['request_date'].label = _('تاريخ الطلب')
         self.fields['scheduled_date'].label = _('تاريخ التنفيذ')
-        self.fields['status'].label = _('الحالة')
-        self.fields['result'].label = _('النتيجة')
+        self.fields['scheduled_time'].label = _('وقت التنفيذ')
+        self.fields['windows_count'].label = _('عدد الشبابيك')
+
+        self.fields['inspection_file'].label = _('ملف المعاينة')
         self.fields['notes'].label = _('ملاحظات')
 
     def clean(self):
@@ -171,16 +275,28 @@ class InspectionForm(forms.ModelForm):
         scheduled_date = cleaned_data.get('scheduled_date')
         request_date = cleaned_data.get('request_date')
 
-        # Validation: If status is completed, result is required
-        if status == 'completed' and not result:
-            self.add_error('result', _('يجب تحديد النتيجة عند اكتمال المعاينة'))
+        # إزالة شرط وجوب تحديد النتيجة عند اكتمال المعاينة
+        # يمكن الآن حفظ المعاينة بأي حالة بدون تحديد النتيجة
 
-        # Validation: scheduled_date should be after or equal to request_date
+        # تاريخ التنفيذ يجب أن يكون بعد أو يساوي تاريخ الطلب
         if request_date and scheduled_date and scheduled_date < request_date:
             self.add_error('scheduled_date', _('تاريخ التنفيذ يجب أن يكون بعد أو يساوي تاريخ الطلب'))
 
-        # Validation: scheduled_date is required
+        # تاريخ التنفيذ إلزامي
         if not scheduled_date:
             self.add_error('scheduled_date', _('يجب تحديد تاريخ التنفيذ'))
 
         return cleaned_data
+
+class InspectionSearchForm(forms.Form):
+    q = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': _('بحث بكود العميل أو اسم العميل أو رقم الطلب أو رقم العقد أو رقم الهاتف...')
+        })
+    )
+    branch = forms.CharField(required=False)
+    status = forms.CharField(required=False)
+    from_orders = forms.CharField(required=False)
+    is_duplicated = forms.CharField(required=False)
