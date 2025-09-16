@@ -31,6 +31,13 @@ from django.conf import settings
 
 
 
+from core.mixins import PaginationFixMixin
+from notifications.models import Notification
+from weasyprint import HTML
+
+
+
+
 from .models import ManufacturingOrder, ManufacturingOrderItem, FabricReceipt, FabricReceiptItem
 from orders.models import Order
 from accounts.models import Department
@@ -39,7 +46,7 @@ from accounts.utils import apply_default_year_filter
 logger = logging.getLogger(__name__)
 
 
-class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = ManufacturingOrder
     template_name = 'manufacturing/manufacturingorder_list.html'
     context_object_name = 'manufacturing_orders'
@@ -471,7 +478,7 @@ class ManufacturingOrderListView(LoginRequiredMixin, PermissionRequiredMixin, Li
         return available_statuses
 
 
-class VIPOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class VIPOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """عرض طلبات VIP فقط"""
     model = ManufacturingOrder
     template_name = 'manufacturing/vip_orders_list.html'
@@ -2057,7 +2064,7 @@ def manufacturing_order_detail_redirect(request, pk):
     return redirect('manufacturing:order_detail_by_code', manufacturing_code=manufacturing_order.manufacturing_code)
 
 
-class OverdueOrdersListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class OverdueOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """عرض أوامر التصنيع المتأخرة"""
     model = ManufacturingOrder
     template_name = 'manufacturing/overdue_orders.html'
