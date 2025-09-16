@@ -68,35 +68,53 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
             # تنظيف المستخدمين غير المتصلين أولاً
             OnlineUser.cleanup_offline_users()
 
-            # تحديث أو إنشاء سجل المستخدم المتصل
+            # محاولة الحصول على السجل الموجود لتقليل عمليات الكتابة على DB
             existing_user = OnlineUser.objects.filter(user=user).first()
             login_time = existing_user.login_time if existing_user else now()
 
-            online_user, created = OnlineUser.objects.update_or_create(
-                user=user,
-                defaults={
-                    'ip_address': ip_address,
-                    'session_key': session_key,
-                    'login_time': login_time,
-                    'device_info': self._get_device_info(request),
-                    'last_seen': now(),
-                    'current_page': request.path,
-                    'current_page_title': self._get_page_title(request.path),
-                }
-            )
+            now_ts = now()
+            should_write = True
 
-            print(f"{GREEN}[DEBUG] Online user {'created' if created else 'updated'}: {user.username}{NC}")
+            # إذا كان لدينا existing_user وتحديث آخر حدث قبل أقل من 10 ثواني
+            # نتجنب الكتابة لتقليل حمل قاعدة البيانات
+            if existing_user and existing_user.last_seen:
+                delta = (now_ts - existing_user.last_seen).total_seconds()
+                if delta < 10:
+                    should_write = False
 
-            # تحديث النشاط إذا كان المستخدم موجود مسبقاً
-            if not created:
-                page_title = self._get_page_title(request.path)
-                action_performed = request.method in ['POST', 'PUT', 'DELETE', 'PATCH']
-                online_user.update_activity(
-                    page_path=request.path,
-                    page_title=page_title,
-                    action_performed=action_performed
+            if should_write:
+                online_user, created = OnlineUser.objects.update_or_create(
+                    user=user,
+                    defaults={
+                        'ip_address': ip_address,
+                        'session_key': session_key,
+                        'login_time': login_time,
+                        'device_info': self._get_device_info(request),
+                        'last_seen': now_ts,
+                        'current_page': request.path,
+                        'current_page_title': self._get_page_title(request.path),
+                    }
                 )
-                print(f"{GREEN}[DEBUG] Activity updated for {user.username}{NC}")
+
+                print(f"{GREEN}[DEBUG] Online user {'created' if created else 'updated'}: {user.username}{NC}")
+
+                # تحديث النشاط إذا كان المستخدم موجود مسبقاً
+                if not created:
+                    page_title = self._get_page_title(request.path)
+                    action_performed = request.method in ['POST', 'PUT', 'DELETE', 'PATCH']
+                    online_user.update_activity(
+                        page_path=request.path,
+                        page_title=page_title,
+                        action_performed=action_performed
+                    )
+                    print(f"{GREEN}[DEBUG] Activity updated for {user.username}{NC}")
+            else:
+                # فقط نحدّث الحقول في الذاكرة (لا نكتب للـ DB)
+                # هذا يسمح للـ API أن يقرأ last_seen قريباً دون ضغط على DB
+                existing_user.current_page = request.path
+                existing_user.current_page_title = self._get_page_title(request.path)
+                # لا ننادي save() هنا لتجنب عملية كتابة
+                print(f"{GREEN}[DEBUG] Skipped DB update for {user.username} (throttled){NC}")
 
         except Exception as e:
             print(f"{RED}[ERROR] خطأ في تحديث حالة المستخدم المتصل: {e}{NC}")
@@ -118,9 +136,12 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
             # تحديد نوع العملية
             action_type = self._determine_action_type(path, method, response.status_code)
             entity_type = self._determine_entity_type(path)
+            
+            # استخراج تفاصيل الكائن
+            entity_id, entity_name = self._extract_entity_details(request, path, entity_type)
 
             # إنشاء وصف العملية
-            description = self._create_description(path, method, action_type, entity_type)
+            description = self._create_description(path, method, action_type, entity_type, entity_name)
 
             # تجنب تسجيل طلبات الإشعارات والصور في سجل النشاط
             if (
@@ -142,6 +163,8 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
                 session=session,
                 action_type=action_type,
                 entity_type=entity_type,
+                entity_id=entity_id,
+                entity_name=entity_name,
                 description=description,
                 url_path=path,
                 http_method=method,
@@ -239,8 +262,77 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
         else:
             return 'page'
 
-    def _create_description(self, path, method, action_type, entity_type):
-        """إنشاء وصف العملية"""
+    def _extract_entity_details(self, request, path, entity_type):
+        """استخراج معرف واسم الكائن من الطلب"""
+        try:
+            # استخراج المعرف من URL
+            entity_id = None
+            entity_name = ""
+            
+            # البحث عن أنماط ID في URL
+            import re
+            id_patterns = [
+                r'/(\d+)/',  # /123/
+                r'/(\d+)$',  # /123 نهاية URL
+                r'id=(\d+)',  # ?id=123
+                r'pk=(\d+)',  # ?pk=123
+            ]
+            
+            for pattern in id_patterns:
+                match = re.search(pattern, path)
+                if match:
+                    entity_id = int(match.group(1))
+                    break
+            
+            # محاولة استخراج اسم الكائن من بيانات POST أو GET
+            if request.method == 'POST':
+                # البحث في بيانات POST
+                if hasattr(request, 'POST') and request.POST:
+                    # أسماء حقول شائعة للأسماء
+                    name_fields = ['name', 'title', 'customer_name', 'product_name', 'order_number', 'full_name']
+                    for field in name_fields:
+                        if field in request.POST and request.POST[field]:
+                            entity_name = request.POST[field][:100]  # تقييد الطول
+                            break
+                            
+                    # إذا لم نجد اسم، نبحث عن رقم طلب أو معرف
+                    if not entity_name:
+                        order_fields = ['order_number', 'order_id', 'reference_number']
+                        for field in order_fields:
+                            if field in request.POST and request.POST[field]:
+                                entity_name = f"طلب #{request.POST[field]}"
+                                break
+                                
+            elif request.method == 'GET':
+                # البحث في بيانات GET
+                if hasattr(request, 'GET') and request.GET:
+                    search_fields = ['search', 'q', 'query', 'name']
+                    for field in search_fields:
+                        if field in request.GET and request.GET[field]:
+                            entity_name = f"بحث: {request.GET[field][:50]}"
+                            break
+            
+            # إذا لم نجد اسم من البيانات، نحاول استخدام المعرف
+            if not entity_name and entity_id:
+                if entity_type == 'customer':
+                    entity_name = f"عميل #{entity_id}"
+                elif entity_type == 'order':
+                    entity_name = f"طلب #{entity_id}"
+                elif entity_type == 'product':
+                    entity_name = f"منتج #{entity_id}"
+                elif entity_type == 'inspection':
+                    entity_name = f"معاينة #{entity_id}"
+                else:
+                    entity_name = f"{entity_type} #{entity_id}"
+            
+            return entity_id, entity_name
+            
+        except Exception as e:
+            print(f"{YELLOW}[WARNING] خطأ في استخراج تفاصيل الكائن: {e}{NC}")
+            return None, ""
+
+    def _create_description(self, path, method, action_type, entity_type, entity_name=""):
+        """إنشاء وصف العملية مع تفاصيل الكائن"""
         action_names = {
             'login': 'تسجيل دخول',
             'logout': 'تسجيل خروج',
@@ -269,12 +361,16 @@ class AdvancedActivityLoggerMiddleware(MiddlewareMixin):
         }
 
         action_name = action_names.get(action_type, action_type)
-        entity_name = entity_names.get(entity_type, entity_type)
+        entity_name_arabic = entity_names.get(entity_type, entity_type)
 
         if action_type in ['page_view', 'dashboard_view']:
             return f"{action_name}: {path}"
+        elif action_type == 'search':
+            return f"{action_name} في {entity_name_arabic}"
+        elif entity_name:
+            return f"{action_name} {entity_name_arabic}: {entity_name}"
         else:
-            return f"{action_name} {entity_name}"
+            return f"{action_name} {entity_name_arabic}"
 
     def _get_page_title(self, path):
         """الحصول على عنوان الصفحة"""

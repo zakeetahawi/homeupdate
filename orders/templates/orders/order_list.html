@@ -327,6 +327,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         <option value="manufacturing_deleted" {% if status_filter == 'manufacturing_deleted' %}selected{% endif %}>أمر تصنيع محذوف</option>
                     </select>
                 </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">-- وضع العميل --</option>
+                        <option value="vip" {% if status_param == 'vip' %}selected{% endif %}>VIP</option>
+                        <option value="normal" {% if status_param == 'normal' %}selected{% endif %}>عادي</option>
+                    </select>
+                </div>
                 <!-- tracking_status filter removed as requested -->
                 <div class="col-md-2">
                     <label for="page_size" class="form-label">عدد الصفوف:</label>
@@ -408,6 +415,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         {% else %}{{ order_type_filter }}
                         {% endif %}
                     </span>
+                {% endif %}
+                {% if status_param %}
+                    <span class="badge bg-primary me-1">وضع العميل: {% if status_param == 'vip' %}VIP{% else %}عادي{% endif %}</span>
                 {% endif %}
                 {% if date_from or date_to %}
                     <span class="badge bg-secondary me-1">

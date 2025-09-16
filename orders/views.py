@@ -55,6 +55,7 @@ def order_list(request):
     """
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('order_status', '')
+    status_param = request.GET.get('status', '')
     page_size = request.GET.get('page_size', '25')
     try:
         page_size = int(page_size)
@@ -110,6 +111,12 @@ def order_list(request):
         # the status filter in the UI corresponds to the manufacturing/order_status
         orders = orders.filter(order_status=status_filter)
 
+    # Filter by customer-facing status (e.g., VIP) if provided
+    if status_param:
+        # only allow known values for safety
+        if status_param in ['vip', 'normal']:
+            orders = orders.filter(status=status_param)
+
     order_type_filter = request.GET.get('order_type', '')
     if order_type_filter:
         # البحث الدقيق في selected_types مع تحسين للبحث
@@ -150,6 +157,7 @@ def order_list(request):
         'page_obj': page_obj,
     'search_query': search_query,
     'status_filter': status_filter,
+    'status_param': status_param,
         'order_type_filter': order_type_filter,
         'year_filter': year_filter,
         'selected_years': selected_years,

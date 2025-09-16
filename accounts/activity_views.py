@@ -20,7 +20,7 @@ from user_activity.models import OnlineUser, UserActivityLog, UserSession, UserL
 @login_required
 @require_http_methods(["GET"])
 def online_users_api(request):
-    """API لجلب المستخدمين النشطين حالياً"""
+    """API لجلب المستخدمين النشطين حالياً والمستخدمين الذين تم تسجيل دخولهم سابقاً"""
     try:
         print(f"[DEBUG] Online users API called by user: {request.user if request.user.is_authenticated else 'Anonymous'}")
 
@@ -29,6 +29,7 @@ def online_users_api(request):
 
         # جلب المستخدمين النشطين
         online_users = OnlineUser.get_online_users().select_related('user')
+        online_user_ids = set(online_users.values_list('user_id', flat=True))
         total_online = online_users.count()
 
         print(f"[DEBUG] Found {total_online} online users")
@@ -46,69 +47,177 @@ def online_users_api(request):
 
         users_data = []
 
-        # عرض المستخدمين حسب الصلاحيات
+        # معالجة المستخدمين النشطين
         for online_user in online_users:
-            print(f"[DEBUG] Processing user: {online_user.user.username}")
+            try:
+                print(f"[DEBUG] Processing online user: {online_user.user.username}")
 
-            # تحديد دور المستخدم
-            user_role = 'مستخدم عادي'
-            if online_user.user.is_superuser:
-                user_role = '👑 مدير عام'
-            elif online_user.user.is_staff:
-                user_role = '⚙️ موظف'
-            elif hasattr(online_user.user, 'get_user_role_display'):
-                user_role = online_user.user.get_user_role_display()
-            elif online_user.user.groups.exists():
-                user_role = f"👥 {online_user.user.groups.first().name}"
+                # تحديد دور المستخدم
+                user_role = 'مستخدم عادي'
+                if online_user.user.is_superuser:
+                    user_role = '👑 مدير عام'
+                elif online_user.user.is_staff:
+                    user_role = '⚙️ موظف'
+                elif hasattr(online_user.user, 'get_user_role_display'):
+                    user_role = online_user.user.get_user_role_display()
+                elif online_user.user.groups.exists():
+                    user_role = f"👥 {online_user.user.groups.first().name}"
 
-            # تحديد الفرع
-            user_branch = 'غير محدد'
-            if hasattr(online_user.user, 'branch') and online_user.user.branch:
-                user_branch = online_user.user.branch.name
-            # إذا كان المستخدم بائع، نحاول العثور على فرعه من خلال نموذج Salesperson
-            elif online_user.user.is_salesperson:
-                try:
-                    from accounts.models import Salesperson
-                    salesperson = Salesperson.objects.filter(name=online_user.user.get_full_name()).first()
-                    if salesperson and salesperson.branch:
-                        user_branch = salesperson.branch.name
-                except Exception:
-                    pass
+                # تحديد الفرع
+                user_branch = 'غير محدد'
+                if hasattr(online_user.user, 'branch') and online_user.user.branch:
+                    user_branch = online_user.user.branch.name
+                # إذا كان المستخدم بائع، نحاول العثور على فرعه من خلال نموذج Salesperson
+                elif online_user.user.is_salesperson:
+                    try:
+                        from accounts.models import Salesperson
+                        salesperson = Salesperson.objects.filter(name=online_user.user.get_full_name()).first()
+                        if salesperson and salesperson.branch:
+                            user_branch = salesperson.branch.name
+                    except Exception:
+                        pass
 
-            # معلومات أساسية للجميع
-            user_data = {
-                'id': online_user.user.id,
-                'username': online_user.user.username,
-                'full_name': online_user.user.get_full_name() or online_user.user.username,
-                'role': user_role,
-                'branch': user_branch,
-                'online_duration': online_user.online_duration_formatted,
-                'last_seen': online_user.last_seen.strftime('%H:%M'),
-                'avatar_url': getattr(online_user.user, 'image', None).url if hasattr(online_user.user, 'image') and online_user.user.image else None,
-            }
+                # جلب آخر تسجيل دخول
+                last_login = UserLoginHistory.objects.filter(user=online_user.user).order_by('-login_time').first()
+                last_login_time = last_login.login_time if last_login else None
 
-            # معلومات إضافية للمديرين فقط
-            if user_is_admin:
-                user_data.update({
-                    'current_page': online_user.current_page_title or 'غير محدد',
-                    'pages_visited': online_user.pages_visited,
-                    'actions_performed': online_user.actions_performed,
-                    'device_info': online_user.device_info,
-                    'ip_address': online_user.ip_address,
-                })
+                # معلومات أساسية للجميع
+                user_data = {
+                    'id': online_user.user.id,
+                    'username': online_user.user.username,
+                    'full_name': online_user.user.get_full_name() or online_user.user.username,
+                    'role': user_role,
+                    'branch': user_branch,
+                    'is_online': online_user.is_online,  # استخدام خاصية النموذج بدلاً من True الثابت
+                    'online_duration': online_user.online_duration_formatted if online_user.is_online else 'غير متصل',
+                    'last_seen': online_user.last_seen.strftime('%H:%M') if online_user.last_seen else 'غير محدد',
+                    'last_login': last_login_time.isoformat() if last_login_time else None,
+                    'last_login_formatted': last_login_time.strftime('%Y-%m-%d %H:%M') if last_login_time else 'غير محدد',
+                    'avatar_url': getattr(online_user.user, 'image', None).url if hasattr(online_user.user, 'image') and online_user.user.image else None,
+                }
 
-            users_data.append(user_data)
-        
-        print(f"[DEBUG] Final response: success=True, total_online={total_online}, users_count={len(users_data)}")
+                # معلومات إضافية للمديرين فقط
+                if user_is_admin:
+                    user_data.update({
+                        'current_page': online_user.current_page_title or 'غير محدد',
+                        'pages_visited': online_user.pages_visited,
+                        'actions_performed': online_user.actions_performed,
+                        'device_info': online_user.device_info,
+                        'ip_address': online_user.ip_address,
+                    })
+
+                users_data.append(user_data)
+                print(f"[DEBUG] Successfully processed online user: {online_user.user.username}")
+
+            except Exception as user_error:
+                print(f"[ERROR] Error processing online user {online_user.user.username}: {user_error}")
+                continue
+
+        # جلب المستخدمين الذين تم تسجيل دخولهم سابقاً ولكنهم غير متصلين الآن
+        recent_login_users = UserLoginHistory.objects.filter(
+            login_time__gte=timezone.now() - timedelta(days=7)  # آخر أسبوع
+        ).exclude(
+            user_id__in=online_user_ids
+        ).select_related('user').order_by('-login_time')[:50]  # جلب المزيد للتأكد من وجود مستخدمين مختلفين
+
+        # الحصول على المستخدمين الفريدين
+        seen_users = set()
+        unique_recent_users = []
+        for login_history in recent_login_users:
+            if login_history.user_id not in seen_users:
+                seen_users.add(login_history.user_id)
+                unique_recent_users.append(login_history)
+                if len(unique_recent_users) >= 20:  # أخذ أول 20 مستخدم فريد
+                    break
+
+        print(f"[DEBUG] Found {len(unique_recent_users)} recently logged in users")
+
+        for login_history in unique_recent_users:
+            try:
+                user = login_history.user
+                print(f"[DEBUG] Processing offline user: {user.username}")
+
+                # تحديد دور المستخدم
+                user_role = 'مستخدم عادي'
+                if user.is_superuser:
+                    user_role = '👑 مدير عام'
+                elif user.is_staff:
+                    user_role = '⚙️ موظف'
+                elif hasattr(user, 'get_user_role_display'):
+                    user_role = user.get_user_role_display()
+                elif user.groups.exists():
+                    user_role = f"👥 {user.groups.first().name}"
+
+                # تحديد الفرع
+                user_branch = 'غير محدد'
+                if hasattr(user, 'branch') and user.branch:
+                    user_branch = user.branch.name
+                # إذا كان المستخدم بائع، نحاول العثور على فرعه من خلال نموذج Salesperson
+                elif user.is_salesperson:
+                    try:
+                        from accounts.models import Salesperson
+                        salesperson = Salesperson.objects.filter(name=user.get_full_name()).first()
+                        if salesperson and salesperson.branch:
+                            user_branch = salesperson.branch.name
+                    except Exception:
+                        pass
+
+                # معلومات المستخدم غير المتصل
+                user_data = {
+                    'id': user.id,
+                    'username': user.username,
+                    'full_name': user.get_full_name() or user.username,
+                    'role': user_role,
+                    'branch': user_branch,
+                    'is_online': False,
+                    'online_duration': 'غير متصل',
+                    'last_seen': 'غير متصل',
+                    'last_login': login_history.login_time.isoformat(),
+                    'last_login_formatted': login_history.login_time.strftime('%Y-%m-%d %H:%M'),
+                    'avatar_url': getattr(user, 'image', None).url if hasattr(user, 'image') and user.image else None,
+                }
+
+                # معلومات إضافية للمديرين فقط
+                if user_is_admin:
+                    user_data.update({
+                        'current_page': 'غير متصل',
+                        'pages_visited': 0,
+                        'actions_performed': 0,
+                        'device_info': 'غير متصل',
+                        'ip_address': login_history.ip_address or 'غير محدد',
+                    })
+
+                users_data.append(user_data)
+                print(f"[DEBUG] Successfully processed offline user: {user.username}")
+
+            except Exception as user_error:
+                print(f"[ERROR] Error processing offline user {login_history.user.username}: {user_error}")
+                continue
+
+        # ترتيب المستخدمين: النشطين أولاً، ثم غير النشطين حسب آخر تسجيل دخول (الأحدث أولاً)
+        # نُفضل التجميع الواضح بدل الاعتماد على reverse للوضوح
+        online_list = [u for u in users_data if u.get('is_online')]
+        offline_list = [u for u in users_data if not u.get('is_online')]
+        # فرز القائمة غير المتصلة حسب last_login نزولياً (الأحدث أولاً)
+        def _parse_login_key(item):
+            # last_login مخزن كـ ISO string أو None
+            return item.get('last_login') or ''
+
+        offline_list.sort(key=_parse_login_key, reverse=True)
+
+        users_data = online_list + offline_list
+
+        print(f"[DEBUG] Final response: success=True, total_users={len(users_data)}, online={total_online}")
 
         return JsonResponse({
             'success': True,
             'users': users_data,
             'total_online': total_online,
+            'total_users': len(users_data),
             'user_is_admin': user_is_admin,
             'timestamp': timezone.now().strftime('%H:%M:%S')
         })
-        
+
     except Exception as e:
         print(f"[ERROR] Exception in online_users_api: {e}")
         import traceback
@@ -143,8 +252,10 @@ def user_activity_dashboard(request):
         activity_count=Count('activity_logs')
     ).order_by('-activity_count')[:10]
     
-    # أحدث الأنشطة
-    recent_activities = UserActivityLog.objects.select_related('user').order_by('-timestamp')[:20]
+    # أحدث الأنشطة (استبعاد عمليات تسجيل الدخول والخروج)
+    recent_activities = UserActivityLog.objects.select_related('user').exclude(
+        action_type__in=['login', 'logout']
+    ).order_by('-timestamp')[:20]
     
     # المستخدمون النشطون
     online_users = OnlineUser.get_online_users().select_related('user')
@@ -182,8 +293,10 @@ def user_activity_detail(request, user_id):
         start_date = None
         end_date = None
     
-    # جلب الأنشطة مع استبعاد الطلبات غير المرغوب فيها
+    # جلب الأنشطة مع استبعاد الطلبات غير المرغوب فيها وعمليات تسجيل الدخول/الخروج
     activities = UserActivityLog.objects.filter(user=user).exclude(
+        action_type__in=['login', 'logout']
+    ).exclude(
         url_path__contains='/accounts/notifications/data/'
     ).exclude(
         url_path__contains='/media/users/'
@@ -244,8 +357,10 @@ def activity_logs_list(request):
     action_filter = request.GET.get('action')
     date_filter = request.GET.get('date', 'today')
     
-    # بناء الاستعلام
-    activities = UserActivityLog.objects.select_related('user').all()
+    # بناء الاستعلام مع استبعاد عمليات تسجيل الدخول والخروج
+    activities = UserActivityLog.objects.select_related('user').exclude(
+        action_type__in=['login', 'logout']
+    ).all()
     
     # فلترة حسب البحث
     if search_query:
@@ -370,6 +485,157 @@ def update_current_page(request):
         return JsonResponse({'success': True})
         
     except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def user_activities_api(request, user_id):
+    """API لجلب آخر 5 نشاطات لمستخدم محدد"""
+    try:
+        print(f"[DEBUG] User activities API called for user: {user_id}")
+
+        # التحقق من صلاحيات المستخدم
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({
+                'success': False,
+                'error': 'غير مصرح لك بعرض هذه المعلومات'
+            }, status=403)
+
+        # جلب المستخدم المطلوب
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'المستخدم غير موجود'
+            }, status=404)
+
+        # جلب آخر 5 نشاطات (استبعاد عمليات تسجيل الدخول والخروج)
+        activities = UserActivityLog.objects.filter(
+            user=target_user
+        ).exclude(
+            action_type__in=['login', 'logout']
+        ).select_related('session').order_by('-timestamp')[:5]
+
+        activities_data = []
+        for activity in activities:
+            # تحديد الأيقونة حسب نوع العملية
+            icon_map = {
+                'login': 'fa-sign-in-alt',
+                'logout': 'fa-sign-out-alt',
+                'view': 'fa-eye',
+                'create': 'fa-plus',
+                'update': 'fa-edit',
+                'delete': 'fa-trash',
+                'search': 'fa-search',
+                'export': 'fa-download',
+                'import': 'fa-upload',
+                'upload': 'fa-cloud-upload-alt',
+                'download': 'fa-cloud-download-alt',
+                'print': 'fa-print',
+                'email': 'fa-envelope',
+                'api_call': 'fa-code',
+                'error': 'fa-exclamation-triangle',
+                'security': 'fa-shield-alt',
+                'admin': 'fa-cog',
+                'report': 'fa-chart-bar',
+                'backup': 'fa-save',
+                'restore': 'fa-undo',
+                'maintenance': 'fa-tools',
+            }
+
+            icon = icon_map.get(activity.action_type, 'fa-circle')
+
+            # إنشاء عنوان ووصف للنشاط مع روابط تفاعلية
+            title = activity.action_type
+            description = f"{activity.entity_type}: {activity.entity_name or 'غير محدد'}"
+            link_url = None
+            link_text = None
+
+            if activity.action_type == 'login':
+                title = 'تسجيل دخول'
+                description = f"من {activity.session.ip_address if activity.session else 'غير محدد'}"
+            elif activity.action_type == 'logout':
+                title = 'تسجيل خروج'
+                description = f"بعد {activity.session.duration if activity.session else 'غير محدد'}"
+            elif activity.action_type == 'view':
+                title = 'عرض صفحة'
+                description = activity.entity_name or 'صفحة غير محددة'
+            elif activity.action_type == 'create':
+                title = 'إنشاء'
+                if activity.entity_type == 'customer' or activity.entity_type == 'عميل':
+                    title = 'إنشاء عميل جديد'
+                    description = f"العميل: {activity.entity_name or 'جديد'}"
+                    link_url = f"/complaints/customer/{activity.entity_id}/" if activity.entity_id else None
+                    link_text = "عرض العميل"
+                elif activity.entity_type == 'order' or activity.entity_type == 'طلب':
+                    title = 'إنشاء طلب جديد'
+                    description = f"الطلب: {activity.entity_name or 'جديد'}"
+                    link_url = f"/complaints/order/{activity.entity_id}/" if activity.entity_id else None
+                    link_text = "عرض الطلب"
+                else:
+                    description = f"{activity.entity_type}: {activity.entity_name or 'جديد'}"
+            elif activity.action_type == 'update':
+                title = 'تحديث'
+                if activity.entity_type == 'customer' or activity.entity_type == 'عميل':
+                    title = 'تحديث بيانات عميل'
+                    description = f"العميل: {activity.entity_name or 'محدث'}"
+                    link_url = f"/complaints/customer/{activity.entity_id}/" if activity.entity_id else None
+                    link_text = "عرض العميل"
+                elif activity.entity_type == 'order' or activity.entity_type == 'طلب':
+                    title = 'تحديث طلب'
+                    description = f"الطلب: {activity.entity_name or 'محدث'}"
+                    link_url = f"/complaints/order/{activity.entity_id}/" if activity.entity_id else None
+                    link_text = "عرض الطلب"
+                else:
+                    description = f"{activity.entity_type}: {activity.entity_name or 'محدث'}"
+            elif activity.action_type == 'delete':
+                title = 'حذف'
+                description = f"{activity.entity_type}: {activity.entity_name or 'محذوف'}"
+            elif activity.action_type == 'upload' or activity.action_type == 'download':
+                if activity.action_type == 'upload':
+                    title = 'رفع ملف'
+                    description = f"الملف: {activity.entity_name or 'غير محدد'}"
+                else:
+                    title = 'تحميل ملف'
+                    description = f"الملف: {activity.entity_name or 'غير محدد'}"
+                if activity.url_path and activity.url_path.startswith('/media/'):
+                    link_url = activity.url_path
+                    link_text = "عرض الملف" if activity.action_type == 'upload' else "تحميل الملف"
+
+            activities_data.append({
+                'id': activity.id,
+                'action_type': activity.action_type,
+                'title': title,
+                'description': description,
+                'icon': icon,
+                'timestamp': activity.timestamp.isoformat(),
+                'entity_type': activity.entity_type,
+                'entity_name': activity.entity_name,
+                # لا نُرجع عنوان الـ IP في الـ API الخاص بالـ popup لأسباب خصوصية
+                'link_url': link_url,
+                'link_text': link_text,
+            })
+
+        # Debug: number of activities collected
+        # print(f"[DEBUG] Found {len(activities_data)} activities for user {user_id}")
+
+        return JsonResponse({
+            'success': True,
+            'activities': activities_data,
+            'user': {
+                'id': target_user.id,
+                'username': target_user.username,
+                'full_name': target_user.get_full_name() or target_user.username,
+            }
+        })
+
+    except Exception as e:
+        # print(f"[ERROR] User activities API error: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': str(e)

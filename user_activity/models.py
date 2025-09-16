@@ -288,6 +288,61 @@ class UserActivityLog(models.Model):
         }
         return icons.get(self.action_type, '📝')
 
+    def get_color_class(self):
+        """إرجاع class لون حسب نوع العملية والنجاح"""
+        if not self.success:
+            return 'danger'
+        
+        color_map = {
+            'login': 'success',
+            'logout': 'secondary',
+            'view': 'info',
+            'create': 'success',
+            'update': 'warning',
+            'delete': 'danger',
+            'search': 'info',
+            'export': 'primary',
+            'import': 'primary',
+            'download': 'primary',
+            'upload': 'primary',
+            'print': 'secondary',
+            'email': 'info',
+            'api_call': 'secondary',
+            'error': 'danger',
+            'security': 'warning',
+            'admin': 'warning',
+            'report': 'info',
+            'backup': 'secondary',
+            'restore': 'secondary',
+            'maintenance': 'warning',
+            'other': 'secondary',
+        }
+        return color_map.get(self.action_type, 'secondary')
+
+    def get_entity_details(self):
+        """إرجاع تفاصيل الكائن إذا كان متوفراً"""
+        if self.entity_type and self.entity_name:
+            entity_type_arabic = {
+                'user': 'مستخدم',
+                'customer': 'عميل',
+                'order': 'طلب',
+                'product': 'منتج',
+                'inspection': 'معاينة',
+                'manufacturing': 'تصنيع',
+                'installation': 'تركيب',
+                'complaint': 'شكوى',
+                'report': 'تقرير',
+                'system': 'نظام',
+                'file': 'ملف',
+                'page': 'صفحة',
+                'api': 'واجهة برمجية',
+                'database': 'قاعدة بيانات',
+                'other': 'أخرى',
+            }.get(self.entity_type, self.entity_type)
+            
+            return f"{entity_type_arabic}: {self.entity_name}"
+        return ""
+
     @classmethod
     def log_activity(cls, user, action_type, description, **kwargs):
         """طريقة مساعدة لتسجيل النشاط"""
@@ -385,8 +440,8 @@ class OnlineUser(models.Model):
     @property
     def is_online(self):
         """فحص ما إذا كان المستخدم متصل حالياً"""
-        # اعتبار المستخدم متصل إذا كان آخر نشاط خلال آخر 5 دقائق
-        return (timezone.now() - self.last_seen).total_seconds() < 300
+        # اعتبار المستخدم متصل إذا كان آخر نشاط خلال آخر 15 دقيقة
+        return (timezone.now() - self.last_seen).total_seconds() < 900
 
     @property
     def online_duration(self):
@@ -429,13 +484,13 @@ class OnlineUser(models.Model):
 
         # إرجاع المستخدمين النشطين
         return cls.objects.filter(
-            last_seen__gte=timezone.now() - timedelta(minutes=5)
+            last_seen__gte=timezone.now() - timedelta(minutes=15)
         ).select_related('user')
 
     @classmethod
     def cleanup_offline_users(cls):
         """تنظيف المستخدمين غير المتصلين"""
-        offline_threshold = timezone.now() - timedelta(minutes=5)
+        offline_threshold = timezone.now() - timedelta(minutes=15)
         cls.objects.filter(last_seen__lt=offline_threshold).delete()
 
     @classmethod

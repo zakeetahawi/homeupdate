@@ -305,6 +305,9 @@
                             <div class="flex-grow-1">
                                 <div class="fw-bold">{{ activity.user.username }}</div>
                                 <div class="small">{{ activity.description }}</div>
+                                {% if activity.get_entity_details %}
+                                <div class="small text-muted">{{ activity.get_entity_details }}</div>
+                                {% endif %}
                                 <div class="activity-time">{{ activity.timestamp|timesince }} مضت</div>
                             </div>
                             {% if not activity.success %}

@@ -3,7 +3,7 @@ from . import views, api_views
 from .auth_compat import auth_compat_view
 from .activity_views import (
     user_activity_dashboard, user_activity_detail, activity_logs_list,
-    login_history_list, online_users_api, update_current_page
+    login_history_list, online_users_api, update_current_page, user_activities_api
 )
 
 app_name = 'accounts'
@@ -84,5 +84,6 @@ urlpatterns = [
 
     # APIs للمستخدمين النشطين
     path('api/online-users/', online_users_api, name='online_users_api'),
+    path('api/user-activities/<int:user_id>/', user_activities_api, name='user_activities_api'),
     path('api/update-current-page/', update_current_page, name='update_current_page'),
 ]
