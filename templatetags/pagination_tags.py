@@ -27,16 +27,27 @@ def pagination_url(context, page_number):
     
     params['page'] = page_number
     
-    # التأكد من أن جميع القيم في params هي strings وليس lists
+    # قائمة بالمعاملات التي يجب أن تكون arrays (فلاتر متعددة الاختيار)
+    array_params = [
+        'status', 'branch', 'order_type', 'production_line', 
+        'search_columns', 'status[]', 'branch[]', 'order_type[]', 
+        'production_line[]', 'search_columns[]'
+    ]
+    
+    # التأكد من أن جميع القيم في params هي strings وليس lists، باستثناء الفلاتر المتعددة
     cleaned_params = {}
     for key, value in params.items():
         if isinstance(value, (list, tuple)):
-            # إذا كان value هو list، خذ العنصر الأول أو القيمة الفارغة
-            cleaned_params[key] = value[0] if value else ''
+            # إذا كان value هو list وهو فلتر متعدد الاختيار، احتفظ بجميع القيم
+            if key in array_params or key.endswith('[]'):
+                cleaned_params[key] = value
+            else:
+                # إذا كان value هو list وليس فلتر متعدد الاختيار، خذ العنصر الأول
+                cleaned_params[key] = value[0] if value else ''
         else:
             cleaned_params[key] = str(value)
     
-    return f"?{urlencode(cleaned_params)}"
+    return f"?{urlencode(cleaned_params, doseq=True)}"
 
 @register.simple_tag(takes_context=True)
 def pagination_url_with_filters(context, page_number, preserve_filters=None):
@@ -67,56 +78,27 @@ def pagination_url_with_filters(context, page_number, preserve_filters=None):
 
     params['page'] = page_number
 
-    # التأكد من أن جميع القيم في params هي strings وليس lists
+    # قائمة بالمعاملات التي يجب أن تكون arrays (فلاتر متعددة الاختيار)
+    array_params = [
+        'status', 'branch', 'order_type', 'production_line', 
+        'search_columns', 'status[]', 'branch[]', 'order_type[]', 
+        'production_line[]', 'search_columns[]'
+    ]
+    
+    # التأكد من أن جميع القيم في params هي strings وليس lists، باستثناء الفلاتر المتعددة
     cleaned_params = {}
     for key, value in params.items():
         if isinstance(value, (list, tuple)):
-            # إذا كان value هو list، خذ العنصر الأول أو القيمة الفارغة
-            cleaned_params[key] = value[0] if value else ''
+            # إذا كان value هو list وهو فلتر متعدد الاختيار، احتفظ بجميع القيم
+            if key in array_params or key.endswith('[]'):
+                cleaned_params[key] = value
+            else:
+                # إذا كان value هو list وليس فلتر متعدد الاختيار، خذ العنصر الأول
+                cleaned_params[key] = value[0] if value else ''
         else:
             cleaned_params[key] = str(value)
 
-    return f"?{urlencode(cleaned_params)}"
-
-@register.simple_tag(takes_context=True)
-def pagination_url_with_filters(context, page_number, preserve_filters=None):
-    """
-    إنشاء URL للصفحة مع الحفاظ على فلاتر محددة فقط
-    """
-    request = context['request']
-    params = request.GET.copy()
-
-    # تحديد الفلاتر التي يجب الحفاظ عليها
-    if preserve_filters:
-        if isinstance(preserve_filters, str):
-            preserve_filters = [preserve_filters]
-
-        # حذف جميع الفلاتر غير المطلوبة
-        for key in list(params.keys()):
-            if key not in preserve_filters and key != 'page':
-                del params[key]
-
-    # التأكد من أن page_number هو integer وليس list أو أي نوع آخر
-    if isinstance(page_number, (list, tuple)):
-        page_number = page_number[0] if page_number else 1
-
-    try:
-        page_number = int(page_number)
-    except (ValueError, TypeError):
-        page_number = 1
-
-    params['page'] = page_number
-
-    # التأكد من أن جميع القيم في params هي strings وليس lists
-    cleaned_params = {}
-    for key, value in params.items():
-        if isinstance(value, (list, tuple)):
-            # إذا كان value هو list، خذ العنصر الأول أو القيمة الفارغة
-            cleaned_params[key] = value[0] if value else ''
-        else:
-            cleaned_params[key] = str(value)
-
-    return f"?{urlencode(cleaned_params)}"
+    return f"?{urlencode(cleaned_params, doseq=True)}"
 
 @register.simple_tag(takes_context=True)
 def preserve_filters(context, exclude_params=None):
@@ -174,16 +156,27 @@ def current_url_with_page(context, page_num):
     # تحديث رقم الصفحة
     params['page'] = page_num
     
-    # التأكد من أن جميع القيم في params هي strings وليس lists
+    # قائمة بالمعاملات التي يجب أن تكون arrays (فلاتر متعددة الاختيار)
+    array_params = [
+        'status', 'branch', 'order_type', 'production_line', 
+        'search_columns', 'status[]', 'branch[]', 'order_type[]', 
+        'production_line[]', 'search_columns[]'
+    ]
+    
+    # التأكد من أن جميع القيم في params هي strings وليس lists، باستثناء الفلاتر المتعددة
     cleaned_params = {}
     for key, value in params.items():
         if isinstance(value, (list, tuple)):
-            # إذا كان value هو list، خذ العنصر الأول أو القيمة الفارغة
-            cleaned_params[key] = value[0] if value else ''
+            # إذا كان value هو list وهو فلتر متعدد الاختيار، احتفظ بجميع القيم
+            if key in array_params or key.endswith('[]'):
+                cleaned_params[key] = value
+            else:
+                # إذا كان value هو list وليس فلتر متعدد الاختيار، خذ العنصر الأول
+                cleaned_params[key] = value[0] if value else ''
         else:
             cleaned_params[key] = str(value)
     
-    return f"?{urlencode(cleaned_params)}"
+    return f"?{urlencode(cleaned_params, doseq=True)}"
 
 @register.simple_tag(takes_context=True)
 def build_filter_url(context, **kwargs):
@@ -203,16 +196,27 @@ def build_filter_url(context, **kwargs):
     # إعادة تعيين الصفحة إلى 1 عند تغيير الفلاتر
     params['page'] = 1
     
-    # التأكد من أن جميع القيم في params هي strings وليس lists
+    # قائمة بالمعاملات التي يجب أن تكون arrays (فلاتر متعددة الاختيار)
+    array_params = [
+        'status', 'branch', 'order_type', 'production_line', 
+        'search_columns', 'status[]', 'branch[]', 'order_type[]', 
+        'production_line[]', 'search_columns[]'
+    ]
+    
+    # التأكد من أن جميع القيم في params هي strings وليس lists، باستثناء الفلاتر المتعددة
     cleaned_params = {}
     for key, value in params.items():
         if isinstance(value, (list, tuple)):
-            # إذا كان value هو list، خذ العنصر الأول أو القيمة الفارغة
-            cleaned_params[key] = value[0] if value else ''
+            # إذا كان value هو list وهو فلتر متعدد الاختيار، احتفظ بجميع القيم
+            if key in array_params or key.endswith('[]'):
+                cleaned_params[key] = value
+            else:
+                # إذا كان value هو list وليس فلتر متعدد الاختيار، خذ العنصر الأول
+                cleaned_params[key] = value[0] if value else ''
         else:
             cleaned_params[key] = str(value)
     
-    return f"?{urlencode(cleaned_params)}"
+    return f"?{urlencode(cleaned_params, doseq=True)}"
 
 @register.simple_tag(takes_context=True)
 def get_filter_value(context, param_name, default=''):

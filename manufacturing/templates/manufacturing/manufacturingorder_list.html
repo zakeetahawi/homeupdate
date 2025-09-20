@@ -1544,7 +1544,37 @@ $(document).ready(function() {
     // تصفية الجدول
     $('#filterForm').on('submit', function(e) {
         e.preventDefault();
-        window.location.href = '?' + $(this).serialize();
+
+        // جمع البيانات مع التعامل الصحيح مع multiple selects
+        const formData = new FormData(this);
+        const params = new URLSearchParams();
+
+        // معالجة كل حقل في النموذج
+        for (let [key, value] of formData.entries()) {
+            if (value !== '') { // تجاهل القيم الفارغة
+                params.append(key, value);
+            }
+        }
+
+        // التعامل مع multiple selects بشكل منفصل
+        const multiSelects = ['status', 'branch', 'order_type', 'search_columns', 'production_line'];
+        multiSelects.forEach(fieldName => {
+            const selectedValues = $(this).find(`select[name="${fieldName}"]`).val();
+            if (selectedValues && selectedValues.length > 0) {
+                // إزالة القيم السابقة لهذا الحقل
+                params.delete(fieldName);
+                // إضافة القيم الجديدة
+                selectedValues.forEach(value => {
+                    if (value !== '') {
+                        params.append(fieldName, value);
+                    }
+                });
+            }
+        });
+
+        // الانتقال إلى الصفحة مع المعاملات
+        const queryString = params.toString();
+        window.location.href = queryString ? '?' + queryString : window.location.pathname;
     });
 
     // إزالة backdrop عند إغلاق المودال - حل قوي
