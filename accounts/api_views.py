@@ -37,7 +37,7 @@ def user_info(request):
     user_data = UserSerializer(user).data
     
     # إضافة معلومات إضافية
-    user_data['unread_notifications_count'] = getattr(user, 'notifications', []).filter(is_read=False).count()
+    # user_data['unread_notifications_count'] = getattr(user, 'notifications', []).filter(is_read=False).count()  # تم إزالة نظام الإشعارات
     
     # إضافة الصلاحيات والمجموعات
     permissions = list(user.get_all_permissions())
