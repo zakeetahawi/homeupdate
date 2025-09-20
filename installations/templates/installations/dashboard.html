@@ -385,6 +385,9 @@ a.text-decoration-none:hover {
             <small class="text-muted ms-2">
                 <i class="fas fa-calendar-alt"></i> السنة: {{ default_year }}
             </small>
+            <small class="text-muted ms-2 last-updated-time">
+                <i class="fas fa-sync-alt"></i> جاري التحميل...
+            </small>
         </h1>
         <button class="btn btn-primary btn-sm" onclick="updateStats()" id="updateBtn">
             <i class="fas fa-sync-alt"></i> تحديث الإحصائيات
@@ -471,7 +474,7 @@ a.text-decoration-none:hover {
         </div>
 
         <div class="col-lg-1-5 col-md-4 col-sm-6 mb-3">
-            <a href="{% url 'installations:installation_list' %}?status=modification_required" class="text-decoration-none">
+            <a href="{% url 'installations:installation_list' %}?status=modification_required&status=modification_scheduled&status=modification_in_progress" class="text-decoration-none">
                 <div class="card border-warning shadow h-100 py-1 installation-card-hover">
                     <div class="card-body p-3">
                         <div class="text-center">
@@ -726,6 +729,10 @@ a.text-decoration-none:hover {
                                             {% elif installation.status == 'modification_completed' %}
                                                 <span class="badge badge-success">
                                                     <i class="fas fa-check-circle"></i> التعديل مكتمل
+                                                </span>
+                                            {% elif installation.status == 'modification_scheduled' %}
+                                                <span class="badge badge-warning">
+                                                    <i class="fas fa-calendar-alt"></i> جدولة التعديل
                                                 </span>
                                             {% else %}
                                                 <span class="badge badge-secondary">
@@ -1109,8 +1116,20 @@ a.text-decoration-none:hover {
 // تحديث الإحصائيات كل 5 دقائق (بدلاً من 30 ثانية لتقليل التضارب)
 setInterval(function() {
     fetch('{% url "installations:installation_stats_api" %}')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            // التحقق من وجود خطأ في البيانات
+            if (data.error) {
+                console.error('خطأ في بيانات الإحصائيات:', data.error);
+                showNotification('خطأ في تحميل الإحصائيات', 'error');
+                return;
+            }
+
             // تحديث إجمالي طلبات التركيب (البطاقة الأولى)
             const totalInstallationsCard = document.querySelector('.card.border-primary .text-gray-800');
             if (totalInstallationsCard) {
@@ -1123,14 +1142,78 @@ setInterval(function() {
                 completedInstallationsCard.textContent = data.completed || 0;
             }
 
+            // تحديث طلبات التعديل (البطاقة الثالثة)
+            const modificationsCard = document.querySelector('.card.border-warning .text-gray-800');
+            if (modificationsCard) {
+                modificationsCard.textContent = data.modification_required || 0;
+            }
+
             // تحديث الطلبات بانتظار الجدولة (البطاقة الرابعة)
             const needsSchedulingCard = document.querySelector('.card.border-info .text-gray-800');
             if (needsSchedulingCard) {
                 needsSchedulingCard.textContent = data.orders_needing_scheduling || 0;
             }
+
+            // تحديث التركيبات المجدولة (البطاقة الخامسة)
+            const scheduledCard = document.querySelector('.card.border-secondary .text-gray-800');
+            if (scheduledCard) {
+                scheduledCard.textContent = data.scheduled || 0;
+            }
+
+            // تحديث التركيبات قيد التنفيذ (البطاقة السادسة)
+            const inProgressCard = document.querySelector('.card.border-purple .text-gray-800');
+            if (inProgressCard) {
+                inProgressCard.textContent = data.in_progress || 0;
+            }
+
+            // تحديث الطلبات المديونة (البطاقة السابعة)
+            const debtCard = document.querySelector('.card.border-danger .text-gray-800');
+            if (debtCard) {
+                debtCard.textContent = data.orders_with_debt || 0;
+            }
+
+            // تحديث الطلبات تحت التصنيع (البطاقة الثامنة)
+            const manufacturingCard = document.querySelector('.card.border-dark .text-gray-800');
+            if (manufacturingCard) {
+                manufacturingCard.textContent = data.orders_in_manufacturing || 0;
+            }
+
+            // تحديث الطلبات المسلمة (البطاقة التاسعة)
+            const deliveredCard = document.querySelector('.card.border-teal .text-gray-800');
+            if (deliveredCard) {
+                deliveredCard.textContent = data.delivered_manufacturing_orders || 0;
+            }
+
+            // تحديث معدل الإنجاز (البطاقة العاشرة)
+            const completionRateCard = document.querySelector('.card.border-orange .text-gray-800');
+            if (completionRateCard) {
+                const completionRate = data.total_scheduled > 0 
+                    ? Math.round((data.completed / data.total_scheduled) * 100) 
+                    : 0;
+                completionRateCard.textContent = `${completionRate}%`;
+            }
+
+            // تحديث عدد الفرق (البطاقة الحادية عشر)
+            const teamsCard = document.querySelector('.card.border-indigo .text-gray-800');
+            if (teamsCard) {
+                teamsCard.textContent = data.teams_stats || 0;
+            }
+
+            // تحديث عدد التركيبات اليوم (البطاقة الثانية عشر)
+            const todayCard = document.querySelector('.card.border-pink .text-gray-800');
+            if (todayCard) {
+                todayCard.textContent = data.today_installations || 0;
+            }
+
+            // تحديث وقت آخر تحديث
+            const lastUpdatedElement = document.querySelector('.last-updated-time');
+            if (lastUpdatedElement && data.last_updated) {
+                lastUpdatedElement.textContent = `آخر تحديث: ${data.last_updated}`;
+            }
         })
         .catch(error => {
             console.log('خطأ في تحديث الإحصائيات:', error);
+            showNotification('خطأ في تحديث الإحصائيات', 'error');
         });
 }, 300000); // كل 5 دقائق
 
@@ -1167,8 +1250,20 @@ function updateStats() {
     updateBtn.disabled = true;
 
     fetch('{% url "installations:installation_stats_api" %}')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            // التحقق من وجود خطأ في البيانات
+            if (data.error) {
+                console.error('خطأ في بيانات الإحصائيات:', data.error);
+                showNotification('خطأ في تحميل الإحصائيات', 'error');
+                return;
+            }
+
             // تحديث إجمالي طلبات التركيب (البطاقة الأولى)
             const totalInstallationsCard = document.querySelector('.card.border-primary .text-gray-800');
             if (totalInstallationsCard) {
@@ -1181,10 +1276,73 @@ function updateStats() {
                 completedInstallationsCard.textContent = data.completed || 0;
             }
 
+            // تحديث طلبات التعديل (البطاقة الثالثة)
+            const modificationsCard = document.querySelector('.card.border-warning .text-gray-800');
+            if (modificationsCard) {
+                modificationsCard.textContent = data.modification_required || 0;
+            }
+
             // تحديث الطلبات بانتظار الجدولة (البطاقة الرابعة)
             const needsSchedulingCard = document.querySelector('.card.border-info .text-gray-800');
             if (needsSchedulingCard) {
                 needsSchedulingCard.textContent = data.orders_needing_scheduling || 0;
+            }
+
+            // تحديث التركيبات المجدولة (البطاقة الخامسة)
+            const scheduledCard = document.querySelector('.card.border-secondary .text-gray-800');
+            if (scheduledCard) {
+                scheduledCard.textContent = data.scheduled || 0;
+            }
+
+            // تحديث التركيبات قيد التنفيذ (البطاقة السادسة)
+            const inProgressCard = document.querySelector('.card.border-purple .text-gray-800');
+            if (inProgressCard) {
+                inProgressCard.textContent = data.in_progress || 0;
+            }
+
+            // تحديث الطلبات المديونة (البطاقة السابعة)
+            const debtCard = document.querySelector('.card.border-danger .text-gray-800');
+            if (debtCard) {
+                debtCard.textContent = data.orders_with_debt || 0;
+            }
+
+            // تحديث الطلبات تحت التصنيع (البطاقة الثامنة)
+            const manufacturingCard = document.querySelector('.card.border-dark .text-gray-800');
+            if (manufacturingCard) {
+                manufacturingCard.textContent = data.orders_in_manufacturing || 0;
+            }
+
+            // تحديث الطلبات المسلمة (البطاقة التاسعة)
+            const deliveredCard = document.querySelector('.card.border-teal .text-gray-800');
+            if (deliveredCard) {
+                deliveredCard.textContent = data.delivered_manufacturing_orders || 0;
+            }
+
+            // تحديث معدل الإنجاز (البطاقة العاشرة)
+            const completionRateCard = document.querySelector('.card.border-orange .text-gray-800');
+            if (completionRateCard) {
+                const completionRate = data.total_scheduled > 0 
+                    ? Math.round((data.completed / data.total_scheduled) * 100) 
+                    : 0;
+                completionRateCard.textContent = `${completionRate}%`;
+            }
+
+            // تحديث عدد الفرق (البطاقة الحادية عشر)
+            const teamsCard = document.querySelector('.card.border-indigo .text-gray-800');
+            if (teamsCard) {
+                teamsCard.textContent = data.teams_stats || 0;
+            }
+
+            // تحديث عدد التركيبات اليوم (البطاقة الثانية عشر)
+            const todayCard = document.querySelector('.card.border-pink .text-gray-800');
+            if (todayCard) {
+                todayCard.textContent = data.today_installations || 0;
+            }
+
+            // تحديث وقت آخر تحديث
+            const lastUpdatedElement = document.querySelector('.last-updated-time');
+            if (lastUpdatedElement && data.last_updated) {
+                lastUpdatedElement.textContent = `آخر تحديث: ${data.last_updated}`;
             }
 
             // إظهار رسالة نجاح

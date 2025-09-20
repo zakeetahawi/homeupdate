@@ -23,10 +23,10 @@ class PaginationFixMixin:
                 # إذا كان parameter هو string يحتوي على ['value']، استخرج القيمة
                 try:
                     import re
-                    # البحث عن pattern ['value'] أو [value]
-                    match = re.search(r"\['([^']+)'\]|\[([^\]]+)\]", value)
+                    # البحث عن pattern ['value'] أو [value] أو ["value"]
+                    match = re.search(r"\['([^']+)'\]|\[\"([^\"]+)\"\]|\[([^\]]+)\]", value)
                     if match:
-                        new_value = match.group(1) if match.group(1) is not None else match.group(2)
+                        new_value = match.group(1) or match.group(2) or match.group(3)
                         new_get[key] = new_value
                         fixed_params = True
                 except:

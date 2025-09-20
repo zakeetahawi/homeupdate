@@ -195,6 +195,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.current_user.CurrentUserMiddleware',  # تتبع المستخدم الحالي
     'accounts.middleware.log_terminal_activity.TerminalActivityLoggerMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

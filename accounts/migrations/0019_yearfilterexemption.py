@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("accounts", "0018_delete_notification"),
+        ("accounts", "0016_delete_notification"),
     ]
 
     operations = [

@@ -17,7 +17,7 @@ from .models import (
     InstallationSchedule, InstallationTeam, Technician, Driver,
     ModificationRequest, ModificationImage, ManufacturingOrder,
     ModificationReport, ReceiptMemo, InstallationPayment, InstallationArchive, CustomerDebt,
-    ModificationErrorAnalysis, ModificationErrorType
+    ModificationErrorAnalysis, ModificationErrorType, InstallationEventLog, InstallationStatusLog
 )
 from .forms import (
     InstallationScheduleForm, InstallationTeamForm, TechnicianForm, TechnicianEditForm, DriverForm,
@@ -40,13 +40,46 @@ def currency_format(amount):
         return f"{amount:,.2f} ر.س"
 
 
-def update_related_orders(installation, new_status, old_status):
+def update_related_orders(installation, new_status, old_status, user=None):
     """تحديث حالة الطلب وأمر التصنيع المقابل عند تغيير حالة التركيب"""
     try:
-        # تحديث حالة الطلب
+        # تسجيل تغيير حالة التركيب في OrderStatusLog
+        try:
+            from orders.models import OrderStatusLog
+            
+            OrderStatusLog.objects.create(
+                order=installation.order,
+                old_status=old_status,
+                new_status=new_status,
+                changed_by=user,
+                notes=f'تغيير حالة التركيب من {dict(InstallationSchedule.STATUS_CHOICES).get(old_status, old_status)} إلى {dict(InstallationSchedule.STATUS_CHOICES).get(new_status, new_status)}'
+            )
+        except Exception as e:
+            print(f"خطأ في تسجيل تغيير حالة التركيب: {e}")
+
+        # تحديث حالة الطلب فقط إذا كانت مختلفة
         if new_status == 'completed' and old_status != 'completed':
-            installation.order.order_status = 'completed'
-            installation.order.save()
+            old_order_status = installation.order.order_status
+            if old_order_status != 'completed':  # تجنب التسجيل المكرر
+                installation.order.order_status = 'completed'
+                # وضع علامة للتحديث التلقائي لتجنب التسجيل المكرر في الإشارات
+                installation.order.is_auto_update = True
+                installation.order.save()
+                # إعادة تعيين العلامة بعد الحفظ
+                installation.order.is_auto_update = False
+                
+                # تسجيل تغيير حالة الطلب في OrderStatusLog
+                try:
+                    from orders.models import OrderStatusLog
+                    OrderStatusLog.objects.create(
+                        order=installation.order,
+                        old_status=old_order_status,
+                        new_status='completed',
+                        changed_by=user,
+                        notes=f'تم تحديث حالة الطلب تلقائياً عند إكمال التركيب #{installation.installation_code}'
+                    )
+                except Exception as e:
+                    print(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
 
         # البحث عن أمر التصنيع المقابل
         from manufacturing.models import ManufacturingOrder
@@ -107,7 +140,9 @@ def dashboard(request):
     completed_installations = installation_schedules_queryset.filter(status='completed').count()
     in_installation_installations = installation_schedules_queryset.filter(status='in_installation').count()
     scheduled_installations = installation_schedules_queryset.filter(status='scheduled').count()
-    modification_required_installations = installation_schedules_queryset.filter(status='modification_required').count()
+    modification_required_installations = installation_schedules_queryset.filter(
+        status__in=['modification_required', 'modification_scheduled', 'modification_in_progress']
+    ).count()
 
     # حساب الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
     orders_needing_scheduling_count = ManufacturingOrder.objects.filter(
@@ -259,7 +294,10 @@ def change_installation_status(request, installation_id):
                 )
 
             # تحديث حالة الطلب وأمر التصنيع المقابل
-            update_related_orders(installation, new_status, old_status)
+            update_related_orders(installation, new_status, old_status, request.user)
+
+            # إزالة إنشاء الأرشيف التلقائي من هنا - سيتم في الإشارات
+            # للتأكد من تسجيل المستخدم الصحيح
 
             if new_status == 'completed' and old_status != 'completed':
                 messages.success(request, 'تم إكمال التركيب بنجاح وتحديث أمر التصنيع')
@@ -451,10 +489,15 @@ def installation_list(request):
     
     # ترقيم الصفحات
     from django.core.paginator import Paginator
-    page_size = int(request.GET.get('page_size', 25))
+    page_size_str = request.GET.get('page_size', '25')
+    if isinstance(page_size_str, list):
+        page_size_str = page_size_str[0] if page_size_str else '25'
+    page_size = int(page_size_str)
     paginator = Paginator(installation_items, page_size)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_number_str = request.GET.get('page')
+    if isinstance(page_number_str, list):
+        page_number_str = page_number_str[0] if page_number_str else '1'
+    page_obj = paginator.get_page(page_number_str)
 
     # إحصائيات سريعة
     total_count = len(installation_items)
@@ -498,17 +541,35 @@ def installation_detail(request, installation_id):
 
     # الحصول على المدفوعات والتقارير
     payments = InstallationPayment.objects.filter(installation=installation)
-    # تصحيح ��لعلاقة مع ModificationReport
+    # تصحيح العلاقة مع ModificationReport
     modification_reports = ModificationReport.objects.filter(
         modification_request__installation=installation
     )
     receipt_memo = ReceiptMemo.objects.filter(installation=installation).first()
+
+    # الحصول على سجل الأحداث
+    event_logs = InstallationEventLog.objects.filter(
+        installation=installation
+    ).select_related('user').order_by('-created_at')[:20]  # آخر 20 حدث
+
+    # الحصول على سجل تغيير الحالات
+    status_logs = InstallationStatusLog.objects.filter(
+        installation=installation
+    ).select_related('changed_by').order_by('-created_at')[:20]  # آخر 20 تغيير
+
+    # الحصول على معلومات الأرشفة إذا كان مؤرشف
+    archive_info = None
+    if hasattr(installation, 'installationarchive'):
+        archive_info = installation.installationarchive
 
     context = {
         'installation': installation,
         'payments': payments,
         'modification_reports': modification_reports,
         'receipt_memo': receipt_memo,
+        'event_logs': event_logs,
+        'status_logs': status_logs,
+        'archive_info': archive_info,
     }
 
     return render(request, 'installations/installation_detail.html', context)
@@ -640,7 +701,7 @@ def update_status(request, installation_id):
                 installation.save(update_fields=['status'])
 
             # تحديث الطلبات المرتبطة
-            update_related_orders(installation, new_status, old_status)
+            update_related_orders(installation, new_status, old_status, request.user)
             
             # إنشاء سجل حدث
             try:
@@ -660,10 +721,53 @@ def update_status(request, installation_id):
                 # لا نريد أن يفشل التحديث بسبب سجل الحدث
                 print(f"خطأ في إنشاء سجل الحدث: {e}")
             
+            # إنشاء إشعار لتحديث الحالة
+            try:
+                from notifications.signals import create_notification
+                
+                # تحديد نوع الإشعار
+                notification_type = 'installation_status_changed'
+                
+                # إنشاء عنوان ووصف الإشعار
+                title = f'تحديث حالة التركيب #{installation.order.order_number}'
+                message = f'تم تغيير حالة التركيب من "{valid_statuses.get(old_status, old_status)}" إلى "{valid_statuses.get(new_status, new_status)}" بواسطة {request.user.get_full_name() or request.user.username}'
+                
+                # إنشاء الإشعار
+                create_notification(
+                    title=title,
+                    message=message,
+                    notification_type=notification_type,
+                    related_object=installation,
+                    created_by=request.user,
+                    extra_data={
+                        'old_status': old_status,
+                        'new_status': new_status,
+                        'changed_by': request.user.username,
+                        'order_number': installation.order.order_number,
+                        'customer_name': installation.order.customer.name if installation.order.customer else 'غير محدد'
+                    }
+                )
+            except Exception as e:
+                print(f"خطأ في إنشاء إشعار تحديث الحالة: {e}")
+            
             # تحديث حالة الطلب عند الإكمال
             if new_status == 'completed' and old_status != 'completed':
+                old_order_status = installation.order.order_status
                 installation.order.order_status = 'completed'
                 installation.order.save(update_fields=['order_status'])
+                
+                # تسجيل تغيير حالة الطلب في OrderStatusLog
+                try:
+                    from orders.models import OrderStatusLog
+                    OrderStatusLog.objects.create(
+                        order=installation.order,
+                        old_status=old_order_status,
+                        new_status='completed',
+                        changed_by=request.user,
+                        notes=f'تم تحديث حالة الطلب تلقائياً عند إكمال التركيب #{installation.installation_code}'
+                    )
+                except Exception as e:
+                    print(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
 
             # إرسال رسالة نجاح
             success_message = f'تم تحديث حالة التركيب بنجاح إلى: {valid_statuses.get(new_status, new_status)}'
@@ -743,7 +847,7 @@ def update_status_by_code(request, installation_code):
                 installation.save(update_fields=['status'])
 
             # تحديث الطلبات المرتبطة
-            update_related_orders(installation, new_status, old_status)
+            update_related_orders(installation, new_status, old_status, request.user)
 
             # إنشاء سجل حدث
             try:
@@ -763,10 +867,53 @@ def update_status_by_code(request, installation_code):
                 # لا نريد أن يفشل التحديث بسبب سجل الحدث
                 print(f"خطأ في إنشاء سجل الحدث: {e}")
 
+            # إنشاء إشعار لتحديث الحالة
+            try:
+                from notifications.signals import create_notification
+                
+                # تحديد نوع الإشعار
+                notification_type = 'installation_status_changed'
+                
+                # إنشاء عنوان ووصف الإشعار
+                title = f'تحديث حالة التركيب #{installation.order.order_number}'
+                message = f'تم تغيير حالة التركيب من "{valid_statuses.get(old_status, old_status)}" إلى "{valid_statuses.get(new_status, new_status)}" بواسطة {request.user.get_full_name() or request.user.username}'
+                
+                # إنشاء الإشعار
+                create_notification(
+                    title=title,
+                    message=message,
+                    notification_type=notification_type,
+                    related_object=installation,
+                    created_by=request.user,
+                    extra_data={
+                        'old_status': old_status,
+                        'new_status': new_status,
+                        'changed_by': request.user.username,
+                        'order_number': installation.order.order_number,
+                        'customer_name': installation.order.customer.name if installation.order.customer else 'غير محدد'
+                    }
+                )
+            except Exception as e:
+                print(f"خطأ في إنشاء إشعار تحديث الحالة: {e}")
+
             # تحديث حالة الطلب عند الإكمال
             if new_status == 'completed' and old_status != 'completed':
+                old_order_status = installation.order.order_status
                 installation.order.order_status = 'completed'
                 installation.order.save(update_fields=['order_status'])
+                
+                # تسجيل تغيير حالة الطلب في OrderStatusLog
+                try:
+                    from orders.models import OrderStatusLog
+                    OrderStatusLog.objects.create(
+                        order=installation.order,
+                        old_status=old_order_status,
+                        new_status='completed',
+                        changed_by=request.user,
+                        notes=f'تم تحديث حالة الطلب تلقائياً عند إكمال التركيب #{installation.installation_code}'
+                    )
+                except Exception as e:
+                    print(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
 
             # إرسال رسالة نجاح
             success_message = f'تم تحديث حالة التركيب بنجاح إلى: {valid_statuses.get(new_status, new_status)}'
@@ -1546,11 +1693,8 @@ def complete_installation(request, installation_id):
         
         installation.save()
 
-        # إنشاء أرشيف
-        InstallationArchive.objects.create(
-            installation=installation,
-            archived_by=request.user
-        )
+        # إزالة إنشاء الأرشيف من هنا - سيتم تلقائياً في الإشارات
+        # لضمان تسجيل المستخدم الصحيح
 
         # إنشاء سجل حدث
         from .models import InstallationEventLog
@@ -1702,42 +1846,143 @@ def archive_list(request):
 @login_required
 def installation_stats_api(request):
     """API لإحصائيات التركيبات (بدون فلترة افتراضية)"""
+    try:
+        # إحصائيات التركيبات المجدولة (مع فلترة صحيحة)
+        installation_schedules_queryset = InstallationSchedule.objects.filter(
+            order__isnull=False,
+            order__selected_types__contains=['installation']
+        )
 
-    # إحصائيات التركيبات المجدولة (مع فلترة صحيحة)
-    installation_schedules_queryset = InstallationSchedule.objects.filter(
-        order__isnull=False,
-        order__selected_types__icontains='installation'
-    )
+        # استخدام aggregate لتحسين الأداء
+        stats = installation_schedules_queryset.aggregate(
+            total=Count('id'),
+            completed=Count('id', filter=Q(status='completed')),
+            pending=Count('id', filter=Q(status='pending')),
+            in_progress=Count('id', filter=Q(status='in_progress')),
+            scheduled=Count('id', filter=Q(status='scheduled')),
+            modification_required=Count('id', filter=Q(status__in=['modification_required', 'modification_scheduled', 'modification_in_progress']))
+        )
 
-    # استخدام aggregate لتحسين الأداء
-    stats = installation_schedules_queryset.aggregate(
-        total=Count('id'),
-        completed=Count('id', filter=Q(status='completed')),
-        pending=Count('id', filter=Q(status='pending')),
-        in_progress=Count('id', filter=Q(status='in_progress')),
-        scheduled=Count('id', filter=Q(status='scheduled')),
-        modification_required=Count('id', filter=Q(status='modification_required'))
-    )
+        # إحصائيات طلبات التركيب (إجمالي في النظام)
+        total_orders = Order.objects.filter(selected_types__contains=['installation']).count()
 
-    # إحصائيات طلبات التركيب (إجمالي في النظام)
-    total_orders = Order.objects.filter(selected_types__icontains='installation').count()
+        # الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
+        orders_needing_scheduling = ManufacturingOrder.objects.filter(
+            status__in=['ready_install', 'delivered'],
+            modification_request__installation__order__selected_types__contains=['installation'],
+            modification_request__installation__isnull=True
+        ).count()
 
-    # الطلبات التي تحتاج جدولة
-    orders_needing_scheduling = Order.objects.filter(
-        selected_types__icontains='installation',
-        installationschedule__isnull=True
-    ).count()
+        # الطلبات المديونة
+        try:
+            orders_with_debt = Order.objects.filter(
+                selected_types__contains=['installation'],
+                total_amount__gt=F('paid_amount')
+            ).count()
+        except Exception as e:
+            orders_with_debt = 0
+            print(f"Error in debt calculation: {str(e)}")
 
-    return JsonResponse({
-        'total_scheduled': stats['total'],  # إجمالي التركيبات المجدولة
-        'total_orders': total_orders,  # إجمالي طلبات التركيب في النظام
-        'completed': stats['completed'],
-        'pending': stats['pending'],
-        'in_progress': stats['in_progress'],
-        'scheduled': stats['scheduled'],
-        'modification_required': stats['modification_required'],
-        'orders_needing_scheduling': orders_needing_scheduling
-    })
+        # أوامر التصنيع
+        try:
+            orders_in_manufacturing = ManufacturingOrder.objects.filter(
+                status__in=['pending_approval', 'pending', 'in_progress'],
+                modification_request__installation__order__selected_types__contains=['installation']
+            ).count()
+        except Exception as e:
+            orders_in_manufacturing = 0
+            print(f"Error in manufacturing orders calculation: {str(e)}")
+
+        try:
+            delivered_manufacturing_orders = ManufacturingOrder.objects.filter(
+                status='delivered',
+                modification_request__installation__order__selected_types__contains=['installation']
+            ).count()
+        except Exception as e:
+            delivered_manufacturing_orders = 0
+            print(f"Error in delivered orders calculation: {str(e)}")
+
+        # التركيبات المجدولة اليوم
+        today = timezone.now().date()
+        try:
+            today_installations_count = InstallationSchedule.objects.filter(
+                scheduled_date=today,
+                status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
+            ).exclude(status='completed').count()
+        except Exception as e:
+            today_installations_count = 0
+            print(f"Error in today installations calculation: {str(e)}")
+
+        # التركيبات القادمة
+        try:
+            upcoming_installations_count = InstallationSchedule.objects.filter(
+                scheduled_date__gt=today,
+                status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
+            ).exclude(status='completed').count()
+        except Exception as e:
+            upcoming_installations_count = 0
+            print(f"Error in upcoming installations calculation: {str(e)}")
+
+        # الطلبات الجديدة (آخر 7 أيام)
+        try:
+            recent_orders_count = Order.objects.filter(
+                selected_types__contains=['installation'],
+                created_at__gte=timezone.now() - timezone.timedelta(days=7)
+            ).count()
+        except Exception as e:
+            recent_orders_count = 0
+            print(f"Error in recent orders calculation: {str(e)}")
+
+        # إحصائيات الفرق
+        try:
+            teams_stats_count = InstallationTeam.objects.filter(
+                is_active=True
+            ).annotate(
+                installations_count=Count('installationschedule')
+            ).count()
+        except Exception as e:
+            teams_stats_count = 0
+            print(f"Error in teams stats calculation: {str(e)}")
+
+        return JsonResponse({
+            'total_scheduled': stats['total'],  # إجمالي التركيبات المجدولة
+            'total_orders': total_orders,  # إجمالي طلبات التركيب في النظام
+            'completed': stats['completed'],
+            'pending': stats['pending'],
+            'in_progress': stats['in_progress'],
+            'scheduled': stats['scheduled'],
+            'modification_required': stats['modification_required'],
+            'orders_needing_scheduling': orders_needing_scheduling,
+            'orders_with_debt': orders_with_debt,
+            'orders_in_manufacturing': orders_in_manufacturing,
+            'delivered_manufacturing_orders': delivered_manufacturing_orders,
+            'today_installations': today_installations_count,
+            'upcoming_installations': upcoming_installations_count,
+            'recent_orders': recent_orders_count,
+            'teams_stats': teams_stats_count,
+            'last_updated': timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+    except Exception as e:
+        print(f"Error in installation_stats_api: {str(e)}")
+        return JsonResponse({
+            'error': str(e),
+            'total_scheduled': 0,
+            'total_orders': 0,
+            'completed': 0,
+            'pending': 0,
+            'in_progress': 0,
+            'scheduled': 0,
+            'modification_required': 0,
+            'orders_needing_scheduling': 0,
+            'orders_with_debt': 0,
+            'orders_in_manufacturing': 0,
+            'delivered_manufacturing_orders': 0,
+            'today_installations': 0,
+            'upcoming_installations': 0,
+            'recent_orders': 0,
+            'teams_stats': 0,
+            'last_updated': timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+        }, status=500)
 
 
 # إدارة مديونية العملاء
@@ -2676,3 +2921,156 @@ def installation_detail_redirect(request, installation_id):
     return redirect('installations:installation_detail_by_code', installation_code=installation.installation_code)
 
 
+
+
+@login_required
+def daily_schedule(request):
+    """عرض الجدول اليومي للتركيبات مع فلاتر محسنة"""
+    from django.db.models import Q
+    from manufacturing.models import ManufacturingOrder
+    
+    # نموذج الفلترة
+    form = DailyScheduleForm(request.GET or None)
+    
+    # استخراج قيم الفلاتر
+    selected_date = request.GET.get('date', timezone.now().date().isoformat())
+    status_filter = request.GET.get('status', '')
+    team_filter = request.GET.get('team', '')
+    salesperson_filter = request.GET.get('salesperson', '')
+    branch_filter = request.GET.get('branch', '')
+    search = request.GET.get('search', '').strip()
+    
+    # تحويل التاريخ إلى كائن date
+    try:
+        if isinstance(selected_date, str):
+            selected_date = timezone.datetime.strptime(selected_date, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        selected_date = timezone.now().date()
+    
+    # بناء الاستعلام الأساسي للتركيبات المجدولة في التاريخ المحدد
+    installations_query = InstallationSchedule.objects.select_related(
+        'order__customer', 'order__salesperson', 'order__branch', 'team'
+    ).filter(
+        scheduled_date=selected_date
+    )
+    
+    # تطبيق فلاتر الحالة
+    if status_filter:
+        installations_query = installations_query.filter(status=status_filter)
+    
+    # تطبيق فلاتر الفريق
+    if team_filter:
+        installations_query = installations_query.filter(team_id=team_filter)
+    
+    # تطبيق فلاتر البائع
+    if salesperson_filter:
+        installations_query = installations_query.filter(order__salesperson_id=salesperson_filter)
+    
+    # تطبيق فلاتر الفرع
+    if branch_filter:
+        installations_query = installations_query.filter(order__branch_id=branch_filter)
+    
+    # تطبيق فلاتر البحث
+    if search:
+        search_q = Q(order__order_number__icontains=search) | \
+                  Q(order__customer__name__icontains=search) | \
+                  Q(order__customer__phone__icontains=search) | \
+                  Q(order__contract_number__icontains=search) | \
+                  Q(order__invoice_number__icontains=search)
+        installations_query = installations_query.filter(search_q)
+    
+    # ترتيب النتائج حسب الوقت المجدول
+    installations = installations_query.order_by('scheduled_time', 'id')
+    
+    # إحصائيات سريعة
+    total_installations = installations.count()
+    scheduled_count = installations.filter(status='scheduled').count()
+    in_installation_count = installations.filter(status='in_installation').count()
+    completed_count = installations.filter(status='completed').count()
+    
+    context = {
+        'form': form,
+        'installations': installations,
+        'selected_date': selected_date,
+        'total_installations': total_installations,
+        'scheduled_count': scheduled_count,
+        'in_installation_count': in_installation_count,
+        'completed_count': completed_count,
+        'status_filter': status_filter,
+        'team_filter': team_filter,
+        'salesperson_filter': salesperson_filter,
+        'branch_filter': branch_filter,
+        'search': search,
+    }
+    
+    return render(request, 'installations/daily_schedule.html', context)
+
+
+@login_required
+def print_daily_schedule(request):
+    """طباعة الجدول اليومي للتركيبات"""
+    # نفس منطق daily_schedule ولكن مع template مختلف للطباعة
+    from django.db.models import Q
+    from manufacturing.models import ManufacturingOrder
+    
+    # نموذج الفلترة
+    form = DailyScheduleForm(request.GET or None)
+    
+    # استخراج قيم الفلاتر
+    selected_date = request.GET.get('date', timezone.now().date().isoformat())
+    status_filter = request.GET.get('status', '')
+    team_filter = request.GET.get('team', '')
+    salesperson_filter = request.GET.get('salesperson', '')
+    branch_filter = request.GET.get('branch', '')
+    search = request.GET.get('search', '').strip()
+    
+    # تحويل التاريخ إلى كائن date
+    try:
+        if isinstance(selected_date, str):
+            selected_date = timezone.datetime.strptime(selected_date, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        selected_date = timezone.now().date()
+    
+    # بناء الاستعلام الأساسي للتركيبات المجدولة في التاريخ المحدد
+    installations_query = InstallationSchedule.objects.select_related(
+        'order__customer', 'order__salesperson', 'order__branch', 'team'
+    ).filter(
+        scheduled_date=selected_date
+    )
+    
+    # تطبيق فلاتر الحالة
+    if status_filter:
+        installations_query = installations_query.filter(status=status_filter)
+    
+    # تطبيق فلاتر الفريق
+    if team_filter:
+        installations_query = installations_query.filter(team_id=team_filter)
+    
+    # تطبيق فلاتر البائع
+    if salesperson_filter:
+        installations_query = installations_query.filter(order__salesperson_id=salesperson_filter)
+    
+    # تطبيق فلاتر الفرع
+    if branch_filter:
+        installations_query = installations_query.filter(order__branch_id=branch_filter)
+    
+    # تطبيق فلاتر البحث
+    if search:
+        search_q = Q(order__order_number__icontains=search) | \
+                  Q(order__customer__name__icontains=search) | \
+                  Q(order__customer__phone__icontains=search) | \
+                  Q(order__contract_number__icontains=search) | \
+                  Q(order__invoice_number__icontains=search)
+        installations_query = installations_query.filter(search_q)
+    
+    # ترتيب النتائج حسب الوقت المجدول
+    installations = installations_query.order_by('scheduled_time', 'id')
+    
+    context = {
+        'form': form,
+        'installations': installations,
+        'selected_date': selected_date,
+        'print_mode': True,
+    }
+    
+    return render(request, 'installations/print_daily_schedule.html', context)

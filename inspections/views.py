@@ -62,6 +62,7 @@ class CompletedInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, Lis
     template_name = 'inspections/completed_details.html'
     context_object_name = 'inspections'
     paginate_by = 20
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
 
     def get_queryset(self):
         queryset = Inspection.objects.filter(status='completed')
@@ -79,6 +80,7 @@ class CancelledInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, Lis
     template_name = 'inspections/cancelled_details.html'
     context_object_name = 'inspections'
     paginate_by = 20
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
 
     def get_queryset(self):
         queryset = Inspection.objects.filter(status='cancelled')
@@ -96,6 +98,7 @@ class PendingInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, ListV
     template_name = 'inspections/pending_details.html'
     context_object_name = 'inspections'
     paginate_by = 20
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
 
     def get_queryset(self):
         queryset = Inspection.objects.filter(status='pending')
@@ -113,6 +116,7 @@ class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
     template_name = 'inspections/inspection_list.html'
     context_object_name = 'inspections'
     paginate_by = 25  # الافتراضي
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
 
     def get_paginate_by(self, queryset):
         try:
@@ -416,6 +420,45 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         # Save inspection first to ensure it exists
         response = super().form_valid(form)
         
+        # إنشاء إشعار لتحديث حالة المعاينة إذا تغيرت
+        if old_status != new_status:
+            try:
+                from notifications.signals import create_notification
+                
+                # تحديد نوع الإشعار
+                notification_type = 'inspection_status_changed'
+                
+                # إنشاء عنوان ووصف الإشعار
+                title = f'تحديث حالة المعاينة #{inspection.pk}'
+                message = f'تم تغيير حالة المعاينة من "{old_status}" إلى "{new_status}" بواسطة {self.request.user.get_full_name() or self.request.user.username}'
+                
+                # إضافة معلومات الطلب إذا كان موجوداً
+                order_info = ""
+                if inspection.order:
+                    order_info = f" - الطلب: {inspection.order.order_number}"
+                    message += f" (الطلب: {inspection.order.order_number})"
+                
+                title += order_info
+                
+                # إنشاء الإشعار
+                create_notification(
+                    title=title,
+                    message=message,
+                    notification_type=notification_type,
+                    related_object=inspection,
+                    created_by=self.request.user,
+                    extra_data={
+                        'old_status': old_status,
+                        'new_status': new_status,
+                        'changed_by': self.request.user.username,
+                        'inspection_id': inspection.pk,
+                        'order_number': inspection.order.order_number if inspection.order else None,
+                        'customer_name': inspection.customer.name if inspection.customer else 'غير محدد'
+                    }
+                )
+            except Exception as e:
+                print(f"خطأ في إنشاء إشعار تحديث حالة المعاينة: {e}")
+        
         # التحقق من وجود ملف جديد وإعطاء رسالة مناسبة
         old_file = old_inspection.inspection_file
         new_file = inspection.inspection_file
@@ -590,6 +633,7 @@ class NotificationListView(PaginationFixMixin, LoginRequiredMixin, ListView):
     template_name = 'inspections/notifications/notification_list.html'  # Updated path
     context_object_name = 'notifications'
     paginate_by = 10
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
 
     def get_queryset(self):
         return InspectionNotification.objects.filter(

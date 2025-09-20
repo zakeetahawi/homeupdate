@@ -52,10 +52,14 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
     context_object_name = 'manufacturing_orders'
     paginate_by = 25  # تفعيل Django pagination
     permission_required = 'manufacturing.view_manufacturingorder'
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
     
     def get_paginate_by(self, queryset):
         try:
-            page_size = int(self.request.GET.get('page_size', 25))
+            page_size_str = self.request.GET.get('page_size', '25')
+            if isinstance(page_size_str, list):
+                page_size_str = page_size_str[0] if page_size_str else '25'
+            page_size = int(page_size_str)
             if page_size > 100:
                 page_size = 100
             elif page_size < 1:
@@ -78,6 +82,16 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
         # Apply filters - دعم الفلاتر المتعددة
         # فلتر الحالات (اختيار متعدد)
         status_filters = self.request.GET.getlist('status')
+        # محاولة فك ترميز القوائمة إذا كانت مُرمّزة
+        import json
+        try:
+            if status_filters and len(status_filters) == 1:
+                status_filters = json.loads(status_filters[0].replace('%27', "'").replace('%22', '"'))
+                if not isinstance(status_filters, list):
+                    status_filters = [status_filters]
+        except:
+            pass
+
         if status_filters:
             queryset = queryset.filter(status__in=status_filters)
 
@@ -127,6 +141,15 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
         # البحث النصي مع اختيار أعمدة البحث
         search = self.request.GET.get('search')
         search_columns = self.request.GET.getlist('search_columns')
+
+        # محاولة فك ترميز قوالب البحث إذا كانت مُرمّزة
+        try:
+            if search_columns and len(search_columns) == 1:
+                search_columns = json.loads(search_columns[0].replace('%27', "'").replace('%22', '"'))
+                if not isinstance(search_columns, list):
+                    search_columns = [search_columns]
+        except:
+            pass
 
         if search:
             # إذا لم يحدد المستخدم أعمدة أو اختار 'all'، نفذ البحث الشامل كما كان
@@ -485,6 +508,7 @@ class VIPOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRequir
     context_object_name = 'vip_orders'
     paginate_by = 25
     permission_required = 'manufacturing.view_manufacturingorder'
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
 
     def get_queryset(self):
         """الحصول على طلبات VIP فقط"""
@@ -2071,6 +2095,7 @@ class OverdueOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRe
     context_object_name = 'overdue_orders'
     paginate_by = 25
     permission_required = 'manufacturing.view_manufacturingorder'
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
 
     def get_queryset(self):
         """الحصول على أوامر التصنيع المتأخرة فقط"""

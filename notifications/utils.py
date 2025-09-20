@@ -39,7 +39,7 @@ def get_notification_recipients(notification_type, related_object=None, created_
         inspection_recipients = get_inspection_notification_recipients(related_object, created_by, notification_type).values_list('id', flat=True)
         recipient_ids.update(inspection_recipients)
 
-    elif notification_type in ['installation_scheduled', 'installation_completed']:
+    elif notification_type in ['installation_scheduled', 'installation_completed', 'installation_status_changed']:
         installation_recipients = get_installation_notification_recipients(related_object, created_by, notification_type).values_list('id', flat=True)
         recipient_ids.update(installation_recipients)
 

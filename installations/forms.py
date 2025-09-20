@@ -927,3 +927,78 @@ class ScheduleEditForm(forms.ModelForm):
                 raise ValidationError(_('لا يمكن جدولة تركيب في وقت ماضي'))
 
         return cleaned_data
+
+
+class DailyScheduleForm(forms.Form):
+    """نموذج فلترة الجدول اليومي للتركيبات"""
+    date = forms.DateField(
+        label='التاريخ',
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date',
+            'id': 'date-filter'
+        }),
+        initial=timezone.now().date()
+    )
+    
+    status = forms.ChoiceField(
+        label='الحالة',
+        choices=[
+            ('', 'جميع الحالات'),
+            ('scheduled', 'مجدول'),
+            ('in_installation', 'قيد التركيب'),
+            ('completed', 'مكتمل'),
+            ('cancelled', 'ملغي'),
+            ('modification_required', 'يحتاج تعديل'),
+            ('modification_in_progress', 'تعديل قيد التنفيذ'),
+            ('modification_completed', 'تعديل مكتمل'),
+        ],
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'status-filter'
+        }),
+        required=False
+    )
+    
+    team = forms.ModelChoiceField(
+        label='الفريق',
+        queryset=InstallationTeam.objects.filter(is_active=True),
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'team-filter'
+        }),
+        required=False,
+        empty_label='جميع الفرق'
+    )
+    
+    salesperson = forms.ModelChoiceField(
+        label='البائع',
+        queryset=Salesperson.objects.filter(is_active=True),
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'salesperson-filter'
+        }),
+        required=False,
+        empty_label='جميع البائعين'
+    )
+    
+    branch = forms.ModelChoiceField(
+        label='الفرع',
+        queryset=Branch.objects.filter(is_active=True),
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'branch-filter'
+        }),
+        required=False,
+        empty_label='جميع الفروع'
+    )
+    
+    search = forms.CharField(
+        label='البحث',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'رقم الطلب، اسم العميل، رقم الهاتف...',
+            'id': 'search-filter'
+        }),
+        required=False
+    )

@@ -506,6 +506,16 @@ if (searchInput) {
         searchTimeout = setTimeout(() => {
             if (this.value.length >= 3 || this.value.length === 0) {
                 const form = this.closest('form');
+
+                // إظهار مؤشر التحميل
+                showLoading();
+
+                // إعادة تعيين الصفحة إلى 1 عند البحث
+                const pageInput = form.querySelector('input[name="page"]');
+                if (pageInput) {
+                    pageInput.value = 1;
+                }
+
                 form.submit();
             }
         }, 1000);
@@ -516,20 +526,44 @@ if (searchInput) {
 function saveFilterState() {
     const formData = new FormData(document.getElementById('filterForm'));
     const filters = Object.fromEntries(formData);
-    localStorage.setItem('installation_filters', JSON.stringify(filters));
+
+    // تحويل القيم إلى strings لمنع مشاكل النوع
+    const filtersForStorage = {};
+    for (const [key, value] of Object.entries(filters)) {
+        if (Array.isArray(value)) {
+            filtersForStorage[key] = value[0] || '';
+        } else {
+            filtersForStorage[key] = String(value);
+        }
+    }
+
+    localStorage.setItem('installation_filters', JSON.stringify(filtersForStorage));
 }
 
 function loadFilterState() {
     const saved = localStorage.getItem('installation_filters');
-    if (saved && !window.location.search) {
-        const filters = JSON.parse(saved);
-        const form = document.getElementById('filterForm');
-        Object.entries(filters).forEach(([key, value]) => {
-            const input = form.querySelector(`[name="${key}"]`);
-            if (input && value) {
-                input.value = value;
+    if (saved) {
+        try {
+            const filters = JSON.parse(saved);
+            const form = document.getElementById('filterForm');
+
+            // التحقق من صلاحية البيانات المحفوظة
+            if (filters && typeof filters === 'object') {
+                Object.entries(filters).forEach(([key, value]) => {
+                    const input = form.querySelector(`[name="${key}"]`);
+                    if (input) {
+                        if (input.type === 'checkbox' || input.type === 'radio') {
+                            input.checked = String(value) === 'true';
+                        } else {
+                            input.value = String(value);
+                        }
+                    }
+                });
             }
-        });
+        } catch (error) {
+            console.error('خطأ في تحميل الفلاتر المحفوظة:', error);
+            localStorage.removeItem('installation_filters');
+        }
     }
 }
 

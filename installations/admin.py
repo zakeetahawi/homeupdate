@@ -11,7 +11,8 @@ from .models import (
     InstallationSchedule, InstallationTeam, Technician, Driver,
     ModificationRequest, ModificationImage, ManufacturingOrder as InstallationManufacturingOrder,
     ModificationReport, ReceiptMemo, InstallationPayment, InstallationArchive, CustomerDebt,
-    InstallationAnalytics, ModificationErrorAnalysis, ModificationErrorType
+    InstallationAnalytics, ModificationErrorAnalysis, ModificationErrorType,
+    InstallationStatusLog, InstallationEventLog
 )
 from manufacturing.models import ManufacturingOrder
 
@@ -941,11 +942,108 @@ class InstallationPaymentAdmin(admin.ModelAdmin):
 @admin.register(InstallationArchive)
 class InstallationArchiveAdmin(admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
-    list_display = ['installation', 'completion_date', 'archived_by']
+    list_display = ['installation', 'completion_date', 'archived_by_display', 'archive_notes_short']
     list_filter = ['completion_date', 'archived_by']
-    search_fields = ['installation__order__order_number']
+    search_fields = ['installation__order__order_number', 'archive_notes', 'archived_by__username', 'archived_by__first_name', 'archived_by__last_name']
     ordering = ['-completion_date']
     readonly_fields = ['completion_date', 'archived_by']
+
+    def archive_notes_short(self, obj):
+        """عرض مختصر لملاحظات الأرشفة"""
+        if obj.archive_notes:
+            return obj.archive_notes[:50] + '...' if len(obj.archive_notes) > 50 else obj.archive_notes
+        return '-'
+    archive_notes_short.short_description = 'ملاحظات الأرشفة'
+
+    def archived_by_display(self, obj):
+        """عرض اسم المستخدم الذي أرشف التركيب"""
+        if obj.archived_by:
+            full_name = obj.archived_by.get_full_name()
+            username = obj.archived_by.username
+            if full_name:
+                return format_html('<span title="{}">{}</span>', username, full_name)
+            return username
+        return '-'
+    archived_by_display.short_description = 'أرشف بواسطة'
+    archived_by_display.admin_order_field = 'archived_by__username'
+
+
+@admin.register(InstallationStatusLog)
+class InstallationStatusLogAdmin(admin.ModelAdmin):
+    """إدارة سجل تغيير حالات التركيبات"""
+    list_per_page = 50
+    list_display = ['installation', 'old_status_display', 'new_status_display', 'changed_by_display', 'created_at', 'reason_short']
+    list_filter = ['created_at', 'changed_by', 'old_status', 'new_status']
+    search_fields = ['installation__order__order_number', 'reason', 'notes', 'changed_by__username', 'changed_by__first_name', 'changed_by__last_name']
+    ordering = ['-created_at']
+    readonly_fields = ['installation', 'old_status', 'new_status', 'changed_by', 'reason', 'notes', 'created_at']
+
+    def old_status_display(self, obj):
+        """عرض حالة التركيب القديمة بشكل واضح"""
+        return obj.get_old_status_display()
+    old_status_display.short_description = 'من حالة'
+    old_status_display.admin_order_field = 'old_status'
+
+    def new_status_display(self, obj):
+        """عرض حالة التركيب الجديدة بشكل واضح"""
+        return obj.get_new_status_display()
+    new_status_display.short_description = 'إلى حالة'
+    new_status_display.admin_order_field = 'new_status'
+
+    def changed_by_display(self, obj):
+        """عرض اسم المستخدم الذي غير الحالة"""
+        if obj.changed_by:
+            full_name = obj.changed_by.get_full_name()
+            username = obj.changed_by.username
+            if full_name:
+                return format_html('<span title="{}">{}</span>', username, full_name)
+            return username
+        return '-'
+    changed_by_display.short_description = 'غير بواسطة'
+    changed_by_display.admin_order_field = 'changed_by__username'
+
+    def reason_short(self, obj):
+        """عرض مختصر لسبب التغيير"""
+        if obj.reason:
+            return obj.reason[:30] + '...' if len(obj.reason) > 30 else obj.reason
+        return '-'
+    reason_short.short_description = 'السبب'
+
+
+@admin.register(InstallationEventLog)
+class InstallationEventLogAdmin(admin.ModelAdmin):
+    """إدارة سجل أحداث التركيبات"""
+    list_per_page = 50
+    list_display = ['installation', 'event_type_display', 'description_short', 'user_display', 'created_at']
+    list_filter = ['created_at', 'user', 'event_type']
+    search_fields = ['installation__order__order_number', 'description', 'user__username', 'user__first_name', 'user__last_name']
+    ordering = ['-created_at']
+    readonly_fields = ['installation', 'event_type', 'description', 'user', 'metadata', 'created_at']
+
+    def event_type_display(self, obj):
+        """عرض نوع الحدث بشكل واضح"""
+        return obj.get_event_type_display()
+    event_type_display.short_description = 'نوع الحدث'
+    event_type_display.admin_order_field = 'event_type'
+
+    def user_display(self, obj):
+        """عرض اسم المستخدم الذي قام بالحدث"""
+        if obj.user:
+            full_name = obj.user.get_full_name()
+            username = obj.user.username
+            if full_name:
+                return format_html('<span title="{}">{}</span>', username, full_name)
+            return username
+        return '-'
+    user_display.short_description = 'المستخدم'
+    user_display.admin_order_field = 'user__username'
+
+    def description_short(self, obj):
+        """عرض مختصر لوصف الحدث"""
+        if obj.description:
+            return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+        return '-'
+    description_short.short_description = 'الوصف'
 
 
 @admin.register(InstallationAnalytics)

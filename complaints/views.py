@@ -199,6 +199,7 @@ class ComplaintListView(PaginationFixMixin, LoginRequiredMixin, ListView):
     template_name = 'complaints/complaint_list.html'
     context_object_name = 'complaints'
     paginate_by = 20
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
 
     def get_queryset(self):
         # تحسين الاستعلامات مع تجنب مشاكل الكاش
@@ -328,6 +329,7 @@ class AdminComplaintListView(PaginationFixMixin, LoginRequiredMixin, ListView):
     template_name = 'complaints/admin_complaint_list.html'
     context_object_name = 'complaints'
     paginate_by = 25
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
 
     def dispatch(self, request, *args, **kwargs):
         # التحقق من صلاحيات المدير

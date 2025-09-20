@@ -16,7 +16,17 @@ def pagination_url(context, page_number):
     request = context['request']
     params = request.GET.copy()
     params['page'] = page_number
-    return f"?{urlencode(params)}"
+    
+    # تنظيف المعاملات للتأكد من أنها ليست قوائم
+    cleaned_params = {}
+    for key, value in params.items():
+        if isinstance(value, (list, tuple)):
+            # إذا كان قائمة، خذ العنصر الأول
+            cleaned_params[key] = value[0] if value else ''
+        else:
+            cleaned_params[key] = value
+    
+    return f"?{urlencode(cleaned_params)}"
 
 @register.simple_tag(takes_context=True)
 def preserve_filters(context, exclude_params=None):
@@ -33,7 +43,16 @@ def preserve_filters(context, exclude_params=None):
             if param in params:
                 del params[param]
     
-    return urlencode(params)
+    # تنظيف المعاملات للتأكد من أنها ليست قوائم
+    cleaned_params = {}
+    for key, value in params.items():
+        if isinstance(value, (list, tuple)):
+            # إذا كان قائمة، خذ العنصر الأول
+            cleaned_params[key] = value[0] if value else ''
+        else:
+            cleaned_params[key] = value
+    
+    return urlencode(cleaned_params)
 
 @register.inclusion_tag('core/pagination.html', takes_context=True)
 def render_pagination(context, page_obj, extra_classes=''):
@@ -65,10 +84,15 @@ def current_url_with_page(context, page_number):
     params = request.GET.copy()
     params['page'] = page_number
     
-    # إزالة المعاملات الفارغة
-    filtered_params = {k: v for k, v in params.items() if v}
+    # إزالة المعاملات الفارغة وتنظيف القوائم
+    cleaned_params = {}
+    for k, v in params.items():
+        if isinstance(v, (list, tuple)):
+            v = v[0] if v else ''
+        if v:  # فقط إذا لم يكن فارغاً
+            cleaned_params[k] = v
     
-    return f"?{urlencode(filtered_params)}"
+    return f"?{urlencode(cleaned_params)}"
 
 @register.simple_tag(takes_context=True)
 def build_filter_url(context, **kwargs):
@@ -88,7 +112,16 @@ def build_filter_url(context, **kwargs):
     # إعادة تعيين الصفحة إلى 1 عند تغيير الفلاتر
     params['page'] = 1
     
-    return f"?{urlencode(params)}"
+    # تنظيف المعاملات للتأكد من أنها ليست قوائم
+    cleaned_params = {}
+    for key, value in params.items():
+        if isinstance(value, (list, tuple)):
+            # إذا كان قائمة، خذ العنصر الأول
+            cleaned_params[key] = value[0] if value else ''
+        else:
+            cleaned_params[key] = value
+    
+    return f"?{urlencode(cleaned_params)}"
 
 @register.simple_tag(takes_context=True)
 def get_filter_value(context, param_name, default=''):
@@ -96,7 +129,10 @@ def get_filter_value(context, param_name, default=''):
     الحصول على قيمة فلتر من URL
     """
     request = context['request']
-    return request.GET.get(param_name, default)
+    value = request.GET.get(param_name, default)
+    if isinstance(value, (list, tuple)):
+        return value[0] if value else default
+    return value
 
 @register.simple_tag(takes_context=True)
 def is_filter_active(context, param_name, value):
@@ -105,6 +141,8 @@ def is_filter_active(context, param_name, value):
     """
     request = context['request']
     current_value = request.GET.get(param_name)
+    if isinstance(current_value, (list, tuple)):
+        current_value = current_value[0] if current_value else ''
     return str(current_value) == str(value)
 
 @register.simple_tag(takes_context=True)
@@ -121,7 +159,16 @@ def clear_filter_url(context, param_name):
     # إعادة تعيين الصفحة إلى 1
     params['page'] = 1
     
-    return f"?{urlencode(params)}" if params else "?"
+    # تنظيف المعاملات للتأكد من أنها ليست قوائم
+    cleaned_params = {}
+    for key, value in params.items():
+        if isinstance(value, (list, tuple)):
+            # إذا كان قائمة، خذ العنصر الأول
+            cleaned_params[key] = value[0] if value else ''
+        else:
+            cleaned_params[key] = value
+    
+    return f"?{urlencode(cleaned_params)}" if cleaned_params else "?"
 
 @register.simple_tag(takes_context=True)
 def clear_all_filters_url(context, keep_params=None):
@@ -137,7 +184,10 @@ def clear_all_filters_url(context, keep_params=None):
     # الاحتفاظ بالمعاملات المحددة فقط
     for param in keep_params:
         if param in request.GET:
-            params[param] = request.GET[param]
+            value = request.GET[param]
+            if isinstance(value, (list, tuple)):
+                value = value[0] if value else ''
+            params[param] = value
     
     return f"?{urlencode(params)}" if params else "?"
 

@@ -18,6 +18,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.authentication import SessionAuthentication
 
+from django.contrib.auth import get_user_model
 from .models import Notification, NotificationVisibility, NotificationSettings
 from .serializers import NotificationSerializer, NotificationVisibilitySerializer
 from .utils import get_user_notification_count, mark_notification_as_read, mark_all_notifications_as_read
@@ -29,6 +30,7 @@ class NotificationListView(PaginationFixMixin, LoginRequiredMixin, ListView):
     template_name = 'notifications/list.html'
     context_object_name = 'notifications'
     paginate_by = 20
+    allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
 
     def get_queryset(self):
         """الحصول على الإشعارات المرئية للمستخدم الحالي"""
@@ -59,14 +61,38 @@ class NotificationListView(PaginationFixMixin, LoginRequiredMixin, ListView):
                 visibility_records__is_read=True
             )
 
+        # فلترة حسب التاريخ
+        date_from = self.request.GET.get('date_from')
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+
+        date_to = self.request.GET.get('date_to')
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
+
+        # فلترة حسب المستخدم المنشئ
+        created_by = self.request.GET.get('created_by')
+        if created_by:
+            queryset = queryset.filter(created_by_id=created_by)
+
         # البحث
         search = self.request.GET.get('search')
         if search:
-            queryset = queryset.filter(
-                Q(title__icontains=search) | Q(message__icontains=search)
-            )
+            # البحث في العنوان والرسالة
+            search_query = Q(title__icontains=search) | Q(message__icontains=search)
+            
+            # البحث في extra_data (JSON)
+            # نبحث في القيم النصية في extra_data
+            search_query |= Q(extra_data__icontains=search)
+            
+            queryset = queryset.filter(search_query)
 
-        return queryset.distinct()
+        # إضافة visibility record لكل إشعار
+        notifications = list(queryset.distinct())
+        for notification in notifications:
+            notification.user_visibility = notification.get_visibility_for_user(self.request.user)
+
+        return notifications
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -81,6 +107,13 @@ class NotificationListView(PaginationFixMixin, LoginRequiredMixin, ListView):
             'current_search': self.request.GET.get('search', ''),
             'unread_count': get_user_notification_count(self.request.user),
         })
+
+        # إضافة المستخدمين الذين لديهم إشعارات
+        User = get_user_model()
+        users_with_notifications = User.objects.filter(
+            id__in=Notification.objects.for_user(self.request.user).values('created_by').distinct()
+        ).order_by('first_name', 'last_name', 'username')
+        context['users_with_notifications'] = users_with_notifications
 
         return context
 

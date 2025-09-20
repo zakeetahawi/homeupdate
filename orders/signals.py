@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
@@ -13,16 +14,133 @@ from django.db import models
 
 logger = logging.getLogger(__name__)
 
+@receiver(pre_save, sender=Order)
+def track_order_changes(sender, instance, **kwargs):
+    """تتبع جميع التغييرات على الطلب وتسجيلها في OrderStatusLog"""
+    if instance.pk:  # تحقق من أن هذا تحديث وليس إنشاء جديد
+        # تجاهل التحديثات التلقائية
+        if instance.is_auto_update:
+            return
+            
+        try:
+            old_instance = Order.objects.get(pk=instance.pk)
+            
+            # قائمة الحقول التي نريد تتبع تغييراتها
+            tracked_fields = [
+                'contract_number', 'contract_number_2', 'contract_number_3',
+                'invoice_number', 'invoice_number_2', 'invoice_number_3',
+                'order_number', 'customer', 'salesperson', 'branch',
+                'expected_delivery_date', 'final_price', 'paid_amount',
+                'order_status', 'tracking_status', 'status', 'notes'
+            ]
+            
+            changes = []
+            for field in tracked_fields:
+                old_value = getattr(old_instance, field)
+                new_value = getattr(instance, field)
+                
+                if old_value != new_value:
+                    # الحصول على أسماء العرض للحقول ذات الاختيارات
+                    if field == 'order_status':
+                        old_display = dict(Order.ORDER_STATUS_CHOICES).get(old_value, old_value)
+                        new_display = dict(Order.ORDER_STATUS_CHOICES).get(new_value, new_value)
+                        changes.append(f'حالة الطلب: من "{old_display}" إلى "{new_display}"')
+                    elif field == 'tracking_status':
+                        old_display = dict(Order.TRACKING_STATUS_CHOICES).get(old_value, old_value)
+                        new_display = dict(Order.TRACKING_STATUS_CHOICES).get(new_value, new_value)
+                        changes.append(f'حالة التتبع: من "{old_display}" إلى "{new_display}"')
+                    elif field == 'status':
+                        old_display = dict(Order.STATUS_CHOICES).get(old_value, old_value)
+                        new_display = dict(Order.STATUS_CHOICES).get(new_value, new_value)
+                        changes.append(f'الحالة: من "{old_display}" إلى "{new_display}"')
+                    elif field in ['contract_number', 'contract_number_2', 'contract_number_3']:
+                        changes.append(f'رقم العقد ({field.replace("contract_number", "" or "الأساسي")}): من "{old_value or "غير محدد"}" إلى "{new_value or "غير محدد"}"')
+                    elif field in ['invoice_number', 'invoice_number_2', 'invoice_number_3']:
+                        changes.append(f'رقم الفاتورة ({field.replace("invoice_number", "" or "الأساسي")}): من "{old_value or "غير محدد"}" إلى "{new_value or "غير محدد"}"')
+                    elif field == 'order_number':
+                        changes.append(f'رقم الطلب: من "{old_value}" إلى "{new_value}"')
+                    elif field == 'expected_delivery_date':
+                        changes.append(f'تاريخ التسليم المتوقع: من "{old_value}" إلى "{new_value}"')
+                    elif field == 'final_price':
+                        changes.append(f'السعر النهائي: من "{old_value}" إلى "{new_value}"')
+                    elif field == 'paid_amount':
+                        changes.append(f'المبلغ المدفوع: من "{old_value}" إلى "{new_value}"')
+                    elif field == 'notes':
+                        changes.append(f'الملاحظات تم تعديلها')
+                    elif field == 'customer':
+                        old_customer = old_value.name if old_value else "غير محدد"
+                        new_customer = new_value.name if new_value else "غير محدد"
+                        changes.append(f'العميل: من "{old_customer}" إلى "{new_customer}"')
+                    elif field == 'salesperson':
+                        old_salesperson = old_value.user.username if old_value and old_value.user else "غير محدد"
+                        new_salesperson = new_value.user.username if new_value and new_value.user else "غير محدد"
+                        changes.append(f'البائع: من "{old_salesperson}" إلى "{new_salesperson}"')
+                    elif field == 'branch':
+                        old_branch = old_value.name if old_value else "غير محدد"
+                        new_branch = new_value.name if new_value else "غير محدد"
+                        changes.append(f'الفرع: من "{old_branch}" إلى "{new_branch}"')
+            
+            # إذا كان هناك تغييرات، سجلها
+            if changes:
+                # الحصول على المستخدم الحالي من thread local storage
+                current_user = None
+                try:
+                    from accounts.middleware.current_user import get_current_user
+                    current_user = get_current_user()
+                except:
+                    pass
+                
+                # إذا لم نتمكن من الحصول على المستخدم، نبحث عن آخر مستخدم قام بتعديل
+                if not current_user:
+                    try:
+                        # البحث عن آخر سجل للطلب نفسه
+                        last_log = OrderStatusLog.objects.filter(order=instance).order_by('-created_at').first()
+                        if last_log and last_log.changed_by:
+                            current_user = last_log.changed_by
+                        else:
+                            # البحث عن آخر سجل للعميل نفسه
+                            from customers.models import Customer
+                            if instance.customer:
+                                customer_logs = OrderStatusLog.objects.filter(
+                                    order__customer=instance.customer
+                                ).order_by('-created_at')[:5]
+                                for log in customer_logs:
+                                    if log.changed_by:
+                                        current_user = log.changed_by
+                                        break
+                    except:
+                        pass
+                
+                # تسجيل التغييرات
+                try:
+                    OrderStatusLog.objects.create(
+                        order=instance,
+                        old_status=old_instance.order_status,
+                        new_status=instance.order_status,  # نفس الحالة لأن هذا تعديل وليس تغيير حالة
+                        changed_by=current_user,
+                        notes=f'تعديل الطلب: {"، ".join(changes)}'
+                    )
+                except Exception as e:
+                    logger.error(f"خطأ في تسجيل تعديل الطلب {instance.order_number}: {e}")
+                    
+        except Order.DoesNotExist:
+            pass  # حالة الإنشاء الجديد
+
+
 @receiver(pre_save, sender='orders.Order')
 def track_price_changes(sender, instance, **kwargs):
     """تتبع تغييرات الأسعار في الطلبات"""
     if instance.pk:  # تحقق من أن هذا تحديث وليس إنشاء جديد
+        # تجاهل التحديثات التلقائية
+        if instance.is_auto_update:
+            return
+            
         try:
             Order = instance.__class__
             old_instance = Order.objects.get(pk=instance.pk)
             if old_instance.final_price != instance.final_price:
                 # لا نسجل التعديلات إذا كان هذا تحديث تلقائي (غير من قبل المستخدم)
-                if not hasattr(instance, '_is_auto_update'):
+                if not instance.is_auto_update:
                     instance.price_changed = True
                     instance.modified_at = timezone.now()
                     # حفظ القيمة القديمة للتتبع
@@ -309,6 +427,57 @@ def order_post_save(sender, instance, created, **kwargs):
                 details=f'تم تغيير إجمالي المبلغ من {instance._old_total_amount} إلى {instance.final_price}',
                 notes='تعديل في المبلغ الإجمالي للطلب'
             )
+        
+        # تتبع التغييرات في حقول الطلب الأساسية إذا كان هناك مستخدم محدد
+        modified_by = getattr(instance, '_modified_by', None)
+        if modified_by:
+            order_fields_to_track = [
+                'contract_number', 'contract_number_2', 'contract_number_3',
+                'invoice_number', 'invoice_number_2', 'invoice_number_3',
+                'notes', 'delivery_address', 'location_address',
+                'expected_delivery_date'
+            ]
+            
+            field_changes = []
+            field_labels = {
+                'contract_number': 'رقم العقد',
+                'contract_number_2': 'رقم العقد الإضافي 2',
+                'contract_number_3': 'رقم العقد الإضافي 3',
+                'invoice_number': 'رقم الفاتورة',
+                'invoice_number_2': 'رقم الفاتورة الإضافي 2',
+                'invoice_number_3': 'رقم الفاتورة الإضافي 3',
+                'notes': 'الملاحظات',
+                'delivery_address': 'عنوان التسليم',
+                'location_address': 'عنوان التركيب',
+                'expected_delivery_date': 'تاريخ التسليم المتوقع'
+            }
+            
+            modified_fields_data = {}
+            
+            for field_name in order_fields_to_track:
+                try:
+                    if instance.tracker.has_changed(field_name):
+                        old_value = instance.tracker.previous(field_name)
+                        new_value = getattr(instance, field_name)
+                        field_changes.append(f"{field_labels[field_name]}: {old_value or 'غير محدد'} → {new_value or 'غير محدد'}")
+                        modified_fields_data[field_name] = {
+                            'old': old_value,
+                            'new': new_value
+                        }
+                except Exception:
+                    # تخطي الحقول غير المتتبعة
+                    continue
+            
+            if field_changes:
+                OrderModificationLog.objects.create(
+                    order=instance,
+                    modification_type='تعديل حقول الطلب الأساسية',
+                    modified_by=modified_by,
+                    details=' | '.join(field_changes),
+                    notes='تعديل يدوي في حقول الطلب الأساسية',
+                    is_manual_modification=True,
+                    modified_fields=modified_fields_data
+                )
 
 @receiver(post_save, sender=OrderItem)
 def order_item_post_save(sender, instance, created, **kwargs):
@@ -422,6 +591,10 @@ def order_item_post_save(sender, instance, created, **kwargs):
                 old_price = instance.tracker.previous('unit_price')
                 new_price = instance.unit_price
                 current_quantity = instance.quantity
+                # التأكد من أن الأنواع متوافقة
+                old_price = Decimal(str(old_price)) if old_price is not None else Decimal('0')
+                new_price = Decimal(str(new_price)) if new_price is not None else Decimal('0')
+                current_quantity = Decimal(str(current_quantity)) if current_quantity is not None else Decimal('0')
                 price_change = (new_price - old_price) * current_quantity
                 total_change += price_change
                 modification_details.append(f"السعر: {old_price} → {new_price} ج.م")
@@ -450,7 +623,15 @@ def order_item_post_save(sender, instance, created, **kwargs):
                 new_total_amount=new_total,
                 modified_by=getattr(instance, '_modified_by', None),
                 details=f"تعديل {instance.product.name}: {' | '.join(modification_details)}",
-                notes='تعديل في عناصر الطلب'
+                notes='تعديل في عناصر الطلب',
+                is_manual_modification=bool(getattr(instance, '_modified_by', None)),
+                modified_fields={
+                    'order_items': [{
+                        'item_id': instance.pk,
+                        'product': instance.product.name,
+                        'changes': modification_details
+                    }]
+                }
             )
 
 @receiver(post_save, sender=Payment)

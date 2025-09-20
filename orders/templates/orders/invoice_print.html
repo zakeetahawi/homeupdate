@@ -437,7 +437,7 @@
                 {% endif %}
                 <tr class="total-final">
                     <td class="label">الإجمالي النهائي:</td>
-                    <td class="value">{{ order.final_price|floatformat:2 }} {{ currency_symbol }}</td>
+                    <td class="value">{{ order.final_price_after_discount|floatformat:2 }} {{ currency_symbol }}</td>
                 </tr>
             </table>
         </div>

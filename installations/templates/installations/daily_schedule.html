@@ -275,7 +275,7 @@
             </h6>
         </div>
         <div class="card-body">
-            <form method="post" class="row g-3">
+            <form method="get" class="row g-3">
                 {% csrf_token %}
                 <div class="col-md-2">
                     {{ form.date.label_tag }}
@@ -332,7 +332,7 @@
         </div>
         <div class="card-body">
             <div class="table-container">
-                <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                <table id="installations-table" class="table table-bordered table-hover" width="100%" cellspacing="0">
                     <thead class="thead-dark">
                         <tr>
                             <th>الموعد</th>
@@ -454,6 +454,10 @@
                                     <span class="badge status-badge badge-success" style="background-color: #20c997; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
                                         <i class="fas fa-check-circle"></i> التعديل مكتمل
                                     </span>
+                                {% elif installation.status == 'modification_scheduled' %}
+                                    <span class="badge status-badge badge-warning" style="background-color: #fd7e14; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
+                                        <i class="fas fa-calendar-alt"></i> جدولة التعديل
+                                    </span>
                                 {% else %}
                                     <span class="badge status-badge badge-secondary" style="background-color: #6c757d; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 0.8em;">
                                         {{ installation.get_status_display }}
@@ -478,6 +482,7 @@
                                             <option value="completed" {% if installation.status == 'completed' %}selected{% endif %}>مكتمل</option>
                                             <option value="cancelled" {% if installation.status == 'cancelled' %}selected{% endif %}>ملغي</option>
                                             <option value="modification_required" {% if installation.status == 'modification_required' %}selected{% endif %}>يحتاج تعديل</option>
+                                            <option value="modification_scheduled" {% if installation.status == 'modification_scheduled' %}selected{% endif %}>جدولة التعديل</option>
                                             <option value="modification_in_progress" {% if installation.status == 'modification_in_progress' %}selected{% endif %}>التعديل قيد التنفيذ</option>
                                             <option value="modification_completed" {% if installation.status == 'modification_completed' %}selected{% endif %}>التعديل مكتمل</option>
                                         </select>
@@ -554,8 +559,13 @@
 <!-- SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-let selectedPrintOption = 'full';
-let selectedPrintOrientation = 'portrait';
+// Check if variables are already declared to avoid duplicate declaration errors
+if (typeof selectedPrintOption === 'undefined') {
+    var selectedPrintOption = 'full';
+}
+if (typeof selectedPrintOrientation === 'undefined') {
+    var selectedPrintOrientation = 'portrait';
+}
 
 function showPrintOptions() {
     document.getElementById('printOptionsModal').style.display = 'block';
@@ -654,22 +664,31 @@ function exportToExcel() {
     let csvContent = "data:text/csv;charset=utf-8,";
     
     // إضافة العنوان
-    csvContent += "جدول التركيبات اليومي," + "{{ form.date.value|date:'d/m/Y' }}" + "\n";
-    csvContent += "تاريخ الطباعة," + "{% now 'd/m/Y H:i' %}" + "\n\n";
+    csvContent += "جدول التركيبات اليومي," + document.getElementById('selected-date').textContent + "\n";
+    csvContent += "تاريخ الطباعة," + new Date().toLocaleString('ar-SA') + "\n\n";
     
     // إضافة رؤوس الأعمدة مع جميع التفاصيل
     csvContent += "الموعد,رقم الطلب,اسم العميل,رقم العقد,رقم الفاتورة,العنوان,المكان,رقم الهاتف,اسم البائع,عدد الشبابيك,اسم الفني/الفريق,اسم السائق,الحالة\n";
     
-    // إضافة البيانات مع جميع التفاصيل
-    {% for installation in installations %}
-    csvContent += "{{ installation.scheduled_time|time:'H:i' }},{{ installation.order.order_number }},{{ installation.order.customer.name }},{{ installation.order.contract_number|default:'غير محدد' }},{{ installation.order.invoice_number|default:'غير محدد' }},{{ installation.order.customer.address|default:'غير محدد' }},{{ installation.location_type|default:'غير محدد' }},{{ installation.order.customer.phone }},{{ installation.order.salesperson.name|default:'غير محدد' }},{{ installation.order.windows_count|default:'غير محدد' }},{{ installation.team.name|default:'غير محدد' }},{{ installation.team.driver.name|default:'غير محدد' }},{{ installation.get_status_display }}\n";
-    {% endfor %}
+    // إضافة البيانات من الجدول
+    const tableRows = document.querySelectorAll('#installations-table tbody tr');
+    tableRows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const rowData = [];
+        cells.forEach((cell, index) => {
+            // تجاهل العمود الأخير (الإجراءات)
+            if (index < cells.length - 1) {
+                rowData.push(cell.textContent.trim());
+            }
+        });
+        csvContent += rowData.join(',') + '\n';
+    });
     
     // تحميل الملف
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "جدول_التركيبات_{{ form.date.value|date:'Y-m-d' }}.csv");
+    link.setAttribute("download", "جدول_التركيبات_" + new Date().toISOString().split('T')[0] + ".csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

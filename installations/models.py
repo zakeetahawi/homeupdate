@@ -121,6 +121,7 @@ class InstallationSchedule(models.Model):
         ('completed', _('مكتمل')),
         ('cancelled', _('ملغي')),
         ('modification_required', _('يحتاج تعديل')),
+        ('modification_scheduled', _('جدولة التعديل')),
         ('modification_in_progress', _('التعديل قيد التنفيذ')),
         ('modification_completed', _('التعديل مكتمل')),
     ]
@@ -156,6 +157,9 @@ class InstallationSchedule(models.Model):
         verbose_name = _('جدولة تركيب')
         verbose_name_plural = _('جدولة التركيبات')
         ordering = ['-scheduled_date', '-scheduled_time']
+        constraints = [
+            models.UniqueConstraint(fields=['order'], name='unique_installation_per_order')
+        ]
 
     def __str__(self):
         return f"طلب تركيب {self.installation_code} - {self.get_status_display()}"
@@ -188,6 +192,9 @@ class InstallationSchedule(models.Model):
                 old_scheduled_date = old_instance.scheduled_date
             except InstallationSchedule.DoesNotExist:
                 pass
+        
+        # حفظ الحالة الأصلية للإشارات
+        self._original_status = old_status
         
         # تحديث حالة الطلب عند إكمال التركي��
         if self.status == 'completed' and not self.completion_date:
@@ -230,6 +237,20 @@ class InstallationSchedule(models.Model):
                     self.order.expected_delivery_date = local_date
                     self.order.save(update_fields=['expected_delivery_date'])
         
+        # إنشاء أرشيف عند إكمال التعديل
+        elif self.status == 'modification_completed' and old_status != 'modification_completed':
+            try:
+                # إنشاء أرشيف للتعديل المكتمل
+                InstallationArchive.objects.create(
+                    installation=self,
+                    archive_notes=f'تم إكمال التعديل مع تركيب مكتمل - {self.notes or ""}'
+                )
+            except Exception as e:
+                # لا نريد أن يفشل الحفظ بسبب الأرشفة
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"خطأ في إنشاء أرشيف التعديل: {e}")
+        
         # تحديث تاريخ الجدولة عند بدء التركيب في يوم مختلف
         elif self.status == 'in_installation' and old_status == 'scheduled':
             # استخدام التاريخ المحلي للمنطقة الزمنية المحددة
@@ -270,6 +291,32 @@ class InstallationSchedule(models.Model):
                 self.order.expected_delivery_date = self.scheduled_date
                 self.order.save(update_fields=['expected_delivery_date'])
         
+        # تسجيل تغيير حالة التركيب في OrderStatusLog
+        if old_status and old_status != self.status and self.order:
+            try:
+                from orders.models import OrderStatusLog
+                from django.contrib.auth.models import User
+                
+                # محاولة الحصول على المستخدم الحالي
+                try:
+                    from django.utils.deprecation import get_current_user
+                    current_user = get_current_user()
+                except:
+                    current_user = None
+                
+                OrderStatusLog.objects.create(
+                    order=self.order,
+                    old_status=old_status,
+                    new_status=self.status,
+                    changed_by=current_user,
+                    notes=f'تغيير حالة التركيب من {dict(self.STATUS_CHOICES).get(old_status, old_status)} إلى {dict(self.STATUS_CHOICES).get(self.status, self.status)}'
+                )
+            except Exception as e:
+                # لا نريد أن يفشل الحفظ بسبب تسجيل السجل
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"خطأ في تسجيل تغيير حالة التركيب: {e}")
+        
         super().save(*args, **kwargs)
 
     def can_change_status_to(self, new_status):
@@ -280,7 +327,8 @@ class InstallationSchedule(models.Model):
             'in_installation': ['completed', 'modification_required', 'cancelled'],
             'completed': [],  # لا يمكن تغيير الحالة من مكتمل
             'cancelled': ['scheduled'],  # يمكن إعادة جدولة المُلغى
-            'modification_required': ['modification_in_progress', 'cancelled'],
+            'modification_required': ['modification_scheduled', 'cancelled'],
+            'modification_scheduled': ['modification_in_progress', 'cancelled', 'modification_required'],
             'modification_in_progress': ['modification_completed', 'modification_required'],
             'modification_completed': ['completed', 'modification_required'],
         }
@@ -309,7 +357,12 @@ class InstallationSchedule(models.Model):
                 ('scheduled', 'مجدول')
             ],
             'modification_required': [
+                ('modification_scheduled', 'جدولة التعديل'),
+                ('cancelled', 'ملغي')
+            ],
+            'modification_scheduled': [
                 ('modification_in_progress', 'التعديل قيد التنفيذ'),
+                ('modification_required', 'يحتاج تعديل'),
                 ('cancelled', 'ملغي')
             ],
             'modification_in_progress': [

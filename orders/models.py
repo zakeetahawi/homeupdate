@@ -185,6 +185,13 @@ class Order(models.Model):
         help_text='إشارة خضراء عند اكتمال جميع مراحل الطلب'
     )
     
+    # إشارة التحديث التلقائي (لمنع التسجيل المكرر في السجلات)
+    is_auto_update = models.BooleanField(
+        default=False,
+        verbose_name='تحديث تلقائي',
+        help_text='إشارة للتحديثات التلقائية لمنع التسجيل المكرر'
+    )
+    
     # Order type fields
     selected_types = models.JSONField(
         default=list,
@@ -349,7 +356,11 @@ class Order(models.Model):
     )
     
     modified_at = models.DateTimeField(auto_now=True, help_text='آخر تحديث للطلب')
-    tracker = FieldTracker(fields=['tracking_status', 'status'])
+    tracker = FieldTracker(fields=[
+        'tracking_status', 'status', 'notes', 'contract_number', 'contract_number_2', 'contract_number_3',
+        'invoice_number', 'invoice_number_2', 'invoice_number_3', 'delivery_address', 'location_address',
+        'expected_delivery_date'
+    ])
     class Meta:
         verbose_name = 'طلب'
         verbose_name_plural = 'الطلبات'
@@ -762,7 +773,7 @@ class Order(models.Model):
     @property
     def remaining_amount(self):
         """Calculate remaining amount to be paid"""
-        return self.total_amount - self.paid_amount
+        return self.final_price_after_discount - self.paid_amount
     @property
     def is_fully_paid(self):
         """التحقق من سداد الطلب بالكامل"""
@@ -2055,6 +2066,21 @@ class OrderModificationLog(models.Model):
     modified_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ التعديل')
     details = models.TextField(verbose_name='تفاصيل التعديل')
     notes = models.TextField(blank=True, verbose_name='ملاحظات')
+    
+    # تمييز نوع التعديل
+    is_manual_modification = models.BooleanField(
+        default=False, 
+        verbose_name='تعديل يدوي',
+        help_text='إذا كان هذا التعديل تم بواسطة المستخدم مباشرة وليس تلقائياً'
+    )
+    
+    # بيانات التعديل التفصيلية
+    modified_fields = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='الحقول المعدلة',
+        help_text='قاموس يحتوي على الحقول المعدلة وقيمها السابقة والجديدة'
+    )
 
     class Meta:
         verbose_name = 'سجل تعديل الطلب'

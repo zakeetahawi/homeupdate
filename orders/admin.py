@@ -39,6 +39,38 @@ class YearFilter(admin.SimpleListFilter):
                 return queryset
         return queryset
 
+class OrderStatusLogInline(admin.TabularInline):
+    """Inline لعرض سجل حالة الطلب"""
+    model = OrderStatusLog
+    extra = 0
+    readonly_fields = ('old_status_display', 'new_status_display', 'changed_by', 'notes', 'created_at')
+    fields = ('old_status_display', 'new_status_display', 'changed_by', 'notes', 'created_at')
+    ordering = ['-created_at']
+    show_change_link = False
+    can_delete = False
+
+    def old_status_display(self, obj):
+        if obj.old_status:
+            return obj.get_old_status_display()
+        return '-'
+    old_status_display.short_description = 'الحالة السابقة'
+
+    def new_status_display(self, obj):
+        if obj.new_status:
+            return obj.get_new_status_display()
+        return '-'
+    new_status_display.short_description = 'الحالة الجديدة'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 1
@@ -208,7 +240,7 @@ class OrderAdmin(admin.ModelAdmin):
         'salesperson__name',
         'notes'
     )
-    inlines = [OrderItemInline, PaymentInline]
+    inlines = [OrderItemInline, PaymentInline, OrderStatusLogInline]
     readonly_fields = (
         'created_at',
         'updated_at',
@@ -468,15 +500,27 @@ class OrderAdmin(admin.ModelAdmin):
             return obj.order_number
     order_number_display.short_description = 'رقم الطلب'
     order_number_display.admin_order_field = 'order_number'
-
-@admin.register(OrderStatusLog)
-class OrderStatusLogAdmin(admin.ModelAdmin):
-    list_per_page = 50
-    list_display = ('order', 'old_status_display', 'new_status_display', 'changed_by', 'notes', 'created_at')
-    list_filter = ('old_status', 'new_status', 'changed_by', 'created_at')
-    search_fields = ('order__order_number', 'notes')
-    readonly_fields = ('order', 'old_status', 'new_status', 'changed_by', 'created_at')
-    date_hierarchy = 'created_at'
+    
+    def old_status_display(self, obj):
+        if obj.old_status:
+            return obj.get_old_status_display()
+        return '-'
+    old_status_display.short_description = 'الحالة السابقة'
+    old_status_display.admin_order_field = 'old_status'
+    
+    def new_status_display(self, obj):
+        if obj.new_status:
+            return obj.get_new_status_display()
+        return '-'
+    new_status_display.short_description = 'الحالة الجديدة'
+    new_status_display.admin_order_field = 'new_status'
+    
+    def notes_truncated(self, obj):
+        """عرض ملاحظات مختصرة"""
+        if obj.notes:
+            return obj.notes[:50] + '...' if len(obj.notes) > 50 else obj.notes
+        return '-'
+    notes_truncated.short_description = 'ملاحظات'
     
     def old_status_display(self, obj):
         if obj.old_status:
@@ -560,3 +604,42 @@ class PaymentAdmin(admin.ModelAdmin):
 
 # استيراد إدارة الفواتير
 from . import invoice_admin
+
+@admin.register(OrderStatusLog)
+class OrderStatusLogAdmin(admin.ModelAdmin):
+    list_per_page = 50
+    list_display = ('order_link', 'old_status_display', 'new_status_display', 'changed_by', 'notes_truncated', 'created_at')
+    list_filter = ('old_status', 'new_status', 'changed_by', 'created_at')
+    search_fields = ('order__order_number', 'notes', 'changed_by__username')
+    readonly_fields = ('order', 'old_status', 'new_status', 'changed_by', 'created_at', 'notes')
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']
+    
+    def order_link(self, obj):
+        """رابط للطلب مع رقم الطلب"""
+        from django.urls import reverse
+        url = reverse('admin:orders_order_change', args=[obj.order.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.order.order_number)
+    order_link.short_description = 'رقم الطلب'
+    order_link.admin_order_field = 'order__order_number'
+    
+    def old_status_display(self, obj):
+        if obj.old_status:
+            return obj.get_old_status_display()
+        return '-'
+    old_status_display.short_description = 'الحالة السابقة'
+    old_status_display.admin_order_field = 'old_status'
+    
+    def new_status_display(self, obj):
+        if obj.new_status:
+            return obj.get_new_status_display()
+        return '-'
+    new_status_display.short_description = 'الحالة الجديدة'
+    new_status_display.admin_order_field = 'new_status'
+    
+    def notes_truncated(self, obj):
+        """عرض ملاحظات مختصرة"""
+        if obj.notes:
+            return obj.notes[:50] + '...' if len(obj.notes) > 50 else obj.notes
+        return '-'
+    notes_truncated.short_description = 'ملاحظات'

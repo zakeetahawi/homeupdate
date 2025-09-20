@@ -553,6 +553,26 @@ def order_update(request, pk):
         
         if form.is_valid():
             try:
+                # تتبع التعديلات قبل الحفظ
+                modified_fields = {}
+                
+                # تتبع تعديلات حقول الطلب
+                order_fields_to_track = [
+                    'contract_number', 'contract_number_2', 'contract_number_3',
+                    'invoice_number', 'invoice_number_2', 'invoice_number_3',
+                    'notes', 'delivery_address', 'location_address',
+                    'expected_delivery_date'
+                ]
+                
+                for field_name in order_fields_to_track:
+                    old_value = getattr(order, field_name)
+                    new_value = form.cleaned_data.get(field_name)
+                    if old_value != new_value:
+                        modified_fields[field_name] = {
+                            'old': old_value,
+                            'new': new_value
+                        }
+                
                 # Save order
                 order = form.save(commit=False)
                 
@@ -574,6 +594,9 @@ def order_update(request, pk):
                     order.related_inspection = None
                     order.related_inspection_type = None
 
+                # تعيين المستخدم المعدل على الطلب قبل الحفظ
+                order._modified_by = request.user
+
                 # حفظ الطلب
                 order.save()
 
@@ -583,11 +606,106 @@ def order_update(request, pk):
 
                 # Save order items
                 formset = OrderItemFormSet(request.POST, prefix='items', instance=order)
+                items_modified = False
                 if formset.is_valid():
+                    # تتبع التعديلات في العناصر
+                    for form_item in formset:
+                        if form_item.cleaned_data and not form_item.cleaned_data.get('DELETE', False):
+                            # عنصر جديد أو معدل
+                            if form_item.instance.pk:
+                                # عنصر موجود - تحقق من التعديلات
+                                item_fields_to_track = ['quantity', 'unit_price', 'discount_percentage', 'product']
+                                for field_name in item_fields_to_track:
+                                    old_value = getattr(form_item.instance, field_name)
+                                    new_value = form_item.cleaned_data.get(field_name)
+                                    if str(old_value) != str(new_value):
+                                        if 'order_items' not in modified_fields:
+                                            modified_fields['order_items'] = []
+                                        modified_fields['order_items'].append({
+                                            'item_id': form_item.instance.pk,
+                                            'product': str(form_item.instance.product),
+                                            'field': field_name,
+                                            'old': old_value,
+                                            'new': new_value
+                                        })
+                                        items_modified = True
+                            else:
+                                # عنصر جديد
+                                if 'new_order_items' not in modified_fields:
+                                    modified_fields['new_order_items'] = []
+                                modified_fields['new_order_items'].append({
+                                    'product': str(form_item.cleaned_data.get('product')),
+                                    'quantity': form_item.cleaned_data.get('quantity'),
+                                    'unit_price': form_item.cleaned_data.get('unit_price'),
+                                    'discount_percentage': form_item.cleaned_data.get('discount_percentage', 0)
+                                })
+                                items_modified = True
+                    
+                    # التحقق من العناصر المحذوفة
+                    for form_item in formset.deleted_forms:
+                        if form_item.instance.pk:
+                            if 'deleted_order_items' not in modified_fields:
+                                modified_fields['deleted_order_items'] = []
+                            modified_fields['deleted_order_items'].append({
+                                'item_id': form_item.instance.pk,
+                                'product': str(form_item.instance.product),
+                                'quantity': form_item.instance.quantity,
+                                'unit_price': form_item.instance.unit_price
+                            })
+                            items_modified = True
+                    
+                    # تعيين المستخدم المعدل على جميع العناصر قبل الحفظ
+                    for form_item in formset:
+                        if form_item.instance.pk:  # عنصر موجود
+                            form_item.instance._modified_by = request.user
+                    
                     formset.save()
                 else:
                     print("UPDATE - Formset errors:", formset.errors)
                     messages.warning(request, 'تم تحديث الطلب ولكن هناك أخطاء في عناصر الطلب.')
+
+                # إنشاء سجل التعديل اليدوي إذا كانت هناك تعديلات
+                # تم تعطيل هذا لأن signals تقوم بإنشاء السجلات الآن
+                # if modified_fields:
+                #     from .models import OrderModificationLog
+                #     
+                #     modification_details = []
+                #     
+                #     # تفاصيل تعديلات حقول الطلب
+                #     field_labels = {
+                #         'contract_number': 'رقم العقد',
+                #         'contract_number_2': 'رقم العقد الإضافي 2',
+                #         'contract_number_3': 'رقم العقد الإضافي 3',
+                #         'invoice_number': 'رقم الفاتورة',
+                #         'invoice_number_2': 'رقم الفاتورة الإضافي 2',
+                #         'invoice_number_3': 'رقم الفاتورة الإضافي 3',
+                #         'notes': 'الملاحظات',
+                #         'delivery_address': 'عنوان التسليم',
+                #         'location_address': 'عنوان التركيب',
+                #         'expected_delivery_date': 'تاريخ التسليم المتوقع'
+                #     }
+                #     
+                #     for field_name, values in modified_fields.items():
+                #         if field_name in field_labels:
+                #             old_val = values.get('old') or 'غير محدد'
+                #             new_val = values.get('new') or 'غير محدد'
+                #             modification_details.append(f"{field_labels[field_name]}: {old_val} → {new_val}")
+                #         elif field_name == 'order_items':
+                #             modification_details.append(f"تعديل {len(values)} عنصر من عناصر الطلب")
+                #         elif field_name == 'new_order_items':
+                #             modification_details.append(f"إضافة {len(values)} عنصر جديد للطلب")
+                #         elif field_name == 'deleted_order_items':
+                #             modification_details.append(f"حذف {len(values)} عنصر من الطلب")
+                #     
+                #     OrderModificationLog.objects.create(
+                #         order=order,
+                #         modification_type='تعديل يدوي للطلب',
+                #         modified_by=request.user,
+                #         details=' | '.join(modification_details) if modification_details else 'تعديل على الطلب',
+                #         notes='تعديل يدوي من قبل المستخدم',
+                #         is_manual_modification=True,
+                #         modified_fields=modified_fields
+                #     )
 
                 messages.success(request, 'تم تحديث الطلب بنجاح!')
                 return redirect('orders:order_detail', pk=order.pk)
@@ -958,6 +1076,9 @@ def order_detail_by_number(request, order_number):
         customer=order.customer
     ).select_related('created_by').order_by('-created_at')[:5]
 
+    # Check if there are manual modifications
+    has_manual_modifications = order.modification_logs.filter(is_manual_modification=True).exists()
+
     context = {
         'order': order,
         'payments': payments,
@@ -966,6 +1087,7 @@ def order_detail_by_number(request, order_number):
         'customer_notes': customer_notes,
         'can_edit': can_user_edit_order(request.user, order),
         'can_delete': can_user_delete_order(request.user, order),
+        'has_manual_modifications': has_manual_modifications,
     }
     
     return render(request, 'orders/order_detail.html', context)

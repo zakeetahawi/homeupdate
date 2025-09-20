@@ -255,6 +255,54 @@ class Notification(models.Model):
         }
         return color_map.get(self.priority, 'text-info')
 
+    def get_visibility_for_user(self, user):
+        """الحصول على سجل الرؤية لهذا الإشعار لمستخدم معين"""
+        return self.visibility_records.filter(user=user).first()
+
+    def get_related_info(self):
+        """الحصول على معلومات الكائن المرتبط"""
+        if not self.related_object:
+            return None
+        
+        info = {
+            'type': self.content_type.model,
+            'object': self.related_object,
+        }
+        
+        # إضافة معلومات محددة حسب النوع
+        if self.content_type.model == 'order':
+            info.update({
+                'code': self.related_object.order_number,
+                'customer': self.related_object.customer.name if self.related_object.customer else None,
+                'url': self.related_object.get_absolute_url(),
+            })
+        elif self.content_type.model == 'customer':
+            info.update({
+                'code': self.related_object.code,
+                'name': self.related_object.name,
+                'url': self.related_object.get_absolute_url(),
+            })
+        elif self.content_type.model == 'inspection':
+            info.update({
+                'code': self.related_object.contract_number or f"معاينة-{self.related_object.pk}",
+                'customer': self.related_object.customer.name if self.related_object.customer else None,
+                'url': self.related_object.get_absolute_url() if hasattr(self.related_object, 'get_absolute_url') else None,
+            })
+        elif self.content_type.model == 'installationschedule':
+            info.update({
+                'code': f"تركيب-{self.related_object.pk}",
+                'order': self.related_object.order.order_number if self.related_object.order else None,
+                'url': self.related_object.get_absolute_url() if hasattr(self.related_object, 'get_absolute_url') else None,
+            })
+        elif self.content_type.model == 'manufacturingorder':
+            info.update({
+                'code': f"تصنيع-{self.related_object.pk}",
+                'order': self.related_object.order.order_number if self.related_object.order else None,
+                'url': self.related_object.get_absolute_url() if hasattr(self.related_object, 'get_absolute_url') else None,
+            })
+        
+        return info
+
 
 class NotificationVisibility(models.Model):
     """نموذج وسطي لتحديد رؤية الإشعارات للمستخدمين"""

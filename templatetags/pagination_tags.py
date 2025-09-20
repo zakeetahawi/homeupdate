@@ -39,6 +39,86 @@ def pagination_url(context, page_number):
     return f"?{urlencode(cleaned_params)}"
 
 @register.simple_tag(takes_context=True)
+def pagination_url_with_filters(context, page_number, preserve_filters=None):
+    """
+    إنشاء URL للصفحة مع الحفاظ على فلاتر محددة فقط
+    """
+    request = context['request']
+    params = request.GET.copy()
+
+    # تحديد الفلاتر التي يجب الحفاظ عليها
+    if preserve_filters:
+        if isinstance(preserve_filters, str):
+            preserve_filters = [preserve_filters]
+
+        # حذف جميع الفلاتر غير المطلوبة
+        for key in list(params.keys()):
+            if key not in preserve_filters and key != 'page':
+                del params[key]
+
+    # التأكد من أن page_number هو integer وليس list أو أي نوع آخر
+    if isinstance(page_number, (list, tuple)):
+        page_number = page_number[0] if page_number else 1
+
+    try:
+        page_number = int(page_number)
+    except (ValueError, TypeError):
+        page_number = 1
+
+    params['page'] = page_number
+
+    # التأكد من أن جميع القيم في params هي strings وليس lists
+    cleaned_params = {}
+    for key, value in params.items():
+        if isinstance(value, (list, tuple)):
+            # إذا كان value هو list، خذ العنصر الأول أو القيمة الفارغة
+            cleaned_params[key] = value[0] if value else ''
+        else:
+            cleaned_params[key] = str(value)
+
+    return f"?{urlencode(cleaned_params)}"
+
+@register.simple_tag(takes_context=True)
+def pagination_url_with_filters(context, page_number, preserve_filters=None):
+    """
+    إنشاء URL للصفحة مع الحفاظ على فلاتر محددة فقط
+    """
+    request = context['request']
+    params = request.GET.copy()
+
+    # تحديد الفلاتر التي يجب الحفاظ عليها
+    if preserve_filters:
+        if isinstance(preserve_filters, str):
+            preserve_filters = [preserve_filters]
+
+        # حذف جميع الفلاتر غير المطلوبة
+        for key in list(params.keys()):
+            if key not in preserve_filters and key != 'page':
+                del params[key]
+
+    # التأكد من أن page_number هو integer وليس list أو أي نوع آخر
+    if isinstance(page_number, (list, tuple)):
+        page_number = page_number[0] if page_number else 1
+
+    try:
+        page_number = int(page_number)
+    except (ValueError, TypeError):
+        page_number = 1
+
+    params['page'] = page_number
+
+    # التأكد من أن جميع القيم في params هي strings وليس lists
+    cleaned_params = {}
+    for key, value in params.items():
+        if isinstance(value, (list, tuple)):
+            # إذا كان value هو list، خذ العنصر الأول أو القيمة الفارغة
+            cleaned_params[key] = value[0] if value else ''
+        else:
+            cleaned_params[key] = str(value)
+
+    return f"?{urlencode(cleaned_params)}"
+
+@register.simple_tag(takes_context=True)
 def preserve_filters(context, exclude_params=None):
     """
     الحفاظ على جميع معاملات البحث ما عدا المحددة
