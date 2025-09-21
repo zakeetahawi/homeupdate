@@ -2,6 +2,7 @@ import json
 import os
 import logging
 from datetime import timedelta
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -408,15 +409,30 @@ class Order(models.Model):
     @property
     def total_discount_amount(self):
         """إجمالي مبلغ الخصم"""
-        total_discount = 0
+        total_discount = Decimal('0')
         for item in self.items.all():
-            total_discount += item.discount_amount
+            try:
+                # item.discount_amount is usually a Decimal, but guard against None
+                amt = item.discount_amount if item.discount_amount is not None else 0
+                total_discount += Decimal(str(amt))
+            except Exception:
+                # Fallback: treat invalid values as zero
+                try:
+                    total_discount += Decimal(0)
+                except Exception:
+                    pass
         return total_discount
     
     @property
     def final_price_after_discount(self):
         """السعر النهائي بعد الخصم"""
-        return self.final_price - self.total_discount_amount
+        # Coerce None to Decimal(0) to avoid TypeError when final_price not yet calculated
+        final = self.final_price if self.final_price is not None else Decimal('0')
+        try:
+            final_dec = Decimal(str(final))
+        except Exception:
+            final_dec = Decimal('0')
+        return final_dec - self.total_discount_amount
     def save(self, *args, **kwargs):
         try:
             # تحقق مما إذا كان هذا كائن جديد (ليس له مفتاح أساسي)
@@ -773,7 +789,12 @@ class Order(models.Model):
     @property
     def remaining_amount(self):
         """Calculate remaining amount to be paid"""
-        return self.final_price_after_discount - self.paid_amount
+        paid = self.paid_amount if self.paid_amount is not None else Decimal('0')
+        try:
+            paid_dec = Decimal(str(paid))
+        except Exception:
+            paid_dec = Decimal('0')
+        return self.final_price_after_discount - paid_dec
     @property
     def is_fully_paid(self):
         """التحقق من سداد الطلب بالكامل"""
