@@ -3,7 +3,7 @@
 {% load humanize %}
 {% load unified_status_tags %}
 {% load order_extras %}
-{% load pagination_tags %}
+{% load manufacturing_pagination %}
 
 {% block title %}قائمة أوامر التصنيع{% endblock %}
 
@@ -938,9 +938,9 @@ body:not(.modal-open) .modal-backdrop {
                             <button type="submit" class="btn btn-primary" onclick="console.log('تم النقر على زر التصفية');">
                                 <i class="fas fa-filter"></i> تصفية
                             </button>
-                            <a href="{% url 'manufacturing:order_list' %}" class="btn btn-outline-secondary">
+                            <button type="button" class="btn btn-outline-secondary" id="clearFiltersBtn" title="مسح جميع الفلاتر">
                                 <i class="fas fa-redo"></i>
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1022,34 +1022,58 @@ body:not(.modal-open) .modal-backdrop {
         </div>
         <div class="card-body">
             <!-- معلومات الفلاتر المطبقة -->
-            {% if status_filters or search_query or date_from or date_to or branch_filters or order_type_filters or search_columns %}
+            {% if status_filters or search_query or date_from or date_to or branch_filters or order_type_filters or search_columns or production_line_filters or overdue_filter %}
             <div class="alert alert-info mb-3" role="alert">
-                <i class="fas fa-filter me-2"></i>
-                <strong>الفلاتر المطبقة:</strong>
-                {% if status_filters %}
-                    <span class="badge bg-primary me-1">الحالات: {{ status_filters_display|join:", " }}</span>
-                {% endif %}
-                {% if search_query %}
-                    <span class="badge bg-success me-1">البحث: "{{ search_query }}"</span>
-                {% endif %}
-                {% if branch_filters %}
-                    <span class="badge bg-warning text-dark me-1">الفروع: {{ branch_filters_display|join:", " }}</span>
-                {% endif %}
-                {% if order_type_filters %}
-                    <span class="badge bg-purple me-1">الأنواع: {{ order_type_filters_display|join:", " }}</span>
-                {% endif %}
-                {% if search_columns %}
-                    <span class="badge bg-info me-1">أعمدة البحث: {{ search_columns_display|join:", " }}</span>
-                {% endif %}
-                {% if date_from %}
-                    <span class="badge bg-info me-1">من تاريخ: {{ date_from }}</span>
-                {% endif %}
-                {% if date_to %}
-                    <span class="badge bg-info me-1">إلى تاريخ: {{ date_to }}</span>
-                {% endif %}
-                <a href="{% url 'manufacturing:order_list' %}" class="btn btn-sm btn-outline-secondary ms-2">
-                    <i class="fas fa-times me-1"></i>إزالة جميع الفلاتر
-                </a>
+                <div class="d-flex flex-wrap align-items-center">
+                    <div class="me-3 mb-2">
+                        <i class="fas fa-filter me-2"></i>
+                        <strong>الفلاتر المطبقة:</strong>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% if status_filters %}
+                            {% for status in status_filters_display %}
+                                <span class="badge bg-primary me-1 mb-1">حالة: {{ status }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if search_query %}
+                            <span class="badge bg-success me-1 mb-1">البحث: "{{ search_query }}"</span>
+                        {% endif %}
+                        {% if branch_filters %}
+                            {% for branch in branch_filters_display %}
+                                <span class="badge bg-warning text-dark me-1 mb-1">فرع: {{ branch }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if order_type_filters %}
+                            {% for type in order_type_filters_display %}
+                                <span class="badge bg-purple me-1 mb-1">نوع: {{ type }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if production_line_filters %}
+                            {% for line in production_line_filters_display %}
+                                <span class="badge bg-secondary me-1 mb-1">خط إنتاج: {{ line }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if search_columns %}
+                            {% for column in search_columns_display %}
+                                <span class="badge bg-info me-1 mb-1">عمود بحث: {{ column }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if date_from %}
+                            <span class="badge bg-info me-1 mb-1">من تاريخ: {{ date_from }}</span>
+                        {% endif %}
+                        {% if date_to %}
+                            <span class="badge bg-info me-1 mb-1">إلى تاريخ: {{ date_to }}</span>
+                        {% endif %}
+                        {% if overdue_filter == 'true' %}
+                            <span class="badge bg-danger me-1 mb-1">الطلبات المتأخرة فقط</span>
+                        {% endif %}
+                    </div>
+                    <div class="ms-auto">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clearAllFiltersBtn">
+                            <i class="fas fa-times me-1"></i>إزالة جميع الفلاتر
+                        </button>
+                    </div>
+                </div>
             </div>
             {% endif %}
 
@@ -1318,9 +1342,8 @@ body:not(.modal-open) .modal-backdrop {
                 </table>
             </div>
             
-            <!-- Unified Pagination -->
-            {% load pagination_tags %}
-            {% render_pagination page_obj %}
+            <!-- Manufacturing Pagination -->
+            {% render_manufacturing_pagination page_obj %}
             
             {% else %}
             <div class="text-center py-5">
@@ -1497,6 +1520,61 @@ function forceCleanModal() {
 }
 
 $(document).ready(function() {
+    // استعادة الفلاتر المحفوظة عند تحميل الصفحة
+    function restoreFilters() {
+        try {
+            const savedFilters = localStorage.getItem('manufacturing_filters');
+            if (savedFilters) {
+                const filters = JSON.parse(savedFilters);
+                
+                // استعادة الفلاتر فقط إذا لم تكن هناك معاملات في URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const hasUrlFilters = Array.from(urlParams.keys()).some(key => 
+                    ['status', 'branch', 'order_type', 'search', 'date_from', 'date_to', 'overdue', 'production_line', 'search_columns'].includes(key)
+                );
+                
+                if (!hasUrlFilters) {
+                    // استعادة القيم المحفوظة
+                    if (filters.status && filters.status.length > 0) {
+                        $('select[name="status"]').val(filters.status);
+                    }
+                    if (filters.branch && filters.branch.length > 0) {
+                        $('select[name="branch"]').val(filters.branch);
+                    }
+                    if (filters.order_type && filters.order_type.length > 0) {
+                        $('select[name="order_type"]').val(filters.order_type);
+                    }
+                    if (filters.search_columns && filters.search_columns.length > 0) {
+                        $('select[name="search_columns"]').val(filters.search_columns);
+                    }
+                    if (filters.production_line && filters.production_line.length > 0) {
+                        $('select[name="production_line"]').val(filters.production_line);
+                    }
+                    if (filters.search) {
+                        $('input[name="search"]').val(filters.search);
+                    }
+                    if (filters.date_from) {
+                        $('input[name="date_from"]').val(filters.date_from);
+                    }
+                    if (filters.date_to) {
+                        $('input[name="date_to"]').val(filters.date_to);
+                    }
+                    if (filters.overdue) {
+                        $('input[name="overdue"]').prop('checked', filters.overdue);
+                    }
+                    if (filters.page_size) {
+                        $('select[name="page_size"]').val(filters.page_size);
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('خطأ في استعادة الفلاتر:', e);
+        }
+    }
+
+    // استدعاء دالة استعادة الفلاتر عند تحميل الصفحة
+    restoreFilters();
+
     // معالجة الموافقة
     $('.approve-btn').on('click', function() {
         const orderId = $(this).data('order-id');
@@ -1572,10 +1650,115 @@ $(document).ready(function() {
             }
         });
 
+        // حفظ الفلاتر في localStorage للحفاظ عليها عند التنقل
+        const filterState = {
+            status: $(this).find('select[name="status"]').val() || [],
+            branch: $(this).find('select[name="branch"]').val() || [],
+            order_type: $(this).find('select[name="order_type"]').val() || [],
+            search_columns: $(this).find('select[name="search_columns"]').val() || [],
+            production_line: $(this).find('select[name="production_line"]').val() || [],
+            search: $(this).find('input[name="search"]').val() || '',
+            date_from: $(this).find('input[name="date_from"]').val() || '',
+            date_to: $(this).find('input[name="date_to"]').val() || '',
+            overdue: $(this).find('input[name="overdue"]').is(':checked'),
+            page_size: $(this).find('select[name="page_size"]').val() || '25'
+        };
+        localStorage.setItem('manufacturing_filters', JSON.stringify(filterState));
+
         // الانتقال إلى الصفحة مع المعاملات
         const queryString = params.toString();
         window.location.href = queryString ? '?' + queryString : window.location.pathname;
     });
+
+    // مسح الفلاتر - زر مسح الفلاتر الجديد
+    $('#clearFiltersBtn, #clearAllFiltersBtn').on('click', function(e) {
+        e.preventDefault();
+        
+        // مسح جميع الفلاتر من النموذج
+        $('#filterForm')[0].reset();
+        
+        // مسح الفلاتر المحفوظة
+        localStorage.removeItem('manufacturing_filters');
+        
+        // الانتقال إلى الصفحة بدون فلاتر
+        window.location.href = window.location.pathname;
+    });
+
+    // مسح الفلاتر المحفوظة عند النقر على زر إعادة التعيي�� (الرابط القديم)
+    $('a[href*="order_list"]').on('click', function(e) {
+        if ($(this).find('.fa-redo').length > 0 || $(this).find('.fa-times').length > 0) {
+            localStorage.removeItem('manufacturing_filters');
+        }
+    });
+
+    // إضافة وظيفة الترتيب للجدول
+    $('.sortable-header').on('click', function() {
+        const column = $(this).data('sort');
+        if (!column) return;
+
+        // الحصول على الترتيب الحالي
+        const currentSort = new URLSearchParams(window.location.search).get('sort');
+        const currentDirection = new URLSearchParams(window.location.search).get('direction') || 'asc';
+        
+        let newDirection = 'asc';
+        
+        // تحديد الاتجاه الجديد
+        if (currentSort === column) {
+            if (currentDirection === 'asc') {
+                newDirection = 'desc';
+            } else if (currentDirection === 'desc') {
+                newDirection = 'none'; // إزالة الترتيب
+            } else {
+                newDirection = 'asc';
+            }
+        }
+
+        // تحديث أيقونات الترتيب
+        $('.sortable-header').removeClass('active');
+        $('.sort-icon').removeClass('asc desc').addClass('none');
+        
+        if (newDirection !== 'none') {
+            $(this).addClass('active');
+            $(this).find('.sort-icon').removeClass('none').addClass(newDirection);
+        }
+
+        // بناء URL جديد مع الترتيب
+        const params = new URLSearchParams(window.location.search);
+        
+        if (newDirection === 'none') {
+            params.delete('sort');
+            params.delete('direction');
+        } else {
+            params.set('sort', column);
+            params.set('direction', newDirection);
+        }
+        
+        // إعادة تعيين الصفحة إلى 1 عند تغيير الترتيب
+        params.set('page', '1');
+
+        // الانتقال إلى الصفحة الجديدة
+        window.location.href = '?' + params.toString();
+    });
+
+    // تحديث أيقونات الترتيب عند تحميل الصفحة
+    function updateSortIcons() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentSort = urlParams.get('sort');
+        const currentDirection = urlParams.get('direction') || 'asc';
+
+        if (currentSort) {
+            $('.sortable-header').each(function() {
+                const column = $(this).data('sort');
+                if (column === currentSort) {
+                    $(this).addClass('active');
+                    $(this).find('.sort-icon').removeClass('none asc desc').addClass(currentDirection);
+                }
+            });
+        }
+    }
+
+    // استدعاء تحديث أيقونات الترتيب عند تحميل الصفحة
+    updateSortIcons();
 
     // إزالة backdrop عند إغلاق المودال - حل قوي
     $('#rejectModal').on('hidden.bs.modal', function () {

@@ -1,0 +1,78 @@
+{% load manufacturing_pagination %}
+
+<!-- Manufacturing Pagination Template مع الحفاظ على جميع الفلاتر المتعددة -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="تصفح الصفحات" class="mt-4">
+    <ul class="pagination justify-content-center {{ extra_classes }}">
+        
+        <!-- الصفحة الأولى والسابقة -->
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="{% manufacturing_pagination_url 1 %}" aria-label="الأولى" title="الصفحة الأولى">
+                <span aria-hidden="true">&laquo;&laquo;</span>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="{% manufacturing_pagination_url page_obj.previous_page_number %}" aria-label="السابقة" title="الصفحة السابقة">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link" aria-label="الأولى">
+                <span aria-hidden="true">&laquo;&laquo;</span>
+            </span>
+        </li>
+        <li class="page-item disabled">
+            <span class="page-link" aria-label="السابقة">
+                <span aria-hidden="true">&laquo;</span>
+            </span>
+        </li>
+        {% endif %}
+        
+        <!-- أرقام الصفحات -->
+        {% for num in page_obj|get_manufacturing_page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+        </li>
+        {% else %}
+        <li class="page-item">
+            <a class="page-link" href="{% manufacturing_pagination_url num %}" title="الصفحة {{ num }}">{{ num }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+        
+        <!-- الصفحة التالية والأخيرة -->
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{% manufacturing_pagination_url page_obj.next_page_number %}" aria-label="التالية" title="الصفحة التالية">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="{% manufacturing_pagination_url page_obj.paginator.num_pages %}" aria-label="الأخيرة" title="الصفحة الأخيرة">
+                <span aria-hidden="true">&raquo;&raquo;</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link" aria-label="التالية">
+                <span aria-hidden="true">&raquo;</span>
+            </span>
+        </li>
+        <li class="page-item disabled">
+            <span class="page-link" aria-label="الأخيرة">
+                <span aria-hidden="true">&raquo;&raquo;</span>
+            </span>
+        </li>
+        {% endif %}
+    </ul>
+    
+    <!-- معلومات الصفحة -->
+    <div class="text-center text-muted small mt-2">
+        صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }} 
+        ({{ page_obj.start_index }}-{{ page_obj.end_index }} من {{ page_obj.paginator.count }} عنصر)
+    </div>
+</nav>
+{% endif %}
