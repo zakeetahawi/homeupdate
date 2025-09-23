@@ -563,6 +563,9 @@ class Order(models.Model):
             # تسجيل الخطأ
             logger.error(f"خطأ في حفظ الطلب {getattr(self, 'order_number', 'غير محدد')}: {str(e)}")
             raise
+
+
+# (وصل الإشارات يتم بعد تعريف الكلاس في أسفل الملف)
     # تم إزالة دالة create_order_notifications
 
     # تم إزالة دالة create_status_change_notification
@@ -1011,6 +1014,17 @@ class Order(models.Model):
     
     def get_display_status(self):
         """إرجاع الحالة المعروضة بناءً على منطق العرض الجديد"""
+        # أولوية عرض حالة التقطيع: إذا كان أي عنصر يحتوي على حالة قطع غير مكتملة
+        try:
+            cutting_items = self.items.filter(cutting_status__in=['pending', 'in_progress'])
+            if cutting_items.exists():
+                return {
+                    'status': 'cutting',
+                    'source': 'cutting',
+                    'manufacturing_status': None
+                }
+        except Exception:
+            pass
         # إذا كان الطلب من نوع معاينة
         if 'inspection' in self.get_selected_types_list():
             # البحث عن المعاينة المرتبطة بالطلب
@@ -1131,6 +1145,9 @@ class Order(models.Model):
                 'cancelled': 'bg-danger',  # أحمر
                 'manufacturing_deleted': 'bg-secondary',  # فضي
             }
+            # إضافة حالة التقطيع
+            if status == 'cutting':
+                return 'bg-info'
             return order_badges.get(status, 'bg-secondary')
     
     def get_display_status_icon(self):
@@ -1189,6 +1206,8 @@ class Order(models.Model):
                 'cancelled': 'fas fa-ban',
                 'manufacturing_deleted': 'fas fa-trash-alt',
             }
+            if status == 'cutting':
+                return 'fas fa-cut'
             return order_icons.get(status, 'fas fa-question')
     
     def get_display_status_text(self):
@@ -1247,6 +1266,8 @@ class Order(models.Model):
                 'cancelled': 'ملغي',
                 'manufacturing_deleted': 'أمر تصنيع محذوف',
             }
+            if status == 'cutting':
+                return 'قيد التقطيع'
             return order_texts.get(status, status)
     
     @property
@@ -1428,6 +1449,57 @@ def update_order_installation_status(sender, instance, **kwargs):
     except Exception as e:
         print(f"خطأ في تحديث حالة الطلب من التركيب: {e}")
         pass
+
+
+# Signals for OrderItem to keep order totals in sync and update cutting status
+from django.db.models.signals import post_save as oi_post_save, post_delete as oi_post_delete
+
+
+def _recompute_order_totals(order_id):
+    try:
+        from .tasks import calculate_order_totals_async
+        calculate_order_totals_async.delay(order_id)
+    except Exception:
+        try:
+            order = Order.objects.get(pk=order_id)
+            # Force recalculation locally when Celery is not available
+            order.calculate_final_price(force_update=True)
+            order.total_amount = order.final_price
+            order.save(update_fields=['final_price', 'total_amount'])
+        except Exception:
+            pass
+
+
+def _update_order_cutting_flag(order):
+    try:
+        # إذا وُجدت عناصر في حالة تقطيع غير مكتملة، ضع حالة الطلب إلى 'in_progress' للتقطيع
+        if order.items.filter(cutting_status__in=['pending', 'in_progress']).exists():
+            # نضع علامة تتبع أو نحدّث order_status إلى 'in_progress' إن كان مناسباً
+            # لكن من الأفضل استخدام عرض مخصص - هنا نحافظ على order_status إذا لم يكن 'in_progress'
+            if order.order_status != 'in_progress':
+                order.order_status = 'in_progress'
+                order.save(update_fields=['order_status'])
+        else:
+            # إذا لم توجد عناصر قيد التقطيع، لا نغيّر الحالة هنا (قد يتولّى المصنع/التوصيل إدارة الحالة)
+            pass
+    except Exception:
+        pass
+
+
+def order_item_saved(sender, instance, created, **kwargs):
+    # إعادة حساب إجماليات الطلب
+    if instance and instance.order:
+        _recompute_order_totals(instance.order.pk)
+        _update_order_cutting_flag(instance.order)
+
+
+def order_item_deleted(sender, instance, **kwargs):
+    if instance and instance.order:
+        _recompute_order_totals(instance.order.pk)
+        _update_order_cutting_flag(instance.order)
+
+
+
 
 
 class OrderItem(models.Model):
@@ -1705,6 +1777,12 @@ class OrderItem(models.Model):
             logger = logging.getLogger(__name__)
             logger.error(f"خطأ في حفظ عنصر الطلب: {str(e)}")
             raise
+
+
+# وصل إشارات OrderItem الآن
+from django.db.models.signals import post_save as oi_post_save, post_delete as oi_post_delete
+oi_post_save.connect(order_item_saved, sender=OrderItem)
+oi_post_delete.connect(order_item_deleted, sender=OrderItem)
 
 
 class Payment(models.Model):

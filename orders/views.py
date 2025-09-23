@@ -435,6 +435,18 @@ def order_create(request):
                 formset = OrderItemFormSet(request.POST, prefix='items', instance=order)
                 if formset.is_valid():
                     formset.save()
+                    # إعادة حساب الإجماليات بعد إنشاء عناصر الطلب
+                    try:
+                        from .tasks import calculate_order_totals_async
+                        calculate_order_totals_async.delay(order.pk)
+                    except Exception:
+                        try:
+                            # Force recalculation locally when background tasks are not available
+                            order.calculate_final_price(force_update=True)
+                            order.total_amount = order.final_price
+                            order.save(update_fields=['final_price', 'total_amount'])
+                        except Exception:
+                            pass
                 else:
                     print("Formset errors:", formset.errors)
 
@@ -660,6 +672,18 @@ def order_update(request, pk):
                             form_item.instance._modified_by = request.user
                     
                     formset.save()
+                    # إعادة حساب إجماليات الطلب بعد حفظ عناصر الطلب
+                    try:
+                        from .tasks import calculate_order_totals_async
+                        calculate_order_totals_async.delay(order.pk)
+                    except Exception:
+                        try:
+                            # Force recalculation locally when background tasks are not available
+                            order.calculate_final_price(force_update=True)
+                            order.total_amount = order.final_price
+                            order.save(update_fields=['final_price', 'total_amount'])
+                        except Exception:
+                            pass
                 else:
                     print("UPDATE - Formset errors:", formset.errors)
                     messages.warning(request, 'تم تحديث الطلب ولكن هناك أخطاء في عناصر الطلب.')
@@ -1299,7 +1323,15 @@ def order_update_by_number(request, order_number):
             formset.save()
 
             # إعادة حساب المبلغ الإجمالي
-            updated_order.calculate_total()
+            # حاول استخدام مهمة الخلفية ثم احتياطي محلي
+            try:
+                from .tasks import calculate_order_totals_async
+                calculate_order_totals_async.delay(updated_order.pk)
+            except Exception:
+                try:
+                    updated_order.calculate_total()
+                except Exception:
+                    pass
 
             # تسجيل التعديلات
             from .models import OrderNote

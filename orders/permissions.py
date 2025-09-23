@@ -57,13 +57,21 @@ def get_user_orders_queryset(user):
     if user.is_superuser:
         return Order.objects.filter(created_by=user)
 
-    # المستخدم العادي لا يرى أي طلبات
-    return Order.objects.none()
+    # بشكل افتراضي، أعد طلبات التي أنشأها المستخدم (تم إنشاؤها بواسطة)
+    # هذا يسمح للمستخدمين العاديين بمشاهدة طلباتهم حتى لو لم يكن لديهم دور محدد
+    return Order.objects.filter(created_by=user)
 
 
 def can_user_view_order(user, order):
     """التحقق من إمكانية المستخدم لعرض طلب معين"""
     # فحص الأدوار المخصصة أولاً قبل is_superuser
+
+    # صاحب الطلب يمكنه دائمًا رؤية طلبه
+    try:
+        if order.created_by == user:
+            return True
+    except Exception:
+        pass
 
     # المدير العام يرى جميع الطلبات
     if hasattr(user, 'is_general_manager') and user.is_general_manager:
@@ -117,6 +125,13 @@ def can_user_view_order(user, order):
 
 def can_user_edit_order(user, order):
     """التحقق من إمكانية المستخدم لتعديل طلب معين"""
+    # صاحب الطلب يمكنه دائمًا تعديل طلبه
+    try:
+        if order.created_by == user:
+            return True
+    except Exception:
+        pass
+
     if user.is_superuser:
         return True
     

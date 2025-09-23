@@ -484,13 +484,22 @@ def order_item_post_save(sender, instance, created, **kwargs):
     """معالج حفظ عنصر الطلب"""
     if created:
         # تحديث المبلغ الإجمالي للطلب (للطلبات الجديدة فقط)
-        force_update = getattr(instance, '_force_price_update', False)
-        instance.order.calculate_final_price(force_update=force_update)
-        # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
-        instance.order._is_auto_update = True  # تمييز التحديث التلقائي
-        Order.objects.filter(pk=instance.order.pk).update(
-            final_price=instance.order.final_price
-        )
+        # Force recalculation to ensure stored final_price matches items
+        try:
+            instance.order.calculate_final_price(force_update=True)
+            # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
+            instance.order._is_auto_update = True  # تمييز التحديث التلقائي
+            Order.objects.filter(pk=instance.order.pk).update(
+                final_price=instance.order.final_price,
+                total_amount=instance.order.final_price
+            )
+        except Exception:
+            # As a fallback, schedule async calculation
+            try:
+                from .tasks import calculate_order_totals_async
+                calculate_order_totals_async.delay(instance.order.pk)
+            except Exception:
+                pass
         # لا نسجل تعديلات عند الإنشاء الأولي
         return
     else:
@@ -561,10 +570,9 @@ def order_item_post_save(sender, instance, created, **kwargs):
             )
         
         # إنشاء سجل تعديل شامل للطلب
-        # لا نسجل التعديلات إذا لم يكن هناك مستخدم محدد (إنشاء أولي)
-        if getattr(instance, '_modified_by', None) is None:
-            return
-            
+        # الاحتفاظ بتسجيل السجل فقط إن وُجد مستخدم محدد، لكن دعنا نسمح دائماً بإعادة الحساب
+        has_user_modifier = bool(getattr(instance, '_modified_by', None))
+
         if any([
             instance.tracker.has_changed('quantity'),
             instance.tracker.has_changed('unit_price'),
@@ -615,24 +623,50 @@ def order_item_post_save(sender, instance, created, **kwargs):
             
             new_total = old_total + total_change
             
-            # إنشاء سجل تعديل شامل مع تفاصيل العناصر
-            OrderModificationLog.objects.create(
-                order=instance.order,
-                modification_type='تعديل الأصناف الموجودة',
-                old_total_amount=old_total,
-                new_total_amount=new_total,
-                modified_by=getattr(instance, '_modified_by', None),
-                details=f"تعديل {instance.product.name}: {' | '.join(modification_details)}",
-                notes='تعديل في عناصر الطلب',
-                is_manual_modification=bool(getattr(instance, '_modified_by', None)),
-                modified_fields={
-                    'order_items': [{
-                        'item_id': instance.pk,
-                        'product': instance.product.name,
-                        'changes': modification_details
-                    }]
-                }
-            )
+            # إنشاء سجل تعديل شامل مع تفاصيل العناصر (فقط إذا وُجد مستخدم محدد)
+            if has_user_modifier:
+                OrderModificationLog.objects.create(
+                    order=instance.order,
+                    modification_type='تعديل الأصناف الموجودة',
+                    old_total_amount=old_total,
+                    new_total_amount=new_total,
+                    modified_by=getattr(instance, '_modified_by', None),
+                    details=f"تعديل {instance.product.name}: {' | '.join(modification_details)}",
+                    notes='تعديل في عناصر الطلب',
+                    is_manual_modification=True,
+                    modified_fields={
+                        'order_items': [{
+                            'item_id': instance.pk,
+                            'product': instance.product.name,
+                            'changes': modification_details
+                        }]
+                    }
+                )
+            # بعد تسجيل التعديل، نعيد حساب إجماليات الطلب ونحدث الحقول المخزنة فوراً
+            try:
+                # لا نغيّر الأسعار إذا كان الطلب مدفوعًا بالفعل إلا إذا طُلب صراحة
+                allow_force = getattr(instance, '_force_price_update', False)
+                if float(getattr(instance.order, 'paid_amount', 0)) == 0 or allow_force:
+                    instance.order.calculate_final_price(force_update=True)
+                    instance.order._is_auto_update = True
+                    Order.objects.filter(pk=instance.order.pk).update(
+                        final_price=instance.order.final_price,
+                        total_amount=instance.order.final_price
+                    )
+                else:
+                    # إذا كان هناك دفعات، نجدد عبر مهمة خلفية لتجنب تغيير أسعار مدفوعة دون سجل
+                    try:
+                        from .tasks import calculate_order_totals_async
+                        calculate_order_totals_async.delay(instance.order.pk)
+                    except Exception:
+                        pass
+            except Exception:
+                # كاحتياط، حاول جدولة المهمة الخلفية
+                try:
+                    from .tasks import calculate_order_totals_async
+                    calculate_order_totals_async.delay(instance.order.pk)
+                except Exception:
+                    pass
 
 @receiver(post_save, sender=Payment)
 def payment_post_save(sender, instance, created, **kwargs):
