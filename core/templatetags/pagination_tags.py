@@ -15,18 +15,39 @@ def pagination_url(context, page_number):
     """
     request = context['request']
     params = request.GET.copy()
+    
+    # التأكد من أن page_number هو integer وليس list أو أي نوع آخر
+    if isinstance(page_number, (list, tuple)):
+        page_number = page_number[0] if page_number else 1
+    
+    try:
+        page_number = int(page_number)
+    except (ValueError, TypeError):
+        page_number = 1
+    
     params['page'] = page_number
     
-    # تنظيف المعاملات للتأكد من أنها ليست قوائم
+    # قائمة بالمعاملات التي يجب أن تكون arrays (فلاتر متعددة الاختيار)
+    array_params = [
+        'status', 'branch', 'order_type', 'production_line', 
+        'search_columns', 'status[]', 'branch[]', 'order_type[]', 
+        'production_line[]', 'search_columns[]'
+    ]
+    
+    # التأكد من أن جميع القيم في params هي strings وليس lists، باستثناء الفلاتر المتعددة
     cleaned_params = {}
     for key, value in params.items():
         if isinstance(value, (list, tuple)):
-            # إذا كان قائمة، خذ العنصر الأول
-            cleaned_params[key] = value[0] if value else ''
+            # إذا كان value هو list وهو فلتر متعدد الاختيار، احتفظ بجميع القيم
+            if key in array_params or key.endswith('[]'):
+                cleaned_params[key] = value
+            else:
+                # إذا كان value هو list وليس فلتر متعدد الاختيار، خذ العنصر الأول
+                cleaned_params[key] = value[0] if value else ''
         else:
-            cleaned_params[key] = value
+            cleaned_params[key] = str(value)
     
-    return f"?{urlencode(cleaned_params)}"
+    return f"?{urlencode(cleaned_params, doseq=True)}"
 
 @register.simple_tag(takes_context=True)
 def preserve_filters(context, exclude_params=None):
@@ -43,16 +64,27 @@ def preserve_filters(context, exclude_params=None):
             if param in params:
                 del params[param]
     
-    # تنظيف المعاملات للتأكد من أنها ليست قوائم
+    # قائمة بالمعاملات التي يجب أن تكون arrays (فلاتر متعددة الاختيار)
+    array_params = [
+        'status', 'branch', 'order_type', 'production_line', 
+        'search_columns', 'status[]', 'branch[]', 'order_type[]', 
+        'production_line[]', 'search_columns[]'
+    ]
+    
+    # التأكد من أن جميع القيم في params هي strings وليس lists، باستثناء الفلاتر المتعددة
     cleaned_params = {}
     for key, value in params.items():
         if isinstance(value, (list, tuple)):
-            # إذا كان قائمة، خذ العنصر الأول
-            cleaned_params[key] = value[0] if value else ''
+            # إذا كان value هو list وهو فلتر متعدد الاختيار، احتفظ بجميع القيم
+            if key in array_params or key.endswith('[]'):
+                cleaned_params[key] = value
+            else:
+                # إذا كان value هو list وليس فلتر متعدد الاختيار، خذ العنصر الأول
+                cleaned_params[key] = value[0] if value else ''
         else:
-            cleaned_params[key] = value
+            cleaned_params[key] = str(value)
     
-    return urlencode(cleaned_params)
+    return urlencode(cleaned_params, doseq=True)
 
 @register.inclusion_tag('core/pagination.html', takes_context=True)
 def render_pagination(context, page_obj, extra_classes=''):
@@ -82,17 +114,39 @@ def current_url_with_page(context, page_number):
     """
     request = context['request']
     params = request.GET.copy()
+    
+    # التأكد ��ن أن page_number هو integer وليس list أو أي نوع آخر
+    if isinstance(page_number, (list, tuple)):
+        page_number = page_number[0] if page_number else 1
+    
+    try:
+        page_number = int(page_number)
+    except (ValueError, TypeError):
+        page_number = 1
+    
     params['page'] = page_number
     
-    # إزالة المعاملات الفارغة وتنظيف القوائم
-    cleaned_params = {}
-    for k, v in params.items():
-        if isinstance(v, (list, tuple)):
-            v = v[0] if v else ''
-        if v:  # فقط إذا لم يكن فارغاً
-            cleaned_params[k] = v
+    # قائمة بالمعاملات التي يجب أن تكون arrays (فلاتر متعددة الاختيار)
+    array_params = [
+        'status', 'branch', 'order_type', 'production_line', 
+        'search_columns', 'status[]', 'branch[]', 'order_type[]', 
+        'production_line[]', 'search_columns[]'
+    ]
     
-    return f"?{urlencode(cleaned_params)}"
+    # التأكد من أن جميع القيم في params هي strings وليس lists، باستثناء الفلاتر المتعددة
+    cleaned_params = {}
+    for key, value in params.items():
+        if isinstance(value, (list, tuple)):
+            # إذا كان value هو list وهو فلتر متعدد الاختيار، احتفظ بجميع القيم
+            if key in array_params or key.endswith('[]'):
+                cleaned_params[key] = value
+            else:
+                # إذا كان value هو list وليس فلتر متعدد الاختيار، خذ العنصر الأول
+                cleaned_params[key] = value[0] if value else ''
+        else:
+            cleaned_params[key] = str(value)
+    
+    return f"?{urlencode(cleaned_params, doseq=True)}"
 
 @register.simple_tag(takes_context=True)
 def build_filter_url(context, **kwargs):

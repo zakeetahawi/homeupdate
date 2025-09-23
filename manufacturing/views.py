@@ -53,6 +53,33 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
     paginate_by = 25  # تفعيل Django pagination
     permission_required = 'manufacturing.view_manufacturingorder'
     allow_empty = True  # السماح بالصفحات الفارغة دون رفع 404
+    paginate_orphans = 0  # عدم دمج الصفحات الصغيرة
+    
+    def paginate_queryset(self, queryset, page_size):
+        """Override pagination to handle invalid page numbers gracefully"""
+        paginator = self.get_paginator(
+            queryset, page_size, orphans=self.get_paginate_orphans(),
+            allow_empty_first_page=self.get_allow_empty())
+        page_kwarg = self.page_kwarg
+        page = self.kwargs.get(page_kwarg) or self.request.GET.get(page_kwarg) or 1
+        try:
+            page_number = int(page)
+        except ValueError:
+            page_number = 1
+        
+        # If page number is too high, redirect to last page
+        if page_number > paginator.num_pages and paginator.num_pages > 0:
+            page_number = paginator.num_pages
+        elif page_number < 1:
+            page_number = 1
+            
+        try:
+            page = paginator.page(page_number)
+            return (paginator, page, page.object_list, page.has_other_pages())
+        except Exception:
+            # If still fails, return first page
+            page = paginator.page(1)
+            return (paginator, page, page.object_list, page.has_other_pages())
     
     def get_paginate_by(self, queryset):
         try:
@@ -79,24 +106,19 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
         # تطبيق إعدادات العرض للمستخدم الحالي
         queryset = self.apply_display_settings_filter(queryset)
 
-        # Apply filters - دعم الفلاتر المتعددة
+        # Apply filters - دعم الفلاتر المتعددة مع معالجة محسنة
         # فلتر الحالات (اختيار متعدد)
         status_filters = self.request.GET.getlist('status')
-        # محاولة فك ترميز القوائمة إذا كانت مُرمّزة
-        import json
-        try:
-            if status_filters and len(status_filters) == 1:
-                status_filters = json.loads(status_filters[0].replace('%27', "'").replace('%22', '"'))
-                if not isinstance(status_filters, list):
-                    status_filters = [status_filters]
-        except:
-            pass
-
+        # تنظيف الفلاتر من القيم الفارغة
+        status_filters = [f for f in status_filters if f and f.strip()]
+        
         if status_filters:
             queryset = queryset.filter(status__in=status_filters)
 
         # فلتر الفروع (اختيار متعدد)
         branch_filters = self.request.GET.getlist('branch')
+        branch_filters = [f for f in branch_filters if f and f.strip()]
+        
         if branch_filters:
             branch_query = Q()
             for branch_id in branch_filters:
@@ -110,11 +132,15 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
 
         # فلتر أنواع الطلبات (اختيار متعدد)
         order_type_filters = self.request.GET.getlist('order_type')
+        order_type_filters = [f for f in order_type_filters if f and f.strip()]
+        
         if order_type_filters:
             queryset = queryset.filter(order_type__in=order_type_filters)
 
         # فلتر خطوط الإنتاج (اختيار متعدد)
         production_line_filters = self.request.GET.getlist('production_line')
+        production_line_filters = [f for f in production_line_filters if f is not None]
+        
         if production_line_filters:
             line_query = Q()
             for line_id in production_line_filters:
