@@ -80,6 +80,17 @@
             </a>
         </div>
         <div class="col">
+            <a href="{% url 'inspections:inspection_list' %}?status=postponed_by_customer" class="text-decoration-none">
+                <div class="card text-center shadow-sm border-secondary dashboard-card-hover">
+                    <div class="card-body">
+                        <i class="fas fa-pause-circle fa-2x text-secondary mb-2"></i>
+                        <h5 class="card-title">مؤجل من طرف العميل</h5>
+                        <span class="display-6 fw-bold">{{ dashboard.postponed_by_customer_inspections|default:0 }}</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col">
             <a href="{% url 'inspections:inspection_list' %}?is_duplicated=1" class="text-decoration-none">
                 <div class="card text-center shadow-sm border-secondary dashboard-card-hover">
                     <div class="card-body">

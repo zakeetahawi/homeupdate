@@ -135,7 +135,7 @@
                                     <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
                                     <td>
                                         <span class="badge bg-{{ inspection.get_status_color }}">
-                                            {{ inspection.get_status_display }}
+                                            {% load unified_status_tags %}{% get_status_badge inspection.status "inspection" %}
                                         </span>
                                     </td>
                                     <td>{{ inspection.inspector.get_full_name }}</td>

@@ -4,9 +4,8 @@ from . import views
 app_name = 'inspections'
 
 urlpatterns = [
-    # Dashboard
+    # Dashboard removed
     path('', views.InspectionListView.as_view(), name='inspection_list'),
-    path('dashboard/', views.DashboardView.as_view(), name='dashboard'),
     path('completed-details/', views.CompletedInspectionsDetailView.as_view(), name='completed_details'),
     path('cancelled-details/', views.CancelledInspectionsDetailView.as_view(), name='cancelled_details'),
     path('pending-details/', views.PendingInspectionsDetailView.as_view(), name='pending_details'),

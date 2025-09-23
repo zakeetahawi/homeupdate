@@ -22,7 +22,7 @@
                             </div>
                             <div class="col-md-6">
                                 <strong>{% trans 'تاريخ المعاينة' %}:</strong> {{ inspection.scheduled_date }}<br>
-                                <strong>{% trans 'الحالة' %}:</strong> {{ inspection.get_status_display }}
+                                <strong>{% trans 'الحالة' %}:</strong> {% load unified_status_tags %}{% get_status_badge inspection.status "inspection" %}
                             </div>
                         </div>
                     </div>

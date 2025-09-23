@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load decimal_filters %}
+{% load unified_status_tags %}
 
 {% block title %}تفاصيل الطلب - نظام الخواجه{% endblock %}
 
@@ -106,10 +107,7 @@
                                                 <i class="fas fa-eye me-1"></i>عرض تفاصيل المعاينة
                                             </a>
                                             <br>
-                                            <span class="badge {% if order.related_inspection.status == 'completed' %}bg-success{% elif order.related_inspection.status == 'scheduled' %}bg-warning text-dark{% elif order.related_inspection.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
-                                                <i class="fas fa-clipboard-check me-1"></i>
-                                                {{ order.related_inspection.get_status_display }}
-                                            </span>
+                                            {% get_status_badge order.related_inspection.status "inspection" %}
                                             <br><small class="text-muted">
                                                 {% if order.related_inspection.contract_number %}
                                                     {{ order.related_inspection.contract_number }}
@@ -167,10 +165,7 @@
                                             <i class="fas fa-eye me-1"></i>عرض تفاصيل المعاينة
                                         </a>
                                         <br>
-                                        <span class="badge {% if order.related_inspection.status == 'completed' %}bg-success{% elif order.related_inspection.status == 'scheduled' %}bg-warning text-dark{% elif order.related_inspection.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
-                                            <i class="fas fa-clipboard-check me-1"></i>
-                                            {{ order.related_inspection.get_status_display }}
-                                        </span>
+                                        {% get_status_badge order.related_inspection.status "inspection" %}
                                         <br><small class="text-muted">
                                             {% if order.related_inspection.contract_number %}
                                                 {{ order.related_inspection.contract_number }}
@@ -215,7 +210,7 @@
                                                 {{ inspection.scheduled_date|date:"Y-m-d" }}
                                             </span>
                                             <br><small class="text-muted">
-                                                الحالة: {{ inspection.get_status_display }}
+                                                الحالة: {% load unified_status_tags %}{% get_status_badge inspection.status "inspection" %}
                                             </small>
                                         </td>
                                     </tr>
@@ -1017,20 +1012,7 @@
                             <td>
                                 {% with inspection=order.inspections.first %}
                                     {% if inspection %}
-                                        <span class="badge {% if inspection.status == 'pending' %}bg-warning text-dark
-                                                       {% elif inspection.status == 'scheduled' %}bg-info
-                                                       {% elif inspection.status == 'completed' %}bg-success
-                                                       {% else %}bg-danger{% endif %} me-2">
-                                            {% if inspection.status == 'pending' %}
-                                                <i class="fas fa-clock me-1"></i> في الانتظار
-                                            {% elif inspection.status == 'scheduled' %}
-                                                <i class="fas fa-calendar-check me-1"></i> مجدولة
-                                            {% elif inspection.status == 'completed' %}
-                                                <i class="fas fa-check me-1"></i> مكتملة
-                                            {% else %}
-                                                <i class="fas fa-times me-1"></i> ملغية
-                                            {% endif %}
-                                        </span>
+                                        {% get_status_badge inspection.status "inspection" %}
 
                                         {% if inspection.result %}
                                             <span class="badge {% if inspection.result == 'passed' %}bg-success
@@ -1660,25 +1642,12 @@
                                     </span>
                                 {% endif %}
                             </td>
-                            <td class="text-center">
-                                <span class="badge {% if inspection.status == 'pending' %}bg-warning text-dark
-                                           {% elif inspection.status == 'scheduled' %}bg-info
-                                           {% elif inspection.status == 'completed' %}bg-success
-                                           {% else %}bg-danger{% endif %} px-3 py-2">
-                                    {% if inspection.status == 'pending' %}
-                                        <i class="fas fa-clock me-1"></i> في الانتظار
-                                    {% elif inspection.status == 'scheduled' %}
-                                        <i class="fas fa-calendar-check me-1"></i> مجدولة
-                                    {% elif inspection.status == 'completed' %}
-                                        <i class="fas fa-check me-1"></i> مكتملة
-                                    {% else %}
-                                        <i class="fas fa-times me-1"></i> ملغية
+                                <td class="text-center">
+                                    {% get_status_badge inspection.status "inspection" %}
+                                    {% if inspection.status == 'completed' and inspection.updated_at %}
+                                        <br><small class="text-muted mt-1">{{ inspection.updated_at|date:"Y-m-d H:i" }}</small>
                                     {% endif %}
-                                </span>
-                                {% if inspection.status == 'completed' and inspection.updated_at %}
-                                    <br><small class="text-muted mt-1">{{ inspection.updated_at|date:"Y-m-d H:i" }}</small>
-                                {% endif %}
-                            </td>
+                                </td>
                             <td class="text-center">
                                 {% if inspection.result %}
                                     <span class="badge {% if inspection.result == 'passed' %}bg-success

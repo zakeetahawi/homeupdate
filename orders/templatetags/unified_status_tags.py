@@ -19,28 +19,26 @@ def get_status_badge(status, status_type="default"):
         'ready_install': 'status-ready_install',
         'delivered': 'status-delivered',
         'modification_completed': 'status-modification_completed',
-        
         # حالات قيد الانتظار - برتقالي
         'pending': 'status-pending',
         'pending_approval': 'status-pending_approval',
         'modification_required': 'status-modification_required',
         'needs_scheduling': 'status-needs_scheduling',
-        
         # حالات غير مجدول - فضي
         'not_scheduled': 'status-not_scheduled',
-        
         # حالات مجدولة - أزرق فاتح
         'scheduled': 'status-scheduled',
         'modification_in_progress': 'status-modification_in_progress',
         'processing': 'status-processing',
         'in_progress': 'status-in_progress',
         'in_installation': 'status-in_installation',
-        
         # حالات ملغية - أحمر
         'cancelled': 'status-cancelled',
         'rejected': 'status-rejected',
+        # مؤجل من طرف العميل - رمادي داكن
+        'postponed_by_customer': 'status-postponed_by_customer',
     }
-    
+
     status_icons = {
         'pending': 'fas fa-clock',
         'pending_approval': 'fas fa-hourglass-half',
@@ -58,8 +56,9 @@ def get_status_badge(status, status_type="default"):
         'modification_required': 'fas fa-exclamation-triangle',
         'modification_in_progress': 'fas fa-wrench',
         'modification_completed': 'fas fa-check-double',
+        'postponed_by_customer': 'fas fa-pause-circle',
     }
-    
+
     status_texts = {
         'pending': 'قيد الانتظار',
         'pending_approval': 'قيد الموافقة',
@@ -77,6 +76,7 @@ def get_status_badge(status, status_type="default"):
         'modification_required': 'يحتاج تعديل',
         'modification_in_progress': 'التعديل قيد التنفيذ',
         'modification_completed': 'التعديل مكتمل',
+        'postponed_by_customer': 'مؤجل من طرف العميل',
     }
     
     css_class = status_classes.get(status, 'status-secondary')

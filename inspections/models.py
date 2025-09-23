@@ -162,6 +162,7 @@ class Inspection(models.Model):
         ('scheduled', _('مجدول')),
         ('completed', _('مكتملة')),
         ('cancelled', _('ملغية')),
+        ('postponed_by_customer', _('مؤجل من طرف العميل')),
     ]
     RESULT_CHOICES = [
         ('passed', _('ناجحة')),
@@ -233,7 +234,7 @@ class Inspection(models.Model):
     )
     status = models.CharField(
         _('الحالة'),
-        max_length=10,
+        max_length=32,  # Increased to fit 'postponed_by_customer'
         choices=STATUS_CHOICES,
         default='pending'
     )
@@ -379,7 +380,8 @@ class Inspection(models.Model):
             'pending': 'warning',
             'scheduled': 'info',
             'completed': 'success',
-            'cancelled': 'danger'
+            'cancelled': 'danger',
+            'postponed_by_customer': 'secondary',
         }
         return status_colors.get(self.status, 'secondary')
     
@@ -391,7 +393,8 @@ class Inspection(models.Model):
             'scheduled': 'bg-info',  # أزرق فاتح
             'in_progress': 'bg-primary',  # أزرق
             'completed': 'bg-success',  # أخضر
-            'cancelled': 'bg-danger'  # أحمر
+            'cancelled': 'bg-danger',  # أحمر
+            'postponed_by_customer': 'bg-secondary',  # رمادي لطيف
         }
         return status_badges.get(self.status, 'bg-secondary')
     
@@ -401,7 +404,8 @@ class Inspection(models.Model):
             'pending': 'fas fa-clock',
             'scheduled': 'fas fa-calendar',
             'completed': 'fas fa-check-circle',
-            'cancelled': 'fas fa-times-circle'
+            'cancelled': 'fas fa-times-circle',
+            'postponed_by_customer': 'fas fa-pause-circle',
         }
         return status_icons.get(self.status, 'fas fa-minus')
     @property

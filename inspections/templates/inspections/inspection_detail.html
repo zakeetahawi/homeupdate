@@ -8,7 +8,7 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>{% trans 'تفاصيل المعاينة' %}</h2>
-        <div>
+        <div class="d-flex gap-2">
             <a href="{% url 'inspections:inspection_list' %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-right"></i> {% trans 'عودة للقائمة' %}
             </a>
@@ -38,12 +38,8 @@
                             <strong>{% trans 'الحالة' %}:</strong>
                         </div>
                         <div class="col-sm-8">
-                            <span class="badge {% if inspection.status == 'pending' %}bg-warning
-                                       {% elif inspection.status == 'scheduled' %}bg-info
-                                       {% elif inspection.status == 'completed' %}bg-success
-                                       {% else %}bg-danger{% endif %}">
-                                {{ inspection.get_status_display }}
-                            </span>
+                            {% load unified_status_tags %}
+                            {% get_status_badge inspection.status "inspection" %}
                         </div>
                     </div>
                     <div class="row mb-3">

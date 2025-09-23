@@ -1080,7 +1080,6 @@ class Order(models.Model):
         display_info = self.get_display_status()
         status = display_info['status']
         source = display_info['source']
-        
         # فئات البادج حسب المصدر والحالة - ألوان موحدة
         if source == 'inspection':
             inspection_badges = {
@@ -1090,6 +1089,7 @@ class Order(models.Model):
                 'in_progress': 'bg-primary',  # أزرق
                 'completed': 'bg-success',  # أخضر
                 'cancelled': 'bg-danger',  # أحمر
+                'postponed_by_customer': 'bg-secondary text-dark',  # مؤجل من طرف العميل
             }
             return inspection_badges.get(status, 'bg-secondary')
         
@@ -1138,7 +1138,6 @@ class Order(models.Model):
         display_info = self.get_display_status()
         status = display_info['status']
         source = display_info['source']
-        
         # أيقونات حسب المصدر والحالة
         if source == 'inspection':
             inspection_icons = {
@@ -1148,6 +1147,7 @@ class Order(models.Model):
                 'in_progress': 'fas fa-search',
                 'completed': 'fas fa-check',
                 'cancelled': 'fas fa-times',
+                'postponed_by_customer': 'fas fa-pause-circle',
             }
             return inspection_icons.get(status, 'fas fa-question')
         
@@ -1196,7 +1196,6 @@ class Order(models.Model):
         display_info = self.get_display_status()
         status = display_info['status']
         source = display_info['source']
-        
         # نصوص الحالات حسب المصدر
         if source == 'inspection':
             inspection_texts = {
@@ -1206,6 +1205,7 @@ class Order(models.Model):
                 'in_progress': 'قيد التنفيذ',
                 'completed': 'مكتمل',
                 'cancelled': 'ملغية',
+                'postponed_by_customer': 'مؤجل من طرف العميل',
             }
             return inspection_texts.get(status, status)
         
@@ -1272,9 +1272,19 @@ class Order(models.Model):
             # البحث عن المعاينة المرتبطة بالطلب
             inspection = self.inspections.first()
             if inspection:
+                # ترجمة نص حالة المعاينة إلى العربية من خريطة ثابتة لضمان الاتساق
+                inspection_texts = {
+                    'not_scheduled': 'غير مجدولة',
+                    'pending': 'قيد الانتظار',
+                    'scheduled': 'مجدولة',
+                    'in_progress': 'قيد التنفيذ',
+                    'completed': 'مكتمل',
+                    'cancelled': 'ملغية',
+                    'postponed_by_customer': 'مؤجل من طرف العميل',
+                }
                 return {
                     'status': inspection.status,
-                    'text': inspection.get_status_display(),
+                    'text': inspection_texts.get(inspection.status, inspection.get_status_display()),
                     'badge_class': inspection.get_status_badge_class(),
                     'icon': inspection.get_status_icon(),
                     'inspection_id': inspection.id,
@@ -1309,14 +1319,25 @@ class Order(models.Model):
                     'is_inspection_order': False
                 }
             elif self.related_inspection:
+                # استخدم نفس خريطة النصوص لضمان العربية
+                inspection_texts = {
+                    'not_scheduled': 'غير مجدولة',
+                    'pending': 'قيد الانتظار',
+                    'scheduled': 'مجدولة',
+                    'in_progress': 'قيد التنفيذ',
+                    'completed': 'مكتمل',
+                    'cancelled': 'ملغية',
+                    'postponed_by_customer': 'مؤجل من طرف العميل',
+                }
+                rel = self.related_inspection
                 return {
-                    'status': self.related_inspection.status,
-                    'text': self.related_inspection.get_status_display(),
-                    'badge_class': self.related_inspection.get_status_badge_class(),
-                    'icon': self.related_inspection.get_status_icon(),
-                    'inspection_id': self.related_inspection.id,
-                    'contract_number': self.related_inspection.contract_number,
-                    'created_at': self.related_inspection.created_at,
+                    'status': rel.status,
+                    'text': inspection_texts.get(rel.status, rel.get_status_display()),
+                    'badge_class': rel.get_status_badge_class(),
+                    'icon': rel.get_status_icon(),
+                    'inspection_id': rel.id,
+                    'contract_number': rel.contract_number,
+                    'created_at': rel.created_at,
                     'is_inspection_order': False
                 }
             else:

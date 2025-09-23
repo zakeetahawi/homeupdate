@@ -171,6 +171,8 @@ def get_status_badge(status, status_type="default"):
         # حالات ملغية - أحمر داكن
         'cancelled': '#8B0000',
         'rejected': '#DC143C',
+        # مؤجل من طرف العميل - رمادي
+        'postponed_by_customer': '#6c757d',
     }
     
     status_icons = {
@@ -190,6 +192,7 @@ def get_status_badge(status, status_type="default"):
         'modification_required': 'fas fa-exclamation-triangle',
         'modification_in_progress': 'fas fa-wrench',
         'modification_completed': 'fas fa-check-double',
+        'postponed_by_customer': 'fas fa-pause-circle',
     }
     
     status_texts = {
@@ -209,6 +212,7 @@ def get_status_badge(status, status_type="default"):
         'modification_required': 'يحتاج تعديل',
         'modification_in_progress': 'التعديل قيد التنفيذ',
         'modification_completed': 'التعديل مكتمل',
+        'postponed_by_customer': 'مؤجل من طرف العميل',
     }
     
     color = status_colors.get(status, '#6c757d')
@@ -244,6 +248,7 @@ def get_status_display(status):
         'modification_required': 'يحتاج تعديل',
         'modification_in_progress': 'التعديل قيد التنفيذ',
         'modification_completed': 'التعديل مكتمل',
+        'postponed_by_customer': 'مؤجل من طرف العميل',
     }
     return status_map.get(status, status)
 

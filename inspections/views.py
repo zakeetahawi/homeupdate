@@ -17,45 +17,6 @@ from django.contrib.auth.decorators import login_required
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_GET
 
-class DashboardView(LoginRequiredMixin, TemplateView):
-    template_name = 'inspections/dashboard.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        from accounts.models import Branch
-        from django.db.models import Q
-        branch_id = self.request.GET.get('branch')
-        status = self.request.GET.get('status')
-        from_orders = self.request.GET.get('from_orders')
-        is_duplicated = self.request.GET.get('is_duplicated')
-        today = timezone.now().date()
-
-        # بناء queryset للداشبورد بنفس منطق الفلترة
-        dashboard_qs = Inspection.objects.all() if self.request.user.is_superuser else Inspection.objects.filter(
-            Q(inspector=self.request.user) | Q(created_by=self.request.user)
-        )
-
-        # تم إلغاء الفلترة الافتراضية
-        if branch_id:
-            dashboard_qs = dashboard_qs.filter(order__customer__branch_id=branch_id)
-        if status == 'pending' and from_orders == '1':
-            dashboard_qs = dashboard_qs.filter(status='pending', is_from_orders=True)
-        elif status:
-            dashboard_qs = dashboard_qs.filter(status=status)
-        if is_duplicated == '1':
-            dashboard_qs = dashboard_qs.filter(notes__contains='تكرار من المعاينة رقم:')
-
-        # إحصائيات الداشبورد بناءً على الفلترة
-        context['dashboard'] = {
-            'total_inspections': dashboard_qs.count(),
-            'new_inspections': dashboard_qs.filter(status='pending').count(),
-            'scheduled_inspections': dashboard_qs.filter(status='scheduled').count(),
-            'successful_inspections': dashboard_qs.filter(status='completed').count(),
-            'cancelled_inspections': dashboard_qs.filter(status='cancelled').count(),
-            'duplicated_inspections': dashboard_qs.filter(notes__contains='تكرار من المعاينة رقم:').count(),
-        }
-        context['branches'] = Branch.objects.all()
-        return context
 
 class CompletedInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, ListView):
     model = Inspection
@@ -208,6 +169,7 @@ class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
             'scheduled_inspections': dashboard_qs.filter(status='scheduled').count(),
             'successful_inspections': dashboard_qs.filter(status='completed').count(),
             'cancelled_inspections': dashboard_qs.filter(status='cancelled').count(),
+            'postponed_by_customer_inspections': dashboard_qs.filter(status='postponed_by_customer').count(),
             'duplicated_inspections': dashboard_qs.filter(notes__contains='تكرار من المعاينة رقم:').count(),
         }
         context['branches'] = Branch.objects.all()

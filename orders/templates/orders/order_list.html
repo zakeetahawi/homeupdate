@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load unified_status_tags %}
+{% load unified_status_tags %}
 
 {% block title %}الطلبات - نظام الخواجه{% endblock %}
 
@@ -593,32 +594,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             </td>
                             <!-- حالة المعاينة -->
                             <td class="text-center">
-                                {% with inspection_status=order.get_display_inspection_status %}
-                                    {% if inspection_status.inspection_id %}
-                                        <!-- معاينة فعلية مع رابط -->
-                                        <a href="{% url 'inspections:inspection_detail' inspection_status.inspection_id %}"
-                                           class="badge {{ inspection_status.badge_class }} text-decoration-none"
-                                           style="font-size: 0.75rem;"
-                                           title="عرض تفاصيل المعاينة">
-                                            <i class="{{ inspection_status.icon }} me-1"></i>
-                                            {{ inspection_status.text }}
+                                {% with inspection=order.inspections.first %}
+                                    {% if inspection %}
+                                        <a href="{% url 'inspections:inspection_detail' inspection.id %}"
+                                           class="text-decoration-none"
+                                           style="font-size: 0.75rem;">
+                                            {% get_status_badge inspection.status "inspection" %}
                                         </a>
-                                        {% if inspection_status.contract_number or inspection_status.created_at %}
-                                            <br>
-                                            <small class="text-muted" style="font-size: 0.7rem;">
-                                                {% if inspection_status.contract_number %}
-                                                    رقم: {{ inspection_status.contract_number }}<br>
-                                                {% endif %}
-                                                {% if inspection_status.created_at %}
-                                                    تاريخ: {{ inspection_status.created_at|date:'Y-m-d' }}
-                                                {% endif %}
-                                            </small>
-                                        {% endif %}
                                     {% else %}
-                                        <!-- حالة بدون رابط -->
-                                        <span class="badge {{ inspection_status.badge_class }}" style="font-size: 0.75rem;">
-                                            <i class="{{ inspection_status.icon }} me-1"></i>
-                                            {{ inspection_status.text }}
+                                        <span class="badge bg-secondary" style="font-size: 0.75rem;">
+                                            <i class="fas fa-minus me-1"></i>
+                                            لا يوجد
                                         </span>
                                     {% endif %}
                                 {% endwith %}

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load unified_status_tags %}
 
 {% block title %}اختبار عرض المعاينات{% endblock %}
 
@@ -44,11 +45,7 @@
                                 </td>
                                 <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
                                 <td>
-                                    <span class="badge {% if inspection.status == 'pending' %}bg-warning
-                                               {% elif inspection.status == 'completed' %}bg-success
-                                               {% else %}bg-danger{% endif %}">
-                                        {{ inspection.get_status_display }}
-                                    </span>
+                                    {% get_status_badge inspection.status "inspection" %}
                                 </td>
                                 <td>
                                     {% if inspection.result %}

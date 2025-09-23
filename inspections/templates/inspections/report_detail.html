@@ -109,7 +109,7 @@
                                 <span class="badge {% if inspection.status == 'pending' %}bg-warning
                                            {% elif inspection.status == 'completed' %}bg-success
                                            {% else %}bg-danger{% endif %}">
-                                    {{ inspection.get_status_display }}
+                                    {% load unified_status_tags %}{% get_status_badge inspection.status "inspection" %}
                                 </span>
                             </td>
                             <td>

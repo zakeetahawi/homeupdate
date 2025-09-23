@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
+{% load unified_status_tags %}
 
 {% block title %}{{ customer.name }}{% endblock %}
 
@@ -47,11 +48,7 @@
                                 {% endif %}
                             </h2>
                             <div class="mb-3">
-                                <span class="badge {% if customer.status == 'active' %}bg-success
-                                       {% elif customer.status == 'inactive' %}bg-warning text-dark
-                                       {% else %}bg-danger{% endif %} me-2">
-                                    <i class="fas fa-circle me-1"></i>{{ customer.get_status_display }}
-                                </span>
+                                {% get_status_badge customer.status %}
                                 <span class="badge bg-info me-2">
                                     <i class="fas fa-tag me-1"></i>{{ customer.get_customer_type_display }}
                                 </span>
@@ -658,9 +655,7 @@
                                     <td style="text-align: center;">{{ inspection.inspection_code|default:"--" }}</td>
                                     <td style="text-align: center;">{{ inspection.created_at|date:"Y-m-d" }}</td>
                                     <td style="text-align: center;">
-                                        <span class="status-label status-{{ inspection.status }}">
-                                            {{ inspection.get_status_display }}
-                                        </span>
+                                        {% get_status_badge inspection.status "inspection" %}
                                     </td>
                                     <td style="text-align: center;">
                                         {% if inspection.scheduled_date %}
