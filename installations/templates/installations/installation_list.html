@@ -87,7 +87,7 @@
                 </div>
                 <div class="col-md-2">
                     <label for="page_size" class="form-label">عدد الصفوف:</label>
-                    <select name="page_size" id="page_size" class="form-select" onchange="this.form.submit()">
+                    <select name="page_size" id="page_size" class="form-select">
                         <option value="10" {% if current_filters.page_size == 10 %}selected{% endif %}>10</option>
                         <option value="25" {% if current_filters.page_size == 25 or not current_filters.page_size %}selected{% endif %}>25</option>
                         <option value="50" {% if current_filters.page_size == 50 %}selected{% endif %}>50</option>
@@ -97,7 +97,7 @@
                 <div class="col-md-2">
                     <label class="form-label">&nbsp;</label>
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary flex-fill">
+                        <button type="button" class="btn btn-primary apply-filters-btn flex-fill">
                             <i class="fas fa-search"></i> تطبيق
                         </button>
                         <a href="{% url 'installations:installation_list' %}" class="btn btn-outline-secondary" title="مسح الفلاتر">
@@ -497,30 +497,121 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// البحث التلقائي مع تأخير
-let searchTimeout;
-const searchInput = document.querySelector('input[name="search"]');
-if (searchInput) {
-    searchInput.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            if (this.value.length >= 3 || this.value.length === 0) {
-                const form = this.closest('form');
+// إزالة البحث التلقائي بالكامل
+// تم إيقاف البحث التلقائي عند إدخال أي بيانات في الفلاتر
+// الآن يتم البحث والفلترة فقط عند الضغط على زر "تطبيق"
 
-                // إظهار مؤشر التحميل
-                showLoading();
+// منع التطبيق التلقائي للفلاتر عند إدخال البيانات
+document.querySelectorAll('#filterForm select, #filterForm input[type="date"], #filterForm input[name="date_from"], #filterForm input[name="date_to"]').forEach(element => {
+    console.log('تم إعداد منع التطبيق التلقائي للفلاتر لـ:', element.name);
+});
 
-                // إعادة تعيين الصفحة إلى 1 عند البحث
-                const pageInput = form.querySelector('input[name="page"]');
-                if (pageInput) {
-                    pageInput.value = 1;
-                }
+// تطبيق الفلاتر عند الضغط على زر "تطبيق"
+document.addEventListener('DOMContentLoaded', function() {
+    const applyFiltersBtn = document.querySelector('.apply-filters-btn');
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', applyFilters);
+    }
 
-                form.submit();
-            }
-        }, 1000);
+    // تطبيق الفلاتر عند الضغط على زر البحث في input group
+    const searchButton = document.querySelector('.input-group .btn');
+    if (searchButton && searchButton.type === 'submit') {
+        searchButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            applyFilters();
+        });
+    }
+});
+
+function applyFilters() {
+    const form = document.getElementById('filterForm');
+    if (!form) return;
+
+    // إضافة قيمة الصفحة الحالية
+    const pageInput = form.querySelector('input[name="page"]');
+    if (!pageInput) {
+        const hiddenPageInput = document.createElement('input');
+        hiddenPageInput.type = 'hidden';
+        hiddenPageInput.name = 'page';
+        hiddenPageInput.value = '1';
+        form.appendChild(hiddenPageInput);
+    } else {
+        pageInput.value = '1';
+    }
+
+    // إظهار مؤشر التحميل
+    showLoading();
+
+    // حفظ حالة الفلاتر
+    saveFilterState();
+
+    // إرسال النموذج
+    form.submit();
+}
+
+// دالة لمنع التطبيق التلقائي للفلاتر
+function preventAutoFilter() {
+    // إيقاف التطبيق التلقائي للفلاتر الأخرى
+    document.querySelectorAll('#filterForm select, #filterForm input[type="date"]').forEach(element => {
+        // إزالة أي مستمعي أحداث حاليين
+        element.removeEventListener('change', element._autoFilterHandler);
+
+        // منع التطبيق التلقائي
+        element._autoFilterHandler = function(e) {
+            console.log('تم تغيير فلتر:', this.name, '- لن يتم تطبيق الفلاتر تلقائيًا');
+        };
+        element.addEventListener('change', element._autoFilterHandler);
     });
 }
+
+// استدعاء الدالة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', preventAutoFilter);
+
+// دالة للحفاظ على الفلاتر عند التصفح بين الصفحات
+function preserveFiltersOnPagination() {
+    // الحصول على الفلاتر النشطة من النموذج
+    const filters = getActiveFilters();
+    const paginationLinks = document.querySelectorAll('.pagination a');
+    paginationLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        if (!href) return;
+        // استخراج رقم الصفحة من href الأصلي
+        let pageMatch = href.match(/[?&]page=(\d+)/);
+        let pageValue = pageMatch ? pageMatch[1] : null;
+        // إزالة جميع المعاملات من href
+        let baseUrl = href.split('?')[0];
+        let params = new URLSearchParams();
+        if (pageValue) {
+            params.set('page', pageValue);
+        }
+        // إضافة الفلاتر النشطة
+        for (const [key, value] of Object.entries(filters)) {
+            if (value && key !== 'page') {
+                params.set(key, value);
+            }
+        }
+        link.setAttribute('href', `${baseUrl}?${params.toString()}`);
+    });
+}
+
+// دالة للحصول على الفلاتر النشطة
+function getActiveFilters() {
+    const filters = {};
+    const form = document.getElementById('filterForm');
+    if (!form) return filters;
+
+    const formData = new FormData(form);
+    for (const [key, value] of formData.entries()) {
+        if (value && key !== 'page' && key !== 'page_size') {
+            filters[key] = value;
+        }
+    }
+
+    return filters;
+}
+
+// استدعاء الدالة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', preserveFiltersOnPagination);
 
 // حفظ حالة الفلاتر في localStorage
 function saveFilterState() {

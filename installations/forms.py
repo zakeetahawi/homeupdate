@@ -605,8 +605,7 @@ class InstallationFilterForm(forms.Form):
         required=False,
         label=_('حالة التركيب'),
         widget=forms.Select(attrs={
-            'class': 'form-select',
-            'onchange': 'this.form.submit()'  # إرسال تلقائي عند التغيير
+            'class': 'form-select'
         })
     )
     
@@ -616,8 +615,7 @@ class InstallationFilterForm(forms.Form):
         label=_('الفريق'),
         empty_label=_('جميع الفرق'),
         widget=forms.Select(attrs={
-            'class': 'form-select',
-            'onchange': 'this.form.submit()'
+            'class': 'form-select'
         })
     )
     
@@ -661,8 +659,7 @@ class InstallationFilterForm(forms.Form):
         required=False,
         label=_('نوع المكان'),
         widget=forms.Select(attrs={
-            'class': 'form-select',
-            'onchange': 'this.form.submit()'
+            'class': 'form-select'
         })
     )
     
@@ -676,8 +673,7 @@ class InstallationFilterForm(forms.Form):
         required=False,
         label=_('حالة الطلب'),
         widget=forms.Select(attrs={
-            'class': 'form-select',
-            'onchange': 'this.form.submit()'
+            'class': 'form-select'
         })
     )
 
