@@ -355,7 +355,6 @@ class ManufacturingOrder(models.Model):
             'in_progress': 'needs_scheduling',
             'ready_install': 'scheduled',
             'completed': 'completed',
-            'delivered': 'completed',
             'rejected': 'needs_scheduling',
             'cancelled': 'cancelled',
         }
