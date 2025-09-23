@@ -13,6 +13,57 @@ def get_status_badge(status, status_type="default"):
         status: حالة العنصر (pending, completed, etc.)
         status_type: نوع الحالة (default, manufacturing, installation, inspection)
     """
+    # خرائط النصوص حسب نوع الحالة
+    status_texts_map = {
+        'default': {
+            'pending': 'قيد الانتظار',
+            'pending_approval': 'قيد الموافقة',
+            'processing': 'قيد التنفيذ',
+            'in_progress': 'قيد التصنيع',
+            'in_installation': 'قيد التركيب',
+            'ready_install': 'جاهز للتركيب',
+            'completed': 'مكتمل',
+            'delivered': 'تم التسليم',
+            'rejected': 'مرفوض',
+            'cancelled': 'ملغي',
+            'scheduled': 'مجدول',
+            'not_scheduled': 'غير مجدول',
+            'needs_scheduling': 'بحاجة جدولة',
+            'modification_required': 'يحتاج تعديل',
+            'modification_in_progress': 'التعديل قيد التنفيذ',
+            'modification_completed': 'التعديل مكتمل',
+            'postponed_by_customer': 'مؤجل من طرف العميل',
+        },
+        'inspection': {
+            'pending': 'قيد الانتظار',
+            'scheduled': 'مجدول',
+            'completed': 'مكتملة',
+            'cancelled': 'ملغية',
+            'postponed_by_customer': 'مؤجل من طرف العميل',
+        },
+        'manufacturing': {
+            'pending_approval': 'قيد الموافقة',
+            'pending': 'قيد الانتظار',
+            'in_progress': 'قيد التصنيع',
+            'ready_install': 'جاهز للتركيب',
+            'completed': 'مكتمل',
+            'delivered': 'تم التسليم',
+            'rejected': 'مرفوض',
+            'cancelled': 'ملغي',
+        },
+        'installation': {
+            'not_scheduled': 'غير مجدول',
+            'pending': 'في الانتظار',
+            'scheduled': 'مجدول',
+            'in_progress': 'قيد التنفيذ',
+            'completed': 'مكتمل',
+            'cancelled': 'ملغي',
+            'modification_required': 'يحتاج تعديل',
+            'modification_in_progress': 'التعديل قيد التنفيذ',
+            'modification_completed': 'التعديل مكتمل',
+        }
+    }
+    
     status_classes = {
         # الحالات المكتملة - أخضر
         'completed': 'status-completed',
@@ -59,25 +110,8 @@ def get_status_badge(status, status_type="default"):
         'postponed_by_customer': 'fas fa-pause-circle',
     }
 
-    status_texts = {
-        'pending': 'قيد الانتظار',
-        'pending_approval': 'قيد الموافقة',
-        'processing': 'قيد التنفيذ',
-        'in_progress': 'قيد التصنيع',
-        'in_installation': 'قيد التركيب',
-        'ready_install': 'جاهز للتركيب',
-        'completed': 'مكتمل',
-        'delivered': 'تم التسليم',
-        'rejected': 'مرفوض',
-        'cancelled': 'ملغي',
-        'scheduled': 'مجدول',
-        'not_scheduled': 'غير مجدول',
-        'needs_scheduling': 'بحاجة جدولة',
-        'modification_required': 'يحتاج تعديل',
-        'modification_in_progress': 'التعديل قيد التنفيذ',
-        'modification_completed': 'التعديل مكتمل',
-        'postponed_by_customer': 'مؤجل من طرف العميل',
-    }
+    # الحصول على خريطة النصوص المناسبة
+    status_texts = status_texts_map.get(status_type, status_texts_map['default'])
     
     css_class = status_classes.get(status, 'status-secondary')
     icon = status_icons.get(status, 'fas fa-circle')

@@ -1858,25 +1858,25 @@ def installation_stats_api(request):
             total=Count('id'),
             completed=Count('id', filter=Q(status='completed')),
             pending=Count('id', filter=Q(status='pending')),
-            in_progress=Count('id', filter=Q(status='in_progress')),
+            in_progress=Count('id', filter=Q(status='in_installation')),  # تم تصحيح هذا
             scheduled=Count('id', filter=Q(status='scheduled')),
             modification_required=Count('id', filter=Q(status__in=['modification_required', 'modification_scheduled', 'modification_in_progress']))
         )
 
         # إحصائيات طلبات التركيب (إجمالي في النظام)
-        total_orders = Order.objects.filter(selected_types__contains=['installation']).count()
+        total_orders = Order.objects.filter(selected_types__icontains='installation').count()
 
         # الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
         orders_needing_scheduling = ManufacturingOrder.objects.filter(
             status__in=['ready_install', 'delivered'],
-            modification_request__installation__order__selected_types__contains=['installation'],
-            modification_request__installation__isnull=True
+            order__selected_types__icontains='installation',
+            order__installationschedule__isnull=True
         ).count()
 
         # الطلبات المديونة
         try:
             orders_with_debt = Order.objects.filter(
-                selected_types__contains=['installation'],
+                selected_types__icontains='installation',
                 total_amount__gt=F('paid_amount')
             ).count()
         except Exception as e:
@@ -1887,7 +1887,7 @@ def installation_stats_api(request):
         try:
             orders_in_manufacturing = ManufacturingOrder.objects.filter(
                 status__in=['pending_approval', 'pending', 'in_progress'],
-                modification_request__installation__order__selected_types__contains=['installation']
+                order__selected_types__icontains='installation'
             ).count()
         except Exception as e:
             orders_in_manufacturing = 0
@@ -1896,7 +1896,7 @@ def installation_stats_api(request):
         try:
             delivered_manufacturing_orders = ManufacturingOrder.objects.filter(
                 status='delivered',
-                modification_request__installation__order__selected_types__contains=['installation']
+                order__selected_types__icontains='installation'
             ).count()
         except Exception as e:
             delivered_manufacturing_orders = 0
@@ -1926,7 +1926,7 @@ def installation_stats_api(request):
         # الطلبات الجديدة (آخر 7 أيام)
         try:
             recent_orders_count = Order.objects.filter(
-                selected_types__contains=['installation'],
+                selected_types__icontains='installation',
                 created_at__gte=timezone.now() - timezone.timedelta(days=7)
             ).count()
         except Exception as e:
