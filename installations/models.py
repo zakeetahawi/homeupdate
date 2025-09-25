@@ -320,62 +320,20 @@ class InstallationSchedule(models.Model):
         super().save(*args, **kwargs)
 
     def can_change_status_to(self, new_status):
-        """التحقق من إمكانية تغيير الحالة إلى الحالة الجديدة"""
-        status_flow = {
-            'needs_scheduling': ['scheduled', 'cancelled'],
-            'scheduled': ['in_installation', 'cancelled', 'modification_required'],
-            'in_installation': ['completed', 'modification_required', 'cancelled'],
-            'completed': [],  # لا يمكن تغيير الحالة من مكتمل
-            'cancelled': ['scheduled'],  # يمكن إعادة جدولة المُلغى
-            'modification_required': ['modification_scheduled', 'cancelled'],
-            'modification_scheduled': ['modification_in_progress', 'cancelled', 'modification_required'],
-            'modification_in_progress': ['modification_completed', 'modification_required'],
-            'modification_completed': ['completed', 'modification_required'],
-        }
+        """التحقق من إمكانية تغيير الحالة إلى الحالة الجديدة
         
-        return new_status in status_flow.get(self.status, [])
+        تم تعديل هذه الطريقة للسماح بتغيير الحالة إلى أي حالة صالحة دون قيود تسلسل.
+        سابقاً كان هناك تدفق مقيد (status_flow) يحدد الحالات المسموحة من كل حالة.
+        الآن يتم التحقق فقط من أن الحالة الجديدة موجودة في STATUS_CHOICES.
+        """
+        # السماح بتغيير الحالة إلى أي حالة صالحة دون قيود تسلسل
+        valid_statuses = [choice[0] for choice in self.STATUS_CHOICES]
+        return new_status in valid_statuses
 
     def get_next_possible_statuses(self):
         """الحصول على الحالات الممكنة التالية"""
-        status_flow = {
-            'needs_scheduling': [
-                ('scheduled', 'مجدول'),
-                ('cancelled', 'ملغي')
-            ],
-            'scheduled': [
-                ('in_installation', 'قيد التركيب'),
-                ('modification_required', 'يحتاج تعديل'),
-                ('cancelled', 'ملغي')
-            ],
-            'in_installation': [
-                ('completed', 'مكتمل'),
-                ('modification_required', 'يحتاج تعديل'),
-                ('cancelled', 'ملغي')
-            ],
-            'completed': [],
-            'cancelled': [
-                ('scheduled', 'مجدول')
-            ],
-            'modification_required': [
-                ('modification_scheduled', 'جدولة التعديل'),
-                ('cancelled', 'ملغي')
-            ],
-            'modification_scheduled': [
-                ('modification_in_progress', 'التعديل قيد التنفيذ'),
-                ('modification_required', 'يحتاج تعديل'),
-                ('cancelled', 'ملغي')
-            ],
-            'modification_in_progress': [
-                ('modification_completed', 'التعديل مكتمل'),
-                ('modification_required', 'يحتاج تعديل')
-            ],
-            'modification_completed': [
-                ('completed', 'مكتمل'),
-                ('modification_required', 'يحتاج تعديل')
-            ],
-        }
-        
-        return status_flow.get(self.status, [])
+        # السماح بجميع الحالات الممكنة دون قيود تسلسل
+        return [(choice[0], choice[1]) for choice in self.STATUS_CHOICES]
 
     def get_installation_date(self):
         """إرجاع تاريخ التركيب المناسب حسب الحالة"""

@@ -475,10 +475,8 @@
                                                 onchange="updateInstallationStatus('{{ installation.installation_code }}', this.value)"
                                                 style="width: auto; display: inline-block;">
                                             <option value="">تحديث الحالة</option>
-                                            <option value="pending" {% if installation.status == 'pending' %}selected{% endif %}>في الانتظار</option>
                                             <option value="scheduled" {% if installation.status == 'scheduled' %}selected{% endif %}>مجدول</option>
                                             <option value="in_installation" {% if installation.status == 'in_installation' %}selected{% endif %}>قيد التركيب</option>
-                                            <option value="in_progress" {% if installation.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
                                             <option value="completed" {% if installation.status == 'completed' %}selected{% endif %}>مكتمل</option>
                                             <option value="cancelled" {% if installation.status == 'cancelled' %}selected{% endif %}>ملغي</option>
                                             <option value="modification_required" {% if installation.status == 'modification_required' %}selected{% endif %}>يحتاج تعديل</option>

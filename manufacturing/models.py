@@ -27,12 +27,29 @@ class ManufacturingOrderManager(models.Manager):
 
 
 class ManufacturingOrder(models.Model):
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='الوصف',
+        help_text='وصف أمر التصنيع أو تفاصيل التعديل إذا كان الأمر خاصاً بتعديل.'
+    )
+    # ربط أمر التصنيع بطلب التعديل (اختياري)
+    modification_request = models.ForeignKey(
+        'installations.ModificationRequest',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='manufacturing_orders',
+        verbose_name='طلب التعديل',
+        help_text='يربط أمر التصنيع بطلب التعديل إذا كان هذا الأمر خاصاً بتعديل.'
+    )
     """نموذج يمثل أمر التصنيع"""
     
     ORDER_TYPE_CHOICES = [
         ('installation', 'تركيب'),
         ('custom', 'تفصيل'),
         ('accessory', 'اكسسوار'),
+        ('modification', 'تعديل'),
     ]
     
     STATUS_CHOICES = [
@@ -46,10 +63,10 @@ class ManufacturingOrder(models.Model):
         ('cancelled', 'ملغي'),
     ]
     
-    order = models.OneToOneField(
+    order = models.ForeignKey(
         'orders.Order',  # استخدام الإشارة النصية بدلاً من الاستيراد المباشر
         on_delete=models.CASCADE,
-        related_name='manufacturing_order',
+        related_name='manufacturing_orders',
         verbose_name='رقم الطلب'
     )
     

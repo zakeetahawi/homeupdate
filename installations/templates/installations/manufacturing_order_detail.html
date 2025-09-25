@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}تفاصيل أمر التصنيع{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">تفاصيل أمر التصنيع</h2>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">رقم الأمر: {{ manufacturing_order.id }}</h5>
+            <p class="card-text">الحالة: {{ manufacturing_order.get_status_display }}</p>
+            <p class="card-text">تاريخ الإنشاء: {{ manufacturing_order.created_at|date:"Y-m-d H:i" }}</p>
+            <p class="card-text">مخصص إلى: {% if manufacturing_order.assigned_to %}{{ manufacturing_order.assigned_to.get_full_name|default:manufacturing_order.assigned_to.username }}{% else %}غير محدد{% endif %}</p>
+            <p class="card-text">التركيب المرتبط:
+                {% if manufacturing_order.modification_request.installation and manufacturing_order.modification_request.installation.id %}
+                    <a href="{% url 'installations:installation_detail' manufacturing_order.modification_request.installation.id %}">
+                        {{ manufacturing_order.modification_request.installation }}
+                    </a>
+                {% else %}
+                    غير محدد
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    <a href="{% url 'installations:dashboard' %}" class="btn btn-secondary mt-3">العودة للوحة التحكم</a>
+</div>
+{% endblock %}

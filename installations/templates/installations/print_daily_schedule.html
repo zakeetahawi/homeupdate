@@ -222,8 +222,7 @@
                                             <span class="status-badge badge-info" style="background-color: #17a2b8; color: #fff; font-weight: bold; padding: 2px 6px; font-size: 9px;">مجدول</span>
                                         {% elif installation.status == 'in_installation' %}
                                             <span class="status-badge badge-warning" style="background-color: #ffc107; color: #000; font-weight: bold; padding: 2px 6px; font-size: 9px;">قيد التركيب</span>
-                                        {% elif installation.status == 'in_progress' %}
-                                            <span class="status-badge badge-primary" style="background-color: #007bff; color: #fff; font-weight: bold; padding: 2px 6px; font-size: 9px;">قيد التنفيذ</span>
+
                                         {% elif installation.status == 'completed' %}
                                             <span class="status-badge badge-success" style="background-color: #28a745; color: #fff; font-weight: bold; padding: 2px 6px; font-size: 9px;">مكتمل</span>
                                         {% elif installation.status == 'cancelled' %}
@@ -253,10 +252,7 @@
                 <div class="stat-number">{{ installations|dictsort:"status"|length }}</div>
                 <div class="stat-label">قيد التركيب</div>
             </div>
-            <div class="stat-item">
-                <div class="stat-number">{{ installations|dictsort:"status"|length }}</div>
-                <div class="stat-label">قيد التنفيذ</div>
-            </div>
+
         </div>
     </div>
 

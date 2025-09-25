@@ -175,7 +175,13 @@
                                             <span class="badge badge-danger">ملغي</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ order.assigned_to.get_full_name|default:order.assigned_to.username|default:"غير محدد" }}</td>
+                                    <td>
+                                        {% if order.assigned_to %}
+                                            {{ order.assigned_to.get_full_name|default:order.assigned_to.username|default:"غير محدد" }}
+                                        {% else %}
+                                            غير محدد
+                                        {% endif %}
+                                    </td>
                                     <td>{{ order.created_at|date:"Y-m-d" }}</td>
                                     <td>
                                         <a href="{% url 'installations:manufacturing_order_detail' order.id %}" class="btn btn-sm btn-info">

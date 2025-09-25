@@ -1136,8 +1136,35 @@ def create_modification_request(request, installation_id):
             installation.status = 'modification_required'
             installation.save()
 
+
+            # إنشاء أمر تصنيع للتعديل في جدول التصنيع الرئيسي
+            from manufacturing.models import ManufacturingOrder as MainManufacturingOrder
+            # تأكد أن order_type='modification' مدعوم في ORDER_TYPE_CHOICES في manufacturing.models.ManufacturingOrder
+            MainManufacturingOrder.objects.create(
+                order=installation.order,
+                order_type='modification',
+                status='pending',
+                expected_delivery_date=installation.order.expected_delivery_date or timezone.now().date(),
+                description=f'أمر تعديل من قسم التركيبات - {modification_request.description}'
+                # إذا أضفت حقل modification_request في ManufacturingOrder (manufacturing app)، أضفه هنا
+            )
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'modification_id': modification_request.id,
+                    'message': 'تم إنشاء طلب التعديل بنجاح'
+                })
+
             messages.success(request, 'تم إنشاء طلب التعديل بنجاح')
             return redirect('installations:modification_detail', modification_id=modification_request.id)
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': 'بيانات غير صحيحة',
+                    'form_errors': form.errors
+                })
     else:
         form = ModificationRequestForm()
 
