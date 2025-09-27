@@ -178,6 +178,12 @@ def dashboard(request):
         status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
     ).exclude(status='completed').select_related('order__customer', 'team')[:10]
 
+    # حساب العدد الفعلي للتركيبات اليوم (للبطاقة)
+    today_installations_count = InstallationSchedule.objects.filter(
+        scheduled_date=today,
+        status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
+    ).exclude(status='completed').count()
+
     # 6. التركيبات القادمة
     upcoming_installations = InstallationSchedule.objects.filter(
         scheduled_date__gt=today,
