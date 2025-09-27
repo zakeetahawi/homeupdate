@@ -417,8 +417,6 @@ def installation_list(request):
             order__selected_types__icontains='installation',
             order__installationschedule__isnull=True
         ).select_related('order__customer')
-        # تطبيق فلتر السنة الافتراضية
-        ready_manufacturing_query = apply_default_year_filter(ready_manufacturing_query, request, 'order_date')
         
         # تطبيق فلاتر البحث
         if search:
@@ -448,8 +446,6 @@ def installation_list(request):
             status__in=['pending_approval', 'approved', 'in_cutting', 'cutting_completed', 'in_manufacturing', 'quality_check'],
             order__selected_types__icontains='installation'
         ).select_related('order__customer')
-        # تطبيق فلتر السنة الافتراضية
-        under_manufacturing_query = apply_default_year_filter(under_manufacturing_query, request, 'order_date')
         
         # تطبيق فلاتر البحث
         if search:
@@ -2475,10 +2471,6 @@ def installation_in_progress_list(request):
         'order', 'order__customer', 'team'
     ).order_by('scheduled_date', 'scheduled_time')
 
-    # تطبيق فلتر السنة الافتراضية
-    from accounts.utils import apply_default_year_filter
-    installations = apply_default_year_filter(installations, request, 'scheduled_date')
-
     # فلترة حسب الفريق
     team_filter = request.GET.get('team')
     if team_filter:
@@ -2520,10 +2512,6 @@ def print_installation_schedule(request):
     installations = InstallationSchedule.objects.select_related(
         'order', 'order__customer', 'team'
     ).order_by('scheduled_date', 'scheduled_time')
-
-    # تطبيق فلتر السنة الافتراضية
-    from accounts.utils import apply_default_year_filter
-    installations = apply_default_year_filter(installations, request, 'scheduled_date')
 
     # تطبيق الفلاتر
     if date:
