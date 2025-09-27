@@ -595,8 +595,8 @@ a.text-decoration-none:hover {
                                 معدل الإنجاز
                             </div>
                             <div class="h6 mb-1 font-weight-bold text-gray-800">
-                                {% if total_scheduled_installations %}
-                                    {{ completed_installations|default:"0" }}/{{ total_scheduled_installations|default:"0" }}
+                                {% if total_installations %}
+                                    {{ completed_installations|default:"0" }}/{{ total_installations|default:"0" }}
                                 {% else %}
                                     0/0
                                 {% endif %}
@@ -1187,9 +1187,7 @@ setInterval(function() {
             // تحديث معدل الإنجاز (البطاقة العاشرة)
             const completionRateCard = document.querySelector('.card.border-orange .text-gray-800');
             if (completionRateCard) {
-                const completionRate = data.total_scheduled > 0 
-                    ? Math.round((data.completed / data.total_scheduled) * 100) 
-                    : 0;
+                const completionRate = data.completion_rate || 0;
                 completionRateCard.textContent = `${completionRate}%`;
             }
 
@@ -1321,9 +1319,7 @@ function updateStats() {
             // تحديث معدل الإنجاز (البطاقة العاشرة)
             const completionRateCard = document.querySelector('.card.border-orange .text-gray-800');
             if (completionRateCard) {
-                const completionRate = data.total_scheduled > 0 
-                    ? Math.round((data.completed / data.total_scheduled) * 100) 
-                    : 0;
+                const completionRate = data.completion_rate || 0;
                 completionRateCard.textContent = `${completionRate}%`;
             }
 

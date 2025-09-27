@@ -127,67 +127,57 @@ def dashboard(request):
     
     # استخدام select_related و prefetch_related لتحسين الأداء
     
-    # 1. إحصائيات إجمالي التركيبات في النظام (من Order)
-    total_installation_orders = Order.objects.filter(
-        selected_types__icontains='installation'
-    ).count()  # إجمالي طلبات التركيب في النظام
-
-    # 2. إحصائيات التركيبات المجدولة (من InstallationSchedule مع فلترة صحيحة)
-    installation_schedules_queryset = InstallationSchedule.objects.select_related('order').filter(
-        order__isnull=False,
-        order__selected_types__icontains='installation'
-    )
-    completed_installations = installation_schedules_queryset.filter(status='completed').count()
-    in_installation_installations = installation_schedules_queryset.filter(status='in_installation').count()
-    scheduled_installations = installation_schedules_queryset.filter(status='scheduled').count()
-    modification_required_installations = installation_schedules_queryset.filter(
-        status__in=['modification_required', 'modification_scheduled', 'modification_in_progress']
-    ).count()
-
-    # حساب الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
-    orders_needing_scheduling_count = ManufacturingOrder.objects.filter(
-        status__in=['ready_install', 'delivered'],
-        order__selected_types__icontains='installation',
-        order__installationschedule__isnull=True
-    ).count()
-
-    # 3. الطلبات المديونة (بدون فلترة افتراضية)
-    orders_with_debt_query = Order.objects.filter(
-        selected_types__icontains='installation',
-        total_amount__gt=F('paid_amount')
-    )
-    orders_with_debt = orders_with_debt_query.count()
-
-    # 4. أوامر التصنيع (بدون فلترة افتراضية)
-    orders_in_manufacturing_query = ManufacturingOrder.objects.filter(
-        status__in=['pending_approval', 'pending', 'in_progress'],
-        order__selected_types__icontains='installation'
-    )
-    orders_in_manufacturing = orders_in_manufacturing_query.count()
-
-    delivered_manufacturing_orders_query = ManufacturingOrder.objects.filter(
-        status='delivered',
-        order__selected_types__icontains='installation'
-    )
-    delivered_manufacturing_orders = delivered_manufacturing_orders_query.count()
+    # استدعاء API الإحصائيات للحصول على البيانات المتسقة
+    from django.test import RequestFactory
+    factory = RequestFactory()
+    api_request = factory.get('/api/installation-stats/')
+    api_request.user = request.user
+    
+    try:
+        # استدعاء دالة API الإحصائيات مباشرة
+        from django.http import JsonResponse
+        api_response = installation_stats_api(api_request)
+        stats_data = api_response.content.decode('utf-8')
+        import json
+        stats = json.loads(stats_data)
+    except Exception as e:
+        print(f"خطأ في استدعاء API الإحصائيات: {e}")
+        # في حالة فشل API، استخدم حسابات احتياطية
+        stats = {
+            'total_scheduled': 0,
+            'total_orders': 0,
+            'completed': 0,
+            'pending': 0,
+            'in_progress': 0,
+            'scheduled': 0,
+            'modification_required': 0,
+            'orders_needing_scheduling': 0,
+            'orders_with_debt': 0,
+            'orders_in_manufacturing': 0,
+            'delivered_manufacturing_orders': 0,
+            'today_installations': 0,
+            'upcoming_installations': 0,
+            'recent_orders': 0,
+            'teams_stats': 0,
+        }
 
     # 5. التركيبات المجدولة اليوم
     today = timezone.now().date()
     today_installations = InstallationSchedule.objects.filter(
         scheduled_date=today,
-        status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
+        status__in=[
+            'scheduled', 'in_installation', 'modification_required',
+            'modification_scheduled', 'modification_in_progress', 'modification_completed'
+        ]
     ).exclude(status='completed').select_related('order__customer', 'team')[:10]
-
-    # حساب العدد الفعلي للتركيبات اليوم (للبطاقة)
-    today_installations_count = InstallationSchedule.objects.filter(
-        scheduled_date=today,
-        status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
-    ).exclude(status='completed').count()
 
     # 6. التركيبات القادمة
     upcoming_installations = InstallationSchedule.objects.filter(
         scheduled_date__gt=today,
-        status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
+        status__in=[
+            'scheduled', 'in_installation', 'modification_required',
+            'modification_scheduled', 'modification_in_progress', 'modification_completed'
+        ]
     ).exclude(status='completed').select_related('order__customer', 'team')[:5]
 
     # 7. الطلبات الجديدة (آخر 7 أيام)
@@ -217,18 +207,18 @@ def dashboard(request):
     )
 
     context = {
-        # البطاقات الأساسية
-        'total_installations': total_installation_orders,  # إجمالي طلبات التركيب
-        'completed_installations': completed_installations,  # تركيب مكتمل
-        'total_modifications': modification_required_installations,  # طلبات التعديل
-        'orders_needing_scheduling_count': orders_needing_scheduling_count,  # بانتظار الجدولة
-        'scheduled_installations': scheduled_installations,  # تركيب مجدول
-        'in_installation_installations': in_installation_installations,  # قيد التركيب
+        # البطاقات الأساسية - استخدام البيانات من API
+        'total_installations': stats.get('total_orders', 0),  # إجمالي طلبات التركيب
+        'completed_installations': stats.get('completed', 0),  # تركيب مكتمل
+        'total_modifications': stats.get('modification_required', 0),  # طلبات التعديل
+        'orders_needing_scheduling_count': stats.get('orders_needing_scheduling', 0),  # بانتظار الجدولة
+        'scheduled_installations': stats.get('scheduled', 0),  # تركيب مجدول
+        'in_installation_installations': stats.get('in_progress', 0),  # قيد التركيب
 
         # البطاقات الإضافية
-        'orders_with_debt': orders_with_debt,  # طلبات عليها مديونية
-        'orders_in_manufacturing': orders_in_manufacturing,  # طلبات تحت التصنيع
-        'delivered_manufacturing_orders': delivered_manufacturing_orders,  # تم التسليم
+        'orders_with_debt': stats.get('orders_with_debt', 0),  # طلبات عليها مديونية
+        'orders_in_manufacturing': stats.get('orders_in_manufacturing', 0),  # طلبات تحت التصنيع
+        'delivered_manufacturing_orders': stats.get('delivered_manufacturing_orders', 0),  # تم التسليم
 
         # الجداول
         'today_installations': today_installations,
@@ -236,6 +226,7 @@ def dashboard(request):
         'recent_orders': recent_orders,
         'orders_needing_scheduling': orders_needing_scheduling,
         'teams_stats': teams_stats,
+        'today_installations_count': stats.get('today_installations', 0),  # إضافة هذا المتغير
     }
 
     return render(request, 'installations/dashboard.html', context)
@@ -993,7 +984,7 @@ def orders_modal(request):
         from manufacturing.models import ManufacturingOrder
         manufacturing_orders = ManufacturingOrder.objects.filter(
             order__selected_types__icontains='installation',
-            status__in=['pending', 'in_progress']
+            status__in=['pending_approval', 'approved', 'in_cutting', 'cutting_completed', 'in_manufacturing', 'quality_check']
         ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson').order_by('-created_at')
         orders = []
         for mfg in manufacturing_orders:
@@ -1881,26 +1872,35 @@ def installation_stats_api(request):
     """API لإحصائيات التركيبات (بدون فلترة افتراضية)"""
     try:
         # إحصائيات التركيبات المجدولة (مع فلترة صحيحة)
+        # نستثني التركيبات المكتملة من العد الإجمالي
         installation_schedules_queryset = InstallationSchedule.objects.filter(
             order__isnull=False,
-            order__selected_types__contains=['installation']
-        )
+            order__selected_types__icontains='installation'
+        ).exclude(status='completed')
 
         # استخدام aggregate لتحسين الأداء
         stats = installation_schedules_queryset.aggregate(
             total=Count('id'),
-            completed=Count('id', filter=Q(status='completed')),
+            completed=Count('id', filter=Q(status='completed')),  # هذا سيكون دائماً 0 لأننا استثنينا المكتملة
             pending=Count('id', filter=Q(status='pending')),
-            in_progress=Count('id', filter=Q(status='in_installation')),  # تم تصحيح هذا
+            in_progress=Count('id', filter=Q(status='in_installation')),
             scheduled=Count('id', filter=Q(status='scheduled')),
             modification_required=Count('id', filter=Q(status__in=['modification_required', 'modification_scheduled', 'modification_in_progress']))
         )
+
+        # حساب التركيبات المكتملة بشكل منفصل
+        completed_count = InstallationSchedule.objects.filter(
+            order__isnull=False,
+            order__selected_types__icontains='installation',
+            status='completed'
+        ).count()
 
         # إحصائيات طلبات التركيب (إجمالي في النظام)
         total_orders = Order.objects.filter(selected_types__icontains='installation').count()
 
         # الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
-        orders_needing_scheduling = ManufacturingOrder.objects.filter(
+        from manufacturing.models import ManufacturingOrder as MainManufacturingOrder
+        orders_needing_scheduling = MainManufacturingOrder.objects.filter(
             status__in=['ready_install', 'delivered'],
             order__selected_types__icontains='installation',
             order__installationschedule__isnull=True
@@ -1918,7 +1918,7 @@ def installation_stats_api(request):
 
         # أوامر التصنيع
         try:
-            orders_in_manufacturing = ManufacturingOrder.objects.filter(
+            orders_in_manufacturing = MainManufacturingOrder.objects.filter(
                 status__in=['pending_approval', 'pending', 'in_progress'],
                 order__selected_types__icontains='installation'
             ).count()
@@ -1927,7 +1927,7 @@ def installation_stats_api(request):
             print(f"Error in manufacturing orders calculation: {str(e)}")
 
         try:
-            delivered_manufacturing_orders = ManufacturingOrder.objects.filter(
+            delivered_manufacturing_orders = MainManufacturingOrder.objects.filter(
                 status='delivered',
                 order__selected_types__icontains='installation'
             ).count()
@@ -1940,7 +1940,10 @@ def installation_stats_api(request):
         try:
             today_installations_count = InstallationSchedule.objects.filter(
                 scheduled_date=today,
-                status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
+                status__in=[
+                    'scheduled', 'in_installation', 'modification_required',
+                    'modification_scheduled', 'modification_in_progress', 'modification_completed'
+                ]
             ).exclude(status='completed').count()
         except Exception as e:
             today_installations_count = 0
@@ -1950,7 +1953,10 @@ def installation_stats_api(request):
         try:
             upcoming_installations_count = InstallationSchedule.objects.filter(
                 scheduled_date__gt=today,
-                status__in=['scheduled', 'pending', 'in_progress', 'in_installation']
+                status__in=[
+                    'scheduled', 'in_installation', 'modification_required',
+                    'modification_scheduled', 'modification_in_progress', 'modification_completed'
+                ]
             ).exclude(status='completed').count()
         except Exception as e:
             upcoming_installations_count = 0
@@ -1977,10 +1983,18 @@ def installation_stats_api(request):
             teams_stats_count = 0
             print(f"Error in teams stats calculation: {str(e)}")
 
+        # حساب معدل الإنجاز العام
+        try:
+            total_installations_all = stats['total'] + completed_count  # المجدول + المكتمل
+            completion_rate = (completed_count / total_installations_all * 100) if total_installations_all > 0 else 0
+        except Exception as e:
+            completion_rate = 0
+            print(f"Error in completion rate calculation: {str(e)}")
+
         return JsonResponse({
-            'total_scheduled': stats['total'],  # إجمالي التركيبات المجدولة
+            'total_scheduled': stats['total'],  # إجمالي التركيبات المجدولة غير المكتملة
             'total_orders': total_orders,  # إجمالي طلبات التركيب في النظام
-            'completed': stats['completed'],
+            'completed': completed_count,  # عدد التركيبات المكتملة
             'pending': stats['pending'],
             'in_progress': stats['in_progress'],
             'scheduled': stats['scheduled'],
@@ -1993,6 +2007,7 @@ def installation_stats_api(request):
             'upcoming_installations': upcoming_installations_count,
             'recent_orders': recent_orders_count,
             'teams_stats': teams_stats_count,
+            'completion_rate': round(completion_rate, 1),  # معدل الإنجاز بالنسبة المئوية
             'last_updated': timezone.now().strftime('%Y-%m-%d %H:%M:%S')
         })
     except Exception as e:
