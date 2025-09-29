@@ -1013,24 +1013,45 @@ class Order(models.Model):
             return "تاريخ التسليم المتوقع"
     
     def get_display_status(self):
-        """إرجاع الحالة المعروضة بناءً على منطق العرض الجديد"""
-        # أولوية عرض حالة التقطيع: إذا كان أي عنصر يحتوي على حالة قطع غير مكتملة
-        try:
-            cutting_items = self.items.filter(cutting_status__in=['pending', 'in_progress'])
-            if cutting_items.exists():
+        """
+        منطق أولوية الحالة:
+        - طلب المنتجات: أولوية للتقطيع (cutting)
+        - طلب المعاينة: أولوية للمعاينة (inspection)
+        - طلب التركيب: أولوية للتصنيع (manufacturing)، ثم التركيبات (installation)
+        - طلب التسليم: أولوية للتصنيع (manufacturing)
+        - غير ذلك: الحالة الأساسية
+        """
+        types = self.get_selected_types_list()
+        # أولوية المنتجات: cutting
+        if 'products' in types:
+            try:
+                cutting_items = self.items.filter(cutting_status__in=['pending', 'in_progress'])
+                if cutting_items.exists():
+                    return {
+                        'status': 'cutting',
+                        'source': 'cutting',
+                        'manufacturing_status': None
+                    }
+            except Exception:
+                pass
+            # إذا لا يوجد تقطيع، أولوية التصنيع
+            if hasattr(self, 'manufacturing_order') and self.manufacturing_order:
+                manufacturing_status = self.manufacturing_order.status
                 return {
-                    'status': 'cutting',
-                    'source': 'cutting',
+                    'status': manufacturing_status,
+                    'source': 'manufacturing',
+                    'manufacturing_status': manufacturing_status
+                }
+            else:
+                return {
+                    'status': self.order_status,
+                    'source': 'order',
                     'manufacturing_status': None
                 }
-        except Exception:
-            pass
-        # إذا كان الطلب من نوع معاينة
-        if 'inspection' in self.get_selected_types_list():
-            # البحث عن المعاينة المرتبطة بالطلب
+        # أولوية المعاينة
+        if 'inspection' in types:
             inspection = self.inspections.first()
             if inspection:
-                # إذا كانت المعاينة مكتملة، اعرض "مكتمل"
                 if inspection.status == 'completed':
                     return {
                         'status': 'completed',
@@ -1038,29 +1059,23 @@ class Order(models.Model):
                         'manufacturing_status': None
                     }
                 else:
-                    # اعرض حالة المعاينة
                     return {
                         'status': inspection.status,
                         'source': 'inspection',
                         'manufacturing_status': None
                     }
             else:
-                # لا توجد معاينة، اعرض حالة الطلب الأساسية
                 return {
                     'status': self.order_status,
                     'source': 'order',
                     'manufacturing_status': None
                 }
-        
-        # إذا كان الطلب يحتوي على تركيب
-        elif 'installation' in self.get_selected_types_list():
-            # التحقق من وجود أمر تصنيع
+        # أولوية التركيب: التصنيع ثم التركيبات
+        if 'installation' in types:
             if hasattr(self, 'manufacturing_order') and self.manufacturing_order:
                 manufacturing_status = self.manufacturing_order.status
-                
-                # إذا كانت حالة المصنع "جاهز للتركيب" أو ما بعدها، اعرض حالة التركيب
+                # إذا المصنع جاهز للتركيب أو بعده، اعرض حالة التركيبات
                 if manufacturing_status in ['ready_install', 'completed', 'delivered']:
-                    # تحديث حالة التركيب من قسم التركيبات
                     self.update_installation_status()
                     return {
                         'status': self.installation_status,
@@ -1068,26 +1083,38 @@ class Order(models.Model):
                         'manufacturing_status': manufacturing_status
                     }
                 else:
-                    # قبل "جاهز للتركيب"، اعرض حالة المصنع
                     return {
                         'status': manufacturing_status,
                         'source': 'manufacturing',
                         'manufacturing_status': manufacturing_status
                     }
             else:
-                # لا يوجد أمر تصنيع، اعرض حالة الطلب الأساسية
                 return {
                     'status': self.order_status,
                     'source': 'order',
                     'manufacturing_status': None
                 }
-        else:
-            # الطلب لا يحتوي على تركيب، اعرض حالة الطلب الأساسية
-            return {
-                'status': self.order_status,
-                'source': 'order',
-                'manufacturing_status': None
-            }
+        # أولوية التسليم: التصنيع
+        if 'tailoring' in types:
+            if hasattr(self, 'manufacturing_order') and self.manufacturing_order:
+                manufacturing_status = self.manufacturing_order.status
+                return {
+                    'status': manufacturing_status,
+                    'source': 'manufacturing',
+                    'manufacturing_status': manufacturing_status
+                }
+            else:
+                return {
+                    'status': self.order_status,
+                    'source': 'order',
+                    'manufacturing_status': None
+                }
+        # غير ذلك: الحالة الأساسية
+        return {
+            'status': self.order_status,
+            'source': 'order',
+            'manufacturing_status': None
+        }
     
     def get_display_status_badge_class(self):
         """إرجاع فئة البادج المناسبة للحالة المعروضة"""
