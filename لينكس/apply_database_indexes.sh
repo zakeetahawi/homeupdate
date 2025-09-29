@@ -9,7 +9,7 @@ echo -e "Starting Database Indexes Application"
 echo -e "===========================================\033[0m"
 
 # التحقق من وجود ملف الفهارس
-INDEXES_FILE="$(dirname "$0")/../RECOMMENDED_DATABASE_INDEXES.sql"
+INDEXES_FILE="$(dirname "$0")/../COMPREHENSIVE_DATABASE_INDEXES.sql"
 
 if [ ! -f "$INDEXES_FILE" ]; then
     echo -e "\033[1;31m❌ ملف الفهارس غير موجود: $INDEXES_FILE"
