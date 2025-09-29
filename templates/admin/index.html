@@ -210,6 +210,15 @@
             <a href="{% url 'admin:reports_report_changelist' %}" class="action-btn info">
                 📊 عرض التقارير
             </a>
+            <a href="{% url 'installations:debt_orders_list' %}" class="action-btn danger">
+                💳 إدارة المديونيات
+            </a>
+            <a href="{% url 'admin:installations_customerdebt_changelist' %}" class="action-btn warning">
+                📋 قائمة الديون
+            </a>
+            <a href="{% url 'admin:installations_installationpayment_changelist' %}" class="action-btn success">
+                💰 المدفوعات
+            </a>
         </div>
     </div>
     

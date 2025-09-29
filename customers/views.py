@@ -52,25 +52,29 @@ def customer_list(request):
     """
     View for displaying the list of customers with search and filtering
     تم تحسين الأداء باستخدام select_related وتحسين الاستعلامات
+    مع إضافة الفلترة الشهرية
     """
+    from core.monthly_filter_utils import apply_monthly_filter, get_available_years
+
     form = CustomerSearchForm(request.GET)
-    
+
     # الحصول على معامل البحث أولاً
     search_term = request.GET.get('search', '').strip()
-    
+
     # تمرير معامل البحث لدالة الصلاحيات
     queryset = get_queryset_for_user(request.user, search_term)
-    
+
     # التحقق من أن queryset صحيح
     if not hasattr(queryset, 'select_related'):
         # إذا لم يكن QuerySet صحيح، استخدم جميع العملاء
         queryset = Customer.objects.all()
-    
+
     customers = queryset.select_related(
         'category', 'branch', 'created_by'
     ).prefetch_related('customer_orders')
 
-    # تم إلغاء الفلترة الافتراضية
+    # تطبيق الفلترة الشهرية (بناءً على تاريخ إنشاء العميل)
+    customers, monthly_filter_context = apply_monthly_filter(customers, request, 'created_at')
 
     # تحسين الاستعلامات باستخدام الفهارس
     if form.is_valid():
@@ -149,10 +153,34 @@ def customer_list(request):
             pk__in=customer_ids
         ).exclude(branch=request.user.branch).values_list('pk', flat=True)
         cross_branch_customers = list(cross_branch_customer_ids)
-    available_years = Customer.objects.dates('created_at', 'year', order='DESC')
-    available_years = [year.year for year in available_years]
+    # الحصول على السنوات المتاحة للفلترة الشهرية
+    available_years = get_available_years(Customer, 'created_at')
     selected_years = request.GET.getlist('years')
     year_filter = request.GET.get('year', '')
+
+    # حساب الفلاتر النشطة للفلتر المضغوط
+    active_filters = []
+    if search_value:
+        active_filters.append('search')
+    if category_value:
+        active_filters.append('category')
+    if customer_type_value:
+        active_filters.append('customer_type')
+    if status_value:
+        active_filters.append('status')
+    if branch_value:
+        active_filters.append('branch')
+    if monthly_filter_context.get('selected_year'):
+        active_filters.append('year')
+    if monthly_filter_context.get('selected_month'):
+        active_filters.append('month')
+
+    # الحصول على البيانات المطلوبة للفلاتر
+    from customers.models import CustomerCategory
+    from accounts.models import Branch
+
+    categories = CustomerCategory.objects.all()
+    branches = Branch.objects.all()
 
     context = {
         'page_obj': page_obj,
@@ -169,6 +197,13 @@ def customer_list(request):
         'available_years': available_years,
         'selected_years': selected_years,
         'year_filter': year_filter,
+        # سياق الفلتر المضغوط
+        'has_active_filters': len(active_filters) > 0,
+        'active_filters_count': len(active_filters),
+        'categories': categories,
+        'branches': branches,
+        # إضافة سياق الفلترة الشهرية
+        **monthly_filter_context,
     }
 
     return render(request, 'customers/customer_list.html', context)

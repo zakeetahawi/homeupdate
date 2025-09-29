@@ -38,29 +38,39 @@ class OrderCache:
         """الحصول على إعدادات التسليم من التخزين المؤقت"""
         cache_key = CACHE_KEYS['delivery_settings']
         settings_data = cache.get(cache_key)
-        
+
         if settings_data is None:
             try:
                 from .models import DeliveryTimeSettings
                 settings_data = {}
-                
+
                 # جلب جميع إعدادات التسليم
-                delivery_settings = DeliveryTimeSettings.objects.all()
+                delivery_settings = DeliveryTimeSettings.objects.filter(is_active=True)
                 for setting in delivery_settings:
-                    settings_data[setting.order_type] = {
+                    # إنشاء مفتاح مركب للإعداد
+                    key_parts = []
+                    if setting.service_type:
+                        key_parts.append(f"service:{setting.service_type}")
+                    if setting.order_type:
+                        key_parts.append(f"order:{setting.order_type}")
+
+                    setting_key = "|".join(key_parts) if key_parts else "default"
+
+                    settings_data[setting_key] = {
                         'days': setting.delivery_days,
-                        'description': setting.description,
+                        'order_type': setting.order_type,
+                        'service_type': setting.service_type,
                         'is_active': setting.is_active
                     }
-                
+
                 # تخزين في الكاش
                 cache.set(cache_key, settings_data, CACHE_TIMEOUTS['delivery_settings'])
                 logger.info("تم تحديث إعدادات التسليم في التخزين المؤقت")
-                
+
             except Exception as e:
                 logger.error(f"خطأ في جلب إعدادات التسليم: {str(e)}")
                 settings_data = {}
-        
+
         return settings_data
     
     @staticmethod

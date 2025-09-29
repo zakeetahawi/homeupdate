@@ -12,7 +12,7 @@ from django.db import models
 import json
 from datetime import timedelta
 from orders.models import Order
-from accounts.models import SystemSettings
+from accounts.models import SystemSettings, Branch
 from .models import (
     InstallationSchedule, InstallationTeam, Technician, Driver,
     ModificationRequest, ModificationImage, ManufacturingOrder,
@@ -343,10 +343,11 @@ def change_installation_status(request, installation_id):
 
 @login_required
 def installation_list(request):
-    """قائمة التركيبات - محسّنة مع فلاتر ذكية"""
+    """قائمة التركيبات - محسّنة مع فلاتر ذكية والفلترة الشهرية"""
     from django.db.models import Q
     from manufacturing.models import ManufacturingOrder
     from accounts.utils import apply_default_year_filter
+    from core.monthly_filter_utils import apply_monthly_filter, get_available_years
     
     # معالجة الفلاتر
     filter_form = InstallationFilterForm(request.GET)
@@ -354,29 +355,32 @@ def installation_list(request):
     # استخراج قيم الفلاتر
     status_filter = request.GET.get('status', '')
     team_filter = request.GET.get('team', '')
+    branch_filter = request.GET.get('branch', '')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     search = request.GET.get('search', '').strip()
-    location_type_filter = request.GET.get('location_type', '')
-    order_status_filter = request.GET.get('order_status', '')
     
     # بناء الاستعلامات بطريقة محسّنة
     installation_items = []
-    
-    # 1. جلب التركيبات المجدولة (مفلترة بالسنة الافتراضية)
+
+    # تهيئة السياق الشهري
+    monthly_filter_context = {}
+
+    # 1. جلب التركيبات المجدولة (مفلترة بالسنة الافتراضية والشهر)
     if not status_filter or status_filter in ['scheduled', 'in_installation', 'completed', 'cancelled', 'modification_required', 'modification_in_progress', 'modification_completed']:
         scheduled_query = InstallationSchedule.objects.select_related(
             'order__customer', 'team'
         )
-        # تم إلغاء الفلترة الافتراضية
-        
+        # تطبيق الفلترة الشهرية على التركيبات المجدولة (بناءً على تاريخ الطلب)
+        scheduled_query, monthly_filter_context = apply_monthly_filter(scheduled_query, request, 'order__order_date')
+
         # تطبيق فلاتر التركيبات المجدولة
         if status_filter and status_filter != 'needs_scheduling':
             scheduled_query = scheduled_query.filter(status=status_filter)
         if team_filter:
             scheduled_query = scheduled_query.filter(team_id=team_filter)
-        if location_type_filter:
-            scheduled_query = scheduled_query.filter(location_type=location_type_filter)
+        if branch_filter:
+            scheduled_query = scheduled_query.filter(order__branch_id=branch_filter)
         if date_from:
             try:
                 date_from_obj = timezone.datetime.strptime(date_from, '%Y-%m-%d').date()
@@ -392,7 +396,12 @@ def installation_list(request):
         if search:
             search_q = Q(order__order_number__icontains=search) | \
                       Q(order__customer__name__icontains=search) | \
-                      Q(order__customer__phone__icontains=search)
+                      Q(order__customer__phone__icontains=search) | \
+                      Q(order__customer__address__icontains=search) | \
+                      Q(order__customer__location__icontains=search) | \
+                      Q(order__salesperson__username__icontains=search) | \
+                      Q(order__contract_number__icontains=search) | \
+                      Q(order__invoice_number__icontains=search)
             scheduled_query = scheduled_query.filter(search_q)
         
         # إضافة التركيبات المجدولة للقائمة
@@ -418,12 +427,20 @@ def installation_list(request):
             order__installationschedule__isnull=True
         ).select_related('order__customer')
         
-        # تطبيق فلاتر البحث
+        # تطبيق الفلاتر
         if search:
             search_q = Q(order__order_number__icontains=search) | \
                       Q(order__customer__name__icontains=search) | \
-                      Q(order__customer__phone__icontains=search)
+                      Q(order__customer__phone__icontains=search) | \
+                      Q(order__customer__address__icontains=search) | \
+                      Q(order__customer__location__icontains=search) | \
+                      Q(order__salesperson__username__icontains=search) | \
+                      Q(order__contract_number__icontains=search) | \
+                      Q(order__invoice_number__icontains=search)
             ready_manufacturing_query = ready_manufacturing_query.filter(search_q)
+
+        if branch_filter:
+            ready_manufacturing_query = ready_manufacturing_query.filter(order__branch_id=branch_filter)
 
         # إضافة أوامر التصنيع الجاهزة للتركيب
         for mfg_order in ready_manufacturing_query:
@@ -498,27 +515,66 @@ def installation_list(request):
     scheduled_count = sum(1 for item in installation_items if item['status'] in ['scheduled', 'in_installation'])
     completed_count = sum(1 for item in installation_items if item['status'] == 'completed')
 
+    # الحصول على السنوات المتاحة للفلترة الشهرية (بناءً على تاريخ الطلب)
+    available_years = get_available_years(InstallationSchedule, 'order__order_date')
+
+    # حساب الفلاتر النشطة للفلتر المضغوط
+    active_filters = []
+    if search:
+        active_filters.append('search')
+    if status_filter:
+        active_filters.append('status')
+    if team_filter:
+        active_filters.append('team')
+    if branch_filter:
+        active_filters.append('branch')
+    if date_from:
+        active_filters.append('date_from')
+    if date_to:
+        active_filters.append('date_to')
+    if monthly_filter_context.get('selected_year'):
+        active_filters.append('year')
+    if monthly_filter_context.get('selected_month'):
+        active_filters.append('month')
+
+    # الحصول على البيانات المطلوبة للفلاتر
+    from installations.models import InstallationTeam
+    teams = InstallationTeam.objects.filter(is_active=True)
+
     context = {
         'page_obj': page_obj,
         'filter_form': filter_form,
         'installations': page_obj,
-        'has_filters': bool(status_filter or team_filter or date_from or date_to or search or location_type_filter or order_status_filter),
+        'has_filters': bool(status_filter or team_filter or branch_filter or date_from or date_to or search),
         # إحصائيات
         'total_count': total_count,
         'needs_scheduling_count': needs_scheduling_count,
         'scheduled_count': scheduled_count,
         'completed_count': completed_count,
+        'available_years': available_years,
+        # سياق الفلتر المضغوط
+        'has_active_filters': len(active_filters) > 0,
+        'active_filters_count': len(active_filters),
+        'teams': teams,
+        'branches': Branch.objects.all(),
+        'status_filter': status_filter,
+        'team_filter': team_filter,
+        'branch_filter': branch_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'search_query': search,
         # قيم الفلاتر الحالية للـ URL parameters
         'current_filters': {
             'status': status_filter,
             'team': team_filter,
+            'branch': branch_filter,
             'date_from': date_from,
             'date_to': date_to,
             'search': search,
-            'location_type': location_type_filter,
-            'order_status': order_status_filter,
             'page_size': page_size,
-        }
+        },
+        # إضافة سياق الفلترة الشهرية
+        **monthly_filter_context,
     }
 
     return render(request, 'installations/installation_list.html', context)
@@ -2705,16 +2761,24 @@ def delete_installation(request, installation_id):
 @login_required
 def debt_orders_list(request):
     """قائمة الطلبات التي عليها مديونية"""
-    from django.db.models import Q, F
-    
+    from django.db.models import Q, F, Exists, OuterRef
+    from .models import CustomerDebt
+
     # معالجة الفلاتر
     order_status_filter = request.GET.get('order_status', '')
     search = request.GET.get('search', '').strip()
     page_size = int(request.GET.get('page_size', 25))
-    
-    # جلب الطلبات التي عليها مديونية (باستخدام F expressions لحساب المبلغ المتبقي)
+    year_filter = request.GET.get('year', '')
+    month_filter = request.GET.get('month', '')
+
+    # جلب الطلبات التي عليها مديونية فعلية (غير مدفوعة في جدول CustomerDebt)
+    unpaid_debts_subquery = CustomerDebt.objects.filter(
+        order=OuterRef('pk'),
+        is_paid=False
+    )
+
     debt_orders_query = Order.objects.filter(
-        total_amount__gt=F('paid_amount')
+        Exists(unpaid_debts_subquery)
     ).select_related('customer', 'salesperson', 'branch').annotate(
         debt_amount=F('total_amount') - F('paid_amount')
     )
@@ -2722,12 +2786,20 @@ def debt_orders_list(request):
     # تطبيق الفلاتر
     if order_status_filter:
         debt_orders_query = debt_orders_query.filter(order_status=order_status_filter)
-    
+
     if search:
         search_q = Q(order_number__icontains=search) | \
                   Q(customer__name__icontains=search) | \
                   Q(customer__phone__icontains=search)
         debt_orders_query = debt_orders_query.filter(search_q)
+
+    # فلتر السنة
+    if year_filter:
+        debt_orders_query = debt_orders_query.filter(created_at__year=year_filter)
+
+    # فلتر الشهر
+    if month_filter:
+        debt_orders_query = debt_orders_query.filter(created_at__month=month_filter)
     
     # ترتيب حسب المبلغ المتبقي (الأعلى أولاً)
     debt_orders_query = debt_orders_query.order_by('-debt_amount', '-created_at')
@@ -2748,6 +2820,17 @@ def debt_orders_list(request):
         debt_sum=models.Sum('debt_amount')
     ).order_by('-debt_sum')
     
+    # إعداد خيارات السنوات والشهور
+    from django.utils import timezone
+    current_year = timezone.now().year
+    years = list(range(current_year - 5, current_year + 1))
+
+    months = [
+        (1, 'يناير'), (2, 'فبراير'), (3, 'مارس'), (4, 'أبريل'),
+        (5, 'مايو'), (6, 'يونيو'), (7, 'يوليو'), (8, 'أغسطس'),
+        (9, 'سبتمبر'), (10, 'أكتوبر'), (11, 'نوفمبر'), (12, 'ديسمبر')
+    ]
+
     context = {
         'page_obj': page_obj,
         'debt_orders': page_obj,
@@ -2758,8 +2841,10 @@ def debt_orders_list(request):
             'order_status': order_status_filter,
             'search': search,
             'page_size': page_size,
+            'year': year_filter,
+            'month': month_filter,
         },
-        'has_filters': bool(order_status_filter or search),
+        'has_filters': bool(order_status_filter or search or year_filter or month_filter),
         'order_status_choices': [
             ('', 'جميع الحالات'),
             ('pending_approval', 'قيد الموافقة'),
@@ -2767,7 +2852,11 @@ def debt_orders_list(request):
             ('ready_install', 'جاهز للتركيب'),
             ('completed', 'مكتمل'),
             ('delivered', 'تم التسليم'),
-        ]
+        ],
+        'years': years,
+        'months': months,
+        'current_year': current_year,
+        'current_month': timezone.now().month,
     }
     
     return render(request, 'installations/debt_orders_list.html', context)

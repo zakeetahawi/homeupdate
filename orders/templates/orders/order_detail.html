@@ -341,9 +341,6 @@
                                             <i class="fas fa-clock me-1"></i>
                                             {{ order.expected_delivery_date|date:"Y-m-d" }}
                                         </span>
-                                        <br><small class="text-muted">
-                                            هذا الموعد هو 48 ساعة من تاريخ الطلب
-                                        </small>
                                     </td>
                                 </tr>
                             {% elif order.get_smart_delivery_date %}
@@ -1391,7 +1388,7 @@
 
     <!-- Cutting Orders Details -->
     {% with types_list=order.get_selected_types_list %}
-    {% if 'products' in types_list or 'installation' in types_list %}
+    {% if 'accessory' in types_list or 'installation' in types_list %}
     <div class="card mb-4">
         <div class="card-header bg-warning text-dark">
             <h5 class="mb-0">
@@ -1795,8 +1792,16 @@
                             <th>{{ order.paid_amount|clean_decimal_currency:currency_symbol }}</th>
                         </tr>
                         <tr class="table-light">
-                            <th colspan="7" class="text-start">المبلغ المتبقي</th>
-                            <th>{{ order.remaining_amount|clean_decimal_currency:currency_symbol }}</th>
+                            {% if order.is_customer_credit %}
+                                <th colspan="7" class="text-start">متبقي للعميل</th>
+                                <th class="text-success">-{{ order.remaining_amount_display|clean_decimal_currency:currency_symbol }}</th>
+                            {% elif order.remaining_amount > 0 %}
+                                <th colspan="7" class="text-start">المبلغ المتبقي</th>
+                                <th class="text-danger">{{ order.remaining_amount|clean_decimal_currency:currency_symbol }}</th>
+                            {% else %}
+                                <th colspan="7" class="text-start">المبلغ المتبقي</th>
+                                <th class="text-success">{{ order.remaining_amount|clean_decimal_currency:currency_symbol }}</th>
+                            {% endif %}
                         </tr>
                     </tfoot>
                 </table>

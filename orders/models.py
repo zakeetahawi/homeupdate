@@ -583,39 +583,50 @@ class Order(models.Model):
 
 
     def calculate_expected_delivery_date(self):
-        """حساب تاريخ التسليم المتوقع بناءً على وضع الطلب ونوع الطلب"""
+        """حساب تاريخ التسليم المتوقع بناءً على نوع الطلب ونوع الخدمة"""
         if not self.order_date:
             return None
 
-        # تحديد نوع الطلب للحصول على عدد الأيام المناسب
+        # تحديد نوع الطلب والخدمة
         selected_types = self.get_selected_types_list()
 
-        # معالجة خاصة للمنتجات (72 ساعة = 3 أيام)
-        if 'products' in selected_types:
-            expected_date = self.order_date + timedelta(days=3)
-            return expected_date
-
+        # تحديد نوع الطلب
         order_type = 'vip' if self.status == 'vip' else 'normal'
 
-        # التحقق من وجود معاينة في الطلب
-        if 'inspection' in selected_types:
-            order_type = 'inspection'
+        # تحديد نوع الخدمة (أول نوع في القائمة حسب الأولوية)
+        service_type = None
+        service_priority = ['inspection', 'accessory', 'products', 'installation', 'tailoring']
+        for service in service_priority:
+            if service in selected_types:
+                service_type = service
+                break
 
-        # الحصول على عدد الأيام من التخزين المؤقت
+        # الحصول على عدد الأيام من الإعدادات المحدثة
         try:
-            from .cache import get_cached_delivery_settings
-            delivery_settings = get_cached_delivery_settings()
-
-            if order_type in delivery_settings and delivery_settings[order_type]['is_active']:
-                days_to_add = delivery_settings[order_type]['days']
-            else:
-                # القيم الافتراضية في حالة عدم وجود إعدادات
-                default_days = {'normal': 7, 'vip': 3, 'inspection': 14}
-                days_to_add = default_days.get(order_type, 7)
+            days_to_add = DeliveryTimeSettings.get_delivery_days(
+                order_type=order_type,
+                service_type=service_type
+            )
         except Exception as e:
-            logger.error(f"خطأ في جلب إعدادات التسليم من التخزين المؤقت: {str(e)}")
-            # استخدام الطريقة القديمة كبديل
-            days_to_add = DeliveryTimeSettings.get_delivery_days(order_type)
+            logger.error(f"خطأ في جلب إعدادات التسليم: {str(e)}")
+            # القيم الافتراضية
+            default_days = {
+                'inspection': 2,
+                'accessory': 5,
+                'products': 3,
+                'installation': 10,
+                'tailoring': 7,
+                'vip': 7,
+                'normal': 15
+            }
+
+            # استخدام نوع الخدمة أولاً، ثم نوع الطلب
+            if service_type and service_type in default_days:
+                days_to_add = default_days[service_type]
+            elif order_type in default_days:
+                days_to_add = default_days[order_type]
+            else:
+                days_to_add = 15
 
         # حساب التاريخ المتوقع
         expected_date = self.order_date + timedelta(days=days_to_add)
@@ -792,12 +803,32 @@ class Order(models.Model):
     @property
     def remaining_amount(self):
         """Calculate remaining amount to be paid"""
+        # حساب المبلغ المتبقي بناءً على الحساب الفعلي وليس على المديونية
         paid = self.paid_amount if self.paid_amount is not None else Decimal('0')
         try:
             paid_dec = Decimal(str(paid))
         except Exception:
             paid_dec = Decimal('0')
-        return self.final_price_after_discount - paid_dec
+        # استخدام المبلغ النهائي بعد الخصم بدلاً من المبلغ الإجمالي قبل الخصم
+        final_amount = self.final_price_after_discount
+        remaining = final_amount - paid_dec
+        return remaining
+
+    @property
+    def remaining_amount_display(self):
+        """عرض المبلغ المتبقي مع التنسيق المناسب"""
+        remaining = self.remaining_amount
+        if remaining > 0:
+            return remaining
+        elif remaining < 0:
+            return abs(remaining)  # إرجاع القيمة المطلقة للعرض
+        else:
+            return Decimal('0')
+
+    @property
+    def is_customer_credit(self):
+        """التحقق من وجود رصيد للعميل (دفع أكثر من المطلوب)"""
+        return self.remaining_amount < 0
     @property
     def is_fully_paid(self):
         """التحقق من سداد الطلب بالكامل"""
@@ -1312,10 +1343,10 @@ class Order(models.Model):
     def get_display_inspection_status(self):
         """
         إرجاع حالة المعاينة حسب نوع الطلب:
-        1. طلب معاينة: يعرض حالة المعاينة التلقائية المنشأة
+        1. طلب معاينة: يعرض حالة المعاينة المنشأة
         2. طلب تفصيل/تركيب: يعرض زر تفاصيل المعاينة أو طرف العميل
         """
-        # إذا كان طلب معاينة - يجب أن تكون هناك معاينة تلقائية
+        # إذا كان طلب معاينة - يجب أن تكون هناك معاينة منشأة
         if 'inspection' in self.get_selected_types_list():
             # البحث عن المعاينة المرتبطة بالطلب
             inspection = self.inspections.first()
@@ -1400,8 +1431,8 @@ class Order(models.Model):
                     'is_inspection_order': False
                 }
         
-        # للمنتجات والأنواع الأخرى
-        elif 'products' in self.get_selected_types_list():
+        # للإكسسوار والأنواع الأخرى
+        elif 'accessory' in self.get_selected_types_list():
             return {
                 'status': 'not_applicable',
                 'text': 'لا يوجد',
@@ -1851,6 +1882,27 @@ class Payment(models.Model):
                 )['total'] or 0
                 self.order.paid_amount = total_payments
                 self.order.save(update_fields=['paid_amount'])
+
+                # تحديث المديونية إذا كانت موجودة
+                try:
+                    from installations.models import CustomerDebt
+                    debt = CustomerDebt.objects.filter(order=self.order, is_paid=False).first()
+                    if debt:
+                        remaining = self.order.remaining_amount
+                        if remaining <= 0:
+                            # الطلب مدفوع بالكامل، احذف المديونية أو اجعلها مدفوعة
+                            debt.is_paid = True
+                            debt.payment_date = timezone.now()
+                            debt.payment_receiver_name = getattr(self, 'created_by', None)
+                            if debt.payment_receiver_name:
+                                debt.payment_receiver_name = debt.payment_receiver_name.get_full_name() or debt.payment_receiver_name.username
+                            debt.save()
+                        else:
+                            # حدث مبلغ المديونية
+                            debt.debt_amount = remaining
+                            debt.save()
+                except Exception:
+                    pass
             except Exception as e:
                 pass
         except Exception as e:
@@ -2034,17 +2086,33 @@ class ManufacturingDeletionLog(models.Model):
 
 
 class DeliveryTimeSettings(models.Model):
-    """إعدادات مواعيد التسليم للطلبات والمعاينات"""
+    """إعدادات مواعيد التسليم للطلبات والخدمات"""
     ORDER_TYPE_CHOICES = [
         ('normal', 'طلب عادي'),
         ('vip', 'طلب VIP'),
+    ]
+
+    SERVICE_TYPE_CHOICES = [
+        ('accessory', 'إكسسوار'),
+        ('products', 'منتجات'),
+        ('installation', 'تركيب'),
+        ('tailoring', 'تسليم'),
         ('inspection', 'معاينة'),
     ]
-    
+
     order_type = models.CharField(
         max_length=20,
         choices=ORDER_TYPE_CHOICES,
-        verbose_name='نوع الطلب'
+        verbose_name='نوع الطلب',
+        null=True,
+        blank=True
+    )
+    service_type = models.CharField(
+        max_length=20,
+        choices=SERVICE_TYPE_CHOICES,
+        verbose_name='نوع الخدمة',
+        null=True,
+        blank=True
     )
     delivery_days = models.PositiveIntegerField(
         verbose_name='عدد أيام التسليم',
@@ -2062,30 +2130,81 @@ class DeliveryTimeSettings(models.Model):
         auto_now=True,
         verbose_name='تاريخ التحديث'
     )
-    
+
     class Meta:
         verbose_name = 'إعداد موعد التسليم'
         verbose_name_plural = 'إعدادات مواعيد التسليم'
-        unique_together = ['order_type']
-        ordering = ['order_type']
+        unique_together = ['order_type', 'service_type']
+        ordering = ['service_type', 'order_type']
     
     def __str__(self):
-        return f"{self.get_order_type_display()} - {self.delivery_days} يوم"
-    
+        parts = []
+        if self.service_type:
+            parts.append(self.get_service_type_display())
+        if self.order_type:
+            parts.append(self.get_order_type_display())
+
+        if parts:
+            return f"{' - '.join(parts)} - {self.delivery_days} يوم"
+        else:
+            return f"إعداد عام - {self.delivery_days} يوم"
+
     @classmethod
-    def get_delivery_days(cls, order_type):
-        """الحصول على عدد أيام التسليم لنوع طلب معين"""
+    def get_delivery_days(cls, order_type=None, service_type=None):
+        """الحصول على عدد أيام التسليم بناءً على نوع الطلب ونوع الخدمة"""
         try:
-            setting = cls.objects.get(order_type=order_type, is_active=True)
-            return setting.delivery_days
-        except cls.DoesNotExist:
-            # القيم الافتراضية
-            defaults = {
-                'normal': 15,
-                'vip': 7,
-                'inspection': 2,  # 48 ساعة
-            }
-            return defaults.get(order_type, 15)
+            # البحث بالأولوية: نوع الخدمة + نوع الطلب
+            if service_type and order_type:
+                # البحث عن تطابق كامل (خدمة + نوع طلب)
+                setting = cls.objects.filter(
+                    service_type=service_type,
+                    order_type=order_type,
+                    is_active=True
+                ).first()
+                if setting:
+                    return setting.delivery_days
+
+            # إذا لم يوجد تطابق كامل، ابحث بنوع الخدمة فقط (بدون نوع طلب محدد)
+            if service_type:
+                setting = cls.objects.filter(
+                    service_type=service_type,
+                    order_type__isnull=True,
+                    is_active=True
+                ).first()
+                if setting:
+                    return setting.delivery_days
+
+            # إذا لم يوجد، ابحث بنوع الطلب فقط (بدون نوع خدمة محدد)
+            if order_type:
+                setting = cls.objects.filter(
+                    order_type=order_type,
+                    service_type__isnull=True,
+                    is_active=True
+                ).first()
+                if setting:
+                    return setting.delivery_days
+
+        except Exception as e:
+            logger.error(f"خطأ في جلب إعدادات التسليم: {str(e)}")
+
+        # القيم الافتراضية
+        defaults = {
+            'normal': 15,
+            'vip': 7,
+            'inspection': 2,
+            'accessory': 5,
+            'products': 3,
+            'installation': 10,
+            'tailoring': 7,
+        }
+
+        # إرجاع القيمة الافتراضية بناءً على نوع الخدمة أو نوع الطلب
+        if service_type and service_type in defaults:
+            return defaults[service_type]
+        elif order_type and order_type in defaults:
+            return defaults[order_type]
+        else:
+            return 15
 
     def get_scheduling_date(self):
         """إرجاع تاريخ الجدولة للعرض في الجدول"""

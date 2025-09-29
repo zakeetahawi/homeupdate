@@ -4,6 +4,7 @@
 
 import os
 from celery import Celery
+from celery.schedules import crontab
 from django.conf import settings
 
 # تعيين إعدادات Django الافتراضية لـ Celery
@@ -76,6 +77,28 @@ app.conf.update(
             'task': 'complaints.tasks.cleanup_expired_cache',
             'schedule': 1800.0,  # كل 30 دقيقة
             'options': {'queue': 'maintenance'}
+        },
+
+        # مهام إدارة المديونيات
+        'sync-customer-debts': {
+            'task': 'installations.tasks.sync_customer_debts_task',
+            'schedule': 3600.0,  # كل ساعة
+            'options': {'queue': 'default'}
+        },
+        'create-debt-records': {
+            'task': 'installations.tasks.create_debt_records_task',
+            'schedule': 1800.0,  # كل 30 دقيقة
+            'options': {'queue': 'default'}
+        },
+        'update-overdue-debts': {
+            'task': 'installations.tasks.update_overdue_debts_task',
+            'schedule': crontab(hour=0, minute=0),  # يومياً في منتصف الليل
+            'options': {'queue': 'default'}
+        },
+        'generate-debt-report': {
+            'task': 'installations.tasks.generate_debt_report_task',
+            'schedule': crontab(hour=8, minute=0, day_of_week=0),  # كل أحد الساعة 8 صباحاً
+            'options': {'queue': 'default'}
         },
         'cleanup-failed-uploads': {
             'task': 'orders.tasks.cleanup_failed_uploads',

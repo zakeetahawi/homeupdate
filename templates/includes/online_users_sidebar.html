@@ -1,45 +1,88 @@
 {% load static %}
 {% load complaints_permissions %}
 
-<!-- Professional Online Users Sidebar -->
+<!-- Enhanced Professional Online Users Sidebar -->
 <div id="online-users-sidebar" class="online-users-sidebar collapsed">
-    <!-- Sidebar Header -->
+    <!-- Enhanced Sidebar Header -->
     <div class="sidebar-header">
         <div class="header-content">
-            <i class="fas fa-users"></i>
-            <span class="header-title">المستخدمون</span>
-            <div class="user-counts">
-                <span class="online-count" id="online-count" title="متصل">0</span>
-                <span class="total-count" id="total-count" title="إجمالي">0</span>
+            <div class="header-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="header-info">
+                <span class="header-title">المستخدمون النشطون</span>
+                <div class="user-counts">
+                    <span class="online-count" id="online-count" title="متصل الآن">
+                        <i class="fas fa-circle online-dot"></i>
+                        <span class="count-number">0</span>
+                    </span>
+                    <span class="total-count" id="total-count" title="إجمالي المستخدمين">
+                        <i class="fas fa-users-cog"></i>
+                        <span class="count-number">0</span>
+                    </span>
+                </div>
             </div>
         </div>
-        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="قائمة المستخدمين">
-            <i class="fas fa-chevron-right"></i>
-            <span class="external-badge" id="external-online-badge" title="المتصلون">0</span>
-        </button>
+        <div class="header-actions">
+            <button class="refresh-btn" id="refresh-users" title="تحديث البيانات">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="قائمة المستخدمين">
+                <i class="fas fa-chevron-right"></i>
+                <span class="external-badge" id="external-online-badge" title="المتصلون">0</span>
+            </button>
+        </div>
     </div>
 
-    <!-- Users List Container -->
+    <!-- Enhanced Users List Container -->
     <div class="users-list-container">
+        <!-- Filter Tabs -->
+        <div class="user-filter-tabs">
+            <button class="filter-tab active" data-filter="all">
+                <i class="fas fa-users"></i>
+                الكل
+            </button>
+            <button class="filter-tab" data-filter="online">
+                <i class="fas fa-circle online-dot"></i>
+                متصل
+            </button>
+            <button class="filter-tab" data-filter="departments">
+                <i class="fas fa-sitemap"></i>
+                الأقسام
+            </button>
+        </div>
+
+        <!-- Users List -->
         <div class="users-list" id="users-list">
             <!-- Users will be loaded here via JavaScript -->
             <div class="loading-indicator">
-                <div class="spinner-border spinner-border-sm" role="status">
-                    <span class="visually-hidden">جاري التحميل...</span>
+                <div class="loading-spinner">
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
                 </div>
                 <span class="loading-text">جاري تحديث البيانات...</span>
             </div>
         </div>
     </div>
 
-    <!-- Sidebar Footer -->
+    <!-- Enhanced Sidebar Footer -->
     <div class="sidebar-footer">
-        <div class="last-update">
-            <small id="last-update-time">آخر تحديث: الآن</small>
+        <div class="footer-info">
+            <div class="last-update">
+                <i class="fas fa-clock"></i>
+                <small id="last-update-time">آخر تحديث: الآن</small>
+            </div>
+            <div class="connection-status" id="connection-status">
+                <i class="fas fa-wifi"></i>
+                <span>متصل</span>
+            </div>
         </div>
-        <button class="refresh-btn" id="refresh-users">
-            <i class="fas fa-sync-alt"></i>
-        </button>
+        <div class="footer-actions">
+            <button class="settings-btn" id="sidebar-settings" title="إعدادات العرض">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
     </div>
 </div>
 

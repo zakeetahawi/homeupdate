@@ -6,14 +6,18 @@
 (function() {
     'use strict';
 
-    // ===== CONFIGURATION =====
+    // ===== ENHANCED CONFIGURATION =====
     const CONFIG = {
-        UPDATE_INTERVAL: 5000, // 5 seconds for instant updates
-        ACTIVITY_UPDATE_INTERVAL: 10000, // 10 seconds for activities
-        ANIMATION_DURATION: 300,
+        UPDATE_INTERVAL: 8000, // Optimized to 8 seconds to reduce server load
+        ACTIVITY_UPDATE_INTERVAL: 15000, // 15 seconds for activities
+        ANIMATION_DURATION: 400, // Smoother animations
         API_ENDPOINT: '/accounts/api/online-users/',
         USER_ACTIVITIES_ENDPOINT: '/accounts/api/user-activities/',
-        DEBUG_MODE: false
+        DEBUG_MODE: false,
+        MAX_RETRIES: 3,
+        RETRY_DELAY: 2000,
+        ENABLE_SOUND_NOTIFICATIONS: false,
+        ENABLE_ACTIVITY_TRACKING: true
     };
 
     // ===== UTILITY FUNCTIONS =====
@@ -327,41 +331,66 @@
         createUserHtml: function(user) {
             const avatarHtml = user.avatar_url
                 ? `<img src="${user.avatar_url}" alt="${user.full_name}">`
-                : `<span>${user.full_name.charAt(0).toUpperCase()}</span>`;
+                : `<div class="user-initial">${user.full_name.charAt(0).toUpperCase()}</div>`;
 
-            // تحديد لون المؤشر حسب الحالة
-            const indicatorClass = user.is_online ? 'online-indicator online' : 'online-indicator offline';
+            // Enhanced status indicators
             const indicatorHtml = user.is_online
-                ? '<div class="online-indicator online"></div>'
-                : '<div class="online-indicator offline"><i class="fas fa-circle"></i></div>';
+                ? '<div class="online-indicator online"><div class="pulse-ring"></div></div>'
+                : '<div class="online-indicator offline"></div>';
 
-            // تحديد النص حسب الحالة
-            const statusText = user.is_online ? 'متصل' : 'غير متصل';
+            // Enhanced status text with activity context
+            const statusText = user.is_online ? 'متصل الآن' : 'غير متصل';
             const durationText = user.is_online
-                ? `متصل منذ ${user.online_duration}`
-                : `آخر دخول: ${user.last_login_formatted || 'غير محدد'}`;
+                ? `نشط منذ ${user.online_duration}`
+                : `آخر ظهور: ${user.last_login_formatted || 'غير محدد'}`;
 
-            // إضافة class للمستخدم غير المتصل
-            const userClass = user.is_online ? 'user-item' : 'user-item user-offline';
+            // Activity indicator
+            const activityIndicator = user.current_activity
+                ? `<div class="activity-indicator" title="${user.current_activity}">
+                     <i class="fas fa-circle"></i>
+                   </div>`
+                : '';
+
+            // User class with enhanced states
+            const userClass = `user-item ${user.is_online ? 'online' : 'offline'} ${user.role?.toLowerCase() || ''}`;
 
             return `
-                <div class="${userClass}" data-user-id="${user.id}">
+                <div class="${userClass}"
+                     data-user-id="${user.id}"
+                     data-username="${user.username}"
+                     data-role="${user.role}"
+                     data-branch="${user.branch}"
+                     data-online="${user.is_online}">
                     <div class="user-avatar">
                         ${avatarHtml}
                         ${indicatorHtml}
+                        ${activityIndicator}
                     </div>
                     <div class="user-info">
                         <div class="user-name">
-                            ${user.full_name}
+                            <span class="name-text">${user.full_name}</span>
                             <span class="user-status ${user.is_online ? 'online' : 'offline'}">${statusText}</span>
                         </div>
                         <div class="user-details">
-                            <div class="user-role">${user.role}</div>
-                            <div class="user-branch">${user.branch}</div>
-                            <div class="user-duration">${durationText}</div>
+                            <div class="user-role">
+                                <i class="fas fa-user-tag"></i>
+                                ${user.role}
+                            </div>
+                            <div class="user-branch">
+                                <i class="fas fa-building"></i>
+                                ${user.branch}
+                            </div>
+                            <div class="user-duration">
+                                <i class="fas fa-clock"></i>
+                                ${durationText}
+                            </div>
                         </div>
                     </div>
-                    <i class="fas fa-chevron-left text-muted user-arrow"></i>
+                    <div class="user-actions">
+                        <button class="action-btn expand-btn" title="عرض التفاصيل">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
                 </div>
             `;
         },
@@ -622,6 +651,74 @@
         // Check if sidebar exists
         if (document.getElementById('online-users-sidebar')) {
             OnlineUsersSidebar.init();
+        }
+    });
+
+    // Enhanced functionality for filter tabs and user interactions
+    OnlineUsersSidebar.enhancedFeatures = {
+        // Handle filter tab switching
+        handleFilterTab(tab) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+
+            // Add active class to clicked tab
+            tab.classList.add('active');
+
+            // Get filter type
+            const filter = tab.dataset.filter;
+
+            // Filter users based on selection
+            this.filterUsers(filter);
+        },
+
+        // Filter users based on selected tab
+        filterUsers(filter) {
+            const userItems = document.querySelectorAll('.user-item');
+
+            userItems.forEach(item => {
+                const isOnline = item.classList.contains('online');
+                const department = item.dataset.department;
+
+                let shouldShow = true;
+
+                switch(filter) {
+                    case 'online':
+                        shouldShow = isOnline;
+                        break;
+                    case 'departments':
+                        shouldShow = department && department !== 'undefined';
+                        break;
+                    case 'all':
+                    default:
+                        shouldShow = true;
+                        break;
+                }
+
+                item.style.display = shouldShow ? 'block' : 'none';
+            });
+
+            // Update user count
+            this.updateUserCount();
+        },
+
+        // Update user count display
+        updateUserCount() {
+            const visibleUsers = document.querySelectorAll('.user-item:not([style*="display: none"])');
+            const onlineCount = Array.from(visibleUsers).filter(item => item.classList.contains('online')).length;
+
+            const countElement = document.querySelector('.user-count');
+            if (countElement) {
+                countElement.textContent = `${onlineCount} متصل من ${visibleUsers.length}`;
+            }
+        }
+    };
+
+    // Add enhanced event listeners
+    document.addEventListener('click', (e) => {
+        // Handle filter tab clicks
+        if (e.target.matches('.filter-tab')) {
+            e.preventDefault();
+            OnlineUsersSidebar.enhancedFeatures.handleFilterTab(e.target);
         }
     });
 

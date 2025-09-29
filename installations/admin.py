@@ -5,7 +5,10 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
+from django.db.models import Sum, Count, Q
+from django.utils import timezone
 from accounts.models import SystemSettings
+from . import admin_filters
 
 from .models import (
     InstallationSchedule, InstallationTeam, Technician, Driver,
@@ -116,23 +119,352 @@ def currency_format(amount):
 
 @admin.register(CustomerDebt)
 class CustomerDebtAdmin(admin.ModelAdmin):
-    list_per_page = 50  # زيادة العدد إلى 50
-    list_display = ['customer', 'order', 'debt_amount_formatted', 'is_paid', 'payment_date', 'created_at']
-    list_filter = ['is_paid', 'created_at', 'payment_date']
-    search_fields = ['customer__name', 'order__order_number']
+    list_per_page = 50
+    list_display = [
+        'customer_name', 'order_number', 'branch_name', 'salesperson_name',
+        'debt_amount_formatted', 'payment_status', 'days_overdue',
+        'payment_date', 'created_at', 'payment_receiver', 'is_paid'
+    ]
+    list_filter = [
+        'is_paid',
+        admin_filters.BranchFilter,
+        admin_filters.SalespersonFilter,
+        admin_filters.DebtAmountRangeFilter,
+        admin_filters.OverdueFilter,
+        admin_filters.PaymentMethodFilter,
+        admin_filters.CustomerTypeFilter,
+        admin_filters.OrderTypeFilter,
+        admin_filters.DebtAgeFilter,
+        ('created_at', admin.DateFieldListFilter),
+        ('payment_date', admin.DateFieldListFilter),
+    ]
+    search_fields = [
+        'customer__name',
+        'customer__phone',
+        'order__order_number',
+        'order__customer__branch__name',
+        'order__salesperson__first_name',
+        'order__salesperson__last_name',
+        'payment_receiver_name'
+    ]
     list_editable = ['is_paid']
     ordering = ['-created_at']
-    
+    actions = ['mark_as_paid', 'export_to_excel', 'print_debts_report']
+
     # إضافة إمكانية الترتيب لجميع الأعمدة
     sortable_by = [
         'customer__name', 'order__order_number', 'debt_amount',
         'is_paid', 'payment_date', 'created_at'
     ]
 
+    def get_queryset(self, request):
+        """تحسين الاستعلام لتقليل عدد استعلامات قاعدة البيانات"""
+        return super().get_queryset(request).select_related(
+            'customer', 'order', 'order__customer__branch', 'order__salesperson'
+        )
+
+    def customer_name(self, obj):
+        """عرض اسم العميل مع رقم الهاتف"""
+        phone = obj.customer.phone or 'لا يوجد'
+        return f"{obj.customer.name}\n{phone}"
+    customer_name.short_description = 'العميل'
+    customer_name.admin_order_field = 'customer__name'
+
+    def order_number(self, obj):
+        """عرض رقم الطلب كرابط"""
+        from django.urls import reverse
+        from django.utils.html import format_html
+        url = reverse('admin:orders_order_change', args=[obj.order.id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.order.order_number)
+    order_number.short_description = 'رقم الطلب'
+    order_number.admin_order_field = 'order__order_number'
+
+    def branch_name(self, obj):
+        """عرض اسم الفرع"""
+        return obj.order.customer.branch.name if obj.order.customer.branch else 'غير محدد'
+    branch_name.short_description = 'الفرع'
+    branch_name.admin_order_field = 'order__customer__branch__name'
+
+    def salesperson_name(self, obj):
+        """عرض اسم البائع"""
+        if obj.order.salesperson:
+            return obj.order.salesperson.name
+        return 'غير محدد'
+    salesperson_name.short_description = 'البائع'
+    salesperson_name.admin_order_field = 'order__salesperson__name'
+
     def debt_amount_formatted(self, obj):
+        """عرض مبلغ المديونية مع التنسيق"""
         return currency_format(obj.debt_amount)
     debt_amount_formatted.short_description = 'مبلغ المديونية'
-    debt_amount_formatted.admin_order_field = 'debt_amount'  # تمكين الترتيب
+    debt_amount_formatted.admin_order_field = 'debt_amount'
+
+    def payment_status(self, obj):
+        """عرض حالة الدفع مع الألوان"""
+        from django.utils.html import format_html
+        if obj.is_paid:
+            return format_html(
+                '<span style="color: green; font-weight: bold;">✓ مدفوع</span>'
+            )
+        else:
+            # تحديد إذا كانت متأخرة
+            from django.utils import timezone
+            days_diff = (timezone.now() - obj.created_at).days
+            if days_diff > 30:
+                return format_html(
+                    '<span style="color: red; font-weight: bold;">⚠ متأخر</span>'
+                )
+            else:
+                return format_html(
+                    '<span style="color: orange; font-weight: bold;">⏳ غير مدفوع</span>'
+                )
+    payment_status.short_description = 'حالة الدفع'
+
+    def days_overdue(self, obj):
+        """عرض عدد الأيام المتأخرة"""
+        if obj.is_paid:
+            return '-'
+        from django.utils import timezone
+        days = (timezone.now() - obj.created_at).days
+        if days > 30:
+            return f"{days} يوم"
+        return f"{days} يوم"
+    days_overdue.short_description = 'أيام التأخير'
+
+    def payment_receiver(self, obj):
+        """عرض اسم مستلم الدفع"""
+        return obj.payment_receiver_name or '-'
+    payment_receiver.short_description = 'مستلم الدفع'
+
+    def save_model(self, request, obj, form, change):
+        """حفظ النموذج مع تحديث معلومات الدفع وتسجيل الدفعة في الطلب"""
+        if change and 'is_paid' in form.changed_data:
+            if obj.is_paid and not obj.payment_date:
+                obj.payment_date = timezone.now()
+                obj.payment_receiver_name = request.user.get_full_name() or request.user.username
+                if obj.notes:
+                    obj.notes += f' - تم التسديد بواسطة {obj.payment_receiver_name} في {timezone.now().strftime("%Y-%m-%d %H:%M")}'
+                else:
+                    obj.notes = f'تم التسديد بواسطة {obj.payment_receiver_name} في {timezone.now().strftime("%Y-%m-%d %H:%M")}'
+
+                # تحديث الطلب بالدفعة الجديدة
+                if obj.order:
+                    # إنشاء دفعة جديدة في جدول الدفعات
+                    from orders.models import Payment
+                    Payment.objects.create(
+                        order=obj.order,
+                        amount=obj.debt_amount,
+                        payment_method='cash',  # افتراضي
+                        payment_date=obj.payment_date or timezone.now(),
+                        notes=f'إغلاق مديونية تلقائي من لوحة التحكم بواسطة {obj.payment_receiver_name}',
+                        created_by=request.user
+                    )
+
+                    # إنشاء ملاحظة في الطلب
+                    from orders.models import OrderNote
+                    OrderNote.objects.create(
+                        order=obj.order,
+                        note_type='payment',
+                        title='تسديد مديونية',
+                        content=f'تم تسديد مديونية بمبلغ {obj.debt_amount} ج.م بواسطة {obj.payment_receiver_name} من لوحة التحكم وتسجيل دفعة تلقائية',
+                        created_by=request.user
+                    )
+
+        super().save_model(request, obj, form, change)
+
+        # إرسال إشعار نجاح
+        if change and 'is_paid' in form.changed_data and obj.is_paid:
+            self.message_user(request, f'تم تسديد مديونية العميل {obj.customer.name} بمبلغ {obj.debt_amount} ج.م بنجاح وتحديث الطلب.', level='SUCCESS')
+
+    # الإجراءات المخصصة
+    def mark_as_paid(self, request, queryset):
+        """تسديد المديونيات المحددة مع تحديث الطلبات"""
+        from django.utils import timezone
+        from orders.models import OrderNote
+        updated = 0
+        for debt in queryset.filter(is_paid=False):
+            debt.is_paid = True
+            debt.payment_date = timezone.now()
+            debt.payment_receiver_name = request.user.get_full_name() or request.user.username
+            debt.notes += f' - تم التسديد بواسطة {debt.payment_receiver_name} في {timezone.now().strftime("%Y-%m-%d %H:%M")}'
+
+            # تحديث الطلب بالدفعة الجديدة
+            if debt.order:
+                # إنشاء دفعة جديدة في جدول الدفعات
+                from orders.models import Payment
+                Payment.objects.create(
+                    order=debt.order,
+                    amount=debt.debt_amount,
+                    payment_method='cash',  # افتراضي
+                    payment_date=debt.payment_date,
+                    notes=f'إغلاق مديونية تلقائي (إجراء جماعي) من لوحة التحكم بواسطة {debt.payment_receiver_name}',
+                    created_by=request.user
+                )
+
+                # إنشاء ملاحظة في الطلب
+                OrderNote.objects.create(
+                    order=debt.order,
+                    note_type='payment',
+                    title='تسديد مديونية (إجراء جماعي)',
+                    content=f'تم تسديد مديونية بمبلغ {debt.debt_amount} ج.م بواسطة {debt.payment_receiver_name} من لوحة التحكم (إجراء جماعي) وتسجيل دفعة تلقائية',
+                    created_by=request.user
+                )
+
+            debt.save()
+            updated += 1
+
+        self.message_user(request, f'تم تسديد {updated} مديونية بنجاح وتحديث الطلبات المرتبطة.')
+    mark_as_paid.short_description = "تسديد المديونيات المحددة"
+
+    def export_to_excel(self, request, queryset):
+        """تصدير المديونيات إلى Excel"""
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from django.http import HttpResponse
+        from django.utils import timezone
+
+        # إنشاء ملف Excel
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "تقرير المديونيات"
+
+        # تنسيق الرأس
+        headers = [
+            'اسم العميل', 'رقم الهاتف', 'رقم الطلب', 'الفرع', 'البائع',
+            'مبلغ المديونية', 'حالة الدفع', 'تاريخ الإنشاء', 'تاريخ الدفع',
+            'مستلم الدفع', 'أيام التأخير', 'ملاحظات'
+        ]
+
+        # كتابة الرأس
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center")
+
+        # كتابة البيانات
+        for row, debt in enumerate(queryset.select_related('customer', 'order', 'order__customer__branch', 'order__salesperson'), 2):
+            ws.cell(row=row, column=1, value=debt.customer.name)
+            ws.cell(row=row, column=2, value=debt.customer.phone or 'لا يوجد')
+            ws.cell(row=row, column=3, value=debt.order.order_number)
+            ws.cell(row=row, column=4, value=debt.order.customer.branch.name if debt.order.customer.branch else 'غير محدد')
+
+            salesperson = ''
+            if debt.order.salesperson:
+                salesperson = debt.order.salesperson.name
+            ws.cell(row=row, column=5, value=salesperson or 'غير محدد')
+
+            ws.cell(row=row, column=6, value=float(debt.debt_amount))
+            ws.cell(row=row, column=7, value='مدفوع' if debt.is_paid else 'غير مدفوع')
+            ws.cell(row=row, column=8, value=debt.created_at.strftime('%Y-%m-%d'))
+            ws.cell(row=row, column=9, value=debt.payment_date.strftime('%Y-%m-%d') if debt.payment_date else '')
+            ws.cell(row=row, column=10, value=debt.payment_receiver_name or '')
+
+            # حساب أيام التأخير
+            if not debt.is_paid:
+                days_overdue = (timezone.now() - debt.created_at).days
+                ws.cell(row=row, column=11, value=days_overdue)
+            else:
+                ws.cell(row=row, column=11, value=0)
+
+            ws.cell(row=row, column=12, value=debt.notes)
+
+        # تنسيق الأعمدة
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+
+        # إعداد الاستجابة
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f'تقرير_المديونيات_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        wb.save(response)
+        return response
+    export_to_excel.short_description = "تصدير إلى Excel"
+
+    def print_debts_report(self, request, queryset):
+        """طباعة تقرير المديونيات"""
+        from django.shortcuts import render
+        from django.http import HttpResponse
+        from django.template.loader import get_template
+        from django.utils import timezone
+
+        # حساب الإحصائيات
+        total_debts = queryset.count()
+        total_amount = sum(debt.debt_amount for debt in queryset)
+        paid_debts = queryset.filter(is_paid=True).count()
+        unpaid_debts = queryset.filter(is_paid=False).count()
+        overdue_debts = queryset.filter(
+            is_paid=False,
+            created_at__lt=timezone.now() - timezone.timedelta(days=30)
+        ).count()
+
+        context = {
+            'debts': queryset.select_related('customer', 'order', 'order__customer__branch', 'order__salesperson'),
+            'stats': {
+                'total_debts': total_debts,
+                'total_amount': total_amount,
+                'paid_debts': paid_debts,
+                'unpaid_debts': unpaid_debts,
+                'overdue_debts': overdue_debts,
+            },
+            'report_date': timezone.now(),
+            'generated_by': request.user.get_full_name() or request.user.username,
+        }
+
+        template = get_template('admin/debt_print_report.html')
+        html = template.render(context)
+
+        response = HttpResponse(html, content_type='text/html')
+        return response
+    print_debts_report.short_description = "طباعة تقرير المديونيات"
+
+    def get_readonly_fields(self, request, obj=None):
+        """تحديد الحقول للقراءة فقط"""
+        readonly_fields = ['created_at', 'updated_at']
+        if obj and obj.is_paid:
+            readonly_fields.extend(['debt_amount', 'customer', 'order'])
+        return readonly_fields
+
+    def get_fieldsets(self, request, obj=None):
+        """تنظيم الحقول في مجموعات"""
+        fieldsets = [
+            ('معلومات المديونية', {
+                'fields': ('customer', 'order', 'debt_amount', 'notes')
+            }),
+            ('معلومات الدفع', {
+                'fields': ('is_paid', 'payment_date', 'payment_receiver_name', 'payment_receipt_number'),
+                'classes': ('collapse',)
+            }),
+            ('معلومات النظام', {
+                'fields': ('created_at', 'updated_at'),
+                'classes': ('collapse',)
+            }),
+        ]
+        return fieldsets
+
+    def has_delete_permission(self, request, obj=None):
+        """منع حذف المديونيات المدفوعة"""
+        if obj and obj.is_paid:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    class Media:
+        css = {
+            'all': ('admin/css/debt_admin.css',)
+        }
+        js = ('admin/js/debt_admin.js',)
 
 
 @admin.register(Technician)

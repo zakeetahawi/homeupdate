@@ -548,38 +548,91 @@ class DeliveryTimeSettingsAdmin(admin.ModelAdmin):
     """إدارة إعدادات مواعيد التسليم"""
     list_per_page = 50
     list_display = [
-        'order_type', 'delivery_days', 'is_active', 
+        'get_setting_display', 'delivery_days', 'get_default_days_display', 'is_active',
         'created_at', 'updated_at'
     ]
-    list_filter = ['order_type', 'is_active', 'created_at']
-    search_fields = ['order_type']
+    list_filter = ['service_type', 'order_type', 'is_active', 'created_at']
+    search_fields = ['service_type', 'order_type']
     readonly_fields = ['created_at', 'updated_at']
+    ordering = ['service_type', 'order_type']
+
     fieldsets = (
         (_('معلومات أساسية'), {
-            'fields': ('order_type', 'delivery_days', 'is_active')
+            'fields': ('service_type', 'order_type', 'delivery_days', 'is_active'),
+            'description': 'حدد نوع الخدمة ونوع الطلب لتخصيص مواعيد التسليم. اترك الحقول فارغة للإعدادات العامة.'
         }),
         (_('معلومات النظام'), {
             'classes': ('collapse',),
             'fields': ('created_at', 'updated_at')
         }),
     )
+
+    def get_setting_display(self, obj):
+        """عرض وصف الإعداد"""
+        parts = []
+        if obj.service_type:
+            parts.append(f"خدمة {obj.get_service_type_display()}")
+        if obj.order_type:
+            parts.append(f"طلب {obj.get_order_type_display()}")
+
+        return " - ".join(parts) if parts else "إعداد عام"
+    get_setting_display.short_description = 'نوع الإعداد'
+
+    def get_default_days_display(self, obj):
+        """عرض الأيام الافتراضية للمقارنة"""
+        # القيم الافتراضية
+        defaults = {
+            'inspection': 2,
+            'accessory': 5,
+            'products': 3,
+            'installation': 10,
+            'tailoring': 7,
+            'fabric': 7,
+            'transport': 5,
+            'vip': 3,
+            'normal': 15
+        }
+
+        # تحديد القيمة الافتراضية بناءً على نوع الخدمة أو نوع الطلب
+        default_days = None
+        if obj.service_type and obj.service_type in defaults:
+            default_days = defaults[obj.service_type]
+        elif obj.order_type and obj.order_type in defaults:
+            default_days = defaults[obj.order_type]
+        else:
+            default_days = 15
+
+        if default_days == obj.delivery_days:
+            return f"{default_days} (افتراضي)"
+        else:
+            return f"{default_days} (افتراضي) → مخصص"
+    get_default_days_display.short_description = 'الأيام الافتراضية'
+
     def get_queryset(self, request):
         return super().get_queryset(request).select_related()
+
     def has_delete_permission(self, request, obj=None):
-        if obj and obj.order_type in ['normal', 'vip', 'inspection']:
-            return False
+        # السماح بحذف جميع الإعدادات المخصصة
         return super().has_delete_permission(request, obj)
+
     def save_model(self, request, obj, form, change):
+        # التحقق من عدم وجود إعداد مكرر
         if not change:
             existing = DeliveryTimeSettings.objects.filter(
-                order_type=obj.order_type
+                order_type=obj.order_type,
+                service_type=obj.service_type
             ).first()
             if existing:
                 existing.delivery_days = obj.delivery_days
                 existing.is_active = obj.is_active
                 existing.save()
                 return
+
         super().save_model(request, obj, form, change)
+
+        # إلغاء التخزين المؤقت بعد الحفظ
+        from .cache import OrderCache
+        OrderCache.invalidate_delivery_settings_cache()
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):

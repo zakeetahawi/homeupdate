@@ -273,84 +273,8 @@ document.addEventListener('DOMContentLoaded', function() {
         </a>
     </div>
 
-    <!-- Search and Filter -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-                {% if show_branch_filter %}
-                <div class="col-md-3">
-                    <label for="branch" class="form-label">فرع:</label>
-                    <select name="branch" id="branch" class="form-select">
-                        <option value="">-- جميع الفروع --</option>
-                        {% for branch in branches %}
-                            <option value="{{ branch.id }}" {% if branch_filter == branch.id|stringformat:'s' %}selected{% endif %}>{{ branch.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                {% endif %}
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <input type="text" name="search" class="form-control" placeholder="بحث برقم الطلب أو اسم العميل" value="{{ search_query }}">
-                        <button class="btn btn-outline-secondary" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <select name="order_type" class="form-select">
-                        <option value="">-- جميع الأنواع --</option>
-                        <option value="installation" {% if order_type_filter == 'installation' %}selected{% endif %}>تركيب</option>
-                        <option value="accessory" {% if order_type_filter == 'accessory' %}selected{% endif %}>إكسسوار</option>
-                        <option value="tailoring" {% if order_type_filter == 'tailoring' %}selected{% endif %}>تسليم</option>
-                        <option value="inspection" {% if order_type_filter == 'inspection' %}selected{% endif %}>معاينة</option>
-                        <option value="products" {% if order_type_filter == 'products' %}selected{% endif %}>منتجات</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="date_from" class="form-label">من تاريخ:</label>
-                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from }}">
-                </div>
-                <div class="col-md-2">
-                    <label for="date_to" class="form-label">إلى تاريخ:</label>
-                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to }}">
-                </div>
-                <div class="col-md-3">
-                    <select name="order_status" class="form-select">
-                        <option value="">-- جميع الحالات --</option>
-                        <option value="pending_approval" {% if status_filter == 'pending_approval' %}selected{% endif %}>قيد الموافقة</option>
-                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>قيد الانتظار</option>
-                        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>قيد التصنيع</option>
-                        <option value="ready_install" {% if status_filter == 'ready_install' %}selected{% endif %}>جاهز للتركيب</option>
-                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>مكتمل</option>
-                        <option value="delivered" {% if status_filter == 'delivered' %}selected{% endif %}>تم التسليم</option>
-                        <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>مرفوض</option>
-                        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>ملغي</option>
-                        <option value="manufacturing_deleted" {% if status_filter == 'manufacturing_deleted' %}selected{% endif %}>أمر تصنيع محذوف</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="status" class="form-select">
-                        <option value="">-- وضع العميل --</option>
-                        <option value="vip" {% if status_param == 'vip' %}selected{% endif %}>VIP</option>
-                        <option value="normal" {% if status_param == 'normal' %}selected{% endif %}>عادي</option>
-                    </select>
-                </div>
-                <!-- tracking_status filter removed as requested -->
-                <div class="col-md-2">
-                    <label for="page_size" class="form-label">عدد الصفوف:</label>
-                    <select name="page_size" id="page_size" class="form-select">
-                        <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
-                        <option value="25" {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>25</option>
-                        <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
-                        <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">تصفية</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Orders Filter -->
+    {% include 'includes/orders_filter.html' %}
 
     <!-- Orders List -->
     <div class="card">
@@ -499,12 +423,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td class="text-center">
                                 {% with order_types=order.get_selected_types_list %}
                                     {% if 'inspection' in order_types %}
-                                        <!-- للمعاينات: عرض وضع الطلب تلقائي -->
-                                        <span class="unified-badge status-info" style="font-size: 0.7rem; line-height: 1.2; padding: 0.3rem 0.5rem; display: inline-block; text-align: center;">
-                                            <i class="fas fa-clock" style="display: block; margin-bottom: 2px;"></i>
-                                            <span style="display: block;">تلقائي</span>
-                                            <span style="display: block; font-size: 0.65rem;">(48 ساعة)</span>
-                                        </span>
+                                        <!-- للمعاينات: عرض وضع الطلب العادي -->
+                                        {% if order.status == 'vip' %}
+                                            {% get_vip_badge %}
+                                        {% else %}
+                                            {% get_normal_badge %}
+                                        {% endif %}
                                     {% else %}
                                         <!-- للخدمات الأخرى: عرض وضع الطلب العادي -->
                                         {% if order.status == 'vip' %}

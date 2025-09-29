@@ -285,7 +285,7 @@
         <div class="card-body">
             <form method="get" class="filter-form">
                 <div class="row">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">حالة الطلب</label>
                         <select name="order_status" class="form-select">
                             {% for value, label in order_status_choices %}
@@ -295,27 +295,49 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">البحث</label>
-                        <input type="text" name="search" class="form-control" 
-                               placeholder="رقم الطلب، اسم العميل، رقم الهاتف..." 
+                        <input type="text" name="search" class="form-control"
+                               placeholder="رقم الطلب، اسم العميل، رقم الهاتف..."
                                value="{{ current_filters.search }}">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">عدد النتائج</label>
+                        <label class="form-label">السنة</label>
+                        <select name="year" class="form-select">
+                            <option value="">جميع السنوات</option>
+                            {% for year in years %}
+                            <option value="{{ year }}" {% if year|stringformat:"s" == current_filters.year %}selected{% endif %}>
+                                {{ year }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">الشهر</label>
+                        <select name="month" class="form-select">
+                            <option value="">جميع الشهور</option>
+                            {% for month_num, month_name in months %}
+                            <option value="{{ month_num }}" {% if month_num|stringformat:"s" == current_filters.month %}selected{% endif %}>
+                                {{ month_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">العدد</label>
                         <select name="page_size" class="form-select">
                             <option value="25" {% if current_filters.page_size == 25 %}selected{% endif %}>25</option>
                             <option value="50" {% if current_filters.page_size == 50 %}selected{% endif %}>50</option>
                             <option value="100" {% if current_filters.page_size == 100 %}selected{% endif %}>100</option>
                         </select>
                     </div>
-                    <div class="col-md-3 d-flex align-items-end">
+                    <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-gradient me-2">
                             <i class="fas fa-search"></i> بحث
                         </button>
                         {% if has_filters %}
                         <a href="{% url 'installations:debt_orders_list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> مسح الفلاتر
+                            <i class="fas fa-times"></i> مسح
                         </a>
                         {% endif %}
                     </div>
@@ -398,7 +420,7 @@
                     <ul class="pagination">
                         {% if page_obj.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ page_obj.previous_page_number }}">
+                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.year %}year={{ current_filters.year }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ page_obj.previous_page_number }}">
                                 <i class="fas fa-chevron-right"></i>
                             </a>
                         </li>
@@ -411,14 +433,14 @@
                         </li>
                         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                         <li class="page-item">
-                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ num }}">{{ num }}</a>
+                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.year %}year={{ current_filters.year }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ num }}">{{ num }}</a>
                         </li>
                         {% endif %}
                         {% endfor %}
                         
                         {% if page_obj.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ page_obj.next_page_number }}">
+                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.year %}year={{ current_filters.year }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ page_obj.next_page_number }}">
                                 <i class="fas fa-chevron-left"></i>
                             </a>
                         </li>

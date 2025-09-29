@@ -191,8 +191,6 @@
                         <td class="text-center">
                             {% if order.expected_delivery_date %}
                                 {{ order.expected_delivery_date|date:"Y-m-d" }}
-                                <br>
-                                <small class="text-muted">خلال 48 ساعة</small>
                             {% else %}
                                 <span class="text-muted">غير محدد</span>
                             {% endif %}

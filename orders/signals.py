@@ -303,8 +303,8 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                     from inspections.models import Inspection
                     # استخدم تاريخ الطلب كـ request_date
                     request_date = instance.order_date.date() if instance.order_date else timezone.now().date()
-                    # حاول استخراج تاريخ تنفيذ محدد من notes أو من بيانات الطلب إذا كان ذلك ممكناً (يمكنك تطوير هذا لاحقاً)
-                    scheduled_date = request_date + timedelta(days=2)
+                    # لا نحدد تاريخ مجدول - سيتم تحديده يدوياً من قسم المعاينات
+                    scheduled_date = None
                     # التحقق من البائع وإعداد المعاين
                     inspector = instance.created_by
                     responsible_employee = None
@@ -330,21 +330,21 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                         contract_number=instance.contract_number,  # إضافة رقم العقد
                         is_from_orders=True,
                         request_date=request_date,
-                        scheduled_date=scheduled_date,
-                        status='pending',
-                        notes=f'معاينة تلقائية للطلب رقم {instance.order_number}',
+                        scheduled_date=scheduled_date,  # None - غير مجدولة
+                        status='pending',  # قيد الانتظار - يتم الجدولة يدوياً
+                        notes=f'معاينة للطلب رقم {instance.order_number}',
                         order_notes=instance.notes,
                         created_by=instance.created_by,
                         windows_count=1  # قيمة افتراضية
                     )
-                    print(f"✅ تم إنشاء معاينة تلقائية للطلب {instance.order_number} - معرف المعاينة: {inspection.id}")
+                    print(f"✅ تم إنشاء معاينة للطلب {instance.order_number} - معرف المعاينة: {inspection.id} (قيد الانتظار)")
                     Order.objects.filter(pk=instance.pk).update(
                         tracking_status='processing',
                         order_status='pending'
                     )
             except Exception as e:
                 import traceback
-                error_msg = f"❌ خطأ في إنشاء معاينة تلقائية للطلب {instance.order_number}: {str(e)}"
+                error_msg = f"❌ خطأ في إنشاء معاينة للطلب {instance.order_number}: {str(e)}"
                 print(f"\033[31m{error_msg}\033[0m")
                 traceback.print_exc()
         else:

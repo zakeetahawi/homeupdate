@@ -4,6 +4,209 @@
 
 {% block title %}قائمة التركيبات{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<style>
+    /* تنسيق الفلاتر المتقدمة */
+    .filter-card {
+        transition: all 0.3s ease;
+        border: none !important;
+    }
+    .filter-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+    }
+    .advanced-filter-form .form-floating {
+        position: relative;
+    }
+    .advanced-filter-form .form-floating > .form-select,
+    .advanced-filter-form .form-floating > .form-control {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        padding: 12px 16px;
+    }
+    .advanced-filter-form .form-floating > .form-select:focus,
+    .advanced-filter-form .form-floating > .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        transform: translateY(-1px);
+    }
+    .advanced-filter-form .form-floating > label {
+        color: #6c757d;
+        font-weight: 500;
+        font-size: 13px;
+        padding: 8px 16px;
+    }
+    .advanced-filter-form .form-floating > .form-select:focus ~ label,
+    .advanced-filter-form .form-floating > .form-control:focus ~ label,
+    .advanced-filter-form .form-floating > .form-select:not(:placeholder-shown) ~ label,
+    .advanced-filter-form .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        color: #667eea;
+        font-weight: 600;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    .btn-outline-danger {
+        border: 2px solid #dc3545;
+        color: #dc3545;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .btn-outline-danger:hover {
+        background: #dc3545;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+    }
+    .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+    }
+    .input-group-text {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px solid #e9ecef;
+        color: #6c757d;
+    }
+    .input-group .form-control {
+        border: 2px solid #e9ecef;
+        border-left: none;
+        border-right: none;
+    }
+    .input-group .form-control:focus {
+        border-color: #667eea;
+        box-shadow: none;
+    }
+    .input-group .form-control:focus + .btn,
+    .input-group .form-control:focus ~ .input-group-text {
+        border-color: #667eea;
+    }
+    .badge {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 8px 12px;
+        border-radius: 20px;
+    }
+    .applied-filters .badge {
+        margin: 2px;
+        position: relative;
+        padding-right: 25px;
+    }
+    .applied-filters .badge a {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 14px;
+    }
+    @media (max-width: 768px) {
+        .filter-stats {
+            flex-direction: column;
+            gap: 5px;
+        }
+        .filter-stats .badge {
+            font-size: 11px;
+            padding: 6px 10px;
+        }
+        .advanced-filter-form .btn-lg {
+            font-size: 14px;
+            padding: 10px 15px;
+        }
+    }
+    .filter-card {
+        animation: slideInDown 0.5s ease-out;
+    }
+    @keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .form-floating {
+        animation: fadeInUp 0.6s ease-out;
+    }
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    /* --- محتوى البلوك الثاني --- */
+    .card { 
+        border-radius: 0.5rem; 
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: 1px solid rgba(0, 0, 0, 0.125);
+        transition: all 0.3s ease;
+    } 
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    .badge { 
+        font-size: 0.75rem; 
+        font-weight: 600; 
+        border-radius: 0.375rem; 
+        padding: 0.375rem 0.5rem; 
+        transition: all 0.2s ease;
+    } 
+    .badge:hover {
+        transform: scale(1.05);
+    }
+    .badge-success { 
+        background-color: #28a745 !important;
+        color: white !important;
+    } 
+    .badge-info { 
+        background-color: #17a2b8 !important;
+        color: white !important;
+    } 
+    .badge-primary { 
+        background-color: #007bff !important;
+        color: white !important;
+    } 
+    .badge-warning { 
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+    } 
+    .badge-danger { 
+        background-color: #dc3545 !important;
+        color: white !important;
+    } 
+    .badge-secondary { 
+        background-color: #6c757d !important;
+        color: white !important;
+    } 
+    .filter-card {
+        border-radius: 0.5rem;
+        border: 1px solid rgba(0, 0, 0, 0.125);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 {% csrf_token %}
 <div class="container-fluid">
@@ -46,131 +249,43 @@
         </a>
     </div>
 
-    <!-- فلاتر البحث المحسّنة -->
-    <div class="card filter-card shadow mb-4">
-        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-filter"></i>
-                فلاتر البحث والعرض
-            </h6>
-            <div class="filter-stats">
-                <span class="badge badge-info">{{ total_count }} نتيجة</span>
-                {% if needs_scheduling_count %}
-                    <span class="badge badge-warning">{{ needs_scheduling_count }} بحاجة جدولة</span>
-                {% endif %}
-                {% if scheduled_count %}
-                    <span class="badge badge-primary">{{ scheduled_count }} مجدول</span>
-                {% endif %}
-                {% if completed_count %}
-                    <span class="badge badge-success">{{ completed_count }} مكتمل</span>
-                {% endif %}
+    <!-- فلاتر البحث المحسّنة والحديثة -->
+    <div class="card filter-card shadow-lg mb-4" style="border: none; border-radius: 15px;">
+        <div class="card-header py-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px 15px 0 0;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="m-0 text-white fw-bold">
+                    <i class="fas fa-filter me-2"></i>
+                    فلاتر البحث والعرض المتقدمة
+                </h5>
+                <div class="filter-stats d-flex gap-2">
+                    <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                        <i class="fas fa-list me-1"></i>
+                        {{ total_count }} نتيجة
+                    </span>
+                    {% if needs_scheduling_count %}
+                        <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ needs_scheduling_count }} بحاجة جدولة
+                        </span>
+                    {% endif %}
+                    {% if scheduled_count %}
+                        <span class="badge bg-primary fs-6 px-3 py-2">
+                            <i class="fas fa-calendar-check me-1"></i>
+                            {{ scheduled_count }} مجدول
+                        </span>
+                    {% endif %}
+                    {% if completed_count %}
+                        <span class="badge bg-success fs-6 px-3 py-2">
+                            <i class="fas fa-check-circle me-1"></i>
+                            {{ completed_count }} مكتمل
+                        </span>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        <div class="card-body">
-            <form method="get" class="row g-3" id="filterForm">
-                <!-- الصف الأول - الفلاتر الأساسية -->
-                <div class="col-md-2">
-                    {{ filter_form.status.label_tag }}
-                    {{ filter_form.status }}
-                </div>
-                <div class="col-md-2">
-                    {{ filter_form.team.label_tag }}
-                    {{ filter_form.team }}
-                </div>
-                <div class="col-md-2">
-                    {{ filter_form.location_type.label_tag }}
-                    {{ filter_form.location_type }}
-                </div>
-                <div class="col-md-2">
-                    {{ filter_form.order_status.label_tag }}
-                    {{ filter_form.order_status }}
-                </div>
-                <div class="col-md-2">
-                    <label for="page_size" class="form-label">عدد الصفوف:</label>
-                    <select name="page_size" id="page_size" class="form-select">
-                        <option value="10" {% if current_filters.page_size == 10 %}selected{% endif %}>10</option>
-                        <option value="25" {% if current_filters.page_size == 25 or not current_filters.page_size %}selected{% endif %}>25</option>
-                        <option value="50" {% if current_filters.page_size == 50 %}selected{% endif %}>50</option>
-                        <option value="100" {% if current_filters.page_size == 100 %}selected{% endif %}>100</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-primary apply-filters-btn flex-fill">
-                            <i class="fas fa-search"></i> تطبيق
-                        </button>
-                        <a href="{% url 'installations:installation_list' %}" class="btn btn-outline-secondary" title="مسح الفلاتر">
-                            <i class="fas fa-times"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- الصف الثاني - التواريخ والبحث -->
-                <div class="col-md-3">
-                    {{ filter_form.date_from.label_tag }}
-                    {{ filter_form.date_from }}
-                </div>
-                <div class="col-md-3">
-                    {{ filter_form.date_to.label_tag }}
-                    {{ filter_form.date_to }}
-                </div>
-                <div class="col-md-6">
-                    {{ filter_form.search.label_tag }}
-                    <div class="input-group">
-                        {{ filter_form.search }}
-                        <button class="btn btn-outline-secondary" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-            </form>
-            
-            <!-- عرض الفلاتر المطبقة -->
-            {% if has_filters %}
-            <div class="mt-3 pt-3 border-top">
-                <div class="d-flex justify-content-between align-items-center flex-wrap">
-                    <div class="applied-filters">
-                        <span class="text-muted me-2">الفلاتر المطبقة:</span>
-                        {% if current_filters.status %}
-                            <span class="badge badge-primary me-1">
-                                الحالة: {% if current_filters.status == 'needs_scheduling' %}بحاجة جدولة{% elif current_filters.status == 'scheduled' %}مجدول{% elif current_filters.status == 'completed' %}مكتمل{% else %}{{ current_filters.status }}{% endif %}
-                                <a href="?{% for key, value in current_filters.items %}{% if key != 'status' and value %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1">×</a>
-                            </span>
-                        {% endif %}
-                        {% if current_filters.search %}
-                            <span class="badge badge-info me-1">
-                                بحث: "{{ current_filters.search }}"
-                                <a href="?{% for key, value in current_filters.items %}{% if key != 'search' and value %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1">×</a>
-                            </span>
-                        {% endif %}
-                        {% if current_filters.team %}
-                            <span class="badge badge-success me-1">
-                                فريق محدد
-                                <a href="?{% for key, value in current_filters.items %}{% if key != 'team' and value %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1">×</a>
-                            </span>
-                        {% endif %}
-                        {% if current_filters.date_from or current_filters.date_to %}
-                            <span class="badge badge-warning me-1">
-                                فترة زمنية محددة
-                                <a href="?{% for key, value in current_filters.items %}{% if key != 'date_from' and key != 'date_to' and value %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="text-white ms-1">×</a>
-                            </span>
-                        {% endif %}
-                    </div>
-                    <a href="{% url 'installations:installation_list' %}" class="btn btn-sm btn-outline-danger">
-                        <i class="fas fa-times me-1"></i> مسح جميع الفلاتر
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-            
-            <!-- رسالة توضيحية للطلبات التي تحتاج جدولة -->
-            {% if current_filters.status == 'needs_scheduling' or not has_filters %}
-            <div class="alert alert-info mt-3" role="alert">
-                <i class="fas fa-info-circle me-2"></i>
-                <strong>ملاحظة:</strong> تظهر هنا الطلبات الجاهزة للتركيب والتي تحتاج إلى جدولة. يمكنك النقر على زر الجدولة لإنشاء موعد تركيب.
-            </div>
-            {% endif %}
+        <!-- Installations Filter -->
+        {% include 'includes/installations_filter.html' %}
+
         </div>
     </div>
 
@@ -783,351 +898,4 @@ function showDebtWarning(customerName, remainingAmount, orderId) {
     });
 }
 </script>
-{% endblock %} 
-
-{% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-<style>
-/* تطبيق نفس الهوية البصرية لقسم المعاينات */
-
-/* تحسين البطاقات الحديث */
-.card { 
-    border-radius: 0.5rem; 
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    border: 1px solid rgba(0, 0, 0, 0.125);
-    transition: all 0.3s ease;
-} 
-
-.card:hover {
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-}
-
-/* تحسين مظهر البادجات */
-.badge { 
-    font-size: 0.75rem; 
-    font-weight: 600; 
-    border-radius: 0.375rem; 
-    padding: 0.375rem 0.5rem; 
-    transition: all 0.2s ease;
-} 
-
-.badge:hover {
-    transform: scale(1.05);
-}
-
-.badge-success { 
-    background-color: #28a745 !important;
-    color: white !important;
-} 
-
-.badge-info { 
-    background-color: #17a2b8 !important;
-    color: white !important;
-} 
-
-.badge-primary { 
-    background-color: #007bff !important;
-    color: white !important;
-} 
-
-.badge-warning { 
-    background-color: #ffc107 !important;
-    color: #212529 !important;
-} 
-
-.badge-danger { 
-    background-color: #dc3545 !important;
-    color: white !important;
-} 
-
-.badge-secondary { 
-    background-color: #6c757d !important;
-    color: white !important;
-} 
-
-/* تحسين مظهر نماذج الفلاتر */
-.filter-card {
-    border-radius: 0.5rem;
-    border: 1px solid rgba(0, 0, 0, 0.125);
-}
-
-.filter-card .card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
-    border-radius: 0.5rem 0.5rem 0 0;
-}
-
-.filter-card .form-label { 
-    font-weight: 600; 
-    color: #495057; 
-    margin-bottom: 0.25rem; 
-} 
-
-.filter-card .form-select, .filter-card .form-control { 
-    font-size: 0.875rem; 
-    padding: 0.375rem 0.75rem; 
-    border-radius: 0.375rem; 
-    border: 1px solid #ced4da;
-    transition: all 0.15s ease-in-out;
-} 
-
-.filter-card .form-select:focus, .filter-card .form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.filter-card .btn { 
-    font-size: 0.875rem; 
-    padding: 0.375rem 0.75rem; 
-    border-radius: 0.375rem; 
-    font-weight: 500;
-    transition: all 0.15s ease-in-out;
-} 
-
-.btn:hover {
-    transform: translateY(-1px);
-}
-
-.btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
-}
-
-.btn-outline-secondary {
-    color: #6c757d;
-    border-color: #6c757d;
-}
-
-.btn-outline-secondary:hover {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    color: white;
-}
-
-/* تحسين مظهر الجدول */
-.installations-table {
-    margin-bottom: 0;
-    border-radius: 0 0 0.5rem 0.5rem;
-    overflow: hidden;
-}
-
-.installations-table th, .installations-table td {
-    padding: 0.75rem 0.5rem !important;
-    vertical-align: middle;
-    text-align: center;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.installations-table th {
-    background-color: #f8f9fa;
-    color: #495057;
-    font-weight: 600;
-    border: none;
-    font-size: 0.875rem;
-}
-
-.installations-table tbody tr {
-    transition: all 0.2s ease;
-}
-
-.installations-table tbody tr:hover {
-    background-color: rgba(0, 123, 255, 0.075);
-    transform: scale(1.01);
-}
-
-.installations-table td {
-    font-size: 0.875rem;
-}
-
-/* تحسين الروابط */
-.installations-table a {
-    transition: all 0.2s ease;
-    font-weight: 600;
-}
-
-.installations-table a:hover {
-    text-decoration: underline !important;
-    opacity: 0.8;
-}
-
-.installations-table .text-primary {
-    color: #007bff !important;
-}
-
-.installations-table .text-primary:hover {
-    color: #0056b3 !important;
-}
-
-.installations-table .text-info {
-    color: #17a2b8 !important;
-}
-
-.installations-table .text-info:hover {
-    color: #117a8b !important;
-}
-
-/* تحسين مظهر أزرار الإجراءات */
-.action-buttons {
-    display: flex;
-    gap: 0.25rem;
-    justify-content: center;
-    align-items: center;
-}
-
-.action-buttons .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    border-radius: 0.25rem;
-    margin: 0;
-}
-
-.action-buttons .btn i {
-    font-size: 0.75em;
-}
-
-/* تحسين مظهر ترقيم الصفحات */
-.pagination {
-    justify-content: center;
-    margin-top: 1.5rem;
-}
-
-.pagination .page-link {
-    border-radius: 0.375rem;
-    margin: 0 0.125rem;
-    border: 1px solid #dee2e6;
-    background: #fff;
-    color: #007bff;
-    padding: 0.5rem 0.75rem;
-    transition: all 0.15s ease-in-out;
-}
-
-.pagination .page-item.active .page-link {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: white;
-}
-
-.pagination .page-link:hover {
-    background-color: #e9ecef;
-    border-color: #dee2e6;
-    color: #0056b3;
-    transform: translateY(-1px);
-}
-
-/* تحسين النصوص العربية */
-body, .installations-table, .form-control, .btn {
-    font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* تحسين الألوان والمساحات */
-.text-muted {
-    color: #6c757d !important;
-}
-
-.text-warning {
-    color: #ffc107 !important;
-}
-
-.text-success {
-    color: #28a745 !important;
-}
-
-.text-danger {
-    color: #dc3545 !important;
-}
-
-.text-info {
-    color: #17a2b8 !important;
-}
-
-/* تحسين التنبيهات */
-.alert {
-    border-radius: 0.5rem;
-    border: none;
-    padding: 1rem 1.25rem;
-}
-
-.alert-info {
-    background-color: #d1ecf1;
-    color: #0c5460;
-}
-
-/* تحسين عرض بادجات المديونية */
-.badge[onclick] {
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.badge[onclick]:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
-}
-
-/* توافق مع الأجهزة المحمولة */
-@media (max-width: 768px) {
-    .installations-table {
-        font-size: 0.75rem;
-    }
-    
-    .action-buttons .btn {
-        padding: 0.125rem 0.25rem;
-        font-size: 0.625rem;
-    }
-    
-    .action-buttons .btn i {
-        font-size: 0.625em;
-    }
-    
-    .filter-stats .badge {
-        font-size: 0.625rem;
-        margin: 0.125rem;
-    }
-    
-    .installations-table th, .installations-table td {
-        padding: 0.5rem 0.25rem !important;
-    }
-}
-
-/* تحسين شكل الفلاتر المطبقة */
-.applied-filters .badge {
-    margin-bottom: 0.25rem;
-    margin-right: 0.25rem;
-}
-
-.applied-filters .badge a {
-    text-decoration: none;
-    font-weight: bold;
-    margin-left: 0.25rem;
-}
-
-.applied-filters .badge a:hover {
-    opacity: 0.7;
-}
-
-/* تحسين شكل عداد النتائج */
-.filter-stats .badge {
-    margin-left: 0.25rem;
-    margin-right: 0.25rem;
-}
-
-/* تحسين شكل عنوان الصفحة */
-.h3 {
-    color: #495057;
-    font-weight: 600;
-}
-
-.fas.fa-list {
-    margin-left: 0.5rem;
-}
-
-/* تحسين شكل زر العودة */
-.btn-outline-secondary {
-    transition: all 0.15s ease-in-out;
-}
-
-.btn-outline-secondary:hover {
-    transform: translateY(-1px);
-}
-</style>
 {% endblock %}

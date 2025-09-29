@@ -1,0 +1,375 @@
+{% load static %}
+
+<!-- Compact Filter Component -->
+<div class="compact-filter-component">
+    <div class="filter-toggle-header" onclick="toggleFilters()">
+        <div class="filter-title">
+            <i class="fas fa-filter me-2"></i>
+            <span>فلاتر البحث</span>
+            {% if has_active_filters %}
+                <span class="active-filters-count">{{ active_filters_count }}</span>
+            {% endif %}
+        </div>
+        <div class="filter-actions">
+            {% if has_active_filters %}
+                <button type="button" class="btn btn-sm btn-outline-danger me-2" onclick="clearAllFilters(event)">
+                    <i class="fas fa-times me-1"></i>
+                    مسح الكل
+                </button>
+            {% endif %}
+            <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+    </div>
+    
+    <div class="filter-content" id="filterContent" style="display: {% if has_active_filters %}block{% else %}none{% endif %};">
+        <form method="get" id="filterForm" class="compact-filter-form">
+            <!-- Monthly Filter Row -->
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">السنة</label>
+                    <select name="year" class="filter-select">
+                        <option value="">كل السنوات</option>
+                        {% for year in available_years %}
+                            <option value="{{ year }}" {% if selected_year == year|stringformat:'s' %}selected{% endif %}>
+                                {{ year }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">الشهر</label>
+                    <select name="month" class="filter-select">
+                        <option value="">كل الشهور</option>
+                        <option value="1" {% if selected_month == '1' %}selected{% endif %}>يناير</option>
+                        <option value="2" {% if selected_month == '2' %}selected{% endif %}>فبراير</option>
+                        <option value="3" {% if selected_month == '3' %}selected{% endif %}>مارس</option>
+                        <option value="4" {% if selected_month == '4' %}selected{% endif %}>أبريل</option>
+                        <option value="5" {% if selected_month == '5' %}selected{% endif %}>مايو</option>
+                        <option value="6" {% if selected_month == '6' %}selected{% endif %}>يونيو</option>
+                        <option value="7" {% if selected_month == '7' %}selected{% endif %}>يوليو</option>
+                        <option value="8" {% if selected_month == '8' %}selected{% endif %}>أغسطس</option>
+                        <option value="9" {% if selected_month == '9' %}selected{% endif %}>سبتمبر</option>
+                        <option value="10" {% if selected_month == '10' %}selected{% endif %}>أكتوبر</option>
+                        <option value="11" {% if selected_month == '11' %}selected{% endif %}>نوفمبر</option>
+                        <option value="12" {% if selected_month == '12' %}selected{% endif %}>ديسمبر</option>
+                    </select>
+                </div>
+
+                <div class="filter-group search-group">
+                    <label class="filter-label">البحث</label>
+                    <input type="text" name="search" class="filter-input" placeholder="البحث في جميع الحقول..." value="{{ search_query }}" title="البحث في: رقم الطلب، العميل، الهاتف، العنوان، المكان، البائع، رقم العقد، رقم الفاتورة">
+                </div>
+
+                <div class="filter-group">
+                    <button type="submit" class="search-btn-main">
+                        <i class="fas fa-search me-1"></i>
+                        بحث
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Additional Filters Row -->
+            <div class="filter-row">
+                {% block additional_filters %}
+                <!-- يتم إضافة فلاتر إضافية هنا حسب الصفحة -->
+                {% endblock %}
+                
+                <div class="filter-group">
+                    <label class="filter-label">عدد النتائج</label>
+                    <select name="page_size" class="filter-select">
+                        <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
+                        <option value="25" {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>25</option>
+                        <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
+                        <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Active Filters Display -->
+            {% if has_active_filters %}
+            <div class="active-filters-display">
+                <span class="active-filters-label">الفلاتر النشطة:</span>
+                {% if selected_year %}
+                    <span class="filter-tag">
+                        سنة {{ selected_year }}
+                        <button type="button" onclick="removeFilter('year')" class="remove-filter">×</button>
+                    </span>
+                {% endif %}
+                {% if selected_month %}
+                    <span class="filter-tag">
+                        شهر {{ selected_month }}
+                        <button type="button" onclick="removeFilter('month')" class="remove-filter">×</button>
+                    </span>
+                {% endif %}
+                {% if search_query %}
+                    <span class="filter-tag">
+                        بحث: "{{ search_query }}"
+                        <button type="button" onclick="removeFilter('search')" class="remove-filter">×</button>
+                    </span>
+                {% endif %}
+                {% block active_filter_tags %}
+                <!-- يتم إضافة تاجات الفلاتر النشطة هنا -->
+                {% endblock %}
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<style>
+.compact-filter-component {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.filter-toggle-header {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    transition: background-color 0.2s ease;
+}
+
+.filter-toggle-header:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+
+.filter-title {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.active-filters-count {
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+.filter-actions {
+    display: flex;
+    align-items: center;
+}
+
+.toggle-icon {
+    transition: transform 0.3s ease;
+    color: #6c757d;
+}
+
+.filter-content.expanded .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.filter-content {
+    border-top: 1px solid #dee2e6;
+    padding: 1rem;
+    background: white;
+}
+
+.compact-filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    min-width: fit-content;
+    flex: 0 0 auto;
+}
+
+.search-group {
+    min-width: 150px;
+    flex: 1 1 auto;
+}
+
+.filter-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+.filter-select, .filter-input {
+    padding: 0.375rem 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    min-width: 80px;
+    width: auto;
+}
+
+.filter-select:focus, .filter-input:focus {
+    border-color: #007bff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.search-input-group {
+    display: flex;
+}
+
+.search-input-group .filter-input {
+    border-radius: 4px 0 0 4px;
+    border-right: none;
+}
+
+.search-btn {
+    background: #007bff;
+    color: white;
+    border: 1px solid #007bff;
+    border-radius: 0 4px 4px 0;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.search-btn:hover {
+    background: #0056b3;
+}
+
+.search-btn-main {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+    min-width: 100px;
+}
+
+.search-btn-main:hover {
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
+}
+
+.active-filters-display {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.active-filters-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.filter-tag {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.remove-filter {
+    background: none;
+    border: none;
+    color: #1976d2;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remove-filter:hover {
+    background: rgba(25, 118, 210, 0.1);
+}
+
+@media (max-width: 768px) {
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .search-group {
+        min-width: auto;
+    }
+    
+    .filter-toggle-header {
+        padding: 0.5rem;
+    }
+    
+    .filter-content {
+        padding: 0.75rem;
+    }
+}
+</style>
+
+<script>
+function toggleFilters() {
+    const content = document.getElementById('filterContent');
+    const icon = document.querySelector('.toggle-icon');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        content.style.display = 'none';
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+
+// تم إزالة التطبيق التلقائي - الآن يتم التطبيق فقط عند الضغط على زر البحث
+
+function clearAllFilters(event) {
+    event.stopPropagation();
+    const form = document.getElementById('filterForm');
+    const inputs = form.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        if (input.name !== 'page_size') {
+            input.value = '';
+        }
+    });
+    form.submit();
+}
+
+function removeFilter(filterName) {
+    const form = document.getElementById('filterForm');
+    const input = form.querySelector(`[name="${filterName}"]`);
+    if (input) {
+        input.value = '';
+        form.submit();
+    }
+}
+</script>

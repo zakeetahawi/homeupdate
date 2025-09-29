@@ -158,8 +158,10 @@ class InspectionReport(models.Model):
 
 class Inspection(models.Model):
     STATUS_CHOICES = [
+        ('not_scheduled', _('غير مجدولة')),
         ('pending', _('قيد الانتظار')),
         ('scheduled', _('مجدول')),
+        ('in_progress', _('قيد التنفيذ')),
         ('completed', _('مكتملة')),
         ('cancelled', _('ملغية')),
         ('postponed_by_customer', _('مؤجل من طرف العميل')),
@@ -218,7 +220,7 @@ class Inspection(models.Model):
     google_drive_file_name = models.CharField(_('اسم الملف في Google Drive'), max_length=500, blank=True, null=True)
     is_uploaded_to_drive = models.BooleanField(_('تم الرفع إلى Google Drive'), default=False)
     request_date = models.DateField(_('تاريخ طلب المعاينة'), default=timezone.now, editable=True)
-    scheduled_date = models.DateField(_('تاريخ تنفيذ المعاينة'), default=timezone.now, editable=True)
+    scheduled_date = models.DateField(_('تاريخ تنفيذ المعاينة'), blank=True, null=True, editable=True)
     scheduled_time = models.TimeField(_('وقت تنفيذ المعاينة'), blank=True, null=True)
 
     # حالة المديونية
@@ -458,16 +460,30 @@ class Inspection(models.Model):
     def calculate_expected_delivery_date(self):
         """حساب تاريخ التسليم المتوقع للمعاينة"""
         from orders.models import DeliveryTimeSettings
-        
+
         if not self.request_date:
             return None
-        
+
+        # تحديد نوع الطلب بناءً على الطلب المرتبط
+        order_type = 'normal'  # افتراضي
+        if self.order and hasattr(self.order, 'status'):
+            if self.order.status == 'vip':
+                order_type = 'vip'
+
         # الحصول على عدد الأيام من إعدادات المعاينة
-        delivery_days = DeliveryTimeSettings.get_delivery_days('inspection')
-        
+        delivery_days = DeliveryTimeSettings.get_delivery_days(
+            service_type='inspection',
+            order_type=order_type
+        )
+
         # حساب التاريخ المتوقع
         expected_date = self.request_date + timedelta(days=delivery_days)
         return expected_date
+
+    def recalculate_expected_delivery_date(self):
+        """إعادة حساب تاريخ التسليم المتوقع وحفظه"""
+        self.expected_delivery_date = self.calculate_expected_delivery_date()
+        self.save(update_fields=['expected_delivery_date'])
 
     def upload_to_google_drive_async(self):
         """رفع الملف إلى Google Drive بشكل تلقائي"""

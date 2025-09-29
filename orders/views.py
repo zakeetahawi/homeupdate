@@ -52,7 +52,10 @@ class OrdersDashboardView(LoginRequiredMixin, TemplateView):
 def order_list(request):
     """
     View for displaying the list of orders with search and filtering
+    مع إضافة الفلترة الشهرية
     """
+    from core.monthly_filter_utils import apply_monthly_filter, get_available_years
+
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('order_status', '')
     status_param = request.GET.get('status', '')
@@ -80,7 +83,8 @@ def order_list(request):
     else:
         orders = get_user_orders_queryset(request.user).select_related('customer', 'salesperson')
 
-    # تم إلغاء الفلترة الافتراضية
+    # تطبيق الفلترة الشهرية
+    orders, monthly_filter_context = apply_monthly_filter(orders, request, 'order_date')
     
     # الحصول على معاملات السنة للعرض
     selected_years = request.GET.getlist('years')
@@ -153,11 +157,32 @@ def order_list(request):
     if show_branch_filter:
         branches = Branch.objects.filter(is_active=True)
 
+    # حساب الفلاتر النشطة للفلتر المضغوط
+    active_filters = []
+    if search_query:
+        active_filters.append('search')
+    if status_filter:
+        active_filters.append('status')
+    if status_param:
+        active_filters.append('customer_status')
+    if order_type_filter:
+        active_filters.append('order_type')
+    if branch_filter:
+        active_filters.append('branch')
+    if date_from:
+        active_filters.append('date_from')
+    if date_to:
+        active_filters.append('date_to')
+    if monthly_filter_context.get('selected_year'):
+        active_filters.append('year')
+    if monthly_filter_context.get('selected_month'):
+        active_filters.append('month')
+
     context = {
         'page_obj': page_obj,
-    'search_query': search_query,
-    'status_filter': status_filter,
-    'status_param': status_param,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'status_param': status_param,
         'order_type_filter': order_type_filter,
         'year_filter': year_filter,
         'selected_years': selected_years,
@@ -171,6 +196,11 @@ def order_list(request):
         'branch_filter': branch_filter,
         'date_from': date_from,
         'date_to': date_to,
+        # سياق الفلتر المضغوط
+        'has_active_filters': len(active_filters) > 0,
+        'active_filters_count': len(active_filters),
+        # إضافة سياق الفلترة الشهرية
+        **monthly_filter_context,
     }
 
     return render(request, 'orders/order_list.html', context)

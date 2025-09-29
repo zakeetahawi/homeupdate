@@ -151,7 +151,7 @@ def get_order_type_badge(order_type, order=None):
     type_texts = {
         'installation': 'تركيب',
         'tailoring': 'تسليم',
-        'accessory': 'إكسسوارات',
+        'accessory': 'إكسسوار',
         'inspection': 'معاينة',
     }
     
@@ -188,7 +188,7 @@ def get_order_type_text(order_type, is_vip=False):
     type_texts = {
         'installation': 'تركيب',
         'tailoring': 'تسليم',
-        'accessory': 'إكسسوارات',
+        'accessory': 'إكسسوار',
         'inspection': 'معاينة',
     }
     
@@ -296,6 +296,18 @@ def get_vip_badge():
     return mark_safe(html)
 
 @register.simple_tag
+def get_normal_badge():
+    """
+    إنشاء badge للطلبات العادية
+    """
+    html = '''
+    <span class="unified-badge status-normal normal-badge" title="طلب عادي">
+        <i class="fas fa-user me-1"></i>عادي
+    </span>
+    '''
+    return mark_safe(html)
+
+@register.simple_tag
 def get_urgent_badge():
     """
     إنشاء badge للطلبات العاجلة
@@ -305,4 +317,4 @@ def get_urgent_badge():
         <i class="fas fa-exclamation-triangle me-1"></i>عاجل
     </span>
     '''
-    return mark_safe(html) 
+    return mark_safe(html)

@@ -96,12 +96,17 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
             return 25
     
     def get_queryset(self):
+        from core.monthly_filter_utils import apply_monthly_filter
+
         # Optimize the query by selecting related fields that exist
         queryset = ManufacturingOrder.objects.select_related(
             'order',  # This is the only direct foreign key in the model
             'order__customer',  # Access customer through order
             'production_line'  # Production line information
         ).order_by('expected_delivery_date', 'order_date')
+
+        # تطبيق الفلترة الشهرية (بناءً على تاريخ الطلب)
+        queryset, self.monthly_filter_context = apply_monthly_filter(queryset, self.request, 'order_date')
 
         # تطبيق إعدادات العرض للمستخدم الحالي
         queryset = self.apply_display_settings_filter(queryset)
@@ -320,6 +325,8 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
         return False
 
     def get_context_data(self, **kwargs):
+        from core.monthly_filter_utils import get_available_years
+
         context = super().get_context_data(**kwargs)
         from django.db.models import Count, Q
         from django.contrib.auth import get_user_model
@@ -436,6 +443,42 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
         context['branch_filters_display'] = [branch_map.get(bid, bid) for bid in context.get('branch_filters', [])]
         context['order_type_filters_display'] = [order_types_map.get(code, code) for code in context.get('order_type_filters', [])]
         context['search_columns_display'] = [column_labels.get(col, col) for col in context.get('search_columns', [])]
+
+        # إضافة السنوات المتاحة والسياق الشهري (بناءً على تاريخ الطلب)
+        context['available_years'] = get_available_years(ManufacturingOrder, 'order_date')
+        if hasattr(self, 'monthly_filter_context'):
+            context.update(self.monthly_filter_context)
+
+        # حساب الفلاتر النشطة للفلتر المضغوط
+        active_filters = []
+        if context.get('search_query'):
+            active_filters.append('search')
+        if context.get('status_filters'):
+            active_filters.append('status')
+        if context.get('production_line_filters'):
+            active_filters.append('production_line')
+        if context.get('priority_filters'):
+            active_filters.append('priority')
+        if context.get('date_from'):
+            active_filters.append('date_from')
+        if context.get('date_to'):
+            active_filters.append('date_to')
+        if hasattr(self, 'monthly_filter_context') and self.monthly_filter_context.get('selected_year'):
+            active_filters.append('year')
+        if hasattr(self, 'monthly_filter_context') and self.monthly_filter_context.get('selected_month'):
+            active_filters.append('month')
+
+        # الحصول على البيانات المطلوبة للفلاتر
+        from manufacturing.models import ProductionLine
+        production_lines = ProductionLine.objects.filter(is_active=True)
+
+        # سياق الفلتر المضغوط
+        context['has_active_filters'] = len(active_filters) > 0
+        context['active_filters_count'] = len(active_filters)
+        context['production_lines'] = production_lines
+        context['status_filter'] = context.get('status_filters', [])
+        context['production_line_filter'] = context.get('production_line_filters', [])
+        context['priority_filter'] = context.get('priority_filters', [])
 
         return context
     

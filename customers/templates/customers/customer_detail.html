@@ -575,39 +575,54 @@
                                     </td>
                                     <td style="white-space: nowrap; max-width: 100px; text-align: center;">{{ order.order_date|date:"Y-m-d" }}</td>
                                     <td style="white-space: nowrap; max-width: 140px; text-align: center;">
-                                        {% if order.order_type == 'product' %}
-                                            <span class="badge bg-primary">منتج</span>
-                                        {% elif order.order_type == 'service' %}
-                                            <span class="badge bg-info">خدمة</span>
-                                            {% for service_type in order.service_types %}
-                                                {% if service_type == 'installation' %}
-                                                    <span class="badge bg-secondary">تركيب</span>
-                                                {% elif service_type == 'inspection' %}
-                                                    <span class="badge bg-warning">معاينة</span>
-                                                {% elif service_type == 'transport' %}
-                                                    <span class="badge bg-dark">نقل</span>
-                                                {% elif service_type == 'tailoring' %}
-                                                    <span class="badge bg-success">تسليم</span>
+                                        {% with types_list=order.get_selected_types_list %}
+                                            {% if types_list %}
+                                                {% for selected_type in types_list %}
+                                                    {% if selected_type == 'fabric' %}
+                                                        <span class="badge bg-primary">
+                                                            <i class="fas fa-cut me-1"></i>قماش
+                                                        </span>
+                                                    {% elif selected_type == 'accessory' %}
+                                                        <span class="badge bg-info">
+                                                            <i class="fas fa-gem me-1"></i>إكسسوار
+                                                        </span>
+                                                    {% elif selected_type == 'installation' %}
+                                                        <span class="badge bg-warning">
+                                                            <i class="fas fa-tools me-1"></i>تركيب
+                                                        </span>
+                                                    {% elif selected_type == 'inspection' %}
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-eye me-1"></i>معاينة
+                                                        </span>
+                                                    {% elif selected_type == 'transport' %}
+                                                        <span class="badge bg-dark">
+                                                            <i class="fas fa-truck me-1"></i>نقل
+                                                        </span>
+                                                    {% elif selected_type == 'tailoring' %}
+                                                        <span class="badge bg-primary">
+                                                            <i class="fas fa-cut me-1"></i>تسليم
+                                                        </span>
+                                                    {% elif selected_type == 'products' %}
+                                                        <span class="badge bg-secondary">
+                                                            <i class="fas fa-box me-1"></i>منتجات
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">{{ selected_type }}</span>
+                                                    {% endif %}
+                                                    {% if not forloop.last %}<br>{% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <!-- Fallback للطلبات القديمة -->
+                                                {% if order.order_type == 'product' %}
+                                                    <span class="badge bg-primary">منتج</span>
+                                                {% elif order.order_type == 'service' %}
+                                                    <span class="badge bg-info">خدمة</span>
+                                                {% else %}
+                                                    <span class="badge bg-light text-dark">غير محدد</span>
                                                 {% endif %}
-                                            {% endfor %}
-                                        {% else %}
-                                            <span class="badge bg-secondary">طلب</span>
-                                            {% for selected_type in order.selected_types %}
-                                                {% if selected_type == 'fabric' %}
-                                                    <span class="badge bg-primary">قماش</span>
-                                                {% elif selected_type == 'accessory' %}
-                                                    <span class="badge bg-info">إكسسوار</span>
-                                                {% elif selected_type == 'installation' %}
-                                                    <span class="badge bg-secondary">تركيب</span>
-                                                {% elif selected_type == 'inspection' %}
-                                                    <span class="badge bg-warning">معاينة</span>
-                                                {% elif selected_type == 'transport' %}
-                                                    <span class="badge bg-dark">نقل</span>
-                                                {% elif selected_type == 'tailoring' %}
-                                                    <span class="badge bg-success">تسليم</span>
-                                                {% endif %}
-                                            {% endfor %}
-                                        {% endif %}
+                                            {% endif %}
+                                        {% endwith %}
+
                                     </td>
                                     <td style="white-space: nowrap; max-width: 140px; text-align: center;">
                                         <span class="badge {{ order.get_display_status_badge_class }}" style="font-size: 0.95em; padding: 0.35em 0.7em;">

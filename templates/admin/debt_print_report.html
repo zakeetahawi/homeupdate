@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تقرير المديونيات</title>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; }
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            background: white;
+            color: #333;
+            line-height: 1.4;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .header .subtitle {
+            color: #7f8c8d;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        
+        .report-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .report-info div {
+            text-align: center;
+        }
+        
+        .report-info .label {
+            font-weight: bold;
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card.danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .stat-card.success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+        
+        .stat-card.warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+        
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .stat-card p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .debts-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .debts-table th {
+            background: #2c3e50;
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .debts-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #ecf0f1;
+            text-align: center;
+            font-size: 11px;
+        }
+        
+        .debts-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .debts-table tr:hover {
+            background: #e8f4fd;
+        }
+        
+        .status-paid {
+            background: #27ae60;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .status-unpaid {
+            background: #e74c3c;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .status-overdue {
+            background: #f39c12;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .amount {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 12px;
+            border-top: 1px solid #ecf0f1;
+            padding-top: 15px;
+        }
+        
+        .print-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .print-btn:hover {
+            background: #2980b9;
+        }
+        
+        @page {
+            margin: 1cm;
+            size: A4;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button class="print-btn" onclick="window.print()">
+            🖨️ طباعة التقرير
+        </button>
+    </div>
+
+    <div class="header">
+        <h1>تقرير المديونيات</h1>
+        <div class="subtitle">نظام إدارة الخواجة</div>
+    </div>
+
+    <div class="report-info">
+        <div>
+            <span class="label">تاريخ التقرير</span>
+            {{ report_date|date:"d/m/Y H:i" }}
+        </div>
+        <div>
+            <span class="label">تم الإنشاء بواسطة</span>
+            {{ generated_by }}
+        </div>
+        <div>
+            <span class="label">عدد السجلات</span>
+            {{ debts|length }}
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>{{ stats.total_debts }}</h3>
+            <p>إجمالي المديونيات</p>
+        </div>
+        
+        <div class="stat-card danger">
+            <h3>{{ stats.total_amount|floatformat:2 }}</h3>
+            <p>إجمالي المبلغ (ج.م)</p>
+        </div>
+        
+        <div class="stat-card success">
+            <h3>{{ stats.paid_debts }}</h3>
+            <p>مديونيات مدفوعة</p>
+        </div>
+        
+        <div class="stat-card warning">
+            <h3>{{ stats.unpaid_debts }}</h3>
+            <p>مديونيات غير مدفوعة</p>
+        </div>
+        
+        <div class="stat-card danger">
+            <h3>{{ stats.overdue_debts }}</h3>
+            <p>مديونيات متأخرة</p>
+        </div>
+    </div>
+
+    <table class="debts-table">
+        <thead>
+            <tr>
+                <th>العميل</th>
+                <th>الهاتف</th>
+                <th>رقم الطلب</th>
+                <th>الفرع</th>
+                <th>البائع</th>
+                <th>المبلغ</th>
+                <th>الحالة</th>
+                <th>تاريخ الإنشاء</th>
+                <th>تاريخ الدفع</th>
+                <th>أيام التأخير</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for debt in debts %}
+            <tr>
+                <td>{{ debt.customer.name }}</td>
+                <td>{{ debt.customer.phone|default:"لا يوجد" }}</td>
+                <td>{{ debt.order.order_number }}</td>
+                <td>
+                    {% if debt.order.customer.branch %}
+                        {{ debt.order.customer.branch.name }}
+                    {% else %}
+                        غير محدد
+                    {% endif %}
+                </td>
+                <td>
+                    {% if debt.order.salesperson %}
+                        {{ debt.order.salesperson.name }}
+                    {% else %}
+                        غير محدد
+                    {% endif %}
+                </td>
+                <td class="amount">{{ debt.debt_amount|floatformat:2 }} ج.م</td>
+                <td>
+                    {% if debt.is_paid %}
+                        <span class="status-paid">مدفوع</span>
+                    {% else %}
+                        {% with days_overdue=debt.created_at|timesince %}
+                            {% if "30" in days_overdue or "month" in days_overdue or "year" in days_overdue %}
+                                <span class="status-overdue">متأخر</span>
+                            {% else %}
+                                <span class="status-unpaid">غير مدفوع</span>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                </td>
+                <td>{{ debt.created_at|date:"d/m/Y" }}</td>
+                <td>
+                    {% if debt.payment_date %}
+                        {{ debt.payment_date|date:"d/m/Y" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if not debt.is_paid %}
+                        {% with days_diff=debt.created_at|timesince %}
+                            {{ days_diff|truncatewords:2 }}
+                        {% endwith %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="10" style="text-align: center; padding: 20px; color: #7f8c8d;">
+                    لا توجد مديونيات للعرض
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>تم إنشاء هذا التقرير تلقائياً من نظام إدارة الخواجة</p>
+        <p>{{ report_date|date:"d/m/Y H:i" }} - {{ generated_by }}</p>
+    </div>
+
+    <script>
+        // طباعة تلقائية عند فتح الصفحة (اختياري)
+        // window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>
