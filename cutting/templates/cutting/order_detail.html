@@ -60,6 +60,22 @@
                     <i class="fas fa-cut"></i>
                     أمر التقطيع: {{ cutting_order.cutting_code }}
                 </h1>
+
+                <!-- نوع الطلب والوجهة -->
+                <div class="mb-3">
+                    {% with selected_types=cutting_order.order.get_selected_types_list %}
+                        {% if 'installation' in selected_types or 'tailoring' in selected_types %}
+                            <span class="badge bg-warning text-dark me-2" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                                <i class="fas fa-industry me-1"></i>تسليم المصنع - ستائر
+                            </span>
+                        {% elif 'products' in selected_types or 'accessory' in selected_types %}
+                            <span class="badge bg-info text-white me-2" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                                <i class="fas fa-store me-1"></i>تسليم الفرع
+                            </span>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+
                 <div class="row">
                     <div class="col-md-6">
                         <p class="mb-1">
@@ -77,6 +93,12 @@
                                 {{ cutting_order.order.invoice_number|default:"غير محدد" }}
                             </span>
                         </p>
+                        {% if cutting_order.order.customer.branch %}
+                        <p class="mb-1">
+                            <i class="fas fa-map-marker-alt"></i>
+                            الفرع: {{ cutting_order.order.customer.branch.name }}
+                        </p>
+                        {% endif %}
                     </div>
                     <div class="col-md-6">
                         <p class="mb-1">
@@ -87,6 +109,12 @@
                             <i class="fas fa-calendar"></i>
                             تاريخ الإنشاء: {{ cutting_order.created_at|date:"d/m/Y H:i" }}
                         </p>
+                        {% if cutting_order.order.salesperson %}
+                        <p class="mb-1">
+                            <i class="fas fa-user-tie"></i>
+                            البائع: {{ cutting_order.order.salesperson.name }}
+                        </p>
+                        {% endif %}
                     </div>
                 </div>
             </div>

@@ -692,60 +692,163 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # الحصول على عناصر الطلب الأساسي مع بيانات التقطيع
+        # الحصول على إعدادات التصنيع
+        from manufacturing.models import ManufacturingSettings
+        settings = ManufacturingSettings.get_settings()
+
+        # الحصول على المستودعات المحددة للعرض
+        display_warehouses = list(settings.warehouses_for_display.all())
+        meters_warehouses = list(settings.warehouses_for_meters_calculation.all())
+
+        # إذا كانت القوائم فارغة، نستخدم None للدلالة على "الكل"
+        display_warehouses = display_warehouses if display_warehouses else None
+        meters_warehouses = meters_warehouses if meters_warehouses else None
+
+        context['display_warehouses'] = display_warehouses
+        context['meters_warehouses'] = meters_warehouses
+        context['has_warehouse_filter'] = display_warehouses is not None
+
+        # الحصول على جميع عناصر الطلب الأصلي
         if self.object.order:
-            order_items = self.object.order.items.all()
+            order_items = self.object.order.items.select_related('product').all()
 
             # إنشاء قاموس لبيانات التقطيع والاستلام
             items_data = []
+            total_meters = 0  # لحساب إجمالي الأمتار من المستودعات المحددة
 
-            for item in order_items:
-                # البحث عن عنصر التقطيع المرتبط
-                cutting_item = None
-                cutting_orders = self.object.order.cutting_orders.all()
+            for order_item in order_items:
+                # البحث عن عنصر التصنيع المرتبط بهذا العنصر
+                mfg_item = self.object.items.filter(order_item=order_item).first()
 
-                for cutting_order in cutting_orders:
-                    cutting_item = cutting_order.items.filter(order_item=item).first()
-                    if cutting_item:
-                        break
+                # البحث عن عناصر التقطيع المرتبطة بهذا العنصر
+                cutting_items = order_item.cutting_items.all()
 
-                # البحث عن بيانات الاستلام
-                # أولاً: البحث في FabricReceiptItem
-                fabric_receipt_item = FabricReceiptItem.objects.filter(
-                    order_item=item,
-                    fabric_receipt__manufacturing_order=self.object
-                ).first()
+                if mfg_item:
+                    # العنصر له manufacturing item
+                    cutting_item = mfg_item.cutting_item
+                    warehouse = cutting_item.cutting_order.warehouse if cutting_item and cutting_item.cutting_order else None
 
-                fabric_receipt = fabric_receipt_item.fabric_receipt if fabric_receipt_item else None
+                    # التحقق من أن المستودع ضمن المستودعات المحددة للعرض
+                    should_display = True
+                    if display_warehouses:
+                        should_display = warehouse and warehouse in display_warehouses
 
-                # إذا لم نجد في FabricReceiptItem، نبحث مباشرة في FabricReceipt
-                if not fabric_receipt:
-                    fabric_receipt = self.object.fabric_receipts.first()  # أخذ أول استلام مرتبط بأمر التصنيع
+                    if should_display:
+                        item_data = {
+                            'manufacturing_item': mfg_item,
+                            'order_item': order_item,
+                            'cutting_receiver_name': mfg_item.receiver_name or (cutting_item.receiver_name if cutting_item else None),
+                            'cutting_permit_number': mfg_item.permit_number or (cutting_item.permit_number if cutting_item else None),
+                            'cutting_date': mfg_item.cutting_date or (cutting_item.cutting_date if cutting_item else None),
+                            'cutting_status': mfg_item.cutting_status_display,
+                            'cutting_status_color': mfg_item.get_cutting_status_color(),
+                            'has_cutting_data': mfg_item.has_cutting_data,
+                            'is_cut': mfg_item.is_cut,
+                            'warehouse_name': warehouse.name if warehouse else None,
+                            'warehouse': warehouse,
+                            'fabric_received': mfg_item.fabric_received,
+                            'bag_number': mfg_item.bag_number,
+                            'fabric_received_date': mfg_item.fabric_received_date,
+                            'fabric_receiver_name': mfg_item.fabric_received_by.get_full_name() if mfg_item.fabric_received_by else None,
+                            'fabric_status': mfg_item.get_fabric_status_display(),
+                            'fabric_status_color': mfg_item.get_fabric_status_color(),
+                        }
 
-                # إنشاء كائن بيانات العنصر
-                item_data = {
-                    'order_item': item,
-                    'cutting_receiver_name': cutting_item.receiver_name if cutting_item else None,
-                    'cutting_permit_number': cutting_item.permit_number if cutting_item else None,
-                    'cutting_date': cutting_item.cutting_date if cutting_item else None,
-                    'cutting_status': cutting_item.status if cutting_item else None,
-                    'has_cutting_data': cutting_item is not None,
-                    'warehouse_name': cutting_item.cutting_order.warehouse.name if cutting_item else None,
-                    'fabric_received': fabric_receipt is not None,  # تغيير هنا: إذا وجد استلام فهو مستلم
-                    'bag_number': fabric_receipt.bag_number if fabric_receipt else None,
-                    'fabric_received_date': fabric_receipt.receipt_date if fabric_receipt else None,
-                    'fabric_receiver_name': fabric_receipt.received_by_name if fabric_receipt else None,
-                }
-                items_data.append(item_data)
+                        items_data.append(item_data)
+
+                        # حساب الأمتار
+                        should_count = True
+                        if meters_warehouses:
+                            should_count = warehouse and warehouse in meters_warehouses
+
+                        if should_count:
+                            total_meters += order_item.quantity
+
+                elif cutting_items.exists():
+                    # العنصر تم تقطيعه لكن لا يوجد manufacturing item
+                    for cutting_item in cutting_items:
+                        warehouse = cutting_item.cutting_order.warehouse if cutting_item.cutting_order else None
+
+                        # التحقق من الفلترة
+                        should_display = True
+                        if display_warehouses:
+                            should_display = warehouse and warehouse in display_warehouses
+
+                        if should_display:
+                            item_data = {
+                                'manufacturing_item': None,
+                                'order_item': order_item,
+                                'cutting_receiver_name': cutting_item.receiver_name,
+                                'cutting_permit_number': cutting_item.permit_number,
+                                'cutting_date': cutting_item.cutting_date,
+                                'cutting_status': cutting_item.get_status_display(),
+                                'cutting_status_color': 'success' if cutting_item.status == 'completed' else 'warning',
+                                'has_cutting_data': True,
+                                'is_cut': cutting_item.status == 'completed',
+                                'warehouse_name': warehouse.name if warehouse else None,
+                                'warehouse': warehouse,
+                                'fabric_received': False,
+                                'bag_number': None,
+                                'fabric_received_date': None,
+                                'fabric_receiver_name': None,
+                                'fabric_status': 'لم يتم الاستلام',
+                                'fabric_status_color': 'warning',
+                            }
+
+                            items_data.append(item_data)
+
+                            # حساب الأمتار
+                            should_count = True
+                            if meters_warehouses:
+                                should_count = warehouse and warehouse in meters_warehouses
+
+                            if should_count:
+                                total_meters += order_item.quantity
+                else:
+                    # العنصر لم يتم تقطيعه بعد - نعرضه دائماً
+                    item_data = {
+                        'manufacturing_item': None,
+                        'order_item': order_item,
+                        'cutting_receiver_name': None,
+                        'cutting_permit_number': None,
+                        'cutting_date': None,
+                        'cutting_status': 'لم يتم التقطيع',
+                        'cutting_status_color': 'secondary',
+                        'has_cutting_data': False,
+                        'is_cut': False,
+                        'warehouse_name': None,
+                        'warehouse': None,
+                        'fabric_received': False,
+                        'bag_number': None,
+                        'fabric_received_date': None,
+                        'fabric_receiver_name': None,
+                        'fabric_status': 'لم يتم التقطيع',
+                        'fabric_status_color': 'secondary',
+                    }
+
+                    items_data.append(item_data)
 
             context['items_data'] = items_data
 
-            # حساب إجمالي الكمية من عناصر الطلب الأساسي
-            total_quantity = sum(item.quantity for item in order_items)
-            context['total_quantity'] = total_quantity
+            # حساب إجمالي الكمية من المستودعات المحددة فقط
+            context['total_quantity'] = total_meters
+
+            # حساب إجمالي الكمية من جميع عناصر الطلب (للمقارنة)
+            context['all_items_quantity'] = sum(item.quantity for item in order_items)
+
+            # إضافة إحصائيات العناصر
+            context['total_items'] = len(items_data)
+            context['cut_items'] = sum(1 for item in items_data if item['is_cut'])
+            context['received_items'] = sum(1 for item in items_data if item['fabric_received'])
+            context['pending_items'] = context['total_items'] - context['received_items']
         else:
-            context['order_items'] = []
+            context['items_data'] = []
             context['total_quantity'] = 0
+            context['all_items_quantity'] = 0
+            context['total_items'] = 0
+            context['cut_items'] = 0
+            context['received_items'] = 0
+            context['pending_items'] = 0
 
         return context
 
@@ -2263,39 +2366,7 @@ class OverdueOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRe
         return context
 
 
-# نظام استلام الأقمشة في المصنع
-class FabricReceiptView(LoginRequiredMixin, TemplateView):
-    """صفحة استلام الأقمشة في المصنع"""
-    template_name = 'manufacturing/fabric_receipt.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        # الحصول على أوامر التصنيع التي لها عناصر جاهزة للاستلام
-        manufacturing_orders = ManufacturingOrder.objects.filter(
-            items__receiver_name__isnull=False,
-            items__permit_number__isnull=False,
-            items__fabric_received=False
-        ).select_related(
-            'order', 'order__customer'
-        ).prefetch_related(
-            'items'
-        ).distinct().order_by('-order_date')
-
-        # فلترة حسب البحث
-        search = self.request.GET.get('search')
-        if search:
-            manufacturing_orders = manufacturing_orders.filter(
-                Q(order__contract_number__icontains=search) |
-                Q(order__customer__name__icontains=search)
-            )
-
-        context.update({
-            'manufacturing_orders': manufacturing_orders,
-            'search_query': search or '',
-        })
-
-        return context
+# نظام استلام الأقمشة في المصنع - تم نقله للأسفل
 
 
 @login_required
@@ -2306,14 +2377,37 @@ def receive_fabric_item(request, item_id):
             item = get_object_or_404(ManufacturingOrderItem, pk=item_id)
 
             data = json.loads(request.body)
+
+            # طباعة البيانات المستلمة للتشخيص
+            print(f"DEBUG - Received data: {data}")
+
             bag_number = data.get('bag_number', '').strip()
+            use_previous_bag = data.get('use_previous_bag', False)
             notes = data.get('notes', '').strip()
 
-            if not bag_number:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'رقم الشنطة مطلوب'
-                })
+            print(f"DEBUG - bag_number: '{bag_number}'")
+            print(f"DEBUG - use_previous_bag: {use_previous_bag}")
+
+            # إذا كان المستخدم يريد استخدام شنطة سابقة
+            if use_previous_bag:
+                previous_bag_number = data.get('previous_bag_number', '').strip()
+                print(f"DEBUG - previous_bag_number: '{previous_bag_number}'")
+                if not previous_bag_number:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'يجب اختيار رقم الشنطة السابقة'
+                    })
+                bag_number = previous_bag_number
+            else:
+                # استخدام رقم الشنطة المُرسل (المُولد تلقائياً)
+                if not bag_number:
+                    print(f"DEBUG - bag_number is empty!")
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'رقم الشنطة مطلوب'
+                    })
+
+            print(f"DEBUG - Final bag_number before save: '{bag_number}'")
 
             # تعيين العنصر كمستلم
             item.mark_fabric_received(
@@ -2322,18 +2416,45 @@ def receive_fabric_item(request, item_id):
                 notes=notes
             )
 
+            # التحقق من الحفظ
+            item.refresh_from_db()
+            print(f"DEBUG - bag_number after save: '{item.bag_number}'")
+
             return JsonResponse({
                 'success': True,
-                'message': 'تم استلام القماش بنجاح'
+                'message': f'تم استلام القماش بنجاح - رقم الشنطة: {bag_number}',
+                'bag_number': bag_number
             })
 
         except Exception as e:
+            import traceback
+            print(f"DEBUG - Exception: {str(e)}")
+            print(f"DEBUG - Traceback: {traceback.format_exc()}")
             return JsonResponse({
                 'success': False,
                 'message': f'حدث خطأ: {str(e)}'
             })
 
     return JsonResponse({'success': False, 'message': 'طريقة غير مدعومة'})
+
+
+@login_required
+def get_bag_number_data(request):
+    """الحصول على رقم الشنطة التالي وقائمة الأرقام المتاحة لإعادة الاستخدام"""
+    try:
+        next_bag = ManufacturingOrderItem.get_next_bag_number()
+        available_bags = ManufacturingOrderItem.get_available_bag_numbers()
+
+        return JsonResponse({
+            'success': True,
+            'next_bag_number': next_bag,
+            'available_bags': available_bags
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
 
 
 @login_required
@@ -2431,62 +2552,67 @@ def fabric_receipt_status_api(request, order_id):
         })
 
 
-class FabricReceiptView(LoginRequiredMixin, ListView):
-    """صفحة استلام الأقمشة في المصنع - أوامر التقطيع للتصنيع"""
+class FabricReceiptView(LoginRequiredMixin, TemplateView):
+    """صفحة استلام الأقمشة في المصنع - عرض العناصر الفردية المقطوعة"""
     template_name = 'manufacturing/fabric_receipt.html'
-    context_object_name = 'cutting_orders'
-    paginate_by = 20
-
-    def get_queryset(self):
-        """الحصول على أوامر التقطيع الجاهزة للاستلام للتصنيع وجميع الأنواع الأخرى"""
-        from cutting.models import CuttingOrder
-        from django.db.models import Q
-
-        queryset = CuttingOrder.objects.select_related(
-            'order', 'order__customer', 'warehouse'
-        ).prefetch_related(
-            'items'
-        ).filter(
-            # أوامر التقطيع المكتملة
-            status='completed',
-            # التي تحتوي على عناصر مكتملة وجاهزة للاستلام
-            items__status='completed',
-            items__receiver_name__isnull=False,
-            items__permit_number__isnull=False
-        ).filter(
-            # تضمين جميع أنواع الطلبات: تصنيع، تركيب، تسليم، إكسسوار
-            Q(order__selected_types__icontains='manufacturing') |
-            Q(order__selected_types__icontains='installation') |
-            Q(order__selected_types__icontains='tailoring') |
-            Q(order__selected_types__icontains='accessory')
-        ).exclude(
-            # استبعاد الأوامر التي تم استلامها بالفعل
-            items__fabric_received=True
-        ).distinct().order_by('-created_at')
-
-        # البحث
-        search = self.request.GET.get('search')
-        if search:
-            queryset = queryset.filter(
-                Q(cutting_code__icontains=search) |
-                Q(order__contract_number__icontains=search) |
-                Q(order__customer__name__icontains=search)
-            )
-
-        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # إحصائيات
-        total_available_orders = self.get_queryset().count()
-        context['total_available_orders'] = total_available_orders
+        from cutting.models import CuttingOrderItem
+        from django.db.models import Q
 
-        # معلومات الصفحات
-        paginator = context.get('paginator')
-        if paginator:
-            context['total_pages'] = paginator.num_pages
-            context['current_page'] = context['page_obj'].number
+        # الحصول على العناصر المقطوعة الفردية الجاهزة للاستلام
+        # بغض النظر عن حالة أمر التقطيع الكامل
+        cutting_items = CuttingOrderItem.objects.select_related(
+            'cutting_order',
+            'cutting_order__order',
+            'cutting_order__order__customer',
+            'cutting_order__warehouse',
+            'order_item',
+            'order_item__product'
+        ).filter(
+            # العناصر المكتملة فقط
+            status='completed',
+            # التي لها اسم مستلم ورقم إذن
+            receiver_name__isnull=False,
+            permit_number__isnull=False
+        ).exclude(
+            # استبعاد العناصر التي تم استلامها بالفعل في نظام التصنيع
+            manufacturing_items__fabric_received=True
+        ).filter(
+            # تضمين جميع أنواع الطلبات
+            Q(cutting_order__order__selected_types__icontains='manufacturing') |
+            Q(cutting_order__order__selected_types__icontains='installation') |
+            Q(cutting_order__order__selected_types__icontains='tailoring') |
+            Q(cutting_order__order__selected_types__icontains='accessory')
+        ).distinct().order_by('-cutting_date', '-cutting_order__created_at')
+
+        # البحث
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            cutting_items = cutting_items.filter(
+                Q(cutting_order__cutting_code__icontains=search) |
+                Q(cutting_order__order__contract_number__icontains=search) |
+                Q(cutting_order__order__customer__name__icontains=search) |
+                Q(order_item__product__name__icontains=search)
+            )
+
+        # تجميع العناصر حسب أمر التقطيع لعرض أفضل
+        orders_dict = {}
+        for item in cutting_items:
+            order_id = item.cutting_order.id
+            if order_id not in orders_dict:
+                orders_dict[order_id] = {
+                    'cutting_order': item.cutting_order,
+                    'items': []
+                }
+            orders_dict[order_id]['items'].append(item)
+
+        context['cutting_orders_with_items'] = list(orders_dict.values())
+        context['total_available_items'] = cutting_items.count()
+        context['total_available_orders'] = len(orders_dict)
+        context['search_query'] = search
 
         return context
 
@@ -2607,54 +2733,7 @@ def get_cutting_order_data(request, cutting_order_id):
         })
 
 
-@require_http_methods(["POST"])
-def receive_fabric_item(request, item_id):
-    """استلام عنصر واحد من الأقمشة"""
-    try:
-        item = get_object_or_404(ManufacturingOrderItem, id=item_id)
-
-        # التحقق من أن العنصر جاهز للاستلام
-        if not item.receiver_name or not item.permit_number:
-            return JsonResponse({
-                'success': False,
-                'message': 'العنصر غير جاهز للاستلام'
-            })
-
-        if item.fabric_received:
-            return JsonResponse({
-                'success': False,
-                'message': 'تم استلام هذا العنصر مسبقاً'
-            })
-
-        # تحديث حالة الاستلام
-        item.fabric_received = True
-        item.fabric_received_date = timezone.now()
-        item.fabric_received_by = request.user
-        item.save()
-
-        # إرسال إشعار
-        try:
-            from notifications.signals import create_notification
-            create_notification(
-                title='تم استلام أقمشة',
-                message=f'تم استلام أقمشة {item.product_name} في المصنع',
-                notification_type='fabric_received',
-                related_object=item,
-                created_by=request.user
-            )
-        except:
-            pass
-
-        return JsonResponse({
-            'success': True,
-            'message': 'تم استلام العنصر بنجاح'
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'حدث خطأ: {str(e)}'
-        })
+# تم حذف الـ view المكرر - استخدم الـ view في السطر 2290
 
 
 @require_http_methods(["POST"])
@@ -2885,30 +2964,153 @@ class FabricReceiptDetailView(LoginRequiredMixin, DetailView):
 
 
 class FabricReceiptListView(LoginRequiredMixin, ListView):
-    """عرض قائمة استلامات الأقمشة"""
+    """عرض قائمة استلامات الأقمشة - العناصر المستلمة مع فلاتر شاملة"""
     template_name = 'manufacturing/fabric_receipt_list.html'
-    context_object_name = 'fabric_receipts'
-    paginate_by = 20
+    context_object_name = 'received_items'
+    paginate_by = 50
 
     def get_queryset(self):
-        return FabricReceipt.objects.select_related(
-            'order', 'order__customer', 'order__customer__branch',
-            'cutting_order', 'manufacturing_order', 'received_by'
-        ).order_by('-receipt_date')
+        # عرض جميع عناصر التصنيع المستلمة مع تحسين الأداء
+        queryset = ManufacturingOrderItem.objects.filter(
+            fabric_received=True
+        ).select_related(
+            'manufacturing_order',
+            'manufacturing_order__order',
+            'manufacturing_order__order__customer',
+            'fabric_received_by'
+        ).only(
+            # حقول ManufacturingOrderItem
+            'id', 'product_name', 'quantity', 'permit_number', 'receiver_name',
+            'bag_number', 'fabric_received_date', 'fabric_received',
+            'manufacturing_order_id', 'fabric_received_by_id',
+            # حقول ManufacturingOrder
+            'manufacturing_order__id',
+            # حقول Order
+            'manufacturing_order__order__id', 'manufacturing_order__order__order_number',
+            # حقول Customer
+            'manufacturing_order__order__customer__id',
+            'manufacturing_order__order__customer__name',
+            # حقول User
+            'fabric_received_by__id', 'fabric_received_by__first_name',
+            'fabric_received_by__last_name', 'fabric_received_by__username'
+        )
+
+        # تطبيق الفلاتر
+        # فلتر التاريخ من
+        date_from = self.request.GET.get('date_from')
+        if date_from:
+            queryset = queryset.filter(fabric_received_date__date__gte=date_from)
+
+        # فلتر التاريخ إلى
+        date_to = self.request.GET.get('date_to')
+        if date_to:
+            queryset = queryset.filter(fabric_received_date__date__lte=date_to)
+
+        # فلتر العميل (ID)
+        customer_id = self.request.GET.get('customer')
+        if customer_id:
+            queryset = queryset.filter(manufacturing_order__order__customer_id=customer_id)
+
+        # فلتر اسم العميل (بحث نصي)
+        customer_name = self.request.GET.get('customer_name')
+        if customer_name:
+            queryset = queryset.filter(manufacturing_order__order__customer__name__icontains=customer_name)
+
+        # فلتر المنتج (بحث جزئي)
+        product_name = self.request.GET.get('product_name')
+        if product_name:
+            queryset = queryset.filter(product_name__icontains=product_name)
+
+        # فلتر رقم الشنطة
+        bag_number = self.request.GET.get('bag_number')
+        if bag_number:
+            queryset = queryset.filter(bag_number=bag_number)
+
+        # فلتر رقم الإذن
+        permit_number = self.request.GET.get('permit_number')
+        if permit_number:
+            queryset = queryset.filter(permit_number__icontains=permit_number)
+
+        # فلتر المستلم بالتقطيع
+        receiver_name = self.request.GET.get('receiver_name')
+        if receiver_name:
+            queryset = queryset.filter(receiver_name__icontains=receiver_name)
+
+        # فلتر المستلم بالمصنع
+        received_by = self.request.GET.get('received_by')
+        if received_by:
+            queryset = queryset.filter(fabric_received_by_id=received_by)
+
+        # فلتر أمر التصنيع (بحث في رقم الطلب الأصلي)
+        manufacturing_code = self.request.GET.get('manufacturing_code')
+        if manufacturing_code:
+            # إزالة -M من نهاية الكود إذا وجد
+            search_code = manufacturing_code.replace('-M', '').replace('-m', '')
+            queryset = queryset.filter(manufacturing_order__order__order_number__icontains=search_code)
+
+        return queryset.order_by('-fabric_received_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # إحصائيات
-        context['total_receipts'] = FabricReceipt.objects.count()
-        context['today_receipts'] = FabricReceipt.objects.filter(
-            receipt_date__date=timezone.now().date()
-        ).count()
-        this_week_count = FabricReceipt.objects.filter(
-            receipt_date__gte=timezone.now().date() - timedelta(days=7)
-        ).count()
-        context['this_week_receipts'] = this_week_count
-        context['daily_average'] = round(this_week_count / 7, 1) if this_week_count > 0 else 0
+        # الحصول على الـ queryset المفلتر
+        filtered_queryset = self.get_queryset()
+
+        # إحصائيات عامة (بدون فلترة) - استخدام aggregate لتحسين الأداء
+        from django.db.models import Count, Q
+        today = timezone.now().date()
+        week_ago = today - timedelta(days=7)
+
+        stats = ManufacturingOrderItem.objects.filter(fabric_received=True).aggregate(
+            total=Count('id'),
+            today=Count('id', filter=Q(fabric_received_date__date=today)),
+            this_week=Count('id', filter=Q(fabric_received_date__date__gte=week_ago))
+        )
+
+        context['total_receipts'] = stats['total'] or 0
+        context['today_receipts'] = stats['today'] or 0
+        context['this_week_receipts'] = stats['this_week'] or 0
+        context['daily_average'] = round(stats['this_week'] / 7, 1) if stats['this_week'] > 0 else 0
+
+        # إحصائيات مفلترة
+        from django.db.models import Sum, Count
+        filtered_stats = filtered_queryset.aggregate(
+            total_quantity=Sum('quantity'),
+            total_items=Count('id')
+        )
+        context['filtered_total_quantity'] = filtered_stats['total_quantity'] or 0
+        context['filtered_total_items'] = filtered_stats['total_items'] or 0
+
+        # قائمة المستلمين بالمصنع للفلتر (فقط الذين استلموا فعلياً)
+        from accounts.models import User
+        context['factory_receivers'] = User.objects.filter(
+            id__in=ManufacturingOrderItem.objects.filter(
+                fabric_received=True,
+                fabric_received_by__isnull=False
+            ).values_list('fabric_received_by_id', flat=True).distinct()
+        ).order_by('first_name')
+
+        # قائمة أرقام الشنطات المتاحة (محدودة لتحسين الأداء)
+        context['bag_numbers'] = ManufacturingOrderItem.objects.filter(
+            fabric_received=True,
+            bag_number__isnull=False
+        ).exclude(
+            bag_number=''
+        ).values_list('bag_number', flat=True).distinct()[:100]  # أول 100 رقم فقط
+
+        # الاحتفاظ بقيم الفلاتر
+        context['filters'] = {
+            'date_from': self.request.GET.get('date_from', ''),
+            'date_to': self.request.GET.get('date_to', ''),
+            'customer': self.request.GET.get('customer', ''),
+            'customer_name': self.request.GET.get('customer_name', ''),
+            'product_name': self.request.GET.get('product_name', ''),
+            'bag_number': self.request.GET.get('bag_number', ''),
+            'permit_number': self.request.GET.get('permit_number', ''),
+            'receiver_name': self.request.GET.get('receiver_name', ''),
+            'received_by': self.request.GET.get('received_by', ''),
+            'manufacturing_code': self.request.GET.get('manufacturing_code', ''),
+        }
 
         return context
 
@@ -3247,3 +3449,85 @@ def create_product_receipt(request):
             'success': False,
             'message': f'حدث خطأ: {str(e)}'
         })
+
+
+class ManufacturingItemStatusReportView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    """
+    عرض تقرير حالة العناصر في أوامر التصنيع
+    يعرض:
+    - الأوامر التي تم استلام جميع عناصرها
+    - الأوامر التي بها عناصر ناقصة
+    - تفصيل العناصر المفقودة
+    """
+    template_name = 'manufacturing/item_status_report.html'
+    permission_required = 'manufacturing.view_manufacturingorder'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # الحصول على جميع أوامر التصنيع
+        manufacturing_orders = ManufacturingOrder.objects.select_related(
+            'order',
+            'order__customer',
+            'order__salesperson'
+        ).prefetch_related(
+            'items',
+            'items__cutting_item',
+            'items__order_item',
+            'items__order_item__product'
+        ).all()
+
+        # تطبيق فلتر السنة
+        manufacturing_orders = apply_default_year_filter(manufacturing_orders, 'order_date')
+
+        # تصنيف الأوامر
+        complete_orders = []
+        incomplete_orders = []
+
+        for order in manufacturing_orders:
+            total_items = order.total_items_count
+            received_items = order.received_items_count
+
+            order_data = {
+                'order': order,
+                'total_items': total_items,
+                'cut_items': order.cut_items_count,
+                'received_items': received_items,
+                'pending_items': order.pending_items_count,
+                'missing_items': [],
+            }
+
+            # إذا كان هناك عناصر معلقة، نجمع تفاصيلها
+            if received_items < total_items:
+                for item in order.items.all():
+                    if not item.fabric_received:
+                        order_data['missing_items'].append({
+                            'product_name': item.product_name,
+                            'quantity': item.quantity,
+                            'cutting_status': item.cutting_status_display,
+                            'is_cut': item.is_cut,
+                        })
+                incomplete_orders.append(order_data)
+            else:
+                complete_orders.append(order_data)
+
+        # الفلاتر
+        filter_type = self.request.GET.get('filter', 'all')
+
+        if filter_type == 'complete':
+            context['orders'] = complete_orders
+            context['showing'] = 'complete'
+        elif filter_type == 'incomplete':
+            context['orders'] = incomplete_orders
+            context['showing'] = 'incomplete'
+        else:
+            context['orders'] = complete_orders + incomplete_orders
+            context['showing'] = 'all'
+
+        # الإحصائيات
+        context['total_orders'] = len(complete_orders) + len(incomplete_orders)
+        context['complete_orders_count'] = len(complete_orders)
+        context['incomplete_orders_count'] = len(incomplete_orders)
+        context['filter_type'] = filter_type
+
+        return context

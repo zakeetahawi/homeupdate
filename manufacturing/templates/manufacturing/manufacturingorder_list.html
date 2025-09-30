@@ -1414,6 +1414,9 @@ body:not(.modal-open) .modal-backdrop {
                             <th class="text-center sortable-header" data-sort="status" style="padding: 0.3rem 0.4rem; min-width: 90px;">
                                 <span class="sort-icon none"></span>الحالة
                             </th>
+                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 120px; word-break: break-word; white-space: normal;">
+                                <i class="fas fa-boxes me-1"></i>العناصر
+                            </th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">معلومات التسليم</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">موافقة العقد</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 70px; word-break: break-word; white-space: normal;">الإجراءات</th>
@@ -1544,14 +1547,48 @@ body:not(.modal-open) .modal-backdrop {
                                     {% if order.status == 'delivered' %}
                                         {% get_status_badge order.status "manufacturing" %}
                                     {% else %}
-                                        <button class="status-btn status-{{ order.status }} unified-badge status-{{ order.status }}" 
-                                                data-order-id="{{ order.id }}" 
+                                        <button class="status-btn status-{{ order.status }} unified-badge status-{{ order.status }}"
+                                                data-order-id="{{ order.id }}"
                                                 data-current-status="{{ order.status }}"
                                                 onclick="showStatusModal({{ order.id }}, '{{ order.status }}', '{{ order.get_status_display }}', '{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}')">
                                             {{ order.get_status_display }}
                                         </button>
                                     {% endif %}
                                 {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div style="font-size: 0.85em;">
+                                    <!-- إجمالي العناصر -->
+                                    <div class="mb-1">
+                                        <span class="badge bg-primary" title="إجمالي العناصر">
+                                            <i class="fas fa-list me-1"></i>{{ order.total_items_count }}
+                                        </span>
+                                    </div>
+                                    <!-- العناصر المقطوعة -->
+                                    {% if order.cut_items_count > 0 %}
+                                    <div class="mb-1">
+                                        <span class="badge bg-info" title="عدد العناصر المقطوعة">
+                                            <i class="fas fa-cut me-1"></i>{{ order.cut_items_count }} مقطوع
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    <!-- العناصر المستلمة -->
+                                    {% if order.received_items_count > 0 %}
+                                    <div>
+                                        <span class="badge bg-success" title="عدد العناصر المستلمة">
+                                            <i class="fas fa-check-circle me-1"></i>{{ order.received_items_count }} مستلم
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    <!-- العناصر المعلقة -->
+                                    {% if order.pending_items_count > 0 %}
+                                    <div class="mt-1">
+                                        <span class="badge bg-warning text-dark" title="عدد العناصر المعلقة">
+                                            <i class="fas fa-clock me-1"></i>{{ order.pending_items_count }} معلق
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
                             </td>
                             <td>
                                 {% if order.status == 'delivered' %}

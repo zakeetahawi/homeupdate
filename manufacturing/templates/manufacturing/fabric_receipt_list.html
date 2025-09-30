@@ -118,6 +118,187 @@
         </div>
     </div>
 
+    <!-- بطاقات الإحصائيات المفلترة -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card shadow" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">
+                                <i class="fas fa-box-open me-2"></i>
+                                إجمالي العناصر المفلترة
+                            </h6>
+                            <h2 class="mb-0 fw-bold">{{ filtered_total_items|intcomma }}</h2>
+                            <small class="text-white-50">عنصر مستلم</small>
+                        </div>
+                        <div>
+                            <i class="fas fa-cubes fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="card shadow" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">
+                                <i class="fas fa-layer-group me-2"></i>
+                                إجمالي الكمية المفلترة
+                            </h6>
+                            <h2 class="mb-0 fw-bold">{{ filtered_total_quantity|floatformat:3|intcomma }}</h2>
+                            <small class="text-white-50">متر مستلم</small>
+                        </div>
+                        <div>
+                            <i class="fas fa-ruler fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قسم الفلاتر -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-filter"></i>
+                فلاتر البحث
+            </h6>
+            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="filtersCollapse">
+            <div class="card-body">
+                <form method="get" id="filterForm">
+                    <div class="row g-3">
+                        <!-- فلتر التاريخ من -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">
+                                <i class="fas fa-calendar-alt text-primary me-1"></i>
+                                من تاريخ
+                            </label>
+                            <input type="date" class="form-control" name="date_from" value="{{ filters.date_from }}">
+                        </div>
+
+                        <!-- فلتر التاريخ إلى -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">
+                                <i class="fas fa-calendar-alt text-primary me-1"></i>
+                                إلى تاريخ
+                            </label>
+                            <input type="date" class="form-control" name="date_to" value="{{ filters.date_to }}">
+                        </div>
+
+                        <!-- فلتر اسم العميل -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">
+                                <i class="fas fa-user text-success me-1"></i>
+                                اسم العميل
+                            </label>
+                            <input type="text" class="form-control" name="customer_name"
+                                   value="{{ filters.customer_name }}" placeholder="اسم العميل...">
+                        </div>
+
+                        <!-- فلتر المنتج -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">
+                                <i class="fas fa-tag text-info me-1"></i>
+                                المنتج
+                            </label>
+                            <input type="text" class="form-control" name="product_name"
+                                   value="{{ filters.product_name }}" placeholder="اسم المنتج...">
+                        </div>
+
+                        <!-- فلتر رقم الشنطة -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">
+                                <i class="fas fa-shopping-bag text-warning me-1"></i>
+                                رقم الشنطة
+                            </label>
+                            <select class="form-select" name="bag_number">
+                                <option value="">الكل</option>
+                                {% for bag in bag_numbers %}
+                                <option value="{{ bag }}" {% if filters.bag_number == bag %}selected{% endif %}>
+                                    {{ bag }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- فلتر رقم الإذن -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">
+                                <i class="fas fa-file-alt text-danger me-1"></i>
+                                رقم الإذن
+                            </label>
+                            <input type="text" class="form-control" name="permit_number"
+                                   value="{{ filters.permit_number }}" placeholder="رقم الإذن...">
+                        </div>
+
+                        <!-- فلتر المستلم بالتقطيع -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">
+                                <i class="fas fa-user-check text-secondary me-1"></i>
+                                المستلم (التقطيع)
+                            </label>
+                            <input type="text" class="form-control" name="receiver_name"
+                                   value="{{ filters.receiver_name }}" placeholder="اسم المستلم...">
+                        </div>
+
+                        <!-- فلتر المستلم بالمصنع -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">
+                                <i class="fas fa-user-tie text-dark me-1"></i>
+                                المستلم (المصنع)
+                            </label>
+                            <select class="form-select" name="received_by">
+                                <option value="">الكل</option>
+                                {% for user in factory_receivers %}
+                                <option value="{{ user.id }}" {% if filters.received_by == user.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ user.get_full_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- فلتر أمر التصنيع -->
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">
+                                <i class="fas fa-industry text-primary me-1"></i>
+                                أمر التصنيع
+                            </label>
+                            <input type="text" class="form-control" name="manufacturing_code"
+                                   value="{{ filters.manufacturing_code }}" placeholder="كود التصنيع...">
+                        </div>
+                    </div>
+
+                    <!-- أزرار التحكم -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-2"></i>
+                                بحث
+                            </button>
+                            <a href="{% url 'manufacturing:fabric_receipt_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-redo me-2"></i>
+                                إعادة تعيين
+                            </a>
+                            <button type="button" class="btn btn-success" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel me-2"></i>
+                                تصدير Excel
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- جدول الاستلامات -->
     <div class="card shadow">
         <div class="card-header py-3">
@@ -131,70 +312,64 @@
                 <table class="table table-hover table-striped mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th width="12%">كود الاستلام</th>
-                            <th width="18%">اسم العميل</th>
-                            <th width="12%">الفرع</th>
-                            <th width="15%">رقم الإذن</th>
-                            <th width="12%">المستلم</th>
-                            <th width="12%">تاريخ الاستلام</th>
-                            <th width="12%">رقم الشنطة</th>
-                            <th width="7%">إجراءات</th>
+                            <th>#</th>
+                            <th>أمر التصنيع</th>
+                            <th>المنتج</th>
+                            <th>العميل</th>
+                            <th>الكمية</th>
+                            <th>رقم الإذن (التقطيع)</th>
+                            <th>المستلم (التقطيع)</th>
+                            <th>رقم الشنطة</th>
+                            <th>تاريخ الاستلام</th>
+                            <th>المستلم بالمصنع</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for receipt in fabric_receipts %}
+                        {% for item in received_items %}
                         <tr>
+                            <td>{{ forloop.counter }}</td>
                             <td>
-                                <a href="{% url 'manufacturing:fabric_receipt_detail' receipt.id %}" 
+                                <a href="{% url 'manufacturing:order_detail_by_code' item.manufacturing_order.manufacturing_code %}"
                                    class="text-primary font-weight-bold">
-                                    {{ receipt.receipt_code }}
+                                    {{ item.manufacturing_order.manufacturing_code }}
                                 </a>
                             </td>
                             <td>
-                                <div class="fw-bold">{{ receipt.customer_name }}</div>
-                                <small class="text-muted">{{ receipt.order_number }}</small>
+                                <strong>{{ item.product_name }}</strong>
                             </td>
                             <td>
-                                <span class="text-muted">
-                                    {{ receipt.order.customer.branch.name|default:"الفرع الرئيسي" }}
+                                {{ item.manufacturing_order.order.customer.name }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary">{{ item.quantity }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-warning text-dark">
+                                    {{ item.permit_number|default:"غير محدد" }}
                                 </span>
                             </td>
-                            <td>
-                                <div class="text-center">
-                                    <div class="fw-bold">{{ receipt.permit_number|default:"غير محدد" }}</div>
-                                    {% if receipt.cutting_order %}
-                                        <small class="text-muted">من التقطيع</small>
-                                    {% elif receipt.manufacturing_order %}
-                                        <small class="text-muted">من التصنيع</small>
-                                    {% else %}
-                                        <small class="text-muted">مباشر</small>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td>
-                                <div class="text-center">
-                                    <div class="fw-bold">{{ receipt.received_by_name|default:"غير محدد" }}</div>
-                                    <small class="text-muted">{{ receipt.received_by.username|default:"" }}</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="text-center">
-                                    <div class="fw-bold">{{ receipt.receipt_date|date:"d/m/Y" }}</div>
-                                    <small class="text-muted">{{ receipt.receipt_date|date:"H:i" }}</small>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge badge-custom bg-warning text-dark">
-                                    {{ receipt.bag_number }}
+                            <td class="text-center">
+                                <span class="badge bg-info">
+                                    {{ item.receiver_name|default:"غير محدد" }}
                                 </span>
                             </td>
-                            <td>
-                                <div class="text-center">
-                                    <a href="{% url 'manufacturing:fabric_receipt_detail' receipt.id %}" 
-                                       class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </div>
+                            <td class="text-center">
+                                <span class="badge bg-success">
+                                    {{ item.bag_number|default:"غير محدد" }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="fw-bold">{{ item.fabric_received_date|date:"d/m/Y" }}</div>
+                                <small class="text-muted">{{ item.fabric_received_date|date:"H:i" }}</small>
+                            </td>
+                            <td class="text-center">
+                                {% if item.fabric_received_by %}
+                                    <span class="badge bg-secondary">
+                                        {{ item.fabric_received_by.get_full_name }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}
@@ -244,4 +419,91 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+// تصدير البيانات إلى Excel
+function exportToExcel() {
+    // جمع البيانات من الجدول
+    const table = document.querySelector('.table');
+    const rows = [];
+
+    // العناوين
+    const headers = [];
+    table.querySelectorAll('thead th').forEach(th => {
+        headers.push(th.textContent.trim());
+    });
+    rows.push(headers);
+
+    // البيانات
+    table.querySelectorAll('tbody tr').forEach(tr => {
+        const row = [];
+        tr.querySelectorAll('td').forEach(td => {
+            // إزالة الأيقونات والعناصر الإضافية
+            const text = td.textContent.trim().replace(/\s+/g, ' ');
+            row.push(text);
+        });
+        if (row.length > 0 && row[0] !== 'لا توجد استلامات مسجلة') {
+            rows.push(row);
+        }
+    });
+
+    // إنشاء ورقة العمل
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // تنسيق العرض
+    const wscols = [
+        {wch: 5},   // #
+        {wch: 15},  // أمر التصنيع
+        {wch: 20},  // المنتج
+        {wch: 20},  // العميل
+        {wch: 10},  // الكمية
+        {wch: 15},  // رقم الإذن
+        {wch: 15},  // المستلم (التقطيع)
+        {wch: 12},  // رقم الشنطة
+        {wch: 15},  // تاريخ الاستلام
+        {wch: 15}   // المستلم بالمصنع
+    ];
+    ws['!cols'] = wscols;
+
+    // إنشاء المصنف
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'استلامات الأقمشة');
+
+    // إضافة معلومات إضافية
+    const infoSheet = [
+        ['تقرير استلامات الأقمشة'],
+        [''],
+        ['إجمالي العناصر المفلترة:', '{{ filtered_total_items }}'],
+        ['إجمالي الكمية المفلترة:', '{{ filtered_total_quantity|floatformat:3 }}'],
+        ['تاريخ التصدير:', new Date().toLocaleString('ar-EG')],
+        [''],
+        ['الفلاتر المطبقة:'],
+        {% if filters.date_from %}['من تاريخ:', '{{ filters.date_from }}'],{% endif %}
+        {% if filters.date_to %}['إلى تاريخ:', '{{ filters.date_to }}'],{% endif %}
+        {% if filters.customer %}['العميل:', '{{ filters.customer }}'],{% endif %}
+        {% if filters.product_name %}['المنتج:', '{{ filters.product_name }}'],{% endif %}
+        {% if filters.bag_number %}['رقم الشنطة:', '{{ filters.bag_number }}'],{% endif %}
+    ];
+    const infoWs = XLSX.utils.aoa_to_sheet(infoSheet);
+    XLSX.utils.book_append_sheet(wb, infoWs, 'معلومات التقرير');
+
+    // تنزيل الملف
+    const fileName = `استلامات_الأقمشة_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+}
+
+// تحديث URL عند تغيير الفلاتر للحفاظ على الصفحة الحالية
+document.getElementById('filterForm').addEventListener('submit', function(e) {
+    // إزالة الحقول الفارغة من الفورم
+    const inputs = this.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        if (!input.value || input.value === '') {
+            input.removeAttribute('name');
+        }
+    });
+});
+</script>
 {% endblock %}

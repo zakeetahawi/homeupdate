@@ -153,6 +153,21 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        <!-- نوع الطلب والوجهة -->
+                        <div class="mb-3">
+                            {% with selected_types=cutting_order.order.get_selected_types_list %}
+                                {% if 'installation' in selected_types or 'tailoring' in selected_types %}
+                                    <span class="badge bg-warning text-dark mb-2" style="font-size: 0.9rem;">
+                                        <i class="fas fa-industry me-1"></i>تسليم المصنع - ستائر
+                                    </span>
+                                {% elif 'products' in selected_types or 'accessory' in selected_types %}
+                                    <span class="badge bg-info text-white mb-2" style="font-size: 0.9rem;">
+                                        <i class="fas fa-store me-1"></i>تسليم الفرع
+                                    </span>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+
                         <!-- معلومات العميل والطلب -->
                         <div class="mb-3">
                             <h6 class="text-primary font-weight-bold">
@@ -174,6 +189,18 @@
                                 <i class="fas fa-warehouse"></i>
                                 {{ cutting_order.warehouse.name }}
                             </p>
+                            {% if cutting_order.order.customer.branch %}
+                            <p class="text-muted small mb-1">
+                                <i class="fas fa-map-marker-alt"></i>
+                                الفرع: {{ cutting_order.order.customer.branch.name }}
+                            </p>
+                            {% endif %}
+                            {% if cutting_order.order.salesperson %}
+                            <p class="text-muted small mb-1">
+                                <i class="fas fa-user-tie"></i>
+                                البائع: {{ cutting_order.order.salesperson.name }}
+                            </p>
+                            {% endif %}
                         </div>
 
                         <!-- حالة التقطيع -->

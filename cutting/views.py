@@ -764,11 +764,83 @@ class UserPermissionsView(LoginRequiredMixin, TemplateView):
 
 @login_required
 def print_cutting_report(request, report_id):
-    """طباعة تقرير التقطيع"""
+    """طباعة تقرير التقطيع المفصل"""
+    from django.db.models import Sum, Count, Q
+
     report = get_object_or_404(CuttingReport, pk=report_id)
 
+    # الحصول على جميع أوامر التقطيع في الفترة المحددة
+    cutting_orders = CuttingOrder.objects.filter(
+        warehouse=report.warehouse,
+        created_at__date__range=[report.start_date, report.end_date]
+    ).select_related(
+        'order', 'order__customer', 'warehouse', 'assigned_to'
+    ).prefetch_related(
+        'items__order_item__product'
+    ).order_by('created_at')
+
+    # الحصول على جميع عناصر التقطيع في الفترة
+    cutting_items = CuttingOrderItem.objects.filter(
+        cutting_order__warehouse=report.warehouse,
+        cutting_order__created_at__date__range=[report.start_date, report.end_date]
+    ).select_related(
+        'cutting_order__order__customer',
+        'order_item__product'
+    ).order_by('cutting_order__created_at', 'id')
+
+    # إحصائيات تفصيلية
+    items_stats = cutting_items.aggregate(
+        total_quantity=Sum('order_item__quantity'),
+        completed_count=Count('id', filter=Q(status='completed')),
+        rejected_count=Count('id', filter=Q(status='rejected')),
+        pending_count=Count('id', filter=Q(status='pending')),
+        completed_quantity=Sum('order_item__quantity', filter=Q(status='completed')),
+        rejected_quantity=Sum('order_item__quantity', filter=Q(status='rejected')),
+        pending_quantity=Sum('order_item__quantity', filter=Q(status='pending'))
+    )
+
+    # تجميع حسب المنتج
+    products_summary = cutting_items.values(
+        'order_item__product__name'
+    ).annotate(
+        total_quantity=Sum('order_item__quantity'),
+        completed_count=Count('id', filter=Q(status='completed')),
+        rejected_count=Count('id', filter=Q(status='rejected')),
+        pending_count=Count('id', filter=Q(status='pending'))
+    ).order_by('-total_quantity')
+
+    # تجميع حسب العميل
+    customers_summary = cutting_orders.values(
+        'order__customer__name',
+        'order__contract_number',
+        'order__invoice_number'
+    ).annotate(
+        total_items=Count('items'),
+        completed_items=Count('items', filter=Q(items__status='completed')),
+        total_quantity=Sum('items__order_item__quantity')
+    ).order_by('order__customer__name')
+
+    # تجميع حسب المستلم
+    receivers_summary = cutting_items.exclude(
+        receiver_name__isnull=True
+    ).exclude(
+        receiver_name=''
+    ).values('receiver_name').annotate(
+        total_items=Count('id'),
+        completed_items=Count('id', filter=Q(status='completed')),
+        total_quantity=Sum('order_item__quantity')
+    ).order_by('-total_items')
+
     context = {
-        'report': report
+        'report': report,
+        'cutting_orders': cutting_orders,
+        'cutting_items': cutting_items,
+        'items_stats': items_stats,
+        'products_summary': products_summary,
+        'customers_summary': customers_summary,
+        'receivers_summary': receivers_summary,
+        'total_orders_count': cutting_orders.count(),
+        'total_items_count': cutting_items.count(),
     }
 
     return render(request, 'cutting/print_report.html', context)

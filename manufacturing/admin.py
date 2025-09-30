@@ -12,7 +12,7 @@ from django import forms
 
 from .models import (
     ManufacturingOrder, ManufacturingOrderItem, ProductionLine, ManufacturingDisplaySettings,
-    FabricReceipt, FabricReceiptItem
+    FabricReceipt, FabricReceiptItem, ManufacturingSettings
 )
 
 
@@ -918,3 +918,46 @@ class FabricReceiptItemAdmin(admin.ModelAdmin):
     list_filter = ['fabric_receipt__receipt_type', 'fabric_receipt__receipt_date']
     search_fields = ['product_name', 'fabric_receipt__receipt_code', 'fabric_receipt__bag_number']
     readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(ManufacturingSettings)
+class ManufacturingSettingsAdmin(admin.ModelAdmin):
+    """إدارة إعدادات نظام التصنيع"""
+
+    fieldsets = (
+        ('إعدادات حساب الأمتار', {
+            'fields': ('warehouses_for_meters_calculation',),
+            'description': 'حدد المستودعات التي يتم حساب أمتارها في badge إجمالي أمتار أمر التصنيع'
+        }),
+        ('إعدادات عرض العناصر', {
+            'fields': ('warehouses_for_display',),
+            'description': 'حدد المستودعات التي تظهر عناصرها في تفاصيل أمر التصنيع'
+        }),
+        ('معلومات النظام', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    readonly_fields = ['created_at', 'updated_at']
+
+    filter_horizontal = ['warehouses_for_meters_calculation', 'warehouses_for_display']
+
+    def has_add_permission(self, request):
+        """منع إضافة سجلات جديدة (سجل واحد فقط)"""
+        return not ManufacturingSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        """منع حذف الإعدادات"""
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        """إعادة توجيه إلى صفحة التعديل مباشرة"""
+        settings = ManufacturingSettings.get_settings()
+        return redirect('admin:manufacturing_manufacturingsettings_change', settings.pk)
+
+    class Media:
+        css = {
+            'all': ('admin/css/widgets.css',)
+        }
+        js = ('admin/js/jquery.init.js', 'admin/js/core.js')

@@ -22,6 +22,11 @@ urlpatterns = [
         name='vip_orders'
     ),
     path(
+        'orders/item-status-report/',
+        views.ManufacturingItemStatusReportView.as_view(),
+        name='item_status_report'
+    ),
+    path(
         'orders/create/',
         views.ManufacturingOrderCreateView.as_view(),
         name='order_create'
@@ -35,6 +40,11 @@ urlpatterns = [
         'receive-item/<int:item_id>/',
         views.receive_fabric_item,
         name='receive_fabric_item'
+    ),
+    path(
+        'get-bag-number-data/',
+        views.get_bag_number_data,
+        name='get_bag_number_data'
     ),
     path(
         'receive-all-items/<int:order_id>/',

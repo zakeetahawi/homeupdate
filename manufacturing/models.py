@@ -14,6 +14,59 @@ User = get_user_model()
 # سيتم استخدام الإشارة النصية 'orders.Order' بدلاً من ذلك
 
 
+class ManufacturingSettings(models.Model):
+    """إعدادات نظام التصنيع"""
+
+    # المستودعات المحسوبة في إجمالي الأمتار
+    warehouses_for_meters_calculation = models.ManyToManyField(
+        'inventory.Warehouse',
+        blank=True,
+        related_name='manufacturing_meters_settings',
+        verbose_name='المستودعات المحسوبة في الأمتار',
+        help_text='المستودعات التي يتم حساب أمتارها في badge إجمالي أمتار أمر التصنيع'
+    )
+
+    # المستودعات التي تظهر عناصرها في تفاصيل أمر التصنيع
+    warehouses_for_display = models.ManyToManyField(
+        'inventory.Warehouse',
+        blank=True,
+        related_name='manufacturing_display_settings',
+        verbose_name='المستودعات المعروضة',
+        help_text='المستودعات التي تظهر عناصرها في تفاصيل أمر التصنيع'
+    )
+
+    # حقل singleton للتأكد من وجود سجل واحد فقط
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='نشط',
+        editable=False
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+
+    class Meta:
+        verbose_name = 'إعدادات التصنيع'
+        verbose_name_plural = 'إعدادات التصنيع'
+
+    def __str__(self):
+        return 'إعدادات نظام التصنيع'
+
+    def save(self, *args, **kwargs):
+        """التأكد من وجود سجل واحد فقط"""
+        if not self.pk and ManufacturingSettings.objects.exists():
+            # إذا كان هناك سجل موجود، نحدثه بدلاً من إنشاء واحد جديد
+            existing = ManufacturingSettings.objects.first()
+            self.pk = existing.pk
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        """الحصول على الإعدادات (إنشاء إذا لم تكن موجودة)"""
+        settings, created = cls.objects.get_or_create(is_active=True)
+        return settings
+
+
 class ManufacturingOrderManager(models.Manager):
     """Manager محسن لأوامر التصنيع"""
 
@@ -432,18 +485,43 @@ class ManufacturingOrder(models.Model):
 
     @property
     def total_items_count(self):
-        """إجمالي عدد العناصر"""
-        return self.items.count()
+        """إجمالي عدد العناصر من الطلب الأصلي"""
+        if self.order:
+            return self.order.items.count()
+        return 0
 
     @property
     def received_items_count(self):
-        """عدد العناصر المستلمة"""
+        """عدد العناصر المستلمة في المصنع"""
         return self.items.filter(fabric_received=True).count()
 
     @property
     def pending_items_count(self):
-        """عدد العناصر المعلقة"""
-        return self.items.filter(fabric_received=False).count()
+        """عدد العناصر المعلقة (لم يتم استلامها أو تقطيعها)"""
+        if self.order:
+            total = self.order.items.count()
+            received = self.received_items_count
+            return total - received
+        return 0
+
+    @property
+    def cut_items_count(self):
+        """عدد العناصر المقطوعة (سواء مستلمة أو لا)"""
+        from django.db.models import Q
+        # العناصر التي لها بيانات تقطيع أو مرتبطة بعنصر تقطيع مكتمل
+        return self.items.filter(
+            Q(receiver_name__isnull=False, permit_number__isnull=False) |
+            Q(cutting_item__status='completed')
+        ).distinct().count()
+
+    @property
+    def uncut_items_count(self):
+        """عدد العناصر غير المقطوعة"""
+        if self.order:
+            total = self.order.items.count()
+            cut = self.cut_items_count
+            return total - cut
+        return 0
 
     @property
     def items_completion_percentage(self):
@@ -480,19 +558,40 @@ class ManufacturingOrder(models.Model):
 
 class ManufacturingOrderItem(models.Model):
     """نموذج يمثل عناصر أمر التصنيع"""
-    
+
     manufacturing_order = models.ForeignKey(
         ManufacturingOrder,
         on_delete=models.CASCADE,
         related_name='items',
         verbose_name='أمر التصنيع'
     )
-    
+
+    # ربط مباشر بعنصر التقطيع (للتتبع الفردي)
+    cutting_item = models.ForeignKey(
+        'cutting.CuttingOrderItem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='manufacturing_items',
+        verbose_name='عنصر التقطيع',
+        help_text='ربط مباشر بعنصر التقطيع للتتبع الفردي'
+    )
+
+    # ربط بعنصر الطلب الأصلي (للرجوع للمصدر)
+    order_item = models.ForeignKey(
+        'orders.OrderItem',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='manufacturing_items',
+        verbose_name='عنصر الطلب الأصلي'
+    )
+
     product_name = models.CharField(
         max_length=255,
         verbose_name='اسم المنتج'
     )
-    
+
     quantity = models.DecimalField(
         max_digits=10,
         decimal_places=3,
@@ -500,13 +599,13 @@ class ManufacturingOrderItem(models.Model):
         verbose_name='الكمية',
         help_text='يمكن إدخال قيم عشرية مثل 4.25 متر'
     )
-    
+
     specifications = models.TextField(
         blank=True,
         null=True,
         verbose_name='المواصفات'
     )
-    
+
     status = models.CharField(
         max_length=30,
         choices=ManufacturingOrder.STATUS_CHOICES,
@@ -575,6 +674,11 @@ class ManufacturingOrderItem(models.Model):
     class Meta:
         verbose_name = 'عنصر أمر تصنيع'
         verbose_name_plural = 'عناصر أوامر التصنيع'
+        indexes = [
+            models.Index(fields=['fabric_received', 'fabric_received_date'], name='fabric_rcvd_idx'),
+            models.Index(fields=['bag_number'], name='bag_number_idx'),
+            models.Index(fields=['fabric_received', 'bag_number'], name='fabric_bag_idx'),
+        ]
     
     def __str__(self):
         return f'{self.product_name} - {self.get_clean_quantity_display()}'
@@ -599,18 +703,92 @@ class ManufacturingOrderItem(models.Model):
         self.bag_number = bag_number
         self.fabric_received_date = timezone.now()
         self.fabric_received_by = user
-        self.fabric_notes = notes
+        if notes:
+            self.fabric_notes = notes
         self.save()
+
+    @staticmethod
+    def get_next_bag_number():
+        """الحصول على رقم الشنطة التالي تلقائياً - يبدأ من 1"""
+        import re
+
+        # الحصول على جميع أرقام الشنطات المستخدمة حالياً (غير المكتملة)
+        active_bags = ManufacturingOrderItem.objects.filter(
+            fabric_received=True
+        ).exclude(
+            bag_number__isnull=True
+        ).exclude(
+            bag_number=''
+        ).values_list('bag_number', flat=True)
+
+        # استخراج الأرقام فقط
+        used_numbers = set()
+        for bag in active_bags:
+            # محاولة استخراج الرقم من النص
+            numbers = re.findall(r'^\d+$', str(bag).strip())
+            if numbers:
+                used_numbers.add(int(numbers[0]))
+
+        # البحث عن أول رقم متاح بدءاً من 1
+        next_number = 1
+        while next_number in used_numbers:
+            next_number += 1
+
+        return str(next_number)
+
+    @staticmethod
+    def get_available_bag_numbers():
+        """الحصول على قائمة أرقام الشنطات المتاحة لإعادة الاستخدام"""
+        import re
+        from django.db.models import Q
+
+        # الحصول على أرقام الشنطات من الطلبات المكتملة (جاهز للتركيب)
+        completed_orders = ManufacturingOrder.objects.filter(
+            status='ready_for_installation'
+        )
+
+        reusable_bags = set()
+        for order in completed_orders:
+            for item in order.items.filter(fabric_received=True).exclude(bag_number=''):
+                bag_num = str(item.bag_number).strip()
+                # التحقق من أن الرقم رقمي فقط
+                if re.match(r'^\d+$', bag_num):
+                    reusable_bags.add(bag_num)
+
+        # ترتيب الأرقام تصاعدياً
+        return sorted(reusable_bags, key=lambda x: int(x))
 
     @property
     def has_cutting_data(self):
         """التحقق من وجود بيانات التقطيع"""
-        return bool(self.receiver_name and self.permit_number)
+        # التحقق من البيانات المحلية أو من عنصر التقطيع المرتبط
+        if self.receiver_name and self.permit_number:
+            return True
+        if self.cutting_item and self.cutting_item.receiver_name and self.cutting_item.permit_number:
+            return True
+        return False
 
     @property
     def is_fabric_received(self):
         """التحقق من استلام الأقمشة"""
         return self.fabric_received
+
+    @property
+    def is_cut(self):
+        """التحقق من أن العنصر تم تقطيعه"""
+        if self.cutting_item:
+            return self.cutting_item.status == 'completed'
+        return self.has_cutting_data
+
+    @property
+    def cutting_status_display(self):
+        """عرض حالة التقطيع"""
+        if self.cutting_item:
+            return self.cutting_item.get_status_display()
+        elif self.has_cutting_data:
+            return 'مكتمل'
+        else:
+            return 'لم يتم التقطيع'
 
     def get_fabric_status_display(self):
         """إرجاع حالة استلام الأقمشة"""
@@ -627,6 +805,23 @@ class ManufacturingOrderItem(models.Model):
             return 'success'
         elif self.has_cutting_data:
             return 'warning'
+        else:
+            return 'secondary'
+
+    def get_cutting_status_color(self):
+        """إرجاع لون حالة التقطيع"""
+        if self.cutting_item:
+            status = self.cutting_item.status
+            if status == 'completed':
+                return 'success'
+            elif status == 'in_progress':
+                return 'info'
+            elif status == 'rejected':
+                return 'danger'
+            else:
+                return 'secondary'
+        elif self.has_cutting_data:
+            return 'success'
         else:
             return 'secondary'
 
