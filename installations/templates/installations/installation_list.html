@@ -101,6 +101,28 @@
         padding: 8px 12px;
         border-radius: 20px;
     }
+
+    /* بادج عدد الشبابيك */
+    .badge-pill.windows-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .badge-pill.windows-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .badge-pill.windows-badge i {
+        font-size: 1rem;
+    }
     .applied-filters .badge {
         margin: 2px;
         position: relative;
@@ -318,6 +340,7 @@
                                 <th>الفريق</th>
                                 <th>التاريخ</th>
                                 <th>الموعد</th>
+                                <th>عدد الشبابيك</th>
                                 <th>القيمة المتبقية</th>
                                 <th>الحالة</th>
                                 <th>الإجراءات</th>
@@ -381,6 +404,16 @@
                                         {{ item.installation.scheduled_time|time:"H:i" }}
                                     {% else %}
                                         <span class="text-muted">غير محدد</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if item.windows_count %}
+                                        <span class="badge badge-pill" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 0.9rem; padding: 0.5rem 1rem;">
+                                            <i class="fas fa-window-maximize"></i>
+                                            {{ item.windows_count }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-center">

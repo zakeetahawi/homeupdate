@@ -270,19 +270,25 @@ class InstallationScheduleForm(forms.ModelForm):
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'min': '1',
-            'placeholder': 'أدخل عدد الشبابيك'
+            'placeholder': 'أدخل عدد الشبابيك',
+            'required': 'required'
         }),
-        required=False,
-        help_text=_('عدد الشبابيك المطلوبة للتركيب')
+        required=True,
+        help_text=_('عدد الشبابيك المطلوبة للتركيب (إلزامي)')
     )
 
     class Meta:
         model = InstallationSchedule
         fields = ['team', 'scheduled_date', 'scheduled_time', 'location_type', 'windows_count', 'notes']
         widgets = {
+            'team': forms.Select(attrs={
+                'class': 'form-control',
+                'required': 'required'
+            }),
             'location_type': forms.Select(attrs={
                 'class': 'form-control',
-                'placeholder': 'اختر نوع المكان'
+                'placeholder': 'اختر نوع المكان',
+                'required': 'required'
             }),
             'notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'أضف ملاحظات هنا...'}),
         }
@@ -291,6 +297,30 @@ class InstallationScheduleForm(forms.ModelForm):
         cleaned_data = super().clean()
         scheduled_date = cleaned_data.get('scheduled_date')
         scheduled_time = cleaned_data.get('scheduled_time')
+        team = cleaned_data.get('team')
+        location_type = cleaned_data.get('location_type')
+        windows_count = cleaned_data.get('windows_count')
+
+        # التحقق من الحقول الإلزامية
+        if not team:
+            raise ValidationError({
+                'team': _('⚠️ الفريق مطلوب - يجب اختيار فريق التركيب')
+            })
+
+        if not location_type:
+            raise ValidationError({
+                'location_type': _('⚠️ نوع المكان مطلوب - يجب تحديد نوع المكان (مفتوح أو كومبوند)')
+            })
+
+        if not windows_count:
+            raise ValidationError({
+                'windows_count': _('⚠️ عدد الشبابيك مطلوب - يجب إدخال عدد الشبابيك')
+            })
+
+        if windows_count and windows_count < 1:
+            raise ValidationError({
+                'windows_count': _('⚠️ عدد الشبابيك يجب أن يكون 1 على الأقل')
+            })
 
         # التحقق من أن التاريخ والوقت مطلوبان عند الجدولة
         if self.instance and self.instance.status in ['scheduled', 'in_installation']:
@@ -348,7 +378,19 @@ class QuickScheduleForm(forms.ModelForm):
         }),
         help_text=_('إذا تم ملء هذا الحقل، سيتم تحديث العنوان الرئيسي للعميل في جميع أنحاء النظام')
     )
-    
+
+    windows_count = forms.IntegerField(
+        label=_('عدد الشبابيك'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '1',
+            'placeholder': 'أدخل عدد الشبابيك',
+            'required': 'required'
+        }),
+        required=True,
+        help_text=_('عدد الشبابيك المطلوبة للتركيب (إلزامي)')
+    )
+
     def __init__(self, *args, **kwargs):
         order = kwargs.pop('order', None)
         super().__init__(*args, **kwargs)
@@ -369,16 +411,22 @@ class QuickScheduleForm(forms.ModelForm):
 
     class Meta:
         model = InstallationSchedule
-        fields = ['team', 'scheduled_date', 'scheduled_time', 'location_type', 'location_address', 'notes']
+        fields = ['team', 'scheduled_date', 'scheduled_time', 'location_type', 'windows_count', 'location_address', 'notes']
         widgets = {
+            'team': forms.Select(attrs={
+                'class': 'form-control'
+                # الفريق غير إلزامي في الجدولة السريعة
+            }),
             'location_type': forms.Select(attrs={
                 'class': 'form-control',
-                'placeholder': 'اختر نوع المكان'
+                'placeholder': 'اختر نوع المكان',
+                'required': 'required'
             }),
             'location_address': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
                 'placeholder': 'أدخل عنوان التركيب بالتفصيل'
+                # عنوان التركيب غير إلزامي
             }),
             'notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'أضف ملاحظات هنا...'}),
         }
@@ -387,6 +435,25 @@ class QuickScheduleForm(forms.ModelForm):
         cleaned_data = super().clean()
         scheduled_date = cleaned_data.get('scheduled_date')
         scheduled_time = cleaned_data.get('scheduled_time')
+        location_type = cleaned_data.get('location_type')
+        windows_count = cleaned_data.get('windows_count')
+
+        # التحقق من الحقول الإلزامية (الفريق وعنوان التركيب غير إلزاميين في الجدولة السريعة)
+
+        if not location_type:
+            raise ValidationError({
+                'location_type': _('⚠️ نوع المكان مطلوب - يجب تحديد نوع المكان (مفتوح أو كومبوند)')
+            })
+
+        if not windows_count:
+            raise ValidationError({
+                'windows_count': _('⚠️ عدد الشبابيك مطلوب - يجب إدخال عدد الشبابيك')
+            })
+
+        if windows_count and windows_count < 1:
+            raise ValidationError({
+                'windows_count': _('⚠️ عدد الشبابيك يجب أن يكون 1 على الأقل')
+            })
 
         if not scheduled_date:
             raise ValidationError(_('تاريخ التركيب مطلوب'))

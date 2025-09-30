@@ -3,6 +3,32 @@
 
 {% block title %}التركيبات قيد التنفيذ{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* بادج عدد الشبابيك */
+    .badge-pill.windows-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .badge-pill.windows-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .badge-pill.windows-badge i {
+        font-size: 1rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row">
@@ -83,6 +109,7 @@
                                     <th>تاريخ التركيب</th>
                                     <th>وقت التركيب</th>
                                     <th>الفريق</th>
+                                    <th>عدد الشبابيك</th>
                                     <th>الحالة</th>
                                     <th>الإجراءات</th>
                                 </tr>
@@ -110,6 +137,16 @@
                                                 <span class="text-muted">غير محدد</span>
                                             {% endif %}
                                         </td>
+                                        <td class="text-center">
+                                            {% if installation.windows_count %}
+                                                <span class="badge badge-pill" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 0.9rem; padding: 0.5rem 1rem;">
+                                                    <i class="fas fa-window-maximize"></i>
+                                                    {{ installation.windows_count }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
                                         <td>
                                             <span class="badge badge-{% if installation.status == 'in_progress' %}warning{% elif installation.status == 'in_installation' %}info{% else %}secondary{% endif %}">
                                                 {{ installation.get_status_display }}
@@ -130,7 +167,7 @@
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="7" class="text-center">لا توجد تركيبات قيد التنفيذ</td>
+                                        <td colspan="8" class="text-center">لا توجد تركيبات قيد التنفيذ</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
