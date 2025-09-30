@@ -147,6 +147,12 @@ class InstallationSchedule(models.Model):
         verbose_name=_('عنوان التركيب'),
         help_text='عنوان التركيب بالتفصيل'
     )
+    windows_count = models.PositiveIntegerField(
+        verbose_name=_('عدد الشبابيك'),
+        null=True,
+        blank=True,
+        help_text=_('عدد الشبابيك المطلوبة للتركيب')
+    )
     status = models.CharField(_('الحالة'), max_length=30, choices=STATUS_CHOICES, default='needs_scheduling')
     notes = models.TextField(_('ملاحظات'), blank=True)
     completion_date = models.DateTimeField(_('تاريخ الإكمال'), null=True, blank=True)

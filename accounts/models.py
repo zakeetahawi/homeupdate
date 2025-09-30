@@ -21,6 +21,16 @@ class User(AbstractUser):
     is_factory_manager = models.BooleanField(default=False, verbose_name=_("مسؤول مصنع"))
     is_inspection_manager = models.BooleanField(default=False, verbose_name=_("مسؤول معاينات"))
     is_installation_manager = models.BooleanField(default=False, verbose_name=_("مسؤول تركيبات"))
+    is_warehouse_staff = models.BooleanField(default=False, verbose_name=_("موظف مستودع"))
+    assigned_warehouse = models.ForeignKey(
+        'inventory.Warehouse',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='warehouse_staff',
+        verbose_name=_('المستودع المخصص'),
+        help_text=_('المستودع المخصص لموظف المستودع')
+    )
     managed_branches = models.ManyToManyField("Branch", blank=True, related_name="region_managers", verbose_name=_("الفروع المُدارة"))
     default_theme = models.CharField(max_length=50, default='default', verbose_name=_('الثيم الافتراضي'))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_('تاريخ التحديث'))
@@ -38,7 +48,7 @@ class User(AbstractUser):
     def clean(self):
         """التحقق من صحة البيانات"""
         super().clean()
-        
+
         # التحقق من أن المستخدم لديه دور واحد فقط
         roles = [
             self.is_salesperson,
@@ -47,12 +57,17 @@ class User(AbstractUser):
             self.is_general_manager,
             self.is_factory_manager,
             self.is_inspection_manager,
-            self.is_installation_manager
+            self.is_installation_manager,
+            self.is_warehouse_staff
         ]
-        
+
         active_roles = sum(roles)
         if active_roles > 1:
             raise ValidationError(_("لا يمكن اختيار أكثر من دور واحد للمستخدم"))
+
+        # التحقق من أن موظف المستودع لديه مستودع مخصص
+        if self.is_warehouse_staff and not self.assigned_warehouse:
+            raise ValidationError(_("يجب تحديد مستودع مخصص لموظف المستودع"))
     
     def save(self, *args, **kwargs):
         self.clean()
@@ -72,13 +87,15 @@ class User(AbstractUser):
             return "inspection_manager"
         elif self.is_installation_manager:
             return "installation_manager"
+        elif self.is_warehouse_staff:
+            return "warehouse_staff"
         elif self.is_salesperson:
             return "salesperson"
         elif self.is_inspection_technician:
             return "inspection_technician"
         else:
             return "user"
-    
+
     def get_user_role_display(self):
         """الحصول على اسم الدور للعرض"""
         role_names = {
@@ -88,6 +105,7 @@ class User(AbstractUser):
             "factory_manager": "مسؤول مصنع",
             "inspection_manager": "مسؤول معاينات",
             "installation_manager": "مسؤول تركيبات",
+            "warehouse_staff": "موظف مستودع",
             "salesperson": "بائع",
             "inspection_technician": "فني معاينة",
             "user": "مستخدم عادي"

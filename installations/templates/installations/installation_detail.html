@@ -258,6 +258,16 @@
                                     <th>موعد التركيب:</th>
                                     <td>{{ installation.scheduled_time|time:"H:i"|default:"غير محدد" }}</td>
                                 </tr>
+                                <tr>
+                                    <th>عدد الشبابيك:</th>
+                                    <td>
+                                        {% if installation.windows_count %}
+                                            <span class="badge badge-primary">{{ installation.windows_count }}</span>
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
                             </table>
                         </div>
                     </div>

@@ -9,6 +9,7 @@ urlpatterns = [
     
     # أوامر التقطيع
     path('orders/', views.CuttingOrderListView.as_view(), name='order_list'),
+    path('orders/completed/', views.CompletedCuttingOrdersView.as_view(), name='completed_orders'),
     path('orders/warehouse/<int:warehouse_id>/', views.CuttingOrderListView.as_view(), name='order_list_by_warehouse'),
     path('orders/<int:pk>/', views.CuttingOrderDetailView.as_view(), name='order_detail'),
     path('orders/<str:cutting_code>/', views.cutting_order_detail_by_code, name='order_detail_by_code'),

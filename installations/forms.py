@@ -278,7 +278,7 @@ class InstallationScheduleForm(forms.ModelForm):
 
     class Meta:
         model = InstallationSchedule
-        fields = ['team', 'scheduled_date', 'scheduled_time', 'location_type', 'notes']
+        fields = ['team', 'scheduled_date', 'scheduled_time', 'location_type', 'windows_count', 'notes']
         widgets = {
             'location_type': forms.Select(attrs={
                 'class': 'form-control',

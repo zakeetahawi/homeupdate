@@ -133,21 +133,23 @@ class CustomUserAdmin(UserAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = (
         'username', 'email', 'branch', 'first_name', 'last_name', 'is_staff',
-        'get_user_role_display', 'get_roles', 'has_manufacturing_approval'
+        'get_user_role_display', 'get_roles', 'has_manufacturing_approval',
+        'is_warehouse_staff', 'assigned_warehouse'
     )
 
     def get_queryset(self, request):
         """تحسين الاستعلامات لتقليل N+1 queries"""
         return super().get_queryset(request).select_related(
-            'branch'
+            'branch', 'assigned_warehouse'
         ).prefetch_related(
             'user_roles__role'  # حل مشكلة N+1 في get_roles فقط
         )
     list_filter = (
         'is_staff', 'is_superuser', 'is_active', 'branch',
-        'is_inspection_technician', 'is_salesperson', 'is_branch_manager', 
+        'is_inspection_technician', 'is_salesperson', 'is_branch_manager',
         'is_region_manager', 'is_general_manager', 'is_factory_manager',
-        'is_inspection_manager', 'is_installation_manager', 'user_roles__role'
+        'is_inspection_manager', 'is_installation_manager', 'is_warehouse_staff',
+        'user_roles__role'
     )
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
     inlines = [UserRoleInline]
@@ -167,9 +169,9 @@ class CustomUserAdmin(UserAdmin):
         (_('الصلاحيات'), {
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
-                'is_inspection_technician', 'is_salesperson', 'is_branch_manager', 
+                'is_inspection_technician', 'is_salesperson', 'is_branch_manager',
                 'is_region_manager', 'is_general_manager', 'is_factory_manager',
-                'is_inspection_manager', 'is_installation_manager', 'managed_branches', 
+                'is_inspection_manager', 'is_installation_manager', 'managed_branches',
                 'groups', 'user_permissions'
             ),
             'classes': ('collapse',),
@@ -177,6 +179,10 @@ class CustomUserAdmin(UserAdmin):
                 'يمكنك إدارة أدوار المستخدم بشكل أسهل '
                 'من خلال قسم "أدوار المستخدم" أدناه.'
             )
+        }),
+        (_('أدوار المستودع'), {
+            'fields': ('is_warehouse_staff', 'assigned_warehouse'),
+            'description': _('تحديد موظفي المستودع والمستودع المخصص لهم')
         }),
         (_('تواريخ مهمة'), {'fields': ('last_login', 'date_joined')}),
     )

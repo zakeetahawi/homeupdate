@@ -55,6 +55,10 @@ class CuttingDashboardView(LoginRequiredMixin, TemplateView):
         if user.is_superuser:
             return Warehouse.objects.filter(is_active=True)
 
+        # موظف مستودع: الوصول فقط للمستودع المخصص له
+        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff and user.assigned_warehouse:
+            return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+
         # يمكن إضافة منطق صلاحيات المستودعات هنا
         # مؤقتاً نعرض جميع المستودعات النشطة
         return Warehouse.objects.filter(is_active=True)
@@ -99,7 +103,7 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
         queryset = CuttingOrder.objects.select_related(
             'order', 'order__customer', 'warehouse', 'assigned_to'
         ).prefetch_related('items')
-        
+
         # فلترة حسب المستودع إذا تم تحديده
         warehouse_id = self.kwargs.get('warehouse_id')
         if warehouse_id:
@@ -108,7 +112,12 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
             # فلترة حسب مستودعات المستخدم
             user_warehouses = self.get_user_warehouses()
             queryset = queryset.filter(warehouse__in=user_warehouses)
-        
+
+        # لموظفي المستودع: عرض الطلبات غير المكتملة فقط
+        user = self.request.user
+        if hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+            queryset = queryset.exclude(status='completed')
+
         # البحث
         search = self.request.GET.get('search')
         if search:
@@ -118,19 +127,22 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
                 Q(order__customer__name__icontains=search) |
                 Q(order__customer__phone__icontains=search)
             )
-        
+
         # فلترة حسب الحالة
         status = self.request.GET.get('status')
         if status:
             queryset = queryset.filter(status=status)
-        
+
         return queryset.order_by('-created_at')
-    
+
     def get_user_warehouses(self):
         """الحصول على المستودعات المتاحة للمستخدم"""
         user = self.request.user
         if user.is_superuser:
             return Warehouse.objects.filter(is_active=True)
+        # موظف مستودع: الوصول فقط للمستودع المخصص له
+        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff and user.assigned_warehouse:
+            return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
         return Warehouse.objects.filter(is_active=True)
     
     def get_context_data(self, **kwargs):
@@ -141,6 +153,72 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
             'status_choices': CuttingOrder.STATUS_CHOICES,
             'search_query': self.request.GET.get('search', ''),
             'current_status': self.request.GET.get('status', ''),
+        })
+        return context
+
+
+class CompletedCuttingOrdersView(LoginRequiredMixin, ListView):
+    """قائمة أوامر التقطيع المجمعة - مع فلترة حسب الحالة"""
+    model = CuttingOrder
+    template_name = 'cutting/completed_orders.html'
+    context_object_name = 'cutting_orders'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = CuttingOrder.objects.select_related(
+            'order', 'order__customer', 'warehouse', 'assigned_to'
+        ).prefetch_related('items')
+
+        # فلترة حسب مستودعات المستخدم
+        user_warehouses = self.get_user_warehouses()
+        queryset = queryset.filter(warehouse__in=user_warehouses)
+
+        # فلترة حسب المستودع إذا تم تحديده
+        warehouse_id = self.request.GET.get('warehouse')
+        if warehouse_id:
+            queryset = queryset.filter(warehouse_id=warehouse_id)
+
+        # فلترة حسب الحالة
+        status_filter = self.request.GET.get('status_filter')
+        if status_filter == 'completed':
+            queryset = queryset.filter(status='completed')
+        elif status_filter == 'incomplete':
+            queryset = queryset.exclude(status='completed')
+        elif status_filter == 'partially_completed':
+            # الطلبات التي لديها بعض العناصر المكتملة وليست مكتملة بالكامل
+            queryset = queryset.filter(
+                items__status='completed'
+            ).exclude(status='completed').distinct()
+
+        # البحث
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(cutting_code__icontains=search) |
+                Q(order__contract_number__icontains=search) |
+                Q(order__customer__name__icontains=search) |
+                Q(order__customer__phone__icontains=search)
+            )
+
+        return queryset.order_by('-created_at')
+
+    def get_user_warehouses(self):
+        """الحصول على المستودعات المتاحة للمستخدم"""
+        user = self.request.user
+        if user.is_superuser:
+            return Warehouse.objects.filter(is_active=True)
+        # موظف مستودع: الوصول فقط للمستودع المخصص له
+        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff and user.assigned_warehouse:
+            return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+        return Warehouse.objects.filter(is_active=True)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'warehouses': self.get_user_warehouses(),
+            'selected_warehouse': self.request.GET.get('warehouse', ''),
+            'status_filter': self.request.GET.get('status_filter', ''),
+            'search_query': self.request.GET.get('search', ''),
         })
         return context
 
