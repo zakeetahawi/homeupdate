@@ -564,6 +564,30 @@ class Order(models.Model):
             logger.error(f"خطأ في حفظ الطلب {getattr(self, 'order_number', 'غير محدد')}: {str(e)}")
             raise
 
+    def delete(self, *args, **kwargs):
+        """حذف الطلب مع حذف السجلات المرتبطة بشكل آمن"""
+        from django.db import connection, transaction
+        from django.db.models.signals import post_delete
+        from . import signals as order_signals
+
+        # تعيين علامة لتجنب تشغيل signals أثناء الحذف
+        self._is_being_deleted = True
+
+        # تعطيل signal حذف عناصر الطلب مؤقتاً
+        post_delete.disconnect(order_signals.log_order_item_deletion, sender=OrderItem)
+
+        try:
+            # استخدام معاملة واحدة لحذف السجلات والطلب
+            with transaction.atomic():
+                # حذف سجلات OrderStatusLog أولاً باستخدام raw SQL
+                with connection.cursor() as cursor:
+                    cursor.execute("DELETE FROM orders_orderstatuslog WHERE order_id = %s", [self.pk])
+
+                # حذف الطلب (سيتم حذف العناصر المرتبطة تلقائياً بسبب CASCADE)
+                super().delete(*args, **kwargs)
+        finally:
+            # إعادة تفعيل signal حذف عناصر الطلب
+            post_delete.connect(order_signals.log_order_item_deletion, sender=OrderItem)
 
 # (وصل الإشارات يتم بعد تعريف الكلاس في أسفل الملف)
     # تم إزالة دالة create_order_notifications
@@ -1547,14 +1571,26 @@ def _update_order_cutting_flag(order):
 def order_item_saved(sender, instance, created, **kwargs):
     # إعادة حساب إجماليات الطلب
     if instance and instance.order:
-        _recompute_order_totals(instance.order.pk)
-        _update_order_cutting_flag(instance.order)
+        try:
+            # التحقق من أن الطلب لا يزال موجوداً
+            if Order.objects.filter(pk=instance.order.pk).exists():
+                _recompute_order_totals(instance.order.pk)
+                _update_order_cutting_flag(instance.order)
+        except Exception:
+            # تجاهل الأخطاء إذا كان الطلب قيد الحذف
+            pass
 
 
 def order_item_deleted(sender, instance, **kwargs):
     if instance and instance.order:
-        _recompute_order_totals(instance.order.pk)
-        _update_order_cutting_flag(instance.order)
+        try:
+            # التحقق من أن الطلب لا يزال موجوداً
+            if Order.objects.filter(pk=instance.order.pk).exists():
+                _recompute_order_totals(instance.order.pk)
+                _update_order_cutting_flag(instance.order)
+        except Exception:
+            # تجاهل الأخطاء إذا كان الطلب قيد الحذف
+            pass
 
 
 
@@ -2289,52 +2325,56 @@ class OrderStatusLog(models.Model):
     def create_detailed_log(cls, order, change_type, old_value=None, new_value=None,
                            changed_by=None, notes='', field_name=None, **extra_details):
         """إنشاء سجل مفصل للتغيير"""
-        change_details = extra_details.copy()
+        try:
+            change_details = extra_details.copy()
 
-        # حفظ القيم الأساسية دائماً
-        change_details.update({
-            'field_name': field_name,
-            'old_value': str(old_value) if old_value not in [None, ''] else 'غير محدد',
-            'new_value': str(new_value) if new_value not in [None, ''] else 'غير محدد',
-        })
-
-        if change_type == 'customer':
+            # حفظ القيم الأساسية دائماً
             change_details.update({
-                'old_customer_name': getattr(old_value, 'name', str(old_value)) if old_value else 'غير محدد',
-                'new_customer_name': getattr(new_value, 'name', str(new_value)) if new_value else 'غير محدد',
-            })
-        elif change_type == 'price':
-            change_details.update({
-                'old_price': float(old_value) if old_value else 0,
-                'new_price': float(new_value) if new_value else 0,
-            })
-        elif change_type == 'date':
-            change_details.update({
-                'old_date': str(old_value) if old_value else 'غير محدد',
-                'new_date': str(new_value) if new_value else 'غير محدد',
+                'field_name': field_name,
+                'old_value': str(old_value) if old_value not in [None, ''] else 'غير محدد',
+                'new_value': str(new_value) if new_value not in [None, ''] else 'غير محدد',
             })
 
-        # تحديد الحالات
-        if change_type == 'status':
-            # للتغييرات في الحالة، استخدم القيم المرسلة
-            old_status = old_value or getattr(order, 'order_status', '')
-            new_status = new_value or getattr(order, 'order_status', '')
-        else:
-            # للتغييرات الأخرى، استخدم حالة الطلب الحالية
-            current_status = getattr(order, 'order_status', None) or getattr(order, 'tracking_status', '')
-            old_status = current_status
-            new_status = current_status
+            if change_type == 'customer':
+                change_details.update({
+                    'old_customer_name': getattr(old_value, 'name', str(old_value)) if old_value else 'غير محدد',
+                    'new_customer_name': getattr(new_value, 'name', str(new_value)) if new_value else 'غير محدد',
+                })
+            elif change_type == 'price':
+                change_details.update({
+                    'old_price': float(old_value) if old_value else 0,
+                    'new_price': float(new_value) if new_value else 0,
+                })
+            elif change_type == 'date':
+                change_details.update({
+                    'old_date': str(old_value) if old_value else 'غير محدد',
+                    'new_date': str(new_value) if new_value else 'غير محدد',
+                })
 
-        return cls.objects.create(
-            order=order,
-            old_status=old_status,
-            new_status=new_status,
-            changed_by=changed_by,
-            notes=notes,
-            change_type=change_type,
-            change_details=change_details,
-            is_automatic=changed_by is None
-        )
+            # تحديد الحالات
+            if change_type == 'status':
+                # للتغييرات في الحالة، استخدم القيم المرسلة
+                old_status = old_value or getattr(order, 'order_status', '')
+                new_status = new_value or getattr(order, 'order_status', '')
+            else:
+                # للتغييرات الأخرى، استخدم حالة الطلب الحالية
+                current_status = getattr(order, 'order_status', None) or getattr(order, 'tracking_status', '')
+                old_status = current_status
+                new_status = current_status
+
+            return cls.objects.create(
+                order=order,
+                old_status=old_status,
+                new_status=new_status,
+                changed_by=changed_by,
+                notes=notes,
+                change_type=change_type,
+                change_details=change_details,
+                is_automatic=changed_by is None
+            )
+        except Exception:
+            # تجاهل الأخطاء إذا كان الطلب قيد الحذف أو حدث خطأ في المفتاح الأجنبي
+            return None
 
 
 class ManufacturingDeletionLog(models.Model):

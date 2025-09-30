@@ -813,6 +813,7 @@ def order_delete(request, pk):
 
     if request.method == 'POST':
         try:
+            # الآن نموذج Order يتعامل مع حذف السجلات بشكل آمن
             order.delete()
             messages.success(request, 'تم حذف الطلب بنجاح.')
         except Exception as e:
@@ -1435,17 +1436,23 @@ def order_update_by_number(request, order_number):
 def order_delete_by_number(request, order_number):
     """حذف الطلب باستخدام رقم الطلب"""
     order = get_object_or_404(Order, order_number=order_number)
-    
+
     if not can_user_delete_order(request.user, order):
         messages.error(request, "ليس لديك صلاحية لحذف هذا الطلب.")
         return redirect("orders:order_detail_by_number", order_number=order_number)
-    
+
     if request.method == 'POST':
         order_number_for_message = order.order_number
-        order.delete()
-        messages.success(request, f'تم حذف الطلب {order_number_for_message} بنجاح.')
+
+        try:
+            # الآن نموذج Order يتعامل مع حذف السجلات بشكل آمن
+            order.delete()
+            messages.success(request, f'تم حذف الطلب {order_number_for_message} بنجاح.')
+        except Exception as e:
+            messages.error(request, f'حدث خطأ أثناء حذف الطلب: {str(e)}')
+
         return redirect('orders:order_list')
-    
+
     return render(request, 'orders/order_confirm_delete.html', {'order': order})
 
 

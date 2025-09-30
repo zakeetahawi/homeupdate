@@ -143,13 +143,14 @@ class CustomerDebtAdmin(admin.ModelAdmin):
         'customer__phone',
         'order__order_number',
         'order__customer__branch__name',
-        'order__salesperson__first_name',
-        'order__salesperson__last_name',
+        'order__salesperson__name',
+        'order__salesperson__user__first_name',
+        'order__salesperson__user__last_name',
         'payment_receiver_name'
     ]
     list_editable = ['is_paid']
     ordering = ['-created_at']
-    actions = ['mark_as_paid', 'export_to_excel', 'print_debts_report']
+    actions = ['mark_as_paid', 'delete_selected_debts', 'export_to_excel', 'print_debts_report']
 
     # إضافة إمكانية الترتيب لجميع الأعمدة
     sortable_by = [
@@ -162,6 +163,38 @@ class CustomerDebtAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related(
             'customer', 'order', 'order__customer__branch', 'order__salesperson'
         )
+
+    def has_delete_permission(self, request, obj=None):
+        """السماح بالحذف للمدراء والمستخدمين المصرح لهم"""
+        # السماح للمدراء (superuser)
+        if request.user.is_superuser:
+            return True
+        # التحقق من الصلاحية العادية
+        return request.user.has_perm('installations.delete_customerdebt')
+
+    def get_deleted_objects(self, objs, request):
+        """
+        تجاوز فحص الصلاحيات المتقدم للحذف
+        """
+        # إذا كان المستخدم مدير، نسمح بالحذف مباشرة
+        if request.user.is_superuser:
+            from django.contrib.admin.utils import NestedObjects
+            from django.db import router
+
+            collector = NestedObjects(using=router.db_for_write(self.model))
+            collector.collect(objs)
+
+            def format_callback(obj):
+                return str(obj)
+
+            to_delete = collector.nested(format_callback)
+            protected = []
+            model_count = {self.model._meta.verbose_name_plural: len(objs)}
+
+            return to_delete, model_count, set(), protected
+
+        # للمستخدمين الآخرين، استخدم السلوك الافتراضي
+        return super().get_deleted_objects(objs, request)
 
     def customer_name(self, obj):
         """عرض اسم العميل مع رقم الهاتف"""
@@ -315,6 +348,17 @@ class CustomerDebtAdmin(admin.ModelAdmin):
 
         self.message_user(request, f'تم تسديد {updated} مديونية بنجاح وتحديث الطلبات المرتبطة.')
     mark_as_paid.short_description = "تسديد المديونيات المحددة"
+
+    def delete_selected_debts(self, request, queryset):
+        """حذف المديونيات المحددة (للمدراء فقط)"""
+        if not request.user.is_superuser:
+            self.message_user(request, 'ليس لديك صلاحية حذف المديونيات.', level='ERROR')
+            return
+
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f'تم حذف {count} مديونية بنجاح.')
+    delete_selected_debts.short_description = "حذف المديونيات المحددة"
 
     def export_to_excel(self, request, queryset):
         """تصدير المديونيات إلى Excel"""
@@ -1276,7 +1320,7 @@ class InstallationArchiveAdmin(admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['installation', 'completion_date', 'archived_by_display', 'archive_notes_short']
     list_filter = ['completion_date', 'archived_by']
-    search_fields = ['installation__order__order_number', 'archive_notes', 'archived_by__username', 'archived_by__first_name', 'archived_by__last_name']
+    search_fields = ['installation__order__order_number', 'archive_notes', 'archived_by__username', 'archived_by__first_name', 'archived_by__last_name', 'archived_by__email']
     ordering = ['-completion_date']
     readonly_fields = ['completion_date', 'archived_by']
 
@@ -1306,7 +1350,7 @@ class InstallationStatusLogAdmin(admin.ModelAdmin):
     list_per_page = 50
     list_display = ['installation', 'old_status_display', 'new_status_display', 'changed_by_display', 'created_at', 'reason_short']
     list_filter = ['created_at', 'changed_by', 'old_status', 'new_status']
-    search_fields = ['installation__order__order_number', 'reason', 'notes', 'changed_by__username', 'changed_by__first_name', 'changed_by__last_name']
+    search_fields = ['installation__order__order_number', 'reason', 'notes', 'changed_by__username', 'changed_by__first_name', 'changed_by__last_name', 'changed_by__email']
     ordering = ['-created_at']
     readonly_fields = ['installation', 'old_status', 'new_status', 'changed_by', 'reason', 'notes', 'created_at']
 
@@ -1348,7 +1392,7 @@ class InstallationEventLogAdmin(admin.ModelAdmin):
     list_per_page = 50
     list_display = ['installation', 'event_type_display', 'description_short', 'user_display', 'created_at']
     list_filter = ['created_at', 'user', 'event_type']
-    search_fields = ['installation__order__order_number', 'description', 'user__username', 'user__first_name', 'user__last_name']
+    search_fields = ['installation__order__order_number', 'description', 'user__username', 'user__first_name', 'user__last_name', 'user__email']
     ordering = ['-created_at']
     readonly_fields = ['installation', 'event_type', 'description', 'user', 'metadata', 'created_at']
 

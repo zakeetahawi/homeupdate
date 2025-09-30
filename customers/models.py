@@ -575,3 +575,30 @@ class Customer(models.Model):
     def has_discount(self):
         """تحديد ما إذا كان العميل له خصم"""
         return self.discount_type is not None and self.discount_type.is_active
+
+    def delete(self, *args, **kwargs):
+        """حذف العميل مع حذف السجلات المرتبطة بشكل آمن"""
+        from django.db import connection, transaction
+        from django.db.models.signals import post_delete
+        from orders import signals as order_signals
+        from orders.models import OrderItem
+
+        # تعطيل signal حذف عناصر الطلب مؤقتاً
+        post_delete.disconnect(order_signals.log_order_item_deletion, sender=OrderItem)
+
+        try:
+            with transaction.atomic():
+                # حذف سجلات OrderStatusLog لجميع طلبات العميل
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        DELETE FROM orders_orderstatuslog
+                        WHERE order_id IN (
+                            SELECT id FROM orders_order WHERE customer_id = %s
+                        )
+                    """, [self.pk])
+
+                # حذف العميل (سيتم حذف الطلبات تلقائياً بسبب CASCADE)
+                super().delete(*args, **kwargs)
+        finally:
+            # إعادة تفعيل signal حذف عناصر الطلب
+            post_delete.connect(order_signals.log_order_item_deletion, sender=OrderItem)

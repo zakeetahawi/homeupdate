@@ -398,8 +398,8 @@ def installation_list(request):
                       Q(order__customer__name__icontains=search) | \
                       Q(order__customer__phone__icontains=search) | \
                       Q(order__customer__address__icontains=search) | \
-                      Q(order__customer__location__icontains=search) | \
-                      Q(order__salesperson__username__icontains=search) | \
+                      Q(order__customer__location_type__icontains=search) | \
+                      Q(order__salesperson__name__icontains=search) | \
                       Q(order__contract_number__icontains=search) | \
                       Q(order__invoice_number__icontains=search)
             scheduled_query = scheduled_query.filter(search_q)
@@ -433,8 +433,8 @@ def installation_list(request):
                       Q(order__customer__name__icontains=search) | \
                       Q(order__customer__phone__icontains=search) | \
                       Q(order__customer__address__icontains=search) | \
-                      Q(order__customer__location__icontains=search) | \
-                      Q(order__salesperson__username__icontains=search) | \
+                      Q(order__customer__location_type__icontains=search) | \
+                      Q(order__salesperson__name__icontains=search) | \
                       Q(order__contract_number__icontains=search) | \
                       Q(order__invoice_number__icontains=search)
             ready_manufacturing_query = ready_manufacturing_query.filter(search_q)

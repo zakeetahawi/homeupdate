@@ -1177,20 +1177,33 @@ def log_order_item_creation(sender, instance, created, **kwargs):
 @receiver(post_delete, sender='orders.OrderItem')
 def log_order_item_deletion(sender, instance, **kwargs):
     """تسجيل حذف عناصر من الطلب"""
-    if instance.order:
-        try:
-            from .models import OrderStatusLog
-            OrderStatusLog.create_detailed_log(
-                order=instance.order,
-                change_type='general',
-                old_value=f'{instance.product.name} - الكمية: {instance.quantity}',
-                new_value='',
-                changed_by=getattr(instance, '_modified_by', None),
-                notes=f'تم حذف عنصر: {instance.product.name} (الكمية: {instance.quantity}، السعر: {instance.unit_price})',
-                field_name='عناصر الطلب'
-            )
-        except Exception as e:
-            logger.error(f"خطأ في تسجيل حذف عنصر الطلب {instance.pk}: {e}")
+    # عدم تسجيل أي شيء إذا لم يكن هناك طلب مرتبط
+    if not instance.order:
+        return
+
+    # التحقق من أن الطلب ليس قيد الحذف
+    if getattr(instance.order, '_is_being_deleted', False):
+        return
+
+    try:
+        # التحقق من أن الطلب لا يزال موجوداً في قاعدة البيانات
+        from .models import Order, OrderStatusLog
+        if not Order.objects.filter(pk=instance.order.pk).exists():
+            # الطلب تم حذفه، لا نسجل شيء
+            return
+
+        OrderStatusLog.create_detailed_log(
+            order=instance.order,
+            change_type='general',
+            old_value=f'{instance.product.name} - الكمية: {instance.quantity}',
+            new_value='',
+            changed_by=getattr(instance, '_modified_by', None),
+            notes=f'تم حذف عنصر: {instance.product.name} (الكمية: {instance.quantity}، السعر: {instance.unit_price})',
+            field_name='عناصر الطلب'
+        )
+    except Exception as e:
+        # تجاهل الأخطاء بصمت إذا كان الطلب قيد الحذف
+        pass
 
 
 @receiver(post_save, sender=Order)

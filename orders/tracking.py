@@ -58,6 +58,10 @@ def unified_order_tracking_post_save(sender, instance, created, **kwargs):
     """
     تسجيل جميع التغييرات على الطلب بعد الحفظ
     """
+    # تجاهل التتبع إذا كان الطلب قيد الحذف
+    if getattr(instance, '_is_being_deleted', False):
+        return
+
     if created:
         # طلب جديد
         user = getattr(instance, '_modified_by', None) or get_current_user()
@@ -73,7 +77,7 @@ def unified_order_tracking_post_save(sender, instance, created, **kwargs):
                 is_automatic=False
             )
         return
-    
+
     # تحديث طلب موجود
     old_instance = getattr(instance, '_old_instance', None)
     if not old_instance:
@@ -256,6 +260,10 @@ def orderitem_tracking_pre_save(sender, instance, **kwargs):
 @receiver(post_save, sender=OrderItem)
 def orderitem_tracking_post_save(sender, instance, created, **kwargs):
     """تتبع التغييرات على عناصر الطلب"""
+
+    # تجاهل التتبع إذا كان الطلب قيد الحذف
+    if instance.order and getattr(instance.order, '_is_being_deleted', False):
+        return
 
     # المستخدم المسؤول عن التغيير
     user = getattr(instance, '_modified_by', None) or get_current_user()
