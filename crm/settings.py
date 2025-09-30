@@ -189,6 +189,7 @@ AUTHENTICATION_BACKENDS = [
 # قائمة الوسطاء الأساسية مع إدارة اتصالات محسنة
 MIDDLEWARE = [
     'crm.middleware.emergency_connection.EmergencyConnectionMiddleware',  # إدارة الاتصالات الطارئة
+    'orders.middleware.CurrentUserMiddleware',  # تتبع المستخدم الحالي
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

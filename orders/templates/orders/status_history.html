@@ -23,53 +23,152 @@
     .status-log-item {
         border-left: 4px solid #007bff;
         margin: 15px 0;
-        padding: 15px;
+        padding: 20px;
         background: #f8f9fa;
-        border-radius: 0 8px 8px 0;
+        border-radius: 0 12px 12px 0;
         transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    
+
     .status-log-item:hover {
         background: #e9ecef;
         transform: translateX(5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .status-log-item[data-change-type="creation"] {
+        border-left-color: #28a745;
+        background: linear-gradient(135deg, #d4edda 0%, #f8f9fa 100%);
+    }
+
+    .status-log-item[data-change-type="status"] {
+        border-left-color: #007bff;
+    }
+
+    /* أنماط خاصة بأنواع الطلبات */
+    .status-log-item[data-order-type*="inspection"] {
+        border-left-color: #fd7e14;
+        background: linear-gradient(135deg, #fff3cd 0%, #f8f9fa 100%);
+    }
+
+    .status-log-item[data-order-type*="installation"] {
+        border-left-color: #6f42c1;
+        background: linear-gradient(135deg, #e2d9f3 0%, #f8f9fa 100%);
+    }
+
+    .status-log-item[data-order-type*="products"] {
+        border-left-color: #dc3545;
+        background: linear-gradient(135deg, #f8d7da 0%, #f8f9fa 100%);
+    }
+
+    .status-log-item[data-order-type*="accessory"] {
+        border-left-color: #20c997;
+        background: linear-gradient(135deg, #d1ecf1 0%, #f8f9fa 100%);
+    }
+
+    .status-log-item[data-order-type*="tailoring"] {
+        border-left-color: #ffc107;
+        background: linear-gradient(135deg, #fff3cd 0%, #f8f9fa 100%);
+    }
+
+    .status-log-item[data-change-type="customer"] {
+        border-left-color: #17a2b8;
+    }
+
+    .status-log-item[data-change-type="price"] {
+        border-left-color: #28a745;
+    }
+
+    .status-log-item[data-change-type="date"] {
+        border-left-color: #ffc107;
+    }
+
+    .status-log-item[data-change-type="manufacturing"] {
+        border-left-color: #6c757d;
+    }
+
+    .status-log-item[data-change-type="installation"] {
+        border-left-color: #343a40;
+    }
+
+    .status-log-item[data-change-type="payment"] {
+        border-left-color: #28a745;
+    }
+
+    .change-icon {
+        font-size: 1.5em;
+        margin-bottom: 10px;
     }
     
     .status-change {
-        font-weight: bold;
-        color: #495057;
+        font-weight: 600;
+        color: #2c3e50;
         margin-bottom: 8px;
+        font-size: 1.1em;
     }
-    
+
     .status-from {
         color: #dc3545;
+        background: #f8d7da;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.9em;
     }
-    
+
     .status-to {
         color: #28a745;
+        background: #d4edda;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.9em;
     }
-    
+
     .status-arrow {
         color: #6c757d;
         margin: 0 10px;
+        font-weight: bold;
     }
-    
+
     .user-info {
         color: #6c757d;
         font-size: 0.9em;
-        margin-top: 8px;
     }
-    
+
+    .user-info i {
+        color: #007bff;
+        margin-right: 5px;
+        width: 15px;
+    }
+
     .timestamp {
-        color: #868e96;
-        font-size: 0.8em;
+        color: #6c757d;
+        font-size: 0.85em;
     }
-    
+
+    .timestamp i {
+        color: #28a745;
+        margin-right: 5px;
+        width: 15px;
+    }
+
     .notes {
-        background: #e3f2fd;
-        padding: 10px;
-        border-radius: 4px;
-        margin-top: 8px;
-        border-right: 3px solid #2196f3;
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin: 10px 0;
+        color: #856404;
+        font-size: 0.9em;
+    }
+
+    .notes i {
+        color: #f39c12;
+        margin-right: 5px;
+    }
+
+    .badge {
+        font-size: 0.75em;
+        padding: 4px 8px;
     }
     
     .filters-section {
@@ -77,6 +176,41 @@
         padding: 20px;
         border-radius: 8px;
         margin-bottom: 20px;
+    }
+
+    /* تحسينات للتفاصيل */
+    .change-details {
+        transition: all 0.3s ease;
+    }
+
+    .change-details:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    }
+
+    .change-arrow {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 0.7; }
+        50% { opacity: 1; }
+        100% { opacity: 0.7; }
+    }
+
+    /* تحسين badges */
+    .badge.bg-light {
+        background-color: #fff3cd !important;
+        border-color: #ffc107 !important;
+        color: #856404 !important;
+    }
+
+    .badge.bg-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    }
+
+    .badge.bg-primary {
+        background: linear-gradient(135deg, #007bff 0%, #6610f2 100%) !important;
     }
     
     .filter-group {
@@ -119,6 +253,39 @@
         font-size: 3em;
         margin-bottom: 15px;
         color: #dee2e6;
+    }
+
+    /* تحسينات إضافية للعرض */
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .timestamp {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        justify-content: flex-end;
+    }
+
+    .badge {
+        font-weight: normal;
+    }
+
+    .status-log-item .badge {
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.8); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    /* تحسين عرض التاريخ والوقت */
+    .timestamp small {
+        line-height: 1.2;
+        text-align: right;
     }
 </style>
 {% endblock %}
@@ -163,18 +330,35 @@
 
     <!-- Filters -->
     <div class="filters-section">
-        <form method="get" class="row">
-            <div class="col-md-4">
-                <div class="filter-group">
-                    <label for="search" class="form-label">البحث</label>
-                    <input type="text" class="form-control" id="search" name="search" 
-                           value="{{ search_query }}" placeholder="البحث في الملاحظات أو اسم المستخدم">
-                </div>
-            </div>
+        <form method="get" class="row g-3">
             <div class="col-md-3">
-                <div class="filter-group">
-                    <label for="status" class="form-label">الحالة</label>
-                    <select class="form-select" id="status" name="status">
+                <label for="search" class="form-label">البحث</label>
+                <input type="text" class="form-control" id="search" name="search"
+                       value="{{ search_query }}" placeholder="البحث في الملاحظات أو اسم المستخدم">
+            </div>
+            <div class="col-md-2">
+                <label for="change_type" class="form-label">نوع التغيير</label>
+                <select class="form-select" id="change_type" name="change_type">
+                    <option value="">جميع الأنواع</option>
+                    <option value="creation" {% if request.GET.change_type == 'creation' %}selected{% endif %}>إنشاء طلب</option>
+                    <option value="status" {% if request.GET.change_type == 'status' %}selected{% endif %}>تغيير حالة</option>
+                    <option value="customer" {% if request.GET.change_type == 'customer' %}selected{% endif %}>تغيير عميل</option>
+                    <option value="price" {% if request.GET.change_type == 'price' %}selected{% endif %}>تغيير سعر</option>
+                    <option value="date" {% if request.GET.change_type == 'date' %}selected{% endif %}>تغيير تاريخ</option>
+                    <option value="payment" {% if request.GET.change_type == 'payment' %}selected{% endif %}>تحديث دفع</option>
+                    <option value="general" {% if request.GET.change_type == 'general' %}selected{% endif %}>تحديثات عامة</option>
+                    <!-- فلاتر الأقسام -->
+                    <optgroup label="الأقسام">
+                        <option value="inspection" {% if request.GET.change_type == 'inspection' %}selected{% endif %}>🔍 المعاينات</option>
+                        <option value="installation" {% if request.GET.change_type == 'installation' %}selected{% endif %}>🔧 التركيب</option>
+                        <option value="manufacturing" {% if request.GET.change_type == 'manufacturing' %}selected{% endif %}>🏭 التصنيع</option>
+                        <option value="cutting" {% if request.GET.change_type == 'cutting' %}selected{% endif %}>✂️ التقطيع</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="status" class="form-label">الحالة</label>
+                <select class="form-select" id="status" name="status">
                         <option value="">جميع الحالات</option>
                         {% for status_code, status_name in status_choices %}
                         <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>
@@ -219,35 +403,127 @@
             {% for log in page_obj %}
                 {# Skip generic manufacturing-sync logs; prefer the explicit manufacturing log created in the manufacturing views #}
                 {% if not log.notes or "مزامنة حالة الطلب" not in log.notes %}
-                <div class="status-log-item">
-                    <div class="status-change">
-                        {% if log.notes and "تم تغيير حالة أمر التصنيع" in log.notes %}
-                            {{ log.notes }}
-                        {% else %}
-                            تم تبديل الحالة من
-                            <strong>{{ log.old_status_pretty }}</strong>
-                            إلى
-                            <strong>{{ log.new_status_pretty }}</strong>
-                        {% endif %}
-                    </div>
+                <div class="status-log-item" data-change-type="{{ log.change_type }}" data-order-type="{{ log.order.get_selected_types_display|default:'' }}">
+                    <div class="row">
+                        <div class="col-md-1 text-center">
+                            <div class="change-icon">
+                                <i class="{{ log.change_icon }} text-{{ log.change_color }}"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-11">
+                            <div class="status-change">
+                                <strong>{{ log.get_detailed_description }}</strong>
+                                {% if log.change_type != 'creation' and log.change_type != 'status' %}
+                                    <span class="badge badge-{{ log.change_color }} ms-2">{{ log.change_type_display }}</span>
+                                {% endif %}
+                                {% if log.change_type == 'status' and log.order.get_selected_types_display %}
+                                    <span class="badge badge-outline-secondary ms-2">{{ log.order.get_selected_types_display }}</span>
+                                {% endif %}
+                            </div>
 
-                    {% if log.notes %}
-                    <div class="notes">
-                        <i class="fas fa-sticky-note"></i> {{ log.notes }}
-                    </div>
-                    {% endif %}
+                            {% if log.notes and log.change_type != 'creation' %}
+                            <div class="notes mt-2">
+                                <i class="fas fa-sticky-note text-muted"></i>
+                                <small class="text-muted">{{ log.notes }}</small>
+                            </div>
+                            {% endif %}
 
-                    <div class="user-info">
-                        <i class="fas fa-user"></i>
-                        {% if log.changed_by %}
-                            {{ log.changed_by.get_full_name|default:log.changed_by.username }}
-                        {% else %}
-                            مستخدم غير محدد
-                        {% endif %}
-                    </div>
+                            <!-- عرض التفاصيل القديمة والجديدة مع badges -->
+                            {% if log.change_details %}
+                                <div class="change-details mt-3 p-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; border-left: 4px solid #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                    <div class="row align-items-center">
+                                        {% if log.change_details.field_name %}
+                                        <div class="col-12 mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-edit text-primary me-2"></i>
+                                                <small class="text-muted me-2">الحقل المعدل:</small>
+                                                <span class="badge bg-primary" style="font-size: 0.75em;">
+                                                    <i class="fas fa-tag me-1"></i>{{ log.change_details.field_name }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {% endif %}
 
-                    <div class="timestamp">
-                        <i class="fas fa-clock"></i> {{ log.created_at|date:"Y-m-d H:i" }}
+                                        {% if log.change_details.old_value or log.change_details.new_value %}
+                                        <div class="col-md-6 mb-2">
+                                            <div class="d-flex flex-column">
+                                                <small class="text-muted mb-1">
+                                                    <i class="fas fa-history text-warning me-1"></i> القيمة السابقة:
+                                                </small>
+                                                <span class="badge bg-light text-dark border border-warning" style="font-size: 0.85em; padding: 8px 12px; word-break: break-all;">
+                                                    <i class="fas fa-minus-circle text-warning me-1"></i>
+                                                    {{ log.change_details.old_value|default:"غير محدد" }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="d-flex flex-column">
+                                                <small class="text-muted mb-1">
+                                                    <i class="fas fa-check-circle text-success me-1"></i> القيمة الجديدة:
+                                                </small>
+                                                <span class="badge bg-success text-white" style="font-size: 0.85em; padding: 8px 12px; word-break: break-all;">
+                                                    <i class="fas fa-plus-circle me-1"></i>
+                                                    {{ log.change_details.new_value|default:"غير محدد" }}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- سهم التغيير -->
+                                        <div class="col-12 text-center mt-2">
+                                            <div class="change-arrow" style="opacity: 0.7;">
+                                                <i class="fas fa-long-arrow-alt-right text-primary" style="font-size: 1.2em;"></i>
+                                                <small class="text-muted ms-2">تم التغيير</small>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- إضافة badge للحالة الأساسية للطلب إذا كان التغيير في حالة فرعية -->
+                            {% if log.change_type == 'status' and log.order.order_status %}
+                            <div class="mt-2 mb-2">
+                                <small class="text-muted">حالة الطلب الأساسية:</small>
+                                <span class="badge bg-primary ms-1" style="font-size: 0.75em;">
+                                    {{ log.order.get_order_status_display }}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <div class="user-info">
+                                        <i class="fas fa-user text-muted"></i>
+                                        <small style="font-size: 0.85em;">
+                                            {% if log.changed_by %}
+                                                <strong>{{ log.changed_by.get_full_name|default:log.changed_by.username }}</strong>
+                                                {% if not log.is_automatic %}
+                                                    <span class="badge bg-success ms-1" style="font-size: 0.7em;">يدوي</span>
+                                                {% endif %}
+                                            {% elif log.is_automatic %}
+                                                <span class="text-muted">
+                                                    <i class="fas fa-robot"></i> تلقائي
+                                                </span>
+                                            {% else %}
+                                                <span class="text-warning">
+                                                    <i class="fas fa-question-circle"></i> مستخدم غير محدد
+                                                </span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <div class="timestamp">
+                                        <i class="fas fa-clock text-muted"></i>
+                                        <small class="text-muted" style="font-size: 0.85em;">
+                                            {{ log.created_at|date:"Y-m-d" }}
+                                            <br>
+                                            <strong>{{ log.created_at|date:"H:i:s" }}</strong>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 {% endif %}

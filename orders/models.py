@@ -1974,12 +1974,44 @@ class OrderNote(models.Model):
 
 
 class OrderStatusLog(models.Model):
+    # أنواع التغييرات
+    CHANGE_TYPE_CHOICES = [
+        ('status', 'تغيير حالة'),
+        ('customer', 'تغيير عميل'),
+        ('price', 'تغيير سعر'),
+        ('date', 'تغيير تاريخ'),
+        ('manufacturing', 'تحديث تصنيع'),
+        ('installation', 'تحديث تركيب'),
+        ('payment', 'تحديث دفع'),
+        ('general', 'تحديث عام'),
+        ('creation', 'إنشاء طلب'),
+    ]
+
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_logs', verbose_name=_('الطلب'))
     old_status = models.CharField(max_length=25, choices=Order.ORDER_STATUS_CHOICES, verbose_name=_('الحالة السابقة'))
     new_status = models.CharField(max_length=25, choices=Order.ORDER_STATUS_CHOICES, verbose_name=_('الحالة الجديدة'))
     changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name=_('تم التغيير بواسطة'))
     notes = models.TextField(blank=True, verbose_name=_('ملاحظات'))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('تاريخ التغيير'))
+
+    # حقول جديدة لتفاصيل التغيير
+    change_type = models.CharField(
+        max_length=20,
+        choices=CHANGE_TYPE_CHOICES,
+        default='status',
+        verbose_name=_('نوع التغيير')
+    )
+    change_details = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_('تفاصيل التغيير'),
+        help_text=_('تفاصيل إضافية عن التغيير في صيغة JSON')
+    )
+    is_automatic = models.BooleanField(
+        default=False,
+        verbose_name=_('تغيير تلقائي'),
+        help_text=_('هل هذا التغيير تم تلقائياً أم يدوياً')
+    )
     class Meta:
         verbose_name = _('سجل حالة الطلب')
         verbose_name_plural = _('سجلات حالة الطلب')
@@ -1991,14 +2023,27 @@ class OrderStatusLog(models.Model):
     def __str__(self):
         return f'{self.order.order_number} - {self.get_new_status_display()}'
     def _status_label(self, code):
-        """Return a human-friendly label for a status code.
-        Try canonical ORDER_STATUS_CHOICES first, then TRACKING_STATUS_CHOICES, else return raw code.
+        """Return a human-friendly label for a status code based on order type.
+        Try order-type-specific choices first, then general choices.
         """
+        if not code:
+            return ''
+
+        # محاولة الحصول على الحالات المحددة حسب نوع الطلب
+        if self.order:
+            order_types = self.order.get_selected_types_list()
+            specific_choices = self.get_status_choices_for_order_type(order_types)
+            specific_map = dict(specific_choices)
+            if code in specific_map:
+                return specific_map[code]
+
+        # الحالات العامة كبديل
         try:
             order_map = dict(self.order.ORDER_STATUS_CHOICES)
         except Exception:
             order_map = dict(Order.ORDER_STATUS_CHOICES) if 'Order' in globals() else {}
         tracking_map = dict(Order.TRACKING_STATUS_CHOICES) if 'Order' in globals() else {}
+
         if code in order_map:
             return order_map[code]
         if code in tracking_map:
@@ -2012,34 +2057,284 @@ class OrderStatusLog(models.Model):
     @property
     def new_status_pretty(self):
         return self._status_label(self.new_status or '')
+
+    @property
+    def change_type_display(self):
+        """عرض نوع التغيير بشكل جميل"""
+        return dict(self.CHANGE_TYPE_CHOICES).get(self.change_type, self.change_type)
+
+    @property
+    def change_icon(self):
+        """أيقونة حسب نوع التغيير ونوع الطلب"""
+        # أيقونات أساسية
+        base_icons = {
+            'customer': 'fas fa-user',
+            'price': 'fas fa-dollar-sign',
+            'date': 'fas fa-calendar',
+            'manufacturing': 'fas fa-industry',
+            'installation': 'fas fa-tools',
+            'payment': 'fas fa-credit-card',
+            'creation': 'fas fa-plus-circle',
+        }
+
+        # أيقونات خاصة للتغييرات العامة
+        if self.change_type == 'general' and self.change_details:
+            field_name = self.change_details.get('field_name', '')
+            if field_name == 'عناصر الطلب':
+                return 'fas fa-list'
+            elif field_name == 'أنواع الطلب':
+                return 'fas fa-tags'
+            elif field_name == 'الملاحظات':
+                return 'fas fa-sticky-note'
+            elif 'العقد' in field_name:
+                return 'fas fa-file-contract'
+            elif 'الفاتورة' in field_name:
+                return 'fas fa-file-invoice'
+            elif 'العنوان' in field_name or 'الموقع' in field_name:
+                return 'fas fa-map-marker-alt'
+            elif field_name == 'وضع الطلب':
+                return 'fas fa-star'
+            else:
+                return 'fas fa-edit'
+
+        # أيقونات خاصة بحالات أنواع الطلبات
+        if self.change_type == 'status' and self.order:
+            order_types = self.order.get_selected_types_list()
+
+            # أيقونات حسب نوع الطلب
+            if 'inspection' in order_types:
+                return 'fas fa-search'  # معاينة
+            elif 'installation' in order_types:
+                return 'fas fa-tools'  # تركيب
+            elif 'products' in order_types:
+                return 'fas fa-cut'  # تقطيع/منتجات
+            elif 'accessory' in order_types:
+                return 'fas fa-gem'  # إكسسوار
+            elif 'tailoring' in order_types:
+                return 'fas fa-shipping-fast'  # تسليم
+            else:
+                return 'fas fa-exchange-alt'  # حالة عامة
+
+        return base_icons.get(self.change_type, 'fas fa-info-circle')
+
+    def _get_order_type_name(self, order_types):
+        """إرجاع اسم نوع الطلب بالعربية"""
+        if not order_types:
+            return 'الطلب'
+
+        type_names = {
+            'inspection': 'المعاينة',
+            'installation': 'التركيب',
+            'products': 'المنتجات',
+            'accessory': 'الإكسسوار',
+            'tailoring': 'التسليم',
+        }
+
+        # إرجاع أول نوع موجود
+        for order_type in order_types:
+            if order_type in type_names:
+                return type_names[order_type]
+
+        return 'الطلب'
+
+    @property
+    def change_color(self):
+        """لون حسب نوع التغيير"""
+        colors = {
+            'status': 'primary',
+            'customer': 'info',
+            'price': 'success',
+            'date': 'warning',
+            'manufacturing': 'secondary',
+            'installation': 'dark',
+            'payment': 'success',
+            'general': 'light',
+            'creation': 'primary',
+        }
+        return colors.get(self.change_type, 'secondary')
+
+    def get_detailed_description(self):
+        """وصف مفصل للتغيير"""
+        if self.change_type == 'creation':
+            return 'تم إنشاء الطلب'
+        elif self.change_type == 'status':
+            if self.old_status == self.new_status:
+                return f'تأكيد الحالة: {self.new_status_pretty}'
+            else:
+                # تحديد نوع الطلب لعرض الوصف المناسب
+                if self.order:
+                    order_types = self.order.get_selected_types_list()
+                    order_type_name = self._get_order_type_name(order_types)
+                    return f'تم تبديل حالة {order_type_name} من {self.old_status_pretty} إلى {self.new_status_pretty}'
+                else:
+                    return f'تم تبديل الحالة من {self.old_status_pretty} إلى {self.new_status_pretty}'
+        elif self.change_type == 'customer' and self.change_details:
+            old_customer = self.change_details.get('old_customer_name', 'غير محدد')
+            new_customer = self.change_details.get('new_customer_name', 'غير محدد')
+            return f'تم تغيير العميل من {old_customer} إلى {new_customer}'
+        elif self.change_type == 'price' and self.change_details:
+            old_price = self.change_details.get('old_price', 0)
+            new_price = self.change_details.get('new_price', 0)
+            return f'تم تغيير السعر من {old_price} إلى {new_price}'
+        elif self.change_type == 'date' and self.change_details:
+            field_name = self.change_details.get('field_name', 'التاريخ')
+            old_date = self.change_details.get('old_date', 'غير محدد')
+            new_date = self.change_details.get('new_date', 'غير محدد')
+            return f'تم تغيير {field_name} من {old_date} إلى {new_date}'
+        elif self.change_type == 'general':
+            # عرض محسن للتغييرات العامة
+            if self.change_details and self.change_details.get('field_name'):
+                field_name = self.change_details.get('field_name')
+                if field_name == 'عناصر الطلب':
+                    # عرض خاص لتغييرات عناصر الطلب
+                    return self.notes or f'تم تعديل {field_name}'
+                elif field_name == 'أنواع الطلب':
+                    return f'تم تغيير أنواع الطلب من "{self.old_status}" إلى "{self.new_status}"'
+                else:
+                    # استخدام القيم من change_details بدلاً من old_status/new_status
+                    old_val = self.change_details.get('old_value', 'غير محدد')
+                    new_val = self.change_details.get('new_value', 'غير محدد')
+                    return f'تم تغيير {field_name} من "{old_val}" إلى "{new_val}"'
+            elif self.notes:
+                return self.notes
+            else:
+                return 'تم إجراء تعديل عام على الطلب'
+        elif self.notes:
+            return self.notes
+        else:
+            return f'{self.change_type_display}'
     def save(self, *args, **kwargs):
         try:
             # التحقق من أن الطلب له مفتاح أساسي
             if not self.order.pk:
                 raise models.ValidationError('يجب حفظ الطلب أولاً قبل إنشاء سجل حالة')
+
+            # تحديد نوع التغيير تلقائياً إذا لم يتم تحديده
+            if not self.change_type or self.change_type == 'status':
+                if not self.pk:  # سجل جديد
+                    if not self.old_status:
+                        self.change_type = 'creation'
+                    elif self.old_status != self.new_status:
+                        self.change_type = 'status'
+
             # اختر المصدر Canonical: استخدم order_status إذا كان موجودًا، وإلا التراجع إلى tracking_status
             if not self.old_status and self.order:
                 self.old_status = getattr(self.order, 'order_status', None) or getattr(self.order, 'tracking_status', None)
+
             super().save(*args, **kwargs)
-            # تحديث حالة الطلب
-            try:
-                # عندما يتم حفظ سجل الحالة، نحدث الحقل Canonical `order_status` إن كان مناسبًا
-                if self.order and self.new_status != getattr(self.order, 'order_status', None):
-                    # حدّث الحقل canonical
-                    try:
-                        self.order.order_status = self.new_status
-                        self.order.last_notification_date = timezone.now()
-                        self.order.save(update_fields=['order_status', 'last_notification_date'])
-                    except Exception:
-                        # في حالة عدم وجود الحقل، استخدام tracking_status القديم كاحتياط
-                        self.order.tracking_status = self.new_status
-                        self.order.last_notification_date = timezone.now()
-                        self.order.save(update_fields=['tracking_status', 'last_notification_date'])
-            except Exception as e:
-                pass
+
+            # تحديث حالة الطلب فقط إذا كان هذا تغيير حالة وليس تلقائي
+            if self.change_type == 'status' and not self.is_automatic:
+                try:
+                    # عندما يتم حفظ سجل الحالة، نحدث الحقل Canonical `order_status` إن كان مناسبًا
+                    if self.order and self.new_status != getattr(self.order, 'order_status', None):
+                        # حدّث الحقل canonical
+                        try:
+                            self.order.order_status = self.new_status
+                            self.order.last_notification_date = timezone.now()
+                            self.order.save(update_fields=['order_status', 'last_notification_date'])
+                        except Exception:
+                            # في حالة عدم وجود الحقل، استخدام tracking_status القديم كاحتياط
+                            self.order.tracking_status = self.new_status
+                            self.order.last_notification_date = timezone.now()
+                            self.order.save(update_fields=['tracking_status', 'last_notification_date'])
+                except Exception as e:
+                    pass
         except Exception as e:
             pass
             raise
+
+    @classmethod
+    def get_status_choices_for_order_type(cls, order_types):
+        """إرجاع خيارات الحالة المناسبة لنوع الطلب"""
+        if not order_types:
+            return cls.ORDER_STATUS_CHOICES
+
+        # حالات المعاينة
+        if 'inspection' in order_types:
+            try:
+                from inspections.models import Inspection
+                return Inspection.STATUS_CHOICES
+            except ImportError:
+                pass
+
+        # حالات التركيب
+        elif 'installation' in order_types:
+            try:
+                from installations.models import InstallationSchedule
+                return InstallationSchedule.STATUS_CHOICES
+            except ImportError:
+                pass
+
+        # حالات التصنيع
+        elif 'tailoring' in order_types or 'accessory' in order_types:
+            try:
+                from manufacturing.models import ManufacturingOrder
+                return ManufacturingOrder.STATUS_CHOICES
+            except ImportError:
+                pass
+
+        # حالات التقطيع للمنتجات
+        elif 'products' in order_types:
+            try:
+                from cutting.models import CuttingOrder
+                return CuttingOrder.STATUS_CHOICES
+            except ImportError:
+                pass
+
+        # الحالات العامة للطلب
+        return cls.ORDER_STATUS_CHOICES
+
+    @classmethod
+    def create_detailed_log(cls, order, change_type, old_value=None, new_value=None,
+                           changed_by=None, notes='', field_name=None, **extra_details):
+        """إنشاء سجل مفصل للتغيير"""
+        change_details = extra_details.copy()
+
+        # حفظ القيم الأساسية دائماً
+        change_details.update({
+            'field_name': field_name,
+            'old_value': str(old_value) if old_value not in [None, ''] else 'غير محدد',
+            'new_value': str(new_value) if new_value not in [None, ''] else 'غير محدد',
+        })
+
+        if change_type == 'customer':
+            change_details.update({
+                'old_customer_name': getattr(old_value, 'name', str(old_value)) if old_value else 'غير محدد',
+                'new_customer_name': getattr(new_value, 'name', str(new_value)) if new_value else 'غير محدد',
+            })
+        elif change_type == 'price':
+            change_details.update({
+                'old_price': float(old_value) if old_value else 0,
+                'new_price': float(new_value) if new_value else 0,
+            })
+        elif change_type == 'date':
+            change_details.update({
+                'old_date': str(old_value) if old_value else 'غير محدد',
+                'new_date': str(new_value) if new_value else 'غير محدد',
+            })
+
+        # تحديد الحالات
+        if change_type == 'status':
+            # للتغييرات في الحالة، استخدم القيم المرسلة
+            old_status = old_value or getattr(order, 'order_status', '')
+            new_status = new_value or getattr(order, 'order_status', '')
+        else:
+            # للتغييرات الأخرى، استخدم حالة الطلب الحالية
+            current_status = getattr(order, 'order_status', None) or getattr(order, 'tracking_status', '')
+            old_status = current_status
+            new_status = current_status
+
+        return cls.objects.create(
+            order=order,
+            old_status=old_status,
+            new_status=new_status,
+            changed_by=changed_by,
+            notes=notes,
+            change_type=change_type,
+            change_details=change_details,
+            is_automatic=changed_by is None
+        )
 
 
 class ManufacturingDeletionLog(models.Model):

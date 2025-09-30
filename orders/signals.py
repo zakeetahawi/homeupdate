@@ -14,6 +14,26 @@ from django.db import models
 
 logger = logging.getLogger(__name__)
 
+def _get_order_type_name_for_signal(order_types):
+    """إرجاع اسم نوع الطلب بالعربية للاستخدام في الـ signals"""
+    if not order_types:
+        return 'الطلب'
+
+    type_names = {
+        'inspection': 'المعاينة',
+        'installation': 'التركيب',
+        'products': 'المنتجات',
+        'accessory': 'الإكسسوار',
+        'tailoring': 'التسليم',
+    }
+
+    # إرجاع أول نوع موجود
+    for order_type in order_types:
+        if order_type in type_names:
+            return type_names[order_type]
+
+    return 'الطلب'
+
 @receiver(pre_save, sender=Order)
 def track_order_changes(sender, instance, **kwargs):
     """تتبع جميع التغييرات على الطلب وتسجيلها في OrderStatusLog"""
@@ -21,108 +41,389 @@ def track_order_changes(sender, instance, **kwargs):
         # تجاهل التحديثات التلقائية
         if instance.is_auto_update:
             return
-            
+
         try:
+            from .models import OrderStatusLog
             old_instance = Order.objects.get(pk=instance.pk)
-            
-            # قائمة الحقول التي نريد تتبع تغييراتها
-            tracked_fields = [
-                'contract_number', 'contract_number_2', 'contract_number_3',
-                'invoice_number', 'invoice_number_2', 'invoice_number_3',
-                'order_number', 'customer', 'salesperson', 'branch',
-                'expected_delivery_date', 'final_price', 'paid_amount',
-                'order_status', 'tracking_status', 'status', 'notes'
-            ]
-            
-            changes = []
-            for field in tracked_fields:
-                old_value = getattr(old_instance, field)
-                new_value = getattr(instance, field)
-                
-                if old_value != new_value:
-                    # الحصول على أسماء العرض للحقول ذات الاختيارات
-                    if field == 'order_status':
-                        old_display = dict(Order.ORDER_STATUS_CHOICES).get(old_value, old_value)
-                        new_display = dict(Order.ORDER_STATUS_CHOICES).get(new_value, new_value)
-                        changes.append(f'حالة الطلب: من "{old_display}" إلى "{new_display}"')
-                    elif field == 'tracking_status':
-                        old_display = dict(Order.TRACKING_STATUS_CHOICES).get(old_value, old_value)
-                        new_display = dict(Order.TRACKING_STATUS_CHOICES).get(new_value, new_value)
-                        changes.append(f'حالة التتبع: من "{old_display}" إلى "{new_display}"')
-                    elif field == 'status':
-                        old_display = dict(Order.STATUS_CHOICES).get(old_value, old_value)
-                        new_display = dict(Order.STATUS_CHOICES).get(new_value, new_value)
-                        changes.append(f'الحالة: من "{old_display}" إلى "{new_display}"')
-                    elif field in ['contract_number', 'contract_number_2', 'contract_number_3']:
-                        changes.append(f'رقم العقد ({field.replace("contract_number", "" or "الأساسي")}): من "{old_value or "غير محدد"}" إلى "{new_value or "غير محدد"}"')
-                    elif field in ['invoice_number', 'invoice_number_2', 'invoice_number_3']:
-                        changes.append(f'رقم الفاتورة ({field.replace("invoice_number", "" or "الأساسي")}): من "{old_value or "غير محدد"}" إلى "{new_value or "غير محدد"}"')
-                    elif field == 'order_number':
-                        changes.append(f'رقم الطلب: من "{old_value}" إلى "{new_value}"')
-                    elif field == 'expected_delivery_date':
-                        changes.append(f'تاريخ التسليم المتوقع: من "{old_value}" إلى "{new_value}"')
-                    elif field == 'final_price':
-                        changes.append(f'السعر النهائي: من "{old_value}" إلى "{new_value}"')
-                    elif field == 'paid_amount':
-                        changes.append(f'المبلغ المدفوع: من "{old_value}" إلى "{new_value}"')
-                    elif field == 'notes':
-                        changes.append(f'الملاحظات تم تعديلها')
-                    elif field == 'customer':
-                        old_customer = old_value.name if old_value else "غير محدد"
-                        new_customer = new_value.name if new_value else "غير محدد"
-                        changes.append(f'العميل: من "{old_customer}" إلى "{new_customer}"')
-                    elif field == 'salesperson':
-                        old_salesperson = old_value.user.username if old_value and old_value.user else "غير محدد"
-                        new_salesperson = new_value.user.username if new_value and new_value.user else "غير محدد"
-                        changes.append(f'البائع: من "{old_salesperson}" إلى "{new_salesperson}"')
-                    elif field == 'branch':
-                        old_branch = old_value.name if old_value else "غير محدد"
-                        new_branch = new_value.name if new_value else "غير محدد"
-                        changes.append(f'الفرع: من "{old_branch}" إلى "{new_branch}"')
-            
-            # إذا كان هناك تغييرات، سجلها
-            if changes:
-                # الحصول على المستخدم الحالي من thread local storage
-                current_user = None
-                try:
-                    from accounts.middleware.current_user import get_current_user
-                    current_user = get_current_user()
-                except:
-                    pass
-                
-                # إذا لم نتمكن من الحصول على المستخدم، نبحث عن آخر مستخدم قام بتعديل
-                if not current_user:
-                    try:
-                        # البحث عن آخر سجل للطلب نفسه
-                        last_log = OrderStatusLog.objects.filter(order=instance).order_by('-created_at').first()
-                        if last_log and last_log.changed_by:
-                            current_user = last_log.changed_by
-                        else:
-                            # البحث عن آخر سجل للعميل نفسه
-                            from customers.models import Customer
-                            if instance.customer:
-                                customer_logs = OrderStatusLog.objects.filter(
-                                    order__customer=instance.customer
-                                ).order_by('-created_at')[:5]
-                                for log in customer_logs:
-                                    if log.changed_by:
-                                        current_user = log.changed_by
-                                        break
-                    except:
-                        pass
-                
-                # تسجيل التغييرات
-                try:
-                    OrderStatusLog.objects.create(
+
+            # تتبع تغييرات حالة الطلب فقط (order_status) وليس tracking_status
+            # فقط إذا كان التغيير يدوي من قبل مستخدم
+            if (getattr(old_instance, 'order_status', None) != getattr(instance, 'order_status', None) and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+
+                old_status = getattr(old_instance, 'order_status', None)
+                new_status = getattr(instance, 'order_status', None)
+
+                if old_status != new_status:
+                    # تحديد نوع الطلب لإنشاء رسالة مناسبة
+                    order_types = instance.get_selected_types_list()
+                    order_type_name = _get_order_type_name_for_signal(order_types)
+
+                    OrderStatusLog.create_detailed_log(
                         order=instance,
-                        old_status=old_instance.order_status,
-                        new_status=instance.order_status,  # نفس الحالة لأن هذا تعديل وليس تغيير حالة
-                        changed_by=current_user,
-                        notes=f'تعديل الطلب: {"، ".join(changes)}'
+                        change_type='status',
+                        old_value=old_status,
+                        new_value=new_status,
+                        changed_by=instance._modified_by,
+                        notes=f'تم تغيير حالة {order_type_name}',
+                        order_types=order_types,
+                        is_automatic=False
                     )
-                except Exception as e:
-                    logger.error(f"خطأ في تسجيل تعديل الطلب {instance.order_number}: {e}")
-                    
+
+            # تتبع تغيير العميل (فقط التعديلات اليدوية)
+            if (old_instance.customer != instance.customer and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='customer',
+                    old_value=old_instance.customer,
+                    new_value=instance.customer,
+                    changed_by=instance._modified_by,
+                    notes='تم تغيير العميل',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير السعر (فقط التعديلات اليدوية)
+            if (old_instance.final_price != instance.final_price and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='price',
+                    old_value=old_instance.final_price,
+                    new_value=instance.final_price,
+                    changed_by=instance._modified_by,
+                    notes='تم تغيير السعر النهائي',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير تاريخ التسليم (فقط التعديلات اليدوية)
+            if (old_instance.expected_delivery_date != instance.expected_delivery_date and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                old_date = old_instance.expected_delivery_date.strftime('%Y-%m-%d') if old_instance.expected_delivery_date else 'غير محدد'
+                new_date = instance.expected_delivery_date.strftime('%Y-%m-%d') if instance.expected_delivery_date else 'غير محدد'
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='date',
+                    old_value=old_date,
+                    new_value=new_date,
+                    changed_by=instance._modified_by,
+                    field_name='تاريخ التسليم المتوقع',
+                    notes=f'تم تغيير تاريخ التسليم المتوقع من {old_date} إلى {new_date}',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير المبلغ المدفوع (فقط التعديلات اليدوية)
+            if (old_instance.paid_amount != instance.paid_amount and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='payment',
+                    old_value=old_instance.paid_amount,
+                    new_value=instance.paid_amount,
+                    changed_by=instance._modified_by,
+                    notes='تم تحديث المبلغ المدفوع',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير أنواع الطلب (فقط التعديلات اليدوية)
+            if (old_instance.selected_types != instance.selected_types and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                old_types = old_instance.get_selected_types_display()
+                new_types = instance.get_selected_types_display()
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='general',
+                    old_value=old_types,
+                    new_value=new_types,
+                    changed_by=instance._modified_by,
+                    notes=f'تم تغيير أنواع الطلب من "{old_types}" إلى "{new_types}"',
+                    field_name='أنواع الطلب',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير الملاحظات (فقط التعديلات اليدوية)
+            if (old_instance.notes != instance.notes and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='general',
+                    old_value=old_instance.notes or 'لا توجد ملاحظات',
+                    new_value=instance.notes or 'لا توجد ملاحظات',
+                    changed_by=instance._modified_by,
+                    notes='تم تحديث ملاحظات الطلب',
+                    field_name='الملاحظات',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير أرقام العقود (فقط التعديلات اليدوية)
+            if hasattr(instance, '_modified_by') and instance._modified_by:
+                contract_fields = [
+                    ('contract_number', 'رقم العقد الأول'),
+                    ('contract_number_2', 'رقم العقد الثاني'),
+                    ('contract_number_3', 'رقم العقد الثالث'),
+                ]
+
+                for field_name, field_display in contract_fields:
+                    old_value = getattr(old_instance, field_name, None)
+                    new_value = getattr(instance, field_name, None)
+                    if old_value != new_value:
+                        OrderStatusLog.create_detailed_log(
+                            order=instance,
+                            change_type='general',
+                            old_value=old_value or 'غير محدد',
+                            new_value=new_value or 'غير محدد',
+                            changed_by=instance._modified_by,
+                            notes=f'تم تحديث {field_display}',
+                            field_name=field_display,
+                            is_automatic=False
+                        )
+
+            # تتبع تغيير البائع (فقط التعديلات اليدوية)
+            if (old_instance.salesperson != instance.salesperson and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                old_salesperson = old_instance.salesperson.user.get_full_name() if old_instance.salesperson and old_instance.salesperson.user else 'غير محدد'
+                new_salesperson = instance.salesperson.user.get_full_name() if instance.salesperson and instance.salesperson.user else 'غير محدد'
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='general',
+                    old_value=old_salesperson,
+                    new_value=new_salesperson,
+                    changed_by=instance._modified_by,
+                    notes=f'تم تغيير البائع من "{old_salesperson}" إلى "{new_salesperson}"',
+                    field_name='البائع',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير الفرع (فقط التعديلات اليدوية)
+            if (old_instance.branch != instance.branch and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                old_branch = old_instance.branch.name if old_instance.branch else 'غير محدد'
+                new_branch = instance.branch.name if instance.branch else 'غير محدد'
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='general',
+                    old_value=old_branch,
+                    new_value=new_branch,
+                    changed_by=instance._modified_by,
+                    notes=f'تم تغيير الفرع من "{old_branch}" إلى "{new_branch}"',
+                    field_name='الفرع',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير نوع التسليم (فقط التعديلات اليدوية)
+            if (old_instance.delivery_type != instance.delivery_type and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                old_delivery = old_instance.get_delivery_type_display() if old_instance.delivery_type else 'غير محدد'
+                new_delivery = instance.get_delivery_type_display() if instance.delivery_type else 'غير محدد'
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='general',
+                    old_value=old_delivery,
+                    new_value=new_delivery,
+                    changed_by=instance._modified_by,
+                    notes=f'تم تغيير نوع التسليم من "{old_delivery}" إلى "{new_delivery}"',
+                    field_name='نوع التسليم',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير أرقام الفواتير (فقط التعديلات اليدوية)
+            if hasattr(instance, '_modified_by') and instance._modified_by:
+                invoice_fields = [
+                    ('invoice_number', 'رقم الفاتورة الأولى'),
+                    ('invoice_number_2', 'رقم الفاتورة الثانية'),
+                    ('invoice_number_3', 'رقم الفاتورة الثالثة'),
+                ]
+
+                for field_name, field_display in invoice_fields:
+                    old_value = getattr(old_instance, field_name, None)
+                    new_value = getattr(instance, field_name, None)
+                    if old_value != new_value:
+                        OrderStatusLog.create_detailed_log(
+                            order=instance,
+                            change_type='general',
+                            old_value=old_value or 'غير محدد',
+                            new_value=new_value or 'غير محدد',
+                            changed_by=instance._modified_by,
+                            notes=f'تم تحديث {field_display}',
+                            field_name=field_display,
+                            is_automatic=False
+                        )
+
+            # تتبع تغيير العناوين (فقط التعديلات اليدوية)
+            if hasattr(instance, '_modified_by') and instance._modified_by:
+                address_fields = [
+                    ('delivery_address', 'عنوان التسليم'),
+                    ('location_address', 'عنوان الموقع'),
+                ]
+
+                for field_name, field_display in address_fields:
+                    old_value = getattr(old_instance, field_name, None)
+                    new_value = getattr(instance, field_name, None)
+                    if old_value != new_value:
+                        OrderStatusLog.create_detailed_log(
+                            order=instance,
+                            change_type='general',
+                            old_value=old_value or 'غير محدد',
+                            new_value=new_value or 'غير محدد',
+                            changed_by=instance._modified_by,
+                            notes=f'تم تحديث {field_display}',
+                            field_name=field_display,
+                            is_automatic=False
+                        )
+
+            # تتبع تغيير حالة الطلب (VIP/عادي) (فقط التعديلات اليدوية)
+            if (old_instance.status != instance.status and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                old_status_display = old_instance.get_status_display() if old_instance.status else 'غير محدد'
+                new_status_display = instance.get_status_display() if instance.status else 'غير محدد'
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='general',
+                    old_value=old_status_display,
+                    new_value=new_status_display,
+                    changed_by=instance._modified_by,
+                    notes=f'تم تغيير وضع الطلب من "{old_status_display}" إلى "{new_status_display}"',
+                    field_name='وضع الطلب',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير حالة المعاينة (فقط التعديلات اليدوية)
+            if (old_instance.inspection_status != instance.inspection_status and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                old_inspection = old_instance.get_inspection_status_display() if old_instance.inspection_status else 'غير محدد'
+                new_inspection = instance.get_inspection_status_display() if instance.inspection_status else 'غير محدد'
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='general',
+                    old_value=old_inspection,
+                    new_value=new_inspection,
+                    changed_by=instance._modified_by,
+                    notes=f'تم تغيير حالة المعاينة من "{old_inspection}" إلى "{new_inspection}"',
+                    field_name='حالة المعاينة',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير رقم الهاتف (إذا كان الحقل موجود)
+            if (hasattr(old_instance, 'phone_number') and hasattr(instance, 'phone_number') and
+                old_instance.phone_number != instance.phone_number and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='general',
+                    old_value=old_instance.phone_number or 'غير محدد',
+                    new_value=instance.phone_number or 'غير محدد',
+                    changed_by=instance._modified_by,
+                    notes='تم تحديث رقم الهاتف',
+                    field_name='رقم الهاتف',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير تاريخ الطلب (فقط التعديلات اليدوية)
+            if (old_instance.order_date != instance.order_date and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='date',
+                    old_value=old_instance.order_date,
+                    new_value=instance.order_date,
+                    changed_by=instance._modified_by,
+                    field_name='تاريخ الطلب',
+                    notes='تم تغيير تاريخ الطلب',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير التحقق من الدفع (فقط التعديلات اليدوية)
+            if (old_instance.payment_verified != instance.payment_verified and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                old_verified = 'تم التحقق' if old_instance.payment_verified else 'لم يتم التحقق'
+                new_verified = 'تم التحقق' if instance.payment_verified else 'لم يتم التحقق'
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='payment',
+                    old_value=old_verified,
+                    new_value=new_verified,
+                    changed_by=instance._modified_by,
+                    notes=f'تم تغيير حالة التحقق من الدفع من "{old_verified}" إلى "{new_verified}"',
+                    field_name='التحقق من الدفع',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير حالة الدفع (إذا كان الحقل موجود)
+            if (hasattr(old_instance, 'payment_status') and hasattr(instance, 'payment_status') and
+                old_instance.payment_status != instance.payment_status and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                old_payment_status = old_instance.get_payment_status_display() if old_instance.payment_status else 'غير محدد'
+                new_payment_status = instance.get_payment_status_display() if instance.payment_status else 'غير محدد'
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='payment',
+                    old_value=old_payment_status,
+                    new_value=new_payment_status,
+                    changed_by=instance._modified_by,
+                    notes=f'تم تغيير حالة الدفع من "{old_payment_status}" إلى "{new_payment_status}"',
+                    field_name='حالة الدفع',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير حالة المعاينة (فقط التعديلات اليدوية)
+            if (old_instance.inspection_status != instance.inspection_status and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                old_inspection_display = dict(old_instance._meta.get_field('inspection_status').choices).get(old_instance.inspection_status, old_instance.inspection_status)
+                new_inspection_display = dict(instance._meta.get_field('inspection_status').choices).get(instance.inspection_status, instance.inspection_status)
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='status',
+                    old_value=old_inspection_display,
+                    new_value=new_inspection_display,
+                    changed_by=instance._modified_by,
+                    notes=f'تم تغيير حالة المعاينة من {old_inspection_display} إلى {new_inspection_display}',
+                    field_name='حالة المعاينة',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير الخصم (فقط التعديلات اليدوية)
+            if (getattr(old_instance, 'discount_amount', 0) != getattr(instance, 'discount_amount', 0) and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='price',
+                    old_value=getattr(old_instance, 'discount_amount', 0),
+                    new_value=getattr(instance, 'discount_amount', 0),
+                    changed_by=instance._modified_by,
+                    notes='تم تحديث مبلغ الخصم',
+                    field_name='مبلغ الخصم',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير الضريبة (فقط التعديلات اليدوية)
+            if (getattr(old_instance, 'tax_amount', 0) != getattr(instance, 'tax_amount', 0) and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='price',
+                    old_value=getattr(old_instance, 'tax_amount', 0),
+                    new_value=getattr(instance, 'tax_amount', 0),
+                    changed_by=instance._modified_by,
+                    notes='تم تحديث مبلغ الضريبة',
+                    field_name='مبلغ الضريبة',
+                    is_automatic=False
+                )
+
+            # تتبع تغيير الملاحظات الداخلية (فقط التعديلات اليدوية)
+            if (getattr(old_instance, 'internal_notes', '') != getattr(instance, 'internal_notes', '') and
+                hasattr(instance, '_modified_by') and instance._modified_by):
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type='general',
+                    old_value=getattr(old_instance, 'internal_notes', '') or 'لا توجد ملاحظات داخلية',
+                    new_value=getattr(instance, 'internal_notes', '') or 'لا توجد ملاحظات داخلية',
+                    changed_by=instance._modified_by,
+                    notes='تم تحديث الملاحظات الداخلية',
+                    field_name='الملاحظات الداخلية',
+                    is_automatic=False
+                )
+
+
         except Order.DoesNotExist:
             pass  # حالة الإنشاء الجديد
 
@@ -390,11 +691,10 @@ def create_production_order(order):
 def order_post_save(sender, instance, created, **kwargs):
     """معالج حفظ الطلب"""
     if created:
-        # إنشاء سجل حالة أولية
-        OrderStatusLog.objects.create(
+        # إنشاء سجل حالة أولية باستخدام النموذج المحسن
+        OrderStatusLog.create_detailed_log(
             order=instance,
-            old_status='',
-            new_status=getattr(instance, 'order_status', instance.tracking_status),
+            change_type='creation',
             changed_by=getattr(instance, 'created_by', None),
             notes='تم إنشاء الطلب'
         )
@@ -460,9 +760,18 @@ def order_post_save(sender, instance, created, **kwargs):
                         old_value = instance.tracker.previous(field_name)
                         new_value = getattr(instance, field_name)
                         field_changes.append(f"{field_labels[field_name]}: {old_value or 'غير محدد'} → {new_value or 'غير محدد'}")
+                        # تحويل التواريخ إلى نص للتسلسل في JSON
+                        old_value_serializable = old_value
+                        new_value_serializable = new_value
+
+                        if hasattr(old_value, 'strftime'):  # تاريخ أو وقت
+                            old_value_serializable = old_value.strftime('%Y-%m-%d') if old_value else None
+                        if hasattr(new_value, 'strftime'):  # تاريخ أو وقت
+                            new_value_serializable = new_value.strftime('%Y-%m-%d') if new_value else None
+
                         modified_fields_data[field_name] = {
-                            'old': old_value,
-                            'new': new_value
+                            'old': old_value_serializable,
+                            'new': new_value_serializable
                         }
                 except Exception:
                     # تخطي الحقول غير المتتبعة
@@ -801,6 +1110,88 @@ def track_order_item_changes(sender, instance, **kwargs):
         except OrderItem.DoesNotExist:
             pass  # حالة الإنشاء الجديد
 
+@receiver(post_save, sender='orders.OrderItem')
+def log_order_item_changes(sender, instance, created, **kwargs):
+    """تسجيل تغييرات عناصر الطلب في سجل الحالة"""
+    if (not created and instance.order and
+        hasattr(instance, '_modified_by') and instance._modified_by):  # فقط للتحديثات اليدوية
+        try:
+            from .models import OrderStatusLog
+            changes = []
+
+            # تتبع تغيير الكمية
+            if hasattr(instance, '_old_quantity') and instance._old_quantity != instance.quantity:
+                changes.append(f'الكمية: {instance._old_quantity} → {instance.quantity}')
+
+            # تتبع تغيير سعر الوحدة
+            if hasattr(instance, '_old_unit_price') and instance._old_unit_price != instance.unit_price:
+                changes.append(f'سعر الوحدة: {instance._old_unit_price} → {instance.unit_price}')
+
+            # تتبع تغيير المنتج
+            if hasattr(instance, '_old_product_id') and instance._old_product_id != instance.product.id:
+                try:
+                    from inventory.models import Product
+                    old_product = Product.objects.get(id=instance._old_product_id)
+                    changes.append(f'المنتج: {old_product.name} → {instance.product.name}')
+                except:
+                    changes.append(f'المنتج: تم التغيير')
+
+            # تتبع تغيير نسبة الخصم
+            if hasattr(instance, '_old_discount_percentage') and instance._old_discount_percentage != instance.discount_percentage:
+                changes.append(f'نسبة الخصم: {instance._old_discount_percentage}% → {instance.discount_percentage}%')
+
+            # إنشاء سجل إذا كان هناك تغييرات
+            if changes:
+                OrderStatusLog.create_detailed_log(
+                    order=instance.order,
+                    change_type='general',
+                    old_value='',
+                    new_value='',
+                    changed_by=getattr(instance, '_modified_by', None),
+                    notes=f'تم تعديل عنصر الطلب: {instance.product.name} - {" | ".join(changes)}',
+                    field_name='عناصر الطلب'
+                )
+
+        except Exception as e:
+            logger.error(f"خطأ في تسجيل تغييرات عنصر الطلب {instance.pk}: {e}")
+
+@receiver(post_save, sender='orders.OrderItem')
+def log_order_item_creation(sender, instance, created, **kwargs):
+    """تسجيل إضافة عناصر جديدة للطلب"""
+    if (created and instance.order and
+        hasattr(instance, '_modified_by') and instance._modified_by):  # فقط الإضافة اليدوية
+        try:
+            from .models import OrderStatusLog
+            OrderStatusLog.create_detailed_log(
+                order=instance.order,
+                change_type='general',
+                old_value='',
+                new_value=f'{instance.product.name} - الكمية: {instance.quantity}',
+                changed_by=getattr(instance, '_modified_by', None),
+                notes=f'تم إضافة عنصر جديد: {instance.product.name} (الكمية: {instance.quantity}، السعر: {instance.unit_price})',
+                field_name='عناصر الطلب'
+            )
+        except Exception as e:
+            logger.error(f"خطأ في تسجيل إضافة عنصر الطلب {instance.pk}: {e}")
+
+@receiver(post_delete, sender='orders.OrderItem')
+def log_order_item_deletion(sender, instance, **kwargs):
+    """تسجيل حذف عناصر من الطلب"""
+    if instance.order:
+        try:
+            from .models import OrderStatusLog
+            OrderStatusLog.create_detailed_log(
+                order=instance.order,
+                change_type='general',
+                old_value=f'{instance.product.name} - الكمية: {instance.quantity}',
+                new_value='',
+                changed_by=getattr(instance, '_modified_by', None),
+                notes=f'تم حذف عنصر: {instance.product.name} (الكمية: {instance.quantity}، السعر: {instance.unit_price})',
+                field_name='عناصر الطلب'
+            )
+        except Exception as e:
+            logger.error(f"خطأ في تسجيل حذف عنصر الطلب {instance.pk}: {e}")
+
 
 @receiver(post_save, sender=Order)
 def invalidate_order_cache_on_save(sender, instance, created, **kwargs):
@@ -883,5 +1274,215 @@ def invalidate_product_cache_on_delete(sender, instance, **kwargs):
     except Exception as e:
         logger.error(f"خطأ في إلغاء التخزين المؤقت للمنتجات بعد الحذف: {str(e)}")
 
+
+# إضافة signals لتتبع تغييرات حالات أنواع الطلبات المختلفة
+try:
+    @receiver(post_save, sender='inspections.Inspection')
+    def track_inspection_status_changes(sender, instance, created, **kwargs):
+        """تتبع تغييرات حالة المعاينة"""
+        if not created and instance.order:
+            try:
+                from inspections.models import Inspection
+
+                # محاولة الحصول على الحالة السابقة
+                old_status = None
+                if hasattr(instance, '_old_status'):
+                    old_status = instance._old_status
+                elif hasattr(Inspection, 'tracker') and hasattr(instance, 'tracker'):
+                    old_status = instance.tracker.previous('status')
+
+                if old_status and old_status != instance.status:
+                    # البحث عن المستخدم من مصادر مختلفة
+                    changed_by = None
+
+                    # 1. من instance المعاينة (_modified_by - الأولوية الأولى والأهم)
+                    if hasattr(instance, '_modified_by') and instance._modified_by:
+                        changed_by = instance._modified_by
+
+                    # 2. إذا لم نجد _modified_by، نستخدم منشئ المعاينة كبديل
+                    elif hasattr(instance, 'created_by') and instance.created_by:
+                        changed_by = instance.created_by
+
+                    # 3. كحل أخير، نستخدم فني المعاينة
+                    elif hasattr(instance, 'inspector') and instance.inspector:
+                        changed_by = instance.inspector
+
+                    # 4. البائع المسؤول كحل أخير
+                    elif hasattr(instance, 'responsible_employee') and instance.responsible_employee:
+                        # تحويل Salesperson إلى User إذا لزم الأمر
+                        if hasattr(instance.responsible_employee, 'user'):
+                            changed_by = instance.responsible_employee.user
+                        else:
+                            changed_by = instance.responsible_employee
+
+                    # إنشاء السجل مع تحديد أنه ليس تلقائي إذا وُجد مستخدم
+                    OrderStatusLog.create_detailed_log(
+                        order=instance.order,
+                        change_type='status',
+                        old_value=old_status,
+                        new_value=instance.status,
+                        changed_by=changed_by,
+                        notes=f'تم تغيير حالة المعاينة',
+                        is_automatic=changed_by is None  # تلقائي فقط إذا لم نجد مستخدم
+                    )
+            except Exception as e:
+                logger.error(f"خطأ في تتبع تغييرات المعاينة {instance.pk}: {e}")
+    @receiver(pre_save, sender='inspections.Inspection')
+    def track_inspection_changes_pre_save(sender, instance, **kwargs):
+        """حفظ الحالة السابقة للمعاينة قبل التحديث"""
+        if instance.pk:
+            try:
+                from inspections.models import Inspection
+                old_instance = Inspection.objects.get(pk=instance.pk)
+                instance._old_status = old_instance.status
+            except Inspection.DoesNotExist:
+                pass
+
+except ImportError:
+    logger.info("نموذج المعاينة غير متوفر")
+
+try:
+    @receiver(post_save, sender='cutting.CuttingOrder')
+    def track_cutting_status_changes(sender, instance, created, **kwargs):
+        """تتبع تغييرات حالة التقطيع"""
+        if not created and instance.order:
+            try:
+                from cutting.models import CuttingOrder
+                # استخدام الطريقة المباشرة للحصول على الحالة السابقة
+                if hasattr(instance, '_old_status') and instance._old_status != instance.status:
+                    # البحث عن المستخدم من مصادر مختلفة
+                    changed_by = None
+
+                    # 1. من instance التقطيع
+                    if hasattr(instance, '_modified_by') and instance._modified_by:
+                        changed_by = instance._modified_by
+
+                    # 2. من حقول أخرى في نموذج التقطيع
+                    elif hasattr(instance, 'cutter_name') and instance.cutter_name:
+                        # محاولة العثور على المستخدم من اسم القاطع
+                        try:
+                            from accounts.models import User
+                            changed_by = User.objects.filter(username__icontains=instance.cutter_name).first()
+                        except:
+                            pass
+                    elif hasattr(instance, 'created_by') and instance.created_by:
+                        changed_by = instance.created_by
+
+                    OrderStatusLog.create_detailed_log(
+                        order=instance.order,
+                        change_type='status',
+                        old_value=instance._old_status,
+                        new_value=instance.status,
+                        changed_by=changed_by,
+                        notes=f'تم تغيير حالة التقطيع',
+                        is_automatic=changed_by is None
+                    )
+            except Exception as e:
+                logger.error(f"خطأ في تتبع تغييرات التقطيع {instance.pk}: {e}")
+
+    @receiver(pre_save, sender='cutting.CuttingOrder')
+    def track_cutting_changes_pre_save(sender, instance, **kwargs):
+        """حفظ الحالة السابقة للتقطيع قبل التحديث"""
+        if instance.pk:
+            try:
+                from cutting.models import CuttingOrder
+                old_instance = CuttingOrder.objects.get(pk=instance.pk)
+                instance._old_status = old_instance.status
+            except CuttingOrder.DoesNotExist:
+                pass
+except ImportError:
+    logger.info("نموذج التقطيع غير متوفر")
+
+# إضافة signals للتركيب
+try:
+    @receiver(pre_save, sender='installations.InstallationSchedule')
+    def track_installation_changes_pre_save(sender, instance, **kwargs):
+        """حفظ الحالة السابقة للتركيب قبل التحديث"""
+        if instance.pk:
+            try:
+                from installations.models import InstallationSchedule
+                old_instance = InstallationSchedule.objects.get(pk=instance.pk)
+                instance._old_status = old_instance.status
+            except InstallationSchedule.DoesNotExist:
+                pass
+
+    @receiver(post_save, sender='installations.InstallationSchedule')
+    def track_installation_status_changes(sender, instance, created, **kwargs):
+        """تتبع تغييرات حالة التركيب"""
+        if not created and instance.order:
+            try:
+                if hasattr(instance, '_old_status') and instance._old_status != instance.status:
+                    # البحث عن المستخدم
+                    changed_by = None
+
+                    if hasattr(instance, '_modified_by') and instance._modified_by:
+                        changed_by = instance._modified_by
+                    elif hasattr(instance, 'team') and instance.team:
+                        # محاولة الحصول على قائد الفريق أو أول عضو
+                        if hasattr(instance.team, 'leader') and instance.team.leader:
+                            changed_by = instance.team.leader
+                        elif hasattr(instance.team, 'members') and instance.team.members.exists():
+                            changed_by = instance.team.members.first()
+                    elif hasattr(instance, 'created_by') and instance.created_by:
+                        changed_by = instance.created_by
+
+                    OrderStatusLog.create_detailed_log(
+                        order=instance.order,
+                        change_type='status',
+                        old_value=instance._old_status,
+                        new_value=instance.status,
+                        changed_by=changed_by,
+                        notes=f'تم تغيير حالة التركيب',
+                        is_automatic=changed_by is None
+                    )
+            except Exception as e:
+                logger.error(f"خطأ في تتبع تغييرات التركيب {instance.pk}: {e}")
+except ImportError:
+    logger.info("نموذج التركيب غير متوفر")
+
+# إضافة signals للتصنيع
+try:
+    @receiver(pre_save, sender='manufacturing.ManufacturingOrder')
+    def track_manufacturing_changes_pre_save(sender, instance, **kwargs):
+        """حفظ الحالة السابقة للتصنيع قبل التحديث"""
+        if instance.pk:
+            try:
+                from manufacturing.models import ManufacturingOrder
+                old_instance = ManufacturingOrder.objects.get(pk=instance.pk)
+                instance._old_status = old_instance.status
+            except ManufacturingOrder.DoesNotExist:
+                pass
+
+    @receiver(post_save, sender='manufacturing.ManufacturingOrder')
+    def track_manufacturing_status_changes(sender, instance, created, **kwargs):
+        """تتبع تغييرات حالة التصنيع"""
+        if not created and instance.order:
+            try:
+                if hasattr(instance, '_old_status') and instance._old_status != instance.status:
+                    # البحث عن المستخدم
+                    changed_by = None
+
+                    if hasattr(instance, '_modified_by') and instance._modified_by:
+                        changed_by = instance._modified_by
+                    elif hasattr(instance, 'assigned_worker') and instance.assigned_worker:
+                        changed_by = instance.assigned_worker
+                    elif hasattr(instance, 'created_by') and instance.created_by:
+                        changed_by = instance.created_by
+                    elif hasattr(instance, 'responsible_user') and instance.responsible_user:
+                        changed_by = instance.responsible_user
+
+                    OrderStatusLog.create_detailed_log(
+                        order=instance.order,
+                        change_type='status',
+                        old_value=instance._old_status,
+                        new_value=instance.status,
+                        changed_by=changed_by,
+                        notes=f'تم تغيير حالة التصنيع',
+                        is_automatic=changed_by is None
+                    )
+            except Exception as e:
+                logger.error(f"خطأ في تتبع تغييرات التصنيع {instance.pk}: {e}")
+except ImportError:
+    logger.info("نموذج التصنيع غير متوفر")
 
 logger.info("تم تحميل إشارات التخزين المؤقت للطلبات")

@@ -161,7 +161,6 @@ class Inspection(models.Model):
         ('not_scheduled', _('غير مجدولة')),
         ('pending', _('قيد الانتظار')),
         ('scheduled', _('مجدول')),
-        ('in_progress', _('قيد التنفيذ')),
         ('completed', _('مكتملة')),
         ('cancelled', _('ملغية')),
         ('postponed_by_customer', _('مؤجل من طرف العميل')),

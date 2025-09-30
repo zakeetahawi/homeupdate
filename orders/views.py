@@ -1341,8 +1341,10 @@ def order_update_by_number(request, order_number):
                         notes = form_item.cleaned_data.get('notes', '') or 'بدون ملاحظات'
                         added_items.append(f"إضافة صنف جديد: {product_name} (الكمية: {quantity}, السعر: {price} ج.م, ملاحظات: {notes})")
 
-            # حفظ الطلب
-            updated_order = form.save()
+            # حفظ الطلب مع تتبع المستخدم
+            updated_order = form.save(commit=False)
+            updated_order._modified_by = request.user
+            updated_order.save()
 
             # حفظ عناصر الطلب مع تمرير المستخدم الحالي
             formset.instance = updated_order
@@ -1942,7 +1944,9 @@ def order_status_history(request, order_id):
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
     user_filter = request.GET.get('user', '')
-    
+    change_type_filter = request.GET.get('change_type', '')
+    is_automatic_filter = request.GET.get('is_automatic', '')
+
     if search_query:
         status_logs = status_logs.filter(
             Q(notes__icontains=search_query) |
@@ -1950,21 +1954,63 @@ def order_status_history(request, order_id):
             Q(changed_by__last_name__icontains=search_query) |
             Q(changed_by__username__icontains=search_query)
         )
-    
+
     if status_filter:
         status_logs = status_logs.filter(new_status=status_filter)
-    
+
     if user_filter:
         status_logs = status_logs.filter(changed_by__id=user_filter)
+
+    if change_type_filter:
+        status_logs = status_logs.filter(change_type=change_type_filter)
+
+    if is_automatic_filter:
+        is_auto = is_automatic_filter.lower() == 'true'
+        status_logs = status_logs.filter(is_automatic=is_auto)
     
     # الترقيم
     paginator = Paginator(status_logs, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # الحصول على قائمة الحالات للمفلتر
-    status_choices = Order.TRACKING_STATUS_CHOICES
-    
+    # الحصول على قائمة الحالات للمفلتر (حالات الأقسام)
+    status_choices = []
+
+    # إضافة حالات الطلب الأساسية
+    status_choices.extend(Order.ORDER_STATUS_CHOICES)
+
+    # إضافة حالات المعاينة
+    try:
+        from inspections.models import Inspection
+        inspection_choices = [(f"inspection_{choice[0]}", f"معاينة: {choice[1]}") for choice in Inspection.STATUS_CHOICES]
+        status_choices.extend(inspection_choices)
+    except ImportError:
+        pass
+
+    # إضافة حالات التركيب
+    try:
+        from installations.models import InstallationSchedule
+        installation_choices = [(f"installation_{choice[0]}", f"تركيب: {choice[1]}") for choice in InstallationSchedule.STATUS_CHOICES]
+        status_choices.extend(installation_choices)
+    except ImportError:
+        pass
+
+    # إضافة حالات التصنيع
+    try:
+        from manufacturing.models import ManufacturingOrder
+        manufacturing_choices = [(f"manufacturing_{choice[0]}", f"تصنيع: {choice[1]}") for choice in ManufacturingOrder.STATUS_CHOICES]
+        status_choices.extend(manufacturing_choices)
+    except ImportError:
+        pass
+
+    # إضافة حالات التقطيع
+    try:
+        from cutting.models import CuttingOrder
+        cutting_choices = [(f"cutting_{choice[0]}", f"تقطيع: {choice[1]}") for choice in CuttingOrder.STATUS_CHOICES]
+        status_choices.extend(cutting_choices)
+    except ImportError:
+        pass
+
     # الحصول على قائمة المستخدمين للمفلتر
     from django.contrib.auth import get_user_model
     User = get_user_model()
@@ -1978,6 +2024,12 @@ def order_status_history(request, order_id):
         'status_logs': page_obj,
         'status_choices': status_choices,
         'users': users,
+        'total_logs': status_logs.count(),
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'user_filter': user_filter,
+        'change_type_filter': change_type_filter,
+        'is_automatic_filter': is_automatic_filter,
         'search_query': search_query,
         'status_filter': status_filter,
         'user_filter': user_filter,
