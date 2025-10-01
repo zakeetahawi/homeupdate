@@ -1007,3 +1007,59 @@ def start_cutting_order(request, order_id):
             })
 
     return JsonResponse({'success': False, 'message': 'طريقة غير مدعومة'})
+
+
+@login_required
+def quick_stats_api(request):
+    """API للإحصائيات السريعة في صفحة التقارير"""
+    try:
+        # الحصول على تاريخ اليوم
+        today = timezone.now().date()
+
+        # الحصول على المستودعات المتاحة للمستخدم
+        if request.user.is_superuser:
+            warehouses = Warehouse.objects.filter(is_active=True)
+        else:
+            warehouses = Warehouse.objects.filter(is_active=True)
+
+        # عمليات التقطيع اليوم (العناصر المكتملة اليوم)
+        today_items = CuttingOrderItem.objects.filter(
+            cutting_order__warehouse__in=warehouses,
+            cutting_date__date=today
+        )
+
+        # إحصائيات العناصر
+        completed_today = today_items.filter(status='completed').count()
+        rejected_today = today_items.filter(status='rejected').count()
+
+        # العناصر المعلقة (جميع الأوقات)
+        pending_items = CuttingOrderItem.objects.filter(
+            cutting_order__warehouse__in=warehouses,
+            status='pending'
+        ).count()
+
+        # إجمالي عمليات التقطيع اليوم
+        total_today = today_items.count()
+
+        # حساب نسبة الإنجاز
+        if total_today > 0:
+            completion_rate = round((completed_today / total_today) * 100)
+        else:
+            completion_rate = 0
+
+        return JsonResponse({
+            'success': True,
+            'stats': {
+                'total_today': total_today,
+                'completed': completed_today,
+                'rejected': rejected_today,
+                'pending': pending_items,
+                'completion_rate': completion_rate
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })

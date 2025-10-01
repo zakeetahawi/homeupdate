@@ -42,6 +42,7 @@ urlpatterns = [
     path('api/warehouse-stats/<int:warehouse_id>/', views.warehouse_cutting_stats, name='warehouse_stats_api'),
     path('api/item-status/<int:item_id>/', views.get_item_status, name='item_status_api'),
     path('api/notifications/', views.cutting_notifications_api, name='notifications_api'),
+    path('api/quick-stats/', views.quick_stats_api, name='quick_stats_api'),
     
     # إعدادات المستودعات
     path('settings/warehouses/', views.WarehouseSettingsView.as_view(), name='warehouse_settings'),
