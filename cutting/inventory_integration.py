@@ -193,9 +193,11 @@ class InventoryIntegrationService:
     @staticmethod
     def _get_warehouse_for_cutting(cutting_item):
         """تحديد المستودع المناسب للخصم"""
-        # يمكن تطوير هذا المنطق حسب احتياجات النظام
-        # مؤقتاً سنستخدم أول مستودع متاح
+        # استخدام المستودع المحدد في أمر التقطيع
         try:
+            if cutting_item.cutting_order and cutting_item.cutting_order.warehouse:
+                return cutting_item.cutting_order.warehouse
+            # في حالة عدم وجود مستودع محدد، استخدم أول مستودع متاح
             return InventoryWarehouse.objects.filter(is_active=True).first()
         except:
             return None
