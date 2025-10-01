@@ -3,6 +3,40 @@
 
 {% block title %}تفاصيل التحويل - {{ transfer.transfer_number }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-size: 1.2rem;
+    }
+
+    .card {
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        border-bottom: none;
+        padding: 1rem 1.5rem;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <!-- العنوان -->
@@ -42,65 +76,143 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <strong><i class="fas fa-hashtag text-primary"></i> رقم التحويل:</strong>
-                            <p class="mb-0">{{ transfer.transfer_number }}</p>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-primary bg-opacity-10 text-primary me-3">
+                                    <i class="fas fa-hashtag"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">رقم التحويل</small>
+                                    <strong>{{ transfer.transfer_number }}</strong>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <strong><i class="fas fa-flag text-info"></i> الحالة:</strong>
-                            <p class="mb-0">
-                                {% if transfer.status == 'draft' %}
-                                <span class="badge bg-secondary">مسودة</span>
-                                {% elif transfer.status == 'pending' %}
-                                <span class="badge bg-warning">قيد الانتظار</span>
-                                {% elif transfer.status == 'approved' %}
-                                <span class="badge bg-info">تمت الموافقة</span>
-                                {% elif transfer.status == 'in_transit' %}
-                                <span class="badge bg-primary">قيد النقل</span>
-                                {% elif transfer.status == 'completed' %}
-                                <span class="badge bg-success">مكتمل</span>
-                                {% elif transfer.status == 'cancelled' %}
-                                <span class="badge bg-danger">ملغي</span>
-                                {% elif transfer.status == 'rejected' %}
-                                <span class="badge bg-dark">مرفوض</span>
-                                {% endif %}
-                            </p>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-info bg-opacity-10 text-info me-3">
+                                    <i class="fas fa-flag"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">الحالة</small>
+                                    {% if transfer.status == 'draft' %}
+                                    <span class="badge bg-secondary fs-6">
+                                        <i class="fas fa-file"></i> مسودة
+                                    </span>
+                                    {% elif transfer.status == 'pending' %}
+                                    <span class="badge bg-warning fs-6">
+                                        <i class="fas fa-clock"></i> قيد الانتظار
+                                    </span>
+                                    {% elif transfer.status == 'approved' %}
+                                    <span class="badge bg-info fs-6">
+                                        <i class="fas fa-check"></i> تمت الموافقة
+                                    </span>
+                                    {% elif transfer.status == 'in_transit' %}
+                                    <span class="badge bg-primary fs-6">
+                                        <i class="fas fa-truck"></i> قيد النقل
+                                    </span>
+                                    {% elif transfer.status == 'completed' %}
+                                    <span class="badge bg-success fs-6">
+                                        <i class="fas fa-check-circle"></i> مكتمل
+                                    </span>
+                                    {% elif transfer.status == 'cancelled' %}
+                                    <span class="badge bg-danger fs-6">
+                                        <i class="fas fa-times-circle"></i> ملغي
+                                    </span>
+                                    {% elif transfer.status == 'rejected' %}
+                                    <span class="badge bg-dark fs-6">
+                                        <i class="fas fa-ban"></i> مرفوض
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <strong><i class="fas fa-warehouse text-danger"></i> من مستودع:</strong>
-                            <p class="mb-0">{{ transfer.from_warehouse.name }}</p>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-danger bg-opacity-10 text-danger me-3">
+                                    <i class="fas fa-warehouse"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">من مستودع</small>
+                                    <strong>{{ transfer.from_warehouse.name }}</strong>
+                                    {% if transfer.from_warehouse.branch %}
+                                    <br><small class="text-muted">{{ transfer.from_warehouse.branch.name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <strong><i class="fas fa-warehouse text-success"></i> إلى مستودع:</strong>
-                            <p class="mb-0">{{ transfer.to_warehouse.name }}</p>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-success bg-opacity-10 text-success me-3">
+                                    <i class="fas fa-warehouse"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">إلى مستودع</small>
+                                    <strong>{{ transfer.to_warehouse.name }}</strong>
+                                    {% if transfer.to_warehouse.branch %}
+                                    <br><small class="text-muted">{{ transfer.to_warehouse.branch.name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <strong><i class="fas fa-calendar text-primary"></i> تاريخ التحويل:</strong>
-                            <p class="mb-0">{{ transfer.transfer_date|date:"Y-m-d H:i" }}</p>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-primary bg-opacity-10 text-primary me-3">
+                                    <i class="fas fa-calendar"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">تاريخ التحويل</small>
+                                    <strong>{{ transfer.transfer_date|date:"Y-m-d H:i" }}</strong>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <strong><i class="fas fa-calendar-check text-info"></i> تاريخ الوصول المتوقع:</strong>
-                            <p class="mb-0">{{ transfer.expected_arrival_date|date:"Y-m-d H:i"|default:"غير محدد" }}</p>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-info bg-opacity-10 text-info me-3">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">تاريخ الوصول المتوقع</small>
+                                    <strong>{{ transfer.expected_arrival_date|date:"Y-m-d H:i"|default:"غير محدد" }}</strong>
+                                </div>
+                            </div>
                         </div>
                         {% if transfer.actual_arrival_date %}
                         <div class="col-md-6 mb-3">
-                            <strong><i class="fas fa-calendar-check text-success"></i> تاريخ الوصول الفعلي:</strong>
-                            <p class="mb-0">{{ transfer.actual_arrival_date|date:"Y-m-d H:i" }}</p>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-success bg-opacity-10 text-success me-3">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">تاريخ الوصول الفعلي</small>
+                                    <strong>{{ transfer.actual_arrival_date|date:"Y-m-d H:i" }}</strong>
+                                </div>
+                            </div>
                         </div>
                         {% endif %}
                         <div class="col-md-6 mb-3">
-                            <strong><i class="fas fa-user text-secondary"></i> تم الإنشاء بواسطة:</strong>
-                            <p class="mb-0">{{ transfer.created_by.get_full_name|default:transfer.created_by.username }}</p>
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-secondary bg-opacity-10 text-secondary me-3">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">تم الإنشاء بواسطة</small>
+                                    <strong>{{ transfer.created_by.get_full_name|default:transfer.created_by.username }}</strong>
+                                </div>
+                            </div>
                         </div>
                         {% if transfer.reason %}
                         <div class="col-12 mb-3">
-                            <strong><i class="fas fa-comment text-warning"></i> سبب التحويل:</strong>
-                            <p class="mb-0">{{ transfer.reason }}</p>
+                            <div class="alert alert-warning mb-0">
+                                <strong><i class="fas fa-comment"></i> سبب التحويل:</strong>
+                                <p class="mb-0 mt-2">{{ transfer.reason }}</p>
+                            </div>
                         </div>
                         {% endif %}
                         {% if transfer.notes %}
                         <div class="col-12 mb-3">
-                            <strong><i class="fas fa-sticky-note text-secondary"></i> ملاحظات:</strong>
-                            <p class="mb-0">{{ transfer.notes }}</p>
+                            <div class="alert alert-info mb-0">
+                                <strong><i class="fas fa-sticky-note"></i> ملاحظات:</strong>
+                                <p class="mb-0 mt-2">{{ transfer.notes }}</p>
+                            </div>
                         </div>
                         {% endif %}
                     </div>
@@ -206,6 +318,7 @@
                         <tr>
                             <th>#</th>
                             <th>المنتج</th>
+                            <th>المخزون الحالي</th>
                             <th>الكمية المطلوبة</th>
                             <th>الكمية المستلمة</th>
                             <th>الحالة</th>
@@ -217,28 +330,63 @@
                         <tr>
                             <td>{{ forloop.counter }}</td>
                             <td>
-                                <a href="{% url 'inventory:product_detail' item.product.pk %}">
-                                    {{ item.product.name }}
+                                <a href="{% url 'inventory:product_detail' item.product.pk %}" class="text-decoration-none">
+                                    <strong>{{ item.product.name }}</strong>
                                 </a>
                                 <br>
-                                <small class="text-muted">{{ item.product.code }}</small>
+                                <small class="text-muted">
+                                    <i class="fas fa-barcode"></i>
+                                    {{ item.product.code }}
+                                </small>
                             </td>
-                            <td>{{ item.quantity }}</td>
-                            <td>{{ item.received_quantity }}</td>
                             <td>
-                                {% if item.is_fully_received %}
-                                <span class="badge bg-success">مستلم بالكامل</span>
-                                {% elif item.received_quantity > 0 %}
-                                <span class="badge bg-warning">مستلم جزئياً</span>
+                                <span class="badge bg-info fs-6">
+                                    <i class="fas fa-boxes"></i>
+                                    {{ item.product.current_stock|floatformat:0 }} {{ item.product.unit }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary fs-6">
+                                    {{ item.quantity|floatformat:0 }} {{ item.product.unit }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if item.received_quantity %}
+                                <span class="badge bg-success fs-6">
+                                    {{ item.received_quantity|floatformat:0 }} {{ item.product.unit }}
+                                </span>
                                 {% else %}
-                                <span class="badge bg-secondary">لم يستلم</span>
+                                <span class="badge bg-secondary fs-6">
+                                    0 {{ item.product.unit }}
+                                </span>
                                 {% endif %}
                             </td>
-                            <td>{{ item.notes|default:"-" }}</td>
+                            <td>
+                                {% if item.is_fully_received %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i>
+                                    مستلم بالكامل
+                                </span>
+                                {% elif item.received_quantity > 0 %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    مستلم جزئياً
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-clock"></i>
+                                    لم يستلم
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ item.notes|default:"-" }}</small>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted">
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-box-open fa-3x mb-3 d-block"></i>
                                 لا توجد عناصر في هذا التحويل
                             </td>
                         </tr>

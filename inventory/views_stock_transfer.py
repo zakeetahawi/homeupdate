@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, Max
 from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST, require_GET
@@ -29,16 +29,46 @@ def stock_transfer_list(request):
     from_warehouse = request.GET.get('from_warehouse', '')
     to_warehouse = request.GET.get('to_warehouse', '')
     search = request.GET.get('search', '')
-    
+
+    # التحقق من صلاحيات المستخدم
+    user_managed_warehouses = Warehouse.objects.filter(
+        manager=request.user,
+        is_active=True
+    )
+
+    is_warehouse_manager = (
+        user_managed_warehouses.exists() or
+        request.user.groups.filter(name__in=['مسؤول مخازن', 'Warehouse Manager', 'مسؤول مستودع']).exists() or
+        request.user.is_staff or
+        request.user.is_superuser
+    )
+
     # الاستعلام الأساسي
     transfers = StockTransfer.objects.select_related(
         'from_warehouse', 'to_warehouse', 'created_by',
         'approved_by', 'completed_by'
     ).prefetch_related('items__product')
-    
+
+    # تصفية حسب صلاحيات المستخدم
+    if not request.user.is_superuser:
+        if user_managed_warehouses.exists():
+            # عرض التحويلات من أو إلى المستودعات التي يديرها المستخدم
+            transfers = transfers.filter(
+                Q(from_warehouse__in=user_managed_warehouses) |
+                Q(to_warehouse__in=user_managed_warehouses)
+            )
+        elif not is_warehouse_manager:
+            # إذا لم يكن مدير مستودع، لا يرى أي تحويلات
+            transfers = transfers.none()
+
     # تطبيق الفلاتر
     if status:
-        transfers = transfers.filter(status=status)
+        # دعم فلترة متعددة للحالات (مثل: status=approved,in_transit)
+        if ',' in status:
+            status_list = status.split(',')
+            transfers = transfers.filter(status__in=status_list)
+        else:
+            transfers = transfers.filter(status=status)
     if from_warehouse:
         transfers = transfers.filter(from_warehouse_id=from_warehouse)
     if to_warehouse:
@@ -49,29 +79,44 @@ def stock_transfer_list(request):
             Q(notes__icontains=search) |
             Q(reason__icontains=search)
         )
-    
+
     # الترتيب
     transfers = transfers.order_by('-created_at')
-    
+
     # Pagination
     paginator = Paginator(transfers, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
-    # الإحصائيات
+
+    # الإحصائيات (حسب صلاحيات المستخدم)
+    base_query = StockTransfer.objects.all()
+    if not request.user.is_superuser:
+        if user_managed_warehouses.exists():
+            base_query = base_query.filter(
+                Q(from_warehouse__in=user_managed_warehouses) |
+                Q(to_warehouse__in=user_managed_warehouses)
+            )
+        elif not is_warehouse_manager:
+            base_query = base_query.none()
+
     stats = {
-        'total': StockTransfer.objects.count(),
-        'draft': StockTransfer.objects.filter(status='draft').count(),
-        'pending': StockTransfer.objects.filter(status='pending').count(),
-        'approved': StockTransfer.objects.filter(status='approved').count(),
-        'in_transit': StockTransfer.objects.filter(status='in_transit').count(),
-        'completed': StockTransfer.objects.filter(status='completed').count(),
-        'cancelled': StockTransfer.objects.filter(status='cancelled').count(),
+        'total': base_query.count(),
+        'draft': base_query.filter(status='draft').count(),
+        'pending': base_query.filter(status='pending').count(),
+        'approved': base_query.filter(status='approved').count(),
+        'in_transit': base_query.filter(status='in_transit').count(),
+        'completed': base_query.filter(status='completed').count(),
+        'cancelled': base_query.filter(status='cancelled').count(),
     }
-    
-    # المستودعات للفلاتر
-    warehouses = Warehouse.objects.filter(is_active=True)
-    
+
+    # المستودعات للفلاتر (فقط المستودعات التي يديرها المستخدم أو الكل للـ superuser)
+    if request.user.is_superuser:
+        warehouses = Warehouse.objects.filter(is_active=True)
+    elif user_managed_warehouses.exists():
+        warehouses = user_managed_warehouses
+    else:
+        warehouses = Warehouse.objects.filter(is_active=True)
+
     context = {
         'page_obj': page_obj,
         'stats': stats,
@@ -82,49 +127,101 @@ def stock_transfer_list(request):
         'current_from_warehouse': from_warehouse,
         'current_to_warehouse': to_warehouse,
         'current_search': search,
+        'is_warehouse_manager': is_warehouse_manager,
+        'user_managed_warehouses': user_managed_warehouses,
     }
-    
+
     return render(request, 'inventory/stock_transfer_list.html', context)
 
 
 @login_required
-def stock_transfer_create(request):
-    """إنشاء تحويل مخزني جديد"""
-    if request.method == 'POST':
-        form = StockTransferForm(request.POST)
-        formset = StockTransferItemFormSet(request.POST)
-        
-        if form.is_valid() and formset.is_valid():
-            try:
-                with db_transaction.atomic():
-                    # حفظ التحويل
-                    transfer = form.save(commit=False)
-                    transfer.created_by = request.user
-                    transfer.status = 'draft'
-                    transfer.save()
-                    
-                    # حفظ العناصر
-                    formset.instance = transfer
-                    formset.save()
-                    
-                    messages.success(
-                        request,
-                        f'تم إنشاء التحويل المخزني {transfer.transfer_number} بنجاح'
-                    )
-                    return redirect('inventory:stock_transfer_detail', pk=transfer.pk)
-            except Exception as e:
-                messages.error(request, f'حدث خطأ: {str(e)}')
-    else:
-        form = StockTransferForm()
-        formset = StockTransferItemFormSet()
-    
+def stock_transfer_bulk(request):
+    """صفحة التحويلات المخزنية"""
+    warehouses = Warehouse.objects.filter(is_active=True).order_by('name')
+
     context = {
-        'form': form,
-        'formset': formset,
-        'title': 'إنشاء تحويل مخزني جديد',
+        'warehouses': warehouses,
+        'title': 'تحويلات مخزنية',
     }
-    
-    return render(request, 'inventory/stock_transfer_form.html', context)
+
+    return render(request, 'inventory/stock_transfer_bulk.html', context)
+
+
+@login_required
+@require_POST
+def stock_transfer_bulk_create(request):
+    """إنشاء تحويل جماعي"""
+    import json
+
+    try:
+        data = json.loads(request.body)
+        from_warehouse_id = data.get('from_warehouse')
+        to_warehouse_id = data.get('to_warehouse')
+        reason = data.get('reason', '')
+        notes = data.get('notes', '')
+        products = data.get('products', [])
+
+        if not from_warehouse_id or not to_warehouse_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'يجب تحديد المستودع المصدر والمستهدف'
+            }, status=400)
+
+        if not products:
+            return JsonResponse({
+                'success': False,
+                'error': 'يجب اختيار منتج واحد على الأقل'
+            }, status=400)
+
+        from_warehouse = Warehouse.objects.get(pk=from_warehouse_id)
+        to_warehouse = Warehouse.objects.get(pk=to_warehouse_id)
+
+        if from_warehouse == to_warehouse:
+            return JsonResponse({
+                'success': False,
+                'error': 'لا يمكن التحويل من وإلى نفس المستودع'
+            }, status=400)
+
+        with db_transaction.atomic():
+            # إنشاء التحويل
+            transfer = StockTransfer.objects.create(
+                from_warehouse=from_warehouse,
+                to_warehouse=to_warehouse,
+                transfer_date=timezone.now(),
+                reason=reason,
+                notes=notes,
+                created_by=request.user,
+                status='pending'  # ✅ تغيير من draft إلى pending
+            )
+
+            # إضافة المنتجات
+            for product_data in products:
+                product = Product.objects.get(pk=product_data['id'])
+                StockTransferItem.objects.create(
+                    transfer=transfer,
+                    product=product,
+                    quantity=product_data['stock'],  # نقل الكل
+                    notes=f"نقل كامل: {product_data['stock']} {product_data['unit']}"
+                )
+
+            # ✅ الموافقة التلقائية على التحويل
+            transfer.approve(request.user)
+
+            return JsonResponse({
+                'success': True,
+                'transfer_id': transfer.id,
+                'transfer_number': transfer.transfer_number,
+                'redirect_url': f"/inventory/stock-transfer/{transfer.id}/"
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# تم حذف stock_transfer_create القديم - الآن نستخدم stock_transfer_bulk
 
 
 @login_required
@@ -237,31 +334,52 @@ def stock_transfer_receive(request, pk):
         return redirect('inventory:stock_transfer_detail', pk=pk)
     
     if request.method == 'POST':
+        print(f"\n{'='*80}")
+        print(f"📥 استلام POST request للتحويل {transfer.transfer_number}")
+        print(f"{'='*80}")
+        print(f"POST data: {request.POST}")
+
         form = StockTransferReceiveForm(request.POST, transfer=transfer)
-        
+
+        print(f"\n✅ Form created")
+        print(f"Form is valid: {form.is_valid()}")
+
+        if not form.is_valid():
+            print(f"❌ Form errors: {form.errors}")
+
         if form.is_valid():
+            print(f"✅ Form is valid, processing...")
             try:
                 with db_transaction.atomic():
                     # تحديث الكميات المستلمة
                     for item in transfer.items.all():
                         field_name = f'item_{item.id}_received'
                         notes_field_name = f'item_{item.id}_notes'
-                        
+
                         received_qty = form.cleaned_data.get(field_name, item.quantity)
                         notes = form.cleaned_data.get(notes_field_name, '')
-                        
+
+                        print(f"  - {item.product.name}: {received_qty} (ملاحظات: {notes})")
+
                         item.received_quantity = received_qty
                         if notes:
                             item.notes = f"{item.notes}\n{notes}" if item.notes else notes
                         item.save()
-                    
+
                     # إكمال التحويل
+                    print(f"\n🔄 إكمال التحويل...")
                     transfer.complete(request.user)
-                    
+
+                    print(f"✅ تم الاستلام بنجاح!")
                     messages.success(request, 'تم استلام التحويل بنجاح')
                     return redirect('inventory:stock_transfer_detail', pk=pk)
             except Exception as e:
+                print(f"❌ خطأ: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 messages.error(request, f'حدث خطأ: {str(e)}')
+        else:
+            print(f"❌ Form is not valid, showing errors to user")
     else:
         form = StockTransferReceiveForm(transfer=transfer)
     
@@ -307,6 +425,84 @@ def stock_transfer_delete(request, pk):
 
     messages.success(request, f'تم حذف التحويل {transfer_number} بنجاح')
     return redirect('inventory:stock_transfer_list')
+
+
+@login_required
+@require_GET
+def get_warehouse_products(request):
+    """API للحصول على منتجات مستودع معين مع المخزون - مع دعم البحث"""
+    warehouse_id = request.GET.get('warehouse_id')
+    search_query = request.GET.get('search', '').strip()
+
+    if not warehouse_id:
+        return JsonResponse({'error': 'Missing warehouse_id'}, status=400)
+
+    try:
+        warehouse = Warehouse.objects.get(pk=warehouse_id)
+
+        # الحصول على جميع المنتجات التي لها مخزون في هذا المستودع
+        products_with_stock = []
+
+        # الحصول على آخر حركة لكل منتج في المستودع
+        latest_transactions = StockTransaction.objects.filter(
+            warehouse=warehouse
+        ).values('product').annotate(
+            last_date=Max('transaction_date')
+        ).order_by('product')
+
+        for trans in latest_transactions:
+            try:
+                last_trans = StockTransaction.objects.filter(
+                    warehouse=warehouse,
+                    product_id=trans['product'],
+                    transaction_date=trans['last_date']
+                ).order_by('-id').first()
+
+                if last_trans and last_trans.running_balance > 0:
+                    product = last_trans.product
+
+                    # تطبيق البحث إذا كان موجوداً
+                    if search_query:
+                        # البحث في الاسم أو الكود
+                        if (search_query.lower() not in product.name.lower() and
+                            (not product.code or search_query.lower() not in product.code.lower())):
+                            continue
+
+                    products_with_stock.append({
+                        'id': product.id,
+                        'name': product.name,
+                        'code': product.code or '',
+                        'stock': float(last_trans.running_balance),
+                        'unit': product.unit,
+                        'display': f"{product.name} - {last_trans.running_balance} {product.unit}"
+                    })
+            except Exception as e:
+                # تجاهل الأخطاء في المنتجات الفردية
+                print(f"خطأ في معالجة المنتج {trans.get('product')}: {e}")
+                continue
+
+        # ترتيب حسب الاسم
+        products_with_stock.sort(key=lambda x: x['name'])
+
+        # تحديد النتائج إلى 50 منتج فقط لتحسين الأداء
+        if len(products_with_stock) > 50:
+            products_with_stock = products_with_stock[:50]
+
+        return JsonResponse({
+            'success': True,
+            'warehouse_id': warehouse.id,
+            'warehouse_name': warehouse.name,
+            'products': products_with_stock,
+            'count': len(products_with_stock),
+            'search_query': search_query
+        })
+    except Warehouse.DoesNotExist:
+        return JsonResponse({'error': 'Warehouse not found'}, status=404)
+    except Exception as e:
+        import traceback
+        print(f"خطأ في get_warehouse_products: {e}")
+        print(traceback.format_exc())
+        return JsonResponse({'error': f'Internal server error: {str(e)}'}, status=500)
 
 
 @login_required

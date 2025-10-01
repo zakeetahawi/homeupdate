@@ -321,13 +321,13 @@ def product_delete(request, pk):
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
 
-    # الحصول على مستوى المخزون من الذاكرة المؤقتة
-    current_stock = get_cached_stock_level(product.id)
+    # الحصول على المخزون الحالي من property (يحسب من جميع المستودعات)
+    current_stock = product.current_stock
 
     # استخدام select_related للمعاملات
     transactions = product.transactions.select_related(
-        'created_by'
-    ).order_by('-date')
+        'created_by', 'warehouse'
+    ).order_by('-transaction_date', '-id')
 
     # حساب إجمالي الوارد والصادر
     from django.db.models import Sum
@@ -337,50 +337,39 @@ def product_detail(request, pk):
     transactions_in_total = transactions_in.aggregate(total=Sum('quantity'))['total'] or 0
     transactions_out_total = transactions_out.aggregate(total=Sum('quantity'))['total'] or 0
 
-    # إعداد بيانات الرسم البياني
+    # إعداد بيانات الرسم البياني - استخدام running_balance
     from django.utils import timezone
-    from datetime import timedelta    # Get dates for last 30 days
+    from datetime import timedelta
+    from .models import Warehouse
+
     end_date = timezone.now().date()
     start_date = end_date - timedelta(days=29)
 
-    # Get all transactions up to end_date ordered by transaction_date
-    all_transactions = product.transactions.filter(
-        transaction_date__date__lte=end_date
-    ).order_by('transaction_date')
-
-    # Calculate the running balance for each day in the range
+    # حساب الرصيد لكل يوم باستخدام running_balance من جميع المستودعات
     transaction_dates = []
     transaction_balances = []
-    daily_balance = 0
 
-    # Calculate opening balance from transactions before start_date
-    opening_transactions = all_transactions.filter(transaction_date__date__lt=start_date)
-    for trans in opening_transactions:
-        if trans.transaction_type == 'in':
-            daily_balance += trans.quantity
-        else:
-            daily_balance -= trans.quantity
+    # الحصول على جميع المستودعات النشطة
+    warehouses = Warehouse.objects.filter(is_active=True)
 
-    # إضافة الرصيد لكل يوم    # Iterate through each day in the range
+    # لكل يوم، احسب مجموع الرصيد من جميع المستودعات
     current_date = start_date
     while current_date <= end_date:
-        # Get all transactions for this day
-        day_transactions = all_transactions.filter(
-            transaction_date__date=current_date
-        ).order_by('transaction_date')
+        daily_total = 0
 
-        # Update balance with day's transactions
-        for trans in day_transactions:
-            if trans.transaction_type == 'in':
-                daily_balance += trans.quantity
-            else:
-                daily_balance -= trans.quantity
+        # لكل مستودع، احصل على آخر رصيد حتى هذا اليوم
+        for warehouse in warehouses:
+            last_trans = product.transactions.filter(
+                warehouse=warehouse,
+                transaction_date__date__lte=current_date
+            ).order_by('-transaction_date', '-id').first()
 
-        # Add date and balance to lists
+            if last_trans:
+                daily_total += last_trans.running_balance
+
         transaction_dates.append(current_date)
-        transaction_balances.append(daily_balance)
+        transaction_balances.append(float(daily_total))
 
-        # Move to next day
         current_date += timedelta(days=1)
 
     # جلب إعدادات النظام
@@ -400,6 +389,27 @@ def product_detail(request, pk):
     from datetime import datetime
     current_year = datetime.now().year
 
+    # الحصول على المخزون حسب المستودع
+    from .models import Warehouse, StockTransaction
+    from django.db.models import Max
+
+    warehouses_stock = []
+    warehouses = Warehouse.objects.filter(is_active=True)
+
+    for warehouse in warehouses:
+        # الحصول على آخر حركة للمنتج في هذا المستودع
+        last_transaction = StockTransaction.objects.filter(
+            product=product,
+            warehouse=warehouse
+        ).order_by('-transaction_date', '-id').first()
+
+        if last_transaction:
+            warehouses_stock.append({
+                'warehouse': warehouse,
+                'stock': last_transaction.running_balance,
+                'last_update': last_transaction.transaction_date
+            })
+
     context = {
         'product': product,
         'current_stock': current_stock,
@@ -418,6 +428,7 @@ def product_detail(request, pk):
         'recent_alerts': recent_alerts,
         'current_year': current_year,
         'currency_symbol': currency_symbol,
+        'warehouses_stock': warehouses_stock,
     }
     return render(request, 'inventory/product_detail_new_icons.html', context)
 
@@ -441,8 +452,23 @@ def transaction_create(request, product_pk):
         ('other', 'أخرى'),
     ]
 
-    # الحصول على مستوى المخزون الحالي من الذاكرة المؤقتة
-    current_stock = get_cached_stock_level(product.pk)
+    # الحصول على مستوى المخزون الحالي من property
+    current_stock = product.current_stock
+
+    # الحصول على المستودعات النشطة مع مخزونها
+    from .models import Warehouse
+    warehouses_list = []
+    for warehouse in Warehouse.objects.filter(is_active=True):
+        last_trans = StockTransaction.objects.filter(
+            product=product,
+            warehouse=warehouse
+        ).order_by('-transaction_date', '-id').first()
+
+        warehouses_list.append({
+            'id': warehouse.id,
+            'name': warehouse.name,
+            'stock': last_trans.running_balance if last_trans else 0
+        })
 
     if request.method == 'POST':
         try:
@@ -450,11 +476,12 @@ def transaction_create(request, product_pk):
             transaction_type = request.POST.get('transaction_type')
             reason = request.POST.get('reason')
             quantity = request.POST.get('quantity')
+            warehouse_id = request.POST.get('warehouse')
             reference = request.POST.get('reference', '')
             notes = request.POST.get('notes', '')
 
             # التحقق من البيانات المطلوبة
-            if not all([transaction_type, reason, quantity]):
+            if not all([transaction_type, reason, quantity, warehouse_id]):
                 raise ValueError("جميع الحقول المطلوبة يجب ملؤها")
 
             # التحقق من صحة الكمية
@@ -465,26 +492,52 @@ def transaction_create(request, product_pk):
             except (ValueError, TypeError):
                 raise ValueError("الكمية يجب أن تكون رقماً صحيحاً")
 
+            # الحصول على المستودع
+            warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
+
             # إعادة فحص المخزون الحالي قبل تسجيل الحركة
-            current_stock = get_cached_stock_level(product.pk)
+            current_stock = product.current_stock
+
+            # الحصول على مخزون المستودع المحدد
+            warehouse_stock = 0
+            last_trans = StockTransaction.objects.filter(
+                product=product,
+                warehouse=warehouse
+            ).order_by('-transaction_date', '-id').first()
+
+            if last_trans:
+                warehouse_stock = last_trans.running_balance
 
             # التحقق من توفر المخزون للحركات الصادرة
             if transaction_type == 'out':
-                if current_stock <= 0:
-                    raise ValueError("لا يوجد مخزون متاح للصرف")
-                if quantity > current_stock:
-                    raise ValueError(f"الكمية المطلوبة ({quantity}) أكبر من المخزون المتاح ({current_stock})")
+                if warehouse_stock <= 0:
+                    raise ValueError(f"لا يوجد مخزون متاح للصرف من مستودع {warehouse.name}")
+                if quantity > warehouse_stock:
+                    raise ValueError(f"الكمية المطلوبة ({quantity}) أكبر من المخزون المتاح في {warehouse.name} ({warehouse_stock})")
+
+            # حساب running_balance
+            if last_trans:
+                previous_balance = last_trans.running_balance
+            else:
+                previous_balance = 0
+
+            if transaction_type == 'in':
+                new_balance = previous_balance + quantity
+            else:
+                new_balance = previous_balance - quantity
 
             # إنشاء حركة المخزون
             transaction = StockTransaction.objects.create(
                 product=product,
+                warehouse=warehouse,
                 transaction_type=transaction_type,
                 reason=reason,
                 quantity=quantity,
+                running_balance=new_balance,
                 reference=reference,
                 notes=notes,
                 created_by=request.user,
-                date=timezone.now()
+                transaction_date=timezone.now()
             )
 
             # إعادة تحميل الذاكرة المؤقتة للمنتج
@@ -492,9 +545,9 @@ def transaction_create(request, product_pk):
 
             # إضافة رسالة نجاح
             if transaction_type == 'in':
-                messages.success(request, f"تم تسجيل حركة وارد بنجاح. الكمية: {quantity}")
+                messages.success(request, f"تم تسجيل حركة وارد بنجاح إلى {warehouse.name}. الكمية: {quantity}")
             else:
-                messages.success(request, f"تم تسجيل حركة صادر بنجاح. الكمية: {quantity}")
+                messages.success(request, f"تم تسجيل حركة صادر بنجاح من {warehouse.name}. الكمية: {quantity}")
 
             return redirect('inventory:product_detail', pk=product.pk)
 
@@ -519,6 +572,7 @@ def transaction_create(request, product_pk):
         'transaction_types': transaction_types,
         'transaction_reasons': transaction_reasons,
         'current_stock': current_stock,
+        'warehouses': warehouses_list,
         'alerts_count': alerts_count,
         'recent_alerts': recent_alerts,
         'current_year': current_year

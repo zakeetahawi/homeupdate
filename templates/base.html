@@ -234,12 +234,15 @@
                                     <li><a class="dropdown-item" href="/inventory/">
                                         <i class="fas fa-warehouse"></i> إدارة المخزون
                                     </a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="{% url 'inventory:stock_transfer_list' %}">
-                                        <i class="fas fa-exchange-alt"></i> التحويلات المخزنية
+                                    <li><a class="dropdown-item" href="{% url 'inventory:warehouse_list' %}">
+                                        <i class="fas fa-warehouse text-info"></i> إدارة المستودعات
                                     </a></li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="{% url 'inventory:stock_transfer_create' %}">
-                                        <i class="fas fa-plus-circle"></i> إنشاء تحويل جديد
+                                        <i class="fas fa-bolt text-warning"></i> <strong>تحويلات مخزنية</strong>
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventory:stock_transfer_list' %}">
+                                        <i class="fas fa-list"></i> عرض جميع التحويلات
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="/cutting/">
@@ -332,55 +335,115 @@
                 </ul>
                 <div class="d-flex align-items-center ms-auto">
                     {% if user.is_authenticated %}
-                        <!-- أيقونة التحويلات المخزنية المعلقة - لمسؤولي المخازن -->
-                        {% if is_warehouse_manager and pending_transfers_count > 0 %}
+                        <!-- أيقونة التحويلات الواردة - للمستخدمين الذين يديرون مستودعات -->
+                        {% if incoming_transfers_count > 0 %}
                         <div class="dropdown me-2">
-                            <button class="btn btn-outline-info position-relative" type="button" id="pendingTransfersDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="التحويلات المعلقة">
-                                <i class="fas fa-truck-loading"></i>
+                            <button class="btn btn-outline-warning position-relative" type="button" id="incomingTransfersDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="تحويلات واردة بحاجة استلام">
+                                <i class="fas fa-inbox"></i>
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    {{ pending_transfers_count }}
+                                    {{ incoming_transfers_count }}
                                 </span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="pendingTransfersDropdown" style="width: 350px; max-height: 400px; overflow-y: auto;">
-                                <li class="dropdown-header d-flex justify-content-between align-items-center bg-light">
-                                    <span class="fw-bold">
-                                        <i class="fas fa-truck-loading me-2 text-info"></i>
-                                        التحويلات المعلقة
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="incomingTransfersDropdown" style="width: 380px; max-height: 450px; overflow-y: auto;">
+                                <li class="dropdown-header d-flex justify-content-between align-items-center bg-warning bg-opacity-10">
+                                    <span class="fw-bold text-dark">
+                                        <i class="fas fa-inbox me-2 text-warning"></i>
+                                        تحويلات واردة بحاجة استلام
                                     </span>
-                                    <span class="badge bg-danger">{{ pending_transfers_count }}</span>
+                                    <span class="badge bg-danger">{{ incoming_transfers_count }}</span>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
-                                {% for transfer in pending_transfers_list %}
+
+                                {% for transfer in incoming_transfers_list %}
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'inventory:stock_transfer_detail' transfer.id %}">
+                                    <a class="dropdown-item py-3" href="{% url 'inventory:stock_transfer_receive' transfer.id %}" style="border-radius: 8px; margin: 2px 8px;">
                                         <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <strong>{{ transfer.transfer_number }}</strong>
-                                                <br>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-warehouse text-danger"></i> {{ transfer.from_warehouse.name }}
-                                                    <i class="fas fa-arrow-left mx-1"></i>
-                                                    <i class="fas fa-warehouse text-success"></i> {{ transfer.to_warehouse.name }}
-                                                </small>
-                                                <br>
-                                                <small class="text-muted">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <strong class="text-primary">{{ transfer.transfer_number }}</strong>
                                                     {% if transfer.status == 'approved' %}
-                                                        <span class="badge bg-success">تمت الموافقة</span>
+                                                        <span class="badge bg-success ms-2">تمت الموافقة</span>
                                                     {% elif transfer.status == 'in_transit' %}
-                                                        <span class="badge bg-info">قيد النقل</span>
+                                                        <span class="badge bg-info ms-2">قيد النقل</span>
                                                     {% endif %}
-                                                </small>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <small class="text-muted d-block">
+                                                        <i class="fas fa-warehouse text-danger"></i> من: <strong>{{ transfer.from_warehouse.name }}</strong>
+                                                    </small>
+                                                    <small class="text-muted d-block">
+                                                        <i class="fas fa-warehouse text-success"></i> إلى: <strong>{{ transfer.to_warehouse.name }}</strong>
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-boxes"></i> {{ transfer.total_items }} صنف
+                                                    </small>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-clock"></i> {{ transfer.transfer_date|timesince }}
+                                                    </small>
+                                                </div>
                                             </div>
                                         </div>
                                     </a>
                                 </li>
                                 {% if not forloop.last %}<li><hr class="dropdown-divider"></li>{% endif %}
                                 {% endfor %}
+
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item text-center text-primary" href="{% url 'inventory:stock_transfer_list' %}?status=approved,in_transit">
-                                        <i class="fas fa-list"></i> عرض جميع التحويلات المعلقة
+                                        <i class="fas fa-list"></i> عرض جميع التحويلات الواردة
                                     </a>
+                                </li>
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <!-- أيقونة التحويلات المخزنية - لمسؤولي المخازن (للإنشاء) -->
+                        {% if is_warehouse_manager %}
+                        <div class="dropdown me-2">
+                            <button class="btn btn-outline-success position-relative" type="button" id="warehouseActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="إجراءات المخازن">
+                                <i class="fas fa-bolt"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="warehouseActionsDropdown" style="width: 280px;">
+                                <li class="dropdown-header bg-success bg-opacity-10">
+                                    <span class="fw-bold text-dark">
+                                        <i class="fas fa-warehouse me-2 text-success"></i>
+                                        إجراءات المخازن
+                                    </span>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'inventory:stock_transfer_create' %}">
+                                        <i class="fas fa-bolt text-success me-2"></i>
+                                        <strong>تحويل مخزني جديد</strong>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'inventory:stock_transfer_list' %}">
+                                        <i class="fas fa-list text-primary me-2"></i>
+                                        جميع التحويلات
+                                    </a>
+                                </li>
+                                {% if user.is_superuser or user.is_staff %}
+                                <li>
+                                    <a class="dropdown-item py-2" href="{% url 'inventory:warehouse_list' %}">
+                                        <i class="fas fa-warehouse text-info me-2"></i>
+                                        إدارة المستودعات
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="px-3 py-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        {% if pending_transfers_count > 0 %}
+                                        <strong class="text-warning">{{ pending_transfers_count }}</strong> تحويل معلق
+                                        {% else %}
+                                        لا توجد تحويلات معلقة
+                                        {% endif %}
+                                    </small>
                                 </li>
                             </ul>
                         </div>

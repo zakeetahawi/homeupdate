@@ -87,17 +87,34 @@
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
+                        <label for="warehouse" class="form-label">{% trans "المستودع" %} *</label>
+                        <select class="form-select" id="warehouse" name="warehouse" required>
+                            <option value="">{% trans "اختر المستودع" %}</option>
+                            {% for warehouse in warehouses %}
+                                <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
                         <label for="quantity" class="form-label">{% trans "الكمية" %} *</label>
                         <div class="input-group">
                             <input type="number" class="form-control" id="quantity" name="quantity" min="1" step="0.01" required>
                             <span class="input-group-text">{{ product.get_unit_display }}</span>
                         </div>
                     </div>
+                </div>
 
+                <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="reference" class="form-label">{% trans "المرجع" %}</label>
                         <input type="text" class="form-control" id="reference" name="reference"
                                placeholder="{% trans 'مثال: رقم الفاتورة، رقم الطلب، إلخ' %}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div id="warehouse_stock_info" class="alert alert-info mt-4" style="display: none;">
+                            <i class="fas fa-info-circle"></i>
+                            <span id="warehouse_stock_text"></span>
+                        </div>
                     </div>
                 </div>
 
@@ -124,37 +141,81 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const transactionTypeSelect = document.getElementById('transaction_type');
+        const warehouseSelect = document.getElementById('warehouse');
         const quantityInput = document.getElementById('quantity');
+        const warehouseStockInfo = document.getElementById('warehouse_stock_info');
+        const warehouseStockText = document.getElementById('warehouse_stock_text');
         const currentStock = {{ current_stock }};
 
-        // Add validation for outgoing transactions
-        transactionTypeSelect.addEventListener('change', function() {
-            if (this.value === 'out') {
-                quantityInput.setAttribute('max', currentStock);
+        // بيانات المخزون لكل مستودع
+        const warehouseStocks = {
+            {% for warehouse in warehouses %}
+                {{ warehouse.id }}: {
+                    name: '{{ warehouse.name }}',
+                    stock: {{ warehouse.stock }}
+                },
+            {% endfor %}
+        };
 
-                // Add or update validation message
-                let validationMessage = document.getElementById('quantity-validation');
-                if (!validationMessage) {
-                    validationMessage = document.createElement('div');
-                    validationMessage.className = 'form-text text-danger mt-1';
-                    validationMessage.id = 'quantity-validation';
-                    quantityInput.parentNode.after(validationMessage);
+        // عند تغيير المستودع
+        warehouseSelect.addEventListener('change', function() {
+            const warehouseId = this.value;
+            if (warehouseId && warehouseStocks[warehouseId]) {
+                const stock = warehouseStocks[warehouseId].stock;
+                const name = warehouseStocks[warehouseId].name;
+
+                warehouseStockText.innerHTML = `المخزون في <strong>${name}</strong>: <strong>${stock} {{ product.get_unit_display }}</strong>`;
+                warehouseStockInfo.style.display = 'block';
+
+                // تحديث التحقق من الكمية
+                if (transactionTypeSelect.value === 'out') {
+                    quantityInput.setAttribute('max', stock);
+                    updateValidationMessage(stock);
                 }
-                validationMessage.textContent = '{% trans "الكمية المتاحة للصرف:" %} ' + currentStock;
             } else {
-                // Remove validation message for incoming transactions
+                warehouseStockInfo.style.display = 'none';
+            }
+        });
+
+        // عند تغيير نوع الحركة
+        transactionTypeSelect.addEventListener('change', function() {
+            const warehouseId = warehouseSelect.value;
+
+            if (this.value === 'out' && warehouseId && warehouseStocks[warehouseId]) {
+                const stock = warehouseStocks[warehouseId].stock;
+                quantityInput.setAttribute('max', stock);
+                updateValidationMessage(stock);
+            } else {
+                quantityInput.removeAttribute('max');
                 const validationMessage = document.getElementById('quantity-validation');
                 if (validationMessage) {
                     validationMessage.remove();
                 }
-                quantityInput.removeAttribute('max');
             }
         });
 
+        // دالة لتحديث رسالة التحقق
+        function updateValidationMessage(stock) {
+            let validationMessage = document.getElementById('quantity-validation');
+            if (!validationMessage) {
+                validationMessage = document.createElement('div');
+                validationMessage.className = 'form-text text-warning mt-1';
+                validationMessage.id = 'quantity-validation';
+                quantityInput.parentNode.after(validationMessage);
+            }
+            validationMessage.innerHTML = '<i class="fas fa-exclamation-triangle"></i> {% trans "الكمية المتاحة للصرف:" %} <strong>' + stock + ' {{ product.get_unit_display }}</strong>';
+        }
+
         // Validate quantity on input
         quantityInput.addEventListener('input', function() {
-            if (transactionTypeSelect.value === 'out' && parseFloat(this.value) > currentStock) {
-                this.setCustomValidity('{% trans "الكمية المطلوبة أكبر من المخزون المتاح" %}');
+            const warehouseId = warehouseSelect.value;
+            if (transactionTypeSelect.value === 'out' && warehouseId && warehouseStocks[warehouseId]) {
+                const stock = warehouseStocks[warehouseId].stock;
+                if (parseFloat(this.value) > stock) {
+                    this.setCustomValidity('{% trans "الكمية المطلوبة أكبر من المخزون المتاح" %}');
+                } else {
+                    this.setCustomValidity('');
+                }
             } else {
                 this.setCustomValidity('');
             }

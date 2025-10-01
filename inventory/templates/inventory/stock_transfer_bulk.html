@@ -1,0 +1,670 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تحويلات مخزنية{% endblock %}
+
+{% block extra_css %}
+<style>
+    .warehouse-radio-card {
+        cursor: pointer;
+        transition: all 0.3s;
+        border: 2px solid #dee2e6;
+    }
+
+    .warehouse-radio-card:hover {
+        border-color: #0d6efd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-check-input:checked ~ .form-check-label .warehouse-radio-card {
+        border-color: #0d6efd;
+        background: #e7f1ff;
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+    }
+
+    .product-item {
+        padding: 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        margin-bottom: 8px;
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .product-item:hover {
+        background: #f8f9fa;
+        border-color: #0d6efd;
+    }
+
+    .product-item.selected {
+        background: #e7f1ff;
+        border-color: #0d6efd;
+    }
+
+    .stock-badge {
+        font-size: 0.85rem;
+        padding: 4px 8px;
+    }
+
+    .search-box {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: white;
+        padding: 15px;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .products-container {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+    }
+
+    .step {
+        flex: 1;
+        text-align: center;
+        padding: 15px;
+        background: #e9ecef;
+        position: relative;
+    }
+
+    .step.active {
+        background: #0d6efd;
+        color: white;
+    }
+
+    .step.completed {
+        background: #198754;
+        color: white;
+    }
+
+    .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .loading.show {
+        display: block;
+    }
+
+    .form-check {
+        margin-bottom: 0;
+    }
+
+    .form-check-label {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-bolt text-warning"></i>
+                    تحويلات مخزنية
+                </h2>
+                <a href="{% url 'inventory:stock_transfer_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right"></i> رجوع
+                </a>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step active" id="step1">
+                    <i class="fas fa-warehouse"></i>
+                    <div>1. اختر المستودعات</div>
+                </div>
+                <div class="step" id="step2">
+                    <i class="fas fa-boxes"></i>
+                    <div>2. اختر المنتجات</div>
+                </div>
+                <div class="step" id="step3">
+                    <i class="fas fa-check-circle"></i>
+                    <div>3. تأكيد ونقل</div>
+                </div>
+            </div>
+
+            <!-- Step 1: اختيار المستودعات -->
+            <div id="step1-content" class="step-content">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-warehouse"></i>
+                            اختر المستودع المصدر والمستهدف
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- من مستودع -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold fs-5">
+                                <i class="fas fa-warehouse text-danger"></i>
+                                من مستودع *
+                            </label>
+                            <div class="row g-3">
+                                {% for warehouse in warehouses %}
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio"
+                                               name="from_warehouse"
+                                               id="from_{{ warehouse.id }}"
+                                               value="{{ warehouse.id }}"
+                                               onchange="updateToWarehouses()">
+                                        <label class="form-check-label w-100" for="from_{{ warehouse.id }}">
+                                            <div class="card h-100 warehouse-radio-card">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-warehouse fa-2x text-danger mb-2"></i>
+                                                    <h6>{{ warehouse.name }}</h6>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- إلى مستودع -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold fs-5">
+                                <i class="fas fa-warehouse text-success"></i>
+                                إلى مستودع *
+                            </label>
+                            <div class="row g-3" id="to-warehouses-container">
+                                <div class="col-12 text-center text-muted">
+                                    <i class="fas fa-arrow-up"></i>
+                                    اختر المستودع المصدر أولاً
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- معلومات إضافية -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">سبب التحويل</label>
+                                <input type="text" id="reason" class="form-control" placeholder="اختياري...">
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">ملاحظات</label>
+                                <input type="text" id="notes" class="form-control" placeholder="اختياري...">
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-primary btn-lg w-100" onclick="goToStep2()" id="next-step2-btn" disabled>
+                            <i class="fas fa-arrow-left"></i>
+                            التالي: اختيار المنتجات
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: اختيار المنتجات -->
+            <div id="step2-content" class="step-content" style="display:none;">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-boxes"></i>
+                            اختر المنتجات للنقل
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- Search Box -->
+                        <div class="search-box">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <input type="text" id="product-search" class="form-control form-control-lg"
+                                           placeholder="🔍 ابحث عن منتج (الاسم، الكود، الفئة)...">
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="button" class="btn btn-outline-success w-100" onclick="selectAll()">
+                                        <i class="fas fa-check-double"></i>
+                                        تحديد الكل
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="button" class="btn btn-outline-danger w-100" onclick="deselectAll()">
+                                        <i class="fas fa-times-circle"></i>
+                                        إلغاء الكل
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <span class="badge bg-info">
+                                    <span id="selected-count">0</span> منتج محدد
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Loading -->
+                        <div class="loading" id="products-loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">جاري التحميل...</span>
+                            </div>
+                            <p class="mt-2">جاري تحميل المنتجات...</p>
+                        </div>
+                        
+                        <!-- Products List -->
+                        <div class="products-container p-3" id="products-list">
+                            <!-- سيتم ملؤها ديناميكياً -->
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" onclick="goToStep1()">
+                                <i class="fas fa-arrow-right"></i>
+                                رجوع
+                            </button>
+                            <button type="button" class="btn btn-success btn-lg" onclick="goToStep3()">
+                                <i class="fas fa-arrow-left"></i>
+                                التالي: تأكيد النقل
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: التأكيد والنقل -->
+            <div id="step3-content" class="step-content" style="display:none;">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-check-circle"></i>
+                            تأكيد التحويل
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="transfer-summary">
+                            <!-- سيتم ملؤها ديناميكياً -->
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" onclick="goToStep2()">
+                                <i class="fas fa-arrow-right"></i>
+                                رجوع
+                            </button>
+                            <button type="button" class="btn btn-success btn-lg" onclick="submitTransfer()" id="submit-btn">
+                                <i class="fas fa-check"></i>
+                                تأكيد وإنشاء التحويل
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedProducts = [];
+let allProducts = [];
+let fromWarehouseId = null;
+let toWarehouseId = null;
+
+// تحديث المستودعات المستهدفة
+function updateToWarehouses() {
+    fromWarehouseId = $('input[name="from_warehouse"]:checked').val();
+
+    if (!fromWarehouseId) {
+        $('#to-warehouses-container').html(`
+            <div class="col-12 text-center text-muted">
+                <i class="fas fa-arrow-up"></i>
+                اختر المستودع المصدر أولاً
+            </div>
+        `);
+        $('#next-step2-btn').prop('disabled', true);
+        return;
+    }
+
+    // عرض جميع المستودعات ما عدا المصدر
+    let html = '';
+    {% for warehouse in warehouses %}
+    if ('{{ warehouse.id }}' !== fromWarehouseId) {
+        html += `
+            <div class="col-md-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio"
+                           name="to_warehouse"
+                           id="to_{{ warehouse.id }}"
+                           value="{{ warehouse.id }}"
+                           onchange="enableNextButton()">
+                    <label class="form-check-label w-100" for="to_{{ warehouse.id }}">
+                        <div class="card h-100 warehouse-radio-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-warehouse fa-2x text-success mb-2"></i>
+                                <h6>{{ warehouse.name }}</h6>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        `;
+    }
+    {% endfor %}
+
+    $('#to-warehouses-container').html(html);
+}
+
+// تفعيل زر التالي
+function enableNextButton() {
+    toWarehouseId = $('input[name="to_warehouse"]:checked').val();
+    $('#next-step2-btn').prop('disabled', !toWarehouseId);
+}
+
+// الانتقال للخطوة 2
+function goToStep2() {
+    fromWarehouseId = $('input[name="from_warehouse"]:checked').val();
+    toWarehouseId = $('input[name="to_warehouse"]:checked').val();
+
+    if (!fromWarehouseId || !toWarehouseId) {
+        alert('⚠️ يجب اختيار المستودع المصدر والمستهدف');
+        return;
+    }
+
+    if (fromWarehouseId === toWarehouseId) {
+        alert('⚠️ لا يمكن التحويل من وإلى نفس المستودع');
+        return;
+    }
+
+    // إخفاء الخطوة 1 وإظهار الخطوة 2
+    $('#step1-content').hide();
+    $('#step2-content').show();
+    $('#step1').removeClass('active').addClass('completed');
+    $('#step2').addClass('active');
+
+    // عرض رسالة للبحث بدلاً من تحميل جميع المنتجات
+    $('#products-list').html(`
+        <div class="alert alert-info text-center">
+            <i class="fas fa-search"></i>
+            <h5 class="mt-2">ابحث عن المنتجات</h5>
+            <p class="mb-0">استخدم مربع البحث أعلاه للبحث عن المنتجات (اكتب اسم المنتج أو أول حرف منه)</p>
+        </div>
+    `);
+}
+
+// تحميل المنتجات بناءً على البحث
+function loadProducts(searchQuery = '') {
+    // لا تحمل إذا كان البحث فارغاً
+    if (!searchQuery || searchQuery.length < 1) {
+        $('#products-list').html(`
+            <div class="alert alert-info text-center">
+                <i class="fas fa-search"></i>
+                <h5 class="mt-2">ابحث عن المنتجات</h5>
+                <p class="mb-0">اكتب على الأقل حرف واحد للبحث</p>
+            </div>
+        `);
+        return;
+    }
+
+    $('#products-loading').addClass('show');
+    $('#products-list').html('');
+
+    $.ajax({
+        url: '{% url "inventory:api_warehouse_products" %}',
+        data: {
+            warehouse_id: fromWarehouseId,
+            search: searchQuery
+        },
+        success: function(data) {
+            $('#products-loading').removeClass('show');
+
+            if (data.success && data.products.length > 0) {
+                allProducts = data.products;
+                renderProducts(allProducts);
+            } else {
+                $('#products-list').html(`
+                    <div class="alert alert-warning text-center">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        لا توجد منتجات تطابق البحث "${searchQuery}"
+                    </div>
+                `);
+            }
+        },
+        error: function() {
+            $('#products-loading').removeClass('show');
+            $('#products-list').html(`
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-times-circle"></i>
+                    حدث خطأ في تحميل المنتجات
+                </div>
+            `);
+        }
+    });
+}
+
+// عرض المنتجات
+function renderProducts(products) {
+    let html = '';
+    products.forEach(function(product) {
+        const isSelected = selectedProducts.find(p => p.id === product.id);
+        html += `
+            <div class="product-item ${isSelected ? 'selected' : ''}" data-product-id="${product.id}">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           id="product-${product.id}" 
+                           ${isSelected ? 'checked' : ''}
+                           onchange="toggleProduct(${product.id}, '${product.name}', ${product.stock}, '${product.unit}')">
+                    <label class="form-check-label w-100" for="product-${product.id}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${product.name}</strong>
+                                ${product.code ? `<small class="text-muted">(${product.code})</small>` : ''}
+                            </div>
+                            <span class="badge bg-primary stock-badge">
+                                ${product.stock} ${product.unit}
+                            </span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        `;
+    });
+    $('#products-list').html(html);
+}
+
+// تبديل اختيار منتج
+function toggleProduct(id, name, stock, unit) {
+    const index = selectedProducts.findIndex(p => p.id === id);
+    
+    if (index > -1) {
+        selectedProducts.splice(index, 1);
+    } else {
+        selectedProducts.push({ id, name, stock, unit });
+    }
+    
+    updateSelectedCount();
+}
+
+// تحديد الكل
+function selectAll() {
+    const visibleProducts = $('#products-list .product-item:visible');
+    visibleProducts.each(function() {
+        const checkbox = $(this).find('input[type="checkbox"]');
+        if (!checkbox.prop('checked')) {
+            checkbox.prop('checked', true).trigger('change');
+        }
+    });
+}
+
+// إلغاء تحديد الكل (جميع المنتجات المحددة وليس المرئية فقط)
+function deselectAll() {
+    // إلغاء تحديد جميع checkboxes المرئية
+    $('#products-list .product-item input[type="checkbox"]:checked').each(function() {
+        $(this).prop('checked', false);
+    });
+
+    // مسح قائمة المنتجات المحددة بالكامل
+    selectedProducts = [];
+
+    // تحديث العداد
+    updateSelectedCount();
+
+    // إظهار رسالة
+    Swal.fire({
+        icon: 'success',
+        title: 'تم إلغاء التحديد',
+        text: 'تم إلغاء تحديد جميع المنتجات',
+        timer: 1500,
+        showConfirmButton: false
+    });
+}
+
+// تحديث عداد المنتجات المحددة
+function updateSelectedCount() {
+    $('#selected-count').text(selectedProducts.length);
+}
+
+// البحث في المنتجات - مع debounce
+let searchTimeout;
+$('#product-search').on('input', function() {
+    const searchTerm = $(this).val().trim();
+
+    // إلغاء البحث السابق
+    clearTimeout(searchTimeout);
+
+    // الانتظار 500ms قبل البحث
+    searchTimeout = setTimeout(function() {
+        if (searchTerm.length >= 1) {
+            // تحميل المنتجات من السيرفر
+            loadProducts(searchTerm);
+        } else {
+            // عرض رسالة البحث
+            $('#products-list').html(`
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-search"></i>
+                    <h5 class="mt-2">ابحث عن المنتجات</h5>
+                    <p class="mb-0">اكتب على الأقل حرف واحد للبحث</p>
+                </div>
+            `);
+            allProducts = [];
+        }
+    }, 500);
+});
+
+// الانتقال للخطوة 3
+function goToStep3() {
+    if (selectedProducts.length === 0) {
+        alert('⚠️ يجب اختيار منتج واحد على الأقل');
+        return;
+    }
+    
+    $('#step2-content').hide();
+    $('#step3-content').show();
+    $('#step2').removeClass('active').addClass('completed');
+    $('#step3').addClass('active');
+    
+    showSummary();
+}
+
+// عرض الملخص
+function showSummary() {
+    const fromName = $('#from_warehouse option:selected').text();
+    const toName = $('#to_warehouse option:selected').text();
+    const reason = $('#reason').val() || '-';
+    const notes = $('#notes').val() || '-';
+    
+    let html = `
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> معلومات التحويل</h5>
+            <p><strong>من:</strong> ${fromName}</p>
+            <p><strong>إلى:</strong> ${toName}</p>
+            <p><strong>السبب:</strong> ${reason}</p>
+            <p><strong>ملاحظات:</strong> ${notes}</p>
+        </div>
+        
+        <h5 class="mt-4"><i class="fas fa-boxes"></i> المنتجات المحددة (${selectedProducts.length})</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>المنتج</th>
+                        <th>الكمية المتوفرة</th>
+                        <th>الكمية المنقولة</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    selectedProducts.forEach((product, index) => {
+        html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${product.name}</td>
+                <td>${product.stock} ${product.unit}</td>
+                <td><strong class="text-success">${product.stock} ${product.unit}</strong> (الكل)</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    $('#transfer-summary').html(html);
+}
+
+// إرسال التحويل
+function submitTransfer() {
+    $('#submit-btn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> جاري الإنشاء...');
+    
+    const data = {
+        from_warehouse: fromWarehouseId,
+        to_warehouse: toWarehouseId,
+        reason: $('#reason').val(),
+        notes: $('#notes').val(),
+        products: selectedProducts,
+        csrfmiddlewaretoken: '{{ csrf_token }}'
+    };
+    
+    $.ajax({
+        url: '{% url "inventory:stock_transfer_bulk_create" %}',
+        method: 'POST',
+        data: JSON.stringify(data),
+        contentType: 'application/json',
+        success: function(response) {
+            if (response.success) {
+                alert('✅ تم إنشاء التحويل بنجاح!');
+                window.location.href = response.redirect_url;
+            } else {
+                alert('❌ خطأ: ' + response.error);
+                $('#submit-btn').prop('disabled', false).html('<i class="fas fa-check"></i> تأكيد وإنشاء التحويل');
+            }
+        },
+        error: function() {
+            alert('❌ حدث خطأ في إنشاء التحويل');
+            $('#submit-btn').prop('disabled', false).html('<i class="fas fa-check"></i> تأكيد وإنشاء التحويل');
+        }
+    });
+}
+
+// الرجوع للخطوة 1
+function goToStep1() {
+    $('#step2-content').hide();
+    $('#step1-content').show();
+    $('#step2').removeClass('active');
+    $('#step1').removeClass('completed').addClass('active');
+}
+</script>
+{% endblock %}
+

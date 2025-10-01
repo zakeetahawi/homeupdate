@@ -460,32 +460,30 @@ def warehouse_detail(request, pk):
     warehouse_products = []
     products_data = StockTransaction.objects.filter(
         warehouse=warehouse
-    ).values('product__id', 'product__name', 'product__code').distinct()
-    
+    ).values('product__id').distinct()
+
     for product_data in products_data:
         product_id = product_data['product__id']
-        # حساب الكمية المتوفرة للمنتج في هذا المستودع
-        product_in = StockTransaction.objects.filter(
+
+        # الحصول على آخر حركة للمنتج في هذا المستودع
+        last_trans = StockTransaction.objects.filter(
             warehouse=warehouse,
-            product_id=product_id,
-            transaction_type='in'
-        ).aggregate(total=Sum('quantity'))['total'] or 0
-        
-        product_out = StockTransaction.objects.filter(
-            warehouse=warehouse,
-            product_id=product_id,
-            transaction_type='out'
-        ).aggregate(total=Sum('quantity'))['total'] or 0
-        
-        available = product_in - product_out
-        
-        if available > 0:  # إظهار المنتجات المتوفرة فقط
-            warehouse_products.append({
-                'id': product_id,
-                'name': product_data['product__name'],
-                'code': product_data['product__code'],
-                'quantity': available
-            })
+            product_id=product_id
+        ).select_related('product', 'product__category').order_by('-transaction_date', '-id').first()
+
+        if last_trans:
+            available = last_trans.running_balance
+
+            if available > 0:  # إظهار المنتجات المتوفرة فقط
+                warehouse_products.append({
+                    'id': product_id,
+                    'name': last_trans.product.name,
+                    'code': last_trans.product.code,
+                    'category': last_trans.product.category,
+                    'unit': last_trans.product.unit,
+                    'quantity': available,
+                    'last_update': last_trans.transaction_date
+                })
     
     context = {
         'warehouse': warehouse,

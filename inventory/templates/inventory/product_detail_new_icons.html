@@ -9,6 +9,131 @@
 <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 15px 15px 0 0 !important;
+        padding: 1.25rem;
+    }
+
+    .card-header h5 {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .stock-gauge {
+        padding: 2rem;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 15px;
+        margin: 1rem 0;
+    }
+
+    .gauge-value {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .gauge-value.success {
+        color: #28a745;
+    }
+
+    .gauge-value.warning {
+        color: #ffc107;
+    }
+
+    .gauge-value.danger {
+        color: #dc3545;
+    }
+
+    .gauge-label {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #6c757d;
+    }
+
+    .detail-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+
+    .detail-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table thead th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .table-secondary {
+        background-color: #f8f9fa !important;
+    }
+
+    .product-info {
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .product-image {
+        margin-bottom: 1.5rem;
+    }
+
+    .product-name {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+
+    .product-code {
+        font-family: 'Courier New', monospace;
+        background: #f8f9fa;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        display: inline-block;
+        margin: 0.5rem 0;
+        color: #6c757d;
+    }
+
+    .product-price h4 {
+        color: #28a745;
+        font-weight: 700;
+        font-size: 2rem;
+    }
+</style>
+{% endblock %}
+
 {% block quick_actions %}
 <a href="{% url 'inventory:product_update' product.id %}" class="btn btn-primary btn-sm">
     <i class="fas fa-edit"></i> تعديل
@@ -135,7 +260,94 @@
                     </div>
                 </div>
             </div>
-            
+
+            <!-- بطاقة المخزون حسب المستودع -->
+            {% if warehouses_stock %}
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-warehouse"></i>
+                        المخزون حسب المستودع
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-warehouse"></i> المستودع</th>
+                                    <th><i class="fas fa-boxes"></i> الكمية</th>
+                                    <th><i class="fas fa-clock"></i> آخر تحديث</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in warehouses_stock %}
+                                <tr {% if item.stock == 0 %}class="table-secondary"{% endif %}>
+                                    <td>
+                                        <a href="{% url 'inventory:warehouse_detail' item.warehouse.id %}" class="text-decoration-none">
+                                            <i class="fas fa-warehouse me-2"></i>
+                                            <strong>{{ item.warehouse.name }}</strong>
+                                        </a>
+                                        {% if item.warehouse.branch %}
+                                        <br>
+                                        <small class="text-muted ms-4">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            {{ item.warehouse.branch.name }}
+                                        </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.stock > 0 %}
+                                            <span class="badge bg-success fs-6">
+                                                <i class="fas fa-check-circle"></i>
+                                                {{ item.stock|floatformat:0 }} {{ product.unit }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary fs-6">
+                                                <i class="fas fa-times-circle"></i>
+                                                0 {{ product.unit }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock"></i>
+                                            {{ item.last_update|date:"Y-m-d H:i" }}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-primary">
+                                    <th>الإجمالي</th>
+                                    <th>
+                                        <span class="badge bg-primary fs-6">
+                                            {{ current_stock|floatformat:0 }} {{ product.unit }}
+                                        </span>
+                                    </th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        المخزون حسب المستودع
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">لا يوجد مخزون في أي مستودع</p>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- بطاقة الرسم البياني -->
             <div class="card mb-4">
                 <div class="card-header">

@@ -299,41 +299,29 @@ class ProductForm(forms.ModelForm):
 
 
 class StockTransferForm(forms.ModelForm):
-    """نموذج التحويل المخزني"""
+    """نموذج التحويل المخزني المبسط"""
 
     class Meta:
         model = StockTransfer
-        fields = [
-            'from_warehouse', 'to_warehouse', 'transfer_date',
-            'expected_arrival_date', 'reason', 'notes'
-        ]
+        fields = ['from_warehouse', 'to_warehouse', 'reason', 'notes']
         widgets = {
             'from_warehouse': forms.Select(attrs={
                 'class': 'form-select',
-                'required': True
+                'required': True,
+                'id': 'id_from_warehouse'
             }),
             'to_warehouse': forms.Select(attrs={
                 'class': 'form-select',
                 'required': True
             }),
-            'transfer_date': forms.DateTimeInput(attrs={
+            'reason': forms.TextInput(attrs={
                 'class': 'form-control',
-                'type': 'datetime-local',
-                'required': True
-            }),
-            'expected_arrival_date': forms.DateTimeInput(attrs={
-                'class': 'form-control',
-                'type': 'datetime-local'
-            }),
-            'reason': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'سبب التحويل...'
+                'placeholder': 'سبب التحويل (اختياري)...'
             }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'ملاحظات إضافية...'
+                'rows': 2,
+                'placeholder': 'ملاحظات (اختياري)...'
             }),
         }
 
@@ -346,10 +334,12 @@ class StockTransferForm(forms.ModelForm):
         # تسميات الحقول
         self.fields['from_warehouse'].label = _('من مستودع')
         self.fields['to_warehouse'].label = _('إلى مستودع')
-        self.fields['transfer_date'].label = _('تاريخ التحويل')
-        self.fields['expected_arrival_date'].label = _('تاريخ الوصول المتوقع')
         self.fields['reason'].label = _('سبب التحويل')
         self.fields['notes'].label = _('ملاحظات')
+
+        # جعل الحقول اختيارية
+        self.fields['reason'].required = False
+        self.fields['notes'].required = False
 
     def clean(self):
         cleaned_data = super().clean()
@@ -366,25 +356,16 @@ class StockTransferForm(forms.ModelForm):
 
 
 class StockTransferItemForm(forms.ModelForm):
-    """نموذج عنصر التحويل المخزني"""
+    """نموذج عنصر التحويل المخزني المبسط"""
 
     # حقل إضافي لنقل الصنف كاملاً
     transfer_all = forms.BooleanField(
-        label=_('نقل الصنف كاملاً'),
+        label=_('نقل الكل'),
         required=False,
         initial=False,
         widget=forms.CheckboxInput(attrs={
-            'class': 'form-check-input transfer-all-checkbox'
-        })
-    )
-
-    # حقل لاختيار الأصناف المشابهة
-    include_similar = forms.BooleanField(
-        label=_('تضمين الأصناف المشابهة'),
-        required=False,
-        initial=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'form-check-input include-similar-checkbox'
+            'class': 'form-check-input',
+            'title': 'نقل كامل المخزون'
         })
     )
 
@@ -393,10 +374,8 @@ class StockTransferItemForm(forms.ModelForm):
         fields = ['product', 'quantity', 'notes']
         widgets = {
             'product': forms.Select(attrs={
-                'class': 'form-select product-select select2',
-                'required': True,
-                'data-placeholder': 'اختر المنتج...',
-                'data-allow-clear': 'true'
+                'class': 'form-select product-select',
+                'required': True
             }),
             'quantity': forms.NumberInput(attrs={
                 'class': 'form-control quantity-input',
@@ -407,7 +386,7 @@ class StockTransferItemForm(forms.ModelForm):
             }),
             'notes': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'ملاحظات...'
+                'placeholder': 'ملاحظات (اختياري)...'
             }),
         }
 
@@ -420,8 +399,17 @@ class StockTransferItemForm(forms.ModelForm):
         self.fields['quantity'].label = _('الكمية')
         self.fields['notes'].label = _('ملاحظات')
 
-        # جميع المنتجات مع Select2
+        # جعل الملاحظات اختيارية
+        self.fields['notes'].required = False
+
+        # جميع المنتجات مرتبة حسب الاسم
         self.fields['product'].queryset = Product.objects.all().order_by('name')
+
+    def clean_quantity(self):
+        quantity = self.cleaned_data.get('quantity')
+        if quantity and quantity <= 0:
+            raise forms.ValidationError(_('الكمية يجب أن تكون أكبر من صفر'))
+        return quantity
 
 
 # Formset للتحويل المخزني

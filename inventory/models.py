@@ -106,11 +106,22 @@ class Product(models.Model):
 
     @property
     def current_stock(self):
-        """الحصول على مستوى المخزون الحالي"""
-        latest_transaction = self.transactions.order_by('-transaction_date').first()
-        if latest_transaction:
-            return latest_transaction.running_balance
-        return 0
+        """الحصول على مستوى المخزون الحالي (مجموع جميع المستودعات)"""
+        from django.db.models import Sum
+
+        # الحصول على آخر رصيد من كل مستودع
+        total_stock = 0
+        warehouses = Warehouse.objects.filter(is_active=True)
+
+        for warehouse in warehouses:
+            last_trans = self.transactions.filter(
+                warehouse=warehouse
+            ).order_by('-transaction_date', '-id').first()
+
+            if last_trans:
+                total_stock += last_trans.running_balance
+
+        return total_stock
 
     @property
     def is_available(self):
@@ -126,6 +137,27 @@ class Product(models.Model):
         elif current <= self.minimum_stock:
             return _('مخزون منخفض')
         return _('متوفر')
+
+    @property
+    def warehouses_with_stock(self):
+        """الحصول على أسماء المستودعات التي تحتوي على المنتج"""
+        from django.db.models import Max
+
+        # الحصول على المستودعات النشطة
+        warehouses = []
+        from .models import Warehouse
+
+        for warehouse in Warehouse.objects.filter(is_active=True):
+            last_trans = self.transactions.filter(
+                warehouse=warehouse
+            ).order_by('-transaction_date', '-id').first()
+
+            if last_trans and last_trans.running_balance > 0:
+                warehouses.append(warehouse.name)
+
+        if warehouses:
+            return ', '.join(warehouses[:3]) + ('...' if len(warehouses) > 3 else '')
+        return ''
 
     def get_unit_display(self):
         """إرجاع عرض الوحدة"""
@@ -755,6 +787,15 @@ class StockTransfer(models.Model):
 
         # إنشاء حركات مخزون للخروج من المستودع المصدر
         for item in self.items.all():
+            # الحصول على آخر رصيد في المستودع المصدر
+            last_transaction = StockTransaction.objects.filter(
+                product=item.product,
+                warehouse=self.from_warehouse
+            ).order_by('-transaction_date', '-id').first()
+
+            previous_balance = last_transaction.running_balance if last_transaction else 0
+            new_balance = previous_balance - item.quantity
+
             StockTransaction.objects.create(
                 product=item.product,
                 warehouse=self.from_warehouse,
@@ -764,6 +805,7 @@ class StockTransfer(models.Model):
                 reference=self.transfer_number,
                 transaction_date=self.transfer_date,
                 notes=f'تحويل إلى {self.to_warehouse.name}',
+                running_balance=new_balance,
                 created_by=user
             )
 
@@ -780,15 +822,27 @@ class StockTransfer(models.Model):
 
         # إنشاء حركات مخزون للدخول إلى المستودع المستهدف
         for item in self.items.all():
+            qty = item.received_quantity or item.quantity
+
+            # الحصول على آخر رصيد في المستودع المستهدف
+            last_transaction = StockTransaction.objects.filter(
+                product=item.product,
+                warehouse=self.to_warehouse
+            ).order_by('-transaction_date', '-id').first()
+
+            previous_balance = last_transaction.running_balance if last_transaction else 0
+            new_balance = previous_balance + qty
+
             StockTransaction.objects.create(
                 product=item.product,
                 warehouse=self.to_warehouse,
                 transaction_type='in',
                 reason='transfer',
-                quantity=item.received_quantity or item.quantity,
+                quantity=qty,
                 reference=self.transfer_number,
                 transaction_date=timezone.now(),
                 notes=f'تحويل من {self.from_warehouse.name}',
+                running_balance=new_balance,
                 created_by=user
             )
 

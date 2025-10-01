@@ -103,6 +103,7 @@
                             <th>الفئة</th>
                             <th>السعر</th>
                             <th>المخزون</th>
+                            <th>المستودعات</th>
                             <th>الحد الأدنى</th>
                             <th>الإجراءات</th>
                         </tr>
@@ -110,10 +111,14 @@
                     <tbody>
                         {% for product in page_obj %}
                         <tr>
-                            <td>{{ product.name }}</td>
-                            <td>{{ product.code }}</td>
+                            <td>
+                                <a href="{% url 'inventory:product_detail' product.id %}" class="text-decoration-none">
+                                    {{ product.name }}
+                                </a>
+                            </td>
+                            <td><code>{{ product.code }}</code></td>
                             <td>{{ product.category }}</td>
-                            <td>{{ product.price }}</td>
+                            <td>{{ product.price }} {{ product.currency }}</td>
                             <td>
                                 {% if product.current_stock_calc <= 0 %}
                                 <span class="badge bg-danger">نفذ من المخزون</span>
@@ -122,6 +127,15 @@
                                 {% else %}
                                 <span class="badge bg-success">{{ product.current_stock_calc }}</span>
                                 {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted" style="font-size: 0.75rem;">
+                                    {% if product.warehouses_with_stock %}
+                                        {{ product.warehouses_with_stock }}
+                                    {% else %}
+                                        <span class="text-danger">لا يوجد</span>
+                                    {% endif %}
+                                </small>
                             </td>
                             <td>{{ product.minimum_stock }}</td>
                             <td>

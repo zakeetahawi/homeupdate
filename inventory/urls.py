@@ -20,10 +20,11 @@ from .views_bulk import (
     product_bulk_upload, bulk_stock_update, download_excel_template
 )
 from .views_stock_transfer import (
-    stock_transfer_list, stock_transfer_create, stock_transfer_detail,
+    stock_transfer_list, stock_transfer_detail,
     stock_transfer_edit, stock_transfer_submit, stock_transfer_approve,
     stock_transfer_receive, stock_transfer_cancel, stock_transfer_delete,
-    get_product_stock, get_similar_products, get_pending_transfers_for_warehouse
+    stock_transfer_bulk, stock_transfer_bulk_create,
+    get_warehouse_products, get_product_stock, get_similar_products, get_pending_transfers_for_warehouse
 )
 from .views_stock_analysis import (
     product_stock_movement, warehouse_stock_analysis,
@@ -110,7 +111,8 @@ urlpatterns = [
 
     # Stock Transfers
     path('stock-transfers/', stock_transfer_list, name='stock_transfer_list'),
-    path('stock-transfer/create/', stock_transfer_create, name='stock_transfer_create'),
+    path('stock-transfer/create/', stock_transfer_bulk, name='stock_transfer_create'),  # النموذج الجديد
+    path('stock-transfer/create/bulk/', stock_transfer_bulk_create, name='stock_transfer_bulk_create'),
     path('stock-transfer/<int:pk>/', stock_transfer_detail, name='stock_transfer_detail'),
     path('stock-transfer/<int:pk>/edit/', stock_transfer_edit, name='stock_transfer_edit'),
     path('stock-transfer/<int:pk>/submit/', stock_transfer_submit, name='stock_transfer_submit'),
@@ -126,6 +128,7 @@ urlpatterns = [
     path('stock-discrepancy-report/', stock_discrepancy_report, name='stock_discrepancy_report'),
 
     # API Endpoints
+    path('api/warehouse-products/', get_warehouse_products, name='api_warehouse_products'),
     path('api/product-stock/', get_product_stock, name='api_product_stock'),
     path('api/similar-products/', get_similar_products, name='api_similar_products'),
     path('api/pending-transfers/', get_pending_transfers_for_warehouse, name='api_pending_transfers'),
