@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-09-30T13:23:09.814419",
+  "timestamp": "2025-10-01T12:53:10.186612",
   "database_config": {
     "host": "localhost",
     "port": "5432",
@@ -11,143 +11,143 @@
     "successful_indexes": 0,
     "failed_indexes": 27,
     "skipped_indexes": 247,
-    "start_time": "2025-09-30T13:23:07.937611",
-    "end_time": "2025-09-30T13:23:09.813626",
+    "start_time": "2025-10-01T12:53:08.280466",
+    "end_time": "2025-10-01T12:53:10.185660",
     "errors": [
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_customers_category_active ON customers_customercategory(is_active) WH...",
         "error": "column \"is_active\" does not exist\nLINE 1: ...ve ON customers_customercategory(is_active) WHERE is_active ...\n                                                             ^\n",
-        "timestamp": "2025-09-30T13:23:07.949073"
+        "timestamp": "2025-10-01T12:53:08.295639"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_inventory_product_active ON inventory_product(is_active) WHERE is_act...",
         "error": "column \"is_active\" does not exist\nLINE 1: ...duct_active ON inventory_product(is_active) WHERE is_active ...\n                                                             ^\n",
-        "timestamp": "2025-09-30T13:23:07.954691"
+        "timestamp": "2025-10-01T12:53:08.303802"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_inventory_category_active ON inventory_category(is_active) WHERE is_a...",
         "error": "column \"is_active\" does not exist\nLINE 1: ...ory_active ON inventory_category(is_active) WHERE is_active ...\n                                                             ^\n",
-        "timestamp": "2025-09-30T13:23:07.956042"
+        "timestamp": "2025-10-01T12:53:08.305199"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_inventory_transaction_created_at ON inventory_stocktransaction(create...",
         "error": "column \"created_at\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.956930"
+        "timestamp": "2025-10-01T12:53:08.306915"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_manufacturing_order_overdue ON manufacturing_manufacturingorder(expec...",
         "error": "functions in index predicate must be marked IMMUTABLE\n",
-        "timestamp": "2025-09-30T13:23:07.959401"
+        "timestamp": "2025-10-01T12:53:08.311866"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_manufacturing_item_completed ON manufacturing_manufacturingorderitem(...",
         "error": "column \"is_completed\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.960185"
+        "timestamp": "2025-10-01T12:53:08.313978"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_inspections_inspection_technician ON inspections_inspection(technicia...",
         "error": "column \"technician_id\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.960969"
+        "timestamp": "2025-10-01T12:53:08.316026"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_inspections_inspection_technician_date ON inspections_inspection(tech...",
         "error": "column \"technician_id\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.962564"
+        "timestamp": "2025-10-01T12:53:08.319027"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_inspections_notification_type ON inspections_inspectionnotification(n...",
         "error": "column \"notification_type\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.964725"
+        "timestamp": "2025-10-01T12:53:08.321948"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_inspections_notification_sent ON inspections_inspectionnotification(s...",
         "error": "column \"sent\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.965243"
+        "timestamp": "2025-10-01T12:53:08.322513"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_inspections_notification_sent_at ON inspections_inspectionnotificatio...",
         "error": "column \"sent_at\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.965619"
+        "timestamp": "2025-10-01T12:53:08.323003"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_installations_schedule_completed_at ON installations_installationsche...",
         "error": "column \"completed_at\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.966890"
+        "timestamp": "2025-10-01T12:53:08.327093"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_installations_schedule_today ON installations_installationschedule(sc...",
         "error": "functions in index predicate must be marked IMMUTABLE\n",
-        "timestamp": "2025-09-30T13:23:07.967927"
+        "timestamp": "2025-10-01T12:53:08.328748"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_complaints_complaint_order ON complaints_complaint(order_id);",
         "error": "column \"order_id\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.969912"
+        "timestamp": "2025-10-01T12:53:08.331725"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_complaints_complaint_order_status ON complaints_complaint(order_id, s...",
         "error": "column \"order_id\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.971452"
+        "timestamp": "2025-10-01T12:53:08.335931"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_reports_report_date_from ON reports_report(date_from);",
         "error": "column \"date_from\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.973389"
+        "timestamp": "2025-10-01T12:53:08.338931"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_reports_report_date_to ON reports_report(date_to);",
         "error": "column \"date_to\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.973907"
+        "timestamp": "2025-10-01T12:53:08.339805"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_reports_report_status ON reports_report(status);",
         "error": "column \"status\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.974387"
+        "timestamp": "2025-10-01T12:53:08.340554"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_reports_report_date_range ON reports_report(date_from, date_to);",
         "error": "column \"date_from\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.975127"
+        "timestamp": "2025-10-01T12:53:08.341567"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_backup_system_backup_type ON backup_system_databasebackup(backup_type...",
         "error": "relation \"backup_system_databasebackup\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.978596"
+        "timestamp": "2025-10-01T12:53:08.345315"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_backup_system_backup_created_at ON backup_system_databasebackup(creat...",
         "error": "relation \"backup_system_databasebackup\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.979018"
+        "timestamp": "2025-10-01T12:53:08.346026"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_backup_system_backup_success ON backup_system_databasebackup(success)...",
         "error": "relation \"backup_system_databasebackup\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.979418"
+        "timestamp": "2025-10-01T12:53:08.346517"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_backup_system_backup_size ON backup_system_databasebackup(file_size D...",
         "error": "relation \"backup_system_databasebackup\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.979849"
+        "timestamp": "2025-10-01T12:53:08.347072"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_orders_monthly_stats ON orders_order(EXTRACT(YEAR FROM created_at), E...",
         "error": "functions in index expression must be marked IMMUTABLE\n",
-        "timestamp": "2025-09-30T13:23:07.980908"
+        "timestamp": "2025-10-01T12:53:08.348745"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_manufacturing_monthly_stats ON manufacturing_manufacturingorder(EXTRA...",
         "error": "functions in index expression must be marked IMMUTABLE\n",
-        "timestamp": "2025-09-30T13:23:07.981340"
+        "timestamp": "2025-10-01T12:53:08.350645"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_admin_branch_management ON accounts_branch(is_active, is_main_branch,...",
         "error": "column \"created_at\" does not exist\n",
-        "timestamp": "2025-09-30T13:23:07.982406"
+        "timestamp": "2025-10-01T12:53:08.352365"
       },
       {
         "statement": "CREATE INDEX IF NOT EXISTS idx_django_apscheduler_job_enabled ON django_apscheduler_djangojob(enable...",
         "error": "column \"enabled\" does not exist\nLINE 1: ...ed ON django_apscheduler_djangojob(enabled) WHERE enabled = ...\n                                                             ^\n",
-        "timestamp": "2025-09-30T13:23:07.983779"
+        "timestamp": "2025-10-01T12:53:08.354257"
       }
     ]
   },

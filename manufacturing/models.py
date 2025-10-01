@@ -760,12 +760,10 @@ class ManufacturingOrderItem(models.Model):
 
     @property
     def has_cutting_data(self):
-        """التحقق من وجود بيانات التقطيع"""
-        # التحقق من البيانات المحلية أو من عنصر التقطيع المرتبط
-        if self.receiver_name and self.permit_number:
-            return True
-        if self.cutting_item and self.cutting_item.receiver_name and self.cutting_item.permit_number:
-            return True
+        """التحقق من وجود بيانات التقطيع - الاعتماد على نظام التقطيع فقط"""
+        # التحقق من وجود عنصر تقطيع فعلي في نظام التقطيع فقط
+        if self.cutting_item:
+            return self.cutting_item.receiver_name and self.cutting_item.permit_number
         return False
 
     @property

@@ -775,6 +775,9 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
                             should_display = warehouse and warehouse in display_warehouses
 
                         if should_display:
+                            # التحقق من وجود بيانات تقطيع حقيقية
+                            has_actual_cutting_data = bool(cutting_item.receiver_name and cutting_item.permit_number)
+                            
                             item_data = {
                                 'manufacturing_item': None,
                                 'order_item': order_item,
@@ -782,9 +785,9 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
                                 'cutting_permit_number': cutting_item.permit_number,
                                 'cutting_date': cutting_item.cutting_date,
                                 'cutting_status': cutting_item.get_status_display(),
-                                'cutting_status_color': 'success' if cutting_item.status == 'completed' else 'warning',
-                                'has_cutting_data': True,
-                                'is_cut': cutting_item.status == 'completed',
+                                'cutting_status_color': 'success' if cutting_item.status == 'completed' else ('info' if cutting_item.status == 'in_progress' else 'secondary'),
+                                'has_cutting_data': has_actual_cutting_data,
+                                'is_cut': cutting_item.status == 'completed' and has_actual_cutting_data,
                                 'warehouse_name': warehouse.name if warehouse else None,
                                 'warehouse': warehouse,
                                 'fabric_received': False,
@@ -805,7 +808,7 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
                             if should_count:
                                 total_meters += order_item.quantity
                 else:
-                    # العنصر لم يتم تقطيعه بعد - نعرضه دائماً
+                    # العنصر لم يتم تقطيعه بعد - نعرضه دائماً ونحسب أمتاره إذا لم يكن هناك فلترة للمستودعات
                     item_data = {
                         'manufacturing_item': None,
                         'order_item': order_item,
@@ -827,6 +830,11 @@ class ManufacturingOrderDetailView(LoginRequiredMixin, PermissionRequiredMixin, 
                     }
 
                     items_data.append(item_data)
+
+                    # حساب الأمتار للعناصر غير المقطوعة فقط إذا لم يكن هناك فلترة للمستودعات
+                    # (لأن العناصر غير المقطوعة ليس لها مستودع بعد)
+                    if not meters_warehouses:
+                        total_meters += order_item.quantity
 
             context['items_data'] = items_data
 
