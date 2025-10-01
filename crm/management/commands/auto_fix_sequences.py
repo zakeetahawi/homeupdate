@@ -36,18 +36,21 @@ class Command(BaseCommand):
             
             if problems_found:
                 if check_only:
-                    self.stdout.write(
-                        self.style.ERROR('تم اكتشاف مشاكل في التسلسل')
-                    )
+                    if self.verbose:
+                        self.stdout.write(
+                            self.style.ERROR('تم اكتشاف مشاكل في التسلسل')
+                        )
                 else:
                     self.fix_sequences()
-                    self.stdout.write(
-                        self.style.SUCCESS('تم إصلاح التسلسل بنجاح')
-                    )
+                    if self.verbose:
+                        self.stdout.write(
+                            self.style.SUCCESS('تم إصلاح التسلسل بنجاح')
+                        )
             else:
-                self.stdout.write(
-                    self.style.SUCCESS('لا توجد مشاكل في التسلسل')
-                )
+                if self.verbose:
+                    self.stdout.write(
+                        self.style.SUCCESS('لا توجد مشاكل في التسلسل')
+                    )
                 
         except Exception as e:
             raise CommandError(f'خطأ في تنفيذ الأمر: {str(e)}')
@@ -162,7 +165,9 @@ class Command(BaseCommand):
                 return has_problem
                 
             except Exception as e:
-                logger.error(f"خطأ في فحص {sequence_name}: {str(e)}")
+                # تجاهل الأخطاء للجداول غير الموجودة
+                if self.verbose:
+                    logger.debug(f"تخطي فحص {sequence_name}: {str(e)}")
                 return False
 
     def fix_sequences(self):
@@ -201,31 +206,37 @@ class Command(BaseCommand):
                         )
                     
                     if seq_name:
-                        # الحصول على أعلى ID موجود
-                        sql = (
-                            f'SELECT COALESCE(MAX({column_name}), 0) '
-                            f'FROM {table_name}'
-                        )
-                        cursor.execute(sql)
-                        max_id = cursor.fetchone()[0]
-                        
-                        # إعادة تعيين التسلسل
-                        if max_id is not None:
-                            new_value = max_id + 1
+                        try:
+                            # الحصول على أعلى ID موجود
                             sql = (
-                                f"ALTER SEQUENCE {seq_name} "
-                                f"RESTART WITH {new_value}"
+                                f'SELECT COALESCE(MAX({column_name}), 0) '
+                                f'FROM {table_name}'
                             )
                             cursor.execute(sql)
+                            max_id = cursor.fetchone()[0]
                             
+                            # إعادة تعيين التسلسل
+                            if max_id is not None:
+                                new_value = max_id + 1
+                                sql = (
+                                    f"ALTER SEQUENCE {seq_name} "
+                                    f"RESTART WITH {new_value}"
+                                )
+                                cursor.execute(sql)
+                                
+                                if self.verbose:
+                                    msg = (
+                                        f'✅ تم إصلاح {table_name}.{column_name} '
+                                        f'(تم التعيين إلى {new_value})'
+                                    )
+                                    self.stdout.write(
+                                        self.style.SUCCESS(msg)
+                                    )
+                        except Exception as table_error:
+                            # تجاهل الأخطاء للجداول غير الموجودة (مثل جداول ManyToMany قيد الإنشاء)
                             if self.verbose:
-                                msg = (
-                                    f'✅ تم إصلاح {table_name}.{column_name} '
-                                    f'(تم التعيين إلى {new_value})'
-                                )
-                                self.stdout.write(
-                                    self.style.SUCCESS(msg)
-                                )
+                                logger.debug(f"تخطي {table_name}: {str(table_error)}")
+                            continue
                 
             except Exception as e:
                 logger.error(f"خطأ في إصلاح التسلسلات: {str(e)}")

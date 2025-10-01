@@ -19,7 +19,8 @@ def run_sequence_check():
         if not settings.TESTING and 'test' not in sys.argv:
             call_command('auto_fix_sequences', verbosity=0)
     except Exception as e:
-        logger.error(f"حدث خطأ أثناء تنفيذ الترحيلات التلقائية: {str(e)}")
+        # تجاهل الأخطاء الناتجة عن جداول قيد الإنشاء
+        logger.debug(f"حدث خطأ أثناء تنفيذ الترحيلات التلقائية: {str(e)}")
 
 
 @receiver(post_migrate)
