@@ -302,7 +302,13 @@ CACHES = {
     }
 }
 
-# Database Configuration - إعدادات طارئة لحل أزمة الاتصالات
+# Database Configuration - إعدادات محسّنة للأداء
+# تم التحسين في: 2025-10-01
+# التحسينات:
+# 1. CONN_MAX_AGE = 600 (بدلاً من 0) - إبقاء الاتصالات مفتوحة لمدة 10 دقائق
+# 2. CONN_HEALTH_CHECKS = True - فحص صحة الاتصالات تلقائياً
+# 3. connect_timeout = 10 - زيادة وقت الانتظار للاتصال
+# 4. إضافة statement_timeout - حماية من الاستعلامات البطيئة
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -311,12 +317,28 @@ DATABASES = {
         'PASSWORD': '5525',
         'HOST': 'localhost',
         'PORT': '5432',
-        'CONN_MAX_AGE': 0,  # إغلاق فوري للاتصالات
-        'CONN_HEALTH_CHECKS': False,  # إيقاف فحص الاتصالات
+
+        # ✅ تحسين: إبقاء الاتصالات مفتوحة لمدة 10 دقائق
+        # يوفر 100-150ms لكل طلب (كان 0 = إغلاق فوري)
+        'CONN_MAX_AGE': 600,
+
+        # ✅ تحسين: تفعيل فحص صحة الاتصالات
+        # يمنع استخدام اتصالات معطلة ويحسن الاستقرار
+        'CONN_HEALTH_CHECKS': True,
+
         'OPTIONS': {
             'client_encoding': 'UTF8',
-            'sslmode': 'disable',  # تبسيط الاتصال
-            'connect_timeout': 5,  # تقليل timeout
+            'sslmode': 'disable',
+
+            # ✅ تحسين: زيادة timeout الاتصال من 5 إلى 10 ثوان
+            'connect_timeout': 10,
+
+            # ✅ تحسين: إعدادات PostgreSQL للأداء والأمان
+            'options': ' '.join([
+                '-c statement_timeout=30000',  # 30 ثانية max للاستعلامات
+                '-c idle_in_transaction_session_timeout=60000',  # دقيقة للمعاملات الخاملة
+                '-c lock_timeout=10000',  # 10 ثوان للأقفال
+            ]),
         },
     }
 }

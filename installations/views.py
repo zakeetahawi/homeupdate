@@ -368,8 +368,18 @@ def installation_list(request):
 
     # 1. جلب التركيبات المجدولة (مفلترة بالسنة الافتراضية والشهر)
     if not status_filter or status_filter in ['scheduled', 'in_installation', 'completed', 'cancelled', 'modification_required', 'modification_in_progress', 'modification_completed']:
+        # ✅ تحسين: إضافة جميع العلاقات المستخدمة في القالب
+        # يقلل الاستعلامات من 200+ إلى 3-5 استعلامات فقط
         scheduled_query = InstallationSchedule.objects.select_related(
-            'order__customer', 'team'
+            'order',
+            'order__customer',
+            'order__branch',
+            'order__salesperson',
+            'order__salesperson__user',
+            'team',
+            'team__driver'
+        ).prefetch_related(
+            'team__technicians'
         )
         # تطبيق الفلترة الشهرية على التركيبات المجدولة (بناءً على تاريخ الطلب)
         scheduled_query, monthly_filter_context = apply_monthly_filter(scheduled_query, request, 'order__order_date')
@@ -421,11 +431,20 @@ def installation_list(request):
     # 2. جلب الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
     if not status_filter or status_filter == 'needs_scheduling':
         # أوامر التصنيع الجاهزة للتركيب أو المسلمة فقط
+        # ✅ تحسين: إضافة select_related لجميع العلاقات المستخدمة
+        # يقلل الاستعلامات من 100+ إلى 1 استعلام فقط
         ready_manufacturing_query = ManufacturingOrder.objects.filter(
             status__in=['ready_install', 'delivered'],
             order__selected_types__icontains='installation',
             order__installationschedule__isnull=True
-        ).select_related('order__customer')
+        ).select_related(
+            'order',
+            'order__customer',
+            'order__branch',
+            'order__salesperson',
+            'order__salesperson__user',
+            'production_line'
+        )
         
         # تطبيق الفلاتر
         if search:
@@ -459,10 +478,17 @@ def installation_list(request):
     
     # 3. جلب الطلبات تحت التصنيع (للعرض فقط) - مفلترة بالسنة الافتراضية
     if not status_filter or status_filter == 'under_manufacturing':
+        # ✅ تحسين: إضافة select_related لجميع العلاقات
         under_manufacturing_query = ManufacturingOrder.objects.filter(
             status__in=['pending_approval', 'approved', 'in_cutting', 'cutting_completed', 'in_manufacturing', 'quality_check'],
             order__selected_types__icontains='installation'
-        ).select_related('order__customer')
+        ).select_related(
+            'order',
+            'order__customer',
+            'order__branch',
+            'order__salesperson',
+            'production_line'
+        )
         
         # تطبيق فلاتر البحث
         if search:

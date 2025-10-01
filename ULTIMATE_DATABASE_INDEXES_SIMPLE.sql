@@ -442,3 +442,170 @@ ANALYZE notifications_notification;
 ANALYZE notifications_notificationvisibility;
 ANALYZE user_activity_useractivitylog;
 ANALYZE user_activity_usersession;
+
+-- ============================================================================
+-- فهارس تحسين الأداء المضافة - 2025-10-01
+-- الهدف: تحسين أداء صفحات التصنيع والتركيبات
+-- ============================================================================
+
+-- تفعيل امتداد pg_trgm للبحث النصي المتقدم
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- ============================================================================
+-- فهارس التصنيع المحسّنة (Manufacturing - Performance Optimized)
+-- ============================================================================
+
+-- فهرس مركب للاستعلامات الشائعة في قائمة التصنيع
+CREATE INDEX IF NOT EXISTS idx_manufacturing_list_optimized
+ON manufacturing_manufacturingorder (status, order_date DESC, expected_delivery_date)
+WHERE status NOT IN ('cancelled', 'rejected');
+
+-- فهرس للبحث في أرقام العقود (مع تجاهل القيم الفارغة)
+CREATE INDEX IF NOT EXISTS idx_manufacturing_contract_search
+ON manufacturing_manufacturingorder (contract_number)
+WHERE contract_number IS NOT NULL AND contract_number != '';
+
+-- فهرس للبحث في أرقام الفواتير
+CREATE INDEX IF NOT EXISTS idx_manufacturing_invoice_search
+ON manufacturing_manufacturingorder (invoice_number)
+WHERE invoice_number IS NOT NULL AND invoice_number != '';
+
+-- فهرس للبحث في أرقام إذن الخروج
+CREATE INDEX IF NOT EXISTS idx_manufacturing_exit_permit_search
+ON manufacturing_manufacturingorder (exit_permit_number)
+WHERE exit_permit_number IS NOT NULL AND exit_permit_number != '';
+
+-- فهرس مركب لخط الإنتاج مع التاريخ
+CREATE INDEX IF NOT EXISTS idx_manufacturing_line_date
+ON manufacturing_manufacturingorder (production_line_id, order_date DESC, status)
+WHERE production_line_id IS NOT NULL;
+
+-- فهرس للطلبات المتأخرة (استعلام شائع في Dashboard)
+CREATE INDEX IF NOT EXISTS idx_manufacturing_overdue_optimized
+ON manufacturing_manufacturingorder (expected_delivery_date, status, production_line_id)
+WHERE expected_delivery_date < CURRENT_DATE
+  AND status IN ('pending_approval', 'pending', 'in_progress');
+
+-- ============================================================================
+-- فهارس التركيبات المحسّنة (Installations - Performance Optimized)
+-- ============================================================================
+
+-- فهرس مركب للتركيبات المجدولة (الاستعلام الأكثر شيوعاً)
+CREATE INDEX IF NOT EXISTS idx_installations_scheduled_optimized
+ON installations_installationschedule (status, scheduled_date, scheduled_time)
+WHERE status IN ('scheduled', 'in_progress', 'in_installation');
+
+-- فهرس للتركيبات حسب الفريق والتاريخ
+CREATE INDEX IF NOT EXISTS idx_installations_team_schedule
+ON installations_installationschedule (team_id, scheduled_date, status)
+WHERE team_id IS NOT NULL;
+
+-- فهرس للتركيبات المكتملة (للأرشفة والتقارير)
+CREATE INDEX IF NOT EXISTS idx_installations_completed_archive
+ON installations_installationschedule (completion_date DESC, status)
+WHERE status = 'completed';
+
+-- فهرس للتركيبات التي تحتاج جدولة
+CREATE INDEX IF NOT EXISTS idx_installations_needs_scheduling
+ON installations_installationschedule (order_id)
+WHERE status = 'needs_scheduling';
+
+-- ============================================================================
+-- فهارس الطلبات المحسّنة (Orders - Performance Optimized)
+-- ============================================================================
+
+-- فهرس GIN للبحث في selected_types (JSONB field)
+CREATE INDEX IF NOT EXISTS idx_orders_selected_types_gin
+ON orders_order USING gin ((selected_types::text) gin_trgm_ops);
+
+-- فهرس للطلبات التي تحتوي على تركيب
+CREATE INDEX IF NOT EXISTS idx_orders_installation_type
+ON orders_order (order_status, created_at DESC)
+WHERE selected_types::text LIKE '%installation%';
+
+-- فهرس للطلبات VIP
+CREATE INDEX IF NOT EXISTS idx_orders_vip_status
+ON orders_order (status, created_at DESC)
+WHERE status = 'vip';
+
+-- ============================================================================
+-- فهارس العملاء المحسّنة (Customers - Performance Optimized)
+-- ============================================================================
+
+-- فهرس GIN للبحث في أسماء العملاء (بحث نصي متقدم)
+CREATE INDEX IF NOT EXISTS idx_customers_name_trgm
+ON customers_customer USING gin (name gin_trgm_ops);
+
+-- فهرس للبحث في أرقام الهواتف
+CREATE INDEX IF NOT EXISTS idx_customers_phone_search_perf
+ON customers_customer (phone)
+WHERE phone IS NOT NULL AND phone != '';
+
+-- فهرس للبحث في الهاتف الثاني
+CREATE INDEX IF NOT EXISTS idx_customers_phone2_search_perf
+ON customers_customer (phone2)
+WHERE phone2 IS NOT NULL AND phone2 != '';
+
+-- ============================================================================
+-- فهارس عناصر التصنيع المحسّنة (Manufacturing Items)
+-- ============================================================================
+
+-- فهرس لعناصر التصنيع المستلمة
+CREATE INDEX IF NOT EXISTS idx_manufacturing_items_received
+ON manufacturing_manufacturingorderitem (fabric_received, fabric_received_date DESC)
+WHERE fabric_received = true;
+
+-- فهرس للبحث برقم الشنطة
+CREATE INDEX IF NOT EXISTS idx_manufacturing_items_bag
+ON manufacturing_manufacturingorderitem (bag_number)
+WHERE bag_number IS NOT NULL AND bag_number != '';
+
+-- فهرس مركب لأمر التصنيع والحالة
+CREATE INDEX IF NOT EXISTS idx_manufacturing_items_order_status
+ON manufacturing_manufacturingorderitem (manufacturing_order_id, status, fabric_received);
+
+-- ============================================================================
+-- فهارس التقطيع المحسّنة (Cutting)
+-- ============================================================================
+
+-- فهرس للعناصر المقطوعة الجاهزة للاستلام
+CREATE INDEX IF NOT EXISTS idx_cutting_items_ready_receive
+ON cutting_cuttingorderitem (status, receiver_name, permit_number)
+WHERE status = 'completed'
+  AND receiver_name IS NOT NULL
+  AND permit_number IS NOT NULL;
+
+-- فهرس لأوامر التقطيع المكتملة
+CREATE INDEX IF NOT EXISTS idx_cutting_orders_completed
+ON cutting_cuttingorder (status, created_at DESC)
+WHERE status = 'completed';
+
+-- ============================================================================
+-- فهارس خطوط الإنتاج المحسّنة (Production Lines)
+-- ============================================================================
+
+-- فهرس لخطوط الإنتاج النشطة مع الأولوية
+CREATE INDEX IF NOT EXISTS idx_production_lines_active_perf
+ON manufacturing_productionline (is_active, priority DESC, name)
+WHERE is_active = true;
+
+-- ============================================================================
+-- فهارس فرق التركيب المحسّنة (Installation Teams)
+-- ============================================================================
+
+-- فهرس للفرق النشطة
+CREATE INDEX IF NOT EXISTS idx_installation_teams_active_perf
+ON installations_installationteam (is_active, name)
+WHERE is_active = true;
+
+-- ============================================================================
+-- تحليل الجداول بعد إضافة الفهارس المحسّنة
+-- ============================================================================
+
+ANALYZE manufacturing_manufacturingorder;
+ANALYZE manufacturing_manufacturingorderitem;
+ANALYZE installations_installationschedule;
+ANALYZE orders_order;
+ANALYZE customers_customer;
+ANALYZE cutting_cuttingorder;
+ANALYZE cutting_cuttingorderitem;

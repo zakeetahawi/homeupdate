@@ -18,19 +18,44 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Get all manufacturing orders (بدون فلترة افتراضية)
-        all_orders = ManufacturingOrder.objects.all().select_related('order', 'order__customer')
+        # ✅ تحسين: استخدام aggregate بدلاً من جلب جميع السجلات
+        # يقلل استهلاك الذاكرة ويحسن الأداء بشكل كبير
+        today = timezone.now().date()
+
+        # حساب جميع الإحصائيات في استعلام واحد
+        stats = ManufacturingOrder.objects.aggregate(
+            total_orders=Count('id'),
+            pending_approval=Count('id', filter=Q(status='pending_approval')),
+            pending=Count('id', filter=Q(status='pending')),
+            in_progress=Count('id', filter=Q(status='in_progress')),
+            ready_install=Count('id', filter=Q(status='ready_install')),
+            completed=Count('id', filter=Q(status='completed')),
+            delivered=Count('id', filter=Q(status='delivered')),
+            rejected=Count('id', filter=Q(status='rejected')),
+            cancelled=Count('id', filter=Q(status='cancelled')),
+
+            # الطلبات المتأخرة
+            overdue=Count('id', filter=Q(
+                expected_delivery_date__lt=today,
+                status__in=['pending_approval', 'pending', 'in_progress']
+            )),
+        )
 
         # Get date range for charts (last 6 months for better view)
-        end_date = timezone.now().date()
+        end_date = today
         start_date = end_date - timedelta(days=180)  # 6 months
 
-        # Get orders for charts (last 6 months) - also apply year filter
-        chart_orders = all_orders.filter(order_date__range=(start_date, end_date))
-        
-        # Calculate status counts for all orders
-        all_status_counts = all_orders.values('status').annotate(count=Count('status'))
-        all_status_data = {item['status']: item['count'] for item in all_status_counts}
+        # ✅ تحسين: استخدام values + annotate بدلاً من جلب جميع السجلات
+        all_status_data = {
+            'pending_approval': stats['pending_approval'],
+            'pending': stats['pending'],
+            'in_progress': stats['in_progress'],
+            'ready_install': stats['ready_install'],
+            'completed': stats['completed'],
+            'delivered': stats['delivered'],
+            'rejected': stats['rejected'],
+            'cancelled': stats['cancelled'],
+        }
         
         # Prepare status data for the chart
         status_data = {
@@ -58,8 +83,10 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
                 status_data['data'].append(count)
                 status_data['colors'].append(status_colors.get(status_code, '#6c757d'))
         
-        # Get monthly order counts for the last 6 months
-        monthly_orders = chart_orders.annotate(
+        # ✅ تحسين: استعلام مباشر للبيانات الشهرية
+        monthly_orders = ManufacturingOrder.objects.filter(
+            order_date__range=(start_date, end_date)
+        ).annotate(
             month=ExtractMonth('order_date'),
             year=ExtractYear('order_date')
         ).values('year', 'month').annotate(
@@ -83,92 +110,117 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
             monthly_data['labels'].append(month_name)
             monthly_data['data'].append(item['total'])
         
-        # Get recent orders (last 10)
-        recent_orders = all_orders.order_by('-created_at')[:10]
-        
-        # Get orders by type (all orders)
-        orders_by_type = all_orders.values('order_type').annotate(
+        # ✅ تحسين: جلب آخر 10 طلبات مع select_related فقط
+        recent_orders = ManufacturingOrder.objects.select_related(
+            'order',
+            'order__customer',
+            'production_line'
+        ).only(
+            'id', 'status', 'created_at', 'order_date', 'expected_delivery_date',
+            'order__id', 'order__order_number',
+            'order__customer__id', 'order__customer__name',
+            'production_line__id', 'production_line__name'
+        ).order_by('-created_at')[:10]
+
+        # ✅ تحسين: استعلام مباشر لأنواع الطلبات
+        orders_by_type = ManufacturingOrder.objects.values('order_type').annotate(
             count=Count('id')
         )
-        
-        # Calculate additional statistics
-        today = timezone.now().date()
+
+        # ✅ تحسين: حساب إحصائيات الشهر في استعلام واحد
         this_month_start = today.replace(day=1)
         last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
-        
-        # This month vs last month comparison
-        this_month_orders = all_orders.filter(order_date__gte=this_month_start).count()
-        last_month_orders = all_orders.filter(
-            order_date__gte=last_month_start,
-            order_date__lt=this_month_start
-        ).count()
-        
+
+        month_stats = ManufacturingOrder.objects.aggregate(
+            this_month=Count('id', filter=Q(order_date__gte=this_month_start)),
+            last_month=Count('id', filter=Q(
+                order_date__gte=last_month_start,
+                order_date__lt=this_month_start
+            ))
+        )
+
+        this_month_orders = month_stats['this_month']
+        last_month_orders = month_stats['last_month']
+
         # Calculate percentage change
         if last_month_orders > 0:
             month_change_percent = ((this_month_orders - last_month_orders) / last_month_orders) * 100
         else:
             month_change_percent = 100 if this_month_orders > 0 else 0
-        
-        # Orders needing attention (pending approval + overdue)
-        pending_approval_count = all_orders.filter(status='pending_approval').count()
-        overdue_orders = all_orders.filter(
-            expected_delivery_date__lt=today,
-            status__in=['pending_approval', 'pending', 'in_progress']  # فقط هذه الحالات تعتبر متأخرة
-        ).count()
-        
-        # Average completion time (for completed orders)
-        completed_orders_with_dates = all_orders.filter(
+
+        # ✅ تحسين: استخدام البيانات من stats بدلاً من استعلام جديد
+        pending_approval_count = stats['pending_approval']
+        # ✅ تحسين: استخدام البيانات من stats بدلاً من استعلام جديد
+        overdue_orders = stats['overdue']
+
+        # ✅ تحسين: حساب متوسط وقت الإنجاز باستخدام aggregate
+        from django.db.models import Avg, ExpressionWrapper, DurationField
+        from django.db.models.functions import Cast
+
+        # حساب متوسط الأيام باستخدام aggregate (أسرع بكثير)
+        avg_stats = ManufacturingOrder.objects.filter(
             status__in=['ready_install', 'completed', 'delivered'],
             completion_date__isnull=False,
             order_date__isnull=False
+        ).aggregate(
+            avg_days=Avg(
+                ExpressionWrapper(
+                    F('completion_date') - F('order_date'),
+                    output_field=DurationField()
+                )
+            )
         )
-        
+
         avg_completion_days = 0
-        if completed_orders_with_dates.exists():
-            total_days = 0
-            count = 0
-            for order in completed_orders_with_dates:
-                if order.completion_date and order.order_date:
-                    days_diff = (order.completion_date.date() - order.order_date).days
-                    if days_diff >= 0:  # Only positive values
-                        total_days += days_diff
-                        count += 1
-            if count > 0:
-                avg_completion_days = round(total_days / count, 1)
+        if avg_stats['avg_days']:
+            avg_completion_days = round(avg_stats['avg_days'].days, 1)
 
-        # إحصائيات طلبات VIP
-        vip_orders_count = all_orders.filter(order__status='vip').count()
-        vip_pending_count = all_orders.filter(
-            order__status='vip',
-            status__in=['pending_approval', 'pending', 'in_progress']
-        ).count()
-        vip_completed_count = all_orders.filter(
-            order__status='vip',
-            status__in=['ready_install', 'completed', 'delivered']
-        ).count()
+        # ✅ تحسين: إحصائيات طلبات VIP في استعلام واحد
+        vip_stats = ManufacturingOrder.objects.aggregate(
+            vip_total=Count('id', filter=Q(order__status='vip')),
+            vip_pending=Count('id', filter=Q(
+                order__status='vip',
+                status__in=['pending_approval', 'pending', 'in_progress']
+            )),
+            vip_completed=Count('id', filter=Q(
+                order__status='vip',
+                status__in=['ready_install', 'completed', 'delivered']
+            ))
+        )
 
-        # Production lines statistics
+        vip_orders_count = vip_stats['vip_total']
+        vip_pending_count = vip_stats['vip_pending']
+        vip_completed_count = vip_stats['vip_completed']
+
+        # ✅ تحسين: إحصائيات خطوط الإنتاج باستخدام annotate (استعلام واحد بدلاً من N استعلامات)
         from .models import ProductionLine
-        production_lines = ProductionLine.objects.filter(is_active=True).order_by('-priority', 'name')
-        production_lines_stats = []
 
-        for line in production_lines:
-            line_orders = all_orders.filter(production_line=line)
-            line_stats = {
-                'line': line,
-                'total_orders': line_orders.count(),
-                'active_orders': line_orders.filter(
-                    status__in=['pending_approval', 'pending', 'in_progress']
-                ).count(),
-                'completed_orders': line_orders.filter(
-                    status__in=['ready_install', 'completed', 'delivered']
-                ).count(),
-                'overdue_orders': line_orders.filter(
-                    expected_delivery_date__lt=today,
-                    status__in=['pending_approval', 'pending', 'in_progress']  # فقط هذه الحالات تعتبر متأخرة
-                ).count()
-            }
-            production_lines_stats.append(line_stats)
+        production_lines_stats = ProductionLine.objects.filter(
+            is_active=True
+        ).annotate(
+            total_orders=Count('manufacturing_orders'),
+            active_orders=Count(
+                'manufacturing_orders',
+                filter=Q(manufacturing_orders__status__in=[
+                    'pending_approval', 'pending', 'in_progress'
+                ])
+            ),
+            completed_orders=Count(
+                'manufacturing_orders',
+                filter=Q(manufacturing_orders__status__in=[
+                    'ready_install', 'completed', 'delivered'
+                ])
+            ),
+            overdue_orders=Count(
+                'manufacturing_orders',
+                filter=Q(
+                    manufacturing_orders__expected_delivery_date__lt=today,
+                    manufacturing_orders__status__in=[
+                        'pending_approval', 'pending', 'in_progress'
+                    ]
+                )
+            )
+        ).order_by('-priority', 'name')
 
         context.update({
             'status_data': json.dumps(status_data),
@@ -176,16 +228,16 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
             'recent_orders': recent_orders,
             'orders_by_type': orders_by_type,
 
-            # Main statistics (all orders)
-            'total_orders': all_orders.count(),
-            'pending_approval_orders': all_status_data.get('pending_approval', 0),
-            'pending_orders': all_status_data.get('pending', 0),
-            'in_progress_orders': all_status_data.get('in_progress', 0),
-            'ready_install_orders': all_status_data.get('ready_install', 0),
-            'completed_orders': all_status_data.get('completed', 0),
-            'delivered_orders': all_status_data.get('delivered', 0),
-            'rejected_orders': all_status_data.get('rejected', 0),
-            'cancelled_orders': all_status_data.get('cancelled', 0),
+            # ✅ تحسين: استخدام البيانات من stats بدلاً من استعلامات جديدة
+            'total_orders': stats['total_orders'],
+            'pending_approval_orders': stats['pending_approval'],
+            'pending_orders': stats['pending'],
+            'in_progress_orders': stats['in_progress'],
+            'ready_install_orders': stats['ready_install'],
+            'completed_orders': stats['completed'],
+            'delivered_orders': stats['delivered'],
+            'rejected_orders': stats['rejected'],
+            'cancelled_orders': stats['cancelled'],
 
             # Additional metrics
             'this_month_orders': this_month_orders,
