@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تعديل الفريق - {{ team.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit"></i>
+                        تعديل الفريق - {{ team.name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- اسم الفريق -->
+                        <div class="form-group mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                <i class="fas fa-users text-primary"></i>
+                                {{ form.name.label }}
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger mt-1">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.name.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- السائق -->
+                        <div class="form-group mb-3">
+                            <label for="{{ form.driver.id_for_label }}" class="form-label">
+                                <i class="fas fa-car text-info"></i>
+                                {{ form.driver.label }}
+                            </label>
+                            {{ form.driver }}
+                            {% if form.driver.errors %}
+                                <div class="text-danger mt-1">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.driver.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                اختر السائق المسؤول عن هذا الفريق (اختياري)
+                            </small>
+                        </div>
+
+                        <!-- الفنيين -->
+                        <div class="form-group mb-4">
+                            <label class="form-label">
+                                <i class="fas fa-tools text-success"></i>
+                                {{ form.technicians.label }}
+                            </label>
+                            
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        {% for checkbox in form.technicians %}
+                                        <div class="col-md-6 col-lg-4 mb-2">
+                                            <div class="form-check">
+                                                {{ checkbox.tag }}
+                                                <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                                    {{ checkbox.choice_label }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% empty %}
+                                        <div class="col-12">
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                لا يوجد فنيون متاحون. يرجى إضافة فنيين أولاً.
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if form.technicians.errors %}
+                                <div class="text-danger mt-2">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ form.technicians.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                يجب اختيار فني واحد على الأقل
+                            </small>
+                        </div>
+
+                        <!-- الأخطاء العامة -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- الأزرار -->
+                        <div class="form-group mt-4">
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <a href="{% url 'installations:team_management' %}" class="btn btn-secondary btn-block w-100">
+                                        <i class="fas fa-arrow-left"></i>
+                                        العودة
+                                    </a>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <button type="submit" class="btn btn-primary btn-block w-100">
+                                        <i class="fas fa-save"></i>
+                                        حفظ التعديلات
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- معلومات إضافية عن الفريق -->
+            <div class="card shadow mt-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        معلومات الفريق
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong><i class="fas fa-calendar-plus text-primary"></i> تاريخ الإنشاء:</strong>
+                                {{ team.created_at|date:"Y-m-d H:i" }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong><i class="fas fa-calendar-check text-success"></i> آخر تحديث:</strong>
+                                {{ team.updated_at|date:"Y-m-d H:i" }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong><i class="fas fa-users text-info"></i> عدد الفنيين الحالي:</strong>
+                                {{ team.technicians.count }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong><i class="fas fa-check-circle text-success"></i> الحالة:</strong>
+                                {% if team.is_active %}
+                                    <span class="badge bg-success">نشط</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">غير نشط</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-check-input {
+    cursor: pointer;
+}
+
+.form-check-label {
+    cursor: pointer;
+    user-select: none;
+}
+
+.form-check:hover {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 2px 5px;
+}
+
+.card {
+    border-radius: 10px;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+}
+</style>
+{% endblock %}
+
