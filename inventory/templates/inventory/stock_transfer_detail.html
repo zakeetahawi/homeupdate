@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تفاصيل التحويل - {{ transfer.transfer_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- العنوان -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-exchange-alt text-primary"></i>
+                    تفاصيل التحويل: {{ transfer.transfer_number }}
+                </h1>
+                <div>
+                    <a href="{% url 'inventory:stock_transfer_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        العودة
+                    </a>
+                    {% if transfer.status == 'draft' %}
+                    <a href="{% url 'inventory:stock_transfer_edit' transfer.pk %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i>
+                        تعديل
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- معلومات التحويل -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        معلومات التحويل
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-hashtag text-primary"></i> رقم التحويل:</strong>
+                            <p class="mb-0">{{ transfer.transfer_number }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-flag text-info"></i> الحالة:</strong>
+                            <p class="mb-0">
+                                {% if transfer.status == 'draft' %}
+                                <span class="badge bg-secondary">مسودة</span>
+                                {% elif transfer.status == 'pending' %}
+                                <span class="badge bg-warning">قيد الانتظار</span>
+                                {% elif transfer.status == 'approved' %}
+                                <span class="badge bg-info">تمت الموافقة</span>
+                                {% elif transfer.status == 'in_transit' %}
+                                <span class="badge bg-primary">قيد النقل</span>
+                                {% elif transfer.status == 'completed' %}
+                                <span class="badge bg-success">مكتمل</span>
+                                {% elif transfer.status == 'cancelled' %}
+                                <span class="badge bg-danger">ملغي</span>
+                                {% elif transfer.status == 'rejected' %}
+                                <span class="badge bg-dark">مرفوض</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-warehouse text-danger"></i> من مستودع:</strong>
+                            <p class="mb-0">{{ transfer.from_warehouse.name }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-warehouse text-success"></i> إلى مستودع:</strong>
+                            <p class="mb-0">{{ transfer.to_warehouse.name }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-calendar text-primary"></i> تاريخ التحويل:</strong>
+                            <p class="mb-0">{{ transfer.transfer_date|date:"Y-m-d H:i" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-calendar-check text-info"></i> تاريخ الوصول المتوقع:</strong>
+                            <p class="mb-0">{{ transfer.expected_arrival_date|date:"Y-m-d H:i"|default:"غير محدد" }}</p>
+                        </div>
+                        {% if transfer.actual_arrival_date %}
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-calendar-check text-success"></i> تاريخ الوصول الفعلي:</strong>
+                            <p class="mb-0">{{ transfer.actual_arrival_date|date:"Y-m-d H:i" }}</p>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-user text-secondary"></i> تم الإنشاء بواسطة:</strong>
+                            <p class="mb-0">{{ transfer.created_by.get_full_name|default:transfer.created_by.username }}</p>
+                        </div>
+                        {% if transfer.reason %}
+                        <div class="col-12 mb-3">
+                            <strong><i class="fas fa-comment text-warning"></i> سبب التحويل:</strong>
+                            <p class="mb-0">{{ transfer.reason }}</p>
+                        </div>
+                        {% endif %}
+                        {% if transfer.notes %}
+                        <div class="col-12 mb-3">
+                            <strong><i class="fas fa-sticky-note text-secondary"></i> ملاحظات:</strong>
+                            <p class="mb-0">{{ transfer.notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الإجراءات -->
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-tasks"></i>
+                        الإجراءات
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if transfer.status == 'draft' %}
+                    <form method="post" action="{% url 'inventory:stock_transfer_submit' transfer.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary w-100 mb-2">
+                            <i class="fas fa-paper-plane"></i>
+                            تقديم للموافقة
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'inventory:stock_transfer_delete' transfer.pk %}" 
+                          onsubmit="return confirm('هل أنت متأكد من حذف هذا التحويل؟');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger w-100">
+                            <i class="fas fa-trash"></i>
+                            حذف التحويل
+                        </button>
+                    </form>
+                    {% elif transfer.status == 'pending' %}
+                    <form method="post" action="{% url 'inventory:stock_transfer_approve' transfer.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success w-100 mb-2">
+                            <i class="fas fa-check"></i>
+                            الموافقة على التحويل
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        <i class="fas fa-times"></i>
+                        إلغاء التحويل
+                    </button>
+                    {% elif transfer.status == 'approved' or transfer.status == 'in_transit' %}
+                    <a href="{% url 'inventory:stock_transfer_receive' transfer.pk %}" class="btn btn-success w-100 mb-2">
+                        <i class="fas fa-check-circle"></i>
+                        استلام التحويل
+                    </a>
+                    <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        <i class="fas fa-times"></i>
+                        إلغاء التحويل
+                    </button>
+                    {% elif transfer.status == 'completed' %}
+                    <div class="alert alert-success mb-0">
+                        <i class="fas fa-check-circle"></i>
+                        تم إكمال التحويل بنجاح
+                    </div>
+                    {% elif transfer.status == 'cancelled' %}
+                    <div class="alert alert-danger mb-0">
+                        <i class="fas fa-times-circle"></i>
+                        تم إلغاء التحويل
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- الإحصائيات -->
+            <div class="card shadow mt-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-bar"></i>
+                        الإحصائيات
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>عدد الأصناف:</strong>
+                        <span class="float-end badge bg-primary">{{ transfer.total_items }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>الكمية الإجمالية:</strong>
+                        <span class="float-end badge bg-info">{{ transfer.total_quantity }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- عناصر التحويل -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0">
+                <i class="fas fa-boxes"></i>
+                عناصر التحويل
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>المنتج</th>
+                            <th>الكمية المطلوبة</th>
+                            <th>الكمية المستلمة</th>
+                            <th>الحالة</th>
+                            <th>ملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in transfer.items.all %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'inventory:product_detail' item.product.pk %}">
+                                    {{ item.product.name }}
+                                </a>
+                                <br>
+                                <small class="text-muted">{{ item.product.code }}</small>
+                            </td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.received_quantity }}</td>
+                            <td>
+                                {% if item.is_fully_received %}
+                                <span class="badge bg-success">مستلم بالكامل</span>
+                                {% elif item.received_quantity > 0 %}
+                                <span class="badge bg-warning">مستلم جزئياً</span>
+                                {% else %}
+                                <span class="badge bg-secondary">لم يستلم</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.notes|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">
+                                لا توجد عناصر في هذا التحويل
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- حركات المخزون المرتبطة -->
+    {% if stock_transactions %}
+    <div class="card shadow mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h6 class="mb-0">
+                <i class="fas fa-history"></i>
+                حركات المخزون المرتبطة
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>المنتج</th>
+                            <th>المستودع</th>
+                            <th>النوع</th>
+                            <th>الكمية</th>
+                            <th>الرصيد</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in stock_transactions %}
+                        <tr>
+                            <td>{{ transaction.transaction_date|date:"Y-m-d H:i" }}</td>
+                            <td>{{ transaction.product.name }}</td>
+                            <td>{{ transaction.warehouse.name }}</td>
+                            <td>
+                                {% if transaction.transaction_type == 'in' %}
+                                <span class="badge bg-success">وارد</span>
+                                {% else %}
+                                <span class="badge bg-danger">صادر</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ transaction.quantity }}</td>
+                            <td>{{ transaction.running_balance }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal للإلغاء -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-times-circle"></i>
+                    إلغاء التحويل
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'inventory:stock_transfer_cancel' transfer.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="cancel-reason" class="form-label">سبب الإلغاء:</label>
+                        <textarea name="reason" id="cancel-reason" class="form-control" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="submit" class="btn btn-danger">تأكيد الإلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

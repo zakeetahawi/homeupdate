@@ -587,3 +587,270 @@ class StockAlert(models.Model):
         ]
     def __str__(self):
         return f"{self.get_alert_type_display()} - {self.product.name}"
+
+
+class StockTransfer(models.Model):
+    """
+    نموذج التحويل المخزني - لنقل المنتجات بين المستودعات
+    """
+    STATUS_CHOICES = [
+        ('draft', _('مسودة')),
+        ('pending', _('قيد الانتظار')),
+        ('approved', _('تمت الموافقة')),
+        ('in_transit', _('قيد النقل')),
+        ('completed', _('مكتمل')),
+        ('cancelled', _('ملغي')),
+        ('rejected', _('مرفوض'))
+    ]
+
+    transfer_number = models.CharField(
+        _('رقم التحويل'),
+        max_length=50,
+        unique=True,
+        editable=False
+    )
+    from_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name='outgoing_transfers',
+        verbose_name=_('من مستودع')
+    )
+    to_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name='incoming_transfers',
+        verbose_name=_('إلى مستودع')
+    )
+    status = models.CharField(
+        _('الحالة'),
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default='draft'
+    )
+    transfer_date = models.DateTimeField(
+        _('تاريخ التحويل'),
+        default=timezone.now
+    )
+    expected_arrival_date = models.DateTimeField(
+        _('تاريخ الوصول المتوقع'),
+        null=True,
+        blank=True
+    )
+    actual_arrival_date = models.DateTimeField(
+        _('تاريخ الوصول الفعلي'),
+        null=True,
+        blank=True
+    )
+    notes = models.TextField(_('ملاحظات'), blank=True)
+    reason = models.TextField(_('سبب التحويل'), blank=True)
+
+    # Tracking fields
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_transfers',
+        verbose_name=_('تم الإنشاء بواسطة')
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_transfers',
+        verbose_name=_('تمت الموافقة بواسطة')
+    )
+    approved_at = models.DateTimeField(
+        _('تاريخ الموافقة'),
+        null=True,
+        blank=True
+    )
+    completed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='completed_transfers',
+        verbose_name=_('تم الإكمال بواسطة')
+    )
+    completed_at = models.DateTimeField(
+        _('تاريخ الإكمال'),
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        verbose_name = _('تحويل مخزني')
+        verbose_name_plural = _('التحويلات المخزنية')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['transfer_number'], name='transfer_number_idx'),
+            models.Index(fields=['from_warehouse'], name='transfer_from_wh_idx'),
+            models.Index(fields=['to_warehouse'], name='transfer_to_wh_idx'),
+            models.Index(fields=['status'], name='transfer_status_idx'),
+            models.Index(fields=['transfer_date'], name='transfer_date_idx'),
+            models.Index(fields=['created_at'], name='transfer_created_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.transfer_number} - {self.from_warehouse.name} → {self.to_warehouse.name}"
+
+    def save(self, *args, **kwargs):
+        # توليد رقم التحويل تلقائياً
+        if not self.transfer_number:
+            from datetime import datetime
+            date_str = datetime.now().strftime('%Y%m%d')
+            last_transfer = StockTransfer.objects.filter(
+                transfer_number__startswith=f'TRF-{date_str}'
+            ).order_by('-transfer_number').first()
+
+            if last_transfer:
+                last_number = int(last_transfer.transfer_number.split('-')[-1])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+
+            self.transfer_number = f'TRF-{date_str}-{new_number:04d}'
+
+        super().save(*args, **kwargs)
+
+    @property
+    def total_items(self):
+        """إجمالي عدد الأصناف"""
+        return self.items.count()
+
+    @property
+    def total_quantity(self):
+        """إجمالي الكمية"""
+        return self.items.aggregate(
+            total=Sum('quantity')
+        )['total'] or 0
+
+    @property
+    def can_approve(self):
+        """هل يمكن الموافقة على التحويل"""
+        return self.status == 'pending' and self.items.exists()
+
+    @property
+    def can_complete(self):
+        """هل يمكن إكمال التحويل"""
+        return self.status in ['approved', 'in_transit']
+
+    @property
+    def can_cancel(self):
+        """هل يمكن إلغاء التحويل"""
+        return self.status in ['draft', 'pending', 'approved']
+
+    def approve(self, user):
+        """الموافقة على التحويل"""
+        if not self.can_approve:
+            raise ValueError(_('لا يمكن الموافقة على هذا التحويل'))
+
+        self.status = 'approved'
+        self.approved_by = user
+        self.approved_at = timezone.now()
+        self.save()
+
+        # إنشاء حركات مخزون للخروج من المستودع المصدر
+        for item in self.items.all():
+            StockTransaction.objects.create(
+                product=item.product,
+                warehouse=self.from_warehouse,
+                transaction_type='out',
+                reason='transfer',
+                quantity=item.quantity,
+                reference=self.transfer_number,
+                transaction_date=self.transfer_date,
+                notes=f'تحويل إلى {self.to_warehouse.name}',
+                created_by=user
+            )
+
+    def complete(self, user):
+        """إكمال التحويل"""
+        if not self.can_complete:
+            raise ValueError(_('لا يمكن إكمال هذا التحويل'))
+
+        self.status = 'completed'
+        self.completed_by = user
+        self.completed_at = timezone.now()
+        self.actual_arrival_date = timezone.now()
+        self.save()
+
+        # إنشاء حركات مخزون للدخول إلى المستودع المستهدف
+        for item in self.items.all():
+            StockTransaction.objects.create(
+                product=item.product,
+                warehouse=self.to_warehouse,
+                transaction_type='in',
+                reason='transfer',
+                quantity=item.received_quantity or item.quantity,
+                reference=self.transfer_number,
+                transaction_date=timezone.now(),
+                notes=f'تحويل من {self.from_warehouse.name}',
+                created_by=user
+            )
+
+    def cancel(self, user, reason=''):
+        """إلغاء التحويل"""
+        if not self.can_cancel:
+            raise ValueError(_('لا يمكن إلغاء هذا التحويل'))
+
+        self.status = 'cancelled'
+        if reason:
+            self.notes = f"{self.notes}\n\nسبب الإلغاء: {reason}" if self.notes else f"سبب الإلغاء: {reason}"
+        self.save()
+
+
+class StockTransferItem(models.Model):
+    """
+    نموذج عنصر التحويل المخزني
+    """
+    transfer = models.ForeignKey(
+        StockTransfer,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name=_('التحويل')
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name='transfer_items',
+        verbose_name=_('المنتج')
+    )
+    quantity = models.DecimalField(
+        _('الكمية المطلوبة'),
+        max_digits=10,
+        decimal_places=2
+    )
+    received_quantity = models.DecimalField(
+        _('الكمية المستلمة'),
+        max_digits=10,
+        decimal_places=2,
+        default=0
+    )
+    notes = models.TextField(_('ملاحظات'), blank=True)
+
+    class Meta:
+        verbose_name = _('عنصر تحويل مخزني')
+        verbose_name_plural = _('عناصر التحويل المخزني')
+        ordering = ['transfer', 'product']
+        unique_together = ['transfer', 'product']
+        indexes = [
+            models.Index(fields=['transfer'], name='transfer_item_transfer_idx'),
+            models.Index(fields=['product'], name='transfer_item_product_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.transfer.transfer_number} - {self.product.name} ({self.quantity})"
+
+    @property
+    def is_fully_received(self):
+        """هل تم استلام الكمية كاملة"""
+        return self.received_quantity >= self.quantity
+
+    @property
+    def remaining_quantity(self):
+        """الكمية المتبقية"""
+        return self.quantity - self.received_quantity

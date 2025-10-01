@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .formset-row {
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #f8f9fa;
+    }
+    .formset-row.to-delete {
+        opacity: 0.5;
+        background-color: #f8d7da;
+    }
+    .delete-row-btn {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exchange-alt"></i>
+                        {{ title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="transfer-form">
+                        {% csrf_token %}
+                        
+                        <!-- معلومات التحويل الأساسية -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.from_warehouse.id_for_label }}" class="form-label">
+                                        <i class="fas fa-warehouse text-danger"></i>
+                                        {{ form.from_warehouse.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.from_warehouse }}
+                                    {% if form.from_warehouse.errors %}
+                                        <div class="text-danger mt-1">{{ form.from_warehouse.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.to_warehouse.id_for_label }}" class="form-label">
+                                        <i class="fas fa-warehouse text-success"></i>
+                                        {{ form.to_warehouse.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.to_warehouse }}
+                                    {% if form.to_warehouse.errors %}
+                                        <div class="text-danger mt-1">{{ form.to_warehouse.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.transfer_date.id_for_label }}" class="form-label">
+                                        <i class="fas fa-calendar text-primary"></i>
+                                        {{ form.transfer_date.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.transfer_date }}
+                                    {% if form.transfer_date.errors %}
+                                        <div class="text-danger mt-1">{{ form.transfer_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.expected_arrival_date.id_for_label }}" class="form-label">
+                                        <i class="fas fa-calendar-check text-info"></i>
+                                        {{ form.expected_arrival_date.label }}
+                                    </label>
+                                    {{ form.expected_arrival_date }}
+                                    {% if form.expected_arrival_date.errors %}
+                                        <div class="text-danger mt-1">{{ form.expected_arrival_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.reason.id_for_label }}" class="form-label">
+                                        <i class="fas fa-comment text-warning"></i>
+                                        {{ form.reason.label }}
+                                    </label>
+                                    {{ form.reason }}
+                                    {% if form.reason.errors %}
+                                        <div class="text-danger mt-1">{{ form.reason.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                        <i class="fas fa-sticky-note text-secondary"></i>
+                                        {{ form.notes.label }}
+                                    </label>
+                                    {{ form.notes }}
+                                    {% if form.notes.errors %}
+                                        <div class="text-danger mt-1">{{ form.notes.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- الأخطاء العامة -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <hr class="my-4">
+
+                        <!-- عناصر التحويل -->
+                        <h5 class="mb-3">
+                            <i class="fas fa-boxes text-primary"></i>
+                            عناصر التحويل <span class="text-danger">*</span>
+                        </h5>
+
+                        {{ formset.management_form }}
+                        
+                        <div id="formset-container">
+                            {% for form in formset %}
+                            <div class="formset-row" data-form-index="{{ forloop.counter0 }}">
+                                <div class="row">
+                                    <div class="col-md-5">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">المنتج <span class="text-danger">*</span></label>
+                                            {{ form.product }}
+                                            {% if form.product.errors %}
+                                                <div class="text-danger mt-1">{{ form.product.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">الكمية <span class="text-danger">*</span></label>
+                                            {{ form.quantity }}
+                                            {% if form.quantity.errors %}
+                                                <div class="text-danger mt-1">{{ form.quantity.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label">ملاحظات</label>
+                                            {{ form.notes }}
+                                            {% if form.notes.errors %}
+                                                <div class="text-danger mt-1">{{ form.notes.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <label class="form-label">&nbsp;</label>
+                                        <button type="button" class="btn btn-danger btn-sm delete-row-btn w-100" title="حذف">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {{ form.DELETE }}
+                                    </div>
+                                </div>
+                                {{ form.id }}
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="button" id="add-form-btn" class="btn btn-success mb-4">
+                            <i class="fas fa-plus"></i>
+                            إضافة منتج
+                        </button>
+
+                        <!-- الأزرار -->
+                        <hr class="my-4">
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <a href="{% url 'inventory:stock_transfer_list' %}" class="btn btn-secondary w-100">
+                                    <i class="fas fa-arrow-left"></i>
+                                    العودة
+                                </a>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-save"></i>
+                                    حفظ التحويل
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // إدارة الـ formset
+    let formIndex = parseInt($('#id_items-TOTAL_FORMS').val());
+    
+    // إضافة صف جديد
+    $('#add-form-btn').click(function() {
+        let emptyForm = $('.formset-row:first').clone();
+        emptyForm.find('input, select, textarea').each(function() {
+            let name = $(this).attr('name');
+            if (name) {
+                name = name.replace(/items-\d+-/, `items-${formIndex}-`);
+                $(this).attr('name', name);
+                $(this).attr('id', 'id_' + name);
+                $(this).val('');
+            }
+        });
+        emptyForm.attr('data-form-index', formIndex);
+        emptyForm.removeClass('to-delete');
+        $('#formset-container').append(emptyForm);
+        formIndex++;
+        $('#id_items-TOTAL_FORMS').val(formIndex);
+    });
+    
+    // حذف صف
+    $(document).on('click', '.delete-row-btn', function() {
+        let row = $(this).closest('.formset-row');
+        let deleteCheckbox = row.find('input[name$="-DELETE"]');
+        
+        if (deleteCheckbox.length) {
+            // إذا كان الصف موجود في قاعدة البيانات
+            deleteCheckbox.prop('checked', true);
+            row.addClass('to-delete');
+            row.hide();
+        } else {
+            // إذا كان صف جديد
+            row.remove();
+            formIndex--;
+            $('#id_items-TOTAL_FORMS').val(formIndex);
+        }
+    });
+    
+    // تعيين التاريخ الحالي
+    if (!$('#id_transfer_date').val()) {
+        let now = new Date();
+        let dateString = now.toISOString().slice(0, 16);
+        $('#id_transfer_date').val(dateString);
+    }
+});
+</script>
+{% endblock %}
+

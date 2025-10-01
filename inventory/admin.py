@@ -4,7 +4,8 @@ from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from .models import (
     Category, Product, StockTransaction, Supplier, PurchaseOrder, PurchaseOrderItem,
-    Warehouse, WarehouseLocation, ProductBatch, InventoryAdjustment, StockAlert
+    Warehouse, WarehouseLocation, ProductBatch, InventoryAdjustment, StockAlert,
+    StockTransfer, StockTransferItem
 )
 
 @admin.register(Category)
@@ -177,3 +178,76 @@ class StockAlertAdmin(admin.ModelAdmin):
     list_filter = ('alert_type', 'status', 'created_at')
     search_fields = ('product__name', 'message')
     readonly_fields = ('created_at', 'resolved_at', 'resolved_by')
+
+
+class StockTransferItemInline(admin.TabularInline):
+    """عرض عناصر التحويل المخزني"""
+    model = StockTransferItem
+    extra = 1
+    fields = ['product', 'quantity', 'received_quantity', 'notes']
+    autocomplete_fields = ['product']
+
+
+@admin.register(StockTransfer)
+class StockTransferAdmin(admin.ModelAdmin):
+    """إدارة التحويلات المخزنية"""
+    list_per_page = 50
+    list_display = [
+        'transfer_number', 'from_warehouse', 'to_warehouse',
+        'status', 'total_items', 'total_quantity',
+        'transfer_date', 'created_by'
+    ]
+    list_filter = ['status', 'from_warehouse', 'to_warehouse', 'transfer_date', 'created_at']
+    search_fields = ['transfer_number', 'notes', 'reason']
+    readonly_fields = [
+        'transfer_number', 'created_at', 'updated_at', 'created_by',
+        'approved_by', 'approved_at', 'completed_by', 'completed_at',
+        'total_items', 'total_quantity'
+    ]
+    fieldsets = (
+        (_('معلومات التحويل'), {
+            'fields': (
+                'transfer_number', 'from_warehouse', 'to_warehouse',
+                'status', 'transfer_date'
+            )
+        }),
+        (_('التواريخ'), {
+            'fields': (
+                'expected_arrival_date', 'actual_arrival_date'
+            )
+        }),
+        (_('التفاصيل'), {
+            'fields': ('reason', 'notes')
+        }),
+        (_('الإحصائيات'), {
+            'fields': ('total_items', 'total_quantity'),
+            'classes': ('collapse',)
+        }),
+        (_('معلومات التتبع'), {
+            'fields': (
+                'created_at', 'created_by', 'updated_at',
+                'approved_by', 'approved_at',
+                'completed_by', 'completed_at'
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+    inlines = [StockTransferItemInline]
+
+    def save_model(self, request, obj, form, change):
+        if not change:  # إذا كان إنشاء جديد
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(StockTransferItem)
+class StockTransferItemAdmin(admin.ModelAdmin):
+    """إدارة عناصر التحويل المخزني"""
+    list_per_page = 50
+    list_display = [
+        'transfer', 'product', 'quantity',
+        'received_quantity', 'is_fully_received'
+    ]
+    list_filter = ['transfer__status', 'transfer__from_warehouse', 'transfer__to_warehouse']
+    search_fields = ['transfer__transfer_number', 'product__name', 'product__code']
+    autocomplete_fields = ['transfer', 'product']

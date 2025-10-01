@@ -1,10 +1,11 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Product, Category, Warehouse
+from .models import Product, Category, Warehouse, StockTransfer, StockTransferItem
 import pandas as pd
 import openpyxl
 from io import BytesIO
 from django.core.files.uploadedfile import UploadedFile
+from django.forms import inlineformset_factory
 
 
 class ProductExcelUploadForm(forms.Form):
@@ -295,3 +296,158 @@ class ProductForm(forms.ModelForm):
                 del self.fields['warehouse']
             if 'initial_quantity' in self.fields:
                 del self.fields['initial_quantity']
+
+
+class StockTransferForm(forms.ModelForm):
+    """نموذج التحويل المخزني"""
+
+    class Meta:
+        model = StockTransfer
+        fields = [
+            'from_warehouse', 'to_warehouse', 'transfer_date',
+            'expected_arrival_date', 'reason', 'notes'
+        ]
+        widgets = {
+            'from_warehouse': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
+            }),
+            'to_warehouse': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
+            }),
+            'transfer_date': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local',
+                'required': True
+            }),
+            'expected_arrival_date': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local'
+            }),
+            'reason': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'سبب التحويل...'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'ملاحظات إضافية...'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # فقط المستودعات النشطة
+        self.fields['from_warehouse'].queryset = Warehouse.objects.filter(is_active=True)
+        self.fields['to_warehouse'].queryset = Warehouse.objects.filter(is_active=True)
+
+        # تسميات الحقول
+        self.fields['from_warehouse'].label = _('من مستودع')
+        self.fields['to_warehouse'].label = _('إلى مستودع')
+        self.fields['transfer_date'].label = _('تاريخ التحويل')
+        self.fields['expected_arrival_date'].label = _('تاريخ الوصول المتوقع')
+        self.fields['reason'].label = _('سبب التحويل')
+        self.fields['notes'].label = _('ملاحظات')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        from_warehouse = cleaned_data.get('from_warehouse')
+        to_warehouse = cleaned_data.get('to_warehouse')
+
+        # التحقق من أن المستودعين مختلفين
+        if from_warehouse and to_warehouse and from_warehouse == to_warehouse:
+            raise forms.ValidationError(
+                _('لا يمكن التحويل من وإلى نفس المستودع')
+            )
+
+        return cleaned_data
+
+
+class StockTransferItemForm(forms.ModelForm):
+    """نموذج عنصر التحويل المخزني"""
+
+    class Meta:
+        model = StockTransferItem
+        fields = ['product', 'quantity', 'notes']
+        widgets = {
+            'product': forms.Select(attrs={
+                'class': 'form-select product-select',
+                'required': True
+            }),
+            'quantity': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0.01',
+                'step': '0.01',
+                'required': True,
+                'placeholder': 'الكمية'
+            }),
+            'notes': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'ملاحظات...'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        from_warehouse = kwargs.pop('from_warehouse', None)
+        super().__init__(*args, **kwargs)
+
+        # تسميات الحقول
+        self.fields['product'].label = _('المنتج')
+        self.fields['quantity'].label = _('الكمية')
+        self.fields['notes'].label = _('ملاحظات')
+
+        # إذا تم تحديد المستودع المصدر، عرض المنتجات المتوفرة فيه فقط
+        if from_warehouse:
+            # يمكن تحسين هذا لاحقاً لعرض المنتجات المتوفرة فقط
+            self.fields['product'].queryset = Product.objects.all()
+        else:
+            self.fields['product'].queryset = Product.objects.all()
+
+
+# Formset للتحويل المخزني
+StockTransferItemFormSet = inlineformset_factory(
+    StockTransfer,
+    StockTransferItem,
+    form=StockTransferItemForm,
+    extra=3,
+    can_delete=True,
+    min_num=1,
+    validate_min=True,
+)
+
+
+class StockTransferReceiveForm(forms.Form):
+    """نموذج استلام التحويل المخزني"""
+
+    def __init__(self, *args, **kwargs):
+        transfer = kwargs.pop('transfer', None)
+        super().__init__(*args, **kwargs)
+
+        if transfer:
+            for item in transfer.items.all():
+                field_name = f'item_{item.id}_received'
+                self.fields[field_name] = forms.DecimalField(
+                    label=f'{item.product.name}',
+                    initial=item.quantity,
+                    max_digits=10,
+                    decimal_places=2,
+                    min_value=0,
+                    widget=forms.NumberInput(attrs={
+                        'class': 'form-control',
+                        'step': '0.01',
+                        'max': str(item.quantity)
+                    })
+                )
+
+                # حقل الملاحظات لكل عنصر
+                notes_field_name = f'item_{item.id}_notes'
+                self.fields[notes_field_name] = forms.CharField(
+                    label=f'ملاحظات {item.product.name}',
+                    required=False,
+                    widget=forms.TextInput(attrs={
+                        'class': 'form-control',
+                        'placeholder': 'ملاحظات الاستلام...'
+                    })
+                )

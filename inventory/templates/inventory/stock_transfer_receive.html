@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}استلام التحويل - {{ transfer.transfer_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check-circle"></i>
+                        استلام التحويل: {{ transfer.transfer_number }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- معلومات التحويل -->
+                    <div class="alert alert-info">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong><i class="fas fa-warehouse text-danger"></i> من مستودع:</strong>
+                                {{ transfer.from_warehouse.name }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong><i class="fas fa-warehouse text-success"></i> إلى مستودع:</strong>
+                                {{ transfer.to_warehouse.name }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 5%;">#</th>
+                                        <th style="width: 35%;">المنتج</th>
+                                        <th style="width: 15%;">الكمية المطلوبة</th>
+                                        <th style="width: 20%;">الكمية المستلمة</th>
+                                        <th style="width: 25%;">ملاحظات الاستلام</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in transfer.items.all %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <strong>{{ item.product.name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ item.product.code }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ item.quantity }}</span>
+                                        </td>
+                                        <td>
+                                            {% with field_name='item_'|add:item.id|add:'_received' %}
+                                            {{ form|attr:field_name }}
+                                            {% endwith %}
+                                        </td>
+                                        <td>
+                                            {% with notes_field_name='item_'|add:item.id|add:'_notes' %}
+                                            {{ form|attr:notes_field_name }}
+                                            {% endwith %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>تنبيه:</strong> بعد تأكيد الاستلام، سيتم تحديث المخزون تلقائياً ولن يمكن التراجع عن هذا الإجراء.
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <a href="{% url 'inventory:stock_transfer_detail' transfer.pk %}" class="btn btn-secondary w-100">
+                                    <i class="fas fa-arrow-left"></i>
+                                    العودة
+                                </a>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <button type="submit" class="btn btn-success w-100" 
+                                        onclick="return confirm('هل أنت متأكد من استلام هذا التحويل؟');">
+                                    <i class="fas fa-check-circle"></i>
+                                    تأكيد الاستلام
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // التحقق من الكميات
+    $('input[type="number"]').on('change', function() {
+        let maxQty = parseFloat($(this).attr('max'));
+        let currentQty = parseFloat($(this).val());
+        
+        if (currentQty > maxQty) {
+            alert('الكمية المستلمة لا يمكن أن تكون أكبر من الكمية المطلوبة');
+            $(this).val(maxQty);
+        }
+        
+        if (currentQty < 0) {
+            alert('الكمية المستلمة لا يمكن أن تكون سالبة');
+            $(this).val(0);
+        }
+    });
+});
+</script>
+{% endblock %}
+

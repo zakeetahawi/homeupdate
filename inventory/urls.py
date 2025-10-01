@@ -19,6 +19,15 @@ from .views_reports import (
 from .views_bulk import (
     product_bulk_upload, bulk_stock_update, download_excel_template
 )
+from .views_stock_transfer import (
+    stock_transfer_list, stock_transfer_create, stock_transfer_detail,
+    stock_transfer_edit, stock_transfer_submit, stock_transfer_approve,
+    stock_transfer_receive, stock_transfer_cancel, stock_transfer_delete
+)
+from .views_stock_analysis import (
+    product_stock_movement, warehouse_stock_analysis,
+    stock_movement_summary, stock_discrepancy_report
+)
 
 app_name = 'inventory'
 
@@ -97,5 +106,22 @@ urlpatterns = [
     path('api/product/<int:pk>/', views.product_api_detail, name='product_api_detail'),
     path('api/products/', views.product_api_list, name='product_api_list'),
     path('api/product-autocomplete/', views.product_api_autocomplete, name='product_api_autocomplete'),
+
+    # Stock Transfers
+    path('stock-transfers/', stock_transfer_list, name='stock_transfer_list'),
+    path('stock-transfer/create/', stock_transfer_create, name='stock_transfer_create'),
+    path('stock-transfer/<int:pk>/', stock_transfer_detail, name='stock_transfer_detail'),
+    path('stock-transfer/<int:pk>/edit/', stock_transfer_edit, name='stock_transfer_edit'),
+    path('stock-transfer/<int:pk>/submit/', stock_transfer_submit, name='stock_transfer_submit'),
+    path('stock-transfer/<int:pk>/approve/', stock_transfer_approve, name='stock_transfer_approve'),
+    path('stock-transfer/<int:pk>/receive/', stock_transfer_receive, name='stock_transfer_receive'),
+    path('stock-transfer/<int:pk>/cancel/', stock_transfer_cancel, name='stock_transfer_cancel'),
+    path('stock-transfer/<int:pk>/delete/', stock_transfer_delete, name='stock_transfer_delete'),
+
+    # Stock Analysis
+    path('product/<int:product_id>/stock-movement/', product_stock_movement, name='product_stock_movement'),
+    path('warehouse/<int:warehouse_id>/stock-analysis/', warehouse_stock_analysis, name='warehouse_stock_analysis'),
+    path('stock-movement-summary/', stock_movement_summary, name='stock_movement_summary'),
+    path('stock-discrepancy-report/', stock_discrepancy_report, name='stock_discrepancy_report'),
 ]
 
