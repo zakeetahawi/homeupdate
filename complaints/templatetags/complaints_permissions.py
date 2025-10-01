@@ -11,29 +11,18 @@ register = template.Library()
 def has_complaints_permissions(user):
     """
     فحص ما إذا كان المستخدم له صلاحيات للوصول إلى إشعارات الشكاوى
-    يظهر فقط للمستخدمين في المجموعات الإدارية أو لديهم صلاحيات مخصصة
-    (لا يظهر لمدير النظام إلا إذا كان في مجموعة إدارية)
+    يظهر فقط لمدير النظام أو من لديه دور "مدير" (Managers)
     """
     if not user or not user.is_authenticated:
         return False
 
-    # فحص المجموعات الإدارية فقط (بدون superuser)
-    admin_groups = ['Complaints_Supervisors', 'Managers', 'Complaints_Managers']
-    if user.groups.filter(name__in=admin_groups).exists():
+    # مدير النظام يرى أزرار الشكاوى
+    if user.is_superuser:
         return True
 
-    # فحص صلاحيات الشكاوى المخصصة
-    try:
-        permissions = user.complaint_permissions
-        if permissions.is_active and (
-            permissions.can_be_assigned_complaints or
-            permissions.can_escalate_complaints or
-            permissions.can_view_all_complaints or
-            permissions.can_edit_all_complaints
-        ):
-            return True
-    except:
-        pass
+    # فقط مجموعة Managers (المدراء)
+    if user.groups.filter(name='Managers').exists():
+        return True
 
     return False
 
@@ -42,28 +31,18 @@ def has_complaints_permissions(user):
 def has_assignment_permissions(user):
     """
     فحص ما إذا كان المستخدم له صلاحيات للوصول إلى إشعارات التعيين
-    يظهر فقط للمستخدمين في المجموعات الإدارية أو لديهم صلاحيات مخصصة
-    (لا يظهر لمدير النظام إلا إذا كان في مجموعة إدارية)
+    يظهر فقط لمدير النظام أو من لديه دور "مدير" (Managers)
     """
     if not user or not user.is_authenticated:
         return False
 
-    # فحص المجموعات الإدارية فقط (بدون superuser)
-    admin_groups = ['Complaints_Supervisors', 'Managers', 'Complaints_Managers']
-    if user.groups.filter(name__in=admin_groups).exists():
+    # مدير النظام يرى إشعارات التعيين
+    if user.is_superuser:
         return True
 
-    # فحص صلاحيات التعيين والتصعيد المخصصة
-    try:
-        permissions = user.complaint_permissions
-        if permissions.is_active and (
-            permissions.can_assign_complaints or
-            permissions.can_escalate_complaints or
-            permissions.can_be_assigned_complaints
-        ):
-            return True
-    except:
-        pass
+    # فقط مجموعة Managers (المدراء)
+    if user.groups.filter(name='Managers').exists():
+        return True
 
     return False
 
