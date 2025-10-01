@@ -235,6 +235,13 @@
                                         <i class="fas fa-warehouse"></i> إدارة المخزون
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventory:stock_transfer_list' %}">
+                                        <i class="fas fa-exchange-alt"></i> التحويلات المخزنية
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventory:stock_transfer_create' %}">
+                                        <i class="fas fa-plus-circle"></i> إنشاء تحويل جديد
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="/cutting/">
                                         <i class="fas fa-cut"></i> نظام التقطيع
                                     </a></li>
@@ -325,6 +332,60 @@
                 </ul>
                 <div class="d-flex align-items-center ms-auto">
                     {% if user.is_authenticated %}
+                        <!-- أيقونة التحويلات المخزنية المعلقة - لمسؤولي المخازن -->
+                        {% if is_warehouse_manager and pending_transfers_count > 0 %}
+                        <div class="dropdown me-2">
+                            <button class="btn btn-outline-info position-relative" type="button" id="pendingTransfersDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="التحويلات المعلقة">
+                                <i class="fas fa-truck-loading"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ pending_transfers_count }}
+                                </span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="pendingTransfersDropdown" style="width: 350px; max-height: 400px; overflow-y: auto;">
+                                <li class="dropdown-header d-flex justify-content-between align-items-center bg-light">
+                                    <span class="fw-bold">
+                                        <i class="fas fa-truck-loading me-2 text-info"></i>
+                                        التحويلات المعلقة
+                                    </span>
+                                    <span class="badge bg-danger">{{ pending_transfers_count }}</span>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% for transfer in pending_transfers_list %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'inventory:stock_transfer_detail' transfer.id %}">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <strong>{{ transfer.transfer_number }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-warehouse text-danger"></i> {{ transfer.from_warehouse.name }}
+                                                    <i class="fas fa-arrow-left mx-1"></i>
+                                                    <i class="fas fa-warehouse text-success"></i> {{ transfer.to_warehouse.name }}
+                                                </small>
+                                                <br>
+                                                <small class="text-muted">
+                                                    {% if transfer.status == 'approved' %}
+                                                        <span class="badge bg-success">تمت الموافقة</span>
+                                                    {% elif transfer.status == 'in_transit' %}
+                                                        <span class="badge bg-info">قيد النقل</span>
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                                {% if not forloop.last %}<li><hr class="dropdown-divider"></li>{% endif %}
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-center text-primary" href="{% url 'inventory:stock_transfer_list' %}?status=approved,in_transit">
+                                        <i class="fas fa-list"></i> عرض جميع التحويلات المعلقة
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        {% endif %}
+
                         <!-- فحص صلاحيات الشكاوى - يظهر للمدراء والمستخدمين ذوي الصلاحيات -->
                         {% if user|has_complaints_permissions %}
                         <!-- أيقونة إشعارات الشكاوى المحسنة -->

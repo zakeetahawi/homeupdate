@@ -368,16 +368,38 @@ class StockTransferForm(forms.ModelForm):
 class StockTransferItemForm(forms.ModelForm):
     """نموذج عنصر التحويل المخزني"""
 
+    # حقل إضافي لنقل الصنف كاملاً
+    transfer_all = forms.BooleanField(
+        label=_('نقل الصنف كاملاً'),
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input transfer-all-checkbox'
+        })
+    )
+
+    # حقل لاختيار الأصناف المشابهة
+    include_similar = forms.BooleanField(
+        label=_('تضمين الأصناف المشابهة'),
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input include-similar-checkbox'
+        })
+    )
+
     class Meta:
         model = StockTransferItem
         fields = ['product', 'quantity', 'notes']
         widgets = {
             'product': forms.Select(attrs={
-                'class': 'form-select product-select',
-                'required': True
+                'class': 'form-select product-select select2',
+                'required': True,
+                'data-placeholder': 'اختر المنتج...',
+                'data-allow-clear': 'true'
             }),
             'quantity': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'form-control quantity-input',
                 'min': '0.01',
                 'step': '0.01',
                 'required': True,
@@ -398,12 +420,8 @@ class StockTransferItemForm(forms.ModelForm):
         self.fields['quantity'].label = _('الكمية')
         self.fields['notes'].label = _('ملاحظات')
 
-        # إذا تم تحديد المستودع المصدر، عرض المنتجات المتوفرة فيه فقط
-        if from_warehouse:
-            # يمكن تحسين هذا لاحقاً لعرض المنتجات المتوفرة فقط
-            self.fields['product'].queryset = Product.objects.all()
-        else:
-            self.fields['product'].queryset = Product.objects.all()
+        # جميع المنتجات مع Select2
+        self.fields['product'].queryset = Product.objects.all().order_by('name')
 
 
 # Formset للتحويل المخزني

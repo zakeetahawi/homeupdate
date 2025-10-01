@@ -22,7 +22,8 @@ from .views_bulk import (
 from .views_stock_transfer import (
     stock_transfer_list, stock_transfer_create, stock_transfer_detail,
     stock_transfer_edit, stock_transfer_submit, stock_transfer_approve,
-    stock_transfer_receive, stock_transfer_cancel, stock_transfer_delete
+    stock_transfer_receive, stock_transfer_cancel, stock_transfer_delete,
+    get_product_stock, get_similar_products, get_pending_transfers_for_warehouse
 )
 from .views_stock_analysis import (
     product_stock_movement, warehouse_stock_analysis,
@@ -123,5 +124,10 @@ urlpatterns = [
     path('warehouse/<int:warehouse_id>/stock-analysis/', warehouse_stock_analysis, name='warehouse_stock_analysis'),
     path('stock-movement-summary/', stock_movement_summary, name='stock_movement_summary'),
     path('stock-discrepancy-report/', stock_discrepancy_report, name='stock_discrepancy_report'),
+
+    # API Endpoints
+    path('api/product-stock/', get_product_stock, name='api_product_stock'),
+    path('api/similar-products/', get_similar_products, name='api_similar_products'),
+    path('api/pending-transfers/', get_pending_transfers_for_warehouse, name='api_pending_transfers'),
 ]
 

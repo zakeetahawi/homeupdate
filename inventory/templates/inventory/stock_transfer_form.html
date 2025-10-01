@@ -4,261 +4,193 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 <style>
-    .formset-row {
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 15px;
-        background-color: #f8f9fa;
-    }
-    .formset-row.to-delete {
-        opacity: 0.5;
-        background-color: #f8d7da;
-    }
-    .delete-row-btn {
-        cursor: pointer;
-    }
+.formset-row { border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin-bottom: 15px; background-color: #f8f9fa; position: relative; }
+.formset-row.to-delete { opacity: 0.5; background-color: #f8d7da; }
+.delete-row-btn { cursor: pointer; position: absolute; top: 10px; left: 10px; }
+.stock-info { background-color: #e7f3ff; padding: 8px; border-radius: 4px; margin-top: 5px; font-size: 0.9em; }
+.similar-products-box { background-color: #fff3cd; padding: 10px; border-radius: 4px; margin-top: 10px; display: none; }
+.select2-container { width: 100% !important; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-exchange-alt"></i>
-                        {{ title }}
-                    </h5>
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-exchange-alt"></i> {{ title }}</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="transfer-form">
+                {% csrf_token %}
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="fas fa-warehouse text-danger"></i> {{ form.from_warehouse.label }} *</label>
+                        {{ form.from_warehouse }}
+                        {% if form.from_warehouse.errors %}<div class="text-danger">{{ form.from_warehouse.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="fas fa-warehouse text-success"></i> {{ form.to_warehouse.label }} *</label>
+                        {{ form.to_warehouse }}
+                        {% if form.to_warehouse.errors %}<div class="text-danger">{{ form.to_warehouse.errors }}</div>{% endif %}
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form method="post" id="transfer-form">
-                        {% csrf_token %}
-                        
-                        <!-- معلومات التحويل الأساسية -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label for="{{ form.from_warehouse.id_for_label }}" class="form-label">
-                                        <i class="fas fa-warehouse text-danger"></i>
-                                        {{ form.from_warehouse.label }} <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form.from_warehouse }}
-                                    {% if form.from_warehouse.errors %}
-                                        <div class="text-danger mt-1">{{ form.from_warehouse.errors }}</div>
-                                    {% endif %}
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="fas fa-calendar"></i> {{ form.transfer_date.label }} *</label>
+                        {{ form.transfer_date }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="fas fa-calendar-check"></i> {{ form.expected_arrival_date.label }}</label>
+                        {{ form.expected_arrival_date }}
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="fas fa-info-circle"></i> {{ form.reason.label }}</label>
+                        {{ form.reason }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="fas fa-sticky-note"></i> {{ form.notes.label }}</label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+                <hr>
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-3">
+                        <h5><i class="fas fa-boxes"></i> المنتجات</h5>
+                        <button type="button" class="btn btn-success btn-sm" id="add-item"><i class="fas fa-plus"></i> إضافة</button>
+                    </div>
+                    {{ formset.management_form }}
+                    <div id="formset-container">
+                        {% for form in formset %}
+                        <div class="formset-row">
+                            <button type="button" class="btn btn-danger btn-sm delete-row-btn"><i class="fas fa-times"></i></button>
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <label>المنتج *</label>
+                                    {{ form.product }}
+                                    <div class="stock-info" style="display:none;"><span class="stock-text"></span></div>
+                                    <div class="similar-products-box"><strong>الأصناف المشابهة:</strong><div class="similar-products-list"></div></div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label for="{{ form.to_warehouse.id_for_label }}" class="form-label">
-                                        <i class="fas fa-warehouse text-success"></i>
-                                        {{ form.to_warehouse.label }} <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form.to_warehouse }}
-                                    {% if form.to_warehouse.errors %}
-                                        <div class="text-danger mt-1">{{ form.to_warehouse.errors }}</div>
-                                    {% endif %}
+                                <div class="col-md-2">
+                                    <label>الكمية *</label>
+                                    {{ form.quantity }}
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label for="{{ form.transfer_date.id_for_label }}" class="form-label">
-                                        <i class="fas fa-calendar text-primary"></i>
-                                        {{ form.transfer_date.label }} <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form.transfer_date }}
-                                    {% if form.transfer_date.errors %}
-                                        <div class="text-danger mt-1">{{ form.transfer_date.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label for="{{ form.expected_arrival_date.id_for_label }}" class="form-label">
-                                        <i class="fas fa-calendar-check text-info"></i>
-                                        {{ form.expected_arrival_date.label }}
-                                    </label>
-                                    {{ form.expected_arrival_date }}
-                                    {% if form.expected_arrival_date.errors %}
-                                        <div class="text-danger mt-1">{{ form.expected_arrival_date.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label for="{{ form.reason.id_for_label }}" class="form-label">
-                                        <i class="fas fa-comment text-warning"></i>
-                                        {{ form.reason.label }}
-                                    </label>
-                                    {{ form.reason }}
-                                    {% if form.reason.errors %}
-                                        <div class="text-danger mt-1">{{ form.reason.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label for="{{ form.notes.id_for_label }}" class="form-label">
-                                        <i class="fas fa-sticky-note text-secondary"></i>
-                                        {{ form.notes.label }}
-                                    </label>
+                                <div class="col-md-3">
+                                    <label>ملاحظات</label>
                                     {{ form.notes }}
-                                    {% if form.notes.errors %}
-                                        <div class="text-danger mt-1">{{ form.notes.errors }}</div>
-                                    {% endif %}
+                                </div>
+                                <div class="col-md-2">
+                                    <label>خيارات</label>
+                                    <div class="form-check"><input type="checkbox" class="form-check-input transfer-all-checkbox" id="transfer_all_{{ forloop.counter0 }}"><label class="form-check-label" for="transfer_all_{{ forloop.counter0 }}">نقل الكل</label></div>
+                                    <div class="form-check"><input type="checkbox" class="form-check-input include-similar-checkbox" id="include_similar_{{ forloop.counter0 }}"><label class="form-check-label" for="include_similar_{{ forloop.counter0 }}">المشابهة</label></div>
                                 </div>
                             </div>
+                            {{ form.DELETE }}
                         </div>
-
-                        <!-- الأخطاء العامة -->
-                        {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {{ form.non_field_errors }}
-                        </div>
-                        {% endif %}
-
-                        <hr class="my-4">
-
-                        <!-- عناصر التحويل -->
-                        <h5 class="mb-3">
-                            <i class="fas fa-boxes text-primary"></i>
-                            عناصر التحويل <span class="text-danger">*</span>
-                        </h5>
-
-                        {{ formset.management_form }}
-                        
-                        <div id="formset-container">
-                            {% for form in formset %}
-                            <div class="formset-row" data-form-index="{{ forloop.counter0 }}">
-                                <div class="row">
-                                    <div class="col-md-5">
-                                        <div class="form-group mb-3">
-                                            <label class="form-label">المنتج <span class="text-danger">*</span></label>
-                                            {{ form.product }}
-                                            {% if form.product.errors %}
-                                                <div class="text-danger mt-1">{{ form.product.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="form-group mb-3">
-                                            <label class="form-label">الكمية <span class="text-danger">*</span></label>
-                                            {{ form.quantity }}
-                                            {% if form.quantity.errors %}
-                                                <div class="text-danger mt-1">{{ form.quantity.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="form-group mb-3">
-                                            <label class="form-label">ملاحظات</label>
-                                            {{ form.notes }}
-                                            {% if form.notes.errors %}
-                                                <div class="text-danger mt-1">{{ form.notes.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-1">
-                                        <label class="form-label">&nbsp;</label>
-                                        <button type="button" class="btn btn-danger btn-sm delete-row-btn w-100" title="حذف">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        {{ form.DELETE }}
-                                    </div>
-                                </div>
-                                {{ form.id }}
-                            </div>
-                            {% endfor %}
-                        </div>
-
-                        <button type="button" id="add-form-btn" class="btn btn-success mb-4">
-                            <i class="fas fa-plus"></i>
-                            إضافة منتج
-                        </button>
-
-                        <!-- الأزرار -->
-                        <hr class="my-4">
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <a href="{% url 'inventory:stock_transfer_list' %}" class="btn btn-secondary w-100">
-                                    <i class="fas fa-arrow-left"></i>
-                                    العودة
-                                </a>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-save"></i>
-                                    حفظ التحويل
-                                </button>
-                            </div>
-                        </div>
-                    </form>
+                        {% endfor %}
+                    </div>
                 </div>
-            </div>
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'inventory:stock_transfer_list' %}" class="btn btn-secondary"><i class="fas fa-arrow-right"></i> رجوع</a>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
-    // إدارة الـ formset
-    let formIndex = parseInt($('#id_items-TOTAL_FORMS').val());
+    function initSelect2() {
+        $('#id_from_warehouse, #id_to_warehouse').select2({theme: 'bootstrap-5', placeholder: 'اختر...', dir: 'rtl'});
+        $('.product-select').select2({theme: 'bootstrap-5', placeholder: 'اختر المنتج...', dir: 'rtl', width: '100%'});
+    }
+    initSelect2();
     
-    // إضافة صف جديد
-    $('#add-form-btn').click(function() {
-        let emptyForm = $('.formset-row:first').clone();
-        emptyForm.find('input, select, textarea').each(function() {
-            let name = $(this).attr('name');
-            if (name) {
-                name = name.replace(/items-\d+-/, `items-${formIndex}-`);
-                $(this).attr('name', name);
-                $(this).attr('id', 'id_' + name);
-                $(this).val('');
-            }
-        });
-        emptyForm.attr('data-form-index', formIndex);
-        emptyForm.removeClass('to-delete');
-        $('#formset-container').append(emptyForm);
-        formIndex++;
-        $('#id_items-TOTAL_FORMS').val(formIndex);
-    });
-    
-    // حذف صف
-    $(document).on('click', '.delete-row-btn', function() {
-        let row = $(this).closest('.formset-row');
-        let deleteCheckbox = row.find('input[name$="-DELETE"]');
-        
-        if (deleteCheckbox.length) {
-            // إذا كان الصف موجود في قاعدة البيانات
-            deleteCheckbox.prop('checked', true);
-            row.addClass('to-delete');
-            row.hide();
-        } else {
-            // إذا كان صف جديد
-            row.remove();
-            formIndex--;
-            $('#id_items-TOTAL_FORMS').val(formIndex);
+    $(document).on('change', '.product-select', function() {
+        const $row = $(this).closest('.formset-row');
+        const productId = $(this).val();
+        const warehouseId = $('#id_from_warehouse').val();
+        if (productId && warehouseId) {
+            $.get('/inventory/api/product-stock/', {product_id: productId, warehouse_id: warehouseId}, function(data) {
+                if (data.success) {
+                    $row.find('.stock-info').show().find('.stock-text').html('المخزون: <strong>' + data.current_stock + ' ' + data.unit + '</strong>');
+                }
+            });
         }
     });
     
-    // تعيين التاريخ الحالي
-    if (!$('#id_transfer_date').val()) {
-        let now = new Date();
-        let dateString = now.toISOString().slice(0, 16);
-        $('#id_transfer_date').val(dateString);
-    }
+    $(document).on('change', '.transfer-all-checkbox', function() {
+        const $row = $(this).closest('.formset-row');
+        if ($(this).is(':checked')) {
+            const productId = $row.find('.product-select').val();
+            const warehouseId = $('#id_from_warehouse').val();
+            if (productId && warehouseId) {
+                $.get('/inventory/api/product-stock/', {product_id: productId, warehouse_id: warehouseId}, function(data) {
+                    if (data.success) $row.find('.quantity-input').val(data.current_stock);
+                });
+            }
+        }
+    });
+    
+    $(document).on('change', '.include-similar-checkbox', function() {
+        const $row = $(this).closest('.formset-row');
+        const productId = $row.find('.product-select').val();
+        if ($(this).is(':checked') && productId) {
+            $.get('/inventory/api/similar-products/', {product_id: productId}, function(data) {
+                if (data.success && data.similar_products.length > 0) {
+                    let html = '<div class="list-group mt-2">';
+                    data.similar_products.forEach(function(p) {
+                        html += '<a href="#" class="list-group-item list-group-item-action add-similar-product" data-product-id="' + p.id + '">' + p.name + '</a>';
+                    });
+                    html += '</div>';
+                    $row.find('.similar-products-list').html(html);
+                    $row.find('.similar-products-box').show();
+                }
+            });
+        } else {
+            $row.find('.similar-products-box').hide();
+        }
+    });
+    
+    $(document).on('click', '.add-similar-product', function(e) {
+        e.preventDefault();
+        $('#add-item').click();
+        setTimeout(function() { $('.formset-row').last().find('.product-select').val($(this).data('product-id')).trigger('change'); }.bind(this), 100);
+    });
+    
+    let formIndex = {{ formset.total_form_count }};
+    $('#add-item').click(function() {
+        const $template = $('.formset-row').first().clone();
+        $template.find('input, select, textarea').val('');
+        $template.find('.stock-info, .similar-products-box').hide();
+        $template.find('input[type="checkbox"]').prop('checked', false);
+        $template.html($template.html().replace(/form-0/g, 'form-' + formIndex));
+        $('#formset-container').append($template);
+        $('#id_form-TOTAL_FORMS').val(formIndex + 1);
+        formIndex++;
+        initSelect2();
+    });
+    
+    $(document).on('click', '.delete-row-btn', function() {
+        const $row = $(this).closest('.formset-row');
+        if ($('.formset-row').length > 1) {
+            $row.find('input[name$="-DELETE"]').prop('checked', true);
+            $row.addClass('to-delete').hide();
+        } else {
+            alert('يجب أن يحتوي التحويل على منتج واحد على الأقل');
+        }
+    });
+    
+    const now = new Date();
+    if (!$('#id_transfer_date').val()) $('#id_transfer_date').val(now.toISOString().slice(0, 16));
 });
 </script>
 {% endblock %}
-

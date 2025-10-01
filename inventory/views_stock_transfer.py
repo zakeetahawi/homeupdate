@@ -8,7 +8,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count
 from django.utils import timezone
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.db import transaction as db_transaction
 
 from .models import (
@@ -296,15 +296,114 @@ def stock_transfer_cancel(request, pk):
 def stock_transfer_delete(request, pk):
     """حذف التحويل"""
     transfer = get_object_or_404(StockTransfer, pk=pk)
-    
+
     # يمكن الحذف فقط إذا كان في حالة مسودة
     if transfer.status != 'draft':
         messages.error(request, 'لا يمكن حذف التحويل بعد تقديمه')
         return redirect('inventory:stock_transfer_detail', pk=pk)
-    
+
     transfer_number = transfer.transfer_number
     transfer.delete()
-    
+
     messages.success(request, f'تم حذف التحويل {transfer_number} بنجاح')
     return redirect('inventory:stock_transfer_list')
+
+
+@login_required
+@require_GET
+def get_product_stock(request):
+    """API للحصول على مخزون المنتج في مستودع معين"""
+    product_id = request.GET.get('product_id')
+    warehouse_id = request.GET.get('warehouse_id')
+
+    if not product_id or not warehouse_id:
+        return JsonResponse({'error': 'Missing parameters'}, status=400)
+
+    try:
+        product = Product.objects.get(pk=product_id)
+        warehouse = Warehouse.objects.get(pk=warehouse_id)
+
+        # الحصول على آخر حركة مخزون
+        last_transaction = StockTransaction.objects.filter(
+            product=product,
+            warehouse=warehouse
+        ).order_by('-transaction_date').first()
+
+        current_stock = last_transaction.running_balance if last_transaction else 0
+
+        return JsonResponse({
+            'success': True,
+            'product_id': product.id,
+            'product_name': product.name,
+            'warehouse_id': warehouse.id,
+            'warehouse_name': warehouse.name,
+            'current_stock': float(current_stock),
+            'unit': product.unit
+        })
+    except (Product.DoesNotExist, Warehouse.DoesNotExist):
+        return JsonResponse({'error': 'Product or Warehouse not found'}, status=404)
+
+
+@login_required
+@require_GET
+def get_similar_products(request):
+    """API للحصول على الأصناف المشابهة لمنتج معين"""
+    product_id = request.GET.get('product_id')
+
+    if not product_id:
+        return JsonResponse({'error': 'Missing product_id'}, status=400)
+
+    try:
+        product = Product.objects.get(pk=product_id)
+
+        # البحث عن المنتجات المشابهة بالاسم (نفس الاسم الأساسي مع اختلاف اللون مثلاً)
+        # نفترض أن الأسماء المشابهة تحتوي على نفس الكلمات الأساسية
+        base_name = product.name.split('-')[0].strip() if '-' in product.name else product.name
+
+        similar_products = Product.objects.filter(
+            Q(name__icontains=base_name) | Q(category=product.category)
+        ).exclude(id=product.id).values('id', 'name', 'code')[:10]
+
+        return JsonResponse({
+            'success': True,
+            'product_id': product.id,
+            'product_name': product.name,
+            'similar_products': list(similar_products)
+        })
+    except Product.DoesNotExist:
+        return JsonResponse({'error': 'Product not found'}, status=404)
+
+
+@login_required
+@require_GET
+def get_pending_transfers_for_warehouse(request):
+    """API للحصول على التحويلات المعلقة لمستودع معين"""
+    warehouse_id = request.GET.get('warehouse_id')
+
+    if not warehouse_id:
+        # إذا لم يتم تحديد مستودع، نحاول الحصول على مستودعات المستخدم
+        # يمكن تحسين هذا لاحقاً بناءً على صلاحيات المستخدم
+        return JsonResponse({'error': 'Missing warehouse_id'}, status=400)
+
+    try:
+        warehouse = Warehouse.objects.get(pk=warehouse_id)
+
+        # التحويلات الواردة المعلقة
+        pending_transfers = StockTransfer.objects.filter(
+            to_warehouse=warehouse,
+            status__in=['approved', 'in_transit']
+        ).select_related('from_warehouse').values(
+            'id', 'transfer_number', 'from_warehouse__name',
+            'status', 'transfer_date', 'expected_arrival_date'
+        ).order_by('-created_at')[:10]
+
+        return JsonResponse({
+            'success': True,
+            'warehouse_id': warehouse.id,
+            'warehouse_name': warehouse.name,
+            'pending_count': pending_transfers.count(),
+            'transfers': list(pending_transfers)
+        })
+    except Warehouse.DoesNotExist:
+        return JsonResponse({'error': 'Warehouse not found'}, status=404)
 

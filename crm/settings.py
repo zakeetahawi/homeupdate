@@ -242,6 +242,7 @@ TEMPLATES = [
                 'notifications.context_processors.notifications_context',
                 'crm.context_processors.admin_stats',
                 'crm.context_processors.jazzmin_extras',
+                'inventory.context_processors.pending_transfers',
             ],
         },
     },
