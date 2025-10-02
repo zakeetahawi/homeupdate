@@ -2,15 +2,17 @@
 تكوين WSGI للمشروع.
 """
 
-import os
-import sys
 import atexit
 import logging
+import os
+import sys
+
 from django.core.wsgi import get_wsgi_application
 from whitenoise import WhiteNoise
+
 from .resource_tracker import cleanup_resources
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "crm.settings")
 
 # تسجيل دالة تنظيف الموارد لتشغيلها عند إيقاف التطبيق
 atexit.register(cleanup_resources)
@@ -23,6 +25,10 @@ application = get_wsgi_application()
 # إضافة دعم WhiteNoise للملفات الثابتة مع إعدادات محسنة
 application = WhiteNoise(application)
 # إضافة الملفات الثابتة
-application.add_files(os.path.join(os.path.dirname(__file__), '..', 'staticfiles'), prefix='/static/')
+application.add_files(
+    os.path.join(os.path.dirname(__file__), "..", "staticfiles"), prefix="/static/"
+)
 # إضافة ملفات الوسائط
-application.add_files(os.path.join(os.path.dirname(__file__), '..', 'media'), prefix='/media/')
+application.add_files(
+    os.path.join(os.path.dirname(__file__), "..", "media"), prefix="/media/"
+)

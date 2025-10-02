@@ -1,6 +1,7 @@
 """
 Template tags لفحص صلاحيات الشكاوى
 """
+
 from django import template
 from django.contrib.auth.models import Group
 
@@ -21,7 +22,7 @@ def has_complaints_permissions(user):
         return True
 
     # فقط مجموعة Managers (المدراء)
-    if user.groups.filter(name='Managers').exists():
+    if user.groups.filter(name="Managers").exists():
         return True
 
     return False
@@ -41,7 +42,7 @@ def has_assignment_permissions(user):
         return True
 
     # فقط مجموعة Managers (المدراء)
-    if user.groups.filter(name='Managers').exists():
+    if user.groups.filter(name="Managers").exists():
         return True
 
     return False
@@ -53,30 +54,30 @@ def user_complaints_role(user):
     إرجاع دور المستخدم في نظام الشكاوى
     """
     if not user or not user.is_authenticated:
-        return 'none'
-    
+        return "none"
+
     if user.is_superuser:
-        return 'superuser'
-    
-    if user.groups.filter(name='Complaints_Managers').exists():
-        return 'manager'
-    
-    if user.groups.filter(name='Complaints_Supervisors').exists():
-        return 'supervisor'
-    
-    if user.groups.filter(name='Managers').exists():
-        return 'general_manager'
-    
+        return "superuser"
+
+    if user.groups.filter(name="Complaints_Managers").exists():
+        return "manager"
+
+    if user.groups.filter(name="Complaints_Supervisors").exists():
+        return "supervisor"
+
+    if user.groups.filter(name="Managers").exists():
+        return "general_manager"
+
     try:
         permissions = user.complaint_permissions
         if permissions.is_active:
             if permissions.can_edit_all_complaints:
-                return 'editor'
+                return "editor"
             elif permissions.can_be_assigned_complaints:
-                return 'assignee'
+                return "assignee"
             else:
-                return 'viewer'
+                return "viewer"
     except:
         pass
-    
-    return 'none'
+
+    return "none"

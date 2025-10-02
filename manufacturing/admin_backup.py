@@ -1,12 +1,15 @@
-from django.contrib import admin
-from django.utils.html import format_html
-from django.urls import reverse, path
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponseRedirect
 from django import forms
+from django.contrib import admin
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
+from django.urls import path, reverse
+from django.utils.html import format_html
 
 from .models import (
-    ManufacturingOrder, ManufacturingOrderItem, ProductionLine, ManufacturingDisplaySettings
+    ManufacturingDisplaySettings,
+    ManufacturingOrder,
+    ManufacturingOrderItem,
+    ProductionLine,
 )
 
 
@@ -146,7 +149,7 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
 
     def bulk_update_status(self, request, queryset):
         from django import forms
-        from django.shortcuts import render, redirect
+        from django.shortcuts import redirect, render
         class StatusForm(forms.Form):
             status = forms.ChoiceField(choices=queryset.model.STATUS_CHOICES, label='الحالة الجديدة')
 
@@ -176,6 +179,9 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
             )
         }),
     )
+
+    def customer_name(self, obj):
+        """عرض اسم العميل"""
         # استخدام البيانات المحملة مسبقاً أولاً
         if hasattr(obj, '_customer_name') and obj._customer_name:
             return obj._customer_name

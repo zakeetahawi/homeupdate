@@ -1,26 +1,27 @@
-from django.contrib import admin
-from django.urls import path, include, re_path
-from django.views.generic import RedirectView, TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
-from . import views
-from .views_health import health_check
-from accounts.views import admin_logout_view
-from inventory.views import dashboard_view
-from .csrf_views import get_csrf_token_view, csrf_debug_view, test_csrf_view
+from django.contrib import admin
+from django.urls import include, path, re_path
+from django.views.generic import RedirectView, TemplateView
+from rest_framework_simplejwt.views import (
+    TokenBlacklistView,
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
+
 from accounts.api_views import dashboard_stats
-from customers.views import customer_list, customer_detail
-from . import api_monitoring
+from accounts.views import admin_logout_view
+from customers.views import customer_detail, customer_list
+from inventory.views import dashboard_view
+
+from . import api_monitoring, views
+from .csrf_views import csrf_debug_view, get_csrf_token_view, test_csrf_view
+from .views_health import health_check
 
 # تم حذف test_completion_view
 
 
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView,
-    TokenBlacklistView,
-)
 
 # تعريف المسارات الرئيسية
 urlpatterns = [
@@ -94,33 +95,43 @@ urlpatterns = [
     ),
     # نظام النسخ الاحتياطي والاستعادة الجديد
     path("backup-system/", include("backup_system.urls", namespace="backup_system")),
-
-
     # لوحة مراقبة النظام
     path("monitoring/", views.monitoring_dashboard, name="monitoring_dashboard"),
-
     # API مراقبة النظام وقاعدة البيانات
-    path("api/monitoring/status/", api_monitoring.monitoring_status, name="monitoring_status"),
-    path("api/monitoring/database/", api_monitoring.database_stats, name="database_stats"),
+    path(
+        "api/monitoring/status/",
+        api_monitoring.monitoring_status,
+        name="monitoring_status",
+    ),
+    path(
+        "api/monitoring/database/", api_monitoring.database_stats, name="database_stats"
+    ),
     path("api/monitoring/system/", api_monitoring.system_stats, name="system_stats"),
     path("api/monitoring/pool/", api_monitoring.pool_stats, name="pool_stats"),
-    path("api/monitoring/actions/", api_monitoring.DatabaseActionsView.as_view(), name="database_actions"),
+    path(
+        "api/monitoring/actions/",
+        api_monitoring.DatabaseActionsView.as_view(),
+        name="database_actions",
+    ),
     path("api/monitoring/health/", api_monitoring.health_check, name="health_check"),
     path("api/monitoring/alerts/", api_monitoring.alerts, name="monitoring_alerts"),
-
     # صفحة اختبار نظيفة
-    path("test-clean/", TemplateView.as_view(template_name="test_clean.html"), name="test_clean"),
+    path(
+        "test-clean/",
+        TemplateView.as_view(template_name="test_clean.html"),
+        name="test_clean",
+    ),
     path("test-minimal/", views.test_minimal_view, name="test_minimal"),
-
     # صفحة اختبار نوع الشكوى
-    path("test-complaint-type/", TemplateView.as_view(template_name="test_complaint_type_debug.html"), name="test_complaint_type_debug"),
-
+    path(
+        "test-complaint-type/",
+        TemplateView.as_view(template_name="test_complaint_type_debug.html"),
+        name="test_complaint_type_debug",
+    ),
     # أداة مسح cache المتصفح
     path("clear-cache/", views.clear_cache_view, name="clear_cache"),
-
     # إنهاء طلبات الدردشة القديمة
-    re_path(r'^ws/chat/.*$', views.chat_gone_view, name="chat_gone"),
-
+    re_path(r"^ws/chat/.*$", views.chat_gone_view, name="chat_gone"),
 ]
 
 # إضافة مسارات الملفات الثابتة ووسائط التحميل في وضع التطوير

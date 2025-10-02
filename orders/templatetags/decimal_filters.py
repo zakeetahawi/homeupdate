@@ -1,7 +1,9 @@
-from django import template
 from decimal import Decimal
 
+from django import template
+
 register = template.Library()
+
 
 @register.filter
 def clean_decimal(value):
@@ -15,8 +17,8 @@ def clean_decimal(value):
     - 0.001 -> 0.001
     """
     if value is None:
-        return ''
-    
+        return ""
+
     try:
         # تحويل القيمة إلى Decimal للتأكد من دقة العمليات
         if isinstance(value, str):
@@ -27,25 +29,26 @@ def clean_decimal(value):
             pass
         else:
             return str(value)
-        
+
         # إزالة الأصفار الزائدة بعد الفاصلة
         # تحويل إلى string وإزالة الأصفار من النهاية
         str_value = str(value)
-        
+
         # إذا كان هناك فاصلة عشرية
-        if '.' in str_value:
+        if "." in str_value:
             # إزالة الأصفار من النهاية
-            str_value = str_value.rstrip('0')
+            str_value = str_value.rstrip("0")
             # إزالة الفاصلة إذا لم يتبق شيء بعدها
-            if str_value.endswith('.'):
+            if str_value.endswith("."):
                 str_value = str_value[:-1]
-        
+
         return str_value
     except (ValueError, TypeError):
         return str(value)
 
+
 @register.filter
-def clean_decimal_with_unit(value, unit=''):
+def clean_decimal_with_unit(value, unit=""):
     """
     إخفاء الأصفار بعد الفاصلة العشرية مع إضافة الوحدة
     Usage: {{ value|clean_decimal_with_unit:"متر" }}
@@ -59,8 +62,9 @@ def clean_decimal_with_unit(value, unit=''):
         return f"{clean_value} {unit}"
     return clean_value
 
+
 @register.filter
-def clean_decimal_currency(value, currency_symbol='ج.م'):
+def clean_decimal_currency(value, currency_symbol="ج.م"):
     """
     إخفاء الأصفار بعد الفاصلة العشرية مع إضافة رمز العملة
     Usage: {{ value|clean_decimal_currency:"ر.س" }}

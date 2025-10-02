@@ -1,14 +1,17 @@
 """
 خدمة محسنة لاستيراد البيانات من Google Sheets - استيراد ديناميكي كامل مع دعم حذف البيانات والعلاقات (مثل التصنيف) وتعيين حقول التواريخ من Google Sheets
 """
-import logging
+
 import json
-from django.db import transaction
+import logging
+
 from django.apps import apps
+from django.db import transaction
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
+
 
 class GoogleSheetsImporter:
     def __init__(self):
@@ -19,6 +22,7 @@ class GoogleSheetsImporter:
         """تهيئة الخدمة مع Google Sheets API"""
         try:
             from .google_sync import GoogleSyncConfig
+
             self.config = GoogleSyncConfig.get_active_config()
 
             if not self.config:
@@ -57,28 +61,29 @@ class GoogleSheetsImporter:
                 )
 
             required_fields = [
-                'type', 'project_id', 'private_key_id',
-                'private_key', 'client_email', 'client_id'
+                "type",
+                "project_id",
+                "private_key_id",
+                "private_key",
+                "client_email",
+                "client_id",
             ]
             missing_fields = [
-                field for field in required_fields
-                if field not in credentials_data
+                field for field in required_fields if field not in credentials_data
             ]
             if missing_fields:
                 raise Exception(
                     "بيانات الاعتماد غير مكتملة. "
                     f"الحقول المفقودة: {', '.join(missing_fields)}"
                 )
-            if credentials_data.get('type') != 'service_account':
-                raise Exception(
-                    "نوع الحساب غير صحيح. يجب أن يكون 'service_account'"
-                )
+            if credentials_data.get("type") != "service_account":
+                raise Exception("نوع الحساب غير صحيح. يجب أن يكون 'service_account'")
 
             creds = service_account.Credentials.from_service_account_info(
                 credentials_data,
-                scopes=['https://www.googleapis.com/auth/spreadsheets']
+                scopes=["https://www.googleapis.com/auth/spreadsheets"],
             )
-            self.service = build('sheets', 'v4', credentials=creds)
+            self.service = build("sheets", "v4", credentials=creds)
             self._test_connection()
         except Exception as e:
             logger.error(f"فشل في تهيئة خدمة Google Sheets: {str(e)}")
@@ -93,17 +98,17 @@ class GoogleSheetsImporter:
                 .get(spreadsheetId=self.config.spreadsheet_id)
                 .execute()
             )
-            title = spreadsheet.get('properties', {}).get('title', 'Unknown')
+            title = spreadsheet.get("properties", {}).get("title", "Unknown")
             logger.info(f"تم الاتصال بنجاح مع جدول البيانات: {title}")
         except Exception as e:
             error_msg = str(e).lower()
-            if 'not found' in error_msg or '404' in error_msg:
-                raise Exception(
-                    "جدول البيانات غير موجود أو معرف الجدول غير صحيح."
-                )
-            elif 'permission' in error_msg or '403' in error_msg:
+            if "not found" in error_msg or "404" in error_msg:
+                raise Exception("جدول البيانات غير موجود أو معرف الجدول غير صحيح.")
+            elif "permission" in error_msg or "403" in error_msg:
                 creds = self.config.get_credentials()
-                client_email = creds.get('client_email', 'غير معروف') if creds else 'غير معروف'
+                client_email = (
+                    creds.get("client_email", "غير معروف") if creds else "غير معروف"
+                )
                 raise Exception(
                     f"ليس لديك إذن للوصول إلى هذا الجدول. "
                     f"تأكد من مشاركته مع حساب الخدمة: {client_email}"
@@ -115,12 +120,14 @@ class GoogleSheetsImporter:
         if not self.service:
             self.initialize()
         try:
-            spreadsheet = self.service.spreadsheets().get(
-                spreadsheetId=self.config.spreadsheet_id
-            ).execute()
+            spreadsheet = (
+                self.service.spreadsheets()
+                .get(spreadsheetId=self.config.spreadsheet_id)
+                .execute()
+            )
             sheets = []
-            for sheet in spreadsheet.get('sheets', []):
-                sheet_title = sheet.get('properties', {}).get('title', '')
+            for sheet in spreadsheet.get("sheets", []):
+                sheet_title = sheet.get("properties", {}).get("title", "")
                 if sheet_title:
                     sheets.append(sheet_title)
             return sheets
@@ -148,11 +155,7 @@ class GoogleSheetsImporter:
 
             # استخدام الدالة الآمنة لجلب البيانات
             values = get_sheet_data_safe(
-                self.service,
-                self.config.spreadsheet_id,
-                sheet_name,
-                start_row,
-                end_row
+                self.service, self.config.spreadsheet_id, sheet_name, start_row, end_row
             )
 
             return values
@@ -165,17 +168,13 @@ class GoogleSheetsImporter:
         try:
             all_data = self.get_sheet_data(sheet_name)
             if not all_data:
-                return {
-                    'headers': [],
-                    'data': [],
-                    'total_rows': 0
-                }
+                return {"headers": [], "data": [], "total_rows": 0}
             headers = all_data[0] if all_data else []
-            preview_data = all_data[1:max_rows+1] if len(all_data) > 1 else []
+            preview_data = all_data[1 : max_rows + 1] if len(all_data) > 1 else []
             return {
-                'headers': headers,
-                'data': preview_data,
-                'total_rows': len(all_data) - 1
+                "headers": headers,
+                "data": preview_data,
+                "total_rows": len(all_data) - 1,
             }
         except Exception as e:
             logger.error(f"فشل في معاينة البيانات: {str(e)}")
@@ -185,32 +184,33 @@ class GoogleSheetsImporter:
         """استيراد ديناميكي كامل لأي جدول بناءً على الأعمدة مع دعم حذف البيانات والعلاقات وتعيين حقول التواريخ"""
         if not data or not data[0]:
             return {
-                'imported': 0,
-                'updated': 0,
-                'failed': 0,
-                'errors': ['لا توجد بيانات للاستيراد']
+                "imported": 0,
+                "updated": 0,
+                "failed": 0,
+                "errors": ["لا توجد بيانات للاستيراد"],
             }
         from django.utils.dateparse import parse_datetime
+
         headers = data[0]
         rows = data[1:]
         # محاولة تحديد اسم الموديل من اسم الصفحة
         model_map = {
-            'customers': ('customers', 'Customer'),
-            'عملاء': ('customers', 'Customer'),
-            'orders': ('orders', 'Order'),
-            'طلبات': ('orders', 'Order'),
-            'products': ('inventory', 'Product'),
-            'منتجات': ('inventory', 'Product'),
-            'users': ('accounts', 'User'),
-            'مستخدمين': ('accounts', 'User'),
-            'branches': ('accounts', 'Branch'),
-            'فروع': ('accounts', 'Branch'),
-            'databases': ('odoo_db_manager', 'Database'),
-            'قواعد البيانات': ('odoo_db_manager', 'Database'),
-            'inspections': ('inspections', 'Inspection'),
-            'معاينات': ('inspections', 'Inspection'),
-            'settings': ('accounts', 'CompanyInfo'),
-            'إعدادات الشركة والنظام': ('accounts', 'CompanyInfo'),
+            "customers": ("customers", "Customer"),
+            "عملاء": ("customers", "Customer"),
+            "orders": ("orders", "Order"),
+            "طلبات": ("orders", "Order"),
+            "products": ("inventory", "Product"),
+            "منتجات": ("inventory", "Product"),
+            "users": ("accounts", "User"),
+            "مستخدمين": ("accounts", "User"),
+            "branches": ("accounts", "Branch"),
+            "فروع": ("accounts", "Branch"),
+            "databases": ("odoo_db_manager", "Database"),
+            "قواعد البيانات": ("odoo_db_manager", "Database"),
+            "inspections": ("inspections", "Inspection"),
+            "معاينات": ("inspections", "Inspection"),
+            "settings": ("accounts", "CompanyInfo"),
+            "إعدادات الشركة والنظام": ("accounts", "CompanyInfo"),
         }
         sheet_lower = sheet_name.lower()
         model_info = None
@@ -220,14 +220,16 @@ class GoogleSheetsImporter:
                 break
         if not model_info:
             return {
-                'imported': 0,
-                'updated': 0,
-                'failed': len(rows),
-                'errors': [f'لا يوجد موديل مطابق لاسم الصفحة: {sheet_name}']
+                "imported": 0,
+                "updated": 0,
+                "failed": len(rows),
+                "errors": [f"لا يوجد موديل مطابق لاسم الصفحة: {sheet_name}"],
             }
         app_label, model_name = model_info
         Model = apps.get_model(app_label, model_name)
-        model_fields = {f.name: f for f in Model._meta.get_fields() if not f.auto_created}
+        model_fields = {
+            f.name: f for f in Model._meta.get_fields() if not f.auto_created
+        }
         # حذف البيانات القديمة إذا طلب المستخدم ذلك
         if clear_existing:
             Model.objects.all().delete()
@@ -250,29 +252,37 @@ class GoogleSheetsImporter:
                                 field_name = mf
                                 break
                         if not field_name:
-                            if field_label.endswith('_display'):
-                                base_field = field_label.replace('_display', '')
+                            if field_label.endswith("_display"):
+                                base_field = field_label.replace("_display", "")
                                 if base_field in model_fields:
                                     field_name = base_field
                         if not field_name:
                             continue
                         field = model_fields[field_name]
                         # معالجة العلاقات ForeignKey (بما فيها التصنيف)
-                        if field.is_relation and hasattr(field, 'related_model'):
+                        if field.is_relation and hasattr(field, "related_model"):
                             RelatedModel = field.related_model
                             rel_obj = None
                             if value:
                                 # جرب البحث بالاسم
                                 try:
-                                    rel_obj = RelatedModel.objects.filter(name=value).first()
+                                    rel_obj = RelatedModel.objects.filter(
+                                        name=value
+                                    ).first()
                                 except Exception:
                                     rel_obj = None
                                 # جرب البحث بالكود أو أول CharField آخر إذا لم يوجد
                                 if not rel_obj:
                                     for rel_field in RelatedModel._meta.fields:
-                                        if rel_field.name != 'id' and rel_field.get_internal_type() == 'CharField':
+                                        if (
+                                            rel_field.name != "id"
+                                            and rel_field.get_internal_type()
+                                            == "CharField"
+                                        ):
                                             try:
-                                                rel_obj = RelatedModel.objects.filter(**{rel_field.name: value}).first()
+                                                rel_obj = RelatedModel.objects.filter(
+                                                    **{rel_field.name: value}
+                                                ).first()
                                                 if rel_obj:
                                                     break
                                             except Exception:
@@ -280,20 +290,31 @@ class GoogleSheetsImporter:
                                 # إذا لم يوجد، أنشئ العنصر تلقائياً (مثلاً التصنيف)
                                 if not rel_obj:
                                     try:
-                                        rel_obj = RelatedModel.objects.create(name=value)
+                                        rel_obj = RelatedModel.objects.create(
+                                            name=value
+                                        )
                                     except Exception:
                                         rel_obj = None
                             if rel_obj:
                                 obj_data[field_name] = rel_obj
                         # معالجة حقول التواريخ (created_at, updated_at, ...إلخ)
-                        elif field.get_internal_type() in ['DateTimeField', 'DateField']:
+                        elif field.get_internal_type() in [
+                            "DateTimeField",
+                            "DateField",
+                        ]:
                             if value:
                                 # حاول تحويل القيمة إلى datetime
                                 dt_val = parse_datetime(value)
-                                if not dt_val and field.get_internal_type() == 'DateField':
+                                if (
+                                    not dt_val
+                                    and field.get_internal_type() == "DateField"
+                                ):
                                     try:
                                         from datetime import datetime
-                                        dt_val = datetime.strptime(value, "%Y-%m-%d").date()
+
+                                        dt_val = datetime.strptime(
+                                            value, "%Y-%m-%d"
+                                        ).date()
                                     except Exception:
                                         dt_val = None
                                 if dt_val:
@@ -302,12 +323,16 @@ class GoogleSheetsImporter:
                             obj_data[field_name] = value
                     # البحث عن كائن موجود (بناءً على الحقول الفريدة أو الاسم)
                     lookup_kwargs = {}
-                    unique_fields = [f.name for f in Model._meta.fields if f.unique and f.name in obj_data]
+                    unique_fields = [
+                        f.name
+                        for f in Model._meta.fields
+                        if f.unique and f.name in obj_data
+                    ]
                     if unique_fields:
                         for uf in unique_fields:
                             lookup_kwargs[uf] = obj_data[uf]
-                    elif 'name' in obj_data:
-                        lookup_kwargs['name'] = obj_data['name']
+                    elif "name" in obj_data:
+                        lookup_kwargs["name"] = obj_data["name"]
                     obj = None
                     if lookup_kwargs:
                         obj = Model.objects.filter(**lookup_kwargs).first()
@@ -332,44 +357,51 @@ class GoogleSheetsImporter:
                 except Exception as e:
                     errors.append(f"الصف {row_index}: {str(e)}")
                     failed += 1
-                    logger.error(f"خطأ في استيراد {model_name} في الصف {row_index}: {str(e)}")
+                    logger.error(
+                        f"خطأ في استيراد {model_name} في الصف {row_index}: {str(e)}"
+                    )
         return {
-            'imported': imported,
-            'updated': updated,
-            'failed': failed,
-            'errors': errors
+            "imported": imported,
+            "updated": updated,
+            "failed": failed,
+            "errors": errors,
         }
-        
+
     def update_sheet_data(self, sheet_name, data, start_row=1):
         """
         تحديث بيانات Google Sheets
         """
         if not self.service:
             self.initialize()
-            
+
         try:
             from .google_sheets_utils import build_range_name
-            
+
             if not self.service or not self.config:
                 raise Exception("لم يتم تهيئة الخدمة بشكل صحيح")
-                
+
             # تحديد نطاق البيانات
-            range_name = build_range_name(sheet_name, start_row, start_row + len(data) - 1)
-            
+            range_name = build_range_name(
+                sheet_name, start_row, start_row + len(data) - 1
+            )
+
             # تحديث البيانات
-            body = {
-                'values': data
-            }
-            
-            result = self.service.spreadsheets().values().update(
-                spreadsheetId=self.config.spreadsheet_id,
-                range=range_name,
-                valueInputOption='USER_ENTERED',
-                body=body
-            ).execute()
-            
-            return result.get('updatedCells', 0)
-            
+            body = {"values": data}
+
+            result = (
+                self.service.spreadsheets()
+                .values()
+                .update(
+                    spreadsheetId=self.config.spreadsheet_id,
+                    range=range_name,
+                    valueInputOption="USER_ENTERED",
+                    body=body,
+                )
+                .execute()
+            )
+
+            return result.get("updatedCells", 0)
+
         except Exception as e:
             logger.error(f"خطأ في تحديث بيانات الصفحة: {str(e)}")
             raise

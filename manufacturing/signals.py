@@ -1,8 +1,8 @@
-from django.db.models.signals import post_save, pre_save, post_delete
-from django.dispatch import receiver
-from django.utils import timezone
 from django.apps import apps
 from django.db import transaction
+from django.db.models.signals import post_delete, post_save, pre_save
+from django.dispatch import receiver
+from django.utils import timezone
 
 # سيتم استيراد النماذج عند الحاجة باستخدام apps.get_model
 
@@ -19,7 +19,7 @@ from django.db import transaction
 #     # الحصول على النماذج المطلوبة
 #     Order = apps.get_model('orders', 'Order')
 #     ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
-#     
+#
 #     # التحقق من أن الطلب جديد ومن نوع يتطلب تصنيعاً
 #     if created and hasattr(instance, 'order_type') and instance.order_type in ['installation', 'detail']:
 #         with transaction.atomic():
@@ -32,7 +32,7 @@ from django.db import transaction
 #                 expected_delivery_date=instance.expected_delivery_date,
 #                 status='pending'
 #             )
-#             
+#
 #             # إضافة عناصر الطلب إلى أمر التصنيع
 #             ManufacturingOrderItem = apps.get_model('manufacturing', 'ManufacturingOrderItem')
 #             for item in instance.items.all():
@@ -48,34 +48,34 @@ from django.db import transaction
 # تم حذف هذه الإشارة لأنها تسبب مشاكل - يتم التحديث عبر نموذج التصنيع مباشرة
 
 
-@receiver(post_save, sender='manufacturing.ManufacturingOrderItem')
+@receiver(post_save, sender="manufacturing.ManufacturingOrderItem")
 def update_manufacturing_order_status(sender, instance, created, **kwargs):
     """
     تحديث حالة أمر التصنيع بناءً على حالة عناصره
     """
     if not created:  # نتعامل فقط مع التحديثات وليس الإنشاء
-        ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+        ManufacturingOrder = apps.get_model("manufacturing", "ManufacturingOrder")
         manufacturing_order = instance.manufacturing_order
-        
+
         # الحصول على جميع عناصر أمر التصنيع
         items = manufacturing_order.items.all()
-        
+
         if not items.exists():
             return
-        
+
         # إذا كانت جميع العناصر مكتملة
-        if all(item.status == 'completed' for item in items):
-            new_status = 'completed'
+        if all(item.status == "completed" for item in items):
+            new_status = "completed"
         # إذا كان هناك عنصر واحد على الأقل قيد التنفيذ
-        elif any(item.status == 'in_progress' for item in items):
-            new_status = 'in_progress'
+        elif any(item.status == "in_progress" for item in items):
+            new_status = "in_progress"
         # إذا كانت جميع العناصر معلقة
-        elif all(item.status == 'pending' for item in items):
-            new_status = 'pending'
+        elif all(item.status == "pending" for item in items):
+            new_status = "pending"
         # في الحالات الأخرى (مختلط)
         else:
-            new_status = 'in_progress'
-        
+            new_status = "in_progress"
+
         # تحديث حالة أمر التصنيع إذا تغيرت
         if manufacturing_order.status != new_status:
             manufacturing_order.status = new_status
@@ -83,12 +83,12 @@ def update_manufacturing_order_status(sender, instance, created, **kwargs):
             pass
 
 
-@receiver(post_delete, sender='manufacturing.ManufacturingOrder')
+@receiver(post_delete, sender="manufacturing.ManufacturingOrder")
 def delete_related_installation(sender, instance, **kwargs):
     """
     حذف سجل التركيب المرتبط في حالة حذف أمر التصنيع
     """
-    if hasattr(instance, 'installation'):
+    if hasattr(instance, "installation"):
         instance.installation.delete()
 
 
@@ -128,7 +128,7 @@ def delete_related_installation(sender, instance, **kwargs):
 #         pass  # لا يوجد أمر تصنيع مرتبط بهذا الطلب
 
 
-@receiver(post_save, sender='orders.Order')
+@receiver(post_save, sender="orders.Order")
 def sync_order_to_manufacturing(sender, instance, created, **kwargs):
     """
     مزامنة تحديثات الطلب مع أمر التصنيع (اتجاه واحد: من الطلب إلى التصنيع)
@@ -136,7 +136,7 @@ def sync_order_to_manufacturing(sender, instance, created, **kwargs):
     if created:
         return  # تم التعامل مع الحالات الجديدة في إشارة أخرى
 
-    ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+    ManufacturingOrder = apps.get_model("manufacturing", "ManufacturingOrder")
 
     try:
         manufacturing_order = ManufacturingOrder.objects.get(order=instance)
@@ -146,20 +146,26 @@ def sync_order_to_manufacturing(sender, instance, created, **kwargs):
 
         if manufacturing_order.contract_number != instance.contract_number:
             manufacturing_order.contract_number = instance.contract_number
-            update_fields.append('contract_number')
+            update_fields.append("contract_number")
 
         if manufacturing_order.order_date != instance.order_date:
             manufacturing_order.order_date = instance.order_date
-            update_fields.append('order_date')
+            update_fields.append("order_date")
 
-        if manufacturing_order.expected_delivery_date != instance.expected_delivery_date:
+        if (
+            manufacturing_order.expected_delivery_date
+            != instance.expected_delivery_date
+        ):
             manufacturing_order.expected_delivery_date = instance.expected_delivery_date
-            update_fields.append('expected_delivery_date')
+            update_fields.append("expected_delivery_date")
 
         # تحديث فقط الحقول المتغيرة بدون إطلاق signals
         if update_fields:
             ManufacturingOrder.objects.filter(pk=manufacturing_order.pk).update(
-                **{field: getattr(manufacturing_order, field) for field in update_fields}
+                **{
+                    field: getattr(manufacturing_order, field)
+                    for field in update_fields
+                }
             )
 
     except ManufacturingOrder.DoesNotExist:

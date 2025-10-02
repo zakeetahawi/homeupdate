@@ -1,19 +1,20 @@
 """
 Custom widgets for Django admin
 """
+
 from django import forms
 from django.utils.safestring import mark_safe
 
 
 class DurationRangeWidget(forms.NumberInput):
     """Widget لتحديد مدة العرض مع slider وتحديد النطاق"""
-    
+
     def __init__(self, attrs=None):
         default_attrs = {
-            'class': 'duration-range-input',
-            'min': '10',
-            'max': '50',
-            'step': '1'
+            "class": "duration-range-input",
+            "min": "10",
+            "max": "50",
+            "step": "1",
         }
         if attrs:
             default_attrs.update(attrs)
@@ -22,13 +23,13 @@ class DurationRangeWidget(forms.NumberInput):
     def render(self, name, value, attrs=None, renderer=None):
         if value is None:
             value = 20  # القيمة الافتراضية
-        
+
         attrs = self.build_attrs(self.attrs, attrs)
-        attrs['class'] = attrs.get('class', '') + ' duration-range-input'
-        
+        attrs["class"] = attrs.get("class", "") + " duration-range-input"
+
         input_html = super().render(name, value, attrs, renderer)
-        
-        widget_html = f'''
+
+        widget_html = f"""
         <div class="duration-range-container" style="margin-top: 10px;">
             <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
                 <label style="font-weight: 500; color: #333; min-width: 120px;">مدة العرض:</label>
@@ -154,50 +155,50 @@ class DurationRangeWidget(forms.NumberInput):
                 transform: scale(1.1);
             }}
         </style>
-        '''
-        
+        """
+
         return mark_safe(widget_html)
 
 
 class ColorPickerWidget(forms.TextInput):
     """Widget لاختيار الألوان مع معاينة مرئية"""
-    
+
     def __init__(self, attrs=None):
-        default_attrs = {'class': 'color-picker-input'}
+        default_attrs = {"class": "color-picker-input"}
         if attrs:
             default_attrs.update(attrs)
         super().__init__(default_attrs)
-    
+
     def render(self, name, value, attrs=None, renderer=None):
         # إضافة class خاص للـ widget
         if attrs is None:
             attrs = {}
-        attrs['class'] = attrs.get('class', '') + ' color-picker-input'
-        
+        attrs["class"] = attrs.get("class", "") + " color-picker-input"
+
         # إنشاء HTML للـ input الأساسي
         input_html = super().render(name, value, attrs, renderer)
-        
+
         # قائمة الألوان المحددة مسبقاً
         predefined_colors = [
-            ('primary', '#007bff', 'أزرق أساسي'),
-            ('secondary', '#6c757d', 'رمادي ثانوي'),
-            ('success', '#28a745', 'أخضر نجاح'),
-            ('danger', '#dc3545', 'أحمر خطر'),
-            ('warning', '#ffc107', 'أصفر تحذير'),
-            ('info', '#17a2b8', 'أزرق معلومات'),
-            ('light', '#f8f9fa', 'رمادي فاتح'),
-            ('dark', '#343a40', 'رمادي داكن'),
+            ("primary", "#007bff", "أزرق أساسي"),
+            ("secondary", "#6c757d", "رمادي ثانوي"),
+            ("success", "#28a745", "أخضر نجاح"),
+            ("danger", "#dc3545", "أحمر خطر"),
+            ("warning", "#ffc107", "أصفر تحذير"),
+            ("info", "#17a2b8", "أزرق معلومات"),
+            ("light", "#f8f9fa", "رمادي فاتح"),
+            ("dark", "#343a40", "رمادي داكن"),
         ]
-        
+
         # إنشاء HTML للمعاينة والاختيار
-        color_picker_html = f'''
+        color_picker_html = f"""
         <div class="color-picker-container" style="margin-top: 10px;">
             <div class="predefined-colors" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;">
                 <small style="width: 100%; color: #666;">الألوان المحددة مسبقاً:</small>
-        '''
-        
+        """
+
         for color_key, color_value, color_name in predefined_colors:
-            color_picker_html += f'''
+            color_picker_html += f"""
                 <button type="button" 
                         class="color-option" 
                         data-color="{color_key}"
@@ -205,9 +206,9 @@ class ColorPickerWidget(forms.TextInput):
                         title="{color_name}"
                         onclick="selectColor('{name}', '{color_key}', '{color_value}')">
                 </button>
-            '''
-        
-        color_picker_html += '''
+            """
+
+        color_picker_html += """
             </div>
             <div class="custom-color" style="margin-top: 10px;">
                 <small style="color: #666;">أو اختر لون مخصص:</small>
@@ -276,64 +277,66 @@ class ColorPickerWidget(forms.TextInput):
             }}
         }});
         </script>
-        '''.format(name=name)
-        
+        """.format(
+            name=name
+        )
+
         return mark_safe(input_html + color_picker_html)
 
 
 class IconPickerWidget(forms.TextInput):
     """Widget لاختيار الأيقونات مع معاينة مرئية"""
-    
+
     def __init__(self, attrs=None):
-        default_attrs = {'class': 'icon-picker-input'}
+        default_attrs = {"class": "icon-picker-input"}
         if attrs:
             default_attrs.update(attrs)
         super().__init__(default_attrs)
-    
+
     def render(self, name, value, attrs=None, renderer=None):
         if attrs is None:
             attrs = {}
-        attrs['class'] = attrs.get('class', '') + ' icon-picker-input'
-        
+        attrs["class"] = attrs.get("class", "") + " icon-picker-input"
+
         input_html = super().render(name, value, attrs, renderer)
-        
+
         # قائمة الأيقونات المحددة مسبقاً
         predefined_icons = [
-            ('fas fa-bell', 'جرس'),
-            ('fas fa-info-circle', 'معلومات'),
-            ('fas fa-exclamation-triangle', 'تحذير'),
-            ('fas fa-check-circle', 'صح'),
-            ('fas fa-times-circle', 'خطأ'),
-            ('fas fa-star', 'نجمة'),
-            ('fas fa-heart', 'قلب'),
-            ('fas fa-home', 'منزل'),
-            ('fas fa-user', 'مستخدم'),
-            ('fas fa-envelope', 'بريد'),
-            ('fas fa-phone', 'هاتف'),
-            ('fas fa-calendar', 'تقويم'),
-            ('fas fa-clock', 'ساعة'),
-            ('fas fa-cog', 'إعدادات'),
-            ('fas fa-search', 'بحث'),
-            ('fas fa-plus', 'إضافة'),
-            ('fas fa-minus', 'حذف'),
-            ('fas fa-edit', 'تعديل'),
-            ('fas fa-trash', 'سلة مهملات'),
-            ('fas fa-download', 'تحميل'),
-            ('fas fa-upload', 'رفع'),
-            ('fas fa-share', 'مشاركة'),
-            ('fas fa-print', 'طباعة'),
-            ('fas fa-save', 'حفظ'),
+            ("fas fa-bell", "جرس"),
+            ("fas fa-info-circle", "معلومات"),
+            ("fas fa-exclamation-triangle", "تحذير"),
+            ("fas fa-check-circle", "صح"),
+            ("fas fa-times-circle", "خطأ"),
+            ("fas fa-star", "نجمة"),
+            ("fas fa-heart", "قلب"),
+            ("fas fa-home", "منزل"),
+            ("fas fa-user", "مستخدم"),
+            ("fas fa-envelope", "بريد"),
+            ("fas fa-phone", "هاتف"),
+            ("fas fa-calendar", "تقويم"),
+            ("fas fa-clock", "ساعة"),
+            ("fas fa-cog", "إعدادات"),
+            ("fas fa-search", "بحث"),
+            ("fas fa-plus", "إضافة"),
+            ("fas fa-minus", "حذف"),
+            ("fas fa-edit", "تعديل"),
+            ("fas fa-trash", "سلة مهملات"),
+            ("fas fa-download", "تحميل"),
+            ("fas fa-upload", "رفع"),
+            ("fas fa-share", "مشاركة"),
+            ("fas fa-print", "طباعة"),
+            ("fas fa-save", "حفظ"),
         ]
-        
-        icon_picker_html = f'''
+
+        icon_picker_html = f"""
         <div class="icon-picker-container" style="margin-top: 10px;">
             <div class="predefined-icons" style="margin-bottom: 10px;">
                 <small style="color: #666; display: block; margin-bottom: 10px;">الأيقونات المحددة مسبقاً:</small>
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 5px; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
-        '''
-        
+        """
+
         for icon_class, icon_name in predefined_icons:
-            icon_picker_html += f'''
+            icon_picker_html += f"""
                 <button type="button" 
                         class="icon-option" 
                         data-icon="{icon_class}"
@@ -345,9 +348,9 @@ class IconPickerWidget(forms.TextInput):
                     <i class="{icon_class}" style="margin-left: 8px; width: 16px; text-align: center;"></i>
                     <small>{icon_name}</small>
                 </button>
-            '''
-        
-        icon_picker_html += f'''
+            """
+
+        icon_picker_html += f"""
                 </div>
             </div>
             <div class="custom-icon" style="margin-top: 10px;">
@@ -422,6 +425,6 @@ class IconPickerWidget(forms.TextInput):
             }}
         }});
         </script>
-        '''
-        
+        """
+
         return mark_safe(input_html + icon_picker_html)

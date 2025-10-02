@@ -5,88 +5,91 @@
 
 import os
 import sys
+
 import django
 
 # إعداد Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "crm.settings")
 django.setup()
 
-from orders.models import Order
-from inspections.models import Inspection
-from customers.models import Customer
-from accounts.models import Branch, User, Salesperson
 import json
+
+from accounts.models import Branch, Salesperson, User
+from customers.models import Customer
+from inspections.models import Inspection
+from orders.models import Order
 
 
 def test_inspection_creation_final():
     """اختبار نهائي لإنشاء معاينة"""
     print("🎯 الاختبار النهائي لإنشاء المعاينات التلقائية")
     print("=" * 60)
-    
+
     # البحث عن بيانات للاختبار
     customer = Customer.objects.first()
     branch = Branch.objects.first()
     user = User.objects.filter(is_active=True).first()
     salesperson = Salesperson.objects.filter(is_active=True).first()
-    
+
     if not all([customer, branch, user, salesperson]):
         print("❌ لا توجد بيانات كافية للاختبار")
         return False
-    
+
     print(f"📋 العميل: {customer}")
     print(f"🏢 الفرع: {branch}")
     print(f"👤 المستخدم: {user}")
     print(f"💼 البائع: {salesperson}")
     print(f"🔗 البائع له حساب مستخدم: {'نعم' if salesperson.user else 'لا'}")
     print()
-    
+
     # عدد المعاينات قبل الاختبار
     inspections_before = Inspection.objects.count()
     print(f"📊 عدد المعاينات قبل الاختبار: {inspections_before}")
-    
+
     # محاكاة بيانات الواجهة
     from orders.forms import OrderForm
-    
+
     # بيانات كما تأتي من الواجهة
     form_data = {
-        'customer': customer.id,
-        'branch': branch.id,
-        'salesperson': salesperson.id,
-        'selected_types': 'inspection',  # هذا ما يأتي من الراديو
-        'notes': 'طلب معاينة من الواجهة - اختبار نهائي',
-        'status': 'normal',
-        'delivery_type': 'branch',
-        'delivery_address': '',
-        'tracking_status': 'pending',
+        "customer": customer.id,
+        "branch": branch.id,
+        "salesperson": salesperson.id,
+        "selected_types": "inspection",  # هذا ما يأتي من الراديو
+        "notes": "طلب معاينة من الواجهة - اختبار نهائي",
+        "status": "normal",
+        "delivery_type": "branch",
+        "delivery_address": "",
+        "tracking_status": "pending",
     }
-    
+
     print(f"📋 بيانات الواجهة:")
     for key, value in form_data.items():
         print(f"  - {key}: {value}")
     print()
-    
+
     # إنشاء النموذج كما يحدث في الواجهة
     form = OrderForm(data=form_data, user=user)
-    
+
     print("🔍 فحص صحة النموذج...")
     if form.is_valid():
         print("✅ النموذج صالح - سيتم حفظ الطلب")
-        
+
         # حفظ الطلب
         order = form.save()
         print(f"✅ تم حفظ الطلب: {order.order_number}")
         print(f"📋 selected_types النهائي: {order.selected_types}")
         print(f"📋 الأنواع المستخرجة: {order.get_selected_types_list()}")
-        
+
         # انتظار قليل للإشارة
         import time
+
         time.sleep(2)
-        
+
         # فحص المعاينات المرتبطة
         related_inspections = Inspection.objects.filter(order=order)
         print(f"\n🔍 فحص المعاينات المرتبطة...")
         print(f"🔍 عدد المعاينات المرتبطة: {related_inspections.count()}")
-        
+
         if related_inspections.exists():
             inspection = related_inspections.first()
             print(f"\n✅ تم إنشاء المعاينة بنجاح!")
@@ -99,13 +102,15 @@ def test_inspection_creation_final():
             print(f"🏢 الفرع: {inspection.branch}")
             print(f"👥 العميل: {inspection.customer}")
             print(f"📝 الملاحظات: {inspection.notes}")
-            
+
             # التحقق من الربط
             print(f"\n🔗 فحص الربط:")
-            print(f"  - المعاينة مرتبطة بالطلب: {'نعم' if inspection.order == order else 'لا'}")
+            print(
+                f"  - المعاينة مرتبطة بالطلب: {'نعم' if inspection.order == order else 'لا'}"
+            )
             print(f"  - الطلب له معاينات: {order.inspections.count()}")
             print(f"  - من قسم الطلبات: {'نعم' if inspection.is_from_orders else 'لا'}")
-            
+
             # فحص العدد الإجمالي
             inspections_after = Inspection.objects.count()
             new_inspections = inspections_after - inspections_before
@@ -113,7 +118,7 @@ def test_inspection_creation_final():
             print(f"  - المعاينات قبل: {inspections_before}")
             print(f"  - المعاينات بعد: {inspections_after}")
             print(f"  - المعاينات الجديدة: {new_inspections}")
-            
+
             if new_inspections == 1:
                 print("\n🎉 النتيجة النهائية: نجح الاختبار!")
                 print("✅ تم إنشاء معاينة واحدة فقط كما هو مطلوب")
@@ -137,9 +142,9 @@ def main():
     """الدالة الرئيسية"""
     print("🚀 الاختبار النهائي لنظام إنشاء المعاينات التلقائية")
     print("=" * 80)
-    
+
     success = test_inspection_creation_final()
-    
+
     print("\n" + "=" * 80)
     if success:
         print("🎉 تهانينا! النظام يعمل بشكل مثالي!")
@@ -155,7 +160,7 @@ def main():
     else:
         print("❌ لا يزال هناك مشاكل في النظام")
         print("❌ يحتاج إلى مراجعة إضافية")
-    
+
     return success
 
 

@@ -2,40 +2,45 @@
 العرض الرئيسي المحسن للنظام
 """
 
-from django.shortcuts import render, redirect
-from django.http import HttpResponseGone
-from django.utils import timezone
-from django.db.models import Count, Sum, F, Q
+import mimetypes
+import os
+import re
+from datetime import datetime, timedelta
+
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Count, F, Q, Sum
+from django.http import (
+    FileResponse,
+    Http404,
+    HttpResponse,
+    HttpResponseGone,
+    JsonResponse,
+)
+from django.shortcuts import redirect, render
+from django.utils import timezone
+from django.utils.encoding import smart_str
 from django.views.generic import TemplateView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from customers.models import Customer
-from orders.models import Order
-from inventory.models import Product
-from inspections.models import Inspection
+
 from accounts.models import (
+    AboutPageSettings,
+    Branch,
     CompanyInfo,
     ContactFormSettings,
-    AboutPageSettings,
     FooterSettings,
-    Branch,
 )
-from manufacturing.models import ManufacturingOrder, ManufacturingOrderItem
+from customers.models import Customer
+from inspections.models import Inspection
 from installations.models import InstallationSchedule
-import re
-from datetime import datetime, timedelta
-from django.http import JsonResponse
-
-from django.http import HttpResponse, FileResponse, Http404
-from django.conf import settings
-import os
-import mimetypes
-from django.utils.encoding import smart_str
+from inventory.models import Product
+from manufacturing.models import ManufacturingOrder, ManufacturingOrderItem
+from orders.models import Order
 
 
 def is_admin_user(user):
@@ -49,21 +54,22 @@ def admin_dashboard(request):
     """
     داش بورد احترافي محسن للمدراء يعرض تحليلات شاملة لجميع الأقسام
     """
+    from accounts.models import Branch, CompanyInfo
+
     from .dashboard_utils import (
         get_customers_statistics,
-        get_orders_statistics,
-        get_manufacturing_statistics,
+        get_enhanced_chart_data,
+        get_inspection_scheduling_analytics,
         get_inspections_statistics,
+        get_installation_order_scheduling_analytics,
         get_installation_orders_statistics,
         get_inventory_statistics,
-        get_enhanced_chart_data,
         get_manufacturing_approval_analytics,
-        get_inspection_scheduling_analytics,
-        get_user_performance_analytics,
+        get_manufacturing_statistics,
+        get_orders_statistics,
         get_user_activity_analytics,
-        get_installation_order_scheduling_analytics,
+        get_user_performance_analytics,
     )
-    from accounts.models import CompanyInfo, Branch
 
     # الحصول على المعاملات من الطلب
     selected_branch = request.GET.get("branch", "all")
@@ -292,14 +298,14 @@ def get_date_range(selected_year, selected_month, show_all_years):
 def get_comprehensive_statistics(branch_filter, start_date, end_date, show_all_years):
     """الحصول على إحصائيات شاملة محسنة"""
     from .dashboard_utils import (
+        get_complaints_statistics,
         get_customers_statistics,
-        get_orders_statistics,
-        get_manufacturing_statistics,
         get_inspections_statistics,
         get_installation_orders_statistics,
         get_installations_statistics,
         get_inventory_statistics,
-        get_complaints_statistics,
+        get_manufacturing_statistics,
+        get_orders_statistics,
     )
 
     return {
@@ -334,10 +340,10 @@ def get_comparison_data(
     """الحصول على بيانات المقارنة"""
     from .dashboard_utils import (
         get_customers_statistics,
-        get_orders_statistics,
-        get_manufacturing_statistics,
         get_inspections_statistics,
         get_installation_orders_statistics,
+        get_manufacturing_statistics,
+        get_orders_statistics,
     )
 
     if not comparison_year:
@@ -507,6 +513,7 @@ def home(request):
     # Get low stock products - محسن لتجنب N+1
     # نظراً لأن current_stock هو property، نحتاج لاستخدام طريقة مختلفة
     from django.db.models import OuterRef, Subquery
+
     from inventory.models import StockTransaction
 
     # الحصول على آخر رصيد لكل منتج
@@ -699,10 +706,14 @@ def monitoring_dashboard(request):
     """
     لوحة تحكم مراقبة النظام
     """
-    return render(request, 'monitoring/dashboard.html', {
-        'title': 'لوحة مراقبة النظام',
-        'page_title': 'مراقبة النظام وقاعدة البيانات',
-    })
+    return render(
+        request,
+        "monitoring/dashboard.html",
+        {
+            "title": "لوحة مراقبة النظام",
+            "page_title": "مراقبة النظام وقاعدة البيانات",
+        },
+    )
 
 
 def chat_gone_view(request):
@@ -710,23 +721,29 @@ def chat_gone_view(request):
     إرجاع 410 Gone لطلبات الدردشة القديمة مع headers لمنع إعادة المحاولة
     """
     import logging
+
     logger = logging.getLogger(__name__)
 
     # تسجيل معلومات الطلب لتتبع المصدر
-    user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')
-    referer = request.META.get('HTTP_REFERER', 'No referer')
-    remote_addr = request.META.get('REMOTE_ADDR', 'Unknown IP')
+    user_agent = request.META.get("HTTP_USER_AGENT", "Unknown")
+    referer = request.META.get("HTTP_REFERER", "No referer")
+    remote_addr = request.META.get("REMOTE_ADDR", "Unknown IP")
 
-    logger.info(f"🚫 WebSocket request blocked - IP: {remote_addr}, User-Agent: {user_agent[:50]}..., Referer: {referer}")
+    logger.info(
+        f"🚫 WebSocket request blocked - IP: {remote_addr}, User-Agent: {user_agent[:50]}..., Referer: {referer}"
+    )
 
-    response = HttpResponseGone("Chat system has been permanently removed. Please clear your browser cache.")
-    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
-    response['Pragma'] = 'no-cache'
-    response['Expires'] = '0'
-    response['Retry-After'] = '86400'  # لا تحاول مرة أخرى لمدة 24 ساعة
-    response['X-Chat-Status'] = 'PERMANENTLY_REMOVED'
-    response['X-WebSocket-Status'] = 'DISABLED'
+    response = HttpResponseGone(
+        "Chat system has been permanently removed. Please clear your browser cache."
+    )
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    response["Retry-After"] = "86400"  # لا تحاول مرة أخرى لمدة 24 ساعة
+    response["X-Chat-Status"] = "PERMANENTLY_REMOVED"
+    response["X-WebSocket-Status"] = "DISABLED"
     return response
+
 
 def test_minimal_view(request):
     """صفحة اختبار نظيفة تماماً بدون أي JavaScript"""

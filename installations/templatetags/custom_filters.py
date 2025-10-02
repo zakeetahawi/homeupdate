@@ -1,7 +1,9 @@
 from django import template
+
 from accounts.models import SystemSettings
 
 register = template.Library()
+
 
 @register.filter
 def split(value, arg):
@@ -11,24 +13,25 @@ def split(value, arg):
     """
     return value.split(arg)
 
+
 @register.filter
 def get_month_name(month_number):
     """
     Get Arabic month name from month number
     """
     months = {
-        1: 'يناير',
-        2: 'فبراير',
-        3: 'مارس',
-        4: 'أبريل',
-        5: 'مايو',
-        6: 'يونيو',
-        7: 'يوليو',
-        8: 'أغسطس',
-        9: 'سبتمبر',
-        10: 'أكتوبر',
-        11: 'نوفمبر',
-        12: 'ديسمبر'
+        1: "يناير",
+        2: "فبراير",
+        3: "مارس",
+        4: "أبريل",
+        5: "مايو",
+        6: "يونيو",
+        7: "يوليو",
+        8: "أغسطس",
+        9: "سبتمبر",
+        10: "أكتوبر",
+        11: "نوفمبر",
+        12: "ديسمبر",
     }
     return months.get(int(month_number), str(month_number))
 
@@ -40,7 +43,7 @@ def currency_format(amount):
     Usage: {{ amount|currency_format }}
     """
     try:
-        if not amount or str(amount).strip() == '':
+        if not amount or str(amount).strip() == "":
             amount = 0
         settings = SystemSettings.get_settings()
         symbol = settings.currency_symbol
@@ -51,4 +54,4 @@ def currency_format(amount):
             formatted_amount = f"{float(amount):,.2f}"
         except Exception:
             formatted_amount = "0.00"
-        return f"{formatted_amount} ر.س" 
+        return f"{formatted_amount} ر.س"

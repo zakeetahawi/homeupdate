@@ -1,7 +1,9 @@
 import json
+
 from django import template
 
 register = template.Library()
+
 
 @register.filter
 def to_json(value):
@@ -9,7 +11,8 @@ def to_json(value):
     try:
         return json.dumps(value, ensure_ascii=False)
     except (TypeError, ValueError):
-        return '{}'
+        return "{}"
+
 
 @register.filter
 def get_item(dictionary, key):

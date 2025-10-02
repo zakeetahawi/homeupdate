@@ -3,66 +3,58 @@
 أمر Django لإصلاح تسلسل ID تلقائياً
 """
 
-from django.core.management.base import BaseCommand, CommandError
-from django.db import connection
 import logging
 
+from django.core.management.base import BaseCommand, CommandError
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
     """تكوين أمر إصلاح تسلسل ID"""
-    help = 'فحص وإصلاح تسلسل ID تلقائياً'
+
+    help = "فحص وإصلاح تسلسل ID تلقائياً"
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--check-only',
-            action='store_true',
-            help='فحص فقط دون إصلاح'
+            "--check-only", action="store_true", help="فحص فقط دون إصلاح"
         )
-        parser.add_argument(
-            '--verbose',
-            action='store_true',
-            help='عرض تفاصيل أكثر'
-        )
+        parser.add_argument("--verbose", action="store_true", help="عرض تفاصيل أكثر")
 
     def handle(self, *args, **options):
-        self.verbose = options.get('verbose', False)
-        check_only = options.get('check_only', False)
-        
+        self.verbose = options.get("verbose", False)
+        check_only = options.get("check_only", False)
+
         try:
             problems_found = self.detect_sequence_problems()
-            
+
             if problems_found:
                 if check_only:
                     if self.verbose:
                         self.stdout.write(
-                            self.style.ERROR('تم اكتشاف مشاكل في التسلسل')
+                            self.style.ERROR("تم اكتشاف مشاكل في التسلسل")
                         )
                 else:
                     self.fix_sequences()
                     if self.verbose:
-                        self.stdout.write(
-                            self.style.SUCCESS('تم إصلاح التسلسل بنجاح')
-                        )
+                        self.stdout.write(self.style.SUCCESS("تم إصلاح التسلسل بنجاح"))
             else:
                 if self.verbose:
-                    self.stdout.write(
-                        self.style.SUCCESS('لا توجد مشاكل في التسلسل')
-                    )
-                
+                    self.stdout.write(self.style.SUCCESS("لا توجد مشاكل في التسلسل"))
+
         except Exception as e:
-            raise CommandError(f'خطأ في تنفيذ الأمر: {str(e)}')
+            raise CommandError(f"خطأ في تنفيذ الأمر: {str(e)}")
 
     def detect_sequence_problems(self):
         """اكتشاف مشاكل في تسلسل ID"""
         problems_found = False
-        
+
         with connection.cursor() as cursor:
             try:
                 # الحصول على جميع الجداول التي تحتوي على تسلسل
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT 
                         t.table_name,
                         c.column_name,
@@ -77,37 +69,32 @@ class Command(BaseCommand):
                         OR c.is_identity = 'YES'
                     )
                     ORDER BY t.table_name
-                """)
-                
+                """
+                )
+
                 tables_with_sequences = cursor.fetchall()
-                
+
                 for row in tables_with_sequences:
                     table_name, column_name = row[0], row[1]
                     column_default, is_identity = row[2], row[3]
-                    
-                    if is_identity == 'YES':
+
+                    if is_identity == "YES":
                         seq_name = f"{table_name}_{column_name}_seq"
                     else:
-                        seq_name = self.extract_sequence_name(
-                            column_default
-                        )
-                    
+                        seq_name = self.extract_sequence_name(column_default)
+
                     if seq_name:
                         has_problem = self.check_sequence_problem(
-                            table_name, 
-                            column_name, 
-                            seq_name
+                            table_name, column_name, seq_name
                         )
                         if has_problem:
                             problems_found = True
                             if self.verbose:
-                                msg = f'⚠️  مشكلة في {table_name}.{column_name}'
-                                self.stdout.write(
-                                    self.style.ERROR(msg)
-                                )
-                
+                                msg = f"⚠️  مشكلة في {table_name}.{column_name}"
+                                self.stdout.write(self.style.ERROR(msg))
+
                 return problems_found
-                
+
             except Exception as e:
                 logger.error(f"خطأ في اكتشاف المشاكل: {str(e)}")
                 raise
@@ -116,8 +103,9 @@ class Command(BaseCommand):
         """استخراج اسم التسلسل من column_default"""
         if not column_default:
             return None
-            
+
         import re
+
         match = re.search(r"nextval\('([^']+)'", column_default)
         if match:
             return match.group(1)
@@ -128,42 +116,42 @@ class Command(BaseCommand):
         with connection.cursor() as cursor:
             try:
                 # التحقق من وجود التسلسل
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT EXISTS (
                         SELECT FROM pg_sequences
                         WHERE sequencename = %s
                     )
-                """, [sequence_name])
+                """,
+                    [sequence_name],
+                )
 
                 if not cursor.fetchone()[0]:
                     if self.verbose:
-                        msg = f'⚠️  التسلسل {sequence_name} غير موجود'
+                        msg = f"⚠️  التسلسل {sequence_name} غير موجود"
                         self.stdout.write(self.style.ERROR(msg))
                     return True
 
                 # الحصول على أعلى ID موجود
-                sql = (
-                    f'SELECT COALESCE(MAX({column_name}), 0) '
-                    f'FROM {table_name}'
-                )
+                sql = f"SELECT COALESCE(MAX({column_name}), 0) " f"FROM {table_name}"
                 cursor.execute(sql)
                 max_id = cursor.fetchone()[0]
-                
+
                 # الحصول على القيمة الحالية للتسلسل
                 sql = f"SELECT last_value FROM {sequence_name}"
                 cursor.execute(sql)
                 current_seq = cursor.fetchone()[0]
-                
+
                 # إذا كان التسلسل أقل من أو يساوي أعلى ID، فهناك مشكلة
                 has_problem = current_seq <= max_id
                 if has_problem and self.verbose:
                     msg = (
-                        f'⚠️  التسلسل {sequence_name} ({current_seq}) '
-                        f'أقل من أعلى ID ({max_id})'
+                        f"⚠️  التسلسل {sequence_name} ({current_seq}) "
+                        f"أقل من أعلى ID ({max_id})"
                     )
                     self.stdout.write(self.style.ERROR(msg))
                 return has_problem
-                
+
             except Exception as e:
                 # تجاهل الأخطاء للجداول غير الموجودة
                 if self.verbose:
@@ -175,7 +163,8 @@ class Command(BaseCommand):
         with connection.cursor() as cursor:
             try:
                 # الحصول على جميع الجداول التي تحتوي على تسلسل
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT 
                         t.table_name,
                         c.column_name,
@@ -190,31 +179,30 @@ class Command(BaseCommand):
                         OR c.is_identity = 'YES'
                     )
                     ORDER BY t.table_name
-                """)
-                
+                """
+                )
+
                 tables_with_sequences = cursor.fetchall()
-                
+
                 for row in tables_with_sequences:
                     table_name, column_name = row[0], row[1]
                     column_default, is_identity = row[2], row[3]
-                    
-                    if is_identity == 'YES':
+
+                    if is_identity == "YES":
                         seq_name = f"{table_name}_{column_name}_seq"
                     else:
-                        seq_name = self.extract_sequence_name(
-                            column_default
-                        )
-                    
+                        seq_name = self.extract_sequence_name(column_default)
+
                     if seq_name:
                         try:
                             # الحصول على أعلى ID موجود
                             sql = (
-                                f'SELECT COALESCE(MAX({column_name}), 0) '
-                                f'FROM {table_name}'
+                                f"SELECT COALESCE(MAX({column_name}), 0) "
+                                f"FROM {table_name}"
                             )
                             cursor.execute(sql)
                             max_id = cursor.fetchone()[0]
-                            
+
                             # إعادة تعيين التسلسل
                             if max_id is not None:
                                 new_value = max_id + 1
@@ -223,21 +211,19 @@ class Command(BaseCommand):
                                     f"RESTART WITH {new_value}"
                                 )
                                 cursor.execute(sql)
-                                
+
                                 if self.verbose:
                                     msg = (
-                                        f'✅ تم إصلاح {table_name}.{column_name} '
-                                        f'(تم التعيين إلى {new_value})'
+                                        f"✅ تم إصلاح {table_name}.{column_name} "
+                                        f"(تم التعيين إلى {new_value})"
                                     )
-                                    self.stdout.write(
-                                        self.style.SUCCESS(msg)
-                                    )
+                                    self.stdout.write(self.style.SUCCESS(msg))
                         except Exception as table_error:
                             # تجاهل الأخطاء للجداول غير الموجودة (مثل جداول ManyToMany قيد الإنشاء)
                             if self.verbose:
                                 logger.debug(f"تخطي {table_name}: {str(table_error)}")
                             continue
-                
+
             except Exception as e:
                 logger.error(f"خطأ في إصلاح التسلسلات: {str(e)}")
                 raise

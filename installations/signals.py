@@ -1,12 +1,15 @@
-from django.db.models.signals import post_save, post_delete, pre_save
-from django.dispatch import receiver
+import logging
+
 from django.contrib.auth import get_user_model
 from django.db.models import F
+from django.db.models.signals import post_delete, post_save, pre_save
+from django.dispatch import receiver
 from django.utils import timezone
-from .models import InstallationSchedule, InstallationArchive, CustomerDebt
+
 from accounts.middleware.current_user import get_current_user
 from orders.models import Order
-import logging
+
+from .models import CustomerDebt, InstallationArchive, InstallationSchedule
 
 logger = logging.getLogger(__name__)
 
@@ -18,31 +21,33 @@ def installation_status_changed(sender, instance, created, **kwargs):
     current_user = get_current_user()
 
     # إنشاء أرشيف تلقائي إذا تم إكمال التركيب
-    if not created and instance.status == 'completed':
+    if not created and instance.status == "completed":
         # التحقق من أن الحالة تغيرت إلى مكتملة
-        old_status = getattr(instance, '_original_status', None)
-        if old_status and old_status != 'completed':
+        old_status = getattr(instance, "_original_status", None)
+        if old_status and old_status != "completed":
             archive, created = InstallationArchive.objects.get_or_create(
                 installation=instance,
                 defaults={
-                    'archived_by': current_user,
-                    'archive_notes': f'تم الأرشفة تلقائياً عند إكمال التركيب بواسطة {current_user.get_full_name() or current_user.username if current_user else "نظام تلقائي"}'
-                }
+                    "archived_by": current_user,
+                    "archive_notes": f'تم الأرشفة تلقائياً عند إكمال التركيب بواسطة {current_user.get_full_name() or current_user.username if current_user else "نظام تلقائي"}',
+                },
             )
 
             # تسجيل الأرشفة في سجل الأحداث
             if created and current_user:
                 from .models import InstallationEventLog
+
                 InstallationEventLog.objects.create(
                     installation=instance,
-                    event_type='completion',
-                    description=f'تم إكمال التركيب وأرشفته تلقائياً',
+                    event_type="completion",
+                    description=f"تم إكمال التركيب وأرشفته تلقائياً",
                     user=current_user,
                     metadata={
-                        'auto_archived': True,
-                        'completion_date': str(instance.completion_date),
-                        'archived_by': current_user.get_full_name() or current_user.username
-                    }
+                        "auto_archived": True,
+                        "completion_date": str(instance.completion_date),
+                        "archived_by": current_user.get_full_name()
+                        or current_user.username,
+                    },
                 )
 
 
@@ -68,17 +73,21 @@ def manage_customer_debt_on_order_save(sender, instance, created, **kwargs):
                         debt_record.debt_amount = debt_amount
                         debt_record.updated_at = timezone.now()
                         debt_record.save()
-                        logger.info(f"تم تحديث مديونية الطلب {instance.order_number} من {old_amount:.2f} إلى {debt_amount:.2f}")
+                        logger.info(
+                            f"تم تحديث مديونية الطلب {instance.order_number} من {old_amount:.2f} إلى {debt_amount:.2f}"
+                        )
             else:
                 # إنشاء سجل جديد
                 CustomerDebt.objects.create(
                     customer=instance.customer,
                     order=instance,
                     debt_amount=debt_amount,
-                    notes=f'مديونية تلقائية للطلب {instance.order_number}',
-                    is_paid=False
+                    notes=f"مديونية تلقائية للطلب {instance.order_number}",
+                    is_paid=False,
                 )
-                logger.info(f"تم إنشاء سجل مديونية جديد للطلب {instance.order_number} بمبلغ {debt_amount:.2f}")
+                logger.info(
+                    f"تم إنشاء سجل مديونية جديد للطلب {instance.order_number} بمبلغ {debt_amount:.2f}"
+                )
 
         else:
             # لا توجد مديونية (تم الدفع كاملاً)
@@ -91,7 +100,9 @@ def manage_customer_debt_on_order_save(sender, instance, created, **kwargs):
                     debt_record.payment_date = timezone.now()
                     debt_record.notes += f' - تم الدفع كاملاً تلقائياً في {timezone.now().strftime("%Y-%m-%d %H:%M")}'
                     debt_record.save()
-                    logger.info(f"تم تحديث مديونية الطلب {instance.order_number} إلى مدفوعة تلقائياً")
+                    logger.info(
+                        f"تم تحديث مديونية الطلب {instance.order_number} إلى مدفوعة تلقائياً"
+                    )
 
     except Exception as e:
         logger.error(f"خطأ في إدارة مديونية الطلب {instance.order_number}: {str(e)}")
@@ -109,7 +120,9 @@ def update_debt_payment_date(sender, instance, **kwargs):
             if not old_instance.is_paid and instance.is_paid:
                 if not instance.payment_date:
                     instance.payment_date = timezone.now()
-                logger.info(f"تم تحديث تاريخ دفع المديونية للطلب {instance.order.order_number}")
+                logger.info(
+                    f"تم تحديث تاريخ دفع المديونية للطلب {instance.order.order_number}"
+                )
         except CustomerDebt.DoesNotExist:
             pass
     else:

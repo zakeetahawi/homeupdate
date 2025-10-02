@@ -3,25 +3,26 @@ Connection Pool مخصص لإدارة اتصالات قاعدة البيانات
 Custom Database Connection Pool for efficient database connection management
 """
 
+import logging
 import threading
 import time
-import logging
+from contextlib import contextmanager
+
 import psycopg2
 import psycopg2.pool
 from django.conf import settings
-from contextlib import contextmanager
 
-logger = logging.getLogger('db_pool')
+logger = logging.getLogger("db_pool")
 
 
 class DatabaseConnectionPool:
     """
     Connection Pool مخصص لإدارة اتصالات PostgreSQL
     """
-    
+
     _instance = None
     _lock = threading.Lock()
-    
+
     def __new__(cls):
         if cls._instance is None:
             with cls._lock:
@@ -29,39 +30,39 @@ class DatabaseConnectionPool:
                     cls._instance = super().__new__(cls)
                     cls._instance._initialized = False
         return cls._instance
-    
+
     def __init__(self):
         if self._initialized:
             return
-            
+
         self._initialized = True
         self._pool = None
         self._stats = {
-            'connections_created': 0,
-            'connections_closed': 0,
-            'connections_in_use': 0,
-            'pool_hits': 0,
-            'pool_misses': 0,
+            "connections_created": 0,
+            "connections_closed": 0,
+            "connections_in_use": 0,
+            "pool_hits": 0,
+            "pool_misses": 0,
         }
         self._create_pool()
-    
+
     def _create_pool(self):
         """إنشاء connection pool"""
         try:
-            db_config = settings.DATABASES['default']
+            db_config = settings.DATABASES["default"]
 
             # تجربة إنشاء pool مع معالجة الأخطاء
             self._pool = psycopg2.pool.ThreadedConnectionPool(
-                minconn=2,          # الحد الأدنى للاتصالات (مخفض)
-                maxconn=5,          # الحد الأقصى للاتصالات (مخفض)
-                host=db_config['HOST'],
-                port=db_config['PORT'],
-                database=db_config['NAME'],
-                user=db_config['USER'],
-                password=db_config['PASSWORD'],
+                minconn=2,  # الحد الأدنى للاتصالات (مخفض)
+                maxconn=5,  # الحد الأقصى للاتصالات (مخفض)
+                host=db_config["HOST"],
+                port=db_config["PORT"],
+                database=db_config["NAME"],
+                user=db_config["USER"],
+                password=db_config["PASSWORD"],
                 # إعدادات إضافية للأداء
                 connect_timeout=10,
-                application_name='homeupdate_pool',
+                application_name="homeupdate_pool",
             )
 
             logger.info("Database connection pool created successfully")
@@ -70,7 +71,7 @@ class DatabaseConnectionPool:
             logger.warning(f"Failed to create database connection pool: {e}")
             # في حالة الفشل، تعطيل pool
             self._pool = None
-    
+
     @contextmanager
     def get_connection(self):
         """
@@ -83,25 +84,25 @@ class DatabaseConnectionPool:
 
             if self._pool is None:
                 # إذا فشل إنشاء pool، استخدم اتصال مباشر
-                db_config = settings.DATABASES['default']
+                db_config = settings.DATABASES["default"]
                 connection = psycopg2.connect(
-                    host=db_config['HOST'],
-                    port=db_config['PORT'],
-                    database=db_config['NAME'],
-                    user=db_config['USER'],
-                    password=db_config['PASSWORD'],
+                    host=db_config["HOST"],
+                    port=db_config["PORT"],
+                    database=db_config["NAME"],
+                    user=db_config["USER"],
+                    password=db_config["PASSWORD"],
                     connect_timeout=10,
                 )
-                self._stats['pool_misses'] += 1
+                self._stats["pool_misses"] += 1
                 logger.debug("Using direct connection (pool unavailable)")
             else:
                 connection = self._pool.getconn()
                 if connection:
-                    self._stats['connections_in_use'] += 1
-                    self._stats['pool_hits'] += 1
+                    self._stats["connections_in_use"] += 1
+                    self._stats["pool_hits"] += 1
                     logger.debug("Connection acquired from pool")
                 else:
-                    self._stats['pool_misses'] += 1
+                    self._stats["pool_misses"] += 1
                     logger.warning("Failed to acquire connection from pool")
                     raise Exception("No connection available in pool")
 
@@ -123,7 +124,7 @@ class DatabaseConnectionPool:
                     if self._pool is not None:
                         # إعادة الاتصال إلى pool
                         self._pool.putconn(connection)
-                        self._stats['connections_in_use'] -= 1
+                        self._stats["connections_in_use"] -= 1
                         logger.debug("Connection returned to pool")
                     else:
                         # إغلاق الاتصال المباشر
@@ -131,28 +132,28 @@ class DatabaseConnectionPool:
                         logger.debug("Direct connection closed")
                 except Exception as e:
                     logger.error(f"Error handling connection cleanup: {e}")
-    
+
     def get_stats(self):
         """إحصائيات pool"""
         if self._pool:
             return {
                 **self._stats,
-                'pool_size': len(self._pool._pool),
-                'available_connections': len([c for c in self._pool._pool if c]),
+                "pool_size": len(self._pool._pool),
+                "available_connections": len([c for c in self._pool._pool if c]),
             }
         return self._stats
-    
+
     def close_all_connections(self):
         """إغلاق جميع الاتصالات"""
         if self._pool:
             try:
                 self._pool.closeall()
                 logger.info("All connections in pool closed")
-                self._stats['connections_closed'] += self._stats['connections_in_use']
-                self._stats['connections_in_use'] = 0
+                self._stats["connections_closed"] += self._stats["connections_in_use"]
+                self._stats["connections_in_use"] = 0
             except Exception as e:
                 logger.error(f"Error closing pool connections: {e}")
-    
+
     def health_check(self):
         """فحص صحة pool"""
         try:
@@ -170,13 +171,13 @@ class SmartConnectionManager:
     """
     مدير اتصالات ذكي يختار بين PgBouncer والاتصال المباشر
     """
-    
+
     def __init__(self):
         self.pool = DatabaseConnectionPool()
         self.use_pgbouncer = True
         self.fallback_attempts = 0
         self.max_fallback_attempts = 3
-    
+
     @contextmanager
     def get_connection(self):
         """
@@ -191,26 +192,28 @@ class SmartConnectionManager:
             except Exception as e:
                 logger.warning(f"PgBouncer connection failed: {e}")
                 self.fallback_attempts += 1
-                
+
                 if self.fallback_attempts >= self.max_fallback_attempts:
-                    logger.error("Too many PgBouncer failures, switching to direct connection")
+                    logger.error(
+                        "Too many PgBouncer failures, switching to direct connection"
+                    )
                     self.use_pgbouncer = False
-        
+
         # Fallback إلى الاتصال المباشر
         try:
-            direct_config = settings.DATABASES_DIRECT['default']
+            direct_config = settings.DATABASES_DIRECT["default"]
             conn = psycopg2.connect(
-                host=direct_config['HOST'],
-                port=direct_config['PORT'],
-                database=direct_config['NAME'],
-                user=direct_config['USER'],
-                password=direct_config['PASSWORD'],
+                host=direct_config["HOST"],
+                port=direct_config["PORT"],
+                database=direct_config["NAME"],
+                user=direct_config["USER"],
+                password=direct_config["PASSWORD"],
                 connect_timeout=10,
             )
-            
+
             logger.info("Using direct database connection")
             yield conn
-            
+
         except Exception as e:
             logger.error(f"Direct connection also failed: {e}")
             raise
@@ -219,7 +222,7 @@ class SmartConnectionManager:
                 conn.close()
             except:
                 pass
-    
+
     def reset_fallback(self):
         """إعادة تعيين fallback للمحاولة مع PgBouncer مرة أخرى"""
         self.fallback_attempts = 0
@@ -235,31 +238,30 @@ class ConnectionPoolMiddleware:
     """
     Middleware لاستخدام connection pool المخصص
     """
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
         self.pool = DatabaseConnectionPool()
-    
+
     def __call__(self, request):
         # إضافة معلومات pool إلى request
         request.db_pool_stats = self.pool.get_stats()
-        
+
         response = self.get_response(request)
-        
+
         # تنظيف دوري كل 100 طلب
-        if hasattr(request, 'db_pool_stats'):
-            total_requests = (
-                request.db_pool_stats.get('pool_hits', 0) + 
-                request.db_pool_stats.get('pool_misses', 0)
-            )
-            
+        if hasattr(request, "db_pool_stats"):
+            total_requests = request.db_pool_stats.get(
+                "pool_hits", 0
+            ) + request.db_pool_stats.get("pool_misses", 0)
+
             if total_requests % 100 == 0:
                 # فحص صحة pool
                 if not self.pool.health_check():
                     logger.warning("Pool health check failed, recreating pool")
                     self.pool.close_all_connections()
                     self.pool._create_pool()
-        
+
         return response
 
 

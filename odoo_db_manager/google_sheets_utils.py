@@ -5,7 +5,7 @@ Google Sheets Utilities
 
 import logging
 import urllib.parse
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +15,16 @@ def encode_sheet_name(sheet_name: str) -> str:
     تشفير اسم الصفحة للتعامل مع الأسماء العربية
     Encode sheet name to handle Arabic names
     """
-    return urllib.parse.quote(sheet_name, safe='')
+    return urllib.parse.quote(sheet_name, safe="")
 
 
-def build_range_name(sheet_name: str, start_row: Optional[int] = None,
-                    end_row: Optional[int] = None, start_col: str = 'A',
-                    end_col: str = 'Z') -> str:
+def build_range_name(
+    sheet_name: str,
+    start_row: Optional[int] = None,
+    end_row: Optional[int] = None,
+    start_col: str = "A",
+    end_col: str = "Z",
+) -> str:
     """
     بناء اسم النطاق لـ Google Sheets
     Build range name for Google Sheets
@@ -34,9 +38,12 @@ def build_range_name(sheet_name: str, start_row: Optional[int] = None,
 
     # إذا كان الاسم يحتوي على مسافات أو أحرف خاصة، ضعه بين علامتي اقتباس
     needs_quotes = (
-        ' ' in clean_sheet_name or
-        any(char in clean_sheet_name for char in ['!', "'", '"', '-', '(', ')', '[', ']']) or
-        is_arabic_text(clean_sheet_name)
+        " " in clean_sheet_name
+        or any(
+            char in clean_sheet_name
+            for char in ["!", "'", '"', "-", "(", ")", "[", "]"]
+        )
+        or is_arabic_text(clean_sheet_name)
     )
 
     if needs_quotes:
@@ -58,26 +65,26 @@ def build_range_name(sheet_name: str, start_row: Optional[int] = None,
         return f"{clean_sheet_name}!{start_col}1:{end_col}{end_row}"
 
 
-def find_sheet_by_name(service, spreadsheet_id: str, sheet_name: str) -> Optional[Dict[str, Any]]:
+def find_sheet_by_name(
+    service, spreadsheet_id: str, sheet_name: str
+) -> Optional[Dict[str, Any]]:
     """
     البحث عن صفحة بالاسم وإرجاع معلوماتها
     Find sheet by name and return its info
     """
     try:
-        spreadsheet = service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id
-        ).execute()
+        spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
 
-        for sheet in spreadsheet.get('sheets', []):
-            sheet_properties = sheet.get('properties', {})
-            sheet_title = sheet_properties.get('title', '')
+        for sheet in spreadsheet.get("sheets", []):
+            sheet_properties = sheet.get("properties", {})
+            sheet_title = sheet_properties.get("title", "")
 
             if sheet_title == sheet_name:
                 return {
-                    'id': sheet_properties.get('sheetId'),
-                    'title': sheet_title,
-                    'index': sheet_properties.get('index', 0),
-                    'properties': sheet_properties
+                    "id": sheet_properties.get("sheetId"),
+                    "title": sheet_title,
+                    "index": sheet_properties.get("index", 0),
+                    "properties": sheet_properties,
                 }
 
         return None
@@ -87,8 +94,13 @@ def find_sheet_by_name(service, spreadsheet_id: str, sheet_name: str) -> Optiona
         return None
 
 
-def get_sheet_data_safe(service, spreadsheet_id: str, sheet_name: str,
-                       start_row: Optional[int] = None, end_row: Optional[int] = None) -> List[List[str]]:
+def get_sheet_data_safe(
+    service,
+    spreadsheet_id: str,
+    sheet_name: str,
+    start_row: Optional[int] = None,
+    end_row: Optional[int] = None,
+) -> List[List[str]]:
     """
     جلب بيانات الصفحة مع معالجة آمنة للأسماء العربية
     Get sheet data with safe handling of Arabic names
@@ -98,12 +110,14 @@ def get_sheet_data_safe(service, spreadsheet_id: str, sheet_name: str,
         range_name = build_range_name(sheet_name, start_row, end_row)
 
         try:
-            result = service.spreadsheets().values().get(
-                spreadsheetId=spreadsheet_id,
-                range=range_name
-            ).execute()
+            result = (
+                service.spreadsheets()
+                .values()
+                .get(spreadsheetId=spreadsheet_id, range=range_name)
+                .execute()
+            )
 
-            return result.get('values', [])
+            return result.get("values", [])
 
         except Exception as first_error:
             logger.warning(f"فشل في المحاولة الأولى لجلب البيانات: {str(first_error)}")
@@ -118,34 +132,38 @@ def get_sheet_data_safe(service, spreadsheet_id: str, sheet_name: str,
             quoted_range = build_range_name(f"'{sheet_name}'", start_row, end_row)
 
             try:
-                result = service.spreadsheets().values().get(
-                    spreadsheetId=spreadsheet_id,
-                    range=quoted_range
-                ).execute()
+                result = (
+                    service.spreadsheets()
+                    .values()
+                    .get(spreadsheetId=spreadsheet_id, range=quoted_range)
+                    .execute()
+                )
 
-                return result.get('values', [])
+                return result.get("values", [])
 
             except Exception as second_error:
                 logger.warning(f"فشل في المحاولة الثانية: {str(second_error)}")
 
                 # محاولة 4: استخدام فهرس الصفحة
-                sheet_index = sheet_info['index']
+                sheet_index = sheet_info["index"]
                 index_range = f"Sheet{sheet_index + 1}"
 
                 if start_row is not None or end_row is not None:
-                    start_col = 'A'
-                    end_col = 'Z'
+                    start_col = "A"
+                    end_col = "Z"
                     start_r = start_row or 1
                     end_r = end_row or 1000
                     index_range = f"{index_range}!{start_col}{start_r}:{end_col}{end_r}"
 
                 try:
-                    result = service.spreadsheets().values().get(
-                        spreadsheetId=spreadsheet_id,
-                        range=index_range
-                    ).execute()
+                    result = (
+                        service.spreadsheets()
+                        .values()
+                        .get(spreadsheetId=spreadsheet_id, range=index_range)
+                        .execute()
+                    )
 
-                    return result.get('values', [])
+                    return result.get("values", [])
 
                 except Exception as third_error:
                     logger.error(f"فشل في جميع المحاولات: {str(third_error)}")
@@ -165,36 +183,34 @@ def validate_sheet_access(service, spreadsheet_id: str) -> Dict[str, Any]:
     Validate access to spreadsheet
     """
     try:
-        spreadsheet = service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id
-        ).execute()
+        spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
 
         return {
-            'success': True,
-            'title': spreadsheet.get('properties', {}).get('title', 'Unknown'),
-            'sheets': [
-                sheet.get('properties', {}).get('title', '')
-                for sheet in spreadsheet.get('sheets', [])
-            ]
+            "success": True,
+            "title": spreadsheet.get("properties", {}).get("title", "Unknown"),
+            "sheets": [
+                sheet.get("properties", {}).get("title", "")
+                for sheet in spreadsheet.get("sheets", [])
+            ],
         }
 
     except Exception as e:
         error_msg = str(e).lower()
 
-        if 'not found' in error_msg or '404' in error_msg:
+        if "not found" in error_msg or "404" in error_msg:
             return {
-                'success': False,
-                'error': 'جدول البيانات غير موجود أو معرف الجدول غير صحيح.'
+                "success": False,
+                "error": "جدول البيانات غير موجود أو معرف الجدول غير صحيح.",
             }
-        elif 'permission' in error_msg or '403' in error_msg:
+        elif "permission" in error_msg or "403" in error_msg:
             return {
-                'success': False,
-                'error': 'ليس لديك إذن للوصول إلى هذا الجدول. تأكد من مشاركته مع حساب الخدمة.'
+                "success": False,
+                "error": "ليس لديك إذن للوصول إلى هذا الجدول. تأكد من مشاركته مع حساب الخدمة.",
             }
         else:
             return {
-                'success': False,
-                'error': f'خطأ في الاتصال مع Google Sheets: {str(e)}'
+                "success": False,
+                "error": f"خطأ في الاتصال مع Google Sheets: {str(e)}",
             }
 
 
@@ -206,10 +222,10 @@ def get_available_sheets(service, spreadsheet_id: str) -> List[str]:
     try:
         validation = validate_sheet_access(service, spreadsheet_id)
 
-        if validation['success']:
-            return validation['sheets']
+        if validation["success"]:
+            return validation["sheets"]
         else:
-            raise Exception(validation['error'])
+            raise Exception(validation["error"])
 
     except Exception as e:
         logger.error(f"فشل في جلب قائمة الصفحات: {str(e)}")
@@ -240,7 +256,9 @@ def is_arabic_text(text: str) -> bool:
     return any(ord(char) in arabic_range for char in text)
 
 
-def safe_sheet_operation(service, spreadsheet_id: str, sheet_name: str, operation_func, *args, **kwargs):
+def safe_sheet_operation(
+    service, spreadsheet_id: str, sheet_name: str, operation_func, *args, **kwargs
+):
     """
     تنفيذ عملية على الصفحة مع معالجة آمنة للأخطاء
     Execute sheet operation with safe error handling
@@ -262,16 +280,22 @@ def safe_sheet_operation(service, spreadsheet_id: str, sheet_name: str, operatio
             # جرب مع علامات اقتباس
             try:
                 quoted_name = f"'{normalized_name}'"
-                return operation_func(service, spreadsheet_id, quoted_name, *args, **kwargs)
+                return operation_func(
+                    service, spreadsheet_id, quoted_name, *args, **kwargs
+                )
             except Exception as quoted_error:
                 logger.warning(f"فشل مع علامات الاقتباس: {str(quoted_error)}")
 
                 # جرب باستخدام فهرس الصفحة
                 try:
-                    sheet_info = find_sheet_by_name(service, spreadsheet_id, normalized_name)
+                    sheet_info = find_sheet_by_name(
+                        service, spreadsheet_id, normalized_name
+                    )
                     if sheet_info:
                         index_name = f"Sheet{sheet_info['index'] + 1}"
-                        return operation_func(service, spreadsheet_id, index_name, *args, **kwargs)
+                        return operation_func(
+                            service, spreadsheet_id, index_name, *args, **kwargs
+                        )
                 except Exception as index_error:
                     logger.error(f"فشل مع فهرس الصفحة: {str(index_error)}")
 
