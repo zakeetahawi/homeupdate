@@ -54,6 +54,58 @@ def protect_paid_orders_from_price_changes(sender, instance, created, **kwargs):
 def update_running_balance(sender, instance, created, **kwargs):
     """تحديث الرصيد المتحرك للمعاملات"""
     if created:
+        # ✅ حماية: منع السحب من مستودع فارغ
+        if instance.transaction_type == 'out':
+            # التحقق من وجود رصيد قبل السحب
+            last_trans = StockTransaction.objects.filter(
+                product=instance.product,
+                warehouse=instance.warehouse
+            ).exclude(id=instance.id).order_by('-transaction_date').first()
+            
+            if not last_trans:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(
+                    f"❌ محاولة سحب من مستودع فارغ! "
+                    f"المنتج: {instance.product.name} ({instance.product.code}) "
+                    f"المستودع: {instance.warehouse.name} "
+                    f"الكمية: {instance.quantity}"
+                )
+                # حذف المعاملة الخاطئة
+                instance.delete()
+                return
+            
+            if last_trans.running_balance < instance.quantity:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(
+                    f"❌ رصيد غير كافٍ! "
+                    f"المنتج: {instance.product.name} ({instance.product.code}) "
+                    f"المستودع: {instance.warehouse.name} "
+                    f"الرصيد المتاح: {last_trans.running_balance} "
+                    f"الكمية المطلوبة: {instance.quantity}"
+                )
+        
+        # ✅ حماية: منع إدخال منتج في مستودع جديد إذا كان موجوداً في مستودع آخر
+        # (إلا إذا كانت معاملة نقل)
+        if instance.transaction_type == 'in':
+            # التحقق من عدم وجود المنتج في مستودع آخر
+            other_warehouse_trans = StockTransaction.objects.filter(
+                product=instance.product
+            ).exclude(
+                warehouse=instance.warehouse
+            ).order_by('-transaction_date').first()
+            
+            if other_warehouse_trans and other_warehouse_trans.running_balance > 0:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"⚠️ المنتج {instance.product.name} ({instance.product.code}) "
+                    f"موجود بالفعل في مستودع {other_warehouse_trans.warehouse.name} "
+                    f"برصيد {other_warehouse_trans.running_balance}. "
+                    f"يتم الآن إدخاله في مستودع {instance.warehouse.name}. "
+                    f"يُفضل استخدام عملية نقل (transfer) بدلاً من الإدخال المباشر."
+                )
         def update_balances():
             # حساب الرصيد المتحرك
             previous_balance = StockTransaction.objects.filter(

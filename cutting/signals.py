@@ -111,15 +111,21 @@ def determine_warehouse_for_item(order_item, warehouses):
             logger.info(f"📦 تم اختيار مستودع {best_warehouse.name} للمنتج {order_item.product.name} (كمية متاحة: {warehouse_stocks[best_warehouse]})")
             return best_warehouse
 
-        # إذا لم توجد كمية متاحة، ابحث عن آخر معاملة للمنتج
-        last_transaction = StockTransaction.objects.filter(
+        # ⚠️ لا يوجد رصيد متاح في أي مستودع
+        # لا نبحث عن آخر معاملة لأنها قد تكون معاملة خروج (out)
+        # مما يؤدي لإرسال المنتج لمستودع فارغ!
+        logger.warning(f"⚠️ المنتج {order_item.product.name} (كود: {order_item.product.code}) - الرصيد صفر في جميع المستودعات!")
+        
+        # محاولة البحث عن آخر مستودع كان فيه رصيد قبل نفاذه
+        last_positive_transaction = StockTransaction.objects.filter(
             product=order_item.product,
-            warehouse__in=warehouses
+            warehouse__in=warehouses,
+            running_balance__gt=0  # فقط المعاملات التي كان فيها رصيد موجب
         ).select_related('warehouse').order_by('-transaction_date').first()
 
-        if last_transaction:
-            logger.info(f"📋 تم اختيار مستودع {last_transaction.warehouse.name} للمنتج {order_item.product.name} (آخر معاملة)")
-            return last_transaction.warehouse
+        if last_positive_transaction:
+            logger.info(f"📋 تم اختيار مستودع {last_positive_transaction.warehouse.name} للمنتج {order_item.product.name} (آخر رصيد موجب)")
+            return last_positive_transaction.warehouse
 
         # البحث بناءً على فئة المنتج
         if order_item.product.category:
@@ -163,11 +169,13 @@ def determine_warehouse_for_item(order_item, warehouses):
     except Exception as e:
         logger.error(f"خطأ في تحديد المستودع للمنتج {order_item.product.name}: {str(e)}")
 
-    # التوزيع الافتراضي - استخدام التوزيع بالتناوب
-    warehouse_index = order_item.id % warehouses.count()
-    selected_warehouse = warehouses[warehouse_index]
-    logger.info(f"🔄 تم اختيار مستودع {selected_warehouse.name} للمنتج {order_item.product.name} (توزيع افتراضي)")
-    return selected_warehouse
+    # ⚠️ لم يتم العثور على مستودع يحتوي على المنتج
+    # لا نرسل المنتج لمستودع عشوائي - يجب نقله أولاً
+    logger.warning(f"⚠️ المنتج {order_item.product.name} (كود: {order_item.product.code}) غير موجود في أي مستودع!")
+    logger.warning(f"⚠️ يجب نقل المنتج إلى أحد المستودعات النشطة أولاً")
+    
+    # إرجاع None لعدم إنشاء أمر تقطيع حتى يتم نقل المنتج
+    return None
 
 
 @receiver(post_save, sender=OrderItem)
@@ -219,6 +227,11 @@ def handle_order_item_creation(sender, instance, created, **kwargs):
                         status='pending'
                     )
                     logger.info(f"✅ تم إنشاء أمر تقطيع جديد {cutting_order.cutting_code} للمستودع {target_warehouse.name}")
+            else:
+                # المنتج غير موجود في أي مستودع - لا ننشئ أمر تقطيع
+                product_info = f"{instance.product.name} (كود: {instance.product.code})" if instance.product else "غير محدد"
+                logger.error(f"❌ تعذر إنشاء أمر تقطيع للعنصر: {product_info} - المنتج غير موجود في أي مستودع!")
+                logger.error(f"❌ يرجى نقل المنتج إلى أحد المستودعات أولاً")
         else:
             # لا توجد أوامر تقطيع، ننشئ أوامر جديدة للطلب كاملاً
             logger.info(f"🔄 إنشاء أوامر تقطيع جديدة للطلب {order.order_number}")
@@ -261,10 +274,22 @@ def update_cutting_order_status(sender, instance, **kwargs):
 
 @receiver(post_save, sender=CuttingOrderItem)
 def create_manufacturing_item_on_cutting_completion(sender, instance, created, **kwargs):
-    """إنشاء عنصر تصنيع تلقائياً عند اكتمال التقطيع وتعيين المستلم ورقم الإذن"""
+    """ربط عناصر التصنيع بعناصر التقطيع المكتملة لتتبع حالة التقطيع
+    
+    ⚠️ IMPORTANT: 
+    - لا ينشئ أمر تصنيع جديد (يُنشأ تلقائياً عند إنشاء الطلب فقط)
+    - فقط يربط عنصر التصنيع الموجود بعنصر التقطيع المكتمل
+    - يستثني طلبات المنتجات والمعاينات تماماً
+    """
 
     # التحقق من أن العنصر مكتمل ولديه بيانات التسليم
     if instance.status != 'completed' or not instance.receiver_name or not instance.permit_number:
+        return
+
+    # استثناء طلبات المنتجات والمعاينات - لا تحتاج أوامر تصنيع
+    order_types = instance.cutting_order.order.get_selected_types_list()
+    if 'products' in order_types or 'inspection' in order_types:
+        logger.info(f"⏭️ تخطي ربط عنصر التصنيع لعنصر التقطيع {instance.id} - الطلب نوع {order_types}")
         return
 
     # التحقق من عدم وجود عنصر تصنيع مرتبط بالفعل
@@ -276,16 +301,15 @@ def create_manufacturing_item_on_cutting_completion(sender, instance, created, *
             logger.info(f"✅ عنصر التصنيع موجود بالفعل لعنصر التقطيع {instance.id}")
             return
 
-        # البحث عن أمر تصنيع موجود أو إنشاء جديد
-        manufacturing_order, created = ManufacturingOrder.objects.get_or_create(
-            order=instance.cutting_order.order,
-            defaults={
-                'order_date': timezone.now().date(),
-                'expected_delivery_date': instance.cutting_order.order.expected_delivery_date or (timezone.now().date() + timezone.timedelta(days=7)),
-                'notes': f'تم إنشاؤه تلقائياً من أمر التقطيع {instance.cutting_order.cutting_code}',
-                'status': 'pending'
-            }
-        )
+        # البحث عن أمر تصنيع موجود فقط - لا ننشئ جديد
+        try:
+            manufacturing_order = ManufacturingOrder.objects.get(order=instance.cutting_order.order)
+        except ManufacturingOrder.DoesNotExist:
+            logger.warning(f"⚠️ لا يوجد أمر تصنيع للطلب {instance.cutting_order.order.order_number} - سيتم إنشاؤه عند إنشاء الطلب")
+            return
+        except ManufacturingOrder.MultipleObjectsReturned:
+            # إذا كان هناك أكثر من أمر، نأخذ الأول
+            manufacturing_order = ManufacturingOrder.objects.filter(order=instance.cutting_order.order).first()
 
         # إنشاء عنصر التصنيع مرتبط بعنصر التقطيع
         manufacturing_item = ManufacturingOrderItem.objects.create(
@@ -299,13 +323,13 @@ def create_manufacturing_item_on_cutting_completion(sender, instance, created, *
             cutting_date=instance.cutting_date,
             delivery_date=instance.delivery_date,
             fabric_received=False,  # لم يتم الاستلام بعد
-            fabric_notes=f'تم إنشاؤه من عنصر التقطيع {instance.id}'
+            fabric_notes=f'تم ربطه من عنصر التقطيع {instance.id}'
         )
 
-        logger.info(f"✅ تم إنشاء عنصر تصنيع {manufacturing_item.id} لعنصر التقطيع {instance.id}")
+        logger.info(f"✅ تم ربط عنصر التصنيع {manufacturing_item.id} بعنصر التقطيع {instance.id}")
 
     except Exception as e:
-        logger.error(f"❌ خطأ في إنشاء عنصر التصنيع لعنصر التقطيع {instance.id}: {str(e)}")
+        logger.error(f"❌ خطأ في ربط عنصر التصنيع لعنصر التقطيع {instance.id}: {str(e)}")
 
 
 def send_completion_notification(cutting_order):
