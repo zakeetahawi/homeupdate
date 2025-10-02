@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="theme-color" content="#007bff">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    
+    <title>{% block title %}نظام إدارة العملاء{% endblock %} - {{ company_info.name|default:"الخواجه" }}</title>
+    
+    <!-- Favicon -->
+    {% if company_info.logo %}
+    <link rel="icon" type="image/png" href="{{ company_info.logo.url }}">
+    {% else %}
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    {% endif %}
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    
+    <!-- Critical CSS - Inline for fastest rendering -->
+    <style>
+        html{font-size:16px;-webkit-text-size-adjust:100%}
+        body{font-family:'Cairo',sans-serif;margin:0;padding:0;background:#f8f9fa;direction:rtl}
+        .loading{display:flex;align-items:center;justify-content:center;min-height:100vh}
+        .loading::after{content:"جاري التحميل...";font-size:1.2rem;color:#007bff}
+    </style>
+
+    <!-- Modern Unified CSS - Single optimized file -->
+    <link rel="stylesheet" href="{% static 'css/unified-modern.css' %}">
+    
+    <!-- Font Awesome - Defer non-critical -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+    
+    <!-- Google Fonts - Optimized with swap -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Page-specific CSS -->
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="modern-body">
+    <!-- Modern Header -->
+    <header class="modern-header">
+        <nav class="modern-navbar container-fluid">
+            <!-- Logo & Menu Toggle -->
+            <div class="d-flex align-items-center gap-md">
+                <button class="menu-toggle" type="button" aria-label="Toggle menu">
+                    <div class="hamburger">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </button>
+                
+                <a href="{% url 'home' %}" class="header-logo">
+                    {% if company_info.header_logo %}
+                        <img src="{{ company_info.header_logo.url }}" alt="{{ company_info.name }}" loading="lazy">
+                    {% elif company_info.logo %}
+                        <img src="{{ company_info.logo.url }}" alt="{{ company_info.name }}" loading="lazy">
+                    {% else %}
+                        <img src="{% static 'img/logo.png' %}" alt="Logo" loading="lazy">
+                    {% endif %}
+                    <span class="d-none d-md-inline">{{ company_info.name|default:"الخواجه" }}</span>
+                </a>
+            </div>
+
+            {% if user.is_authenticated %}
+            <!-- Header Actions -->
+            <div class="header-actions">
+                <!-- Search (Optional) -->
+                {% block header_search %}{% endblock %}
+                
+                <!-- Notifications -->
+                <button class="header-action-btn" type="button" data-dropdown-trigger="notifications" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    {% if notifications_unread_count > 0 %}
+                    <span class="badge" id="notification-count-badge">{{ notifications_unread_count }}</span>
+                    {% endif %}
+                </button>
+                
+                <!-- User Menu -->
+                <button class="header-user-btn" type="button" data-dropdown-trigger="user-menu" aria-label="User menu">
+                    <div class="avatar">
+                        {% if user.image %}
+                            <img src="{{ user.image.url }}" alt="{{ user.username }}" loading="lazy">
+                        {% else %}
+                            {{ user.username|first|upper }}
+                        {% endif %}
+                    </div>
+                    <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            {% else %}
+            <!-- Login Button -->
+            <a href="{% url 'accounts:login' %}" class="btn-modern btn-outline">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>تسجيل الدخول</span>
+            </a>
+            {% endif %}
+        </nav>
+    </header>
+
+    {% if user.is_authenticated %}
+    <!-- Modern Sidebar -->
+    <aside class="modern-sidebar">
+        <ul class="sidebar-menu">
+            <li class="sidebar-menu-item">
+                <a href="{% url 'home' %}" class="sidebar-menu-link {% if request.path == '/' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>الرئيسية</span>
+                </a>
+            </li>
+
+            {% if user.is_staff or user.is_superuser %}
+            <!-- Admin Links -->
+            {% if user.is_superuser %}
+            <li class="sidebar-menu-item">
+                <a href="{% url 'admin_dashboard' %}" class="sidebar-menu-link {% if 'admin_dashboard' in request.path %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i>
+                    <span>داشبورد الإدارة</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <li class="sidebar-menu-item">
+                <a href="/customers/" class="sidebar-menu-link">
+                    <i class="fas fa-users"></i>
+                    <span>العملاء</span>
+                </a>
+            </li>
+
+            <li class="sidebar-menu-item">
+                <a href="/orders/" class="sidebar-menu-link">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>الطلبات</span>
+                </a>
+            </li>
+
+            <li class="sidebar-menu-item has-submenu">
+                <a href="#" class="sidebar-menu-link">
+                    <i class="fas fa-boxes"></i>
+                    <span>المخزون</span>
+                    <i class="fas fa-chevron-left ms-auto"></i>
+                </a>
+                <ul class="sidebar-submenu">
+                    <li><a href="/inventory/" class="sidebar-submenu-link">إدارة المخزون</a></li>
+                    <li><a href="{% url 'inventory:warehouse_list' %}" class="sidebar-submenu-link">المستودعات</a></li>
+                    <li><a href="{% url 'inventory:stock_transfer_create' %}" class="sidebar-submenu-link">تحويل مخزني</a></li>
+                    <li><a href="/cutting/" class="sidebar-submenu-link">نظام التقطيع</a></li>
+                </ul>
+            </li>
+
+            <li class="sidebar-menu-item">
+                <a href="/inspections/" class="sidebar-menu-link">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>المعاينات</span>
+                </a>
+            </li>
+
+            <li class="sidebar-menu-item">
+                <a href="/installations/" class="sidebar-menu-link">
+                    <i class="fas fa-tools"></i>
+                    <span>التركيبات</span>
+                </a>
+            </li>
+
+            <li class="sidebar-menu-item has-submenu">
+                <a href="#" class="sidebar-menu-link">
+                    <i class="fas fa-industry"></i>
+                    <span>المصنع</span>
+                    <i class="fas fa-chevron-left ms-auto"></i>
+                </a>
+                <ul class="sidebar-submenu">
+                    <li><a href="/manufacturing/" class="sidebar-submenu-link">أوامر التصنيع</a></li>
+                    <li><a href="/manufacturing/fabric-receipt/" class="sidebar-submenu-link">استلام من المصنع</a></li>
+                </ul>
+            </li>
+
+            <li class="sidebar-menu-item has-submenu">
+                <a href="#" class="sidebar-menu-link">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>الشكاوى</span>
+                    <i class="fas fa-chevron-left ms-auto"></i>
+                </a>
+                <ul class="sidebar-submenu">
+                    <li><a href="/complaints/" class="sidebar-submenu-link">لوحة التحكم</a></li>
+                    <li><a href="/complaints/list/" class="sidebar-submenu-link">قائمة الشكاوى</a></li>
+                    <li><a href="/complaints/create/" class="sidebar-submenu-link">شكوى جديدة</a></li>
+                </ul>
+            </li>
+
+            <li class="sidebar-menu-item">
+                <a href="/reports/list/" class="sidebar-menu-link">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>التقارير</span>
+                </a>
+            </li>
+
+            <li class="sidebar-menu-item">
+                <a href="/database/" class="sidebar-menu-link">
+                    <i class="fas fa-database"></i>
+                    <span>إدارة البيانات</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </aside>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay"></div>
+
+    <!-- Notifications Dropdown -->
+    <div class="modern-dropdown" data-dropdown="notifications">
+        <div class="dropdown-header">
+            <span>الإشعارات</span>
+            <button type="button" class="btn-sm" onclick="AppManagers.notifications.markAllAsRead()">
+                تحديد الكل كمقروء
+            </button>
+        </div>
+        <div class="dropdown-body" id="notifications-list">
+            <!-- Loaded dynamically -->
+        </div>
+        <div class="dropdown-footer">
+            <a href="{% url 'notifications:list' %}" class="text-primary">عرض جميع الإشعارات</a>
+        </div>
+    </div>
+
+    <!-- User Menu Dropdown -->
+    <div class="modern-dropdown" data-dropdown="user-menu">
+        <div class="dropdown-body">
+            <a href="{% url 'accounts:profile' %}" class="dropdown-item">
+                <i class="fas fa-user"></i>
+                <span>الملف الشخصي</span>
+            </a>
+            {% if user.is_staff %}
+            <a href="{% url 'admin:index' %}" class="dropdown-item">
+                <i class="fas fa-cog"></i>
+                <span>لوحة الإدارة</span>
+            </a>
+            {% endif %}
+            <div class="dropdown-divider"></div>
+            <a href="{% url 'accounts:logout' %}" class="dropdown-item text-danger">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>تسجيل الخروج</span>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="main-content" style="padding:2rem 1rem;max-width:var(--content-max-width);margin:0 auto;">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="modern-footer" style="background:var(--dark);color:var(--white);padding:2rem 1rem;text-align:center;margin-top:3rem;">
+        <p>&copy; {% now "Y" %} {{ company_info.name|default:"الخواجه" }} - جميع الحقوق محفوظة</p>
+    </footer>
+
+    <!-- Modern Unified JavaScript - Deferred for performance -->
+    <script src="{% static 'js/unified-modern.js' %}" defer></script>
+    
+    <!-- SweetAlert2 for beautiful alerts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    
+    <!-- Page-specific JavaScript -->
+    {% block extra_js %}{% endblock %}
+
+    <!-- Performance Monitoring (Development Only) -->
+    {% if debug %}
+    <script>
+        window.addEventListener('load', () => {
+            const perfData = performance.getEntriesByType('navigation')[0];
+            console.log('⚡ Page Load Time:', (perfData.loadEventEnd - perfData.fetchStart).toFixed(0) + 'ms');
+            console.log('🎨 DOM Content Loaded:', (perfData.domContentLoadedEventEnd - perfData.fetchStart).toFixed(0) + 'ms');
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

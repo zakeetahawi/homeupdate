@@ -1,0 +1,421 @@
+{% extends "base_modern.html" %}
+{% load static %}
+
+{% block title %}داشبورد الإدارة{% endblock %}
+
+{% block extra_css %}
+<style>
+.dashboard-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:1.5rem;
+    margin-bottom:2rem;
+}
+.chart-container{
+    background:white;
+    border-radius:8px;
+    padding:1.5rem;
+    box-shadow:0 2px 12px rgba(0,0,0,0.08);
+}
+.filter-bar{
+    background:white;
+    padding:1rem 1.5rem;
+    border-radius:8px;
+    margin-bottom:2rem;
+    box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+.filter-bar select{
+    padding:0.5rem 1rem;
+    border:1px solid #dee2e6;
+    border-radius:6px;
+    margin:0 0.5rem;
+}
+</style>
+<!-- Chart.js for visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="text-dark" style="font-size:2rem;font-weight:700;">
+            <i class="fas fa-chart-line text-primary"></i>
+            داشبورد الإدارة
+        </h1>
+        
+        <!-- Performance Badge (Debug mode) -->
+        {% if total_db_queries != 'N/A' %}
+        <div class="badge bg-success">
+            <i class="fas fa-database"></i>
+            {{ total_db_queries }} استعلام فقط
+            {% if cache_hit %}
+            <i class="fas fa-bolt text-warning ms-1" title="من الذاكرة المخبأة"></i>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar d-flex align-items-center flex-wrap gap-md">
+        <form method="get" class="d-flex align-items-center gap-md" id="filterForm">
+            <div>
+                <label for="branch" class="fw-bold">الفرع:</label>
+                <select name="branch" id="branch" class="form-select-sm" onchange="this.form.submit()">
+                    <option value="all" {% if selected_branch == 'all' %}selected{% endif %}>جميع الفروع</option>
+                    {% for branch in branches %}
+                    <option value="{{ branch.id }}" {% if selected_branch|stringformat:"s" == branch.id|stringformat:"s" %}selected{% endif %}>
+                        {{ branch.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="month" class="fw-bold">الفترة:</label>
+                <select name="month" id="month" class="form-select-sm" onchange="this.form.submit()">
+                    <option value="year" {% if selected_month == 'year' %}selected{% endif %}>السنة الكاملة</option>
+                    <option value="1" {% if selected_month == 1 %}selected{% endif %}>يناير</option>
+                    <option value="2" {% if selected_month == 2 %}selected{% endif %}>فبراير</option>
+                    <option value="3" {% if selected_month == 3 %}selected{% endif %}>مارس</option>
+                    <option value="4" {% if selected_month == 4 %}selected{% endif %}>أبريل</option>
+                    <option value="5" {% if selected_month == 5 %}selected{% endif %}>مايو</option>
+                    <option value="6" {% if selected_month == 6 %}selected{% endif %}>يونيو</option>
+                    <option value="7" {% if selected_month == 7 %}selected{% endif %}>يوليو</option>
+                    <option value="8" {% if selected_month == 8 %}selected{% endif %}>أغسطس</option>
+                    <option value="9" {% if selected_month == 9 %}selected{% endif %}>سبتمبر</option>
+                    <option value="10" {% if selected_month == 10 %}selected{% endif %}>أكتوبر</option>
+                    <option value="11" {% if selected_month == 11 %}selected{% endif %}>نوفمبر</option>
+                    <option value="12" {% if selected_month == 12 %}selected{% endif %}>ديسمبر</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="year" class="fw-bold">السنة:</label>
+                <select name="year" id="year" class="form-select-sm" onchange="this.form.submit()">
+                    {% for year in "2020,2021,2022,2023,2024,2025"|split:"," %}
+                    <option value="{{ year }}" {% if selected_year|stringformat:"s" == year %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn-modern btn-primary btn-sm">
+                <i class="fas fa-filter"></i> تطبيق
+            </button>
+        </form>
+    </div>
+
+    <!-- KPI Cards Grid -->
+    <div class="dashboard-grid">
+        <!-- Customers Card -->
+        <div class="kpi-card">
+            <i class="fas fa-users fa-2x text-primary mb-2"></i>
+            <div class="kpi-value">{{ customers_stats.total|default:0 }}</div>
+            <div class="kpi-label">إجمالي العملاء</div>
+            <div class="kpi-change positive">
+                <i class="fas fa-arrow-up"></i>
+                {{ customers_stats.new_this_month|default:0 }} جديد هذا الشهر
+            </div>
+        </div>
+
+        <!-- Orders Card -->
+        <div class="kpi-card" style="border-top-color:#28a745;">
+            <i class="fas fa-shopping-cart fa-2x text-success mb-2"></i>
+            <div class="kpi-value">{{ orders_stats.total|default:0 }}</div>
+            <div class="kpi-label">إجمالي الطلبات</div>
+            <div class="kpi-change">
+                <i class="fas fa-check-circle text-success"></i>
+                {{ orders_stats.completed|default:0 }} مكتمل
+            </div>
+        </div>
+
+        <!-- Revenue Card -->
+        <div class="kpi-card" style="border-top-color:#ffc107;">
+            <i class="fas fa-dollar-sign fa-2x text-warning mb-2"></i>
+            <div class="kpi-value">{{ orders_stats.total_amount|default:0|floatformat:0 }}</div>
+            <div class="kpi-label">إجمالي المبيعات (ج.م)</div>
+            <div class="kpi-change">
+                <i class="fas fa-chart-line"></i>
+                متوسط: {{ orders_stats.avg_amount|default:0|floatformat:0 }} ج.م
+            </div>
+        </div>
+
+        <!-- Manufacturing Card -->
+        <div class="kpi-card" style="border-top-color:#17a2b8;">
+            <i class="fas fa-industry fa-2x text-info mb-2"></i>
+            <div class="kpi-value">{{ manufacturing_stats.total|default:0 }}</div>
+            <div class="kpi-label">أوامر التصنيع</div>
+            <div class="kpi-change">
+                <i class="fas fa-spinner text-info"></i>
+                {{ manufacturing_stats.in_progress|default:0 }} قيد التنفيذ
+            </div>
+        </div>
+
+        <!-- Inspections Card -->
+        <div class="kpi-card" style="border-top-color:#6f42c1;">
+            <i class="fas fa-clipboard-check fa-2x mb-2" style="color:#6f42c1;"></i>
+            <div class="kpi-value">{{ inspections_stats.total|default:0 }}</div>
+            <div class="kpi-label">المعاينات</div>
+            <div class="kpi-change">
+                {{ inspections_stats.completed|default:0 }} مكتمل
+            </div>
+        </div>
+
+        <!-- Installations Card -->
+        <div class="kpi-card" style="border-top-color:#fd7e14;">
+            <i class="fas fa-tools fa-2x mb-2" style="color:#fd7e14;"></i>
+            <div class="kpi-value">{{ installations_stats.total|default:0 }}</div>
+            <div class="kpi-label">التركيبات</div>
+            <div class="kpi-change">
+                {{ installations_stats.completed|default:0 }} مكتمل
+            </div>
+        </div>
+
+        <!-- Inventory Card -->
+        <div class="kpi-card" style="border-top-color:#20c997;">
+            <i class="fas fa-boxes fa-2x mb-2" style="color:#20c997;"></i>
+            <div class="kpi-value">{{ inventory_stats.total_products|default:0 }}</div>
+            <div class="kpi-label">المنتجات</div>
+            <div class="kpi-change {% if inventory_stats.low_stock > 0 %}negative{% endif %}">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ inventory_stats.low_stock|default:0 }} منخفض المخزون
+            </div>
+        </div>
+
+        <!-- Pending Orders Card -->
+        <div class="kpi-card" style="border-top-color:#dc3545;">
+            <i class="fas fa-clock fa-2x text-danger mb-2"></i>
+            <div class="kpi-value">{{ orders_stats.pending|default:0 }}</div>
+            <div class="kpi-label">طلبات معلقة</div>
+            <div class="kpi-change">
+                تحتاج معالجة فورية
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mt-4">
+        <!-- Orders by Status Chart -->
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-pie text-primary"></i>
+                    توزيع الطلبات حسب الحالة
+                </h5>
+                <canvas id="ordersStatusChart" style="max-height:300px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Orders by Month Chart -->
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-line text-success"></i>
+                    الطلبات الشهرية
+                </h5>
+                <canvas id="ordersMonthChart" style="max-height:300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Section -->
+    <div class="row mt-4">
+        <!-- Recent Orders -->
+        <div class="col-lg-4 mb-4">
+            <div class="modern-card">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="fas fa-shopping-cart text-success"></i>
+                        أحدث الطلبات
+                    </h5>
+                    <a href="/orders/" class="btn-sm btn-outline">عرض الكل</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                    <div class="list-group">
+                        {% for order in recent_orders %}
+                        <a href="/orders/{{ order.id }}/" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between">
+                                <strong>#{{ order.order_number }}</strong>
+                                <span class="badge bg-{{ order.order_status|default:'secondary' }}">
+                                    {{ order.get_order_status_display }}
+                                </span>
+                            </div>
+                            <small class="text-muted">
+                                {{ order.customer.name }} - {{ order.created_at|timesince }}
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">لا توجد طلبات حديثة</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Manufacturing -->
+        <div class="col-lg-4 mb-4">
+            <div class="modern-card">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="fas fa-industry text-info"></i>
+                        أحدث أوامر التصنيع
+                    </h5>
+                    <a href="/manufacturing/" class="btn-sm btn-outline">عرض الكل</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_manufacturing %}
+                    <div class="list-group">
+                        {% for mfg in recent_manufacturing %}
+                        <a href="/manufacturing/{{ mfg.id }}/" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between">
+                                <strong>أمر #{{ mfg.order.order_number }}</strong>
+                                <span class="badge bg-{{ mfg.status }}">
+                                    {{ mfg.get_status_display }}
+                                </span>
+                            </div>
+                            <small class="text-muted">
+                                {{ mfg.order.customer.name }} - {{ mfg.created_at|timesince }}
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">لا توجد أوامر تصنيع حديثة</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Inspections -->
+        <div class="col-lg-4 mb-4">
+            <div class="modern-card">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="fas fa-clipboard-check" style="color:#6f42c1;"></i>
+                        أحدث المعاينات
+                    </h5>
+                    <a href="/inspections/" class="btn-sm btn-outline">عرض الكل</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_inspections %}
+                    <div class="list-group">
+                        {% for inspection in recent_inspections %}
+                        <a href="/inspections/{{ inspection.id }}/" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between">
+                                <strong>معاينة #{{ inspection.order.order_number }}</strong>
+                                <span class="badge bg-{{ inspection.status }}">
+                                    {{ inspection.get_status_display }}
+                                </span>
+                            </div>
+                            <small class="text-muted">
+                                {{ inspection.order.customer.name }} - {{ inspection.created_at|timesince }}
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">لا توجد معاينات حديثة</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="modern-card mt-4">
+        <div class="card-header">
+            <h5 class="card-title">
+                <i class="fas fa-bolt text-warning"></i>
+                إجراءات سريعة
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex gap-md flex-wrap">
+                <a href="/orders/create/" class="btn-modern btn-primary">
+                    <i class="fas fa-plus"></i> طلب جديد
+                </a>
+                <a href="/customers/create/" class="btn-modern btn-success">
+                    <i class="fas fa-user-plus"></i> عميل جديد
+                </a>
+                <a href="/inspections/create/" class="btn-modern btn-info">
+                    <i class="fas fa-clipboard-check"></i> معاينة جديدة
+                </a>
+                <a href="/reports/list/" class="btn-modern btn-secondary">
+                    <i class="fas fa-file-export"></i> تصدير تقرير
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize Charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Orders by Status Pie Chart
+    const statusCtx = document.getElementById('ordersStatusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ orders_by_status|map:'status'|safe }},
+                datasets: [{
+                    data: {{ orders_by_status|map:'count'|safe }},
+                    backgroundColor: [
+                        '#ffc107', '#17a2b8', '#007bff', '#28a745', '#6c757d'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        rtl: true
+                    }
+                }
+            }
+        });
+    }
+
+    // Orders by Month Line Chart
+    const monthCtx = document.getElementById('ordersMonthChart');
+    if (monthCtx) {
+        const monthData = {{ orders_by_month|safe }};
+        new Chart(monthCtx, {
+            type: 'line',
+            data: {
+                labels: monthData.map(d => 'شهر ' + d.month),
+                datasets: [{
+                    label: 'عدد الطلبات',
+                    data: monthData.map(d => d.count),
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        rtl: true
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
