@@ -6,9 +6,10 @@
 
 import os
 import sys
+sys.path.append('/home/zakee/homeupdate')
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'home_update.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
 django.setup()
 
 from inventory.models import Product, StockTransaction, Warehouse

@@ -4,6 +4,8 @@
 """
 
 import os
+import sys
+sys.path.append('/home/zakee/homeupdate')
 import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
