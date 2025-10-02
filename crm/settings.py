@@ -93,10 +93,13 @@ LOGGING = {
             'encoding': 'utf-8',
         },
         'slow_queries_file': {
-            'level': 'WARNING',
-            'class': 'logging.FileHandler',
-            'filename': '/tmp/slow_queries.log',
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'slow_queries.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
             'formatter': 'verbose',
+            'encoding': 'utf-8',
         },
         'null': {
             'class': 'logging.NullHandler',
@@ -181,7 +184,7 @@ LOGGING = {
         },
         'websocket_blocker': {
             'handlers': ['slow_queries_file'],
-            'level': 'WARNING',
+            'level': 'INFO',
             'propagate': False,
         },
     },
@@ -199,13 +202,30 @@ from django.utils.deprecation import MiddlewareMixin
 class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
     def process_view(self, request, view_func, view_args, view_kwargs):
         request._start_time = time.time()
+        # تفعيل مراقبة الاستعلامات
+        from django.db import connection
+        request._queries_before = len(connection.queries)
 
     def process_response(self, request, response):
-        # تقليل حساسية التسجيل لتقليل الرسائل
+        # حساب الوقت المستغرق
         total_time = (time.time() - getattr(request, '_start_time', time.time())) * 1000
-        if total_time > 1000:  # تسجيل الصفحات التي تستغرق أكثر من ثانية فقط
+        
+        # حساب عدد الاستعلامات
+        from django.db import connection
+        queries_count = len(connection.queries) - getattr(request, '_queries_before', 0)
+        
+        # تسجيل الصفحات البطيئة (أكثر من ثانية)
+        if total_time > 1000:
             logger = logging.getLogger('performance')
-            logger.warning(f"VERY_SLOW_PAGE: {request.path} | {int(total_time)}ms | user={getattr(request, 'user', None)}")
+            logger.warning(f"SLOW_PAGE: {request.path} | {int(total_time)}ms | {queries_count} queries | user={getattr(request, 'user', None)}")
+        
+        # تسجيل الاستعلامات البطيئة (أكثر من 100ms)
+        if hasattr(connection, 'queries'):
+            slow_queries_logger = logging.getLogger('websocket_blocker')
+            for query in connection.queries:
+                if 'time' in query and float(query['time']) > 0.1:  # 100ms
+                    slow_queries_logger.warning(f"SLOW_QUERY: {query['time']}s | {query['sql'][:200]}...")
+        
         return response
 
 # أضف هذا الميدل وير في أعلى قائمة MIDDLEWARE
@@ -313,11 +333,9 @@ MIDDLEWARE = [
     'accounts.middleware.log_terminal_activity.TerminalActivityLoggerMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'crm.settings.QueryPerformanceLoggingMiddleware',  # مراقبة الأداء والاستعلامات البطيئة
     # إزالة middleware مؤقتاً لحل المشكلة
     # 'accounts.middleware.RoleBasedPermissionsMiddleware',
-    # إزالة middleware الثقيل مؤقتاً لحل أزمة الاتصالات
-    # 'accounts.middleware.LogTerminalActivityMiddleware',
-    # 'crm.settings.QueryPerformanceLoggingMiddleware',
 ]
 
 # Debug toolbar configuration for performance monitoring

@@ -116,7 +116,7 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
 
     # تشغيل Celery Worker مع جميع الـ queues (مُصلح)
     celery -A crm worker \
-        --loglevel=error \
+        --loglevel=info \
         --queues=celery,file_uploads \
         --pidfile="$LOGS_DIR/celery_worker.pid" \
         --logfile="$LOGS_DIR/celery_worker.log" \
@@ -157,7 +157,7 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
     
     # تشغيل Celery Beat مع تقليل استهلاك قاعدة البيانات
     celery -A crm beat \
-        --loglevel=error \
+        --loglevel=info \
         --pidfile="$LOGS_DIR/celery_beat.pid" \
         --logfile="$LOGS_DIR/celery_beat.log" \
         --schedule="$LOGS_DIR/celerybeat-schedule" \
