@@ -15,7 +15,7 @@ from accounts.views import admin_logout_view
 from customers.views import customer_detail, customer_list
 from inventory.views import dashboard_view
 
-from . import api_monitoring, views
+from . import api_monitoring, views, views_optimized
 from .csrf_views import csrf_debug_view, get_csrf_token_view, test_csrf_view
 from .views_health import health_check
 

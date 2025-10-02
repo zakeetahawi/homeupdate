@@ -305,68 +305,8 @@ def update_cutting_order_status(sender, instance, **kwargs):
         send_completion_notification(cutting_order)
 
 
-@receiver(post_save, sender=CuttingOrderItem)
-def create_manufacturing_item_on_cutting_completion(
-    sender, instance, created, **kwargs
-):
-    """إنشاء عنصر تصنيع تلقائياً عند اكتمال التقطيع وتعيين المستلم ورقم الإذن"""
-
-    # التحقق من أن العنصر مكتمل ولديه بيانات التسليم
-    if (
-        instance.status != "completed"
-        or not instance.receiver_name
-        or not instance.permit_number
-    ):
-        return
-
-    # التحقق من عدم وجود عنصر تصنيع مرتبط بالفعل
-    try:
-        from manufacturing.models import ManufacturingOrder, ManufacturingOrderItem
-
-        # التحقق من وجود عنصر تصنيع مرتبط بهذا العنصر
-        if ManufacturingOrderItem.objects.filter(cutting_item=instance).exists():
-            logger.info(f"✅ عنصر التصنيع موجود بالفعل لعنصر التقطيع {instance.id}")
-            return
-
-        # البحث عن أمر تصنيع موجود أو إنشاء جديد
-        manufacturing_order, created = ManufacturingOrder.objects.get_or_create(
-            order=instance.cutting_order.order,
-            defaults={
-                "order_date": timezone.now().date(),
-                "expected_delivery_date": instance.cutting_order.order.expected_delivery_date
-                or (timezone.now().date() + timezone.timedelta(days=7)),
-                "notes": f"تم إنشاؤه تلقائياً من أمر التقطيع {instance.cutting_order.cutting_code}",
-                "status": "pending",
-            },
-        )
-
-        # إنشاء عنصر التصنيع مرتبط بعنصر التقطيع
-        manufacturing_item = ManufacturingOrderItem.objects.create(
-            manufacturing_order=manufacturing_order,
-            cutting_item=instance,
-            order_item=instance.order_item,
-            product_name=(
-                instance.order_item.product.name
-                if instance.order_item.product
-                else "منتج غير محدد"
-            ),
-            quantity=instance.order_item.quantity + instance.additional_quantity,
-            receiver_name=instance.receiver_name,
-            permit_number=instance.permit_number,
-            cutting_date=instance.cutting_date,
-            delivery_date=instance.delivery_date,
-            fabric_received=False,  # لم يتم الاستلام بعد
-            fabric_notes=f"تم إنشاؤه من عنصر التقطيع {instance.id}",
-        )
-
-        logger.info(
-            f"✅ تم إنشاء عنصر تصنيع {manufacturing_item.id} لعنصر التقطيع {instance.id}"
-        )
-
-    except Exception as e:
-        logger.error(
-            f"❌ خطأ في إنشاء عنصر التصنيع لعنصر التقطيع {instance.id}: {str(e)}"
-        )
+# تم إلغاء إنشاء أوامر التصنيع من نظام التقطيع
+# نظام التقطيع ينهي عمله بالعناصر فقط ولا علاقة له بالتصنيع
 
 
 def send_completion_notification(cutting_order):

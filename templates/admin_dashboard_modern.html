@@ -93,8 +93,8 @@
             <div>
                 <label for="year" class="fw-bold">السنة:</label>
                 <select name="year" id="year" class="form-select-sm" onchange="this.form.submit()">
-                    {% for year in "2020,2021,2022,2023,2024,2025"|split:"," %}
-                    <option value="{{ year }}" {% if selected_year|stringformat:"s" == year %}selected{% endif %}>{{ year }}</option>
+                    {% for year in years %}
+                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -361,9 +361,9 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: {{ orders_by_status|map:'status'|safe }},
+                labels: {{ orders_status_labels|safe }},
                 datasets: [{
-                    data: {{ orders_by_status|map:'count'|safe }},
+                    data: {{ orders_status_data|safe }},
                     backgroundColor: [
                         '#ffc107', '#17a2b8', '#007bff', '#28a745', '#6c757d'
                     ]
