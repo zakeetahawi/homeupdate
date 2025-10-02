@@ -1,16 +1,31 @@
 import os
+from pathlib import Path
+
 # ======================================
-# Optimized Logging Configuration 
+# Enhanced Logging Configuration
 # ======================================
 import logging
+
+# الحصول على BASE_DIR
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# إنشاء مجلد logs إذا لم يكن موجوداً
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOGS_DIR, exist_ok=True)
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '[{asctime}] {levelname} {name} {message}',
+            'format': '[{asctime}] {levelname} {name} {module}.{funcName}:{lineno} - {message}',
             'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '[{asctime}] {levelname} - {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
         },
         'minimal': {
             'format': '{message}',
@@ -18,8 +33,67 @@ LOGGING = {
         },
     },
     'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'django_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'django.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'errors.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'security_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'security.log'),
+            'maxBytes': 1024 * 1024 * 5,  # 5 MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'performance_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'performance.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'database_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'database.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'api_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'api.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
         'slow_queries_file': {
-            'level': 'WARNING',  # تقليل مستوى التسجيل
+            'level': 'WARNING',
             'class': 'logging.FileHandler',
             'filename': '/tmp/slow_queries.log',
             'formatter': 'verbose',
@@ -29,14 +103,54 @@ LOGGING = {
         },
     },
     'loggers': {
-        'django.db.backends': {
-            'handlers': ['null'],  # إيقاف تسجيل استعلامات قاعدة البيانات
+        'django': {
+            'handlers': ['console', 'django_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['error_file', 'console'],
             'level': 'ERROR',
             'propagate': False,
         },
+        'django.security': {
+            'handlers': ['security_file', 'console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['database_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
         'performance': {
-            'handlers': ['slow_queries_file'],
-            'level': 'WARNING',  # تسجيل التحذيرات فقط
+            'handlers': ['performance_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'crm': {
+            'handlers': ['console', 'django_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'accounts': {
+            'handlers': ['console', 'django_file', 'security_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'orders': {
+            'handlers': ['console', 'django_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'customers': {
+            'handlers': ['console', 'django_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'api': {
+            'handlers': ['api_file', 'console'],
+            'level': 'INFO',
             'propagate': False,
         },
         # إيقاف رسائل التصحيح غير المهمة
@@ -65,16 +179,15 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': False,
         },
-        'django.request': {
-            'handlers': ['null'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
         'websocket_blocker': {
             'handlers': ['slow_queries_file'],
             'level': 'WARNING',
             'propagate': False,
         },
+    },
+    'root': {
+        'handlers': ['console', 'django_file'],
+        'level': 'INFO',
     },
 }
 

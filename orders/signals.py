@@ -455,11 +455,15 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
     """
     Creates a ManufacturingOrder automatically when a new Order is created
     with specific types ('installation', 'tailoring', 'accessory').
+    
+    ⚠️ IMPORTANT: 'products' and 'inspection' orders should NEVER create manufacturing orders.
+    They follow a different workflow (cutting for products, inspection for inspections).
     """
     if created:
         # print(f"--- SIGNAL TRIGGERED for Order PK: {instance.pk} ---")
         # print(f"Raw selected_types from instance: {instance.selected_types}")
         
+        # فقط هذه الأنواع تنشئ أوامر تصنيع - المنتجات والمعاينات مستثناة تماماً
         MANUFACTURING_TYPES = {'installation', 'tailoring', 'accessory'}
         
         order_types = set()

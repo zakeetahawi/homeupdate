@@ -104,6 +104,9 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
             'order__customer',  # Access customer through order
             'production_line'  # Production line information
         ).order_by('expected_delivery_date', 'order_date')
+        
+        # استثناء طلبات المنتجات (products) من أوامر التصنيع - لا يجب أن تظهر هنا أبداً
+        queryset = queryset.exclude(order__selected_types__contains=['products'])
 
         # تطبيق الفلترة الشهرية (بناءً على تاريخ الطلب)
         queryset, self.monthly_filter_context = apply_monthly_filter(queryset, self.request, 'order_date')
