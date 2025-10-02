@@ -11,6 +11,10 @@ PURPLE='\033[0;35m'
 NC='\033[0m'
 
 PROJECT_DIR="/home/zakee/homeupdate"
+LOGS_DIR="$PROJECT_DIR/logs"
+
+# إنشاء مجلد logs إذا لم يكن موجوداً
+mkdir -p "$LOGS_DIR"
 
 # تقليل مستوى التسجيل للتشغيل السلس - الإنتاج الحقيقي
 export DEBUG=False
@@ -108,14 +112,14 @@ print_upload "📤 سيتم دعم رفع العقود والمعاينات بش
 cd "$PROJECT_DIR"  # التأكد من أننا في المجلد الصحيح
 if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
     # تنظيف الملفات القديمة
-    rm -f /tmp/celery_worker.pid /tmp/celery_worker.log
+    rm -f "$LOGS_DIR/celery_worker.pid" "$LOGS_DIR/celery_worker.log"
 
     # تشغيل Celery Worker مع جميع الـ queues (مُصلح)
     celery -A crm worker \
         --loglevel=error \
         --queues=celery,file_uploads \
-        --pidfile=/tmp/celery_worker.pid \
-        --logfile=/tmp/celery_worker.log \
+        --pidfile="$LOGS_DIR/celery_worker.pid" \
+        --logfile="$LOGS_DIR/celery_worker.log" \
         --pool=solo \
         --concurrency=2 \
         --max-tasks-per-child=50 \
@@ -123,14 +127,14 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
 
     sleep 5  # انتظار بدء العملية
     
-    if [ -f "/tmp/celery_worker.pid" ]; then
-        CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid)
+    if [ -f "$LOGS_DIR/celery_worker.pid" ]; then
+        CELERY_WORKER_PID=$(cat "$LOGS_DIR/celery_worker.pid")
         if ps -p $CELERY_WORKER_PID > /dev/null; then
             print_status "✔️ تم تشغيل Celery Worker بنجاح (PID: $CELERY_WORKER_PID)"
             print_upload "📤 نظام الرفع جاهز: العقود والمعاينات"
         else
-            print_error "❌ فشل في تشغيل Celery Worker - راجع السجل في /tmp/celery_worker.log"
-            tail -n 20 /tmp/celery_worker.log
+            print_error "❌ فشل في تشغيل Celery Worker - راجع السجل في $LOGS_DIR/celery_worker.log"
+            tail -n 20 "$LOGS_DIR/celery_worker.log"
         fi
     else
         print_error "❌ فشل في تشغيل Celery Worker - لم يتم إنشاء ملف PID"
@@ -149,25 +153,25 @@ print_info "تشغيل Celery Beat للمهام الدورية..."
 cd "$PROJECT_DIR"  # التأكد من أننا في المجلد الصحيح
 if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
     # تنظيف الملفات القديمة
-    rm -f /tmp/celery_beat.pid /tmp/celery_beat.log /tmp/celerybeat-schedule*
+    rm -f "$LOGS_DIR/celery_beat.pid" "$LOGS_DIR/celery_beat.log" "$LOGS_DIR/celerybeat-schedule"*
     
     # تشغيل Celery Beat مع تقليل استهلاك قاعدة البيانات
     celery -A crm beat \
         --loglevel=error \
-        --pidfile=/tmp/celery_beat.pid \
-        --logfile=/tmp/celery_beat.log \
-        --schedule=/tmp/celerybeat-schedule \
+        --pidfile="$LOGS_DIR/celery_beat.pid" \
+        --logfile="$LOGS_DIR/celery_beat.log" \
+        --schedule="$LOGS_DIR/celerybeat-schedule" \
         --detach
 
     sleep 5  # انتظار بدء العملية
     
-    if [ -f "/tmp/celery_beat.pid" ]; then
-        CELERY_BEAT_PID=$(cat /tmp/celery_beat.pid)
+    if [ -f "$LOGS_DIR/celery_beat.pid" ]; then
+        CELERY_BEAT_PID=$(cat "$LOGS_DIR/celery_beat.pid")
         if ps -p $CELERY_BEAT_PID > /dev/null; then
             print_status "✔️ تم تشغيل Celery Beat بنجاح (PID: $CELERY_BEAT_PID)"
         else
-            print_error "❌ فشل في تشغيل Celery Beat - راجع السجل في /tmp/celery_beat.log"
-            tail -n 20 /tmp/celery_beat.log
+            print_error "❌ فشل في تشغيل Celery Beat - راجع السجل في $LOGS_DIR/celery_beat.log"
+            tail -n 20 "$LOGS_DIR/celery_beat.log"
         fi
     else
         print_error "❌ فشل في تشغيل Celery Beat - لم يتم إنشاء ملف PID"
@@ -185,7 +189,7 @@ fi
 print_info "جاري تشغيل Cloudflare Tunnel..."
 if [ -f "cloudflared" ]; then
     chmod +x cloudflared
-    ./cloudflared tunnel --config cloudflared.yml run > /tmp/cloudflared.log 2>&1 &
+    ./cloudflared tunnel --config cloudflared.yml run > "$LOGS_DIR/cloudflared.log" 2>&1 &
     TUNNEL_PID=$!
     sleep 5  # انتظار بدء التانل
     
@@ -221,7 +225,7 @@ fi
 # تشغيل سكريبت النسخ الاحتياطي في الخلفية (يأخذ نسخة فورية ثم كل ساعة)
 if [ -f "لينكس/db-backup.sh" ]; then
     chmod +x "لينكس/db-backup.sh"
-    ./لينكس/db-backup.sh > /tmp/db_backup.log 2>&1 &
+    ./لينكس/db-backup.sh > "$LOGS_DIR/db_backup.log" 2>&1 &
     DB_BACKUP_PID=$!
     print_status "✔️ تم تشغيل خدمة النسخ الاحتياطي (PID: $DB_BACKUP_PID) - ستُحفظ النسخ في /home/zakee/homeupdate/media/backups"
 else
@@ -229,8 +233,8 @@ else
 fi
 
 # Tail backup log and print success messages to console
-if [ -f /tmp/db_backup.log ] || true; then
-    ( tail -n0 -F /tmp/db_backup.log 2>/dev/null | while read line; do
+if [ -f "$LOGS_DIR/db_backup.log" ] || true; then
+    ( tail -n0 -F "$LOGS_DIR/db_backup.log" 2>/dev/null | while read line; do
         if echo "$line" | grep -q "تم إنشاء نسخة احتياطية بنجاح"; then
             print_status "$line"
         fi
@@ -242,24 +246,24 @@ cleanup() {
     print_info "إيقاف العمليات..."
 
     # إيقاف Celery Worker
-    if [ -f "/tmp/celery_worker.pid" ]; then
-        CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid 2>/dev/null)
+    if [ -f "$LOGS_DIR/celery_worker.pid" ]; then
+        CELERY_WORKER_PID=$(cat "$LOGS_DIR/celery_worker.pid" 2>/dev/null)
         if [ ! -z "$CELERY_WORKER_PID" ]; then
             kill $CELERY_WORKER_PID 2>/dev/null
             print_status "تم إيقاف Celery Worker"
         fi
-        rm -f /tmp/celery_worker.pid
+        rm -f "$LOGS_DIR/celery_worker.pid"
     fi
 
     # إيقاف Celery Beat
-    if [ -f "/tmp/celery_beat.pid" ]; then
-        CELERY_BEAT_PID=$(cat /tmp/celery_beat.pid 2>/dev/null)
+    if [ -f "$LOGS_DIR/celery_beat.pid" ]; then
+        CELERY_BEAT_PID=$(cat "$LOGS_DIR/celery_beat.pid" 2>/dev/null)
         if [ ! -z "$CELERY_BEAT_PID" ]; then
             kill $CELERY_BEAT_PID 2>/dev/null
             print_status "تم إيقاف Celery Beat"
         fi
-        rm -f /tmp/celery_beat.pid
-        rm -f /tmp/celerybeat-schedule*
+        rm -f "$LOGS_DIR/celery_beat.pid"
+        rm -f "$LOGS_DIR/celerybeat-schedule"*
     fi
 
     # إيقاف Cloudflare Tunnel
@@ -293,8 +297,9 @@ print_info "الموقع: http://localhost:8000"
 print_info "المستخدم: admin | كلمة المرور: admin123"
 print_warning "🔒 وضع الإنتاج: DEBUG=False (أمان عالي)"
 print_info "📁 الملفات الثابتة: مدعومة بواسطة WhiteNoise"
-print_info "📊 مراقبة Celery: tail -f /tmp/celery_worker.log"
-print_info "⏰ مراقبة المهام الدورية: tail -f /tmp/celery_beat.log"
+print_info "📊 مراقبة Celery: tail -f $LOGS_DIR/celery_worker.log"
+print_info "⏰ مراقبة المهام الدورية: tail -f $LOGS_DIR/celery_beat.log"
+print_info "📁 جميع السجلات في: $LOGS_DIR/"
 print_info "🔌 دعم المهام الخلفية المحسنة + خادم إنتاج Gunicorn"
 print_info "🗄️ تحسينات قاعدة البيانات: تقليل الاتصالات بنسبة 97.5%"
 print_info "🔔 إشعارات محسنة: إخفاء تلقائي عند تغيير المسؤول"
@@ -462,8 +467,8 @@ while true; do
     fi
 
     # فحص Celery Worker مع إعادة تشغيل محسنة
-    if [ -f "/tmp/celery_worker.pid" ]; then
-        CELERY_WORKER_PID=$(cat /tmp/celery_worker.pid 2>/dev/null)
+    if [ -f "$LOGS_DIR/celery_worker.pid" ]; then
+        CELERY_WORKER_PID=$(cat "$LOGS_DIR/celery_worker.pid" 2>/dev/null)
         if [ ! -z "$CELERY_WORKER_PID" ] && ! kill -0 $CELERY_WORKER_PID 2>/dev/null; then
             print_warning "⚠️ Celery Worker توقف - إعادة تشغيل مع الإعدادات المحسنة..."
             celery -A crm worker \
@@ -473,8 +478,8 @@ while true; do
                 --concurrency=2 \
                 --max-tasks-per-child=100 \
                 --detach \
-                --pidfile=/tmp/celery_worker.pid \
-                --logfile=/tmp/celery_worker.log
+                --pidfile="$LOGS_DIR/celery_worker.pid" \
+                --logfile="$LOGS_DIR/celery_worker.log"
             if [ $? -eq 0 ]; then
                 print_status "✔️ تم إعادة تشغيل Celery Worker مع الإعدادات المحسنة"
             else
@@ -484,11 +489,11 @@ while true; do
     fi
 
     # فحص Celery Beat
-    if [ -f "/tmp/celery_beat.pid" ]; then
-        CELERY_BEAT_PID=$(cat /tmp/celery_beat.pid 2>/dev/null)
+    if [ -f "$LOGS_DIR/celery_beat.pid" ]; then
+        CELERY_BEAT_PID=$(cat "$LOGS_DIR/celery_beat.pid" 2>/dev/null)
         if [ ! -z "$CELERY_BEAT_PID" ] && ! kill -0 $CELERY_BEAT_PID 2>/dev/null; then
             print_warning "⚠️ Celery Beat توقف - إعادة تشغيل..."
-            celery -A crm beat --loglevel=info --detach --pidfile=/tmp/celery_beat.pid --logfile=/tmp/celery_beat.log --schedule=/tmp/celerybeat-schedule
+            celery -A crm beat --loglevel=info --detach --pidfile="$LOGS_DIR/celery_beat.pid" --logfile="$LOGS_DIR/celery_beat.log" --schedule="$LOGS_DIR/celerybeat-schedule"
             if [ $? -eq 0 ]; then
                 print_status "✔️ تم إعادة تشغيل Celery Beat"
             else
@@ -501,7 +506,7 @@ while true; do
     if [ ! -z "$TUNNEL_PID" ]; then
         if ! kill -0 $TUNNEL_PID 2>/dev/null; then
             print_warning "⚠️ Cloudflare Tunnel توقف - جاري إعادة التشغيل..."
-            ./cloudflared tunnel --config cloudflared.yml run > /tmp/cloudflared.log 2>&1 &
+            ./cloudflared tunnel --config cloudflared.yml run > "$LOGS_DIR/cloudflared.log" 2>&1 &
             TUNNEL_PID=$!
             sleep 5
             
@@ -523,7 +528,7 @@ while true; do
                     TUNNEL_STATUS="disconnected"
                     print_warning "⚠️ الجسر يعمل ولكن الموقع غير متاح - جاري المحاولة مجدداً..."
                     kill $TUNNEL_PID 2>/dev/null
-                    ./cloudflared tunnel --config cloudflared.yml run > /tmp/cloudflared.log 2>&1 &
+                    ./cloudflared tunnel --config cloudflared.yml run > "$LOGS_DIR/cloudflared.log" 2>&1 &
                     TUNNEL_PID=$!
                     sleep 5
                 fi
