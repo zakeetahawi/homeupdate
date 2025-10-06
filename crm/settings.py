@@ -202,8 +202,15 @@ from django.utils.deprecation import MiddlewareMixin
 class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
     def process_view(self, request, view_func, view_args, view_kwargs):
         request._start_time = time.time()
-        # تفعيل مراقبة الاستعلامات
-        from django.db import connection
+        # تفعيل مراقبة الاستعلامات - مع التأكد من تفعيل queries logging
+        from django.db import connection, reset_queries
+        from django.conf import settings
+        
+        # تفعيل queries logging حتى في حالة DEBUG=False
+        if not settings.DEBUG:
+            connection.force_debug_cursor = True
+        
+        reset_queries()
         request._queries_before = len(connection.queries)
 
     def process_response(self, request, response):
@@ -212,6 +219,8 @@ class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
         
         # حساب عدد الاستعلامات
         from django.db import connection
+        from django.conf import settings
+        
         queries_count = len(connection.queries) - getattr(request, '_queries_before', 0)
         
         # تسجيل الصفحات البطيئة (أكثر من ثانية)
@@ -220,11 +229,15 @@ class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
             logger.warning(f"SLOW_PAGE: {request.path} | {int(total_time)}ms | {queries_count} queries | user={getattr(request, 'user', None)}")
         
         # تسجيل الاستعلامات البطيئة (أكثر من 100ms)
-        if hasattr(connection, 'queries'):
+        if hasattr(connection, 'queries') and connection.queries:
             slow_queries_logger = logging.getLogger('websocket_blocker')
-            for query in connection.queries:
+            for query in connection.queries[getattr(request, '_queries_before', 0):]:
                 if 'time' in query and float(query['time']) > 0.1:  # 100ms
                     slow_queries_logger.warning(f"SLOW_QUERY: {query['time']}s | {query['sql'][:200]}...")
+        
+        # إعادة ضبط force_debug_cursor
+        if not settings.DEBUG:
+            connection.force_debug_cursor = False
         
         return response
 

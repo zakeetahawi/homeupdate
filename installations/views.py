@@ -368,18 +368,25 @@ def installation_list(request):
 
     # 1. جلب التركيبات المجدولة (مفلترة بالسنة الافتراضية والشهر)
     if not status_filter or status_filter in ['scheduled', 'in_installation', 'completed', 'cancelled', 'modification_required', 'modification_in_progress', 'modification_completed']:
-        # ✅ تحسين: إضافة جميع العلاقات المستخدمة في القالب
+        # ✅ تحسين: إضافة جميع العلاقات المستخدمة في القالب + تحديد الحقول المطلوبة فقط
         # يقلل الاستعلامات من 200+ إلى 3-5 استعلامات فقط
         scheduled_query = InstallationSchedule.objects.select_related(
             'order',
             'order__customer',
             'order__branch',
             'order__salesperson',
-            'order__salesperson__user',
             'team',
             'team__driver'
         ).prefetch_related(
             'team__technicians'
+        ).only(
+            'id', 'status', 'scheduled_date', 'created_at', 'location_type',
+            'order__id', 'order__order_number', 'order__contract_number', 'order__invoice_number', 'order__location_type',
+            'order__customer__id', 'order__customer__name', 'order__customer__phone', 'order__customer__address', 'order__customer__location_type',
+            'order__branch__id', 'order__branch__name',
+            'order__salesperson__id', 'order__salesperson__name',
+            'team__id', 'team__name',
+            'team__driver__id', 'team__driver__name'
         )
         # تطبيق الفلترة الشهرية على التركيبات المجدولة (بناءً على تاريخ الطلب)
         scheduled_query, monthly_filter_context = apply_monthly_filter(scheduled_query, request, 'order__order_date')
@@ -414,9 +421,9 @@ def installation_list(request):
                       Q(order__invoice_number__icontains=search)
             scheduled_query = scheduled_query.filter(search_q)
         
-        # إضافة التركيبات المجدولة للقائمة
-        for installation in scheduled_query:
-            installation_items.append({
+        # إضافة التركيبات المجدولة للقائمة - تحسين: استخدام list comprehension بدلاً من حلقة
+        installation_items.extend([
+            {
                 'type': 'scheduled',
                 'installation': installation,
                 'order': installation.order,
@@ -426,12 +433,14 @@ def installation_list(request):
                 'scheduled_date': installation.scheduled_date,
                 'created_at': installation.created_at,
                 'location_type': getattr(installation, 'location_type', None),
-            })
+            }
+            for installation in scheduled_query
+        ])
     
     # 2. جلب الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
     if not status_filter or status_filter == 'needs_scheduling':
         # أوامر التصنيع الجاهزة للتركيب أو المسلمة فقط
-        # ✅ تحسين: إضافة select_related لجميع العلاقات المستخدمة
+        # ✅ تحسين: إضافة select_related + only لجميع العلاقات المستخدمة
         # يقلل الاستعلامات من 100+ إلى 1 استعلام فقط
         ready_manufacturing_query = ManufacturingOrder.objects.filter(
             status__in=['ready_install', 'delivered'],
@@ -442,8 +451,14 @@ def installation_list(request):
             'order__customer',
             'order__branch',
             'order__salesperson',
-            'order__salesperson__user',
             'production_line'
+        ).only(
+            'id', 'created_at', 'status',
+            'order__id', 'order__order_number', 'order__contract_number', 'order__invoice_number', 'order__location_type',
+            'order__customer__id', 'order__customer__name', 'order__customer__phone', 'order__customer__address', 'order__customer__location_type',
+            'order__branch__id', 'order__branch__name',
+            'order__salesperson__id', 'order__salesperson__name',
+            'production_line__id', 'production_line__name'
         )
         
         # تطبيق الفلاتر
@@ -461,9 +476,9 @@ def installation_list(request):
         if branch_filter:
             ready_manufacturing_query = ready_manufacturing_query.filter(order__branch_id=branch_filter)
 
-        # إضافة أوامر التصنيع الجاهزة للتركيب
-        for mfg_order in ready_manufacturing_query:
-            installation_items.append({
+        # إضافة أوامر التصنيع الجاهزة للتركيب - تحسين: استخدام list comprehension
+        installation_items.extend([
+            {
                 'type': 'needs_scheduling',
                 'installation': None,
                 'order': mfg_order.order,
@@ -474,11 +489,13 @@ def installation_list(request):
                 'created_at': mfg_order.created_at,
                 'location_type': getattr(mfg_order.order, 'location_type', None),
                 'manufacturing_order': mfg_order,  # إضافة أمر التصنيع للمرجع
-            })
+            }
+            for mfg_order in ready_manufacturing_query
+        ])
     
     # 3. جلب الطلبات تحت التصنيع (للعرض فقط) - مفلترة بالسنة الافتراضية
     if not status_filter or status_filter == 'under_manufacturing':
-        # ✅ تحسين: إضافة select_related لجميع العلاقات
+        # ✅ تحسين: إضافة select_related + only لجميع العلاقات
         under_manufacturing_query = ManufacturingOrder.objects.filter(
             status__in=['pending_approval', 'approved', 'in_cutting', 'cutting_completed', 'in_manufacturing', 'quality_check'],
             order__selected_types__icontains='installation'
@@ -488,6 +505,13 @@ def installation_list(request):
             'order__branch',
             'order__salesperson',
             'production_line'
+        ).only(
+            'id', 'created_at', 'status',
+            'order__id', 'order__order_number',
+            'order__customer__id', 'order__customer__name', 'order__customer__phone',
+            'order__branch__id', 'order__branch__name',
+            'order__salesperson__id', 'order__salesperson__name',
+            'production_line__id', 'production_line__name'
         )
         
         # تطبيق فلاتر البحث
@@ -497,8 +521,9 @@ def installation_list(request):
                       Q(order__customer__phone__icontains=search)
             under_manufacturing_query = under_manufacturing_query.filter(search_q)
         
-        for mfg_order in under_manufacturing_query:
-            installation_items.append({
+        # تحسين: استخدام list comprehension بدلاً من حلقة
+        installation_items.extend([
+            {
                 'type': 'under_manufacturing',
                 'installation': None,
                 'order': mfg_order.order,
@@ -509,17 +534,40 @@ def installation_list(request):
                 'scheduled_date': None,
                 'created_at': mfg_order.created_at,
                 'location_type': None,
-            })
+            }
+            for mfg_order in under_manufacturing_query
+        ])
     
     # ترتيب النتائج حسب الأولوية والتاريخ
     def sort_key(item):
+        # تحويل التواريخ إلى datetime للمقارنة
+        from datetime import datetime, date
+        from django.utils import timezone
+        
+        def to_datetime(value):
+            """تحويل التاريخ إلى datetime للمقارنة مع معالجة timezone"""
+            if value is None:
+                # إرجاع أقدم تاريخ ممكن مع timezone
+                return timezone.make_aware(datetime.min.replace(year=1900))
+            
+            # تحويل date إلى datetime
+            if isinstance(value, date) and not isinstance(value, datetime):
+                value = datetime.combine(value, datetime.min.time())
+            
+            # التأكد من أن جميع datetime لديها timezone
+            if isinstance(value, datetime):
+                if timezone.is_naive(value):
+                    value = timezone.make_aware(value)
+            
+            return value
+        
         # أولوية للطلبات التي تحتاج جدولة
         if item['status'] == 'needs_scheduling':
-            return (0, item['created_at'])
+            return (0, to_datetime(item['created_at']))
         elif item['status'] == 'scheduled':
-            return (1, item['scheduled_date'] or item['created_at'])
+            return (1, to_datetime(item['scheduled_date'] or item['created_at']))
         else:
-            return (2, item['created_at'])
+            return (2, to_datetime(item['created_at']))
     
     installation_items.sort(key=sort_key, reverse=True)
     
