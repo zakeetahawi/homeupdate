@@ -8,12 +8,13 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 from .models import (
     User, CompanyInfo, Branch, Department, Salesperson,
     Role, UserRole, SystemSettings, BranchMessage, DashboardYearSettings,
     ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings,
-    YearFilterExemption
+    YearFilterExemption, InternalMessage
 )
 
 
@@ -753,6 +754,73 @@ class DashboardYearSettingsAdmin(admin.ModelAdmin):
         if obj and getattr(obj, 'is_default', False):
             return False
         return super().has_delete_permission(request, obj)
+
+
+@admin.register(InternalMessage)
+class InternalMessageAdmin(admin.ModelAdmin):
+    """إدارة الرسائل الداخلية"""
+    list_display = ('subject', 'sender', 'recipient', 'is_read', 'is_important', 'created_at', 'read_status_badge')
+    list_filter = ('is_read', 'is_important', 'created_at', 'sender', 'recipient')
+    search_fields = ('subject', 'body', 'sender__username', 'sender__first_name', 'sender__last_name', 
+                    'recipient__username', 'recipient__first_name', 'recipient__last_name')
+    readonly_fields = ('created_at', 'read_at')
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('معلومات الرسالة', {
+            'fields': ('sender', 'recipient', 'subject', 'body')
+        }),
+        ('الحالة والخيارات', {
+            'fields': ('is_read', 'read_at', 'is_important', 'parent_message')
+        }),
+        ('حالة الحذف', {
+            'fields': ('is_deleted_by_sender', 'is_deleted_by_recipient'),
+            'classes': ('collapse',)
+        }),
+        ('معلومات إضافية', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def read_status_badge(self, obj):
+        """عرض حالة القراءة بشكل مرئي"""
+        if obj.is_read:
+            return mark_safe('<span style="color: green;">✓ مقروءة</span>')
+        return mark_safe('<span style="color: orange;">✗ غير مقروءة</span>')
+    read_status_badge.short_description = 'حالة القراءة'
+    
+    def get_queryset(self, request):
+        """تحسين الاستعلامات باستخدام select_related"""
+        qs = super().get_queryset(request)
+        return qs.select_related('sender', 'recipient', 'parent_message')
+    
+    actions = ['mark_as_read', 'mark_as_unread', 'mark_as_important', 'delete_permanently']
+    
+    def mark_as_read(self, request, queryset):
+        """تحديد الرسائل المحددة كمقروءة"""
+        updated = queryset.update(is_read=True, read_at=timezone.now())
+        self.message_user(request, f'تم تحديد {updated} رسالة كمقروءة')
+    mark_as_read.short_description = 'تحديد كمقروءة'
+    
+    def mark_as_unread(self, request, queryset):
+        """تحديد الرسائل المحددة كغير مقروءة"""
+        updated = queryset.update(is_read=False, read_at=None)
+        self.message_user(request, f'تم تحديد {updated} رسالة كغير مقروءة')
+    mark_as_unread.short_description = 'تحديد كغير مقروءة'
+    
+    def mark_as_important(self, request, queryset):
+        """تحديد الرسائل المحددة كمهمة"""
+        updated = queryset.update(is_important=True)
+        self.message_user(request, f'تم تحديد {updated} رسالة كمهمة')
+    mark_as_important.short_description = 'تحديد كمهمة'
+    
+    def delete_permanently(self, request, queryset):
+        """حذف الرسائل نهائياً"""
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f'تم حذف {count} رسالة نهائياً')
+    delete_permanently.short_description = 'حذف نهائياً'
 
 
 

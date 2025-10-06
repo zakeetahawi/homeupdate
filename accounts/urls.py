@@ -5,6 +5,11 @@ from .activity_views import (
     user_activity_dashboard, user_activity_detail, activity_logs_list,
     login_history_list, online_users_api, update_current_page, user_activities_api
 )
+from .messages_views import (
+    inbox, sent_messages, compose_message, view_message, delete_message,
+    mark_as_read, mark_all_as_read, get_unread_count, 
+    get_online_users_with_messages, reply_to_message
+)
 
 app_name = 'accounts'
 
@@ -86,4 +91,18 @@ urlpatterns = [
     path('api/online-users/', online_users_api, name='online_users_api'),
     path('api/user-activities/<int:user_id>/', user_activities_api, name='user_activities_api'),
     path('api/update-current-page/', update_current_page, name='update_current_page'),
+    
+    # 📧 نظام الرسائل الداخلية
+    path('messages/inbox/', inbox, name='inbox'),
+    path('messages/sent/', sent_messages, name='sent_messages'),
+    path('messages/compose/', compose_message, name='compose_message'),
+    path('messages/<int:message_id>/', view_message, name='view_message'),
+    path('messages/<int:message_id>/delete/', delete_message, name='delete_message'),
+    path('messages/<int:message_id>/mark-read/', mark_as_read, name='mark_as_read'),
+    path('messages/<int:message_id>/reply/', reply_to_message, name='reply_to_message'),
+    path('messages/mark-all-read/', mark_all_as_read, name='mark_all_as_read'),
+    
+    # APIs للرسائل
+    path('api/messages/unread-count/', get_unread_count, name='get_unread_count'),
+    path('api/messages/online-users/', get_online_users_with_messages, name='get_online_users_with_messages'),
 ]

@@ -1,0 +1,146 @@
+{% extends "accounts/messages/base_messages.html" %}
+{% load static %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .compose-form {
+        background: #f8f9fa;
+        padding: 2rem;
+        border-radius: 12px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-send {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-send:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .form-check-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .user-select-dropdown {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block messages_content %}
+<div class="page-header">
+    <h4><i class="fas fa-edit me-2"></i>{{ page_title }}</h4>
+</div>
+
+<form method="post" class="compose-form">
+    {% csrf_token %}
+    
+    <!-- Recipient -->
+    <div class="mb-3">
+        <label for="recipient" class="form-label">
+            <i class="fas fa-user me-1"></i>
+            إلى:
+        </label>
+        <select class="form-select" id="recipient" name="recipient" required>
+            <option value="">اختر المستلم...</option>
+            {% for user in users %}
+            <option value="{{ user.id }}" {% if selected_recipient and selected_recipient.id == user.id %}selected{% endif %}>
+                {{ user.get_full_name|default:user.username }} 
+                ({{ user.get_user_role_display }})
+                {% if user.branch %} - {{ user.branch.name }}{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <!-- Subject -->
+    <div class="mb-3">
+        <label for="subject" class="form-label">
+            <i class="fas fa-tag me-1"></i>
+            الموضوع:
+        </label>
+        <input type="text" class="form-control" id="subject" name="subject" required placeholder="موضوع الرسالة">
+    </div>
+    
+    <!-- Body -->
+    <div class="mb-3">
+        <label for="body" class="form-label">
+            <i class="fas fa-align-right me-1"></i>
+            المحتوى:
+        </label>
+        <textarea class="form-control" id="body" name="body" rows="10" required placeholder="اكتب رسالتك هنا..."></textarea>
+    </div>
+    
+    <!-- Important -->
+    <div class="mb-4">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="is_important" name="is_important">
+            <label class="form-check-label" for="is_important">
+                <i class="fas fa-star text-warning me-1"></i>
+                تحديد كرسالة مهمة
+            </label>
+        </div>
+    </div>
+    
+    <!-- Buttons -->
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-send">
+            <i class="fas fa-paper-plane me-1"></i>
+            إرسال الرسالة
+        </button>
+        <a href="{% url 'accounts:inbox' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-times me-1"></i>
+            إلغاء
+        </a>
+    </div>
+</form>
+
+<script>
+// تحسين تجربة المستخدم بإضافة Select2 إذا كان متوفراً
+document.addEventListener('DOMContentLoaded', function() {
+    const recipientSelect = document.getElementById('recipient');
+    
+    // إضافة بحث بسيط
+    if (recipientSelect) {
+        recipientSelect.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const options = recipientSelect.querySelectorAll('option');
+            
+            options.forEach(option => {
+                if (option.value === '') return;
+                const text = option.textContent.toLowerCase();
+                option.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

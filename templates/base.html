@@ -559,6 +559,80 @@
                         </div>
                         {% endif %}
 
+                        <!-- أيقونة الرسائل الداخلية والمستخدمين النشطين -->
+                        <div class="dropdown me-2">
+                            <button class="btn btn-outline-light position-relative" type="button" id="internalMessagesDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="الرسائل والمستخدمين النشطين">
+                                <i class="fas fa-users"></i>
+                                {% if internal_messages_unread > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="internal-messages-badge">
+                                    {{ internal_messages_unread }}
+                                </span>
+                                {% else %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="internal-messages-badge" style="display: none;">
+                                    0
+                                </span>
+                                {% endif %}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg" aria-labelledby="internalMessagesDropdown" style="width: 380px; max-height: 600px; overflow-y: auto;">
+                                <li class="dropdown-header d-flex justify-content-between align-items-center py-3 px-3 bg-light border-bottom">
+                                    <span class="fw-bold text-dark">
+                                        <i class="fas fa-users me-2 text-primary"></i>
+                                        المستخدمين والرسائل
+                                    </span>
+                                </li>
+                                
+                                <!-- قسم الرسائل -->
+                                <li class="px-3 py-2 bg-white border-bottom">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-semibold">
+                                            <i class="fas fa-envelope text-info me-1"></i>
+                                            الرسائل الداخلية
+                                        </span>
+                                        {% if internal_messages_unread > 0 %}
+                                        <span class="badge bg-danger">{{ internal_messages_unread }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <a href="{% url 'accounts:inbox' %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-inbox me-1"></i>
+                                            الوارد
+                                            {% if internal_messages_unread > 0 %}
+                                            <span class="badge bg-danger ms-1">{{ internal_messages_unread }}</span>
+                                            {% endif %}
+                                        </a>
+                                        <a href="{% url 'accounts:sent_messages' %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-paper-plane me-1"></i>
+                                            الصادر
+                                        </a>
+                                        <a href="{% url 'accounts:compose_message' %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-plus me-1"></i>
+                                            رسالة جديدة
+                                        </a>
+                                    </div>
+                                </li>
+                                
+                                <li><hr class="dropdown-divider m-0"></li>
+                                
+                                <!-- قسم المستخدمين النشطين -->
+                                <li class="px-3 py-2">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-semibold">
+                                            <i class="fas fa-circle text-success me-1" style="font-size: 0.6rem;"></i>
+                                            المستخدمين النشطين
+                                        </span>
+                                        <span class="badge bg-success" id="online-users-count-header">0</span>
+                                    </div>
+                                    <div id="online-users-list-dropdown" style="max-height: 300px; overflow-y: auto;">
+                                        <div class="text-center p-3">
+                                            <div class="spinner-border spinner-border-sm" role="status">
+                                                <span class="visually-hidden">جاري التحميل...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
                         <!-- أيقونة الإشعارات العامة -->
                         <div class="dropdown me-3">
                             <button class="btn btn-outline-light position-relative" type="button" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="الإشعارات العامة">
@@ -1026,19 +1100,19 @@
 
     <!-- Main Content -->
     <main class="container-fluid mt-4 flex-grow" id="main-content">
-        {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Django Messages as Toast Notifications (Only for non-messages pages) -->
+    {% if messages and 'messages' not in request.path %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+            showToastNotification('{{ message.tags }}', '{{ message|escapejs }}');
+            {% endfor %}
+        });
+    </script>
+    {% endif %}
     
     <!-- Footer المُحسَّن - تصميم أفقي -->
     <footer class="footer-area text-white py-2" style="background-color: var(--accent);" id="main-footer">
@@ -1451,7 +1525,7 @@
                         }
                     }
                 })
-                .catch(error => console.error('❌ خطأ في تحديث العداد:', error));
+                // Error handling
         }
 
         // تحديث إشعارات التعيين
@@ -1524,7 +1598,7 @@
                         }
                     }
                 })
-                .catch(error => console.error('Error updating assignment notifications:', error));
+                // Error handling
         }
 
         // تحديث عداد إشعارات الشكاوى
@@ -1565,13 +1639,12 @@
                         }
                     }
                 })
-                .catch(error => console.error('❌ خطأ في تحديث عداد الشكاوى غير المحلولة:', error));
+                // Error handling
 
             // جلب الإشعارات الجديدة
             fetch('/complaints/api/notifications/?_=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
-                    console.log('📊 بيانات عداد الإشعارات:', data);
                     if (data.success) {
                         const notificationBadge = document.querySelector('#complaints-notification-count-badge');
                         const notificationDisplay = document.querySelector('#new-notifications-display');
@@ -1588,7 +1661,7 @@
                         }
                     }
                 })
-                .catch(error => console.error('❌ خطأ في تحديث عداد الإشعارات:', error));
+                // Error handling
         }
 
         // تحميل إشعارات الشكاوى في القائمة المنسدلة
@@ -1638,7 +1711,7 @@
                     }
                 })
                 .catch(error => {
-                    console.error('❌ خطأ في تحميل إشعارات الشكاوى:', error);
+                // Error handling
                     if (loadingElement) loadingElement.style.display = 'none';
                     if (emptyElement) emptyElement.style.display = 'block';
                 });
@@ -1672,7 +1745,6 @@
 
         // مسح جميع إشعارات الشكاوى
         function clearComplaintsNotifications() {
-            console.log('🗑️ محاولة مسح إشعارات الشكاوى...');
             if (confirm('هل أنت متأكد من مسح جميع إشعارات الشكاوى؟')) {
                 fetch('/complaints/api/notifications/clear/', {
                     method: 'POST',
@@ -1684,7 +1756,6 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    console.log('📊 نتيجة مسح الإشعارات:', data);
                     if (data.success) {
                         // تحديث العداد
                         updateComplaintsNotificationCount();
@@ -1706,7 +1777,7 @@
                     }
                 })
                 .catch(error => {
-                    console.error('خطأ في مسح الإشعارات:', error);
+                // Error handling
                     showNotificationMessage('حدث خطأ أثناء مسح الإشعارات', 'error');
                 });
             }
@@ -1727,7 +1798,7 @@
                         showAssignedComplaintsPopup(data.complaints);
                     }
                 })
-                .catch(error => console.error('خطأ في جلب الشكاوى المسندة:', error));
+                // Error handling
         }
 
         function showAssignedComplaintsPopup(complaints) {
@@ -1803,37 +1874,31 @@
 
         // إدارة popup الشكاوى المصعدة للمستخدم الحالي فقط
         function checkEscalatedComplaints() {
-            console.log('🔍 فحص الشكاوى المصعدة...');
 
             // التحقق من وجود popup مخفي مؤقتاً
             const snoozedUntil = localStorage.getItem('escalatedPopupSnoozed');
             if (snoozedUntil && new Date() < new Date(snoozedUntil)) {
-                console.log('⏰ البوب أب مؤجل حتى:', snoozedUntil);
                 return; // لا تظهر الـ popup إذا كان مؤجل
             }
 
             fetch('/complaints/api/escalated/?_=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
-                    console.log('📊 بيانات الشكاوى المصعدة:', data);
                     if (data.success && data.complaints && data.complaints.length > 0) {
-                        console.log('✅ عرض البوب أب للشكاوى المصعدة، عدد الشكاوى:', data.complaints.length);
                         showEscalatedComplaintsPopup(data.complaints);
                     } else {
-                        console.log('ℹ️ لا توجد شكاوى مصعدة للعرض');
                     }
                 })
-                .catch(error => console.error('❌ خطأ في جلب الشكاوى المصعدة:', error));
+                // Error handling
         }
 
         function showEscalatedComplaintsPopup(complaints) {
-            console.log('🚨 عرض البوب أب للشكاوى المصعدة، عدد الشكاوى:', complaints.length);
 
             const popup = document.getElementById('escalatedComplaintsPopup');
             const content = document.getElementById('escalatedComplaintsContent');
 
             if (!popup || !content) {
-                console.error('❌ لم يتم العثور على عناصر البوب أب');
+                // Error handling
                 return;
             }
 
@@ -1871,7 +1936,6 @@
 
             content.innerHTML = html;
             popup.style.display = 'block';
-            console.log('✅ تم عرض البوب أب للشكاوى المصعدة بنجاح');
         }
 
         function hideEscalatedPopup() {
@@ -1898,7 +1962,7 @@
             const csrfToken = getCsrfToken();
 
             if (!csrfToken) {
-                console.error('❌ لا يمكن العثور على CSRF token، انتقال مباشر');
+                // Error handling
                 window.location.href = targetUrl;
                 return;
             }
@@ -1914,12 +1978,9 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log('📊 بيانات الاستجابة:', data);
 
                 if (data.success) {
-                    console.log('✅ تم تحديث الإشعار بنجاح');
 
-                    console.log('✅ تم تحديث الإشعار بنجاح، تحديث القائمة المنسدلة...');
 
                     // تحديث العداد فوراً
                     updateNotificationCount();
@@ -1929,17 +1990,16 @@
 
                     // الانتقال للرابط بعد تحديث القائمة
                     setTimeout(() => {
-                        console.log('🔗 انتقال للرابط:', targetUrl);
                         window.location.href = targetUrl;
                     }, 500);
                 } else {
-                    console.error('❌ فشل في تحديث الإشعار:', data);
+                // Error handling
                     // الانتقال للرابط حتى لو فشل التحديث
                     window.location.href = targetUrl;
                 }
             })
             .catch(error => {
-                console.error('❌ خطأ في تحديث الإشعار:', error);
+                // Error handling
                 // الانتقال للرابط حتى لو حدث خطأ
                 window.location.href = targetUrl;
             });
@@ -1970,7 +2030,6 @@
             const isRead = this.getAttribute('data-is-read') === 'true';
             const url = this.getAttribute('href');
 
-            console.log('🔔 نقر على إشعار:', notificationId, 'مقروء:', isRead, 'URL:', url);
 
             if (!isRead) {
                 // منع الانتقال المباشر فقط للإشعارات غير المقروءة
@@ -2109,8 +2168,6 @@
 
                         notificationsList.innerHTML = newContent;
 
-                        console.log('✅ تم تحديث قائمة الإشعارات بنجاح');
-                        console.log('📊 عدد الإشعارات المحدثة:', data.notifications.length);
 
                         // إضافة event listeners للنقر على الإشعارات
                         setTimeout(() => {
@@ -2118,7 +2175,7 @@
                         }, 100);
                     }
                 })
-                .catch(error => console.error('Error updating recent notifications:', error));
+                // Error handling
         }
 
         // دالة مساعدة لحساب الوقت المنقضي
@@ -2135,7 +2192,6 @@
 
         // دالة لتحديد جميع الإشعارات كمقروءة
         function markAllNotificationsRead() {
-            console.log('🔄 محاولة تحديد جميع الإشعارات كمقروءة');
 
             if (!confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')) {
                 return;
@@ -2145,7 +2201,7 @@
             const csrfToken = getCsrfToken();
 
             if (!csrfToken) {
-                console.error('❌ لا يمكن العثور على CSRF token');
+                // Error handling
                 showNotificationMessage('خطأ في الأمان - لا يمكن تنفيذ العملية', 'error');
                 return;
             }
@@ -2159,14 +2215,11 @@
                 }
             })
             .then(response => {
-                console.log('📡 استجابة تحديد الكل:', response.status);
                 return response.json();
             })
             .then(data => {
-                console.log('📊 بيانات تحديد الكل:', data);
 
                 if (data.success) {
-                    console.log('✅ تم تحديد جميع الإشعارات بنجاح');
 
                     // إزالة جميع badges "جديد" من القائمة المنسدلة فوراً
                     removeAllNewBadgesFromDropdown();
@@ -2178,19 +2231,18 @@
                     // إظهار رسالة نجاح
                     showNotificationMessage('تم تحديد جميع الإشعارات كمقروءة', 'success');
                 } else {
-                    console.error('❌ فشل في تحديد الإشعارات:', data);
+                // Error handling
                     showNotificationMessage('حدث خطأ أثناء تحديث الإشعارات', 'error');
                 }
             })
             .catch(error => {
-                console.error('❌ خطأ في تحديد جميع الإشعارات:', error);
+                // Error handling
                 showNotificationMessage('حدث خطأ أثناء تحديث الإشعارات', 'error');
             });
         }
 
         // دالة لإزالة جميع badges "جديد" من القائمة المنسدلة
         function removeAllNewBadgesFromDropdown() {
-            console.log('🧹 إزالة جميع badges "جديد" من القائمة المنسدلة');
 
             // البحث عن جميع badges في القائمة المنسدلة
             const dropdownMenu = document.querySelector('#notificationsDropdown').nextElementSibling;
@@ -2227,7 +2279,6 @@
                     }
                 });
 
-                console.log(`✅ تم إزالة ${removedCount} badge "جديد"`);
             }
         }
 
@@ -2320,18 +2371,15 @@
             setTimeout(checkEscalatedComplaints, 3000); // تأخير 3 ثواني للشكاوى المصعدة
 
             // إضافة زر لمسح التأجيل (للاختبار)
-            console.log('🔧 للاختبار: localStorage.removeItem(\"escalatedPopupSnoozed\") لمسح التأجيل');
 
             // إضافة دالة اختبار للبوب أب
             window.testEscalatedPopup = function() {
-                console.log('🧪 اختبار البوب أب...');
                 localStorage.removeItem('escalatedPopupSnoozed');
                 checkEscalatedComplaints();
             };
 
             // إضافة دالة اختبار مباشرة للبوب أب
             window.showTestPopup = function() {
-                console.log('🧪 عرض بوب أب تجريبي...');
                 const testComplaints = [{
                     id: 1,
                     complaint_number: 'TEST-001',
@@ -2345,9 +2393,6 @@
                 showEscalatedComplaintsPopup(testComplaints);
             };
 
-            console.log('🔧 للاختبار: testEscalatedPopup() لاختبار البوب أب مباشرة');
-            console.log('🔧 للاختبار: clearComplaintsNotifications() لمسح الإشعارات مباشرة');
-            console.log('🔧 للاختبار: updateComplaintsNotificationCount() لتحديث العداد مباشرة');
 
             // تحديث دوري كل 60 ثانية (تحسين الأداء)
             setInterval(function() {
@@ -2597,16 +2642,37 @@
         });
     </script>
 
-    <!-- Online Users Sidebar - Only for authenticated users -->
+    <!-- JavaScript للرسائل الداخلية والمستخدمين النشطين -->
     {% if user.is_authenticated %}
-    {% include 'includes/online_users_sidebar.html' %}
-
-    <!-- Online Users Sidebar CSS -->
-    <link rel="stylesheet" href="{% static 'css/online_users_sidebar.css' %}">
-
-    <!-- Online Users Sidebar JS -->
-    <script src="{% static 'js/online_users_sidebar.js' %}"></script>
+    <script src="{% static 'js/internal_messages_dropdown.js' %}"></script>
     {% endif %}
+
+    <!-- Toast Notifications Function -->
+    <script>
+        function showToastNotification(type, message) {
+            const alertClass = type === 'success' ? 'alert-success' : 
+                              type === 'error' || type === 'danger' ? 'alert-danger' : 
+                              type === 'warning' ? 'alert-warning' : 'alert-info';
+            const iconClass = type === 'success' ? 'fa-check-circle' : 
+                             type === 'error' || type === 'danger' ? 'fa-exclamation-circle' : 
+                             type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+            
+            const toast = document.createElement('div');
+            toast.className = `alert ${alertClass} alert-dismissible fade show`;
+            toast.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px; max-width: 500px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+            toast.innerHTML = `
+                <i class="fas ${iconClass} me-2"></i>${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(function() {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 150);
+            }, 5000);
+        }
+    </script>
 
 </body>
 </html>

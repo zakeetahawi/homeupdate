@@ -1,0 +1,166 @@
+{% extends "accounts/messages/base_messages.html" %}
+{% load static %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .message-view {
+        background: white;
+    }
+    
+    .message-header {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .message-subject {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+    
+    .message-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .message-info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .message-info-item i {
+        color: #667eea;
+    }
+    
+    .message-body {
+        padding: 2rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        line-height: 1.8;
+        color: #495057;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    
+    .message-actions {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid #e9ecef;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .btn-reply {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+        color: white;
+    }
+    
+    .btn-reply:hover {
+        background: linear-gradient(135deg, #764ba2, #667eea);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .important-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+        border-radius: 20px;
+        font-weight: 600;
+        color: #856404;
+    }
+</style>
+{% endblock %}
+
+{% block messages_content %}
+<div class="message-view">
+    <!-- Header -->
+    <div class="message-header">
+        <div class="message-subject">
+            {{ message.subject }}
+            {% if message.is_important %}
+            <span class="important-badge">
+                <i class="fas fa-star"></i>
+                مهم
+            </span>
+            {% endif %}
+        </div>
+        
+        <div class="message-info">
+            <div class="message-info-item">
+                <i class="fas fa-user"></i>
+                <strong>من:</strong>
+                {{ message.sender.get_full_name|default:message.sender.username }}
+            </div>
+            
+            <div class="message-info-item">
+                <i class="fas fa-arrow-left"></i>
+                <strong>إلى:</strong>
+                {{ message.recipient.get_full_name|default:message.recipient.username }}
+            </div>
+            
+            <div class="message-info-item">
+                <i class="fas fa-calendar"></i>
+                {{ message.created_at|date:"Y/m/d - h:i A" }}
+            </div>
+            
+            {% if message.is_read and message.read_at %}
+            <div class="message-info-item text-success">
+                <i class="fas fa-check-double"></i>
+                مقروءة في {{ message.read_at|date:"Y/m/d - h:i A" }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Body -->
+    <div class="message-body">
+        {{ message.body }}
+    </div>
+    
+    <!-- Actions -->
+    <div class="message-actions">
+        {% if message.recipient == user %}
+        <!-- المستلم يمكنه الرد -->
+        <a href="{% url 'accounts:reply_to_message' message.id %}" class="btn btn-reply">
+            <i class="fas fa-reply me-1"></i>
+            رد على الرسالة
+        </a>
+        {% endif %}
+        
+        <form method="post" action="{% url 'accounts:delete_message' message.id %}" style="display: inline;" 
+              onsubmit="return confirm('هل أنت متأكد من حذف هذه الرسالة؟');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="fas fa-trash me-1"></i>
+                حذف
+            </button>
+        </form>
+        
+        {% if message.recipient == user %}
+        <a href="{% url 'accounts:inbox' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-right me-1"></i>
+            العودة للوارد
+        </a>
+        {% else %}
+        <a href="{% url 'accounts:sent_messages' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-right me-1"></i>
+            العودة للصادر
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -197,10 +197,15 @@ def notifications_context(request):
         # الإشعارات - تم إزالتها
         simple_unread = 0
         total_unread = 0
+        
+        # عدد الرسائل الداخلية غير المقروءة
+        from .models import InternalMessage
+        internal_messages_unread = InternalMessage.get_unread_count(request.user)
 
         context.update({
             'simple_notifications_unread': simple_unread,
             'total_notifications_unread': total_unread,
+            'internal_messages_unread': internal_messages_unread,
         })
 
     return context

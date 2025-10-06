@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .messages-container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+    
+    .messages-sidebar {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .messages-sidebar h5 {
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #2c3e50;
+    }
+    
+    .sidebar-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .sidebar-menu li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .sidebar-menu a {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        color: #6c757d;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .sidebar-menu a:hover {
+        background: #f8f9fa;
+        color: #007bff;
+    }
+    
+    .sidebar-menu a.active {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .sidebar-menu a i {
+        margin-left: 0.75rem;
+        font-size: 1.1rem;
+    }
+    
+    .sidebar-menu .badge {
+        margin-right: auto;
+        font-size: 0.75rem;
+    }
+    
+    .messages-content {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        padding: 2rem;
+        min-height: 600px;
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .page-header h4 {
+        font-weight: 600;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .btn-compose {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-compose:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .messages-sidebar {
+            margin-bottom: 1rem;
+            position: static;
+        }
+        
+        .messages-container {
+            padding: 0 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="messages-container">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3 col-md-4 mb-4">
+            <div class="messages-sidebar">
+                <h5><i class="fas fa-envelope me-2"></i>الرسائل</h5>
+                <ul class="sidebar-menu">
+                    <li>
+                        <a href="{% url 'accounts:compose_message' %}" class="btn-compose text-center">
+                            <i class="fas fa-plus"></i>
+                            رسالة جديدة
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'accounts:inbox' %}" class="{% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
+                            <i class="fas fa-inbox"></i>
+                            الوارد
+                            {% if unread_count > 0 %}
+                            <span class="badge bg-danger">{{ unread_count }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'accounts:sent_messages' %}" class="{% if request.resolver_match.url_name == 'sent_messages' %}active{% endif %}">
+                            <i class="fas fa-paper-plane"></i>
+                            الصادر
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="col-lg-9 col-md-8">
+            <div class="messages-content">
+                {% block messages_content %}
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

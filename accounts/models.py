@@ -653,6 +653,87 @@ class DashboardYearSettings(models.Model):
         return timezone.now().year
 
 
+class InternalMessage(models.Model):
+    """
+    نموذج الرسائل الداخلية بين المستخدمين
+    """
+    sender = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name='sent_messages',
+        verbose_name=_('المرسل')
+    )
+    recipient = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name='received_messages',
+        verbose_name=_('المستلم')
+    )
+    subject = models.CharField(_('الموضوع'), max_length=200)
+    body = models.TextField(_('المحتوى'))
+    is_read = models.BooleanField(_('مقروءة'), default=False)
+    read_at = models.DateTimeField(_('تاريخ القراءة'), null=True, blank=True)
+    created_at = models.DateTimeField(_('تاريخ الإرسال'), auto_now_add=True)
+    
+    # حقول إضافية للميزات المتقدمة
+    parent_message = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='replies',
+        verbose_name=_('الرسالة الأصلية')
+    )
+    is_important = models.BooleanField(_('مهم'), default=False)
+    is_deleted_by_sender = models.BooleanField(_('محذوفة من المرسل'), default=False)
+    is_deleted_by_recipient = models.BooleanField(_('محذوفة من المستلم'), default=False)
+    
+    class Meta:
+        verbose_name = _('رسالة داخلية')
+        verbose_name_plural = _('الرسائل الداخلية')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', '-created_at']),
+            models.Index(fields=['sender', '-created_at']),
+            models.Index(fields=['is_read', 'recipient']),
+        ]
+    
+    def __str__(self):
+        return f"{self.sender.get_full_name()} → {self.recipient.get_full_name()}: {self.subject}"
+    
+    def mark_as_read(self):
+        """تحديد الرسالة كمقروءة"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=['is_read', 'read_at'])
+    
+    @classmethod
+    def get_unread_count(cls, user):
+        """الحصول على عدد الرسائل غير المقروءة للمستخدم"""
+        return cls.objects.filter(
+            recipient=user,
+            is_read=False,
+            is_deleted_by_recipient=False
+        ).count()
+    
+    @classmethod
+    def get_inbox(cls, user):
+        """الحصول على صندوق الوارد للمستخدم"""
+        return cls.objects.filter(
+            recipient=user,
+            is_deleted_by_recipient=False
+        ).select_related('sender')
+    
+    @classmethod
+    def get_sent_messages(cls, user):
+        """الحصول على الرسائل المرسلة للمستخدم"""
+        return cls.objects.filter(
+            sender=user,
+            is_deleted_by_sender=False
+        ).select_related('recipient')
+
+
 class YearFilterExemption(models.Model):
     """
     إعدادات استثناء الأقسام من فلتر السنة الافتراضية
