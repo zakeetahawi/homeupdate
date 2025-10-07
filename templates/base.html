@@ -40,36 +40,39 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
     
+    <!-- ===== نظام CSS الموحد الجديد - Unified CSS System ===== -->
+    
     <!-- Global Cairo Font CSS -->
     <link rel="stylesheet" href="{% static 'css/global-cairo-font.css' %}">
     
     <!-- Font Awesome Fix CSS -->
     <link rel="stylesheet" href="{% static 'css/font-awesome-fix.css' %}">
     
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-
-    <!-- Modern Black Theme CSS -->
-    <link rel="stylesheet" href="{% static 'css/modern-black-theme.css' %}">
+    <!-- Core Styles - الأساسيات -->
+    <link rel="stylesheet" href="{% static 'css/core/variables.css' %}">
+    <link rel="stylesheet" href="{% static 'css/core/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/core/utilities.css' %}">
     
-    <!-- Modern Black Theme Fixes -->
-    <link rel="stylesheet" href="{% static 'css/modern-black-fixes.css' %}">
-      <!-- Extra Dark Mode Fixes -->
-    <link rel="stylesheet" href="{% static 'css/extra-dark-fixes.css' %}">
+    <!-- Components - المكونات -->
+    <link rel="stylesheet" href="{% static 'css/components/navbar.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components/dropdowns.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components/tables.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components/forms.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components/cards.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components/footer.css' %}">
     
-    <!-- Custom Theme Enhancements -->
-    <link rel="stylesheet" href="{% static 'css/custom-theme-enhancements.css' %}">
+    <!-- Themes - الثيمات (6 ثيمات) -->
+    <link rel="stylesheet" href="{% static 'css/themes/theme-default.css' %}">
+    <link rel="stylesheet" href="{% static 'css/themes/theme-custom.css' %}">
+    <link rel="stylesheet" href="{% static 'css/themes/theme-modern-black.css' %}">
+    <link rel="stylesheet" href="{% static 'css/themes/theme-mocha-mousse.css' %}">
+    <link rel="stylesheet" href="{% static 'css/themes/theme-warm-earth.css' %}">
+    <link rel="stylesheet" href="{% static 'css/themes/theme-coffee-elegance.css' %}">
 
-    <!-- Unified Status System CSS -->
+    <!-- Additional Styles -->
     <link rel="stylesheet" href="{% static 'css/unified-status-system.css' %}">
-    
-    <!-- Unified Status Colors CSS -->
     <link rel="stylesheet" href="{% static 'css/unified-status-colors.css' %}">
-
-    <!-- Responsive Footer CSS -->
     <link rel="stylesheet" href="{% static 'css/responsive-footer.css' %}">
-
-    <!-- Anti-Flicker CSS -->
     <link rel="stylesheet" href="{% static 'css/anti-flicker.css' %}">
 
     <!-- Google Material Icons -->
@@ -121,6 +124,18 @@
             }, 10);
         })();
     </script>
+
+    <!-- تطبيق تخصيصات الثيم المحفوظة -->
+    {% if user_theme_css_vars %}
+    <style id="user-theme-customization">
+        :root,
+        [data-theme="{{ user.default_theme }}"] {
+            {% for var_name, var_value in user_theme_css_vars.items %}
+            {{ var_name }}: {{ var_value }};
+            {% endfor %}
+        }
+    </style>
+    {% endif %}
 
     <!-- CSS فوري للثيم الافتراضي لتجنب الوميض -->
     <style>
@@ -1005,15 +1020,28 @@
     <div id="customUserDropdown" class="custom-dropdown-menu" style="display:none; position:fixed; top:70px; left:90px; z-index:2147483647; min-width:260px; max-width:95vw; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18); border:1px solid #eee;">
         <div class="dropdown-header fw-bold py-2 px-3 border-bottom">القائمة الشخصية</div>
         <div class="px-3 py-2">
-            <label for="themeSelector" class="form-label" style="font-weight: bold;">اختر الثيم المناسب</label>
+            <label for="themeSelector" class="form-label" style="font-weight: bold;">
+                <i class="fas fa-palette"></i> اختر الثيم المناسب
+            </label>
             <select id="themeSelector" class="form-select">
-                <option value="default">الثيم الإفتراضي</option>
-                <option value="custom-theme">نسخة الثيم الإفتراضي القابلة للتعديل</option>
-                <option value="modern-black">الثيم الأسود العصري</option>
+                <optgroup label="الثيمات الكلاسيكية">
+                    <option value="default">🎨 الثيم الافتراضي</option>
+                    <option value="custom-theme">✨ ثيم مخصص (مع تأثيرات)</option>
+                    <option value="modern-black">🌙 أسود عصري</option>
+                </optgroup>
+                <optgroup label="ثيمات Pantone 2025 الجديدة">
+                    <option value="mocha-mousse">☕ Mocha Mousse (لون العام 2025)</option>
+                    <option value="warm-earth">🌍 ألوان ترابية دافئة</option>
+                    <option value="coffee-elegance">☕ أناقة القهوة</option>
+                </optgroup>
             </select>
+            <small class="text-muted d-block mt-1">
+                <i class="fas fa-info-circle"></i> جرّب الثيمات الجديدة المستوحاة من Pantone 2025!
+            </small>
         </div>
         <hr class="my-1">
         <a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fas fa-id-card"></i> الملف الشخصي</a>
+        <a class="dropdown-item" href="{% url 'accounts:theme_customization' %}"><i class="fas fa-palette"></i> 🎨 تخصيص الثيم</a>
         {% if user.is_staff %}
         <a class="dropdown-item" href="{% url 'admin:index' %}"><i class="fas fa-cog"></i> لوحة الإدارة</a>
         {% endif %}
@@ -1115,7 +1143,7 @@
     {% endif %}
     
     <!-- Footer المُحسَّن - تصميم أفقي -->
-    <footer class="footer-area text-white py-2" style="background-color: var(--accent);" id="main-footer">
+    <footer class="footer-area py-2" id="main-footer">
         <div class="container-fluid">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                 <!-- معلومات الشركة والتواصل الاجتماعي -->

@@ -1,0 +1,115 @@
+/**
+ * الثيم الافتراضي (البني الكلاسيكي)
+ * Default Theme (Classic Brown)
+ * 
+ * هذا هو الثيم الأساسي للنظام - يعتمد على درجات البني الدافئة
+ * This is the base theme - based on warm brown tones
+ */
+
+/* ========================================
+   التنسيقات الخاصة بالثيم الافتراضي
+   ======================================== */
+
+/* Navbar */
+.navbar-dark.bg-primary {
+    background-color: var(--primary) !important;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--accent);
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+}
+
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.25rem rgba(139, 115, 90, 0.5);
+}
+
+/* Links */
+a.text-primary {
+    color: var(--primary) !important;
+}
+
+a.text-primary:hover {
+    color: var(--accent) !important;
+}
+
+/* Badges */
+.badge.bg-primary {
+    background-color: var(--primary) !important;
+    color: #ffffff;
+}
+
+/* Alerts */
+.alert-primary {
+    background-color: rgba(139, 115, 90, 0.1);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* Progress bars */
+.progress-bar {
+    background-color: var(--primary);
+}
+
+/* تخصيصات إضافية للثيم الافتراضي */
+body {
+    background-color: var(--light-bg);
+}
+
+/* Active state للعناصر */
+.nav-link.active,
+.nav-pills .nav-link.active {
+    background-color: var(--primary);
+    color: #ffffff;
+}
+
+.list-group-item.active {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
+/* Pagination */
+.page-link {
+    color: var(--primary);
+}
+
+.page-link:hover {
+    color: var(--accent);
+    background-color: var(--light-bg);
+}
+
+.page-item.active .page-link {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
+/* Form focus states */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.25rem rgba(139, 115, 90, 0.25);
+}
+
+/* Accordion */
+.accordion-button:not(.collapsed) {
+    background-color: rgba(139, 115, 90, 0.1);
+    color: var(--primary);
+}
+
+.accordion-button:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.25rem rgba(139, 115, 90, 0.25);
+}

@@ -1,0 +1,422 @@
+/**
+ * الثيم الأسود العصري (مدمج من 3 ملفات)
+ * Modern Black Theme (Consolidated from 3 files)
+ * 
+ * ثيم أسود احترافي مع إضاءة نيون وتأثيرات حديثة
+ * Professional dark theme with neon lighting and modern effects
+ */
+
+/* ========================================
+   تطبيق الخلفية الأساسية
+   ======================================== */
+[data-theme="modern-black"] {
+    background-color: var(--background);
+}
+
+[data-theme="modern-black"] body {
+    background-color: var(--background);
+    color: var(--text-primary);
+}
+
+/* ========================================
+   Navbar
+   ======================================== */
+[data-theme="modern-black"] .navbar {
+    background: rgba(26, 26, 26, 0.95) !important;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: var(--blur);
+}
+
+[data-theme="modern-black"] .navbar-brand {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .navbar-brand:hover {
+    color: var(--primary) !important;
+}
+
+[data-theme="modern-black"] .logo-img {
+    filter: brightness(1.2);
+}
+
+/* ========================================
+   أيقونات ملونة للأقسام
+   ======================================== */
+[data-theme="modern-black"] .nav-link:hover i {
+    filter: brightness(1.2) drop-shadow(0 0 8px currentColor);
+}
+
+/* ========================================
+   Buttons
+   ======================================== */
+[data-theme="modern-black"] .btn-primary {
+    background: linear-gradient(135deg, var(--primary), #0099CC);
+    color: #000000;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+}
+
+[data-theme="modern-black"] .btn-primary:hover {
+    background: linear-gradient(135deg, #00B8E6, var(--primary));
+    color: #000000;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 210, 255, 0.4);
+}
+
+[data-theme="modern-black"] .btn-success {
+    background: linear-gradient(135deg, var(--success), #00CC6A);
+    color: #000000;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+}
+
+[data-theme="modern-black"] .btn-warning {
+    background: linear-gradient(135deg, var(--warning), #E6C200);
+    color: #000000;
+    border: none;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+}
+
+[data-theme="modern-black"] .btn-danger {
+    background: linear-gradient(135deg, var(--error), #E6004D);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3);
+}
+
+[data-theme="modern-black"] .btn-info {
+    background: linear-gradient(135deg, var(--info), #0099CC);
+    color: #000000;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+}
+
+[data-theme="modern-black"] .btn:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* أزرار Outline */
+[data-theme="modern-black"] .btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+[data-theme="modern-black"] .btn-outline-primary:hover {
+    background-color: var(--primary);
+    color: #000000;
+}
+
+[data-theme="modern-black"] .btn-outline-light {
+    border-color: var(--border);
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="modern-black"] .btn-outline-light:hover {
+    background-color: var(--primary);
+    color: #000000;
+    border-color: var(--primary);
+}
+
+/* ========================================
+   Bootstrap Components
+   ======================================== */
+
+/* Backgrounds */
+[data-theme="modern-black"] .bg-primary {
+    background-color: var(--primary) !important;
+    color: #000000 !important;
+}
+
+[data-theme="modern-black"] .bg-secondary {
+    background-color: var(--secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .bg-light {
+    background-color: var(--elevated-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .bg-dark {
+    background-color: var(--surface) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Text Colors */
+[data-theme="modern-black"] .text-primary {
+    color: var(--primary) !important;
+}
+
+[data-theme="modern-black"] .text-secondary {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="modern-black"] .text-muted {
+    color: var(--text-tertiary) !important;
+}
+
+[data-theme="modern-black"] .text-dark {
+    color: var(--text-primary) !important;
+}
+
+/* ========================================
+   Badges
+   ======================================== */
+[data-theme="modern-black"] .badge.bg-success {
+    background-color: var(--success) !important;
+    color: #000000 !important;
+}
+
+[data-theme="modern-black"] .badge.bg-danger {
+    background-color: var(--error) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="modern-black"] .badge.bg-warning {
+    background-color: var(--warning) !important;
+    color: #000000 !important;
+}
+
+[data-theme="modern-black"] .badge.bg-info {
+    background-color: var(--info) !important;
+    color: #000000 !important;
+}
+
+[data-theme="modern-black"] .badge.bg-primary {
+    background-color: var(--primary) !important;
+    color: #000000 !important;
+}
+
+/* ========================================
+   Alerts
+   ======================================== */
+[data-theme="modern-black"] .alert {
+    border: none;
+    border-radius: var(--radius-large);
+    backdrop-filter: var(--blur);
+}
+
+[data-theme="modern-black"] .alert-success {
+    background-color: rgba(0, 255, 136, 0.15);
+    color: var(--success);
+    border-left: 4px solid var(--success);
+}
+
+[data-theme="modern-black"] .alert-danger {
+    background-color: rgba(255, 51, 102, 0.15);
+    color: var(--error);
+    border-left: 4px solid var(--error);
+}
+
+[data-theme="modern-black"] .alert-warning {
+    background-color: rgba(255, 215, 0, 0.15);
+    color: var(--warning);
+    border-left: 4px solid var(--warning);
+}
+
+[data-theme="modern-black"] .alert-info {
+    background-color: rgba(0, 210, 255, 0.15);
+    color: var(--info);
+    border-left: 4px solid var(--info);
+}
+
+[data-theme="modern-black"] .alert-primary {
+    background-color: rgba(0, 210, 255, 0.15);
+    color: var(--primary);
+    border-left: 4px solid var(--primary);
+}
+
+/* ========================================
+   Modals
+   ======================================== */
+[data-theme="modern-black"] .modal-content {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
+}
+
+[data-theme="modern-black"] .modal-header {
+    border-bottom-color: var(--border);
+}
+
+[data-theme="modern-black"] .modal-footer {
+    border-top-color: var(--border);
+}
+
+[data-theme="modern-black"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* ========================================
+   Pagination
+   ======================================== */
+[data-theme="modern-black"] .page-link {
+    background-color: var(--card-bg);
+    border-color: var(--border);
+    color: var(--primary);
+}
+
+[data-theme="modern-black"] .page-link:hover {
+    background-color: var(--elevated-bg);
+    border-color: var(--border);
+    color: var(--primary);
+}
+
+[data-theme="modern-black"] .page-item.active .page-link {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: #000000;
+}
+
+[data-theme="modern-black"] .page-item.disabled .page-link {
+    background-color: var(--card-bg);
+    border-color: var(--border);
+    color: var(--text-tertiary);
+}
+
+/* ========================================
+   Breadcrumb
+   ======================================== */
+[data-theme="modern-black"] nav[aria-label="breadcrumb"] {
+    background-color: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-light);
+}
+
+[data-theme="modern-black"] .breadcrumb-item,
+[data-theme="modern-black"] .breadcrumb-item a {
+    color: var(--text-primary);
+    text-shadow: 0 0 3px rgba(0, 210, 255, 0.5);
+}
+
+[data-theme="modern-black"] .breadcrumb-item.active {
+    color: var(--primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+[data-theme="modern-black"] .breadcrumb-item + .breadcrumb-item::before {
+    color: var(--primary);
+}
+
+/* ========================================
+   Tabs & Pills
+   ======================================== */
+[data-theme="modern-black"] .nav-tabs {
+    border-bottom-color: var(--border);
+}
+
+[data-theme="modern-black"] .nav-tabs .nav-link.active {
+    background-color: var(--card-bg);
+    border-color: var(--border) var(--border) var(--card-bg);
+    color: var(--primary);
+}
+
+[data-theme="modern-black"] .nav-pills .nav-link.active {
+    background-color: var(--primary);
+    color: #000000;
+}
+
+/* ========================================
+   List Groups
+   ======================================== */
+[data-theme="modern-black"] .list-group-item {
+    background-color: var(--card-bg);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="modern-black"] .list-group-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="modern-black"] .list-group-item.active {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: #000000;
+}
+
+/* ========================================
+   Tooltips & Popovers
+   ======================================== */
+[data-theme="modern-black"] .tooltip-inner {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+[data-theme="modern-black"] .popover {
+    background-color: var(--card-bg);
+    border-color: var(--border);
+}
+
+[data-theme="modern-black"] .popover-header {
+    background-color: var(--elevated-bg);
+    border-bottom-color: var(--border);
+    color: var(--primary);
+}
+
+[data-theme="modern-black"] .popover-body {
+    color: var(--text-primary);
+}
+
+/* ========================================
+   Accordion
+   ======================================== */
+[data-theme="modern-black"] .accordion-item {
+    background-color: var(--card-bg);
+    border-color: var(--border);
+}
+
+[data-theme="modern-black"] .accordion-button {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+}
+
+[data-theme="modern-black"] .accordion-button:not(.collapsed) {
+    background-color: rgba(0, 210, 255, 0.1);
+    color: var(--primary);
+}
+
+/* ========================================
+   Spinner & Progress
+   ======================================== */
+[data-theme="modern-black"] .spinner-border {
+    border-color: var(--primary);
+    border-right-color: transparent;
+}
+
+[data-theme="modern-black"] .progress {
+    background-color: var(--elevated-bg);
+}
+
+[data-theme="modern-black"] .progress-bar {
+    background-color: var(--primary);
+}
+
+/* ========================================
+   تحسينات خاصة
+   ======================================== */
+
+/* تأثير توهج للعناصر النشطة */
+[data-theme="modern-black"] .btn:active,
+[data-theme="modern-black"] .nav-link:active {
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+}
+
+/* Scrollbar مخصص */
+[data-theme="modern-black"] ::-webkit-scrollbar-track {
+    background: var(--surface);
+}
+
+[data-theme="modern-black"] ::-webkit-scrollbar-thumb {
+    background: var(--neutral);
+    border-radius: var(--radius);
+}
+
+[data-theme="modern-black"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+}

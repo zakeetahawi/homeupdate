@@ -1,0 +1,1246 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}🎨 تخصيص الثيم الشخصي{% endblock %}
+
+{% block extra_css %}
+<style>
+    .theme-customization-wrapper {
+        max-width: 1600px;
+        margin: 20px auto;
+        padding: 0 20px;
+    }
+    
+    .customization-header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 40px 30px;
+        border-radius: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        text-align: center;
+    }
+    
+    .customization-header h1 {
+        margin: 0 0 10px 0;
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    
+    .customization-header p {
+        margin: 0;
+        font-size: 1.1rem;
+        opacity: 0.95;
+    }
+    
+
+    
+    .tabs-container {
+        background: var(--card-bg);
+        border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+    
+    .nav-tabs {
+        background: var(--elevated-bg);
+        border-bottom: 3px solid var(--primary);
+        padding: 10px 10px 0 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    
+    .nav-tabs .nav-link {
+        background: transparent;
+        border: none;
+        border-radius: 10px 10px 0 0;
+        padding: 12px 20px;
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        margin: 0;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+    }
+    
+    .nav-tabs .nav-link.active {
+        background: var(--card-bg);
+        color: var(--primary);
+        border-bottom: 3px solid var(--primary);
+        margin-bottom: -3px;
+    }
+    
+    .tab-content {
+        padding: 30px;
+    }
+    
+    .tab-layout {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        gap: 30px;
+    }
+    
+    @media (max-width: 1200px) {
+        .tab-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .color-controls {
+        background: var(--elevated-bg);
+        border-radius: 15px;
+        padding: 25px;
+    }
+    
+    .color-group-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--text-primary);
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--separator);
+    }
+    
+    .color-control-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 15px;
+        padding: 12px;
+        background: var(--card-bg);
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .color-control-item:hover {
+        background: var(--surface);
+        transform: translateX(-5px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .color-control-item label {
+        margin: 0;
+        color: var(--text-primary);
+        font-weight: 500;
+        flex: 1;
+    }
+    
+    .color-control-item input[type="color"] {
+        width: 60px;
+        height: 45px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .color-control-item input[type="color"]:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    .live-preview {
+        background: var(--background);
+        border-radius: 15px;
+        padding: 25px;
+        min-height: 400px;
+    }
+    
+    .preview-title {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: var(--text-primary);
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 3px solid var(--primary);
+    }
+    
+    .preview-section {
+        margin-bottom: 25px;
+    }
+    
+    .preview-section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 15px;
+    }
+    
+    /* معاينة الخلفيات */
+    .background-preview-box {
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 15px;
+        border: 2px solid var(--border);
+        transition: all 0.3s ease;
+    }
+    
+    .bg-main { background: var(--background); }
+    .bg-surface { background: var(--surface); }
+    .bg-card { background: var(--card-bg); }
+    .bg-elevated { background: var(--elevated-bg); }
+    .bg-table { background: var(--table-bg, var(--surface)); }
+    .bg-filter { background: var(--filter-bg, var(--elevated-bg)); }
+    .bg-input { background: var(--input-bg, var(--card-bg)); }
+    
+    /* معاينة Header & Footer */
+    .preview-navbar {
+        background: var(--navbar-bg, var(--primary)) !important;
+        color: var(--navbar-text, white) !important;
+        padding: 15px 20px;
+        border-radius: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .preview-navbar span {
+        color: var(--navbar-text, white) !important;
+    }
+    
+    .preview-footer {
+        background: var(--footer-bg, var(--elevated-bg)) !important;
+        color: var(--footer-text, var(--text-primary)) !important;
+        padding: 15px 20px;
+        border-radius: 10px;
+        text-align: center;
+    }
+    
+    .preview-footer p {
+        color: var(--footer-text, var(--text-primary)) !important;
+        margin: 0;
+    }
+    
+    /* معاينة الألوان الأساسية */
+    .color-sample {
+        display: inline-block;
+        width: 80px;
+        height: 80px;
+        border-radius: 10px;
+        margin: 5px;
+        border: 2px solid var(--border);
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .color-sample:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    .color-sample-label {
+        position: absolute;
+        bottom: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.8rem;
+        white-space: nowrap;
+        color: var(--text-secondary);
+    }
+    
+    .color-primary { background: var(--primary); }
+    .color-secondary { background: var(--secondary); }
+    .color-accent { background: var(--accent); }
+    
+    /* معاينة النصوص */
+    .text-preview {
+        padding: 20px;
+        background: var(--card-bg);
+        border-radius: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .text-primary-preview { color: var(--text-primary); }
+    .text-secondary-preview { color: var(--text-secondary); }
+    .text-tertiary-preview { color: var(--text-tertiary); }
+    
+    /* معاينة الحالات */
+    .status-preview {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin: 5px;
+        font-weight: 500;
+    }
+    
+    .status-success {
+        background: var(--success);
+        color: white;
+    }
+    
+    .status-warning {
+        background: var(--warning);
+        color: white;
+    }
+    
+    .status-error {
+        background: var(--error);
+        color: white;
+    }
+    
+    .status-info {
+        background: var(--info);
+        color: white;
+    }
+    
+    /* معاينة الحدود والأيقونات */
+    .border-preview-box {
+        padding: 20px;
+        border: 3px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 10px;
+        color: var(--text-primary);
+    }
+    
+    .separator-preview {
+        height: 3px;
+        background: var(--separator);
+        border-radius: 2px;
+        margin: 15px 0;
+    }
+    
+    .icon-preview {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 15px;
+        background: var(--card-bg);
+        border-radius: 8px;
+        margin: 5px;
+    }
+    
+    .icon-preview i {
+        color: var(--icon-color, var(--text-primary));
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .icon-preview:hover i {
+        color: var(--icon-hover-color, var(--primary));
+    }
+    
+    /* معاينة الروابط */
+    .link-preview {
+        padding: 20px;
+        background: var(--card-bg);
+        border-radius: 10px;
+    }
+    
+    .link-preview a {
+        color: var(--link-color, var(--primary));
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        font-size: 1.1rem;
+    }
+    
+    .link-preview a:hover {
+        color: var(--link-hover-color, var(--secondary));
+        text-decoration: underline;
+    }
+    
+    /* معاينة الجداول */
+    .table-preview {
+        background: var(--table-bg, var(--surface));
+        border-radius: 10px;
+        overflow: hidden;
+        border: 2px solid var(--border);
+    }
+    
+    .table-preview table {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .table-preview th {
+        background: var(--table-bg, var(--surface));
+        color: var(--text-primary);
+        padding: 12px;
+        font-weight: bold;
+        border-bottom: 2px solid var(--border);
+    }
+    
+    .table-preview td {
+        background: var(--card-bg);
+        color: var(--text-primary);
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--separator);
+    }
+    
+    /* معاينة الأزرار */
+    .buttons-preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .buttons-preview .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    /* أزرار الإجراءات */
+    .action-buttons {
+        position: sticky;
+        bottom: 20px;
+        background: var(--card-bg);
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-top: 30px;
+    }
+    
+    .action-buttons .btn {
+        flex: 1;
+        min-width: 150px;
+        padding: 12px 20px;
+        font-weight: 600;
+        font-size: 1.05rem;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .action-buttons .btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .success-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--success);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: none;
+        z-index: 9999;
+        animation: slideInRight 0.3s ease;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    .info-badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="theme-customization-wrapper">
+    <!-- Header -->
+    <div class="customization-header">
+        <h1>🎨 تخصيص الثيم الشخصي</h1>
+        <p>خصص جميع ألوان الثيم بشكل كامل مع معاينة فورية مباشرة لكل تغيير</p>
+        <span class="info-badge">الثيم الحالي: {{ current_theme }}</span>
+    </div>
+    
+    <!-- Success Toast -->
+    <div class="success-toast" id="successToast">
+        ✅ تم تطبيق التغييرات فوراً!
+    </div>
+    
+    <form method="post" id="themeForm">
+        {% csrf_token %}
+        
+        <!-- Base Theme Hidden -->
+        <div style="display: none;">
+            {{ form.base_theme }}
+        </div>
+        
+        <!-- Tabs Container -->
+        <div class="tabs-container">
+            <ul class="nav nav-tabs" id="customizationTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="backgrounds-tab" data-bs-toggle="tab" data-bs-target="#backgrounds" type="button">
+                        🎨 الخلفيات
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="header-footer-tab" data-bs-toggle="tab" data-bs-target="#header-footer" type="button">
+                        🎯 Header & Footer
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="colors-tab" data-bs-toggle="tab" data-bs-target="#colors" type="button">
+                        🌈 الألوان الأساسية
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="texts-tab" data-bs-toggle="tab" data-bs-target="#texts" type="button">
+                        ✍️ النصوص
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="status-tab" data-bs-toggle="tab" data-bs-target="#status" type="button">
+                        🎭 حالات النظام
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="borders-tab" data-bs-toggle="tab" data-bs-target="#borders" type="button">
+                        📐 الحدود والأيقونات
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="links-tab" data-bs-toggle="tab" data-bs-target="#links" type="button">
+                        🔗 الروابط
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="advanced-tab" data-bs-toggle="tab" data-bs-target="#advanced" type="button">
+                        ⚡ متقدم
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="customizationTabsContent">
+                <!-- Tab 1: الخلفيات -->
+                <div class="tab-pane fade show active" id="backgrounds" role="tabpanel">
+                    <div class="tab-layout">
+                        <div class="color-controls">
+                            <div class="color-group-title">🎨 ألوان الخلفيات</div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_background_color">خلفية التطبيق الرئيسية</label>
+                                {{ form.background_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_surface_color">خلفية الأسطح</label>
+                                {{ form.surface_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_card_bg_color">خلفية البطاقات</label>
+                                {{ form.card_bg_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_elevated_bg_color">خلفية العناصر المرتفعة</label>
+                                {{ form.elevated_bg_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_table_bg_color">خلفية الجداول</label>
+                                {{ form.table_bg_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_filter_bg_color">خلفية الفلاتر</label>
+                                {{ form.filter_bg_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_input_bg_color">خلفية حقول الإدخال</label>
+                                {{ form.input_bg_color }}
+                            </div>
+                        </div>
+                        
+                        <div class="live-preview">
+                            <div class="preview-title">👁️ معاينة فورية</div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">خلفية التطبيق</div>
+                                <div class="background-preview-box bg-main">
+                                    <p style="color: var(--text-primary);">هذه هي الخلفية الرئيسية للتطبيق</p>
+                                </div>
+                            </div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">خلفية الأسطح</div>
+                                <div class="background-preview-box bg-surface">
+                                    <p style="color: var(--text-primary);">تستخدم للأسطح والعناصر الثانوية</p>
+                                </div>
+                            </div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">خلفية البطاقات</div>
+                                <div class="background-preview-box bg-card">
+                                    <p style="color: var(--text-primary);">تستخدم للبطاقات والنوافذ</p>
+                                </div>
+                            </div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">جدول بيانات</div>
+                                <div class="table-preview">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>الاسم</th>
+                                                <th>القسم</th>
+                                                <th>الحالة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>أحمد محمد</td>
+                                                <td>المبيعات</td>
+                                                <td>نشط</td>
+                                            </tr>
+                                            <tr>
+                                                <td>فاطمة علي</td>
+                                                <td>التسويق</td>
+                                                <td>نشط</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 2: Header & Footer -->
+                <div class="tab-pane fade" id="header-footer" role="tabpanel">
+                    <div class="tab-layout">
+                        <div class="color-controls">
+                            <div class="color-group-title">🎯 Header & Footer</div>
+                            <div style="background: var(--success); color: white; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem;">
+                                <i class="fas fa-check-circle"></i>
+                                <strong>مستقل تماماً:</strong> ألوان Header و Footer هنا منفصلة عن الألوان الأساسية.
+                                التغييرات هنا تؤثر فقط على شريط التنقل والتذييل.
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_navbar_bg_color">خلفية شريط التنقل (Navbar)</label>
+                                {{ form.navbar_bg_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_navbar_text_color">نص شريط التنقل</label>
+                                {{ form.navbar_text_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_footer_bg_color">خلفية التذييل (Footer)</label>
+                                {{ form.footer_bg_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_footer_text_color">نص التذييل</label>
+                                {{ form.footer_text_color }}
+                            </div>
+                        </div>
+                        
+                        <div class="live-preview">
+                            <div class="preview-title">👁️ معاينة فورية</div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">شريط التنقل (Navbar)</div>
+                                <div class="preview-navbar">
+                                    <span>🏠 الصفحة الرئيسية</span>
+                                    <span>📊 التقارير</span>
+                                    <span>⚙️ الإعدادات</span>
+                                    <span>👤 الملف الشخصي</span>
+                                </div>
+                            </div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">التذييل (Footer)</div>
+                                <div class="preview-footer">
+                                    <p style="margin: 0;">© 2025 جميع الحقوق محفوظة</p>
+                                    <p style="margin: 5px 0 0 0; font-size: 0.9rem;">تم التطوير بواسطة فريقنا</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 3: الألوان الأساسية -->
+                <div class="tab-pane fade" id="colors" role="tabpanel">
+                    <div class="tab-layout">
+                        <div class="color-controls">
+                            <div class="color-group-title">🌈 الألوان الأساسية</div>
+                            <div style="background: var(--info); color: white; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem;">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>ملاحظة:</strong> هذه الألوان تستخدم للأزرار والعناصر الرئيسية فقط. 
+                                لتغيير ألوان Header/Footer استخدم التبويب المخصص لها.
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_primary_color">اللون الأساسي (Primary)</label>
+                                {{ form.primary_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_secondary_color">اللون الثانوي (Secondary)</label>
+                                {{ form.secondary_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_accent_color">لون التميز (Accent)</label>
+                                {{ form.accent_color }}
+                            </div>
+                        </div>
+                        
+                        <div class="live-preview">
+                            <div class="preview-title">👁️ معاينة فورية</div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">عينات الألوان</div>
+                                <div style="text-align: center; padding: 20px;">
+                                    <div class="color-sample color-primary">
+                                        <span class="color-sample-label">أساسي</span>
+                                    </div>
+                                    <div class="color-sample color-secondary">
+                                        <span class="color-sample-label">ثانوي</span>
+                                    </div>
+                                    <div class="color-sample color-accent">
+                                        <span class="color-sample-label">تميز</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">الأزرار</div>
+                                <div class="buttons-preview">
+                                    <button type="button" class="btn btn-primary">زر أساسي</button>
+                                    <button type="button" class="btn btn-secondary">زر ثانوي</button>
+                                    <button type="button" class="btn btn-outline-primary">زر محدد</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 4: النصوص -->
+                <div class="tab-pane fade" id="texts" role="tabpanel">
+                    <div class="tab-layout">
+                        <div class="color-controls">
+                            <div class="color-group-title">✍️ ألوان النصوص</div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_text_primary_color">النص الأساسي</label>
+                                {{ form.text_primary_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_text_secondary_color">النص الثانوي</label>
+                                {{ form.text_secondary_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_text_tertiary_color">النص المساعد</label>
+                                {{ form.text_tertiary_color }}
+                            </div>
+                        </div>
+                        
+                        <div class="live-preview">
+                            <div class="preview-title">👁️ معاينة فورية</div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">مستويات النصوص</div>
+                                <div class="text-preview">
+                                    <h3 class="text-primary-preview">عنوان بالنص الأساسي</h3>
+                                    <p class="text-primary-preview" style="font-size: 1.1rem;">
+                                        هذا نص أساسي يستخدم للعناوين والنصوص المهمة. 
+                                        يجب أن يكون واضحاً وسهل القراءة على جميع الخلفيات.
+                                    </p>
+                                </div>
+                                
+                                <div class="text-preview">
+                                    <p class="text-secondary-preview" style="font-size: 1rem;">
+                                        نص ثانوي يستخدم للوصف والتفاصيل الإضافية. 
+                                        أقل أهمية من النص الأساسي ولكن يجب أن يظل واضحاً.
+                                    </p>
+                                </div>
+                                
+                                <div class="text-preview">
+                                    <p class="text-tertiary-preview" style="font-size: 0.9rem;">
+                                        نص مساعد للملاحظات والتلميحات والمعلومات الإضافية.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 5: حالات النظام -->
+                <div class="tab-pane fade" id="status" role="tabpanel">
+                    <div class="tab-layout">
+                        <div class="color-controls">
+                            <div class="color-group-title">🎭 حالات النظام</div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_success_color">نجاح (Success)</label>
+                                {{ form.success_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_warning_color">تحذير (Warning)</label>
+                                {{ form.warning_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_error_color">خطأ (Error)</label>
+                                {{ form.error_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_info_color">معلومات (Info)</label>
+                                {{ form.info_color }}
+                            </div>
+                        </div>
+                        
+                        <div class="live-preview">
+                            <div class="preview-title">👁️ معاينة فورية</div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">الرسائل والإشعارات</div>
+                                <div style="padding: 20px;">
+                                    <div class="status-preview status-success">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>تم العملية بنجاح!</span>
+                                    </div>
+                                    
+                                    <div class="status-preview status-warning">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        <span>تحذير: تحقق من البيانات</span>
+                                    </div>
+                                    
+                                    <div class="status-preview status-error">
+                                        <i class="fas fa-times-circle"></i>
+                                        <span>خطأ: فشلت العملية</span>
+                                    </div>
+                                    
+                                    <div class="status-preview status-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span>معلومات مفيدة</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">الأزرار</div>
+                                <div class="buttons-preview">
+                                    <button type="button" class="btn btn-success">✅ نجاح</button>
+                                    <button type="button" class="btn btn-warning">⚠️ تحذير</button>
+                                    <button type="button" class="btn btn-danger">❌ خطأ</button>
+                                    <button type="button" class="btn btn-info">ℹ️ معلومات</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 6: الحدود والأيقونات -->
+                <div class="tab-pane fade" id="borders" role="tabpanel">
+                    <div class="tab-layout">
+                        <div class="color-controls">
+                            <div class="color-group-title">📐 الحدود والأيقونات</div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_border_color">لون الحدود</label>
+                                {{ form.border_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_separator_color">لون الفواصل</label>
+                                {{ form.separator_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_icon_color">لون الأيقونات</label>
+                                {{ form.icon_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_icon_hover_color">لون الأيقونات عند التمرير</label>
+                                {{ form.icon_hover_color }}
+                            </div>
+                        </div>
+                        
+                        <div class="live-preview">
+                            <div class="preview-title">👁️ معاينة فورية</div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">مثال على الحدود</div>
+                                <div class="border-preview-box">
+                                    <p>هذا صندوق محاط بحدود ملونة</p>
+                                    <p>يمكنك تغيير لون الحدود من اليسار</p>
+                                </div>
+                            </div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">فاصل</div>
+                                <div class="separator-preview"></div>
+                                <p style="color: var(--text-secondary); text-align: center;">
+                                    الخط أعلاه هو الفاصل
+                                </p>
+                            </div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">الأيقونات (مرر عليها)</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                    <div class="icon-preview">
+                                        <i class="fas fa-home"></i>
+                                        <span style="color: var(--text-primary);">الرئيسية</span>
+                                    </div>
+                                    <div class="icon-preview">
+                                        <i class="fas fa-user"></i>
+                                        <span style="color: var(--text-primary);">المستخدم</span>
+                                    </div>
+                                    <div class="icon-preview">
+                                        <i class="fas fa-cog"></i>
+                                        <span style="color: var(--text-primary);">الإعدادات</span>
+                                    </div>
+                                    <div class="icon-preview">
+                                        <i class="fas fa-chart-bar"></i>
+                                        <span style="color: var(--text-primary);">التقارير</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 7: الروابط -->
+                <div class="tab-pane fade" id="links" role="tabpanel">
+                    <div class="tab-layout">
+                        <div class="color-controls">
+                            <div class="color-group-title">🔗 الروابط</div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_link_color">لون الروابط</label>
+                                {{ form.link_color }}
+                            </div>
+                            
+                            <div class="color-control-item">
+                                <label for="id_link_hover_color">لون الروابط عند التمرير</label>
+                                {{ form.link_hover_color }}
+                            </div>
+                        </div>
+                        
+                        <div class="live-preview">
+                            <div class="preview-title">👁️ معاينة فورية</div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">روابط تجريبية</div>
+                                <div class="link-preview">
+                                    <p style="color: var(--text-primary); margin-bottom: 15px;">
+                                        <a href="#">هذا رابط تجريبي - مرر عليه لرؤية تأثير Hover</a>
+                                    </p>
+                                    <p style="color: var(--text-primary); margin-bottom: 15px;">
+                                        <a href="#">رابط آخر للصفحة الرئيسية</a>
+                                    </p>
+                                    <p style="color: var(--text-primary); margin-bottom: 15px;">
+                                        <a href="#">رابط للملف الشخصي</a>
+                                    </p>
+                                    <p style="color: var(--text-primary);">
+                                        <a href="#">رابط للإعدادات</a>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 8: متقدم -->
+                <div class="tab-pane fade" id="advanced" role="tabpanel">
+                    <div class="tab-layout">
+                        <div class="color-controls">
+                            <div class="color-group-title">⚡ إعدادات متقدمة</div>
+                            <div style="padding: 20px; background: var(--card-bg); border-radius: 10px;">
+                                <h4 style="color: var(--text-primary); margin-bottom: 15px;">تطبيق التخصيص</h4>
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: flex; align-items: center; gap: 10px; color: var(--text-primary);">
+                                        {{ form.is_active }}
+                                        <span>تفعيل التخصيصات</span>
+                                    </label>
+                                    <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                                        عند التفعيل، سيتم تطبيق جميع التخصيصات تلقائياً
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="live-preview">
+                            <div class="preview-title">👁️ معاينة شاملة</div>
+                            
+                            <div class="preview-section">
+                                <div class="preview-section-title">مثال متكامل</div>
+                                
+                                <!-- Navbar -->
+                                <div class="preview-navbar">
+                                    <span>🏠 النظام</span>
+                                    <span>👤 أحمد</span>
+                                </div>
+                                
+                                <!-- Content -->
+                                <div style="background: var(--card-bg); padding: 20px; border-radius: 10px; margin: 15px 0;">
+                                    <h3 style="color: var(--text-primary); margin-bottom: 15px;">لوحة التحكم</h3>
+                                    
+                                    <!-- Stats -->
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
+                                        <div class="status-preview status-success" style="width: 100%;">
+                                            ✅ 145 عملية ناجحة
+                                        </div>
+                                        <div class="status-preview status-info" style="width: 100%;">
+                                            ℹ️ 23 إشعار جديد
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Table -->
+                                    <div class="table-preview">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>المستخدم</th>
+                                                    <th>العملية</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>أحمد</td>
+                                                    <td>تسجيل دخول</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <!-- Footer -->
+                                <div class="preview-footer">
+                                    © 2025 - نظام الإدارة
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> 💾 حفظ جميع التخصيصات
+            </button>
+            <button type="button" class="btn btn-warning" id="resetBtn">
+                <i class="fas fa-undo"></i> 🔄 إعادة تعيين للافتراضي
+            </button>
+            <button type="button" class="btn btn-info" id="exportBtn">
+                <i class="fas fa-download"></i> 📤 تصدير التخصيصات
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const colorInputs = document.querySelectorAll('input[type="color"]');
+    const root = document.documentElement;
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // CSS Variables Mapping
+    const cssVarMap = {
+        'background_color': '--background',
+        'surface_color': '--surface',
+        'card_bg_color': '--card-bg',
+        'elevated_bg_color': '--elevated-bg',
+        'table_bg_color': '--table-bg',
+        'filter_bg_color': '--filter-bg',
+        'input_bg_color': '--input-bg',
+        'navbar_bg_color': '--navbar-bg',
+        'navbar_text_color': '--navbar-text',
+        'footer_bg_color': '--footer-bg',
+        'footer_text_color': '--footer-text',
+        'primary_color': '--primary',
+        'secondary_color': '--secondary',
+        'accent_color': '--accent',
+        'text_primary_color': '--text-primary',
+        'text_secondary_color': '--text-secondary',
+        'text_tertiary_color': '--text-tertiary',
+        'success_color': '--success',
+        'warning_color': '--warning',
+        'error_color': '--error',
+        'info_color': '--info',
+        'border_color': '--border',
+        'separator_color': '--separator',
+        'icon_color': '--icon-color',
+        'icon_hover_color': '--icon-hover-color',
+        'link_color': '--link-color',
+        'link_hover_color': '--link-hover-color'
+    };
+    
+    // تحميل الألوان الحالية من الثيم النشط
+    function loadCurrentColors() {
+        const computedStyle = getComputedStyle(root);
+        
+        colorInputs.forEach(input => {
+            const fieldName = input.name;
+            const cssVar = cssVarMap[fieldName];
+            
+            if (cssVar) {
+                // إذا كان الحقل فارغاً، نملأه بالقيمة الحالية
+                if (!input.value || input.value === '#000000') {
+                    let currentColor = computedStyle.getPropertyValue(cssVar).trim();
+                    
+                    // تحويل RGB إلى HEX إذا لزم الأمر
+                    if (currentColor.startsWith('rgb')) {
+                        currentColor = rgbToHex(currentColor);
+                    }
+                    
+                    // التأكد من أن اللون بصيغة hex صحيحة
+                    if (currentColor && currentColor.startsWith('#')) {
+                        input.value = currentColor;
+                    }
+                }
+            }
+        });
+        
+        console.log('✅ تم تحميل الألوان الحالية من الثيم النشط');
+    }
+    
+    // تحويل RGB إلى HEX
+    function rgbToHex(rgb) {
+        // استخراج الأرقام من rgb(r, g, b)
+        const result = rgb.match(/\d+/g);
+        if (!result || result.length < 3) return rgb;
+        
+        const r = parseInt(result[0]);
+        const g = parseInt(result[1]);
+        const b = parseInt(result[2]);
+        
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+    }
+    
+    // تحميل الألوان عند بدء الصفحة
+    loadCurrentColors();
+    
+    // Real-time color updates
+    colorInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            const fieldName = this.name;
+            const value = this.value;
+            const cssVar = cssVarMap[fieldName];
+            
+            if (cssVar) {
+                root.style.setProperty(cssVar, value);
+                showSuccessToast();
+            }
+        });
+    });
+    
+    // Success Toast
+    function showSuccessToast() {
+        const toast = document.getElementById('successToast');
+        toast.style.display = 'block';
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 2000);
+    }
+    
+    // Reset Button
+    document.getElementById('resetBtn').addEventListener('click', function() {
+        if (confirm('هل أنت متأكد من إعادة تعيين جميع التخصيصات للقيم الافتراضية؟')) {
+            fetch('{% url "accounts:theme_customization_reset" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('✅ ' + data.message);
+                    location.reload();
+                } else {
+                    alert('❌ حدث خطأ: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('❌ حدث خطأ في الاتصال');
+                console.error('Error:', error);
+            });
+        }
+    });
+    
+    // Export Button
+    document.getElementById('exportBtn').addEventListener('click', function() {
+        fetch('{% url "accounts:theme_customization_export" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const dataStr = JSON.stringify(data.data, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'theme-customization-' + new Date().toISOString().split('T')[0] + '.json';
+                link.click();
+                alert('✅ تم تصدير التخصيصات بنجاح!');
+            } else {
+                alert('❌ حدث خطأ: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('❌ حدث خطأ في الاتصال');
+            console.error('Error:', error);
+        });
+    });
+    
+    // Base Theme Change (مخفي الآن - لكن نبقي الكود للأمان)
+    const baseThemeElement = document.getElementById('id_base_theme');
+    if (baseThemeElement) {
+        baseThemeElement.addEventListener('change', function() {
+            const theme = this.value;
+            if (theme && confirm('هل تريد تطبيق ألوان الثيم "' + this.options[this.selectedIndex].text + '" كنقطة بداية؟')) {
+                fetch('{% url "accounts:set_default_theme" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'theme=' + theme
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    } else {
+                        alert('❌ حدث خطأ: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('❌ حدث خطأ في الاتصال');
+                    console.error('Error:', error);
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

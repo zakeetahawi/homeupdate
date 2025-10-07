@@ -1,0 +1,312 @@
+/**
+ * تنسيقات شريط التنقل الموحدة
+ * Unified Navbar Styles
+ */
+
+/* ========================================
+   شريط التنقل الأساسي
+   ======================================== */
+.navbar {
+    position: relative;
+    z-index: var(--z-fixed);
+    background-color: var(--navbar-bg) !important;
+    color: var(--navbar-text) !important;
+    box-shadow: var(--shadow-light);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.navbar-brand {
+    font-weight: var(--font-weight-semibold);
+    padding: 0.5rem 0;
+    margin-inline-end: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--navbar-text) !important;
+    transition: all 0.2s ease;
+}
+
+.navbar-brand:hover {
+    transform: translateY(-1px);
+}
+
+/* ========================================
+   Logo
+   ======================================== */
+.logo-img {
+    width: 45px;
+    height: 45px;
+    display: inline-block;
+    vertical-align: middle;
+    transition: transform 0.3s ease;
+    background: transparent !important;
+    mix-blend-mode: normal;
+}
+
+.navbar-brand:hover .logo-img {
+    transform: scale(1.05) rotate(2deg);
+}
+
+/* ========================================
+   روابط التنقل - جميع الثيمات
+   ======================================== */
+.navbar-nav .nav-link {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 0.6rem 0.9rem !important;
+    min-height: 65px !important;
+    justify-content: center !important;
+    line-height: 1.1 !important;
+    color: var(--navbar-text) !important;
+    gap: 0.3rem !important;
+    transition: all 0.2s ease;
+    border-radius: var(--radius);
+    margin: 0 2px;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.navbar-nav .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ========================================
+   أيقونات التنقل
+   ======================================== */
+.navbar .nav-link i,
+.navbar .nav-link .fas,
+.navbar .nav-link .far,
+.navbar .nav-link .fab,
+.navbar .nav-link .fal {
+    font-size: 1.4rem !important;
+    margin: 0 !important;
+    display: block !important;
+    order: 1 !important;
+    width: 100% !important;
+    text-align: center !important;
+    transition: all 0.2s ease;
+}
+
+.navbar .nav-link:hover i {
+    transform: scale(1.1);
+}
+
+/* ========================================
+   نصوص التنقل
+   ======================================== */
+.navbar .nav-link .nav-text,
+.navbar .nav-link span {
+    order: 2 !important;
+    font-size: 0.8rem !important;
+    display: block !important;
+    width: 100% !important;
+    text-align: center !important;
+    margin: 0 !important;
+    white-space: nowrap;
+}
+
+/* ========================================
+   أزرار التنقل العلوي (إشعارات، مستخدم)
+   ======================================== */
+.navbar .btn-outline-light {
+    border-width: 1px;
+    padding: 0.6rem 0.85rem;
+    transition: all 0.2s ease;
+    font-size: 1.1rem;
+    position: relative;
+}
+
+.navbar .btn-outline-light:hover {
+    transform: translateY(-2px);
+}
+
+.navbar .btn-outline-light i {
+    font-size: 1.25rem;
+}
+
+/* ========================================
+   Badges في التنقل
+   ======================================== */
+.navbar .position-relative .badge {
+    font-size: 0.65rem;
+    padding: 0.25em 0.5em;
+    font-weight: var(--font-weight-semibold);
+}
+
+/* ========================================
+   Responsive - Mobile
+   ======================================== */
+@media (max-width: 992px) {
+    .navbar-collapse {
+        padding: var(--spacing-md) 0;
+    }
+    
+    .navbar-nav .nav-link {
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        padding: 0.5rem 0.75rem !important;
+        min-height: auto !important;
+        text-align: start !important;
+    }
+    
+    .navbar .nav-link i {
+        order: 1 !important;
+        margin-inline-end: var(--spacing-sm) !important;
+        font-size: 1.2rem !important;
+        width: auto !important;
+    }
+    
+    .navbar .nav-link .nav-text,
+    .navbar .nav-link span {
+        order: 2 !important;
+        text-align: start !important;
+        width: auto !important;
+        font-size: 0.95rem !important;
+    }
+    
+    .navbar-dark .d-flex.align-items-center {
+        margin-top: var(--spacing-md);
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .navbar-dark .dropdown {
+        margin-bottom: var(--spacing-sm);
+    }
+}
+
+/* ========================================
+   تنسيقات خاصة بالثيمات
+   ======================================== */
+
+/* Modern Black Theme */
+[data-theme="modern-black"] .navbar {
+    background: rgba(26, 26, 26, 0.95) !important;
+    border-bottom: 1px solid var(--border);
+}
+
+[data-theme="modern-black"] .navbar-brand {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="modern-black"] .navbar-brand:hover {
+    color: var(--primary) !important;
+}
+
+[data-theme="modern-black"] .logo-img {
+    filter: brightness(1.2);
+}
+
+[data-theme="modern-black"] .nav-link {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="modern-black"] .nav-link:hover {
+    color: var(--text-primary) !important;
+}
+
+/* أيقونات ملونة للثيم الأسود */
+[data-theme="modern-black"] .nav-link[href*="home"] i,
+[data-theme="modern-black"] .nav-link[href="/"] i {
+    color: #00FF88 !important;
+}
+
+[data-theme="modern-black"] .nav-link[href*="customers"] i {
+    color: #00D2FF !important;
+}
+
+[data-theme="modern-black"] .nav-link[href*="orders"] i {
+    color: #FF6B00 !important;
+}
+
+[data-theme="modern-black"] .nav-link[href*="inventory"] i {
+    color: #B537F2 !important;
+}
+
+[data-theme="modern-black"] .nav-link[href*="inspections"] i {
+    color: #00F5D4 !important;
+}
+
+[data-theme="modern-black"] .nav-link[href*="installations"] i {
+    color: #FFD700 !important;
+}
+
+[data-theme="modern-black"] .nav-link[href*="factory"] i,
+[data-theme="modern-black"] .nav-link[href*="manufacturing"] i {
+    color: #FF3366 !important;
+}
+
+[data-theme="modern-black"] .nav-link[href*="reports"] i {
+    color: #3A86FF !important;
+}
+
+[data-theme="modern-black"] .nav-link[href*="database"] i,
+[data-theme="modern-black"] .nav-link[href*="data"] i {
+    color: #9C27B0 !important;
+}
+
+/* Custom Theme - أيقونات ملونة ومشعة */
+[data-theme="custom-theme"] .navbar .nav-link i {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+[data-theme="custom-theme"] .navbar .nav-link:hover i {
+    transform: translateY(-3px) scale(1.1);
+    text-shadow: 0 0 15px currentColor;
+    filter: brightness(1.2);
+}
+
+/* ألوان مخصصة للأيقونات في Custom Theme */
+[data-theme="custom-theme"] .navbar .fa-home {
+    color: #98FB98 !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-users {
+    color: #00CED1 !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-shopping-cart {
+    color: #FFB6C1 !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-boxes {
+    color: #90EE90 !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-clipboard-check {
+    color: #87CEFA !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-tools {
+    color: #DDA0DD !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-industry {
+    color: #98FB98 !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-chart-line,
+[data-theme="custom-theme"] .navbar .fa-chart-bar {
+    color: #87CEEB !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-database {
+    color: #B0C4DE !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-bell {
+    color: #FFD700 !important;
+}
+
+[data-theme="custom-theme"] .navbar .fa-user {
+    color: #87CEEB !important;
+}

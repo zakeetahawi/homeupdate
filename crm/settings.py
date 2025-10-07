@@ -383,6 +383,7 @@ TEMPLATES = [
                 'accounts.context_processors.branch_messages',
                 'accounts.context_processors.notifications_context',
                 'accounts.context_processors.admin_notifications_context',
+                'accounts.context_processors.theme_customization',
                 'notifications.context_processors.notifications_context',
                 'crm.context_processors.admin_stats',
                 'crm.context_processors.jazzmin_extras',

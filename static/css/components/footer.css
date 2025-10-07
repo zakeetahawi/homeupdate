@@ -1,0 +1,239 @@
+/**
+ * تنسيقات Footer الموحدة
+ * Unified Footer Styles
+ * 
+ * يستخدم CSS Variables من ثيمات variables.css
+ * جميع الألوان قابلة للتخصيص من مخصص الثيمات
+ */
+
+/* ========================================
+   Footer الأساسي
+   ======================================== */
+.footer-area {
+    background-color: var(--footer-bg) !important;
+    color: var(--footer-text) !important;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+/* ========================================
+   محتوى Footer
+   ======================================== */
+.footer-area .footer-title {
+    color: var(--footer-text) !important;
+    margin-bottom: 0;
+    font-weight: var(--font-weight-semibold);
+}
+
+.footer-area h6,
+.footer-area h5,
+.footer-area h4 {
+    color: var(--footer-text) !important;
+}
+
+.footer-area p,
+.footer-area span,
+.footer-area div {
+    color: var(--footer-text) !important;
+}
+
+/* ========================================
+   الروابط في Footer
+   ======================================== */
+.footer-area a {
+    color: var(--footer-text) !important;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.footer-area a:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
+/* ========================================
+   أيقونات التواصل الاجتماعي
+   ======================================== */
+.footer-area .social-icon {
+    color: var(--footer-text) !important;
+    opacity: 0.9;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.footer-area .social-icon:hover {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.1);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.footer-area .social-icons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* ========================================
+   قسم معلومات الشركة
+   ======================================== */
+.footer-area .company-info {
+    color: var(--footer-text) !important;
+}
+
+.footer-area .company-info i {
+    color: var(--footer-text) !important;
+    margin-left: 0.5rem;
+}
+
+/* ========================================
+   نص حقوق الطبع
+   ======================================== */
+.footer-area .copyright-text {
+    color: var(--footer-text) !important;
+    font-size: var(--font-size-sm);
+    opacity: 0.95;
+}
+
+/* ========================================
+   الأزرار في Footer
+   ======================================== */
+.footer-area .btn {
+    color: var(--footer-text) !important;
+    border-color: var(--footer-text) !important;
+}
+
+.footer-area .btn:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ========================================
+   Badges في Footer
+   ======================================== */
+.footer-area .badge {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    color: var(--footer-text) !important;
+}
+
+/* ========================================
+   تصميم Responsive
+   ======================================== */
+@media (max-width: 768px) {
+    .footer-area {
+        padding: 1rem 0;
+        text-align: center;
+    }
+    
+    .footer-area .d-flex {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .footer-area .social-icons {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .footer-area {
+        font-size: var(--font-size-sm);
+    }
+    
+    .footer-area .footer-title {
+        font-size: var(--font-size-base);
+    }
+}
+
+/* ========================================
+   Override Bootstrap text-white
+   ======================================== */
+.footer-area .text-white {
+    color: var(--footer-text) !important;
+}
+
+.footer-area .text-muted {
+    color: var(--footer-text) !important;
+    opacity: 0.8;
+}
+
+/* ========================================
+   أيقونات Font Awesome في Footer
+   ======================================== */
+.footer-area i,
+.footer-area .fas,
+.footer-area .far,
+.footer-area .fab {
+    color: var(--footer-text) !important;
+}
+
+/* ========================================
+   روابط التنقل السريع
+   ======================================== */
+.footer-area .quick-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-area .quick-links li {
+    margin-bottom: 0.5rem;
+}
+
+.footer-area .quick-links a {
+    color: var(--footer-text) !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.footer-area .quick-links a:hover {
+    padding-right: 0.5rem;
+}
+
+/* ========================================
+   معلومات الاتصال
+   ======================================== */
+.footer-area .contact-info {
+    color: var(--footer-text) !important;
+}
+
+.footer-area .contact-info i {
+    margin-left: 0.5rem;
+    opacity: 0.9;
+}
+
+/* ========================================
+   فواصل في Footer
+   ======================================== */
+.footer-area .footer-divider {
+    border-color: var(--footer-text) !important;
+    opacity: 0.2;
+}
+
+/* ========================================
+   حالات خاصة
+   ======================================== */
+
+/* Modern Black Theme - تأثيرات خاصة */
+[data-theme="modern-black"] .footer-area {
+    border-top-color: #333333;
+}
+
+[data-theme="modern-black"] .footer-area .social-icon:hover {
+    background-color: rgba(0, 210, 255, 0.1);
+    box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
+}
+
+/* ثيمات فاتحة - ظلال خفيفة */
+:root .footer-area,
+[data-theme="custom-theme"] .footer-area,
+[data-theme="mocha-mousse"] .footer-area,
+[data-theme="warm-earth"] .footer-area,
+[data-theme="coffee-elegance"] .footer-area {
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+}

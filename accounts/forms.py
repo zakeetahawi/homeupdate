@@ -5,11 +5,16 @@ from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from .models import User, Branch, Department, CompanyInfo, FormField, Salesperson, Role, UserRole
 
-# Theme choices constant
+# Theme choices constant - 6 themes
 THEME_CHOICES = [
-    ('default', _('الثيم الإفتراضي')),
-    ('custom-theme', _('نسخة الثيم الإفتراضي القابلة للتعديل')),
-    ('modern-black', _('الثيم الأسود العصري'))
+    # الثيمات الكلاسيكية
+    ('default', _('🎨 الثيم الافتراضي')),
+    ('custom-theme', _('✨ ثيم مخصص (مع تأثيرات)')),
+    ('modern-black', _('🌙 أسود عصري')),
+    # ثيمات Pantone 2025 الجديدة
+    ('mocha-mousse', _('☕ Mocha Mousse (Pantone 2025)')),
+    ('warm-earth', _('🌍 ألوان ترابية دافئة')),
+    ('coffee-elegance', _('☕ أناقة القهوة'))
 ]
 
 class CustomAuthenticationForm(AuthenticationForm):

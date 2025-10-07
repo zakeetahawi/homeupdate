@@ -1,4 +1,5 @@
 from .models import Department, CompanyInfo, SystemSettings, BranchMessage
+from .theme_customization import ThemeCustomization
 from django.utils import timezone
 from accounts.models import FooterSettings
 from django.core.cache import cache
@@ -229,3 +230,30 @@ def admin_notifications_context(request):
         })
 
     return context
+
+
+def theme_customization(request):
+    """
+    إضافة تخصيصات الثيم لجميع القوالب
+    Add theme customization to all templates
+    """
+    if request.user.is_authenticated:
+        try:
+            customization = ThemeCustomization.objects.get(
+                user=request.user,
+                is_active=True
+            )
+            return {
+                'user_theme_customization': customization,
+                'user_theme_css_vars': customization.get_css_variables()
+            }
+        except ThemeCustomization.DoesNotExist:
+            return {
+                'user_theme_customization': None,
+                'user_theme_css_vars': {}
+            }
+    
+    return {
+        'user_theme_customization': None,
+        'user_theme_css_vars': {}
+    }

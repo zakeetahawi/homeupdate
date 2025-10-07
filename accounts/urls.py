@@ -10,6 +10,10 @@ from .messages_views import (
     mark_as_read, mark_all_as_read, get_unread_count, 
     get_online_users_with_messages, reply_to_message
 )
+from .views_theme import (
+    theme_customization_view, theme_customization_reset,
+    theme_customization_export, theme_customization_update_live
+)
 
 app_name = 'accounts'
 
@@ -78,6 +82,12 @@ urlpatterns = [
 
     # Theme Management
     path('save-theme/', views.set_default_theme, name='set_default_theme'),
+    
+    # 🎨 تخصيص الثيمات
+    path('theme-customization/', theme_customization_view, name='theme_customization'),
+    path('theme-customization/reset/', theme_customization_reset, name='theme_customization_reset'),
+    path('theme-customization/export/', theme_customization_export, name='theme_customization_export'),
+    path('theme-customization/update-live/', theme_customization_update_live, name='theme_customization_update_live'),
 
     # 🎨 نظام الإشعارات - تم إزالته
 

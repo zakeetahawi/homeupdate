@@ -1,0 +1,296 @@
+/**
+ * تنسيقات النماذج الموحدة
+ * Unified Form Styles
+ */
+
+/* ========================================
+   التسميات (Labels)
+   ======================================== */
+.form-label,
+label {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-base);
+}
+
+/* ========================================
+   حقول الإدخال
+   ======================================== */
+.form-control,
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+    display: block;
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+    color: var(--text-primary);
+    background-color: var(--card-bg);
+    background-clip: padding-box;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    color: var(--text-primary);
+    background-color: var(--elevated-bg);
+    border-color: var(--primary);
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(var(--primary), 0.25);
+}
+
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-tertiary);
+    opacity: 1;
+}
+
+.form-control:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+    background-color: var(--surface);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   Select
+   ======================================== */
+.form-select,
+select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: left 0.75rem center;
+    background-size: 16px 12px;
+    padding-inline-start: 2.25rem;
+}
+
+.form-select:focus,
+select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--primary), 0.25);
+}
+
+/* ========================================
+   Textarea
+   ======================================== */
+textarea.form-control,
+textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* ========================================
+   Checkboxes & Radios
+   ======================================== */
+.form-check {
+    display: block;
+    min-height: 1.5rem;
+    padding-inline-start: 1.5em;
+    margin-bottom: 0.125rem;
+}
+
+.form-check-input {
+    width: 1em;
+    height: 1em;
+    margin-top: 0.25em;
+    margin-inline-start: -1.5em;
+    vertical-align: top;
+    background-color: var(--card-bg);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    border: 1px solid var(--border);
+    appearance: none;
+    transition: all 0.15s ease-in-out;
+}
+
+.form-check-input[type="checkbox"] {
+    border-radius: 0.25em;
+}
+
+.form-check-input[type="radio"] {
+    border-radius: 50%;
+}
+
+.form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.form-check-input:focus {
+    border-color: var(--primary);
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(var(--primary), 0.25);
+}
+
+.form-check-label {
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+/* ========================================
+   Input Groups
+   ======================================== */
+.input-group {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    width: 100%;
+}
+
+.input-group > .form-control,
+.input-group > .form-select {
+    position: relative;
+    flex: 1 1 auto;
+    width: 1%;
+    min-width: 0;
+}
+
+.input-group-text {
+    display: flex;
+    align-items: center;
+    padding: 0.625rem 0.875rem;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+    color: var(--text-primary);
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--elevated-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+/* ========================================
+   نصوص المساعدة والأخطاء
+   ======================================== */
+.form-text,
+.help-text,
+small.text-muted {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.invalid-feedback {
+    display: none;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: var(--font-size-sm);
+    color: var(--error);
+}
+
+.is-invalid ~ .invalid-feedback {
+    display: block;
+}
+
+.is-invalid {
+    border-color: var(--error);
+}
+
+.is-invalid:focus {
+    border-color: var(--error);
+    box-shadow: 0 0 0 0.25rem rgba(var(--error), 0.25);
+}
+
+.valid-feedback {
+    display: none;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: var(--font-size-sm);
+    color: var(--success);
+}
+
+.is-valid ~ .valid-feedback {
+    display: block;
+}
+
+.is-valid {
+    border-color: var(--success);
+}
+
+.is-valid:focus {
+    border-color: var(--success);
+    box-shadow: 0 0 0 0.25rem rgba(var(--success), 0.25);
+}
+
+/* ========================================
+   تنسيقات خاصة بالثيمات
+   ======================================== */
+
+/* Modern Black Theme */
+[data-theme="modern-black"] .form-control,
+[data-theme="modern-black"] input,
+[data-theme="modern-black"] select,
+[data-theme="modern-black"] textarea {
+    background-color: var(--elevated-bg);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="modern-black"] .form-control:focus,
+[data-theme="modern-black"] input:focus,
+[data-theme="modern-black"] select:focus,
+[data-theme="modern-black"] textarea:focus {
+    background-color: var(--elevated-bg);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.25rem rgba(0, 210, 255, 0.25);
+    color: var(--text-primary);
+}
+
+[data-theme="modern-black"] .form-label,
+[data-theme="modern-black"] label {
+    color: var(--text-primary);
+}
+
+[data-theme="modern-black"] .form-text,
+[data-theme="modern-black"] small.text-muted {
+    color: var(--text-secondary);
+}
+
+[data-theme="modern-black"] .input-group-text {
+    background-color: var(--secondary);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+/* Custom Theme - تأثيرات متقدمة */
+[data-theme="custom-theme"] .form-control:focus,
+[data-theme="custom-theme"] input:focus,
+[data-theme="custom-theme"] select:focus,
+[data-theme="custom-theme"] textarea:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 3px rgba(106, 87, 67, 0.25);
+}
+
+/* Pantone 2025 Themes */
+[data-theme="mocha-mousse"] .form-control:focus,
+[data-theme="warm-earth"] .form-control:focus,
+[data-theme="coffee-elegance"] .form-control:focus {
+    box-shadow: 0 0 0 3px rgba(var(--primary), 0.2);
+}
+
+/* ========================================
+   Responsive
+   ======================================== */
+@media (max-width: 576px) {
+    .form-control,
+    input,
+    select,
+    textarea {
+        font-size: 16px; /* منع التكبير في iOS */
+    }
+}

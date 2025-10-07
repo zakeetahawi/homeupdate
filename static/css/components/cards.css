@@ -1,0 +1,347 @@
+/**
+ * تنسيقات البطاقات الموحدة
+ * Unified Card Styles
+ */
+
+/* ========================================
+   البطاقات الأساسية
+   ======================================== */
+.card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    word-wrap: break-word;
+    background-color: var(--card-bg);
+    background-clip: border-box;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-light);
+    transition: all 0.3s ease;
+    margin-bottom: var(--spacing-lg);
+}
+
+.card:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   رأس البطاقة
+   ======================================== */
+.card-header {
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin-bottom: 0;
+    color: var(--text-primary);
+    background-color: var(--elevated-bg);
+    border-bottom: 1px solid var(--border);
+    border-top-left-radius: calc(var(--radius) - 1px);
+    border-top-right-radius: calc(var(--radius) - 1px);
+    font-weight: var(--font-weight-semibold);
+}
+
+.card-header:first-child {
+    border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+}
+
+/* ========================================
+   جسم البطاقة
+   ======================================== */
+.card-body {
+    flex: 1 1 auto;
+    padding: var(--spacing-lg);
+    color: var(--text-primary);
+    background-color: var(--card-bg);
+}
+
+/* ========================================
+   عنوان ونص البطاقة
+   ======================================== */
+.card-title {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-lg);
+}
+
+.card-subtitle {
+    margin-top: calc(var(--spacing-sm) * -1);
+    margin-bottom: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.card-text {
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.card-text:last-child {
+    margin-bottom: 0;
+}
+
+/* ========================================
+   تذييل البطاقة
+   ======================================== */
+.card-footer {
+    padding: var(--spacing-md) var(--spacing-lg);
+    color: var(--text-secondary);
+    background-color: var(--elevated-bg);
+    border-top: 1px solid var(--border);
+    border-bottom-right-radius: calc(var(--radius) - 1px);
+    border-bottom-left-radius: calc(var(--radius) - 1px);
+}
+
+.card-footer:last-child {
+    border-radius: 0 0 calc(var(--radius) - 1px) calc(var(--radius) - 1px);
+}
+
+/* ========================================
+   صورة البطاقة
+   ======================================== */
+.card-img,
+.card-img-top,
+.card-img-bottom {
+    width: 100%;
+    height: auto;
+}
+
+.card-img,
+.card-img-top {
+    border-top-left-radius: calc(var(--radius) - 1px);
+    border-top-right-radius: calc(var(--radius) - 1px);
+}
+
+.card-img,
+.card-img-bottom {
+    border-bottom-right-radius: calc(var(--radius) - 1px);
+    border-bottom-left-radius: calc(var(--radius) - 1px);
+}
+
+/* ========================================
+   روابط البطاقة
+   ======================================== */
+.card-link {
+    color: var(--primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.card-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.card-link + .card-link {
+    margin-inline-start: var(--spacing-lg);
+}
+
+/* ========================================
+   مجموعة البطاقات
+   ======================================== */
+.card-group {
+    display: flex;
+    flex-flow: row wrap;
+    gap: var(--spacing-md);
+}
+
+.card-group > .card {
+    flex: 1 0 0%;
+}
+
+/* ========================================
+   تنسيقات خاصة بالثيمات
+   ======================================== */
+
+/* Modern Black Theme */
+[data-theme="modern-black"] .card {
+    background-color: var(--card-bg);
+    border-color: var(--border);
+    box-shadow: var(--shadow-light);
+}
+
+[data-theme="modern-black"] .card:hover {
+    box-shadow: var(--shadow);
+    border-color: var(--primary);
+}
+
+[data-theme="modern-black"] .card-header {
+    background-color: var(--elevated-bg);
+    border-bottom-color: var(--border);
+    color: var(--text-primary);
+}
+
+[data-theme="modern-black"] .card-body {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+}
+
+[data-theme="modern-black"] .card-footer {
+    background-color: var(--elevated-bg);
+    border-top-color: var(--border);
+    color: var(--text-secondary);
+}
+
+[data-theme="modern-black"] .card-title {
+    color: var(--text-primary);
+}
+
+[data-theme="modern-black"] .card-text {
+    color: var(--text-primary);
+}
+
+/* Custom Theme - رسوم متحركة متقدمة */
+[data-theme="custom-theme"] .card {
+    transform-origin: center bottom;
+    animation: cardAppear 0.4s ease-out forwards;
+}
+
+@keyframes cardAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+[data-theme="custom-theme"] .card:nth-child(1) { animation-delay: 0.1s; }
+[data-theme="custom-theme"] .card:nth-child(2) { animation-delay: 0.2s; }
+[data-theme="custom-theme"] .card:nth-child(3) { animation-delay: 0.3s; }
+[data-theme="custom-theme"] .card:nth-child(4) { animation-delay: 0.4s; }
+[data-theme="custom-theme"] .card:nth-child(5) { animation-delay: 0.5s; }
+
+[data-theme="custom-theme"] .card:hover {
+    transform: translateY(-5px) scale(1.02);
+}
+
+[data-theme="custom-theme"] .card:hover .card-title {
+    color: var(--primary);
+}
+
+/* Mocha Mousse Theme */
+[data-theme="mocha-mousse"] .card {
+    box-shadow: 0 3px 10px rgba(164, 119, 100, 0.12);
+}
+
+[data-theme="mocha-mousse"] .card:hover {
+    box-shadow: 0 6px 20px rgba(164, 119, 100, 0.2);
+}
+
+[data-theme="mocha-mousse"] .card-header {
+    background: linear-gradient(to bottom, var(--elevated-bg), var(--surface));
+}
+
+/* Warm Earth Theme */
+[data-theme="warm-earth"] .card {
+    box-shadow: 0 3px 12px rgba(184, 134, 91, 0.15);
+}
+
+[data-theme="warm-earth"] .card:hover {
+    box-shadow: 0 6px 24px rgba(184, 134, 91, 0.25);
+    border-color: var(--primary);
+}
+
+/* Coffee Elegance Theme */
+[data-theme="coffee-elegance"] .card {
+    box-shadow: 0 4px 12px rgba(111, 78, 55, 0.18);
+    border-radius: var(--radius-large);
+}
+
+[data-theme="coffee-elegance"] .card:hover {
+    box-shadow: 0 8px 24px rgba(111, 78, 55, 0.28);
+    transform: translateY(-4px) scale(1.01);
+}
+
+[data-theme="coffee-elegance"] .card-header {
+    border-bottom: 2px solid var(--primary);
+    background: linear-gradient(135deg, var(--elevated-bg), var(--surface));
+}
+
+/* ========================================
+   بطاقات خاصة
+   ======================================== */
+
+/* بطاقة الإحصائيات */
+.card-stat {
+    text-align: center;
+    padding: var(--spacing-xl);
+}
+
+.card-stat .stat-value {
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.card-stat .stat-label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* بطاقة الملف الشخصي */
+.card-profile {
+    text-align: center;
+}
+
+.card-profile .profile-img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: var(--spacing-lg) auto;
+    border: 4px solid var(--primary);
+}
+
+/* بطاقة التنبيه */
+.card-alert {
+    border-left: 4px solid var(--primary);
+}
+
+.card-alert.card-success {
+    border-left-color: var(--success);
+}
+
+.card-alert.card-warning {
+    border-left-color: var(--warning);
+}
+
+.card-alert.card-danger {
+    border-left-color: var(--error);
+}
+
+.card-alert.card-info {
+    border-left-color: var(--info);
+}
+
+/* ========================================
+   Responsive
+   ======================================== */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .card-header,
+    .card-body,
+    .card-footer {
+        padding: var(--spacing-md);
+    }
+    
+    .card-group {
+        flex-direction: column;
+    }
+    
+    .card-stat {
+        padding: var(--spacing-lg);
+    }
+    
+    .card-stat .stat-value {
+        font-size: var(--font-size-2xl);
+    }
+}

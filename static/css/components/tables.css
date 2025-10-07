@@ -1,0 +1,282 @@
+/**
+ * تنسيقات الجداول الموحدة
+ * Unified Table Styles
+ */
+
+/* ========================================
+   الجداول الأساسية
+   ======================================== */
+.table,
+table {
+    width: 100%;
+    margin-bottom: var(--spacing-lg);
+    color: var(--text-primary);
+    vertical-align: top;
+    border-color: var(--border);
+    background-color: transparent;
+}
+
+.table > :not(caption) > * > * {
+    padding: 0.75rem 0.75rem;
+    background-color: transparent;
+    border-bottom-width: 1px;
+    box-shadow: inset 0 0 0 9999px transparent;
+}
+
+/* ========================================
+   رأس الجدول
+   ======================================== */
+.table thead th,
+table thead th {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    background-color: var(--elevated-bg);
+    border-bottom: 2px solid var(--border);
+    vertical-align: bottom;
+    transition: all 0.2s ease;
+}
+
+/* ========================================
+   صفوف وخلايا الجدول
+   ======================================== */
+.table tbody tr,
+table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table tbody td,
+table tbody td {
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+}
+
+/* ========================================
+   Hover Effect
+   ======================================== */
+.table-hover tbody tr:hover,
+table.table-hover tbody tr:hover {
+    background-color: var(--elevated-bg);
+    transform: scale(1.005);
+    box-shadow: var(--shadow-light);
+}
+
+/* ========================================
+   جدول مخطط (Striped)
+   ======================================== */
+.table-striped tbody tr:nth-of-type(odd),
+table.table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--surface);
+}
+
+/* ========================================
+   جدول محدود (Bordered)
+   ======================================== */
+.table-bordered,
+table.table-bordered {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.table-bordered > :not(caption) > * > *,
+table.table-bordered > :not(caption) > * > * {
+    border-width: 0 1px;
+}
+
+/* ========================================
+   جدول بلا حدود (Borderless)
+   ======================================== */
+.table-borderless > :not(caption) > * > *,
+table.table-borderless > :not(caption) > * > * {
+    border-bottom-width: 0;
+}
+
+/* ========================================
+   جدول صغير (Small/Compact)
+   ======================================== */
+.table-sm > :not(caption) > * > *,
+table.table-sm > :not(caption) > * > * {
+    padding: 0.4rem 0.4rem;
+}
+
+/* ========================================
+   جدول متجاوب (Responsive)
+   ======================================== */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius);
+}
+
+/* ========================================
+   إجراءات الجدول
+   ======================================== */
+.table .btn-sm,
+table .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: var(--font-size-sm);
+}
+
+/* ========================================
+   تنسيقات خاصة بالثيمات
+   ======================================== */
+
+/* Modern Black Theme */
+[data-theme="modern-black"] .table,
+[data-theme="modern-black"] table {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+[data-theme="modern-black"] .table thead th,
+[data-theme="modern-black"] table thead th {
+    background-color: var(--elevated-bg);
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary);
+}
+
+[data-theme="modern-black"] .table tbody td,
+[data-theme="modern-black"] table tbody td {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+}
+
+[data-theme="modern-black"] .table-hover tbody tr:hover,
+[data-theme="modern-black"] table.table-hover tbody tr:hover {
+    background-color: var(--elevated-bg);
+}
+
+[data-theme="modern-black"] .table-striped tbody tr:nth-of-type(odd),
+[data-theme="modern-black"] table.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Custom Theme - تأثيرات متقدمة */
+[data-theme="custom-theme"] .table,
+[data-theme="custom-theme"] table {
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-light);
+}
+
+[data-theme="custom-theme"] .table thead th,
+[data-theme="custom-theme"] table thead th {
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="custom-theme"] .table thead th::after,
+[data-theme="custom-theme"] table thead th::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(to right, var(--primary), var(--secondary), var(--primary));
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s ease-out;
+}
+
+[data-theme="custom-theme"] .table:hover thead th::after,
+[data-theme="custom-theme"] table:hover thead th::after {
+    transform: scaleX(1);
+}
+
+[data-theme="custom-theme"] .table tbody tr,
+[data-theme="custom-theme"] table tbody tr {
+    transform-origin: center;
+}
+
+[data-theme="custom-theme"] .table tbody tr:hover,
+[data-theme="custom-theme"] table tbody tr:hover {
+    transform: scale(1.01);
+    box-shadow: var(--shadow-light);
+    position: relative;
+    z-index: 1;
+}
+
+/* Pantone 2025 Themes */
+[data-theme="mocha-mousse"] .table thead th,
+[data-theme="mocha-mousse"] table thead th {
+    background: linear-gradient(to bottom, var(--elevated-bg), var(--surface));
+}
+
+[data-theme="warm-earth"] .table tbody tr:hover,
+[data-theme="warm-earth"] table tbody tr:hover {
+    background: linear-gradient(to right, var(--elevated-bg), transparent);
+}
+
+[data-theme="coffee-elegance"] .table,
+[data-theme="coffee-elegance"] table {
+    box-shadow: 0 2px 8px rgba(111, 78, 55, 0.15);
+}
+
+/* ========================================
+   DataTables Integration
+   ======================================== */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.5rem;
+    margin-inline-start: 0.5rem;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.25rem 0.5rem;
+    margin: 0 0.5rem;
+}
+
+/* ========================================
+   Responsive
+   ======================================== */
+@media (max-width: 768px) {
+    .table thead {
+        display: none;
+    }
+    
+    .table tbody tr {
+        display: block;
+        margin-bottom: var(--spacing-md);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+    
+    .table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--separator);
+    }
+    
+    .table tbody td:last-child {
+        border-bottom: 0;
+    }
+    
+    .table tbody td::before {
+        content: attr(data-label);
+        font-weight: var(--font-weight-semibold);
+        margin-inline-end: var(--spacing-md);
+    }
+}

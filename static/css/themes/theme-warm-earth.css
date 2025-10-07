@@ -1,0 +1,332 @@
+/**
+ * ثيم Warm Earth - ألوان ترابية دافئة
+ * Warm Earth Theme - Warm Earthy Colors
+ * 
+ * مستوحى من الطبيعة - تراب، طين، رمال الصحراء
+ * Inspired by nature - earth, clay, desert sands
+ * 
+ * ألوان طبيعية دافئة تجمع بين البيج والذهبي والبني الترابي
+ * Natural warm colors combining beige, gold, and earthy brown
+ */
+
+/* ========================================
+   تطبيق الخلفية الأساسية
+   ======================================== */
+[data-theme="warm-earth"] {
+    background-color: var(--background);
+}
+
+[data-theme="warm-earth"] body {
+    background-color: var(--background);
+    color: var(--text-primary);
+}
+
+/* ========================================
+   Navbar - ذهبي ترابي
+   ======================================== */
+[data-theme="warm-earth"] .navbar-dark.bg-primary {
+    background: linear-gradient(135deg, var(--primary), var(--accent)) !important;
+    box-shadow: 0 3px 14px rgba(184, 134, 91, 0.25);
+}
+
+[data-theme="warm-earth"] .navbar-brand {
+    color: #ffffff !important;
+    font-weight: var(--font-weight-semibold);
+}
+
+[data-theme="warm-earth"] .navbar-brand:hover {
+    color: var(--light-accent) !important;
+    transform: scale(1.02);
+}
+
+[data-theme="warm-earth"] .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="warm-earth"] .nav-link:hover {
+    color: #ffffff !important;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.2), transparent);
+}
+
+/* ========================================
+   Buttons - أزرار ترابية فاخرة
+   ======================================== */
+[data-theme="warm-earth"] .btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border: none;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(184, 134, 91, 0.35);
+    transition: all 0.32s ease-in-out;
+}
+
+[data-theme="warm-earth"] .btn-primary:hover {
+    background: linear-gradient(135deg, var(--accent), var(--primary));
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(184, 134, 91, 0.45);
+    color: #ffffff;
+}
+
+[data-theme="warm-earth"] .btn-secondary {
+    background-color: var(--secondary);
+    border: none;
+    color: #ffffff;
+}
+
+[data-theme="warm-earth"] .btn-success {
+    background: linear-gradient(135deg, var(--success), #7CB342);
+    color: #ffffff;
+}
+
+[data-theme="warm-earth"] .btn-warning {
+    background: linear-gradient(135deg, var(--warning), #FB8C00);
+    color: #ffffff;
+}
+
+/* ========================================
+   Cards - بطاقات ترابية
+   ======================================== */
+[data-theme="warm-earth"] .card {
+    box-shadow: 0 3px 12px rgba(184, 134, 91, 0.15);
+    border-color: var(--border);
+    transition: all 0.32s ease-in-out;
+}
+
+[data-theme="warm-earth"] .card:hover {
+    box-shadow: 0 6px 24px rgba(184, 134, 91, 0.25);
+    transform: translateY(-4px);
+    border-color: var(--primary);
+}
+
+[data-theme="warm-earth"] .card-header {
+    background: linear-gradient(to right, var(--elevated-bg), var(--surface));
+    border-bottom: 2px solid var(--primary);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* ========================================
+   Tables - جداول طبيعية
+   ======================================== */
+[data-theme="warm-earth"] .table thead th {
+    background: linear-gradient(to bottom, var(--elevated-bg), var(--surface));
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+[data-theme="warm-earth"] .table tbody tr:hover {
+    background: linear-gradient(to right, var(--elevated-bg), transparent);
+    box-shadow: 0 2px 8px rgba(184, 134, 91, 0.12);
+}
+
+[data-theme="warm-earth"] .table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--surface);
+}
+
+/* ========================================
+   Forms - نماذج ترابية
+   ======================================== */
+[data-theme="warm-earth"] .form-control,
+[data-theme="warm-earth"] .form-select {
+    border-color: var(--border);
+    background-color: var(--card-bg);
+}
+
+[data-theme="warm-earth"] .form-control:focus,
+[data-theme="warm-earth"] .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.25rem rgba(184, 134, 91, 0.25);
+    background-color: var(--card-bg);
+}
+
+[data-theme="warm-earth"] .form-label {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+}
+
+/* ========================================
+   Badges - شارات ذهبية
+   ======================================== */
+[data-theme="warm-earth"] .badge.bg-primary {
+    background: linear-gradient(135deg, var(--primary), var(--accent)) !important;
+    color: #ffffff;
+}
+
+[data-theme="warm-earth"] .badge.bg-success {
+    background: linear-gradient(135deg, var(--success), #7CB342) !important;
+    color: #ffffff;
+}
+
+/* ========================================
+   Alerts - تنبيهات طبيعية
+   ======================================== */
+[data-theme="warm-earth"] .alert {
+    border-radius: var(--radius);
+    border-left: 4px solid currentColor;
+}
+
+[data-theme="warm-earth"] .alert-primary {
+    background-color: rgba(184, 134, 91, 0.1);
+    border-left-color: var(--primary);
+    color: var(--primary);
+}
+
+[data-theme="warm-earth"] .alert-success {
+    background-color: rgba(139, 195, 74, 0.1);
+    border-left-color: var(--success);
+    color: var(--success);
+}
+
+[data-theme="warm-earth"] .alert-warning {
+    background-color: rgba(255, 152, 0, 0.1);
+    border-left-color: var(--warning);
+    color: var(--warning);
+}
+
+[data-theme="warm-earth"] .alert-danger {
+    background-color: rgba(216, 67, 21, 0.1);
+    border-left-color: var(--error);
+    color: var(--error);
+}
+
+/* ========================================
+   Dropdowns - قوائم ترابية
+   ======================================== */
+[data-theme="warm-earth"] .dropdown-menu {
+    box-shadow: 0 4px 12px rgba(184, 134, 91, 0.22);
+    border-color: var(--border);
+}
+
+[data-theme="warm-earth"] .dropdown-item {
+    transition: all 0.25s ease;
+}
+
+[data-theme="warm-earth"] .dropdown-item:hover {
+    background: linear-gradient(to right, var(--elevated-bg), transparent);
+    color: var(--primary);
+    padding-inline-start: 1.3rem;
+}
+
+/* ========================================
+   Pagination - ترقيم ذهبي
+   ======================================== */
+[data-theme="warm-earth"] .page-link {
+    color: var(--primary);
+    border-color: var(--border);
+}
+
+[data-theme="warm-earth"] .page-link:hover {
+    color: var(--accent);
+    background: linear-gradient(to right, var(--surface), transparent);
+    border-color: var(--primary);
+}
+
+[data-theme="warm-earth"] .page-item.active .page-link {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
+/* ========================================
+   Tabs & Pills
+   ======================================== */
+[data-theme="warm-earth"] .nav-tabs .nav-link.active {
+    background-color: var(--card-bg);
+    border-color: var(--border) var(--border) var(--card-bg);
+    color: var(--primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+[data-theme="warm-earth"] .nav-pills .nav-link.active {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #ffffff;
+}
+
+/* ========================================
+   Progress & Spinners
+   ======================================== */
+[data-theme="warm-earth"] .progress {
+    background-color: var(--surface);
+    border-radius: var(--radius);
+}
+
+[data-theme="warm-earth"] .progress-bar {
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+[data-theme="warm-earth"] .spinner-border {
+    border-color: var(--primary);
+    border-right-color: transparent;
+}
+
+/* ========================================
+   List Groups
+   ======================================== */
+[data-theme="warm-earth"] .list-group-item:hover {
+    background-color: var(--surface);
+    border-left: 3px solid var(--primary);
+}
+
+[data-theme="warm-earth"] .list-group-item.active {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
+/* ========================================
+   تأثيرات خاصة - الطبيعة الدافئة
+   ======================================== */
+
+/* تأثير الرمال المتحركة للعناوين */
+[data-theme="warm-earth"] h1,
+[data-theme="warm-earth"] h2,
+[data-theme="warm-earth"] h3 {
+    position: relative;
+    color: var(--text-primary);
+}
+
+[data-theme="warm-earth"] h1::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(to right, var(--primary), var(--accent), transparent);
+    border-radius: 2px;
+}
+
+/* تأثير الظل الترابي */
+[data-theme="warm-earth"] .shadow {
+    box-shadow: 0 4px 16px rgba(184, 134, 91, 0.18) !important;
+}
+
+[data-theme="warm-earth"] .shadow-lg {
+    box-shadow: 0 8px 32px rgba(184, 134, 91, 0.28) !important;
+}
+
+/* Scrollbar ترابي */
+[data-theme="warm-earth"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, var(--primary), var(--accent));
+    border-radius: var(--radius);
+}
+
+[data-theme="warm-earth"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+    box-shadow: 0 0 8px rgba(184, 134, 91, 0.4);
+}
+
+/* Modals ترابية */
+[data-theme="warm-earth"] .modal-content {
+    box-shadow: 0 8px 32px rgba(184, 134, 91, 0.3);
+}
+
+[data-theme="warm-earth"] .modal-header {
+    background: linear-gradient(to right, var(--elevated-bg), var(--surface));
+    border-bottom: 2px solid var(--primary);
+}
+
+[data-theme="warm-earth"] .modal-footer {
+    background: linear-gradient(to right, var(--surface), var(--elevated-bg));
+    border-top: 2px solid var(--separator);
+}

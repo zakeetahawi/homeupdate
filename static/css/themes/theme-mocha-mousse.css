@@ -1,0 +1,263 @@
+/**
+ * ثيم Mocha Mousse - Pantone 2025
+ * Mocha Mousse Theme - Pantone Color of the Year 2025
+ * 
+ * مستوحى من Pantone 17-1230 Mocha Mousse
+ * Inspired by Pantone 17-1230 Mocha Mousse
+ * 
+ * لون دافئ وناعم يجمع بين الكاكاو والقهوة مع لمسات كريمية
+ * A warm, soft color combining cocoa and coffee with creamy touches
+ */
+
+/* ========================================
+   تطبيق الخلفية الأساسية
+   ======================================== */
+[data-theme="mocha-mousse"] {
+    background-color: var(--background);
+}
+
+[data-theme="mocha-mousse"] body {
+    background-color: var(--background);
+    color: var(--text-primary);
+}
+
+/* ========================================
+   Navbar - أنيق ودافئ
+   ======================================== */
+[data-theme="mocha-mousse"] .navbar-dark.bg-primary {
+    background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
+    box-shadow: 0 3px 12px rgba(164, 119, 100, 0.2);
+}
+
+[data-theme="mocha-mousse"] .navbar-brand {
+    color: #ffffff !important;
+}
+
+[data-theme="mocha-mousse"] .navbar-brand:hover {
+    color: var(--accent) !important;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="mocha-mousse"] .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="mocha-mousse"] .nav-link:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ========================================
+   Buttons - ناعمة وطبيعية
+   ======================================== */
+[data-theme="mocha-mousse"] .btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border: none;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(164, 119, 100, 0.3);
+}
+
+[data-theme="mocha-mousse"] .btn-primary:hover {
+    background: linear-gradient(135deg, var(--accent), var(--primary));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(164, 119, 100, 0.4);
+    color: #ffffff;
+}
+
+[data-theme="mocha-mousse"] .btn-secondary {
+    background-color: var(--secondary);
+    border-color: var(--secondary);
+    color: #ffffff;
+}
+
+[data-theme="mocha-mousse"] .btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+[data-theme="mocha-mousse"] .btn-outline-primary:hover {
+    background-color: var(--primary);
+    color: #ffffff;
+}
+
+/* ========================================
+   Cards - بطاقات أنيقة
+   ======================================== */
+[data-theme="mocha-mousse"] .card {
+    box-shadow: 0 3px 10px rgba(164, 119, 100, 0.12);
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="mocha-mousse"] .card:hover {
+    box-shadow: 0 6px 20px rgba(164, 119, 100, 0.2);
+    transform: translateY(-4px) scale(1.01);
+}
+
+[data-theme="mocha-mousse"] .card-header {
+    background: linear-gradient(to bottom, var(--elevated-bg), var(--surface));
+    border-bottom: 2px solid var(--primary);
+    color: var(--text-primary);
+}
+
+/* ========================================
+   Tables - جداول دافئة
+   ======================================== */
+[data-theme="mocha-mousse"] .table thead th {
+    background: linear-gradient(to bottom, var(--elevated-bg), var(--surface));
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary);
+}
+
+[data-theme="mocha-mousse"] .table-hover tbody tr:hover {
+    background-color: var(--surface);
+    box-shadow: 0 2px 8px rgba(164, 119, 100, 0.1);
+}
+
+/* ========================================
+   Forms - نماذج ناعمة
+   ======================================== */
+[data-theme="mocha-mousse"] .form-control:focus,
+[data-theme="mocha-mousse"] .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.25rem rgba(164, 119, 100, 0.25);
+    background-color: var(--card-bg);
+}
+
+[data-theme="mocha-mousse"] .form-label {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+}
+
+/* ========================================
+   Badges - شارات أنيقة
+   ======================================== */
+[data-theme="mocha-mousse"] .badge.bg-primary {
+    background: linear-gradient(135deg, var(--primary), var(--accent)) !important;
+    color: #ffffff;
+}
+
+[data-theme="mocha-mousse"] .badge.bg-secondary {
+    background-color: var(--secondary) !important;
+    color: #ffffff;
+}
+
+/* ========================================
+   Alerts - تنبيهات دافئة
+   ======================================== */
+[data-theme="mocha-mousse"] .alert {
+    border-radius: var(--radius-large);
+    border-left: 4px solid currentColor;
+}
+
+[data-theme="mocha-mousse"] .alert-primary {
+    background-color: rgba(164, 119, 100, 0.1);
+    border-left-color: var(--primary);
+    color: var(--primary);
+}
+
+[data-theme="mocha-mousse"] .alert-success {
+    background-color: rgba(124, 179, 66, 0.1);
+    border-left-color: var(--success);
+    color: var(--success);
+}
+
+/* ========================================
+   Dropdowns - قوائم أنيقة
+   ======================================== */
+[data-theme="mocha-mousse"] .dropdown-menu {
+    box-shadow: 0 4px 12px rgba(164, 119, 100, 0.2);
+    border-color: var(--border);
+    backdrop-filter: blur(8px);
+}
+
+[data-theme="mocha-mousse"] .dropdown-item:hover {
+    background: linear-gradient(to right, var(--elevated-bg), transparent);
+    color: var(--primary);
+}
+
+/* ========================================
+   Pagination - ترقيم أنيق
+   ======================================== */
+[data-theme="mocha-mousse"] .page-link {
+    color: var(--primary);
+}
+
+[data-theme="mocha-mousse"] .page-link:hover {
+    color: var(--accent);
+    background-color: var(--surface);
+}
+
+[data-theme="mocha-mousse"] .page-item.active .page-link {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
+/* ========================================
+   Progress & Spinners
+   ======================================== */
+[data-theme="mocha-mousse"] .progress {
+    background-color: var(--surface);
+}
+
+[data-theme="mocha-mousse"] .progress-bar {
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+[data-theme="mocha-mousse"] .spinner-border {
+    border-color: var(--primary);
+    border-right-color: transparent;
+}
+
+/* ========================================
+   Breadcrumb
+   ======================================== */
+[data-theme="mocha-mousse"] .breadcrumb-item.active {
+    color: var(--primary);
+}
+
+[data-theme="mocha-mousse"] .breadcrumb-item + .breadcrumb-item::before {
+    color: var(--neutral);
+}
+
+/* ========================================
+   تأثيرات خاصة - Mocha الفاخر
+   ======================================== */
+
+/* تأثير وميض ناعم للعناوين */
+[data-theme="mocha-mousse"] h1,
+[data-theme="mocha-mousse"] h2,
+[data-theme="mocha-mousse"] h3 {
+    position: relative;
+}
+
+[data-theme="mocha-mousse"] h1::after,
+[data-theme="mocha-mousse"] h2::after,
+[data-theme="mocha-mousse"] h3::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(to right, var(--primary), transparent);
+    border-radius: 2px;
+}
+
+/* تأثير الظل الناعم */
+[data-theme="mocha-mousse"] .shadow {
+    box-shadow: 0 4px 15px rgba(164, 119, 100, 0.15) !important;
+}
+
+[data-theme="mocha-mousse"] .shadow-lg {
+    box-shadow: 0 8px 30px rgba(164, 119, 100, 0.25) !important;
+}
+
+/* Scrollbar بلون Mocha */
+[data-theme="mocha-mousse"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, var(--primary), var(--accent));
+}
+
+[data-theme="mocha-mousse"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}

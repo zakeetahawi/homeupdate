@@ -16,6 +16,7 @@ from .models import (
     ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings,
     YearFilterExemption, InternalMessage
 )
+from .theme_customization import ThemeCustomization
 
 
 
@@ -511,6 +512,66 @@ class RoleAdmin(admin.ModelAdmin):
 admin.site.register(Role, RoleAdmin)
 
 # لا نحتاج إلى تسجيل UserRole كنموذج منفصل لأنه متاح الآن من خلال صفحة المستخدم
+
+
+# تسجيل نموذج ThemeCustomization في الإدارة
+@admin.register(ThemeCustomization)
+class ThemeCustomizationAdmin(admin.ModelAdmin):
+    list_display = ['user', 'base_theme', 'is_active', 'updated_at']
+    list_filter = ['base_theme', 'is_active', 'created_at']
+    search_fields = ['user__username', 'user__email']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        (_('معلومات أساسية'), {
+            'fields': ('user', 'base_theme', 'is_active')
+        }),
+        (_('الخلفيات'), {
+            'fields': (
+                'background_color', 'surface_color', 'card_bg_color',
+                'elevated_bg_color', 'table_bg_color', 'filter_bg_color', 'input_bg_color'
+            ),
+            'classes': ('collapse',)
+        }),
+        (_('Header & Footer'), {
+            'fields': (
+                'navbar_bg_color', 'navbar_text_color',
+                'footer_bg_color', 'footer_text_color'
+            ),
+            'classes': ('collapse',)
+        }),
+        (_('الألوان الأساسية'), {
+            'fields': ('primary_color', 'secondary_color', 'accent_color'),
+            'classes': ('collapse',)
+        }),
+        (_('ألوان النصوص'), {
+            'fields': ('text_primary_color', 'text_secondary_color', 'text_tertiary_color'),
+            'classes': ('collapse',)
+        }),
+        (_('ألوان الحالة'), {
+            'fields': ('success_color', 'warning_color', 'error_color', 'info_color'),
+            'classes': ('collapse',)
+        }),
+        (_('الحدود والأيقونات'), {
+            'fields': (
+                'border_color', 'separator_color',
+                'icon_color', 'icon_hover_color'
+            ),
+            'classes': ('collapse',)
+        }),
+        (_('الروابط'), {
+            'fields': ('link_color', 'link_hover_color'),
+            'classes': ('collapse',)
+        }),
+        (_('متقدم'), {
+            'fields': ('advanced_customization',),
+            'classes': ('collapse',)
+        }),
+        (_('التواريخ'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 @admin.register(Permission)
 class PermissionAdmin(admin.ModelAdmin):

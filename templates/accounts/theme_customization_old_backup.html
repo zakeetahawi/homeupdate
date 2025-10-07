@@ -1,0 +1,728 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}🎨 تخصيص الثيم الشخصي{% endblock %}
+
+{% block extra_css %}
+<style>
+    .theme-customization-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .customization-header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+    
+    .customization-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    
+    .customization-header p {
+        margin: 10px 0 0 0;
+        opacity: 0.95;
+    }
+    
+    .customization-layout {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+    
+    @media (max-width: 992px) {
+        .customization-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .customization-panel {
+        background: var(--card-bg);
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid var(--border);
+    }
+    
+    .preview-panel {
+        background: var(--card-bg);
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid var(--border);
+        min-height: 600px;
+    }
+    
+    .color-group {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid var(--separator);
+    }
+    
+    .color-group:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .color-group-title {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: var(--text-primary);
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .color-field {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        padding: 10px;
+        background: var(--elevated-bg);
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .color-field:hover {
+        background: var(--surface);
+        transform: translateX(-3px);
+    }
+    
+    .color-field label {
+        flex: 1;
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+    }
+    
+    .color-field input[type="color"] {
+        width: 50px;
+        height: 40px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .color-field input[type="color"]:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 25px;
+        flex-wrap: wrap;
+    }
+    
+    .action-buttons .btn {
+        flex: 1;
+        min-width: 140px;
+        font-weight: 600;
+        padding: 12px 20px;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .action-buttons .btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .preview-section {
+        margin-bottom: 25px;
+    }
+    
+    .preview-section-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--text-primary);
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 3px solid var(--primary);
+    }
+    
+    .preview-navbar {
+        background: var(--navbar-bg, var(--primary));
+        color: var(--navbar-text, white);
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .preview-table {
+        background: var(--table-bg, var(--surface));
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 15px;
+    }
+    
+    .preview-table table {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .preview-table th {
+        background: var(--table-bg, var(--surface));
+        color: var(--text-primary);
+        padding: 12px;
+    }
+    
+    .preview-table td {
+        background: var(--card-bg);
+        color: var(--text-primary);
+        padding: 10px 12px;
+    }
+    
+    .preview-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .preview-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+    }
+    
+    .preview-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .preview-buttons .btn {
+        flex: 1;
+        min-width: 100px;
+    }
+    
+    .base-theme-selector {
+        margin-bottom: 25px;
+        padding: 20px;
+        background: var(--elevated-bg);
+        border-radius: 10px;
+        border: 2px solid var(--border);
+    }
+    
+    .base-theme-selector label {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+        display: block;
+        margin-bottom: 10px;
+    }
+    
+    .base-theme-selector select {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        background: var(--card-bg);
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+    
+    .scroll-panel {
+        max-height: 600px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+    
+    .scroll-panel::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .scroll-panel::-webkit-scrollbar-track {
+        background: var(--elevated-bg);
+        border-radius: 4px;
+    }
+    
+    .scroll-panel::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 4px;
+    }
+    
+    .scroll-panel::-webkit-scrollbar-thumb:hover {
+        background: var(--secondary);
+    }
+    
+    .success-message {
+        background: var(--success);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        display: none;
+        animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .info-badge {
+        display: inline-block;
+        background: var(--info);
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-left: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="theme-customization-container">
+    <!-- Header -->
+    <div class="customization-header">
+        <h1>🎨 تخصيص الثيم</h1>
+        <p>خصص ألوان الثيم بالكامل واستمتع بمعاينة فورية مباشرة للتغييرات</p>
+        <span class="info-badge">الثيم الحالي: {{ current_theme }}</span>
+    </div>
+    
+    <!-- Success Message -->
+    <div class="success-message" id="successMessage">
+        ✅ تم تطبيق التغييرات مباشرة!
+    </div>
+    
+    <form method="post" id="themeForm">
+        {% csrf_token %}
+        
+        <div class="customization-layout">
+            <!-- Left Panel - Controls -->
+            <div class="customization-panel">
+                <!-- Base Theme Selector -->
+                <div class="base-theme-selector">
+                    <label>🎭 الثيم الأساسي</label>
+                    {{ form.base_theme }}
+                </div>
+                
+                <div class="scroll-panel">
+                    <!-- الخلفيات -->
+                    <div class="color-group">
+                        <div class="color-group-title">🎨 الخلفيات</div>
+                        
+                        <div class="color-field">
+                            {{ form.background_color.label_tag }}
+                            {{ form.background_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.surface_color.label_tag }}
+                            {{ form.surface_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.card_bg_color.label_tag }}
+                            {{ form.card_bg_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.elevated_bg_color.label_tag }}
+                            {{ form.elevated_bg_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.table_bg_color.label_tag }}
+                            {{ form.table_bg_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.filter_bg_color.label_tag }}
+                            {{ form.filter_bg_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.input_bg_color.label_tag }}
+                            {{ form.input_bg_color }}
+                        </div>
+                    </div>
+                    
+                    <!-- Header & Footer -->
+                    <div class="color-group">
+                        <div class="color-group-title">🎯 Header & Footer</div>
+                        
+                        <div class="color-field">
+                            {{ form.navbar_bg_color.label_tag }}
+                            {{ form.navbar_bg_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.navbar_text_color.label_tag }}
+                            {{ form.navbar_text_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.footer_bg_color.label_tag }}
+                            {{ form.footer_bg_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.footer_text_color.label_tag }}
+                            {{ form.footer_text_color }}
+                        </div>
+                    </div>
+                    
+                    <!-- الألوان الأساسية -->
+                    <div class="color-group">
+                        <div class="color-group-title">🎨 الألوان الأساسية</div>
+                        
+                        <div class="color-field">
+                            {{ form.primary_color.label_tag }}
+                            {{ form.primary_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.secondary_color.label_tag }}
+                            {{ form.secondary_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.accent_color.label_tag }}
+                            {{ form.accent_color }}
+                        </div>
+                    </div>
+                    
+                    <!-- ألوان النصوص -->
+                    <div class="color-group">
+                        <div class="color-group-title">✍️ ألوان النصوص</div>
+                        
+                        <div class="color-field">
+                            {{ form.text_primary_color.label_tag }}
+                            {{ form.text_primary_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.text_secondary_color.label_tag }}
+                            {{ form.text_secondary_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.text_tertiary_color.label_tag }}
+                            {{ form.text_tertiary_color }}
+                        </div>
+                    </div>
+                    
+                    <!-- ألوان الحالة -->
+                    <div class="color-group">
+                        <div class="color-group-title">🎭 ألوان الحالة</div>
+                        
+                        <div class="color-field">
+                            {{ form.success_color.label_tag }}
+                            {{ form.success_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.warning_color.label_tag }}
+                            {{ form.warning_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.error_color.label_tag }}
+                            {{ form.error_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.info_color.label_tag }}
+                            {{ form.info_color }}
+                        </div>
+                    </div>
+                    
+                    <!-- الحدود والأيقونات -->
+                    <div class="color-group">
+                        <div class="color-group-title">📐 الحدود والأيقونات</div>
+                        
+                        <div class="color-field">
+                            {{ form.border_color.label_tag }}
+                            {{ form.border_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.separator_color.label_tag }}
+                            {{ form.separator_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.icon_color.label_tag }}
+                            {{ form.icon_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.icon_hover_color.label_tag }}
+                            {{ form.icon_hover_color }}
+                        </div>
+                    </div>
+                    
+                    <!-- الروابط -->
+                    <div class="color-group">
+                        <div class="color-group-title">🔗 الروابط</div>
+                        
+                        <div class="color-field">
+                            {{ form.link_color.label_tag }}
+                            {{ form.link_color }}
+                        </div>
+                        
+                        <div class="color-field">
+                            {{ form.link_hover_color.label_tag }}
+                            {{ form.link_hover_color }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">
+                        💾 حفظ التخصيصات
+                    </button>
+                    <button type="button" class="btn btn-warning" id="resetBtn">
+                        🔄 إعادة تعيين
+                    </button>
+                    <button type="button" class="btn btn-info" id="exportBtn">
+                        📤 تصدير
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Right Panel - Preview -->
+            <div class="preview-panel">
+                <h2 style="margin-top: 0;">👁️ معاينة فورية</h2>
+                
+                <!-- Navbar Preview -->
+                <div class="preview-section">
+                    <div class="preview-section-title">Navbar</div>
+                    <div class="preview-navbar">
+                        <span>🏠 الصفحة الرئيسية</span>
+                        <span>👤 المستخدم</span>
+                    </div>
+                </div>
+                
+                <!-- Table Preview -->
+                <div class="preview-section">
+                    <div class="preview-section-title">جدول بيانات</div>
+                    <div class="preview-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>الاسم</th>
+                                    <th>البريد</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>أحمد محمد</td>
+                                    <td>ahmad@example.com</td>
+                                    <td><span style="color: var(--success);">✅ نشط</span></td>
+                                </tr>
+                                <tr>
+                                    <td>فاطمة علي</td>
+                                    <td>fatima@example.com</td>
+                                    <td><span style="color: var(--warning);">⚠️ معلق</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Cards Preview -->
+                <div class="preview-section">
+                    <div class="preview-section-title">بطاقات</div>
+                    <div class="preview-cards">
+                        <div class="preview-card">
+                            <h4 style="color: var(--text-primary);">📊 الإحصائيات</h4>
+                            <p style="color: var(--text-secondary);">125 عنصر</p>
+                        </div>
+                        <div class="preview-card">
+                            <h4 style="color: var(--text-primary);">👥 المستخدمين</h4>
+                            <p style="color: var(--text-secondary);">48 مستخدم</p>
+                        </div>
+                        <div class="preview-card">
+                            <h4 style="color: var(--text-primary);">📁 الملفات</h4>
+                            <p style="color: var(--text-secondary);">92 ملف</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Buttons Preview -->
+                <div class="preview-section">
+                    <div class="preview-section-title">أزرار</div>
+                    <div class="preview-buttons">
+                        <button type="button" class="btn btn-primary">أساسي</button>
+                        <button type="button" class="btn btn-secondary">ثانوي</button>
+                        <button type="button" class="btn btn-success">نجاح</button>
+                        <button type="button" class="btn btn-warning">تحذير</button>
+                        <button type="button" class="btn btn-danger">خطر</button>
+                        <button type="button" class="btn btn-info">معلومات</button>
+                    </div>
+                </div>
+                
+                <!-- Text & Links Preview -->
+                <div class="preview-section">
+                    <div class="preview-section-title">نصوص وروابط</div>
+                    <p style="color: var(--text-primary);">نص أساسي - Lorem ipsum dolor sit amet</p>
+                    <p style="color: var(--text-secondary);">نص ثانوي - consectetur adipiscing elit</p>
+                    <p style="color: var(--text-tertiary);">نص ثالثي - sed do eiusmod tempor</p>
+                    <p>
+                        <a href="#" style="color: var(--link-color, var(--primary));">رابط تجريبي</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// تحديث مباشر للألوان عند التغيير
+document.addEventListener('DOMContentLoaded', function() {
+    const colorInputs = document.querySelectorAll('input[type="color"]');
+    const root = document.documentElement;
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // تحديث فوري لكل color input
+    colorInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            updateCSSVariable(this);
+            showSuccessMessage();
+        });
+    });
+    
+    function updateCSSVariable(input) {
+        const fieldName = input.name;
+        const value = input.value;
+        
+        // تحديد المتغير CSS المقابل
+        const cssVarMap = {
+            'background_color': '--background',
+            'surface_color': '--surface',
+            'card_bg_color': '--card-bg',
+            'elevated_bg_color': '--elevated-bg',
+            'table_bg_color': '--table-bg',
+            'filter_bg_color': '--filter-bg',
+            'input_bg_color': '--input-bg',
+            'navbar_bg_color': '--navbar-bg',
+            'navbar_text_color': '--navbar-text',
+            'footer_bg_color': '--footer-bg',
+            'footer_text_color': '--footer-text',
+            'primary_color': '--primary',
+            'secondary_color': '--secondary',
+            'accent_color': '--accent',
+            'text_primary_color': '--text-primary',
+            'text_secondary_color': '--text-secondary',
+            'text_tertiary_color': '--text-tertiary',
+            'success_color': '--success',
+            'warning_color': '--warning',
+            'error_color': '--error',
+            'info_color': '--info',
+            'border_color': '--border',
+            'separator_color': '--separator',
+            'icon_color': '--icon-color',
+            'icon_hover_color': '--icon-hover-color',
+            'link_color': '--link-color',
+            'link_hover_color': '--link-hover-color'
+        };
+        
+        const cssVar = cssVarMap[fieldName];
+        if (cssVar) {
+            root.style.setProperty(cssVar, value);
+        }
+    }
+    
+    function showSuccessMessage() {
+        const message = document.getElementById('successMessage');
+        message.style.display = 'block';
+        setTimeout(() => {
+            message.style.display = 'none';
+        }, 2000);
+    }
+    
+    // Reset Button
+    document.getElementById('resetBtn').addEventListener('click', function() {
+        if (confirm('هل أنت متأكد من إعادة تعيين جميع التخصيصات؟')) {
+            fetch('{% url "accounts:theme_customization_reset" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    location.reload();
+                }
+            });
+        }
+    });
+    
+    // Export Button
+    document.getElementById('exportBtn').addEventListener('click', function() {
+        fetch('{% url "accounts:theme_customization_export" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const dataStr = JSON.stringify(data.data, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'theme-customization.json';
+                link.click();
+                alert('✅ تم تصدير التخصيصات بنجاح!');
+            }
+        });
+    });
+    
+    // Base Theme Change
+    document.getElementById('base_theme_select').addEventListener('change', function() {
+        const theme = this.value;
+        if (theme) {
+            // تطبيق الثيم الأساسي
+            fetch('{% url "accounts:set_default_theme" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'theme=' + theme
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
