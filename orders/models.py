@@ -903,11 +903,12 @@ class Order(models.Model):
         # إذا كان الطلب مكتمل أو جاهز للتركيب أو تم التسليم
         if self.order_status in ['completed', 'ready_install', 'delivered']:
             # التحقق من وجود أمر تصنيع وتاريخ إكمال
-            if hasattr(self, 'manufacturing_order') and self.manufacturing_order.completion_date:
-                return self.manufacturing_order.completion_date.date()
+            mo = self.manufacturing_order
+            if mo and mo.completion_date:
+                return mo.completion_date.date()
             # إذا كان تم التسليم، التحقق من تاريخ التسليم الفعلي
-            elif self.order_status == 'delivered' and hasattr(self, 'manufacturing_order') and self.manufacturing_order.delivery_date:
-                return self.manufacturing_order.delivery_date.date()
+            elif self.order_status == 'delivered' and mo and mo.delivery_date:
+                return mo.delivery_date.date()
         
         # في جميع الحالات الأخرى، إرجاع التاريخ المتوقع المحدث
         return self.expected_delivery_date
@@ -1353,15 +1354,24 @@ class Order(models.Model):
             return order_texts.get(status, status)
     
     @property
+    def manufacturing_order(self):
+        """إرجاع أحدث أمر تصنيع مرتبط بالطلب"""
+        try:
+            return self.manufacturing_orders.latest('created_at')
+        except Exception:
+            return None
+    
+    @property
     def is_manufacturing_order(self):
         """التحقق من وجود أمر تصنيع مرتبط بالطلب"""
-        return hasattr(self, 'manufacturing_order') and self.manufacturing_order is not None
+        return self.manufacturing_order is not None
     
     @property
     def is_delivered_manufacturing_order(self):
         """التحقق من أن أمر التصنيع تم تسليمه"""
-        if self.is_manufacturing_order:
-            return self.manufacturing_order.status == 'delivered'
+        mo = self.manufacturing_order
+        if mo:
+            return mo.status == 'delivered'
         return False
 
     def get_display_inspection_status(self):

@@ -102,6 +102,11 @@ urlpatterns = [
         name='send_reply'
     ),
     path(
+        'send_reply_to_rejection_log/<int:log_id>/',
+        views.send_reply_to_rejection_log,
+        name='send_reply_to_rejection_log'
+    ),
+    path(
         'order/<int:pk>/details/',
         views.get_order_details,
         name='get_order_details'

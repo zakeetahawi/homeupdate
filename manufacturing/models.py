@@ -283,6 +283,32 @@ class ManufacturingOrder(models.Model):
     def __str__(self):
         return f'طلب تصنيع {self.manufacturing_code} - {self.get_status_display()}'
     
+    def save(self, *args, **kwargs):
+        """حفظ أمر التصنيع وتسجيل حالات الرفض"""
+        # التحقق من تغيير الحالة إلى rejected
+        if self.pk:  # الكائن موجود مسبقاً
+            try:
+                old_instance = ManufacturingOrder.objects.get(pk=self.pk)
+                # إذا تغيرت الحالة إلى rejected وكان هناك سبب رفض
+                if old_instance.status != 'rejected' and self.status == 'rejected' and self.rejection_reason:
+                    # سيتم إنشاء سجل الرفض بعد الحفظ
+                    self._create_rejection_log = True
+                    self._previous_status = old_instance.status
+            except ManufacturingOrder.DoesNotExist:
+                pass
+        
+        super().save(*args, **kwargs)
+        
+        # إنشاء سجل الرفض إذا لزم الأمر
+        if hasattr(self, '_create_rejection_log') and self._create_rejection_log:
+            ManufacturingRejectionLog.objects.create(
+                manufacturing_order=self,
+                rejection_reason=self.rejection_reason,
+                rejected_by=getattr(self, '_rejected_by', None),
+                previous_status=self._previous_status
+            )
+            delattr(self, '_create_rejection_log')
+    
     @property
     def manufacturing_code(self):
         """إرجاع رقم طلب التصنيع الموحد (رقم الطلب + M)"""
@@ -554,6 +580,98 @@ class ManufacturingOrder(models.Model):
             return 'warning'
         else:
             return 'secondary'
+
+
+class ManufacturingRejectionLog(models.Model):
+    """نموذج لتسجيل حالات الرفض والردود عليها"""
+    
+    manufacturing_order = models.ForeignKey(
+        ManufacturingOrder,
+        on_delete=models.CASCADE,
+        related_name='rejection_logs',
+        verbose_name='أمر التصنيع'
+    )
+    
+    rejection_reason = models.TextField(
+        verbose_name='سبب الرفض',
+        help_text='السبب الذي تم رفض أمر التصنيع من أجله'
+    )
+    
+    rejected_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الرفض'
+    )
+    
+    rejected_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rejected_manufacturing_orders',
+        verbose_name='تم الرفض بواسطة'
+    )
+    
+    # حالة أمر التصنيع قبل الرفض
+    previous_status = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name='الحالة السابقة'
+    )
+    
+    # الرد على الرفض
+    reply_message = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='الرد على الرفض'
+    )
+    
+    replied_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='تاريخ الرد'
+    )
+    
+    replied_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='replied_manufacturing_rejections',
+        verbose_name='تم الرد بواسطة'
+    )
+    
+    # هل تم قراءة الرد من قبل الإدارة
+    reply_read = models.BooleanField(
+        default=False,
+        verbose_name='تم قراءة الرد'
+    )
+    
+    # حالة أمر التصنيع بعد الرد
+    status_after_reply = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name='الحالة بعد الرد'
+    )
+    
+    class Meta:
+        verbose_name = 'سجل رفض التصنيع'
+        verbose_name_plural = 'سجلات رفض التصنيع'
+        ordering = ['-rejected_at']
+    
+    def __str__(self):
+        return f"رفض {self.manufacturing_order} في {self.rejected_at.strftime('%Y-%m-%d %H:%M')}"
+    
+    @property
+    def has_reply(self):
+        """التحقق من وجود رد"""
+        return bool(self.reply_message)
+    
+    @property
+    def can_reply(self):
+        """التحقق من إمكانية الرد (إذا لم يتم الرد بعد)"""
+        return not self.has_reply
 
 
 class ManufacturingOrderItem(models.Model):

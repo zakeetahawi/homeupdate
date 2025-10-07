@@ -265,6 +265,15 @@ def order_detail(request, pk):
     # Get currency symbol from system settings
     system_settings = SystemSettings.get_settings()
     currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+    
+    # Get rejection logs if manufacturing order exists
+    rejection_logs = []
+    manufacturing_order = order.manufacturing_order
+    if manufacturing_order:
+        try:
+            rejection_logs = manufacturing_order.rejection_logs.all().order_by('-rejected_at')
+        except Exception:
+            pass
 
     context = {
         'order': order,
@@ -272,6 +281,7 @@ def order_detail(request, pk):
         'order_items': order_items,
         'inspections': inspections,
         'currency_symbol': currency_symbol,  # Add currency symbol to context
+        'rejection_logs': rejection_logs,  # Add rejection logs
         # computed totals to avoid relying on possibly-stale stored fields
         'computed_total_amount': None,
         'computed_total_discount_amount': None,
@@ -1133,6 +1143,19 @@ def order_detail_by_number(request, order_number):
 
     # Check if there are manual modifications
     has_manual_modifications = order.modification_logs.filter(is_manual_modification=True).exists()
+    
+    # Get currency symbol from system settings
+    system_settings = SystemSettings.get_settings()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+    
+    # Get rejection logs if manufacturing order exists
+    rejection_logs = []
+    manufacturing_order = order.manufacturing_order
+    if manufacturing_order:
+        try:
+            rejection_logs = manufacturing_order.rejection_logs.all().order_by('-rejected_at')
+        except Exception:
+            pass
 
     context = {
         'order': order,
@@ -1143,6 +1166,8 @@ def order_detail_by_number(request, order_number):
         'can_edit': can_user_edit_order(request.user, order),
         'can_delete': can_user_delete_order(request.user, order),
         'has_manual_modifications': has_manual_modifications,
+        'currency_symbol': currency_symbol,
+        'rejection_logs': rejection_logs,
     }
     
     return render(request, 'orders/order_detail.html', context)
@@ -1177,6 +1202,19 @@ def order_detail_by_code(request, order_code):
     customer_notes = CustomerNote.objects.filter(
         customer=order.customer
     ).select_related('created_by').order_by('-created_at')[:5]
+    
+    # Get currency symbol from system settings
+    system_settings = SystemSettings.get_settings()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+    
+    # Get rejection logs if manufacturing order exists
+    rejection_logs = []
+    manufacturing_order = order.manufacturing_order
+    if manufacturing_order:
+        try:
+            rejection_logs = manufacturing_order.rejection_logs.all().order_by('-rejected_at')
+        except Exception:
+            pass
 
     context = {
         'order': order,
@@ -1186,6 +1224,8 @@ def order_detail_by_code(request, order_code):
         'customer_notes': customer_notes,
         'can_edit': can_user_edit_order(request.user, order),
         'can_delete': can_user_delete_order(request.user, order),
+        'currency_symbol': currency_symbol,
+        'rejection_logs': rejection_logs,
     }
     
     return render(request, 'orders/order_detail.html', context)

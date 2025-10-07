@@ -2152,6 +2152,126 @@ def send_reply(request, pk):
 
 
 @require_POST
+def send_reply_to_rejection_log(request, log_id):
+    """
+    إرسال رد على سجل رفض محدد
+    """
+    from django.utils import timezone
+    from .models import ManufacturingRejectionLog
+    
+    try:
+        # التحقق من المصادقة
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'يجب تسجيل الدخول أولاً'
+            }, status=401)
+        
+        # الحصول على سجل الرفض
+        rejection_log = ManufacturingRejectionLog.objects.select_related(
+            'manufacturing_order',
+            'manufacturing_order__order',
+            'manufacturing_order__order__created_by'
+        ).get(pk=log_id)
+        
+        order = rejection_log.manufacturing_order.order
+        
+        # التحقق من صلاحية الرد
+        can_reply = (
+            request.user.is_superuser or
+            request.user.is_staff or
+            (order and order.created_by == request.user) or
+            request.user.has_perm('manufacturing.can_approve_orders') or
+            request.user.has_perm('orders.change_order')
+        )
+        
+        if not can_reply:
+            return JsonResponse({
+                'success': False,
+                'error': 'ليس لديك صلاحية للرد على هذا الطلب'
+            }, status=403)
+        
+        # التحقق من عدم وجود رد سابق
+        if rejection_log.reply_message:
+            return JsonResponse({
+                'success': False,
+                'error': 'تم الرد على هذا الرفض مسبقاً'
+            }, status=400)
+        
+        # تحليل البيانات
+        try:
+            data = json.loads(request.body)
+            reply_message = data.get('reply_message', '').strip()
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'بيانات غير صالحة'
+            }, status=400)
+        
+        if not reply_message:
+            return JsonResponse({
+                'success': False,
+                'error': 'نص الرد مطلوب'
+            }, status=400)
+        
+        # حفظ الرد
+        rejection_log.reply_message = reply_message
+        rejection_log.replied_at = timezone.now()
+        rejection_log.replied_by = request.user
+        rejection_log.save(update_fields=[
+            'reply_message',
+            'replied_at',
+            'replied_by'
+        ])
+        
+        # إرسال إشعار للمدير أو المستخدمين المخولين
+        from django.contrib.auth import get_user_model
+        from django.db import models
+        User = get_user_model()
+        
+        approval_users = User.objects.filter(
+            models.Q(is_superuser=True) |
+            models.Q(user_permissions__codename='can_approve_orders')
+        ).distinct()
+        
+        for user in approval_users:
+            try:
+                customer_name = (order.created_by.get_full_name() or
+                                 order.created_by.username) if order.created_by else 'غير معروف'
+                message = (f'رد من {customer_name}:\n\n{reply_message}\n\n'
+                           f'أمر التصنيع: {rejection_log.manufacturing_order.manufacturing_code}\n'
+                           f'سبب الرفض الأصلي: {rejection_log.rejection_reason}')
+                
+                Notification.objects.create(
+                    recipient=user,
+                    title=f'رد على رفض أمر التصنيع {rejection_log.manufacturing_order.manufacturing_code}',
+                    message=message,
+                    priority='medium',
+                    link=rejection_log.manufacturing_order.get_absolute_url()
+                )
+                logger.info(f"Reply notification sent to {user.username}")
+            except Exception as e:
+                logger.error(f"Failed to create reply notification for {user.username}: {e}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إرسال الرد بنجاح للإدارة'
+        })
+
+    except ManufacturingRejectionLog.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'لم يتم العثور على سجل الرفض'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Unexpected error in send_reply_to_rejection_log: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': f'حدث خطأ غير متوقع: {str(e)}'
+        }, status=500)
+
+
+@require_POST
 def re_approve_after_reply(request, pk):
     """
     Re-approve manufacturing order after reply to rejection
