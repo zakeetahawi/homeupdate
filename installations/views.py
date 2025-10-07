@@ -196,7 +196,8 @@ def dashboard(request):
 
     orders_needing_scheduling = []
     for mfg_order in orders_needing_scheduling_queryset[:10]:
-        mfg_order.order.manufacturing_order = mfg_order
+        # استخدام _cached_manufacturing_order لتخزين mfg_order مؤقتاً في الذاكرة
+        mfg_order.order._cached_manufacturing_order = mfg_order
         orders_needing_scheduling.append(mfg_order.order)
 
     # 9. إحصائيات الفرق (بدون فلترة افتراضية)
@@ -1103,7 +1104,7 @@ def orders_modal(request):
         # تحويل أوامر التصنيع إلى طلبات مع ربط أمر التصنيع
         orders = []
         for mfg_order in manufacturing_orders:
-            mfg_order.order.manufacturing_order = mfg_order
+            mfg_order.order._cached_manufacturing_order = mfg_order
             orders.append(mfg_order.order)
     elif order_type == 'manufacturing':
         # عرض جميع أوامر التصنيع قيد التنفيذ أو قيد الانتظار (وليس فقط الأحدث لكل طلب)
@@ -1114,7 +1115,7 @@ def orders_modal(request):
         ).select_related('order', 'order__customer', 'order__branch', 'order__salesperson').order_by('-created_at')
         orders = []
         for mfg in manufacturing_orders:
-            mfg.order.manufacturing_order = mfg  # ربط أمر التصنيع بالطلب لسهولة العرض في القالب
+            mfg.order._cached_manufacturing_order = mfg  # ربط أمر التصنيع بالطلب لسهولة العرض في القالب
             orders.append(mfg.order)
     elif order_type == 'completed':
         # التركيبات المكتملة من قسم التركيبات فقط
@@ -1169,7 +1170,7 @@ def orders_modal(request):
         orders = []
         for mfg_order in manufacturing_orders:
             # إضافة أمر التصنيع للطلب (سيتم التعامل معه في القالب)
-            mfg_order.order.manufacturing_order = mfg_order
+            mfg_order.order._cached_manufacturing_order = mfg_order
             orders.append(mfg_order.order)
     else:
         orders = Order.objects.none()

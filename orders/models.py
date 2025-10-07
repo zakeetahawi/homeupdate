@@ -1356,6 +1356,10 @@ class Order(models.Model):
     @property
     def manufacturing_order(self):
         """إرجاع أحدث أمر تصنيع مرتبط بالطلب"""
+        # إذا كان هناك قيمة محفوظة مؤقتاً، استخدمها
+        if hasattr(self, '_cached_manufacturing_order'):
+            return self._cached_manufacturing_order
+        
         try:
             return self.manufacturing_orders.latest('created_at')
         except Exception:
