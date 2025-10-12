@@ -1559,7 +1559,10 @@ def update_order_status(request, pk):
         if new_status in ['completed', 'ready_install', 'delivered'] and not order.completion_date:
             order.completion_date = timezone.now()
             # logger.debug(f"[update_order_status] Set completion date to {order.completion_date}")  # معطل لتجنب الرسائل الكثيرة
-        
+
+        # Set the user who changed the status for the signal handler
+        order._changed_by = request.user
+
         # Save the order
         try:
             save_fields = ['status', 'updated_at', 'completion_date']

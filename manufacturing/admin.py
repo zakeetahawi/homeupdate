@@ -12,7 +12,8 @@ from django import forms
 
 from .models import (
     ManufacturingOrder, ManufacturingOrderItem, ProductionLine, ManufacturingDisplaySettings,
-    FabricReceipt, FabricReceiptItem, ManufacturingSettings
+    FabricReceipt, FabricReceiptItem, ManufacturingSettings, ManufacturingStatusLog,
+    ProductionForecast
 )
 
 
@@ -961,3 +962,201 @@ class ManufacturingSettingsAdmin(admin.ModelAdmin):
             'all': ('admin/css/widgets.css',)
         }
         js = ('admin/js/jquery.init.js', 'admin/js/core.js')
+
+
+@admin.register(ManufacturingStatusLog)
+class ManufacturingStatusLogAdmin(admin.ModelAdmin):
+    """
+    إدارة سجلات حالات التصنيع
+    Manufacturing Status Log Admin
+    """
+    list_display = [
+        'id',
+        'manufacturing_order_link',
+        'from_status_display',
+        'to_status_display',
+        'order_type_display',
+        'production_line_display',
+        'changed_by_display',
+        'changed_at'
+    ]
+    list_filter = [
+        'previous_status',
+        'new_status',
+        'changed_at',
+        'changed_by'
+    ]
+    search_fields = [
+        'manufacturing_order__manufacturing_code',
+        'manufacturing_order__order__order_number',
+        'manufacturing_order__contract_number',
+        'manufacturing_order__order__customer__name',
+        'changed_by__username',
+        'changed_by__first_name',
+        'changed_by__last_name',
+        'notes'
+    ]
+    readonly_fields = [
+        'manufacturing_order',
+        'previous_status',
+        'new_status',
+        'changed_by',
+        'changed_at',
+        'notes'
+    ]
+    date_hierarchy = 'changed_at'
+    list_per_page = 50
+    ordering = ['-changed_at']
+
+    def manufacturing_order_link(self, obj):
+        """رابط لأمر التصنيع"""
+        if obj.manufacturing_order:
+            url = reverse('admin:manufacturing_manufacturingorder_change', args=[obj.manufacturing_order.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.manufacturing_order.manufacturing_code)
+        return '-'
+    manufacturing_order_link.short_description = 'أمر التصنيع'
+
+    def from_status_display(self, obj):
+        """عرض الحالة السابقة"""
+        return obj.get_from_status_display()
+    from_status_display.short_description = 'من حالة'
+
+    def to_status_display(self, obj):
+        """عرض الحالة الجديدة"""
+        return obj.get_to_status_display()
+    to_status_display.short_description = 'إلى حالة'
+
+    def order_type_display(self, obj):
+        """عرض نوع الطلب"""
+        return obj.get_order_type_display() if obj.order_type else '-'
+    order_type_display.short_description = 'نوع الطلب'
+
+    def production_line_display(self, obj):
+        """عرض خط الإنتاج"""
+        return obj.production_line.name if obj.production_line else '-'
+    production_line_display.short_description = 'خط الإنتاج'
+
+    def changed_by_display(self, obj):
+        """عرض المستخدم الذي قام بالتغيير"""
+        if obj.changed_by:
+            return obj.changed_by.get_full_name() or obj.changed_by.username
+        return 'تلقائي'
+    changed_by_display.short_description = 'تم التغيير بواسطة'
+
+    def has_add_permission(self, request):
+        """منع الإضافة اليدوية - يتم الإنشاء تلقائياً"""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """منع الحذف للحفاظ على سجل التتبع"""
+        return request.user.is_superuser
+
+
+@admin.register(ProductionForecast)
+class ProductionForecastAdmin(admin.ModelAdmin):
+    """
+    إدارة توقعات الإنتاج
+    Production Forecast Admin
+    """
+    list_display = [
+        'id',
+        'forecast_date',
+        'period_type_display',
+        'forecasted_orders_count',
+        'actual_orders_count',
+        'forecasted_meters',
+        'actual_meters',
+        'accuracy_display',
+        'production_line_display',
+        'order_type_display',
+        'created_by_display',
+        'created_at'
+    ]
+    list_filter = [
+        'period_type',
+        'forecast_date',
+        'production_line',
+        'order_type',
+        'created_by',
+        'created_at'
+    ]
+    search_fields = [
+        'notes',
+        'production_line__name',
+        'created_by__username',
+        'created_by__first_name',
+        'created_by__last_name'
+    ]
+    readonly_fields = [
+        'created_by',
+        'created_at',
+        'updated_at',
+        'accuracy_percentage',
+        'meters_accuracy_percentage'
+    ]
+    fieldsets = (
+        ('معلومات التوقع', {
+            'fields': ('forecast_date', 'period_type', 'confidence_level')
+        }),
+        ('التوقعات', {
+            'fields': ('forecasted_orders_count', 'forecasted_meters')
+        }),
+        ('البيانات الفعلية', {
+            'fields': ('actual_orders_count', 'actual_meters')
+        }),
+        ('الدقة', {
+            'fields': ('accuracy_percentage', 'meters_accuracy_percentage'),
+            'classes': ('collapse',)
+        }),
+        ('تفاصيل إضافية', {
+            'fields': ('production_line', 'order_type', 'notes')
+        }),
+        ('معلومات النظام', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    date_hierarchy = 'forecast_date'
+    list_per_page = 50
+    ordering = ['-forecast_date']
+
+    def period_type_display(self, obj):
+        """عرض نوع الفترة"""
+        return obj.get_period_type_display()
+    period_type_display.short_description = 'نوع الفترة'
+
+    def production_line_display(self, obj):
+        """عرض خط الإنتاج"""
+        return obj.production_line.name if obj.production_line else 'الكل'
+    production_line_display.short_description = 'خط الإنتاج'
+
+    def order_type_display(self, obj):
+        """عرض نوع الطلب"""
+        return obj.get_order_type_display() if obj.order_type else 'الكل'
+    order_type_display.short_description = 'نوع الطلب'
+
+    def created_by_display(self, obj):
+        """عرض المستخدم الذي أنشأ التوقع"""
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        return '-'
+    created_by_display.short_description = 'تم الإنشاء بواسطة'
+
+    def accuracy_display(self, obj):
+        """عرض دقة التوقع"""
+        accuracy = obj.accuracy_percentage
+        if accuracy is not None:
+            color = 'green' if accuracy >= 80 else 'orange' if accuracy >= 60 else 'red'
+            return format_html(
+                '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
+                color,
+                accuracy
+            )
+        return '-'
+    accuracy_display.short_description = 'دقة التوقع'
+
+    def save_model(self, request, obj, form, change):
+        """حفظ النموذج مع تعيين المستخدم"""
+        if not change:  # إنشاء جديد
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)

@@ -3,6 +3,9 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.apps import apps
 from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
 
 # سيتم استيراد النماذج عند الحاجة باستخدام apps.get_model
 
@@ -164,3 +167,57 @@ def sync_order_to_manufacturing(sender, instance, created, **kwargs):
 
     except ManufacturingOrder.DoesNotExist:
         pass  # لا يوجد أمر تصنيع مرتبط بهذا الطلب
+
+
+@receiver(pre_save, sender='manufacturing.ManufacturingOrder')
+def track_manufacturing_status_change(sender, instance, **kwargs):
+    """
+    تتبع تغييرات حالة أمر التصنيع قبل الحفظ
+    يحفظ الحالة القديمة لاستخدامها في post_save
+    """
+    if instance.pk:  # الكائن موجود مسبقاً
+        try:
+            ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
+            old_instance = ManufacturingOrder.objects.get(pk=instance.pk)
+            instance._old_status = old_instance.status
+        except ManufacturingOrder.DoesNotExist:
+            instance._old_status = None
+    else:
+        instance._old_status = None
+
+
+@receiver(post_save, sender='manufacturing.ManufacturingOrder')
+def log_manufacturing_status_change(sender, instance, created, **kwargs):
+    """
+    تسجيل تغييرات حالة أمر التصنيع في ManufacturingStatusLog
+    """
+    # تجاهل الطلبات الجديدة
+    if created:
+        return
+
+    # التحقق من وجود تغيير في الحالة
+    old_status = getattr(instance, '_old_status', None)
+    if old_status is None or old_status == instance.status:
+        return
+
+    try:
+        ManufacturingStatusLog = apps.get_model('manufacturing', 'ManufacturingStatusLog')
+
+        # الحصول على المستخدم الذي قام بالتغيير
+        changed_by = getattr(instance, '_changed_by', None)
+
+        # إنشاء سجل تغيير الحالة
+        ManufacturingStatusLog.objects.create(
+            manufacturing_order=instance,
+            previous_status=old_status,
+            new_status=instance.status,
+            changed_by=changed_by,
+            notes=f'تم تغيير الحالة من {dict(instance.STATUS_CHOICES).get(old_status, old_status)} إلى {dict(instance.STATUS_CHOICES).get(instance.status, instance.status)}'
+        )
+
+        logger.info(f'تم تسجيل تغيير حالة أمر التصنيع {instance.manufacturing_code}: {old_status} → {instance.status}')
+
+    except Exception as e:
+        logger.error(f'خطأ في تسجيل تغيير حالة أمر التصنيع {instance.pk}: {str(e)}')
+        # لا نريد أن يفشل الحفظ بسبب خطأ في التسجيل
+        pass

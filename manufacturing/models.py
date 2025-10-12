@@ -1592,3 +1592,241 @@ class FabricReceiptItem(models.Model):
 
     def __str__(self):
         return f"{self.product_name} - {self.quantity_received}"
+
+
+class ManufacturingStatusLog(models.Model):
+    """
+    نموذج لتتبع تغييرات حالة أوامر التصنيع
+    يسجل كل تغيير في الحالة مع المستخدم المسؤول والتاريخ
+    """
+    manufacturing_order = models.ForeignKey(
+        ManufacturingOrder,
+        on_delete=models.CASCADE,
+        related_name='status_logs',
+        verbose_name='أمر التصنيع'
+    )
+
+    previous_status = models.CharField(
+        max_length=30,
+        choices=ManufacturingOrder.STATUS_CHOICES,
+        verbose_name='الحالة السابقة',
+        help_text='الحالة قبل التغيير'
+    )
+
+    new_status = models.CharField(
+        max_length=30,
+        choices=ManufacturingOrder.STATUS_CHOICES,
+        verbose_name='الحالة الجديدة',
+        help_text='الحالة بعد التغيير'
+    )
+
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='manufacturing_status_changes',
+        verbose_name='تم التغيير بواسطة'
+    )
+
+    changed_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ التغيير',
+        db_index=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='ملاحظات'
+    )
+
+    class Meta:
+        verbose_name = 'سجل حالة التصنيع'
+        verbose_name_plural = 'سجلات حالات التصنيع'
+        ordering = ['-changed_at']
+        db_table = 'manufacturing_manufacturingstatuslog'
+
+    def __str__(self):
+        return f'{self.manufacturing_order.manufacturing_code}: {self.get_previous_status_display()} → {self.get_new_status_display()}'
+
+    # خصائص للتوافق مع الكود القديم
+    @property
+    def from_status(self):
+        return self.previous_status
+
+    @property
+    def to_status(self):
+        return self.new_status
+
+    def get_from_status_display(self):
+        return self.get_previous_status_display()
+
+    def get_to_status_display(self):
+        return self.get_new_status_display()
+
+    @property
+    def order_type(self):
+        """الحصول على نوع الطلب من أمر التصنيع"""
+        return self.manufacturing_order.order_type if self.manufacturing_order else None
+
+    def get_order_type_display(self):
+        """عرض نوع الطلب"""
+        if self.manufacturing_order and self.manufacturing_order.order_type:
+            return dict(ManufacturingOrder.ORDER_TYPE_CHOICES).get(
+                self.manufacturing_order.order_type,
+                self.manufacturing_order.order_type
+            )
+        return None
+
+    @property
+    def production_line(self):
+        """الحصول على خط الإنتاج من أمر التصنيع"""
+        return self.manufacturing_order.production_line if self.manufacturing_order else None
+
+
+class ProductionForecast(models.Model):
+    """
+    نموذج لتخزين توقعات الإنتاج
+    يستخدم للتنبؤ بالإنتاج المستقبلي بناءً على البيانات التاريخية
+    """
+    PERIOD_CHOICES = [
+        ('daily', 'يومي'),
+        ('weekly', 'أسبوعي'),
+        ('monthly', 'شهري'),
+        ('quarterly', 'ربع سنوي'),
+        ('yearly', 'سنوي'),
+    ]
+
+    forecast_date = models.DateField(
+        verbose_name='تاريخ التوقع',
+        db_index=True
+    )
+
+    period_type = models.CharField(
+        max_length=20,
+        choices=PERIOD_CHOICES,
+        default='daily',
+        verbose_name='نوع الفترة'
+    )
+
+    # توقعات عدد الطلبات
+    forecasted_orders_count = models.IntegerField(
+        default=0,
+        verbose_name='عدد الطلبات المتوقع'
+    )
+
+    actual_orders_count = models.IntegerField(
+        default=0,
+        null=True,
+        blank=True,
+        verbose_name='عدد الطلبات الفعلي'
+    )
+
+    # توقعات الأمتار
+    forecasted_meters = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='الأمتار المتوقعة'
+    )
+
+    actual_meters = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        null=True,
+        blank=True,
+        verbose_name='الأمتار الفعلية'
+    )
+
+    # خط الإنتاج (اختياري للتوقعات المحددة)
+    production_line = models.ForeignKey(
+        'ProductionLine',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='forecasts',
+        verbose_name='خط الإنتاج'
+    )
+
+    # نوع الطلب (اختياري للتوقعات المحددة)
+    order_type = models.CharField(
+        max_length=20,
+        choices=ManufacturingOrder.ORDER_TYPE_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name='نوع الطلب'
+    )
+
+    # معلومات التوقع
+    confidence_level = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name='مستوى الثقة (%)',
+        help_text='مستوى الثقة في التوقع (0-100)'
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='ملاحظات'
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='تم الإنشاء بواسطة'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الإنشاء'
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='تاريخ التحديث'
+    )
+
+    class Meta:
+        verbose_name = 'توقع إنتاج'
+        verbose_name_plural = 'توقعات الإنتاج'
+        ordering = ['-forecast_date']
+        unique_together = [['forecast_date', 'period_type', 'production_line', 'order_type']]
+        indexes = [
+            models.Index(fields=['forecast_date', 'period_type']),
+            models.Index(fields=['production_line', 'forecast_date']),
+        ]
+
+    def __str__(self):
+        return f'توقع {self.get_period_type_display()} - {self.forecast_date}'
+
+    @property
+    def accuracy_percentage(self):
+        """حساب دقة التوقع بناءً على البيانات الفعلية"""
+        if self.actual_orders_count is None:
+            return None
+
+        if self.forecasted_orders_count == 0:
+            return 0
+
+        difference = abs(self.actual_orders_count - self.forecasted_orders_count)
+        accuracy = (1 - (difference / max(self.forecasted_orders_count, self.actual_orders_count))) * 100
+        return max(0, min(100, accuracy))
+
+    @property
+    def meters_accuracy_percentage(self):
+        """حساب دقة توقع الأمتار"""
+        if self.actual_meters is None:
+            return None
+
+        if self.forecasted_meters == 0:
+            return 0
+
+        difference = abs(float(self.actual_meters) - float(self.forecasted_meters))
+        accuracy = (1 - (difference / max(float(self.forecasted_meters), float(self.actual_meters)))) * 100
+        return max(0, min(100, accuracy))
