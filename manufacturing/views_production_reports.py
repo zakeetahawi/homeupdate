@@ -119,48 +119,44 @@ class ProductionReportDashboardView(LoginRequiredMixin, PermissionRequiredMixin,
         else:
             date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
 
-        # بناء الاستعلام الأساسي - جميع أوامر التصنيع في الفترة المحددة
-        manufacturing_orders = ManufacturingOrder.objects.filter(
-            order__order_date__date__gte=date_from,
-            order__order_date__date__lte=date_to
-        )
-
-        # تطبيق الفلاتر على أوامر التصنيع
-        if production_line_ids:
-            manufacturing_orders = manufacturing_orders.filter(production_line_id__in=production_line_ids)
-        if order_types:
-            manufacturing_orders = manufacturing_orders.filter(order_type__in=order_types)
-        if order_statuses:
-            manufacturing_orders = manufacturing_orders.filter(order__status__in=order_statuses)
-
-        # فلترة حسب الحالة الحالية (to_statuses) - هذا هو الأهم!
-        if to_statuses:
-            manufacturing_orders = manufacturing_orders.filter(status__in=to_statuses)
-
-        # الحصول على سجلات التحولات لهذه الأوامر
+        # بناء الاستعلام الأساسي - سجلات التحولات في الفترة المحددة
+        # نبدأ من سجلات التحولات وليس من أوامر التصنيع
         status_logs = ManufacturingStatusLog.objects.filter(
-            manufacturing_order__in=manufacturing_orders
+            changed_at__date__gte=date_from,  # ✅ تاريخ تغيير الحالة
+            changed_at__date__lte=date_to
         )
+
+        # فلترة حسب الحالة الجديدة (to_statuses) - الحالة التي تم الانتقال إليها
+        if to_statuses:
+            status_logs = status_logs.filter(new_status__in=to_statuses)
 
         # فلترة حسب الحالة السابقة إذا تم تحديدها
         if from_statuses:
             status_logs = status_logs.filter(previous_status__in=from_statuses)
 
+        # تطبيق الفلاتر على أوامر التصنيع المرتبطة
+        if production_line_ids:
+            status_logs = status_logs.filter(manufacturing_order__production_line_id__in=production_line_ids)
+        if order_types:
+            status_logs = status_logs.filter(manufacturing_order__order_type__in=order_types)
+        if order_statuses:
+            status_logs = status_logs.filter(manufacturing_order__order__status__in=order_statuses)
+
         # تطبيق منطق عدم التكرار - الحصول على آخر سجل لكل أمر تصنيع
         status_logs = get_latest_status_logs(status_logs)
-        
-        # إحصائيات عامة
-        total_transitions = status_logs.count()
-        unique_orders = status_logs.values('manufacturing_order').distinct().count()
-        
-        # حساب إجمالي الأمتار للطلبات في الفترة المحددة
-        orders_in_period = ManufacturingOrder.objects.filter(
-            id__in=status_logs.values_list('manufacturing_order_id', flat=True)
-        )
 
+        # إحصائيات عامة - يجب أن تطابق Detail View
+        total_transitions = status_logs.count()
+
+        # حساب عدد الطلبات الفريدة وإجمالي الأمتار
+        unique_order_ids = set()
         total_meters = 0
-        for order in orders_in_period:
-            # حساب الأمتار من عناصر الطلب الأصلي
+
+        for log in status_logs:
+            order = log.manufacturing_order
+            unique_order_ids.add(order.id)
+
+            # حساب الأمتار من الطلب الأصلي (نفس منطق Detail View)
             if order.order:
                 items_meters = order.order.items.aggregate(
                     total=Sum('quantity', output_field=DecimalField())
@@ -170,6 +166,8 @@ class ProductionReportDashboardView(LoginRequiredMixin, PermissionRequiredMixin,
                     total=Sum('quantity', output_field=DecimalField())
                 )['total'] or 0
             total_meters += float(items_meters)
+
+        unique_orders = len(unique_order_ids)
         
         # توزيع التحولات حسب الحالة (مع تطبيع الحالات المكتملة)
         status_dist_data = {}
@@ -227,6 +225,21 @@ class ProductionReportDashboardView(LoginRequiredMixin, PermissionRequiredMixin,
                     total=Sum('quantity', output_field=DecimalField())
                 )['total'] or 0
 
+            # حساب مدة الإنتاج (فقط للحالات: جاهز للتركيب، تم التسليم، مكتمل)
+            production_days = None
+            if log.new_status in ['ready_install', 'delivered', 'completed']:
+                if order.order and order.order.order_date and log.changed_at:
+                    # حساب الفرق بالأيام
+                    order_date = order.order.order_date
+                    if hasattr(order_date, 'date'):
+                        order_date = order_date.date()
+
+                    changed_date = log.changed_at
+                    if hasattr(changed_date, 'date'):
+                        changed_date = changed_date.date()
+
+                    production_days = (changed_date - order_date).days
+
             table_data.append({
                 'log': log,
                 'order_number': order.order.order_number if order.order else '-',
@@ -236,6 +249,7 @@ class ProductionReportDashboardView(LoginRequiredMixin, PermissionRequiredMixin,
                 'order_date': order.order.order_date if order.order else None,
                 'order_type': order.order_type,
                 'order_type_display': order.get_order_type_display(),
+                'production_days': production_days,
             })
 
         # استيراد Order.ORDER_STATUS_CHOICES
@@ -286,40 +300,41 @@ class ProductionReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Li
         order_types = self.request.GET.getlist('order_type')
         order_statuses = self.request.GET.getlist('order_status')
 
-        # بناء الاستعلام الأساسي - جميع أوامر التصنيع
-        manufacturing_orders = ManufacturingOrder.objects.all()
-
-        # تطبيق فلاتر التاريخ
-        if date_from:
-            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
-            manufacturing_orders = manufacturing_orders.filter(order__order_date__date__gte=date_from_obj)
-
-        if date_to:
+        # تعيين التواريخ الافتراضية (آخر 30 يوم) - نفس منطق Dashboard
+        if not date_to:
+            date_to_obj = timezone.now().date()
+        else:
             date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
-            manufacturing_orders = manufacturing_orders.filter(order__order_date__date__lte=date_to_obj)
 
-        # تطبيق الفلاتر على أوامر التصنيع
-        if production_line_ids:
-            manufacturing_orders = manufacturing_orders.filter(production_line_id__in=production_line_ids)
+        if not date_from:
+            date_from_obj = date_to_obj - timedelta(days=30)
+        else:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
 
-        if order_types:
-            manufacturing_orders = manufacturing_orders.filter(order_type__in=order_types)
+        # بناء الاستعلام الأساسي - سجلات التحولات
+        queryset = ManufacturingStatusLog.objects.all()
 
-        if order_statuses:
-            manufacturing_orders = manufacturing_orders.filter(order__status__in=order_statuses)
+        # تطبيق فلاتر التاريخ على تاريخ تغيير الحالة
+        queryset = queryset.filter(changed_at__date__gte=date_from_obj)
+        queryset = queryset.filter(changed_at__date__lte=date_to_obj)
 
-        # فلترة حسب الحالة الحالية (to_statuses) - هذا هو الأهم!
+        # فلترة حسب الحالة الجديدة (to_statuses) - الحالة التي تم الانتقال إليها
         if to_statuses:
-            manufacturing_orders = manufacturing_orders.filter(status__in=to_statuses)
-
-        # الحصول على سجلات التحولات لهذه الأوامر
-        queryset = ManufacturingStatusLog.objects.filter(
-            manufacturing_order__in=manufacturing_orders
-        )
+            queryset = queryset.filter(new_status__in=to_statuses)
 
         # فلترة حسب الحالة السابقة إذا تم تحديدها
         if from_statuses:
             queryset = queryset.filter(previous_status__in=from_statuses)
+
+        # تطبيق الفلاتر على أوامر التصنيع المرتبطة
+        if production_line_ids:
+            queryset = queryset.filter(manufacturing_order__production_line_id__in=production_line_ids)
+
+        if order_types:
+            queryset = queryset.filter(manufacturing_order__order_type__in=order_types)
+
+        if order_statuses:
+            queryset = queryset.filter(manufacturing_order__order__status__in=order_statuses)
 
         # تطبيق منطق عدم التكرار
         queryset = get_latest_status_logs(queryset)
@@ -335,9 +350,23 @@ class ProductionReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Li
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        # حساب التواريخ الافتراضية (نفس منطق Dashboard)
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+
+        if not date_to:
+            date_to_obj = timezone.now().date()
+        else:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+
+        if not date_from:
+            date_from_obj = date_to_obj - timedelta(days=30)
+        else:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+
         # إضافة معلمات الفلترة للسياق
-        context['date_from'] = self.request.GET.get('date_from', '')
-        context['date_to'] = self.request.GET.get('date_to', '')
+        context['date_from'] = date_from_obj.strftime('%Y-%m-%d')
+        context['date_to'] = date_to_obj.strftime('%Y-%m-%d')
         context['from_statuses'] = self.request.GET.getlist('from_status')
         context['to_statuses'] = self.request.GET.getlist('to_status')
         context['production_line_ids'] = self.request.GET.getlist('production_line')
@@ -369,6 +398,21 @@ class ProductionReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Li
                     total=Sum('quantity', output_field=DecimalField())
                 )['total'] or 0
 
+            # حساب مدة الإنتاج (فقط للحالات: جاهز للتركيب، تم التسليم، مكتمل)
+            production_days = None
+            if log.new_status in ['ready_install', 'delivered', 'completed']:
+                if order.order and order.order.order_date and log.changed_at:
+                    # حساب الفرق بالأيام
+                    order_date = order.order.order_date
+                    if hasattr(order_date, 'date'):
+                        order_date = order_date.date()
+
+                    changed_date = log.changed_at
+                    if hasattr(changed_date, 'date'):
+                        changed_date = changed_date.date()
+
+                    production_days = (changed_date - order_date).days
+
             table_data.append({
                 'log': log,
                 'order_number': order.order.order_number if order.order else '-',
@@ -378,6 +422,7 @@ class ProductionReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Li
                 'order_date': order.order.order_date if order.order else None,
                 'order_type': order.order_type,
                 'order_type_display': order.get_order_type_display(),
+                'production_days': production_days,
             })
 
         context['table_data'] = table_data
@@ -491,27 +536,10 @@ def export_production_report_excel(request):
         else:
             date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
 
-        # بناء الاستعلام الأساسي - جميع أوامر التصنيع في الفترة المحددة
-        manufacturing_orders = ManufacturingOrder.objects.filter(
-            order__order_date__date__gte=date_from,
-            order__order_date__date__lte=date_to
-        )
-
-        # تطبيق الفلاتر على أوامر التصنيع
-        if production_line_ids:
-            manufacturing_orders = manufacturing_orders.filter(production_line_id__in=production_line_ids)
-        if order_types:
-            manufacturing_orders = manufacturing_orders.filter(order_type__in=order_types)
-        if order_statuses:
-            manufacturing_orders = manufacturing_orders.filter(order__status__in=order_statuses)
-
-        # فلترة حسب الحالة الحالية (to_statuses) - هذا هو الأهم!
-        if to_statuses:
-            manufacturing_orders = manufacturing_orders.filter(status__in=to_statuses)
-
-        # الحصول على سجلات التحولات لهذه الأوامر
+        # بناء الاستعلام الأساسي - سجلات التحولات في الفترة المحددة
         status_logs = ManufacturingStatusLog.objects.filter(
-            manufacturing_order__in=manufacturing_orders
+            changed_at__date__gte=date_from,  # ✅ تاريخ تغيير الحالة
+            changed_at__date__lte=date_to
         ).select_related(
             'manufacturing_order',
             'manufacturing_order__order',
@@ -521,9 +549,21 @@ def export_production_report_excel(request):
             'changed_by'
         ).order_by('-changed_at')
 
+        # فلترة حسب الحالة الجديدة (to_statuses) - الحالة التي تم الانتقال إليها
+        if to_statuses:
+            status_logs = status_logs.filter(new_status__in=to_statuses)
+
         # فلترة حسب الحالة السابقة إذا تم تحديدها
         if from_statuses:
             status_logs = status_logs.filter(previous_status__in=from_statuses)
+
+        # تطبيق الفلاتر على أوامر التصنيع المرتبطة
+        if production_line_ids:
+            status_logs = status_logs.filter(manufacturing_order__production_line_id__in=production_line_ids)
+        if order_types:
+            status_logs = status_logs.filter(manufacturing_order__order_type__in=order_types)
+        if order_statuses:
+            status_logs = status_logs.filter(manufacturing_order__order__status__in=order_statuses)
 
         # تطبيق منطق عدم التكرار
         status_logs = get_latest_status_logs(status_logs)

@@ -6,25 +6,14 @@
 {% block extra_css %}
 <style>
     .stats-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        border: none;
         border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
     }
 
-    .stats-card h3 {
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin: 0;
-    }
-
-    .stats-card p {
-        margin: 3px 0 0 0;
-        opacity: 0.9;
-        font-size: 0.8rem;
+    .stats-card:hover {
+        transform: translateY(-2px);
     }
 
     .order-type-badge {
@@ -89,35 +78,41 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-2">
-            <div class="stats-card">
-                <h3>{{ total_transitions }}</h3>
-                <p>إجمالي التحولات</p>
+    <div class="row g-3 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-exchange-alt fa-2x text-primary mb-2"></i>
+                    <h4 class="mb-1">{{ total_transitions }}</h4>
+                    <small class="text-muted">عدد التحولات</small>
+                </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                <h3>{{ unique_orders }}</h3>
-                <p>عدد الطلبات الفريدة</p>
+        <div class="col-lg-3 col-md-6">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-box fa-2x text-success mb-2"></i>
+                    <h4 class="mb-1">{{ unique_orders }}</h4>
+                    <small class="text-muted">عدد الطلبات</small>
+                </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                <h3>{{ total_meters }}</h3>
-                <p>إجمالي الأمتار</p>
+        <div class="col-lg-3 col-md-6">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-ruler fa-2x text-info mb-2"></i>
+                    <h4 class="mb-1">{{ total_meters }}</h4>
+                    <small class="text-muted">إجمالي الأمتار</small>
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="stats-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                <h3>{{ date_from|date:"Y-m-d" }}</h3>
-                <p>من تاريخ</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card" style="background: linear-gradient(135deg, #ffa502 0%, #ff6348 100%);">
-                <h3>{{ date_to|date:"Y-m-d" }}</h3>
-                <p>إلى تاريخ</p>
+        <div class="col-lg-3 col-md-6">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-check fa-2x text-warning mb-2"></i>
+                    <h4 class="mb-1">{{ date_from|date:"Y-m-d" }}</h4>
+                    <small class="text-muted">من تاريخ الإنتاج</small>
+                </div>
             </div>
         </div>
     </div>
@@ -129,88 +124,88 @@
             فلاتر التقرير
         </h5>
         <form method="get" action="{% url 'manufacturing:production_reports_dashboard' %}">
-            <div class="row">
-                <div class="col-md-3">
-                    <label for="date_from" class="form-label">من تاريخ</label>
-                    <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from|date:'Y-m-d' }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="date_to" class="form-label">إلى تاريخ</label>
-                    <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to|date:'Y-m-d' }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">من حالة</label>
-                    <div style="max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem;">
-                        {% for status_code, status_name in status_choices %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="from_status" value="{{ status_code }}" id="from_{{ status_code }}" {% if status_code in from_statuses %}checked{% endif %}>
-                            <label class="form-check-label" for="from_{{ status_code }}">
-                                {{ status_name }}
-                            </label>
+            <div class="row g-2 align-items-end">
+                <!-- التواريخ -->
+                <div class="col-auto">
+                    <div class="row g-1">
+                        <div class="col-12">
+                            <label for="date_from" class="form-label form-label-sm mb-0">من تاريخ</label>
+                            <input type="date" class="form-control form-control-sm" id="date_from" name="date_from" value="{{ date_from|date:'Y-m-d' }}" style="width: 150px;">
                         </div>
-                        {% endfor %}
+                        <div class="col-12">
+                            <label for="date_to" class="form-label form-label-sm mb-0">إلى تاريخ</label>
+                            <input type="date" class="form-control form-control-sm" id="date_to" name="date_to" value="{{ date_to|date:'Y-m-d' }}" style="width: 150px;">
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">إلى حالة</label>
-                    <div style="max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem;">
+
+                <!-- الحالة -->
+                <div class="col-auto">
+                    <label class="form-label form-label-sm mb-1">الحالة</label>
+                    <div style="max-height: 120px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.25rem; min-width: 150px;">
                         {% for status_code, status_name in status_choices %}
-                        <div class="form-check">
+                        <div class="form-check form-check-sm">
                             <input class="form-check-input" type="checkbox" name="to_status" value="{{ status_code }}" id="to_{{ status_code }}" {% if status_code in to_statuses %}checked{% endif %}>
-                            <label class="form-check-label" for="to_{{ status_code }}">
+                            <label class="form-check-label small" for="to_{{ status_code }}">
                                 {{ status_name }}
                             </label>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
-            </div>
-            <div class="row mt-3">
-                <div class="col-md-3">
-                    <label class="form-label">خط الإنتاج</label>
-                    <div style="max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem;">
+
+                <!-- خط الإنتاج -->
+                <div class="col-auto">
+                    <label class="form-label form-label-sm mb-1">خط الإنتاج</label>
+                    <div style="max-height: 120px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.25rem; min-width: 150px;">
                         {% for line in production_lines %}
-                        <div class="form-check">
+                        <div class="form-check form-check-sm">
                             <input class="form-check-input" type="checkbox" name="production_line" value="{{ line.id }}" id="line_{{ line.id }}" {% if line.id|stringformat:"s" in production_line_ids %}checked{% endif %}>
-                            <label class="form-check-label" for="line_{{ line.id }}">
+                            <label class="form-check-label small" for="line_{{ line.id }}">
                                 {{ line.name }}
                             </label>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">نوع الطلب</label>
-                    <div style="max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem;">
+
+                <!-- نوع الطلب -->
+                <div class="col-auto">
+                    <label class="form-label form-label-sm mb-1">نوع الطلب</label>
+                    <div style="max-height: 120px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.25rem; min-width: 120px;">
                         {% for type_code, type_name in order_type_choices %}
-                        <div class="form-check">
+                        <div class="form-check form-check-sm">
                             <input class="form-check-input" type="checkbox" name="order_type" value="{{ type_code }}" id="type_{{ type_code }}" {% if type_code in order_types %}checked{% endif %}>
-                            <label class="form-check-label" for="type_{{ type_code }}">
+                            <label class="form-check-label small" for="type_{{ type_code }}">
                                 {{ type_name }}
                             </label>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">وضع الطلب</label>
-                    <div style="max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem;">
+
+                <!-- وضع الطلب -->
+                <div class="col-auto">
+                    <label class="form-label form-label-sm mb-1">وضع الطلب</label>
+                    <div style="max-height: 120px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.25rem; min-width: 100px;">
                         {% for status_code, status_name in order_status_choices %}
-                        <div class="form-check">
+                        <div class="form-check form-check-sm">
                             <input class="form-check-input" type="checkbox" name="order_status" value="{{ status_code }}" id="order_status_{{ status_code }}" {% if status_code in order_statuses %}checked{% endif %}>
-                            <label class="form-check-label" for="order_status_{{ status_code }}">
+                            <label class="form-check-label small" for="order_status_{{ status_code }}">
                                 {{ status_name }}
                             </label>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
+
+                <!-- أزرار البحث -->
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">
                         <i class="fas fa-search"></i>
                         بحث
                     </button>
-                    <a href="{% url 'manufacturing:production_reports_dashboard' %}" class="btn btn-secondary">
+                    <a href="{% url 'manufacturing:production_reports_dashboard' %}" class="btn btn-secondary btn-sm">
                         <i class="fas fa-redo"></i>
                         إعادة تعيين
                     </a>
