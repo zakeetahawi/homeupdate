@@ -170,6 +170,18 @@
                     </div>
                 </div>
 
+                <!-- عدد الصفوف -->
+                <div class="col-auto">
+                    <label for="page_size" class="form-label form-label-sm mb-1">عدد الصفوف</label>
+                    <select class="form-select form-select-sm" id="page_size" name="page_size" style="width: 120px;">
+                        <option value="50" {% if page_size == '50' %}selected{% endif %}>50 صف</option>
+                        <option value="100" {% if page_size == '100' %}selected{% endif %}>100 صف</option>
+                        <option value="200" {% if page_size == '200' %}selected{% endif %}>200 صف</option>
+                        <option value="500" {% if page_size == '500' %}selected{% endif %}>500 صف</option>
+                        <option value="all" {% if page_size == 'all' %}selected{% endif %}>عرض الكل</option>
+                    </select>
+                </div>
+
                 <!-- أزرار البحث -->
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary btn-sm">
@@ -194,6 +206,7 @@
         <table class="table table-striped table-hover">
             <thead class="table-dark">
                 <tr>
+                    <th style="width: 50px;">#</th>
                     <th>رقم الطلب</th>
                     <th>اسم العميل</th>
                     <th>رقم العقد</th>
@@ -209,6 +222,13 @@
             <tbody>
                 {% for item in table_data %}
                 <tr>
+                    <td class="text-center">
+                        {% if page_obj %}
+                            {{ forloop.counter|add:page_obj.start_index|add:"-1" }}
+                        {% else %}
+                            {{ forloop.counter }}
+                        {% endif %}
+                    </td>
                     <td>
                         <a href="{% url 'manufacturing:order_detail_by_code' item.log.manufacturing_order.manufacturing_code %}" target="_blank">
                             {{ item.order_number }}
@@ -267,7 +287,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="10" class="text-center text-muted">
+                    <td colspan="11" class="text-center text-muted">
                         <i class="fas fa-inbox fa-3x mb-3"></i>
                         <p>لا توجد سجلات تطابق معايير البحث</p>
                     </td>
@@ -308,5 +328,14 @@
     </nav>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // إعادة إرسال النموذج عند تغيير عدد الصفوف
+    document.getElementById('page_size').addEventListener('change', function() {
+        this.form.submit();
+    });
+</script>
 {% endblock %}
 

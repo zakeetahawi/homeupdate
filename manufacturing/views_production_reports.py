@@ -108,14 +108,14 @@ class ProductionReportDashboardView(LoginRequiredMixin, PermissionRequiredMixin,
         order_types = self.request.GET.getlist('order_type')  # دعم الاختيار المتعدد
         order_statuses = self.request.GET.getlist('order_status')  # فلتر جديد
 
-        # تعيين التواريخ الافتراضية (آخر 30 يوم)
+        # تعيين التواريخ الافتراضية (تاريخ اليوم)
         if not date_to:
             date_to = timezone.now().date()
         else:
             date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
 
         if not date_from:
-            date_from = date_to - timedelta(days=30)
+            date_from = timezone.now().date()  # ✅ تاريخ اليوم بدلاً من -30 يوم
         else:
             date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
 
@@ -290,6 +290,19 @@ class ProductionReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Li
     permission_required = 'manufacturing.view_manufacturingorder'
     paginate_by = 50
     
+    def get_paginate_by(self, queryset):
+        """
+        الحصول على عدد الصفوف لكل صفحة من معامل page_size
+        أو إرجاع None لعرض جميع السجلات
+        """
+        page_size = self.request.GET.get('page_size', '50')
+        if page_size == 'all':
+            return None  # عرض جميع السجلات
+        try:
+            return int(page_size)
+        except (ValueError, TypeError):
+            return 50  # القيمة الافتراضية
+    
     def get_queryset(self):
         # الحصول على معلمات الفلترة
         date_from = self.request.GET.get('date_from')
@@ -300,14 +313,14 @@ class ProductionReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Li
         order_types = self.request.GET.getlist('order_type')
         order_statuses = self.request.GET.getlist('order_status')
 
-        # تعيين التواريخ الافتراضية (آخر 30 يوم) - نفس منطق Dashboard
+        # تعيين التواريخ الافتراضية (تاريخ اليوم) - نفس منطق Dashboard
         if not date_to:
             date_to_obj = timezone.now().date()
         else:
             date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
 
         if not date_from:
-            date_from_obj = date_to_obj - timedelta(days=30)
+            date_from_obj = timezone.now().date()  # ✅ تاريخ اليوم بدلاً من -30 يوم
         else:
             date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
 
@@ -360,7 +373,7 @@ class ProductionReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Li
             date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
 
         if not date_from:
-            date_from_obj = date_to_obj - timedelta(days=30)
+            date_from_obj = timezone.now().date()  # ✅ تاريخ اليوم بدلاً من -30 يوم
         else:
             date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
 
@@ -372,6 +385,7 @@ class ProductionReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Li
         context['production_line_ids'] = self.request.GET.getlist('production_line')
         context['order_types'] = self.request.GET.getlist('order_type')
         context['order_statuses'] = self.request.GET.getlist('order_status')
+        context['page_size'] = self.request.GET.get('page_size', '50')  # إضافة page_size
 
         # خيارات الحالات
         from orders.models import Order
@@ -379,6 +393,12 @@ class ProductionReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Li
         context['order_type_choices'] = ManufacturingOrder.ORDER_TYPE_CHOICES
         context['order_status_choices'] = Order.STATUS_CHOICES  # عادي أو VIP
         context['production_lines'] = ProductionLine.objects.all()
+
+        # حساب عدد الطلبات الفريدة من كامل الاستعلام (وليس فقط الصفحة الحالية)
+        # نستخدم self.get_queryset() للحصول على كامل البيانات المفلترة
+        all_logs = self.get_queryset()
+        unique_order_ids_all = all_logs.values_list('manufacturing_order_id', flat=True).distinct()
+        context['total_orders'] = unique_order_ids_all.count()
 
         # إضافة بيانات الأمتار لكل سجل
         table_data = []
@@ -426,7 +446,7 @@ class ProductionReportDetailView(LoginRequiredMixin, PermissionRequiredMixin, Li
             })
 
         context['table_data'] = table_data
-        context['total_orders'] = len(unique_order_ids)  # إضافة عدد الطلبات الفريدة
+        # تم حساب total_orders من كامل الاستعلام في الأعلى
 
         return context
 
@@ -532,7 +552,7 @@ def export_production_report_excel(request):
             date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
 
         if not date_from:
-            date_from = date_to - timedelta(days=30)
+            date_from = timezone.now().date()  # ✅ تاريخ اليوم بدلاً من -30 يوم
         else:
             date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
 
