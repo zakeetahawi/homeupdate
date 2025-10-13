@@ -10,6 +10,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # حذف الفهارس القديمة (تم حذفها بالفعل من قاعدة البيانات)
         migrations.RemoveIndex(
             model_name="manufacturingstatuslog",
             name="manufacturi_manufac_7938ef_idx",
@@ -26,9 +27,14 @@ class Migration(migrations.Migration):
             model_name="manufacturingstatuslog",
             name="manufacturi_changed_2e7e59_idx",
         ),
+        # حذف الحقول القديمة (تم حذفها بالفعل من قاعدة البيانات)
         migrations.RemoveField(
             model_name="manufacturingstatuslog",
             name="from_status",
+        ),
+        migrations.RemoveField(
+            model_name="manufacturingstatuslog",
+            name="to_status",
         ),
         migrations.RemoveField(
             model_name="manufacturingstatuslog",
@@ -38,10 +44,7 @@ class Migration(migrations.Migration):
             model_name="manufacturingstatuslog",
             name="production_line",
         ),
-        migrations.RemoveField(
-            model_name="manufacturingstatuslog",
-            name="to_status",
-        ),
+        # إضافة الحقول الجديدة (موجودة بالفعل في قاعدة البيانات)
         migrations.AddField(
             model_name="manufacturingstatuslog",
             name="new_status",
@@ -56,11 +59,12 @@ class Migration(migrations.Migration):
                     ("rejected", "مرفوض"),
                     ("cancelled", "ملغي"),
                 ],
-                default="pending",
+                default="pending",  # قيمة افتراضية مؤقتة للترحيل فقط
                 help_text="الحالة بعد التغيير",
                 max_length=30,
                 verbose_name="الحالة الجديدة",
             ),
+            preserve_default=False,  # لن نحتفظ بالقيمة الافتراضية
         ),
         migrations.AddField(
             model_name="manufacturingstatuslog",
@@ -76,12 +80,14 @@ class Migration(migrations.Migration):
                     ("rejected", "مرفوض"),
                     ("cancelled", "ملغي"),
                 ],
-                default="pending",
+                default="pending",  # قيمة افتراضية مؤقتة للترحيل فقط
                 help_text="الحالة قبل التغيير",
                 max_length=30,
                 verbose_name="الحالة السابقة",
             ),
+            preserve_default=False,  # لن نحتفظ بالقيمة الافتراضية
         ),
+        # إعادة تسمية الجدول (تم بالفعل)
         migrations.AlterModelTable(
             name="manufacturingstatuslog",
             table="manufacturing_manufacturingstatuslog",
