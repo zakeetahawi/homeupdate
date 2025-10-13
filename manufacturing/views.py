@@ -1530,17 +1530,17 @@ def update_order_status(request, pk):
         order.status = new_status
         order.updated_at = timezone.now()
         
-        # إنشاء سجل تغيير الحالة
+        # إنشاء سجل تغيير الحالة - نسجل جميع تغييرات حالة التصنيع
         try:
             from orders.models import OrderStatusLog
-            # الحصول على الحالة السابقة للطلب الأساسي
-            original_order_old_status = order.order.tracking_status if order.order else 'pending'
-            
+
+            # إنشاء سجل لتغيير حالة التصنيع (نستخدم حالات التصنيع مباشرة)
             OrderStatusLog.objects.create(
                 order=order.order,
-                old_status=original_order_old_status,
+                old_status=old_status,
                 new_status=new_status,
                 changed_by=request.user,
+                change_type='manufacturing',
                 notes=f'تم تغيير حالة أمر التصنيع من {dict(ManufacturingOrder.STATUS_CHOICES).get(old_status, "")} إلى {dict(ManufacturingOrder.STATUS_CHOICES).get(new_status, "")}'
             )
             logger.debug(f"[update_order_status] Created status log for order {pk}")
@@ -1925,12 +1925,29 @@ def update_approval_status(request, pk):
 
         with transaction.atomic():
             if action == 'approve':
+                old_status = order.status
                 order.status = 'pending'  # The manufacturing process itself is now 'pending'
                 order.rejection_reason = None
+                # Set the user who changed the status for the signal handler
+                order._changed_by = request.user
                 order.save()
-                
+
+                # إنشاء سجل تغيير الحالة
+                try:
+                    from orders.models import OrderStatusLog
+                    OrderStatusLog.objects.create(
+                        order=order.order,
+                        old_status=old_status,
+                        new_status='pending',
+                        changed_by=request.user,
+                        change_type='manufacturing',
+                        notes=f'تمت الموافقة على أمر التصنيع'
+                    )
+                except Exception as e:
+                    logger.error(f"Error creating status log: {str(e)}")
+
                 # تم حذف نظام الإشعارات
-                
+
                 # Update order tracking status to in_progress
                 if order.order:
                     order.order.tracking_status = 'in_progress'
@@ -1938,7 +1955,7 @@ def update_approval_status(request, pk):
 
                 logger.info(f"Order {pk} approved by {request.user.username}")
                 return JsonResponse({
-                    'success': True, 
+                    'success': True,
                     'message': 'تمت الموافقة على الطلب وبدء التصنيع.'
                 })
 
@@ -1946,13 +1963,30 @@ def update_approval_status(request, pk):
                 reason = data.get('reason', '').strip()
                 if not reason:
                     return JsonResponse({
-                        'success': False, 
+                        'success': False,
                         'error': 'سبب الرفض مطلوب.'
                     }, status=400)
-                
+
+                old_status = order.status
                 order.status = 'rejected'
                 order.rejection_reason = reason
+                # Set the user who changed the status for the signal handler
+                order._changed_by = request.user
                 order.save()
+
+                # إنشاء سجل تغيير الحالة
+                try:
+                    from orders.models import OrderStatusLog
+                    OrderStatusLog.objects.create(
+                        order=order.order,
+                        old_status=old_status,
+                        new_status='rejected',
+                        changed_by=request.user,
+                        change_type='manufacturing',
+                        notes=f'تم رفض أمر التصنيع - السبب: {reason}'
+                    )
+                except Exception as e:
+                    logger.error(f"Error creating status log: {str(e)}")
 
                 # Revert original order status if it was set to 'factory'
                 original_order = order.order
@@ -1961,7 +1995,7 @@ def update_approval_status(request, pk):
                     original_order.save(update_fields=['tracking_status'])
 
                 # تم حذف نظام الإشعارات
-                
+
                 # Update order tracking status to rejected
                 if order.order:
                     order.order.tracking_status = 'rejected'
@@ -1969,7 +2003,7 @@ def update_approval_status(request, pk):
 
                 logger.info(f"Order {pk} rejected by {request.user.username}, reason: {reason}")
                 return JsonResponse({
-                    'success': True, 
+                    'success': True,
                     'message': 'تم رفض الطلب وإرسال إشعار للمستخدم.'
                 })
 
@@ -2312,9 +2346,26 @@ def re_approve_after_reply(request, pk):
         
         with transaction.atomic():
             # Reset rejection status and approve
+            old_status = order.status
             order.status = 'pending'
+            # Set the user who changed the status for the signal handler
+            order._changed_by = request.user
             order.save(update_fields=['status'])
-            
+
+            # إنشاء سجل تغيير الحالة
+            try:
+                from orders.models import OrderStatusLog
+                OrderStatusLog.objects.create(
+                    order=order.order,
+                    old_status=old_status,
+                    new_status='pending',
+                    changed_by=request.user,
+                    change_type='manufacturing',
+                    notes=f'تمت الموافقة على أمر التصنيع بعد الرد على الرفض'
+                )
+            except Exception as e:
+                logger.error(f"Error creating status log: {str(e)}")
+
             # Update order tracking status to in_progress
             if order.order:
                 order.order.tracking_status = 'factory'

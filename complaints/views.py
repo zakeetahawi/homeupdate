@@ -865,6 +865,21 @@ def complaint_status_update(request, pk):
                 is_visible_to_customer=True
             )
 
+            # إنشاء سجل تغيير الحالة في OrderStatusLog إذا كان هناك طلب مرتبط
+            if complaint.related_order:
+                try:
+                    from orders.models import OrderStatusLog
+                    OrderStatusLog.objects.create(
+                        order=complaint.related_order,
+                        old_status=old_status,
+                        new_status=complaint.status,
+                        changed_by=request.user,
+                        change_type='complaint',
+                        notes=f'تغيير حالة الشكوى #{complaint.complaint_number} من {old_status_display} إلى {complaint.get_status_display()}'
+                    )
+                except Exception as e:
+                    print(f"خطأ في تسجيل تغيير حالة الشكوى: {e}")
+
             # رسائل نجاح مختلفة حسب الحالة
             if complaint.status == 'in_progress':
                 success_message = f'تم بدء العمل على الشكوى رقم {complaint.complaint_number} بنجاح'

@@ -46,12 +46,13 @@ def update_related_orders(installation, new_status, old_status, user=None):
         # تسجيل تغيير حالة التركيب في OrderStatusLog
         try:
             from orders.models import OrderStatusLog
-            
+
             OrderStatusLog.objects.create(
                 order=installation.order,
                 old_status=old_status,
                 new_status=new_status,
                 changed_by=user,
+                change_type='installation',
                 notes=f'تغيير حالة التركيب من {dict(InstallationSchedule.STATUS_CHOICES).get(old_status, old_status)} إلى {dict(InstallationSchedule.STATUS_CHOICES).get(new_status, new_status)}'
             )
         except Exception as e:
@@ -76,7 +77,8 @@ def update_related_orders(installation, new_status, old_status, user=None):
                         old_status=old_order_status,
                         new_status='completed',
                         changed_by=user,
-                        notes=f'تم تحديث حالة الطلب تلقائياً عند إكمال التركيب #{installation.installation_code}'
+                        change_type='installation',
+                        notes=f'تم إكمال التركيب #{installation.installation_code}'
                     )
                 except Exception as e:
                     print(f"خطأ في تسجيل تغيير حالة الطلب: {e}")

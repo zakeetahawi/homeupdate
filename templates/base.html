@@ -718,14 +718,25 @@
                                                         {% endif %}
 
                                                         {% if notification.created_by %}
-                                                        <div class="small text-secondary">
-                                                            <i class="fas fa-user-tie me-1"></i>
-                                                            المنشئ: {{ notification.created_by.get_full_name|default:notification.created_by.username }}
+                                                        <div class="small">
+                                                            <span class="badge bg-primary" style="font-size: 0.75em;">
+                                                                <i class="fas fa-user"></i>
+                                                                {{ notification.created_by.get_full_name|default:notification.created_by.username }}
+                                                            </span>
                                                         </div>
-                                                        {% elif notification.extra_data.changed_by %}
-                                                        <div class="small text-secondary">
-                                                            <i class="fas fa-user-tie me-1"></i>
-                                                            تم التغيير بواسطة: {{ notification.extra_data.changed_by }}
+                                                        {% elif notification.extra_data and notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}
+                                                        <div class="small">
+                                                            <span class="badge bg-info" style="font-size: 0.75em;">
+                                                                <i class="fas fa-user"></i>
+                                                                {{ notification.extra_data.changed_by }}
+                                                            </span>
+                                                        </div>
+                                                        {% else %}
+                                                        <div class="small">
+                                                            <span class="badge bg-secondary" style="font-size: 0.75em;">
+                                                                <i class="fas fa-robot"></i>
+                                                                مستخدم النظام
+                                                            </span>
                                                         </div>
                                                         {% endif %}
                                                     </div>

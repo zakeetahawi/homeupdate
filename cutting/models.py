@@ -475,10 +475,61 @@ def update_products_order_status(sender, instance, **kwargs):
         'products' in instance.order.get_selected_types_list()):
 
         # طلبات المنتجات لا تحتاج أمر تصنيع - تكتمل مباشرة بعد التقطيع
+        old_status = instance.order.order_status
         instance.order.order_status = 'completed'
         instance.order.tracking_status = 'completed'
         instance.order._updating_statuses = True  # تجنب الحلقة اللانهائية
         instance.order.save()
+
+        # إنشاء سجل تغيير الحالة
+        try:
+            from orders.models import OrderStatusLog
+            # محاولة الحصول على المستخدم من آخر عنصر تم تحديثه
+            changed_by = None
+            last_updated_item = instance.items.filter(updated_by__isnull=False).order_by('-updated_at').first()
+            if last_updated_item:
+                changed_by = last_updated_item.updated_by
+
+            # إذا لم نجد، نحاول من assigned_to أو completed_by
+            if not changed_by:
+                changed_by = getattr(instance, 'assigned_to', None) or getattr(instance, 'completed_by', None)
+
+            OrderStatusLog.objects.create(
+                order=instance.order,
+                old_status=old_status,
+                new_status='completed',
+                changed_by=changed_by,
+                change_type='cutting',
+                notes=f'تم إكمال أمر التقطيع #{instance.cutting_code}'
+            )
+        except Exception as e:
+            print(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
+
+        # إنشاء إشعار عند إكمال التقطيع
+        if changed_by:
+            try:
+                from notifications.signals import create_notification
+
+                customer_name = instance.order.customer.name if instance.order.customer else 'غير محدد'
+                title = f'تم إكمال أمر التقطيع - {customer_name}'
+                message = (f'تم إكمال أمر التقطيع #{instance.cutting_code} '
+                          f'للطلب #{instance.order.order_number} - العميل: {customer_name}')
+
+                create_notification(
+                    title=title,
+                    message=message,
+                    notification_type='cutting_completed',
+                    related_object=instance,
+                    created_by=changed_by,
+                    extra_data={
+                        'cutting_code': instance.cutting_code,
+                        'order_number': instance.order.order_number,
+                        'customer_name': customer_name,
+                        'changed_by': changed_by.get_full_name() or changed_by.username
+                    }
+                )
+            except Exception as e:
+                print(f"خطأ في إنشاء إشعار إكمال التقطيع: {e}")
 
         print(f"✅ تم تحديث حالة طلب المنتجات {instance.order.order_number} إلى مكتمل (بدون أمر تصنيع)")
 

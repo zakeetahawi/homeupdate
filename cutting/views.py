@@ -991,9 +991,25 @@ def start_cutting_order(request, order_id):
                 })
 
             # تحديث حالة الأمر
+            old_status = cutting_order.status
             cutting_order.status = 'in_progress'
             cutting_order.assigned_to = request.user
             cutting_order.save()
+
+            # إنشاء سجل تغيير الحالة فقط لطلبات المنتجات
+            try:
+                from orders.models import OrderStatusLog
+                if cutting_order.order and 'products' in cutting_order.order.get_selected_types_list():
+                    OrderStatusLog.objects.create(
+                        order=cutting_order.order,
+                        old_status=old_status,
+                        new_status='in_progress',
+                        changed_by=request.user,
+                        change_type='general',
+                        notes=f'تم بدء أمر التقطيع #{cutting_order.cutting_code}'
+                    )
+            except Exception as e:
+                print(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
 
             return JsonResponse({
                 'success': True,

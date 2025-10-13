@@ -382,26 +382,48 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         # Save inspection first to ensure it exists
         response = super().form_valid(form)
         
+        # إنشاء سجل تغيير الحالة في OrderStatusLog إذا كان هناك طلب مرتبط
+        if old_status != new_status and inspection.order:
+            try:
+                from orders.models import OrderStatusLog
+                from inspections.models import Inspection
+
+                # الحصول على أسماء الحالات
+                status_dict = dict(Inspection.STATUS_CHOICES)
+                old_status_display = status_dict.get(old_status, old_status)
+                new_status_display = status_dict.get(new_status, new_status)
+
+                OrderStatusLog.objects.create(
+                    order=inspection.order,
+                    old_status=old_status,
+                    new_status=new_status,
+                    changed_by=self.request.user,
+                    change_type='inspection',
+                    notes=f'تغيير حالة المعاينة من {old_status_display} إلى {new_status_display}'
+                )
+            except Exception as e:
+                print(f"خطأ في تسجيل تغيير حالة المعاينة: {e}")
+
         # إنشاء إشعار لتحديث حالة المعاينة إذا تغيرت
         if old_status != new_status:
             try:
                 from notifications.signals import create_notification
-                
+
                 # تحديد نوع الإشعار
                 notification_type = 'inspection_status_changed'
-                
+
                 # إنشاء عنوان ووصف الإشعار
                 title = f'تحديث حالة المعاينة #{inspection.pk}'
                 message = f'تم تغيير حالة المعاينة من "{old_status}" إلى "{new_status}" بواسطة {self.request.user.get_full_name() or self.request.user.username}'
-                
+
                 # إضافة معلومات الطلب إذا كان موجوداً
                 order_info = ""
                 if inspection.order:
                     order_info = f" - الطلب: {inspection.order.order_number}"
                     message += f" (الطلب: {inspection.order.order_number})"
-                
+
                 title += order_info
-                
+
                 # إنشاء الإشعار
                 create_notification(
                     title=title,
@@ -412,7 +434,7 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
                     extra_data={
                         'old_status': old_status,
                         'new_status': new_status,
-                        'changed_by': self.request.user.username,
+                        'changed_by': self.request.user.get_full_name() or self.request.user.username,
                         'inspection_id': inspection.pk,
                         'order_number': inspection.order.order_number if inspection.order else None,
                         'customer_name': inspection.customer.name if inspection.customer else 'غير محدد'

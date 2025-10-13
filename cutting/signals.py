@@ -251,6 +251,9 @@ def update_cutting_order_status(sender, instance, **kwargs):
 
     cutting_order = instance.cutting_order
 
+    # حفظ الحالة القديمة
+    old_status = cutting_order.status
+
     # حساب إحصائيات العناصر
     total_items = cutting_order.items.count()
     completed_items = cutting_order.items.filter(status='completed').count()
@@ -265,11 +268,13 @@ def update_cutting_order_status(sender, instance, **kwargs):
     elif pending_items == total_items:
         cutting_order.status = 'pending'
 
-    cutting_order.save()
+    # حفظ فقط إذا تغيرت الحالة لتجنب تكرار السجلات
+    if old_status != cutting_order.status:
+        cutting_order.save()
 
-    # إرسال إشعار لمنشئ الطلب إذا اكتمل التقطيع
-    if cutting_order.status == 'completed':
-        send_completion_notification(cutting_order)
+        # إرسال إشعار لمنشئ الطلب إذا اكتمل التقطيع
+        if cutting_order.status == 'completed':
+            send_completion_notification(cutting_order)
 
 
 @receiver(post_save, sender=CuttingOrderItem)

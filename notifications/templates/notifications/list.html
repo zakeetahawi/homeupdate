@@ -433,13 +433,20 @@
                                 <span class="badge bg-secondary">{{ notification.get_notification_type_display }}</span>
                                 <span class="badge bg-{{ notification.priority }}">{{ notification.get_priority_display }}</span>
                                 {% if notification.created_by %}
-                                <small class="text-muted">
-                                    بواسطة {{ notification.created_by.get_full_name|default:notification.created_by.username }}
-                                </small>
-                                {% elif notification.extra_data.changed_by %}
-                                <small class="text-muted">
-                                    تم التغيير بواسطة: {{ notification.extra_data.changed_by }}
-                                </small>
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-user"></i>
+                                    {{ notification.created_by.get_full_name|default:notification.created_by.username }}
+                                </span>
+                                {% elif notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-user"></i>
+                                    {{ notification.extra_data.changed_by }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-robot"></i>
+                                    مستخدم النظام
+                                </span>
                                 {% endif %}
                             </div>
                             

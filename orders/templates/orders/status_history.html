@@ -493,23 +493,29 @@
                             <div class="row mt-2">
                                 <div class="col-md-6">
                                     <div class="user-info">
-                                        <i class="fas fa-user text-muted"></i>
-                                        <small style="font-size: 0.85em;">
-                                            {% if log.changed_by %}
-                                                <strong>{{ log.changed_by.get_full_name|default:log.changed_by.username }}</strong>
-                                                {% if not log.is_automatic %}
-                                                    <span class="badge bg-success ms-1" style="font-size: 0.7em;">يدوي</span>
-                                                {% endif %}
-                                            {% elif log.is_automatic %}
-                                                <span class="text-muted">
-                                                    <i class="fas fa-robot"></i> تلقائي
+                                        {% if log.changed_by %}
+                                            <span class="badge bg-primary" style="font-size: 0.85em;">
+                                                <i class="fas fa-user"></i>
+                                                {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+                                            </span>
+                                            {% if not log.is_automatic %}
+                                                <span class="badge bg-success ms-1" style="font-size: 0.7em;">
+                                                    <i class="fas fa-hand-pointer"></i> يدوي
                                                 </span>
                                             {% else %}
-                                                <span class="text-warning">
-                                                    <i class="fas fa-question-circle"></i> مستخدم غير محدد
+                                                <span class="badge bg-info ms-1" style="font-size: 0.7em;">
+                                                    <i class="fas fa-cog"></i> تلقائي
                                                 </span>
                                             {% endif %}
-                                        </small>
+                                        {% elif log.is_automatic %}
+                                            <span class="badge bg-secondary" style="font-size: 0.85em;">
+                                                <i class="fas fa-robot"></i> النظام (تلقائي)
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark" style="font-size: 0.85em;">
+                                                <i class="fas fa-question-circle"></i> مستخدم غير محدد
+                                            </span>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <div class="col-md-6 text-end">

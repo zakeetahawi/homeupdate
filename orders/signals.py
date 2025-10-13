@@ -565,24 +565,9 @@ def sync_order_from_manufacturing(sender, instance, created, **kwargs):
             with transaction.atomic():
                 Order.objects.filter(pk=order.pk).update(**{f: getattr(order, f) for f in update_fields})
 
-            # Log status change
-            try:
-                # حاول الحصول على المستخدم الذي أنشأ أمر التصنيع إذا كان متاحاً
-                mfg_creator = getattr(instance, 'created_by', None)
-                # إن لم يتوفر، استخدم منشئ الطلب كاحتياط لتسجيل من قام بالتغيير
-                if not mfg_creator and order and getattr(order, 'created_by', None):
-                    mfg_creator = order.created_by
-                old_st = order.tracker.previous('order_status') or order.tracker.previous('tracking_status') or ''
-                new_st = getattr(order, 'order_status', order.tracking_status)
-                OrderStatusLog.objects.create(
-                    order=order,
-                    old_status=old_st,
-                    new_status=new_st,
-                    changed_by=mfg_creator,
-                    notes=f'مزامنة حالة الطلب من أمر التصنيع ({instance.get_status_display()})'
-                )
-            except Exception:
-                pass
+            # لا نقوم بإنشاء OrderStatusLog هنا لأننا نريد فقط السجلات الحقيقية
+            # التي يتم إنشاؤها من قبل المستخدمين في manufacturing/views.py
+            # (السطر 1539-1545 في update_order_status)
     except Exception:
         # avoid letting signal exceptions break the caller
         import logging
@@ -1472,33 +1457,11 @@ try:
 
     @receiver(post_save, sender='manufacturing.ManufacturingOrder')
     def track_manufacturing_status_changes(sender, instance, created, **kwargs):
-        """تتبع تغييرات حالة التصنيع"""
-        if not created and instance.order:
-            try:
-                if hasattr(instance, '_old_status') and instance._old_status != instance.status:
-                    # البحث عن المستخدم
-                    changed_by = None
-
-                    if hasattr(instance, '_modified_by') and instance._modified_by:
-                        changed_by = instance._modified_by
-                    elif hasattr(instance, 'assigned_worker') and instance.assigned_worker:
-                        changed_by = instance.assigned_worker
-                    elif hasattr(instance, 'created_by') and instance.created_by:
-                        changed_by = instance.created_by
-                    elif hasattr(instance, 'responsible_user') and instance.responsible_user:
-                        changed_by = instance.responsible_user
-
-                    OrderStatusLog.create_detailed_log(
-                        order=instance.order,
-                        change_type='status',
-                        old_value=instance._old_status,
-                        new_value=instance.status,
-                        changed_by=changed_by,
-                        notes=f'تم تغيير حالة التصنيع',
-                        is_automatic=changed_by is None
-                    )
-            except Exception as e:
-                logger.error(f"خطأ في تتبع تغييرات التصنيع {instance.pk}: {e}")
+        """تتبع تغييرات حالة التصنيع - معطل لأننا ننشئ السجل يدوياً في manufacturing/views.py"""
+        # تم تعطيل هذا الـ signal لأننا نريد فقط السجلات الحقيقية
+        # التي يتم إنشاؤها من قبل المستخدمين في manufacturing/views.py
+        # (السطر 1533-1565 في update_order_status)
+        pass
 except ImportError:
     logger.info("نموذج التصنيع غير متوفر")
 

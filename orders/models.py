@@ -2032,6 +2032,9 @@ class OrderStatusLog(models.Model):
         ('date', 'تغيير تاريخ'),
         ('manufacturing', 'تحديث تصنيع'),
         ('installation', 'تحديث تركيب'),
+        ('cutting', 'تحديث تقطيع'),
+        ('inspection', 'تحديث معاينة'),
+        ('complaint', 'تحديث شكوى'),
         ('payment', 'تحديث دفع'),
         ('general', 'تحديث عام'),
         ('creation', 'إنشاء طلب'),
@@ -2123,6 +2126,9 @@ class OrderStatusLog(models.Model):
             'date': 'fas fa-calendar',
             'manufacturing': 'fas fa-industry',
             'installation': 'fas fa-tools',
+            'cutting': 'fas fa-cut',
+            'inspection': 'fas fa-search',
+            'complaint': 'fas fa-exclamation-triangle',
             'payment': 'fas fa-credit-card',
             'creation': 'fas fa-plus-circle',
         }
@@ -2197,6 +2203,9 @@ class OrderStatusLog(models.Model):
             'date': 'warning',
             'manufacturing': 'secondary',
             'installation': 'dark',
+            'cutting': 'warning',
+            'inspection': 'info',
+            'complaint': 'danger',
             'payment': 'success',
             'general': 'light',
             'creation': 'primary',
@@ -2231,6 +2240,21 @@ class OrderStatusLog(models.Model):
             old_date = self.change_details.get('old_date', 'غير محدد')
             new_date = self.change_details.get('new_date', 'غير محدد')
             return f'تم تغيير {field_name} من {old_date} إلى {new_date}'
+        elif self.change_type == 'manufacturing':
+            # عرض خاص لتحديثات التصنيع
+            return self.notes or f'تحديث حالة التصنيع من {self.old_status_pretty} إلى {self.new_status_pretty}'
+        elif self.change_type == 'installation':
+            # عرض خاص لتحديثات التركيب
+            return self.notes or f'تحديث حالة التركيب من {self.old_status_pretty} إلى {self.new_status_pretty}'
+        elif self.change_type == 'cutting':
+            # عرض خاص لتحديثات التقطيع
+            return self.notes or f'تحديث حالة التقطيع من {self.old_status_pretty} إلى {self.new_status_pretty}'
+        elif self.change_type == 'inspection':
+            # عرض خاص لتحديثات المعاينة
+            return self.notes or f'تحديث حالة المعاينة من {self.old_status_pretty} إلى {self.new_status_pretty}'
+        elif self.change_type == 'complaint':
+            # عرض خاص لتحديثات الشكاوى
+            return self.notes or f'تحديث حالة الشكوى من {self.old_status_pretty} إلى {self.new_status_pretty}'
         elif self.change_type == 'general':
             # عرض محسن للتغييرات العامة
             if self.change_details and self.change_details.get('field_name'):
@@ -2260,7 +2284,8 @@ class OrderStatusLog(models.Model):
                 raise models.ValidationError('يجب حفظ الطلب أولاً قبل إنشاء سجل حالة')
 
             # تحديد نوع التغيير تلقائياً إذا لم يتم تحديده
-            if not self.change_type or self.change_type == 'status':
+            # لا نغير change_type إذا كان محدداً بالفعل (مثل 'manufacturing', 'installation', إلخ)
+            if not self.change_type:
                 if not self.pk:  # سجل جديد
                     if not self.old_status:
                         self.change_type = 'creation'

@@ -297,31 +297,10 @@ class InstallationSchedule(models.Model):
                 self.order.expected_delivery_date = self.scheduled_date
                 self.order.save(update_fields=['expected_delivery_date'])
         
-        # تسجيل تغيير حالة التركيب في OrderStatusLog
-        if old_status and old_status != self.status and self.order:
-            try:
-                from orders.models import OrderStatusLog
-                from django.contrib.auth.models import User
-                
-                # محاولة الحصول على المستخدم الحالي
-                try:
-                    from django.utils.deprecation import get_current_user
-                    current_user = get_current_user()
-                except:
-                    current_user = None
-                
-                OrderStatusLog.objects.create(
-                    order=self.order,
-                    old_status=old_status,
-                    new_status=self.status,
-                    changed_by=current_user,
-                    notes=f'تغيير حالة التركيب من {dict(self.STATUS_CHOICES).get(old_status, old_status)} إلى {dict(self.STATUS_CHOICES).get(self.status, self.status)}'
-                )
-            except Exception as e:
-                # لا نريد أن يفشل الحفظ بسبب تسجيل السجل
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"خطأ في تسجيل تغيير حالة التركيب: {e}")
+        # تم تعطيل تسجيل تغيير حالة التركيب هنا
+        # لأننا ننشئ السجل يدوياً في installations/views.py (update_related_orders)
+        # مع المستخدم الحقيقي من request.user
+        # السطر 46-59 في views.py
         
         super().save(*args, **kwargs)
 
