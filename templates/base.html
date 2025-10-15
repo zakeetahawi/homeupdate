@@ -2597,38 +2597,110 @@
         }
     </style>
 
-    <!-- إصلاح القوائم المنسدلة -->
+    <!-- تحويل القوائم المنسدلة إلى أيقونات في الهاتف المحمول -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // إصلاح القوائم المنسدلة Bootstrap
-            const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+            function convertDropdownsToIcons() {
+                // فقط في وضع الهاتف المحمول
+                if (window.innerWidth <= 992) {
+                    const navbarNav = document.querySelector('.navbar-nav');
+                    if (!navbarNav) return;
 
-            dropdownToggles.forEach(function(toggle) {
-                toggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                    // البحث عن جميع القوائم المنسدلة
+                    const dropdowns = navbarNav.querySelectorAll('.nav-item.dropdown');
 
-                    // إغلاق جميع القوائم المفتوحة
-                    document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
-                        menu.classList.remove('show');
-                    });
+                    dropdowns.forEach(function(dropdown) {
+                        const dropdownMenu = dropdown.querySelector('.dropdown-menu');
+                        if (!dropdownMenu) return;
 
-                    // فتح القائمة المطلوبة
-                    const targetMenu = this.nextElementSibling;
-                    if (targetMenu && targetMenu.classList.contains('dropdown-menu')) {
-                        targetMenu.classList.toggle('show');
-                    }
-                });
-            });
+                        // الحصول على جميع العناصر داخل القائمة المنسدلة
+                        const items = dropdownMenu.querySelectorAll('.dropdown-item');
 
-            // إغلاق القوائم عند النقر خارجها
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.dropdown')) {
-                    document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
-                        menu.classList.remove('show');
+                        // إنشاء أيقونات منفصلة لكل عنصر
+                        items.forEach(function(item) {
+                            // تجاهل الفواصل
+                            if (item.tagName === 'HR') return;
+
+                            const href = item.getAttribute('href');
+                            const icon = item.querySelector('i');
+                            const text = item.textContent.trim();
+
+                            if (href && icon) {
+                                // إنشاء nav-item جديد
+                                const newNavItem = document.createElement('li');
+                                newNavItem.className = 'nav-item mobile-icon-item';
+
+                                const newLink = document.createElement('a');
+                                newLink.className = 'nav-link';
+                                newLink.href = href;
+
+                                // نسخ الأيقونة
+                                const newIcon = icon.cloneNode(true);
+                                newIcon.style.fontSize = '2rem';
+                                newIcon.style.marginBottom = '0.5rem';
+
+                                // إنشاء النص
+                                const textSpan = document.createElement('span');
+                                textSpan.className = 'nav-text';
+                                textSpan.textContent = text;
+
+                                newLink.appendChild(newIcon);
+                                newLink.appendChild(textSpan);
+                                newNavItem.appendChild(newLink);
+
+                                // إضافة العنصر الجديد قبل القائمة المنسدلة
+                                navbarNav.insertBefore(newNavItem, dropdown);
+                            }
+                        });
                     });
                 }
+            }
+
+            // تشغيل عند التحميل
+            convertDropdownsToIcons();
+
+            // تشغيل عند تغيير حجم الشاشة
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    // إزالة العناصر المضافة سابقاً
+                    document.querySelectorAll('.mobile-icon-item').forEach(el => el.remove());
+                    convertDropdownsToIcons();
+                }, 250);
             });
+
+            // إصلاح القوائم المنسدلة في وضع Desktop
+            if (window.innerWidth > 992) {
+                const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+
+                dropdownToggles.forEach(function(toggle) {
+                    toggle.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        // إغلاق جميع القوائم المفتوحة
+                        document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                            menu.classList.remove('show');
+                        });
+
+                        // فتح القائمة المطلوبة
+                        const targetMenu = this.nextElementSibling;
+                        if (targetMenu && targetMenu.classList.contains('dropdown-menu')) {
+                            targetMenu.classList.toggle('show');
+                        }
+                    });
+                });
+
+                // إغلاق القوائم عند النقر خارجها
+                document.addEventListener('click', function(e) {
+                    if (!e.target.closest('.dropdown')) {
+                        document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                            menu.classList.remove('show');
+                        });
+                    }
+                });
+            }
         });
 
         // إصلاح مشكلة modal backdrop عالمياً
