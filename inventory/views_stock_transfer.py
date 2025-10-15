@@ -137,11 +137,27 @@ def stock_transfer_list(request):
 @login_required
 def stock_transfer_bulk(request):
     """صفحة التحويلات المخزنية"""
-    warehouses = Warehouse.objects.filter(is_active=True).order_by('name')
+    user = request.user
+
+    # تحديد المستودعات المتاحة حسب صلاحيات المستخدم
+    if user.is_superuser:
+        # المدير يرى جميع المستودعات
+        warehouses = Warehouse.objects.filter(is_active=True).order_by('name')
+    elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+        # موظف المستودع يرى مستودعه فقط كمصدر
+        if user.assigned_warehouse:
+            warehouses = Warehouse.objects.filter(is_active=True).order_by('name')
+        else:
+            warehouses = Warehouse.objects.none()
+    else:
+        # باقي المستخدمين يرون جميع المستودعات
+        warehouses = Warehouse.objects.filter(is_active=True).order_by('name')
 
     context = {
         'warehouses': warehouses,
         'title': 'تحويلات مخزنية',
+        'user_warehouse': user.assigned_warehouse if hasattr(user, 'assigned_warehouse') else None,
+        'is_warehouse_staff': hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff,
     }
 
     return render(request, 'inventory/stock_transfer_bulk.html', context)
@@ -181,6 +197,22 @@ def stock_transfer_bulk_create(request):
                 'success': False,
                 'error': 'لا يمكن التحويل من وإلى نفس المستودع'
             }, status=400)
+
+        # ✅ التحقق من صلاحيات موظف المستودع
+        user = request.user
+        if hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+            # موظف المستودع يمكنه فقط إنشاء تحويل من مستودعه المخصص
+            if not user.assigned_warehouse:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'لا يوجد مستودع مخصص لك'
+                }, status=403)
+
+            if from_warehouse.id != user.assigned_warehouse.id:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'لا يمكنك إنشاء تحويل إلا من مستودعك المخصص ({user.assigned_warehouse.name})'
+                }, status=403)
 
         with db_transaction.atomic():
             # إنشاء التحويل
@@ -234,17 +266,36 @@ def stock_transfer_detail(request, pk):
         ).prefetch_related('items__product'),
         pk=pk
     )
-    
+
     # حركات المخزون المرتبطة
     stock_transactions = StockTransaction.objects.filter(
         reference=transfer.transfer_number
     ).select_related('product', 'warehouse', 'created_by')
-    
+
+    # ✅ التحقق من صلاحيات الاستلام
+    user = request.user
+    can_receive = False
+
+    if transfer.can_complete:
+        # المدير يمكنه الاستلام دائماً
+        if user.is_superuser:
+            can_receive = True
+        # منع منشئ التحويل من الاستلام
+        elif transfer.created_by != user:
+            # موظف المستودع يمكنه الاستلام فقط إذا كان التحويل إلى مستودعه
+            if hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+                if user.assigned_warehouse and transfer.to_warehouse.id == user.assigned_warehouse.id:
+                    can_receive = True
+            else:
+                # المستخدمون الآخرون يمكنهم الاستلام
+                can_receive = True
+
     context = {
         'transfer': transfer,
         'stock_transactions': stock_transactions,
+        'can_receive': can_receive,
     }
-    
+
     return render(request, 'inventory/stock_transfer_detail.html', context)
 
 
@@ -328,10 +379,31 @@ def stock_transfer_approve(request, pk):
 def stock_transfer_receive(request, pk):
     """استلام التحويل"""
     transfer = get_object_or_404(StockTransfer, pk=pk)
-    
+
     if not transfer.can_complete:
         messages.error(request, 'لا يمكن استلام هذا التحويل')
         return redirect('inventory:stock_transfer_detail', pk=pk)
+
+    # ✅ التحقق من صلاحيات الاستلام
+    user = request.user
+
+    # 1. منع منشئ التحويل من استلامه
+    if transfer.created_by == user:
+        messages.error(request, 'لا يمكنك استلام تحويل قمت بإنشائه بنفسك')
+        return redirect('inventory:stock_transfer_detail', pk=pk)
+
+    # 2. موظف المستودع يمكنه فقط استلام تحويل إلى مستودعه المخصص
+    if hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff and not user.is_superuser:
+        if not user.assigned_warehouse:
+            messages.error(request, 'لا يوجد مستودع مخصص لك')
+            return redirect('inventory:stock_transfer_detail', pk=pk)
+
+        if transfer.to_warehouse.id != user.assigned_warehouse.id:
+            messages.error(
+                request,
+                f'لا يمكنك استلام هذا التحويل. يمكنك فقط استلام التحويلات الموجهة إلى مستودعك ({user.assigned_warehouse.name})'
+            )
+            return redirect('inventory:stock_transfer_detail', pk=pk)
     
     if request.method == 'POST':
         print(f"\n{'='*80}")

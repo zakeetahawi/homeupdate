@@ -259,10 +259,17 @@
                         إلغاء التحويل
                     </button>
                     {% elif transfer.status == 'approved' or transfer.status == 'in_transit' %}
+                    {% if can_receive %}
                     <a href="{% url 'inventory:stock_transfer_receive' transfer.pk %}" class="btn btn-success w-100 mb-2">
                         <i class="fas fa-check-circle"></i>
                         استلام التحويل
                     </a>
+                    {% else %}
+                    <button type="button" class="btn btn-secondary w-100 mb-2" disabled title="لا يمكنك استلام هذا التحويل">
+                        <i class="fas fa-lock"></i>
+                        استلام التحويل (غير مصرح)
+                    </button>
+                    {% endif %}
                     <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#cancelModal">
                         <i class="fas fa-times"></i>
                         إلغاء التحويل

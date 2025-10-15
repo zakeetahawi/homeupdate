@@ -152,27 +152,48 @@
                                 <i class="fas fa-warehouse text-danger"></i>
                                 من مستودع *
                             </label>
-                            <div class="row g-3">
-                                {% for warehouse in warehouses %}
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio"
-                                               name="from_warehouse"
-                                               id="from_{{ warehouse.id }}"
-                                               value="{{ warehouse.id }}"
-                                               onchange="updateToWarehouses()">
-                                        <label class="form-check-label w-100" for="from_{{ warehouse.id }}">
-                                            <div class="card h-100 warehouse-radio-card">
-                                                <div class="card-body text-center">
-                                                    <i class="fas fa-warehouse fa-2x text-danger mb-2"></i>
-                                                    <h6>{{ warehouse.name }}</h6>
-                                                </div>
+                            {% if is_warehouse_staff and user_warehouse %}
+                                <!-- موظف المستودع: مستودع واحد فقط (مستودعه المخصص) -->
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    يمكنك فقط إنشاء تحويل من مستودعك المخصص: <strong>{{ user_warehouse.name }}</strong>
+                                </div>
+                                <input type="hidden" name="from_warehouse" value="{{ user_warehouse.id }}" id="from_warehouse_hidden">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="card warehouse-radio-card" style="border-color: #0d6efd; background: #e7f1ff;">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-warehouse fa-2x text-danger mb-2"></i>
+                                                <h6>{{ user_warehouse.name }}</h6>
+                                                <span class="badge bg-primary">مستودعك</span>
                                             </div>
-                                        </label>
+                                        </div>
                                     </div>
                                 </div>
-                                {% endfor %}
-                            </div>
+                            {% else %}
+                                <!-- المدير أو المستخدمون الآخرون: جميع المستودعات -->
+                                <div class="row g-3">
+                                    {% for warehouse in warehouses %}
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio"
+                                                   name="from_warehouse"
+                                                   id="from_{{ warehouse.id }}"
+                                                   value="{{ warehouse.id }}"
+                                                   onchange="updateToWarehouses()">
+                                            <label class="form-check-label w-100" for="from_{{ warehouse.id }}">
+                                                <div class="card h-100 warehouse-radio-card">
+                                                    <div class="card-body text-center">
+                                                        <i class="fas fa-warehouse fa-2x text-danger mb-2"></i>
+                                                        <h6>{{ warehouse.name }}</h6>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
 
                         <hr class="my-4">
@@ -321,7 +342,8 @@ let toWarehouseId = null;
 
 // تحديث المستودعات المستهدفة
 function updateToWarehouses() {
-    fromWarehouseId = $('input[name="from_warehouse"]:checked').val();
+    // للموظفين: استخدام المستودع المخفي
+    fromWarehouseId = $('input[name="from_warehouse"]:checked').val() || $('#from_warehouse_hidden').val();
 
     if (!fromWarehouseId) {
         $('#to-warehouses-container').html(`
@@ -371,7 +393,8 @@ function enableNextButton() {
 
 // الانتقال للخطوة 2
 function goToStep2() {
-    fromWarehouseId = $('input[name="from_warehouse"]:checked').val();
+    // للموظفين: استخدام المستودع المخفي
+    fromWarehouseId = $('input[name="from_warehouse"]:checked').val() || $('#from_warehouse_hidden').val();
     toWarehouseId = $('input[name="to_warehouse"]:checked').val();
 
     if (!fromWarehouseId || !toWarehouseId) {
@@ -665,6 +688,14 @@ function goToStep1() {
     $('#step2').removeClass('active');
     $('#step1').removeClass('completed').addClass('active');
 }
+
+// تحميل المستودعات المستهدفة تلقائياً لموظفي المستودع
+$(document).ready(function() {
+    {% if is_warehouse_staff and user_warehouse %}
+        // تحميل المستودعات المستهدفة تلقائياً
+        updateToWarehouses();
+    {% endif %}
+});
 </script>
 {% endblock %}
 

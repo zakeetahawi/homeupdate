@@ -56,8 +56,12 @@ class CuttingDashboardView(LoginRequiredMixin, TemplateView):
             return Warehouse.objects.filter(is_active=True)
 
         # موظف مستودع: الوصول فقط للمستودع المخصص له
-        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff and user.assigned_warehouse:
-            return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+            if user.assigned_warehouse:
+                return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+            else:
+                # إذا لم يكن لديه مستودع مخصص، لا يرى أي مستودعات
+                return Warehouse.objects.none()
 
         # يمكن إضافة منطق صلاحيات المستودعات هنا
         # مؤقتاً نعرض جميع المستودعات النشطة
@@ -113,11 +117,6 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
             user_warehouses = self.get_user_warehouses()
             queryset = queryset.filter(warehouse__in=user_warehouses)
 
-        # لموظفي المستودع: عرض الطلبات غير المكتملة فقط
-        user = self.request.user
-        if hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
-            queryset = queryset.exclude(status='completed')
-
         # البحث
         search = self.request.GET.get('search')
         if search:
@@ -132,6 +131,11 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
         status = self.request.GET.get('status')
         if status:
             queryset = queryset.filter(status=status)
+        else:
+            # لموظفي المستودع: عرض الطلبات غير المكتملة فقط (إذا لم يتم تحديد حالة معينة)
+            user = self.request.user
+            if hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+                queryset = queryset.exclude(status='completed')
 
         return queryset.order_by('-created_at')
 
@@ -141,8 +145,12 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
         if user.is_superuser:
             return Warehouse.objects.filter(is_active=True)
         # موظف مستودع: الوصول فقط للمستودع المخصص له
-        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff and user.assigned_warehouse:
-            return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+            if user.assigned_warehouse:
+                return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+            else:
+                # إذا لم يكن لديه مستودع مخصص، لا يرى أي مستودعات
+                return Warehouse.objects.none()
         return Warehouse.objects.filter(is_active=True)
     
     def get_context_data(self, **kwargs):
@@ -208,8 +216,12 @@ class CompletedCuttingOrdersView(LoginRequiredMixin, ListView):
         if user.is_superuser:
             return Warehouse.objects.filter(is_active=True)
         # موظف مستودع: الوصول فقط للمستودع المخصص له
-        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff and user.assigned_warehouse:
-            return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+            if user.assigned_warehouse:
+                return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+            else:
+                # إذا لم يكن لديه مستودع مخصص، لا يرى أي مستودعات
+                return Warehouse.objects.none()
         return Warehouse.objects.filter(is_active=True)
 
     def get_context_data(self, **kwargs):
@@ -480,9 +492,17 @@ class CuttingReportsView(LoginRequiredMixin, TemplateView):
         return context
 
     def get_user_warehouses(self):
+        """الحصول على المستودعات المتاحة للمستخدم"""
         user = self.request.user
         if user.is_superuser:
             return Warehouse.objects.filter(is_active=True)
+        # موظف مستودع: الوصول فقط للمستودع المخصص له
+        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+            if user.assigned_warehouse:
+                return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+            else:
+                # إذا لم يكن لديه مستودع مخصص، لا يرى أي مستودعات
+                return Warehouse.objects.none()
         return Warehouse.objects.filter(is_active=True)
 
 
