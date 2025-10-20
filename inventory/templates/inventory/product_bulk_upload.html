@@ -13,12 +13,43 @@
 <a href="{% url 'inventory:download_excel_template' %}" class="btn btn-info btn-sm">
     <i class="fas fa-download"></i> تحميل القالب
 </a>
+<a href="{% url 'inventory:bulk_upload_log_list' %}" class="btn btn-warning btn-sm">
+    <i class="fas fa-history"></i> سجل العمليات
+</a>
 <a href="{% url 'inventory:product_list' %}" class="btn btn-secondary btn-sm">
     <i class="fas fa-arrow-left"></i> العودة للقائمة
 </a>
 {% endblock %}
 
 {% block inventory_content %}
+<!-- آخر عملية رفع -->
+{% if last_upload %}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="alert {% if last_upload.status == 'completed' %}alert-success{% elif last_upload.status == 'completed_with_errors' %}alert-warning{% elif last_upload.status == 'failed' %}alert-danger{% else %}alert-info{% endif %}">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">
+                        <i class="fas fa-clock"></i> آخر عملية رفع: {{ last_upload.file_name }}
+                    </h6>
+                    <small>
+                        {{ last_upload.created_at|date:"Y-m-d H:i" }} - 
+                        {{ last_upload.get_status_display }} - 
+                        معالجة {{ last_upload.processed_count }} من {{ last_upload.total_rows }} صف
+                        {% if last_upload.error_count > 0 %}
+                        - <strong class="text-danger">{{ last_upload.error_count }} خطأ</strong>
+                        {% endif %}
+                    </small>
+                </div>
+                <a href="{% url 'inventory:bulk_upload_report' last_upload.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-file-alt"></i> عرض التقرير
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row">
     <div class="col-md-8">
         <div class="card">

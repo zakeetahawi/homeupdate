@@ -13,7 +13,7 @@ import logging
 import traceback
 import os
 
-from .models import Product, Category, Warehouse, StockTransaction
+from .models import Product, Category, Warehouse, StockTransaction, BulkUploadLog, BulkUploadError
 from .forms import ProductExcelUploadForm, BulkStockUpdateForm
 from .cache_utils import invalidate_product_cache
 
@@ -252,6 +252,16 @@ def product_bulk_upload(request):
                         success_message += f'. تم إنشاء المستودعات التالية: {warehouses_list}'
 
                     messages.success(request, success_message)
+                    
+                    # إضافة رابط لعرض التقرير
+                    if result.get('upload_log_id'):
+                        messages.info(
+                            request, 
+                            _('لعرض تقرير تفصيلي بالعملية <a href="{}">اضغط هنا</a>').format(
+                                f"/inventory/bulk-upload-report/{result['upload_log_id']}/"
+                            )
+                        )
+                    
                     if result['errors']:
                         for error in result['errors'][:5]:
                             messages.warning(request, error)
@@ -267,7 +277,17 @@ def product_bulk_upload(request):
             return redirect('inventory:product_bulk_upload')
     else:
         form = ProductExcelUploadForm()
-    return render(request, 'inventory/product_bulk_upload.html', {'form': form})
+    
+    # الحصول على آخر عملية رفع
+    last_upload = BulkUploadLog.objects.filter(
+        upload_type='products',
+        created_by=request.user
+    ).first()
+    
+    return render(request, 'inventory/product_bulk_upload.html', {
+        'form': form,
+        'last_upload': last_upload
+    })
 
 @login_required
 def bulk_stock_update(request):
@@ -309,6 +329,17 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
     """
     معالجة ملف الإكسل وإضافة المنتجات
     """
+    # إنشاء سجل العملية
+    upload_log = BulkUploadLog.objects.create(
+        upload_type='products',
+        file_name=excel_file.name,
+        warehouse=default_warehouse,
+        options={
+            'overwrite_existing': overwrite_existing
+        },
+        created_by=user
+    )
+    
     try:
         print(f"📁 بدء معالجة ملف: {excel_file.name}")
         print(f"🏢 المستودع الافتراضي: {default_warehouse}")
@@ -320,6 +351,10 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
         df = safe_read_excel(file_data)
         print(f"📋 تم تحليل الملف، عدد الصفوف: {len(df)}")
         print(f"📝 أعمدة الملف: {list(df.columns)}")
+        
+        # تحديث إجمالي الصفوف
+        upload_log.total_rows = len(df)
+        upload_log.save()
 
         result = {
             'success': True,
@@ -328,12 +363,18 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
             'updated_count': 0,
             'created_warehouses': [],
             'errors': [],
-            'message': ''
+            'message': '',
+            'upload_log_id': upload_log.id
         }
         df = df.dropna(subset=['اسم المنتج', 'السعر'])
         df = df.fillna('')
+        
+        errors_to_create = []  # قائمة لحفظ الأخطاء والصفوف المتخطاة دفعة واحدة
+        skipped_count = 0  # عداد الصفوف المتخطاة
+        
         with transaction.atomic():
             for index, row in df.iterrows():
+                row_number = index + 2  # لأن الصف الأول هو العناوين والترقيم يبدأ من 2
                 try:
                     name = str(row['اسم المنتج']).strip()
                     code = str(row['الكود']).strip() if pd.notna(row['الكود']) else None
@@ -390,7 +431,16 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
                         }
                         unit = unit_map.get(unit, 'piece')
                     if not name or price <= 0:
-                        result['errors'].append('الصف {}: اسم المنتج والسعر مطلوبان'.format(index + 2))
+                        error_msg = 'اسم المنتج والسعر مطلوبان'
+                        result['errors'].append(f'الصف {row_number}: {error_msg}')
+                        errors_to_create.append(BulkUploadError(
+                            upload_log=upload_log,
+                            row_number=row_number,
+                            error_type='missing_data',
+                            result_status='failed',
+                            error_message=error_msg,
+                            row_data=row.to_dict()
+                        ))
                         continue
                     category = None
                     if category_name:
@@ -414,7 +464,16 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
                                 product.save()
                                 result['updated_count'] += 1
                             else:
-                                result['errors'].append('الصف {}: منتج بكود {} موجود بالفعل'.format(index + 2, code))
+                                # المنتج موجود ولم يتم اختيار التحديث - تخطي
+                                skipped_count += 1
+                                errors_to_create.append(BulkUploadError(
+                                    upload_log=upload_log,
+                                    row_number=row_number,
+                                    error_type='duplicate',
+                                    result_status='skipped',
+                                    error_message=f'منتج موجود بكود {code} - تم التخطي (لم يتم التحديث)',
+                                    row_data=row.to_dict()
+                                ))
                                 continue
                         except Product.DoesNotExist:
                             product = Product.objects.create(
@@ -453,7 +512,16 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
 
                         # التأكد من وجود مستودع صالح
                         if not target_warehouse:
-                            result['errors'].append(f'الصف {index + 2}: لا يمكن تحديد المستودع')
+                            error_msg = 'لا يمكن تحديد المستودع'
+                            result['errors'].append(f'الصف {row_number}: {error_msg}')
+                            errors_to_create.append(BulkUploadError(
+                                upload_log=upload_log,
+                                row_number=row_number,
+                                error_type='invalid_data',
+                                result_status='failed',
+                                error_message=error_msg,
+                                row_data=row.to_dict()
+                            ))
                             continue
 
                         StockTransaction.objects.create(
@@ -474,13 +542,20 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
                             transaction_date__lt=timezone.now()
                         ).order_by('-transaction_date')
 
-                        previous_balance = 0
-                        if previous_transactions.exists():
-                            previous_balance = previous_transactions.first().running_balance
-
-                        # تحويل الكمية إلى Decimal لتجنب مشاكل الجمع
+                        # تحويل جميع القيم إلى Decimal لتجنب مشاكل الجمع
                         from decimal import Decimal
-                        quantity_decimal = Decimal(str(quantity))
+                        previous_balance = Decimal('0')
+                        if previous_transactions.exists():
+                            prev_trans = previous_transactions.first()
+                            if prev_trans.running_balance is not None:
+                                previous_balance = Decimal(str(prev_trans.running_balance))
+
+                        # تحويل الكمية إلى Decimal بشكل آمن
+                        try:
+                            quantity_decimal = Decimal(str(float(quantity)))
+                        except (ValueError, TypeError):
+                            quantity_decimal = Decimal('0')
+                        
                         new_balance = previous_balance + quantity_decimal
 
                         # تحديث الحركة الحالية بالرصيد الجديد
@@ -496,38 +571,102 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
                     if product:
                         invalidate_product_cache(product.id)
                 except Exception as e:
-                    result['errors'].append('الصف {}: {}'.format(index + 2, str(e)))
+                    error_msg = str(e)
+                    result['errors'].append(f'الصف {row_number}: {error_msg}')
+                    errors_to_create.append(BulkUploadError(
+                        upload_log=upload_log,
+                        row_number=row_number,
+                        error_type='processing',
+                        result_status='failed',
+                        error_message=error_msg,
+                        row_data=row.to_dict() if hasattr(row, 'to_dict') else {}
+                    ))
                     continue
+        
+        # حفظ جميع الأخطاء والصفوف المتخطاة دفعة واحدة
+        if errors_to_create:
+            BulkUploadError.objects.bulk_create(errors_to_create)
+        
+        # حساب عدد الأخطاء الحقيقية (استبعاد المتخطاة)
+        actual_errors = len(result['errors']) - skipped_count
+        
+        # تحديث إحصائيات السجل
+        upload_log.processed_count = result['total_processed']
+        upload_log.created_count = result['created_count']
+        upload_log.updated_count = result['updated_count']
+        upload_log.skipped_count = skipped_count
+        upload_log.error_count = actual_errors
+        upload_log.created_warehouses = result['created_warehouses']
+        
+        # إنشاء ملخص مفصل
+        summary_parts = []
+        if result['created_count'] > 0:
+            summary_parts.append(f"تم إنشاء {result['created_count']} منتج جديد")
+        if result['updated_count'] > 0:
+            summary_parts.append(f"تم تحديث {result['updated_count']} منتج موجود")
+        if skipped_count > 0:
+            summary_parts.append(f"تم تخطي {skipped_count} منتج موجود (لم يتم تحديثه)")
+        if actual_errors > 0:
+            summary_parts.append(f"فشل {actual_errors} صف")
+        
+        summary = '. '.join(summary_parts) if summary_parts else "لا توجد بيانات"
+        upload_log.complete(summary=summary)
         return result
     except Exception as e:
         print(f"🚨 خطأ في معالجة ملف الإكسل: {str(e)}")
         traceback.print_exc()
         logger.error(f"Error processing excel file: {str(e)}")
+        
+        # تسجيل فشل العملية
+        upload_log.fail(error_message=str(e))
+        
         return {
             'success': False,
             'message': str(e),
             'total_processed': 0,
             'created_count': 0,
             'updated_count': 0,
-            'errors': []
+            'errors': [],
+            'upload_log_id': upload_log.id
         }
 
 def process_stock_update(excel_file, warehouse, update_type, reason, user):
     """
     معالجة ملف تحديث المخزون
     """
+    # إنشاء سجل العملية
+    upload_log = BulkUploadLog.objects.create(
+        upload_type='stock_update',
+        file_name=excel_file.name,
+        warehouse=warehouse,
+        options={
+            'update_type': update_type,
+            'reason': reason
+        },
+        created_by=user
+    )
+    
     try:
         file_data = excel_file.read()
         df = safe_read_excel(file_data)
+        
+        # تحديث إجمالي الصفوف
+        upload_log.total_rows = len(df)
+        upload_log.save()
+        
         result = {
             'success': True,
             'updated_count': 0,
             'errors': [],
-            'message': ''
+            'message': '',
+            'upload_log_id': upload_log.id
         }
+        
+        errors_to_create = []
         df = df.dropna(subset=['كود المنتج', 'الكمية'])
         with transaction.atomic():
             for index, row in df.iterrows():
+                row_number = index + 2
                 try:
                     code = str(row['كود المنتج']).strip()
                     
@@ -542,12 +681,30 @@ def process_stock_update(excel_file, warehouse, update_type, reason, user):
                         quantity = 0.0
                     
                     if not code or quantity < 0:
-                        result['errors'].append('الصف {}: كود المنتج والكمية مطلوبان'.format(index + 2))
+                        error_msg = 'كود المنتج والكمية مطلوبان'
+                        result['errors'].append(f'الصف {row_number}: {error_msg}')
+                        errors_to_create.append(BulkUploadError(
+                            upload_log=upload_log,
+                            row_number=row_number,
+                            error_type='missing_data',
+                            result_status='failed',
+                            error_message=error_msg,
+                            row_data=row.to_dict()
+                        ))
                         continue
                     try:
                         product = Product.objects.get(code=code)
                     except Product.DoesNotExist:
-                        result['errors'].append('الصف {}: لا يوجد منتج بكود {}'.format(index + 2, code))
+                        error_msg = f'لا يوجد منتج بكود {code}'
+                        result['errors'].append(f'الصف {row_number}: {error_msg}')
+                        errors_to_create.append(BulkUploadError(
+                            upload_log=upload_log,
+                            row_number=row_number,
+                            error_type='invalid_data',
+                            result_status='failed',
+                            error_message=error_msg,
+                            row_data=row.to_dict()
+                        ))
                         continue
                     current_stock = product.current_stock
                     # تحويل جميع القيم إلى Decimal لتجنب مشاكل الجمع
@@ -569,9 +726,16 @@ def process_stock_update(excel_file, warehouse, update_type, reason, user):
                     stock_change = Decimal(str(stock_change))
                     new_stock = current_stock_decimal + stock_change
                     if new_stock < 0:
-                        result['errors'].append(
-                            'الصف {}: الكمية الجديدة ({}) ستؤدي إلى رصيد سالب'.format(index + 2, new_stock)
-                        )
+                        error_msg = f'الكمية الجديدة ({new_stock}) ستؤدي إلى رصيد سالب'
+                        result['errors'].append(f'الصف {row_number}: {error_msg}')
+                        errors_to_create.append(BulkUploadError(
+                            upload_log=upload_log,
+                            row_number=row_number,
+                            error_type='invalid_data',
+                            result_status='failed',
+                            error_message=error_msg,
+                            row_data=row.to_dict()
+                        ))
                         continue
                     if stock_change != 0:
                         transaction_type = 'in' if stock_change > 0 else 'out'
@@ -589,16 +753,43 @@ def process_stock_update(excel_file, warehouse, update_type, reason, user):
                         result['updated_count'] += 1
                         invalidate_product_cache(product.id)
                 except Exception as e:
-                    result['errors'].append('الصف {}: {}'.format(index + 2, str(e)))
+                    error_msg = str(e)
+                    result['errors'].append(f'الصف {row_number}: {error_msg}')
+                    errors_to_create.append(BulkUploadError(
+                        upload_log=upload_log,
+                        row_number=row_number,
+                        error_type='processing',
+                        result_status='failed',
+                        error_message=error_msg,
+                        row_data=row.to_dict() if hasattr(row, 'to_dict') else {}
+                    ))
                     continue
+        
+        # حفظ جميع الأخطاء دفعة واحدة
+        if errors_to_create:
+            BulkUploadError.objects.bulk_create(errors_to_create)
+        
+        # تحديث إحصائيات السجل
+        upload_log.processed_count = result['updated_count']
+        upload_log.updated_count = result['updated_count']
+        upload_log.error_count = len(result['errors'])
+        upload_log.complete(
+            summary=f"تم تحديث {result['updated_count']} منتج بنجاح."
+        )
+        
         return result
     except Exception as e:
         logger.error(f"Error processing stock update file: {str(e)}")
+        
+        # تسجيل فشل العملية
+        upload_log.fail(error_message=str(e))
+        
         return {
             'success': False,
             'message': str(e),
             'updated_count': 0,
-            'errors': []
+            'errors': [],
+            'upload_log_id': upload_log.id
         }
 
 @login_required

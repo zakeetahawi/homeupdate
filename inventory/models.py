@@ -396,6 +396,8 @@ class StockTransaction(models.Model):
 
     def save(self, *args, **kwargs):
         from django.db import transaction
+        from decimal import Decimal
+        
         with transaction.atomic():
             # Get previous balance from the transaction immediately before this one
             previous_balance = StockTransaction.objects.filter(
@@ -404,13 +406,20 @@ class StockTransaction(models.Model):
             ).order_by('-transaction_date').first()
 
             # Calculate current balance based on previous balance
-            current_balance = previous_balance.running_balance if previous_balance else 0
+            # تحويل إلى Decimal لتجنب خطأ الجمع
+            if previous_balance and previous_balance.running_balance is not None:
+                current_balance = Decimal(str(previous_balance.running_balance))
+            else:
+                current_balance = Decimal('0')
+            
+            # تحويل الكمية إلى Decimal بشكل آمن
+            quantity_decimal = Decimal(str(self.quantity))
 
             # Update running balance for this transaction
             if self.transaction_type == 'in':
-                self.running_balance = current_balance + self.quantity
+                self.running_balance = current_balance + quantity_decimal
             else:  # out, transfer, or adjustment
-                self.running_balance = current_balance - self.quantity
+                self.running_balance = current_balance - quantity_decimal
 
             # Save this transaction
             super().save(*args, **kwargs)
@@ -422,12 +431,13 @@ class StockTransaction(models.Model):
             ).order_by('transaction_date').select_for_update()
 
             # Recalculate running balances for all subsequent transactions
-            current_balance = self.running_balance
+            current_balance = Decimal(str(self.running_balance))
             for trans in next_transactions:
+                trans_quantity = Decimal(str(trans.quantity))
                 if trans.transaction_type == 'in':
-                    current_balance += trans.quantity
+                    current_balance += trans_quantity
                 else:  # out, transfer, or adjustment
-                    current_balance -= trans.quantity
+                    current_balance -= trans_quantity
                 
                 # Only update if balance has changed
                 if trans.running_balance != current_balance:
@@ -908,3 +918,192 @@ class StockTransferItem(models.Model):
     def remaining_quantity(self):
         """الكمية المتبقية"""
         return self.quantity - self.received_quantity
+
+
+class BulkUploadLog(models.Model):
+    """
+    نموذج لتسجيل عمليات رفع المنتجات بالجملة
+    """
+    UPLOAD_TYPE_CHOICES = [
+        ('products', _('رفع منتجات')),
+        ('stock_update', _('تحديث مخزون')),
+    ]
+
+    STATUS_CHOICES = [
+        ('processing', _('قيد المعالجة')),
+        ('completed', _('مكتمل')),
+        ('completed_with_errors', _('مكتمل مع أخطاء')),
+        ('failed', _('فشل')),
+    ]
+
+    upload_type = models.CharField(
+        _('نوع العملية'),
+        max_length=20,
+        choices=UPLOAD_TYPE_CHOICES
+    )
+    status = models.CharField(
+        _('الحالة'),
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default='processing'
+    )
+    file_name = models.CharField(_('اسم الملف'), max_length=255)
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='upload_logs',
+        verbose_name=_('المستودع')
+    )
+    
+    # إحصائيات
+    total_rows = models.PositiveIntegerField(_('إجمالي الصفوف'), default=0)
+    processed_count = models.PositiveIntegerField(_('عدد المعالج'), default=0)
+    created_count = models.PositiveIntegerField(_('عدد المنشأ'), default=0)
+    updated_count = models.PositiveIntegerField(_('عدد المحدث'), default=0)
+    skipped_count = models.PositiveIntegerField(_('عدد المتخطى'), default=0, help_text=_('صفوف موجودة ولم تتغير'))
+    error_count = models.PositiveIntegerField(_('عدد الأخطاء'), default=0)
+    
+    # معلومات إضافية
+    options = models.JSONField(_('خيارات العملية'), default=dict, blank=True)
+    created_warehouses = models.JSONField(_('المستودعات المنشأة'), default=list, blank=True)
+    summary = models.TextField(_('ملخص العملية'), blank=True)
+    
+    # التتبع
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    completed_at = models.DateTimeField(_('تاريخ الإكمال'), null=True, blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='upload_logs',
+        verbose_name=_('تم بواسطة')
+    )
+
+    class Meta:
+        verbose_name = _('سجل رفع جماعي')
+        verbose_name_plural = _('سجلات الرفع الجماعي')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['upload_type'], name='upload_log_type_idx'),
+            models.Index(fields=['status'], name='upload_log_status_idx'),
+            models.Index(fields=['created_at'], name='upload_log_created_idx'),
+            models.Index(fields=['created_by'], name='upload_log_user_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.get_upload_type_display()} - {self.file_name} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+
+    @property
+    def duration(self):
+        """مدة العملية"""
+        if self.completed_at:
+            delta = self.completed_at - self.created_at
+            return delta.total_seconds()
+        return None
+
+    @property
+    def success_rate(self):
+        """نسبة النجاح"""
+        if self.total_rows > 0:
+            success_count = self.created_count + self.updated_count
+            return round((success_count / self.total_rows) * 100, 2)
+        return 0
+
+    @property
+    def has_errors(self):
+        """هل توجد أخطاء"""
+        return self.error_count > 0
+
+    def complete(self, summary=''):
+        """إكمال العملية"""
+        self.completed_at = timezone.now()
+        if self.error_count > 0:
+            self.status = 'completed_with_errors'
+        else:
+            self.status = 'completed'
+        if summary:
+            self.summary = summary
+        self.save()
+
+    def fail(self, error_message=''):
+        """فشل العملية"""
+        self.completed_at = timezone.now()
+        self.status = 'failed'
+        self.summary = error_message
+        self.save()
+
+
+class BulkUploadError(models.Model):
+    """
+    نموذج لتسجيل أخطاء رفع المنتجات بالجملة
+    """
+    ERROR_TYPE_CHOICES = [
+        ('validation', _('خطأ في التحقق')),
+        ('duplicate', _('تكرار')),
+        ('missing_data', _('بيانات ناقصة')),
+        ('invalid_data', _('بيانات غير صالحة')),
+        ('database', _('خطأ في قاعدة البيانات')),
+        ('processing', _('خطأ في المعالجة')),
+        ('other', _('خطأ آخر')),
+    ]
+    
+    RESULT_STATUS_CHOICES = [
+        ('created', _('تم الإنشاء')),
+        ('updated', _('تم التحديث')),
+        ('skipped', _('تم التخطي')),
+        ('failed', _('فشل')),
+    ]
+
+    upload_log = models.ForeignKey(
+        BulkUploadLog,
+        on_delete=models.CASCADE,
+        related_name='errors',
+        verbose_name=_('سجل الرفع')
+    )
+    row_number = models.PositiveIntegerField(_('رقم الصف'))
+    error_type = models.CharField(
+        _('نوع الخطأ'),
+        max_length=20,
+        choices=ERROR_TYPE_CHOICES,
+        default='other'
+    )
+    result_status = models.CharField(
+        _('حالة النتيجة'),
+        max_length=20,
+        choices=RESULT_STATUS_CHOICES,
+        default='failed',
+        help_text=_('حالة معالجة الصف')
+    )
+    error_message = models.TextField(_('رسالة الخطأ'))
+    row_data = models.JSONField(_('بيانات الصف'), default=dict, blank=True)
+    
+    created_at = models.DateTimeField(_('تاريخ التسجيل'), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _('خطأ رفع جماعي')
+        verbose_name_plural = _('أخطاء الرفع الجماعي')
+        ordering = ['upload_log', 'row_number']
+        indexes = [
+            models.Index(fields=['upload_log'], name='upload_error_log_idx'),
+            models.Index(fields=['error_type'], name='upload_error_type_idx'),
+            models.Index(fields=['row_number'], name='upload_error_row_idx'),
+        ]
+
+    def __str__(self):
+        return f"الصف {self.row_number}: {self.error_message[:50]}"
+
+    @property
+    def product_name(self):
+        """الحصول على اسم المنتج من بيانات الصف"""
+        if self.row_data:
+            return self.row_data.get('اسم المنتج', self.row_data.get('name', 'غير محدد'))
+        return 'غير محدد'
+
+    @property
+    def product_code(self):
+        """الحصول على كود المنتج من بيانات الصف"""
+        if self.row_data:
+            return self.row_data.get('الكود', self.row_data.get('code', ''))
+        return ''

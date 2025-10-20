@@ -19,6 +19,10 @@ from .views_reports import (
 from .views_bulk import (
     product_bulk_upload, bulk_stock_update, download_excel_template
 )
+from .views_bulk_reports import (
+    bulk_upload_log_list, bulk_upload_report,
+    latest_bulk_upload_report, bulk_upload_error_detail
+)
 from .views_stock_transfer import (
     stock_transfer_list, stock_transfer_detail,
     stock_transfer_edit, stock_transfer_submit, stock_transfer_approve,
@@ -103,6 +107,13 @@ urlpatterns = [
     path('products/bulk-upload/', product_bulk_upload, name='product_bulk_upload'),
     path('stock/bulk-update/', bulk_stock_update, name='bulk_stock_update'),
     path('download-excel-template/', download_excel_template, name='download_excel_template'),
+    
+    # Bulk Upload Reports
+    path('bulk-upload-logs/', bulk_upload_log_list, name='bulk_upload_log_list'),
+    path('bulk-upload-report/<int:log_id>/', bulk_upload_report, name='bulk_upload_report'),
+    path('latest-bulk-upload-report/', latest_bulk_upload_report, name='latest_bulk_upload_report'),
+    path('latest-bulk-upload-report/<str:upload_type>/', latest_bulk_upload_report, name='latest_bulk_upload_report_type'),
+    path('bulk-upload-error/<int:error_id>/', bulk_upload_error_detail, name='bulk_upload_error_detail'),
 
     # API Endpoints
     path('api/product/<int:pk>/', views.product_api_detail, name='product_api_detail'),

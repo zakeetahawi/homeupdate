@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import (
     Category, Product, StockTransaction, Supplier, PurchaseOrder, PurchaseOrderItem,
     Warehouse, WarehouseLocation, ProductBatch, InventoryAdjustment, StockAlert,
-    StockTransfer, StockTransferItem
+    StockTransfer, StockTransferItem, BulkUploadLog, BulkUploadError
 )
 
 @admin.register(Category)
@@ -251,3 +251,124 @@ class StockTransferItemAdmin(admin.ModelAdmin):
     list_filter = ['transfer__status', 'transfer__from_warehouse', 'transfer__to_warehouse']
     search_fields = ['transfer__transfer_number', 'product__name', 'product__code']
     autocomplete_fields = ['transfer', 'product']
+
+
+class BulkUploadErrorInline(admin.TabularInline):
+    """عرض أخطاء الرفع الجماعي"""
+    model = BulkUploadError
+    extra = 0
+    fields = ['row_number', 'error_type', 'error_message', 'product_name']
+    readonly_fields = ['row_number', 'error_type', 'error_message', 'product_name', 'created_at']
+    can_delete = False
+    max_num = 0  # لا يمكن إضافة أخطاء من الأدمن
+
+    def product_name(self, obj):
+        return obj.product_name
+    product_name.short_description = _('اسم المنتج')
+
+
+@admin.register(BulkUploadLog)
+class BulkUploadLogAdmin(admin.ModelAdmin):
+    """إدارة سجلات الرفع الجماعي"""
+    list_per_page = 50
+    list_display = [
+        'id', 'upload_type', 'file_name', 'status',
+        'total_rows', 'created_count', 'updated_count', 'error_count',
+        'success_rate', 'created_at', 'created_by'
+    ]
+    list_filter = ['upload_type', 'status', 'created_at', 'warehouse']
+    search_fields = ['file_name', 'summary', 'created_by__username']
+    readonly_fields = [
+        'upload_type', 'status', 'file_name', 'warehouse',
+        'total_rows', 'processed_count', 'created_count', 'updated_count', 'error_count',
+        'options', 'created_warehouses', 'summary',
+        'created_at', 'completed_at', 'created_by',
+        'success_rate', 'duration', 'has_errors'
+    ]
+    fieldsets = (
+        (_('معلومات العملية'), {
+            'fields': (
+                'upload_type', 'status', 'file_name', 'warehouse'
+            )
+        }),
+        (_('الإحصائيات'), {
+            'fields': (
+                'total_rows', 'processed_count',
+                'created_count', 'updated_count', 'error_count',
+                'success_rate', 'duration'
+            )
+        }),
+        (_('التفاصيل'), {
+            'fields': ('options', 'created_warehouses', 'summary'),
+            'classes': ('collapse',)
+        }),
+        (_('معلومات التتبع'), {
+            'fields': ('created_at', 'completed_at', 'created_by'),
+            'classes': ('collapse',)
+        }),
+    )
+    inlines = [BulkUploadErrorInline]
+
+    def success_rate(self, obj):
+        return f"{obj.success_rate}%"
+    success_rate.short_description = _('نسبة النجاح')
+
+    def duration(self, obj):
+        if obj.duration:
+            return f"{obj.duration:.2f} ثانية"
+        return '-'
+    duration.short_description = _('المدة')
+
+    def has_errors(self, obj):
+        return '✓' if obj.has_errors else '✗'
+    has_errors.short_description = _('يوجد أخطاء')
+    has_errors.boolean = True
+
+    def has_add_permission(self, request):
+        return False  # لا يمكن إضافة سجلات يدوياً
+
+
+@admin.register(BulkUploadError)
+class BulkUploadErrorAdmin(admin.ModelAdmin):
+    """إدارة أخطاء الرفع الجماعي"""
+    list_per_page = 100
+    list_display = [
+        'upload_log', 'row_number', 'error_type',
+        'product_name', 'product_code', 'short_error_message', 'created_at'
+    ]
+    list_filter = ['error_type', 'upload_log__upload_type', 'created_at']
+    search_fields = ['error_message', 'upload_log__file_name']
+    readonly_fields = [
+        'upload_log', 'row_number', 'error_type', 'error_message',
+        'row_data', 'product_name', 'product_code', 'created_at'
+    ]
+    fieldsets = (
+        (_('معلومات الخطأ'), {
+            'fields': (
+                'upload_log', 'row_number', 'error_type', 'error_message'
+            )
+        }),
+        (_('بيانات الصف'), {
+            'fields': ('row_data', 'product_name', 'product_code'),
+            'classes': ('collapse',)
+        }),
+        (_('معلومات التسجيل'), {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def product_name(self, obj):
+        return obj.product_name
+    product_name.short_description = _('اسم المنتج')
+
+    def product_code(self, obj):
+        return obj.product_code or '-'
+    product_code.short_description = _('الكود')
+
+    def short_error_message(self, obj):
+        return obj.error_message[:100] + '...' if len(obj.error_message) > 100 else obj.error_message
+    short_error_message.short_description = _('رسالة الخطأ')
+
+    def has_add_permission(self, request):
+        return False  # لا يمكن إضافة أخطاء يدوياً
