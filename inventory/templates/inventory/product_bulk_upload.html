@@ -100,14 +100,24 @@
                     </div>
 
                     <div class="mb-4">
-                        <div class="form-check">
-                            {{ form.overwrite_existing }}
-                            <label class="form-check-label" for="{{ form.overwrite_existing.id_for_label }}">
-                                {{ form.overwrite_existing.label }}
-                            </label>
-                        </div>
-                        {% if form.overwrite_existing.help_text %}
-                            <div class="form-text">{{ form.overwrite_existing.help_text }}</div>
+                        <label class="form-label fw-bold">{{ form.upload_mode.label }}</label>
+                        {% if form.upload_mode.help_text %}
+                            <div class="form-text mb-2">{{ form.upload_mode.help_text }}</div>
+                        {% endif %}
+                        {% for radio in form.upload_mode %}
+                            <div class="form-check mb-2">
+                                {{ radio.tag }}
+                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                    {{ radio.choice_label }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                        {% if form.upload_mode.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.upload_mode.errors %}
+                                    <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
                         {% endif %}
                     </div>
 

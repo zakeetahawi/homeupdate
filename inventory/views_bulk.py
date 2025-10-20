@@ -236,7 +236,7 @@ def product_bulk_upload(request):
                 result = process_excel_upload(
                     form.cleaned_data['excel_file'],
                     form.cleaned_data['warehouse'],
-                    form.cleaned_data['overwrite_existing'],
+                    form.cleaned_data['upload_mode'],
                     request.user
                 )
                 if result['success']:
@@ -325,7 +325,7 @@ def bulk_stock_update(request):
         form = BulkStockUpdateForm()
     return render(request, 'inventory/bulk_stock_update.html', {'form': form})
 
-def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user):
+def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
     """
     معالجة ملف الإكسل وإضافة المنتجات
     """
@@ -335,7 +335,7 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
         file_name=excel_file.name,
         warehouse=default_warehouse,
         options={
-            'overwrite_existing': overwrite_existing
+            'upload_mode': upload_mode
         },
         created_by=user
     )
@@ -343,7 +343,7 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
     try:
         print(f"📁 بدء معالجة ملف: {excel_file.name}")
         print(f"🏢 المستودع الافتراضي: {default_warehouse}")
-        print(f"♻️ الكتابة فوق الموجود: {overwrite_existing}")
+        print(f"♻️ وضع الرفع: {upload_mode}")
 
         file_data = excel_file.read()
         print(f"📊 تم قراءة الملف، الحجم: {len(file_data)} بايت")
@@ -450,10 +450,28 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
                         )
                     product = None
                     created = False
+                    product_exists = False
+                    
                     if code:
                         try:
                             product = Product.objects.get(code=code)
-                            if overwrite_existing:
+                            product_exists = True
+                            
+                            # وضع: المنتجات الجديدة فقط - تجاهل الموجود
+                            if upload_mode == 'new_only':
+                                skipped_count += 1
+                                errors_to_create.append(BulkUploadError(
+                                    upload_log=upload_log,
+                                    row_number=row_number,
+                                    error_type='duplicate',
+                                    result_status='skipped',
+                                    error_message=f'منتج موجود بكود {code} - تم التخطي (وضع: جديد فقط)',
+                                    row_data=row.to_dict()
+                                ))
+                                continue
+                            
+                            # وضع: إضافة للموجود أو استبدال - تحديث البيانات
+                            elif upload_mode in ['add_to_existing', 'replace_quantity']:
                                 product.name = name
                                 product.category = category
                                 product.description = description
@@ -463,19 +481,9 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
                                 product.minimum_stock = minimum_stock
                                 product.save()
                                 result['updated_count'] += 1
-                            else:
-                                # المنتج موجود ولم يتم اختيار التحديث - تخطي
-                                skipped_count += 1
-                                errors_to_create.append(BulkUploadError(
-                                    upload_log=upload_log,
-                                    row_number=row_number,
-                                    error_type='duplicate',
-                                    result_status='skipped',
-                                    error_message=f'منتج موجود بكود {code} - تم التخطي (لم يتم التحديث)',
-                                    row_data=row.to_dict()
-                                ))
-                                continue
+                                
                         except Product.DoesNotExist:
+                            # منتج جديد - إنشاء في جميع الأوضاع
                             product = Product.objects.create(
                                 name=name,
                                 code=code,
@@ -489,6 +497,7 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
                             created = True
                             result['created_count'] += 1
                     else:
+                        # بدون كود - إنشاء دائماً
                         product = Product.objects.create(
                             name=name,
                             category=category,
@@ -524,6 +533,32 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
                             ))
                             continue
 
+                        from decimal import Decimal
+                        
+                        # وضع: استبدال الكمية - تصفير الرصيد الحالي أولاً
+                        if upload_mode == 'replace_quantity' and product_exists:
+                            # الحصول على الرصيد الحالي
+                            last_transaction = StockTransaction.objects.filter(
+                                product=product,
+                                warehouse=target_warehouse
+                            ).order_by('-transaction_date').first()
+                            
+                            if last_transaction and last_transaction.running_balance and last_transaction.running_balance > 0:
+                                current_balance = Decimal(str(last_transaction.running_balance))
+                                # إنشاء معاملة خروج لتصفير الرصيد
+                                StockTransaction.objects.create(
+                                    product=product,
+                                    warehouse=target_warehouse,
+                                    transaction_type='out',
+                                    reason='adjustment',
+                                    quantity=current_balance,
+                                    reference='رفع من ملف إكسل - تصفير',
+                                    notes=f'تصفير الرصيد قبل استبدال الكمية (كان: {current_balance})',
+                                    created_by=user,
+                                    transaction_date=timezone.now()
+                                )
+                        
+                        # إنشاء معاملة دخول بالكمية الجديدة (في جميع الأوضاع)
                         StockTransaction.objects.create(
                             product=product,
                             warehouse=target_warehouse,
@@ -531,42 +566,10 @@ def process_excel_upload(excel_file, default_warehouse, overwrite_existing, user
                             reason='purchase',
                             quantity=quantity,
                             reference='رفع من ملف إكسل',
-                            notes=f'تم إضافة الكمية تلقائياً عند رفع المنتج - المستودع: {target_warehouse.name}',
+                            notes=f'{"استبدال" if upload_mode == "replace_quantity" and product_exists else "إضافة"} الكمية - المستودع: {target_warehouse.name}',
                             created_by=user,
                             transaction_date=timezone.now()
                         )
-                        # حساب الرصيد المتحرك بناءً على المنتج والمستودع
-                        previous_transactions = StockTransaction.objects.filter(
-                            product=product,
-                            warehouse=target_warehouse,
-                            transaction_date__lt=timezone.now()
-                        ).order_by('-transaction_date')
-
-                        # تحويل جميع القيم إلى Decimal لتجنب مشاكل الجمع
-                        from decimal import Decimal
-                        previous_balance = Decimal('0')
-                        if previous_transactions.exists():
-                            prev_trans = previous_transactions.first()
-                            if prev_trans.running_balance is not None:
-                                previous_balance = Decimal(str(prev_trans.running_balance))
-
-                        # تحويل الكمية إلى Decimal بشكل آمن
-                        try:
-                            quantity_decimal = Decimal(str(float(quantity)))
-                        except (ValueError, TypeError):
-                            quantity_decimal = Decimal('0')
-                        
-                        new_balance = previous_balance + quantity_decimal
-
-                        # تحديث الحركة الحالية بالرصيد الجديد
-                        transaction_obj = StockTransaction.objects.filter(
-                            product=product,
-                            warehouse=target_warehouse
-                        ).order_by('-transaction_date').first()
-                        
-                        if transaction_obj:
-                            transaction_obj.running_balance = new_balance
-                            transaction_obj.save()
                     result['total_processed'] += 1
                     if product:
                         invalidate_product_cache(product.id)

@@ -30,12 +30,19 @@ class ProductExcelUploadForm(forms.Form):
         help_text=_('اختياري - إذا لم تحدد مستودع، سيتم إنشاء المستودعات تلقائياً من عمود "المستودع" في الملف')
     )
     
-    overwrite_existing = forms.BooleanField(
-        label=_('استبدال المنتجات الموجودة'),
-        required=False,
-        initial=False,
-        help_text=_('في حالة وجود منتج بنفس الكود، سيتم تحديث بياناته'),
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    UPLOAD_MODE_CHOICES = [
+        ('add_to_existing', _('إضافة للكميات الموجودة (تحديث البيانات + إضافة الكمية)')),
+        ('replace_quantity', _('استبدال الكميات (تحديث البيانات + استبدال الكمية بالكامل)')),
+        ('new_only', _('المنتجات الجديدة فقط (تجاهل المنتجات الموجودة)'))
+    ]
+    
+    upload_mode = forms.ChoiceField(
+        choices=UPLOAD_MODE_CHOICES,
+        label=_('وضع الرفع'),
+        initial='add_to_existing',
+        required=True,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        help_text=_('اختر كيفية التعامل مع المنتجات الموجودة في النظام')
     )
 
     def clean_excel_file(self):
