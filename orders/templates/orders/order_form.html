@@ -654,10 +654,15 @@
 
         
         <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
+            <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#orderBarcodeScannerModal"
+                    style="border-radius: 8px; padding: 12px 24px; font-weight: 600; transition: all 0.3s ease; 
+                           border: 2px solid #667eea; color: #667eea; background: white; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.1);">
+                <i class="fas fa-barcode me-2"></i> إضافة بالباركود
+            </button>
             <button type="button" class="btn btn-outline-success btn-lg" id="add-order-item-btn-custom" 
                     style="border-radius: 8px; padding: 12px 24px; font-weight: 600; transition: all 0.3s ease; 
                            border: 2px solid #198754; color: #198754; background: white; box-shadow: 0 2px 4px rgba(25, 135, 84, 0.1);">
-                <i class="fas fa-plus me-2"></i> إضافة عنصر للطلب
+                <i class="fas fa-plus me-2"></i> إضافة يدوياً
             </button>
         </div>
         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -708,4 +713,8 @@
     {% endif %}
 {% endif %}
 </script>
+
+<!-- إضافة Modal الباركود -->
+{% include 'includes/order_barcode_scanner_modal.html' %}
+
 {% endblock %}
