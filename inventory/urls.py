@@ -119,6 +119,7 @@ urlpatterns = [
     path('api/product/<int:pk>/', views.product_api_detail, name='product_api_detail'),
     path('api/products/', views.product_api_list, name='product_api_list'),
     path('api/product-autocomplete/', views.product_api_autocomplete, name='product_api_autocomplete'),
+    path('api/barcode-scan/', views.barcode_scan_api, name='barcode_scan_api'),
 
     # Stock Transfers
     path('stock-transfers/', stock_transfer_list, name='stock_transfer_list'),

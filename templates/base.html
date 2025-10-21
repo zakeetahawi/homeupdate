@@ -339,6 +339,12 @@
                 </ul>
                 <div class="d-flex align-items-center ms-auto">
                     {% if user.is_authenticated %}
+                        <!-- زر فحص الباركود -->
+                        <button class="btn btn-outline-light position-relative me-2" type="button" id="openScannerBtn" title="فحص الباركود">
+                            <i class="fas fa-barcode"></i>
+                            <span class="d-none d-lg-inline ms-1">باركود</span>
+                        </button>
+                        
                         <!-- أيقونة التحويلات الواردة - للمستخدمين الذين يديرون مستودعات -->
                         {% if incoming_transfers_count > 0 %}
                         <div class="dropdown me-2">
@@ -2760,6 +2766,11 @@
             }, 5000);
         }
     </script>
+
+    <!-- نافذة فحص الباركود (للمستخدمين المسجلين فقط) -->
+    {% if user.is_authenticated %}
+    {% include 'barcode_scanner_modal.html' %}
+    {% endif %}
 
 </body>
 </html>

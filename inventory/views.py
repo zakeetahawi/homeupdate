@@ -769,3 +769,87 @@ def product_search_api(request):
         },
         'total_count': total_count
     })
+
+
+@login_required
+def barcode_scan_api(request):
+    """
+    API لفحص الباركود والحصول على معلومات المنتج
+    يستقبل كود المنتج ويرجع كل المعلومات
+    """
+    barcode = request.GET.get('barcode', '').strip()
+    
+    if not barcode:
+        return JsonResponse({
+            'success': False,
+            'error': 'لم يتم توفير رمز الباركود'
+        }, status=400)
+    
+    try:
+        # البحث عن المنتج بواسطة الكود (الباركود = كود الصنف)
+        product = Product.objects.select_related('category').get(code=barcode)
+        
+        # حساب المخزون الحالي من جميع المستودعات
+        current_stock = product.current_stock
+        
+        # الحصول على المخزون حسب المستودع
+        from .models import Warehouse
+        warehouses_stock = []
+        warehouses = Warehouse.objects.filter(is_active=True)
+        
+        for warehouse in warehouses:
+            last_transaction = StockTransaction.objects.filter(
+                product=product,
+                warehouse=warehouse
+            ).order_by('-transaction_date', '-id').first()
+            
+            if last_transaction and last_transaction.running_balance > 0:
+                warehouses_stock.append({
+                    'warehouse_id': warehouse.id,
+                    'warehouse_name': warehouse.name,
+                    'warehouse_code': warehouse.code,
+                    'stock': float(last_transaction.running_balance),
+                    'last_update': last_transaction.transaction_date.strftime('%Y-%m-%d %H:%M')
+                })
+        
+        # جلب إعدادات النظام للعملة
+        system_settings = SystemSettings.get_settings()
+        currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+        
+        # تجهيز البيانات
+        data = {
+            'success': True,
+            'product': {
+                'id': product.id,
+                'name': product.name,
+                'code': product.code,
+                'price': float(product.price),
+                'currency': product.currency,
+                'currency_symbol': currency_symbol,
+                'unit': product.unit,
+                'unit_display': product.get_unit_display(),
+                'category': product.category.name if product.category else 'غير مصنف',
+                'description': product.description,
+                'current_stock': float(current_stock),
+                'minimum_stock': product.minimum_stock,
+                'stock_status': product.stock_status,
+                'is_available': product.is_available,
+                'warehouses': warehouses_stock,
+                'created_at': product.created_at.strftime('%Y-%m-%d'),
+            }
+        }
+        
+        return JsonResponse(data)
+        
+    except Product.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'المنتج غير موجود',
+            'message': f'لا يوجد منتج بكود الباركود: {barcode}'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': 'حدث خطأ أثناء البحث عن المنتج',
+            'message': str(e)
+        }, status=500)
