@@ -1427,7 +1427,7 @@
 
     <!-- Cutting Orders Details -->
     {% with types_list=order.get_selected_types_list %}
-    {% if 'accessory' in types_list or 'installation' in types_list %}
+    {% if 'inspection' not in types_list %}
     <div class="card mb-4">
         <div class="card-header bg-warning text-dark">
             <h5 class="mb-0">
