@@ -328,17 +328,72 @@ function initializeCustomerSearch() {
 
     // عند اختيار عميل
     searchSelect.on('select2:select', function (e) {
-        var customerData = e.params.data.customer;
-        if (customerData) {
-            $('#id_customer').val(customerData.id);
-            validateFormRealTime();
+        var data = e.params.data;
+        console.log('✅ تم اختيار العميل من Select2:', data);
+
+        // الحصول على معرف العميل من البيانات
+        var customerId = data.id || (data.customer && data.customer.id);
+        var customerName = data.text || (data.customer && (data.customer.name + ' - ' + data.customer.phone));
+
+        if (customerId) {
+            console.log('✅ معرف العميل:', customerId);
+            console.log('✅ اسم العميل:', customerName);
+
+            // تعيين القيمة في الحقل المخفي باستخدام jQuery
+            const customerField = $('#id_customer');
+            console.log('🔍 حقل العميل موجود؟', customerField.length > 0);
+            console.log('🔍 نوع حقل العميل:', customerField.prop('tagName'));
+            console.log('🔍 القيمة الحالية:', customerField.val());
+
+            if (customerField.length > 0) {
+                // التحقق من وجود الخيار في القائمة
+                var optionExists = customerField.find('option[value="' + customerId + '"]').length > 0;
+                console.log('🔍 الخيار موجود في القائمة؟', optionExists);
+
+                if (!optionExists) {
+                    // إضافة الخيار إلى القائمة إذا لم يكن موجودًا
+                    var newOption = new Option(customerName, customerId, true, true);
+                    customerField.append(newOption);
+                    console.log('✅ تم إضافة خيار جديد للعميل:', customerId);
+                }
+
+                // تعيين القيمة
+                customerField.val(customerId);
+                console.log('✅ تم تعيين قيمة العميل في الحقل:', customerField.val());
+
+                // إزالة علامة invalid وإضافة valid
+                customerField.removeClass('is-invalid');
+                customerField.addClass('is-valid');
+
+                // تفعيل حدث change لضمان تحديث النموذج
+                customerField.trigger('change');
+            } else {
+                console.error('❌ لم يتم العثور على حقل id_customer');
+            }
+
+            // التحقق من النموذج بعد تأخير قصير للتأكد من تحديث القيمة
+            setTimeout(function() {
+                validateFormRealTime();
+            }, 150);
+        } else {
+            console.error('❌ لم يتم العثور على معرف العميل في البيانات:', data);
         }
     });
 
     // عند إزالة اختيار العميل
     searchSelect.on('select2:clear', function (e) {
-        $('#id_customer').val('');
-        validateFormRealTime();
+        console.log('⚠️ تم إزالة اختيار العميل');
+
+        const customerField = document.getElementById('id_customer');
+        if (customerField) {
+            customerField.value = '';
+            customerField.classList.remove('is-valid');
+            customerField.classList.add('is-invalid');
+        }
+
+        setTimeout(function() {
+            validateFormRealTime();
+        }, 150);
     });
 }
 
@@ -392,13 +447,69 @@ function initializeSelect2OnOriginalField(field) {
         // معالج تغيير الاختيار
         field.on('select2:select', function (e) {
             const data = e.params.data;
-            if (data.customer) {
-                window.currentCustomer = data.customer;
-                console.log('تم اختيار العميل:', data.customer);
+            console.log('✅ تم اختيار العميل من الحقل الأصلي:', data);
+
+            // الحصول على معرف العميل من البيانات
+            var customerId = data.id || (data.customer && data.customer.id);
+            var customerName = data.text || (data.customer && (data.customer.name + ' - ' + data.customer.phone));
+
+            if (customerId) {
+                console.log('✅ معرف العميل:', customerId);
+
+                // حفظ بيانات العميل في المتغير العام
+                if (data.customer) {
+                    window.currentCustomer = data.customer;
+                }
+
+                // التأكد من تعيين القيمة في الحقل
+                const customerField = $('#id_customer');
+                if (customerField.length > 0) {
+                    // التحقق من وجود الخيار في القائمة
+                    var optionExists = customerField.find('option[value="' + customerId + '"]').length > 0;
+
+                    if (!optionExists) {
+                        // إضافة الخيار إلى القائمة إذا لم يكن موجودًا
+                        var newOption = new Option(customerName, customerId, true, true);
+                        customerField.append(newOption);
+                        console.log('✅ تم إضافة خيار جديد للعميل:', customerId);
+                    }
+
+                    customerField.val(customerId);
+                    console.log('✅ تم تعيين قيمة العميل:', customerField.val());
+
+                    // إزالة علامة invalid وإضافة valid
+                    customerField.removeClass('is-invalid');
+                    customerField.addClass('is-valid');
+                }
 
                 // تحديث الحقول إذا لزم الأمر
                 updateFormFields();
+
+                // التحقق من النموذج بعد تأخير قصير
+                setTimeout(function() {
+                    validateFormRealTime();
+                }, 150);
+            } else {
+                console.error('❌ لم يتم العثور على معرف العميل في البيانات:', data);
             }
+        });
+
+        // معالج إزالة الاختيار
+        field.on('select2:clear', function (e) {
+            console.log('⚠️ تم إزالة اختيار العميل من الحقل الأصلي');
+
+            const customerField = document.getElementById('id_customer');
+            if (customerField) {
+                customerField.value = '';
+                customerField.classList.remove('is-valid');
+                customerField.classList.add('is-invalid');
+            }
+
+            window.currentCustomer = null;
+
+            setTimeout(function() {
+                validateFormRealTime();
+            }, 150);
         });
 
         console.log('تم تهيئة Select2 على حقل العميل الأصلي بنجاح');
@@ -1142,7 +1253,22 @@ function performValidation() {
         const element = document.getElementById(field.id);
 
         if (element) {
-            const isEmpty = !element.value || element.value === '';
+            // معالجة خاصة لحقل العميل - التحقق من القيمة الفعلية
+            let isEmpty;
+            if (field.id === 'id_customer') {
+                // التحقق من القيمة الفعلية للحقل
+                const value = element.value;
+                isEmpty = !value || value === '' || value === 'None' || value === 'null';
+
+                // إذا كان الحقل مخفي، تحقق من وجود قيمة صحيحة
+                if (!isEmpty) {
+                    console.log('✅ حقل العميل يحتوي على قيمة:', value);
+                } else {
+                    console.log('❌ حقل العميل فارغ أو غير صحيح:', value);
+                }
+            } else {
+                isEmpty = !element.value || element.value === '';
+            }
 
             if (isEmpty) {
                 isValid = false;
@@ -1155,6 +1281,9 @@ function performValidation() {
                     element.classList.remove('is-invalid');
                 }
             }
+        } else {
+            // إذا لم يتم العثور على العنصر
+            console.log('⚠️ لم يتم العثور على العنصر:', field.id);
         }
     }
 
@@ -1477,6 +1606,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // تحديث جدول العناصر
     updateLiveOrderItemsTable();
+
+    // التحقق من حقل العميل المحدد مسبقاً
+    const customerField = document.getElementById('id_customer');
+    const hiddenCustomerBackup = document.getElementById('hidden_customer_backup');
+
+    // إذا كان هناك حقل احتياطي مخفي، استخدمه لتعيين قيمة الحقل الأصلي
+    if (hiddenCustomerBackup && hiddenCustomerBackup.value && customerField) {
+        console.log('✅ تم العثور على حقل احتياطي للعميل:', hiddenCustomerBackup.value);
+        customerField.value = hiddenCustomerBackup.value;
+        customerField.classList.remove('is-invalid');
+        customerField.classList.add('is-valid');
+    } else if (customerField && customerField.value) {
+        console.log('✅ تم العثور على عميل محدد مسبقاً:', customerField.value);
+        // إزالة علامة invalid إذا كانت موجودة
+        customerField.classList.remove('is-invalid');
+        customerField.classList.add('is-valid');
+    }
 
     // التحقق الأولي
     setTimeout(validateFormRealTime, 500);
