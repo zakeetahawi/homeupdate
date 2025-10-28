@@ -3,6 +3,9 @@
 """
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import PermissionDenied
+from django.contrib.auth.decorators import login_required
+from functools import wraps
 
 
 def get_user_orders_queryset(user):
@@ -363,5 +366,128 @@ def get_user_role_permissions(user):
             'can_create_orders': True,  # طلبات المعاينة فقط
             'can_manage_dashboard': True,
         })
-    
+
     return permissions
+
+
+# ============================================================================
+# Decorators مخصصة للصلاحيات المتقدمة
+# ============================================================================
+
+def order_create_permission_required(view_func):
+    """
+    Decorator مخصص للتحقق من صلاحية إنشاء الطلبات
+    يستخدم نظام الصلاحيات المتقدم بدلاً من الـ permission_required البسيط
+    """
+    @login_required
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        # السماح للمدير الأعلى
+        if request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+
+        # التحقق من صلاحية إنشاء الطلبات
+        if not can_user_create_order_type(request.user, 'product'):
+            raise PermissionDenied('ليس لديك صلاحية لإنشاء طلبات')
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
+
+def order_edit_permission_required(view_func):
+    """
+    Decorator مخصص للتحقق من صلاحية تعديل الطلبات
+    يستخدم نظام الصلاحيات المتقدم
+    يدعم: pk, order_id, order_number, order_code
+    """
+    @login_required
+    @wraps(view_func)
+    def wrapper(request, pk=None, order_id=None, order_number=None, order_code=None, *args, **kwargs):
+        from .models import Order
+
+        # الحصول على الطلب
+        order = None
+        if pk:
+            try:
+                order = Order.objects.get(pk=pk)
+            except Order.DoesNotExist:
+                raise PermissionDenied('الطلب غير موجود')
+        elif order_id:
+            try:
+                order = Order.objects.get(pk=order_id)
+            except Order.DoesNotExist:
+                raise PermissionDenied('الطلب غير موجود')
+        elif order_number:
+            try:
+                order = Order.objects.get(order_number=order_number)
+            except Order.DoesNotExist:
+                raise PermissionDenied('الطلب غير موجود')
+        elif order_code:
+            try:
+                order = Order.objects.get(order_code=order_code)
+            except Order.DoesNotExist:
+                raise PermissionDenied('الطلب غير موجود')
+        else:
+            raise PermissionDenied('معرف الطلب غير محدد')
+
+        # السماح للمدير الأعلى
+        if request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+
+        # التحقق من صلاحية التعديل
+        if not can_user_edit_order(request.user, order):
+            raise PermissionDenied('ليس لديك صلاحية لتعديل هذا الطلب')
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
+
+def order_delete_permission_required(view_func):
+    """
+    Decorator مخصص للتحقق من صلاحية حذف الطلبات
+    يستخدم نظام الصلاحيات المتقدم
+    يدعم: pk, order_id, order_number, order_code
+    """
+    @login_required
+    @wraps(view_func)
+    def wrapper(request, pk=None, order_id=None, order_number=None, order_code=None, *args, **kwargs):
+        from .models import Order
+
+        # الحصول على الطلب
+        order = None
+        if pk:
+            try:
+                order = Order.objects.get(pk=pk)
+            except Order.DoesNotExist:
+                raise PermissionDenied('الطلب غير موجود')
+        elif order_id:
+            try:
+                order = Order.objects.get(pk=order_id)
+            except Order.DoesNotExist:
+                raise PermissionDenied('الطلب غير موجود')
+        elif order_number:
+            try:
+                order = Order.objects.get(order_number=order_number)
+            except Order.DoesNotExist:
+                raise PermissionDenied('الطلب غير موجود')
+        elif order_code:
+            try:
+                order = Order.objects.get(order_code=order_code)
+            except Order.DoesNotExist:
+                raise PermissionDenied('الطلب غير موجود')
+        else:
+            raise PermissionDenied('معرف الطلب غير محدد')
+
+        # السماح للمدير الأعلى
+        if request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+
+        # التحقق من صلاحية الحذف
+        if not can_user_delete_order(request.user, order):
+            raise PermissionDenied('ليس لديك صلاحية لحذف هذا الطلب')
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapper

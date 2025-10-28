@@ -4,7 +4,7 @@ import re
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Sum, Count
 from django.core.paginator import Paginator
@@ -12,7 +12,15 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from .models import Order, OrderItem, Payment
 from .forms import OrderForm, OrderItemFormSet, PaymentForm, OrderEditForm, OrderItemEditFormSet
-from .permissions import get_user_orders_queryset, can_user_view_order, can_user_edit_order, can_user_delete_order
+from .permissions import (
+    get_user_orders_queryset,
+    can_user_view_order,
+    can_user_edit_order,
+    can_user_delete_order,
+    order_create_permission_required,
+    order_edit_permission_required,
+    order_delete_permission_required
+)
 from accounts.models import Branch, Salesperson, Department, SystemSettings
 from customers.models import Customer
 from inventory.models import Product
@@ -313,8 +321,7 @@ def order_detail(request, pk):
 
     return render(request, 'orders/order_detail.html', context)
 
-@login_required
-@permission_required('orders.add_order', raise_exception=True)
+@order_create_permission_required
 def order_create(request):
     """
     View for creating a new order
@@ -563,8 +570,7 @@ def order_create(request):
 
     return render(request, 'orders/order_form.html', context)
 
-@login_required
-@permission_required('orders.change_order', raise_exception=True)
+@order_edit_permission_required
 def order_update(request, pk):
     """
     View for updating an existing order
@@ -798,8 +804,7 @@ def order_update(request, pk):
 
     return render(request, 'orders/order_form.html', context)
 
-@login_required
-@permission_required('orders.delete_order', raise_exception=True)
+@order_delete_permission_required
 def order_delete(request, pk):
     """
     View for deleting an order
@@ -838,7 +843,6 @@ def order_delete(request, pk):
     return render(request, 'orders/order_confirm_delete.html', context)
 
 @login_required
-@permission_required('orders.add_payment', raise_exception=True)
 def payment_create(request, order_pk):
     """
     View for creating a new payment for an order
@@ -886,7 +890,6 @@ def payment_create(request, order_pk):
     return render(request, 'orders/payment_form.html', context)
 
 @login_required
-@permission_required('orders.delete_payment', raise_exception=True)
 def payment_delete(request, pk):
     """
     View for deleting a payment
@@ -948,8 +951,7 @@ def salesperson_list(request):
 
     return render(request, 'orders/salesperson_list.html', context)
 
-@login_required
-@permission_required('orders.change_order', raise_exception=True)
+@order_edit_permission_required
 def update_order_status(request, order_id):
     """
     View for updating order status with detailed logging
@@ -1243,7 +1245,7 @@ def order_success_by_number(request, order_number):
     return render(request, 'orders/order_success.html', {'order': order})
 
 
-@login_required
+@order_edit_permission_required
 def order_update_by_number(request, order_number):
     """تحديث الطلب المتقدم مع عناصر الطلب"""
     order = get_object_or_404(Order, order_number=order_number)
@@ -1472,7 +1474,7 @@ def order_update_by_number(request, order_number):
     })
 
 
-@login_required
+@order_delete_permission_required
 def order_delete_by_number(request, order_number):
     """حذف الطلب باستخدام رقم الطلب"""
     order = get_object_or_404(Order, order_number=order_number)
