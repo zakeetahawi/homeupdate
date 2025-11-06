@@ -49,9 +49,19 @@ class ProductionLineForm(forms.ModelForm):
 
 class ManufacturingOrderItemInline(admin.TabularInline):
     model = ManufacturingOrderItem
-    extra = 1
-    fields = ('product_name', 'quantity', 'specifications', 'status')
-    readonly_fields = ('status',)
+    extra = 0
+    fields = (
+        'product_name', 
+        'quantity', 
+        'specifications', 
+        'status',
+        'fabric_received',
+        'bag_number',
+        'receiver_name',
+        'permit_number',
+        'fabric_received_date'
+    )
+    readonly_fields = ('status', 'fabric_received_date', 'fabric_received')
     
     def get_formset(self, request, obj=None, **kwargs):
         formset = super().get_formset(request, obj, **kwargs)
@@ -623,10 +633,74 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
 
 @admin.register(ManufacturingOrderItem)
 class ManufacturingOrderItemAdmin(admin.ModelAdmin):
-    list_per_page = 50  # عرض 50 صف كافتراضي
-    list_display = ('manufacturing_order', 'product_name', 'quantity', 'status')
-    list_filter = ('status',)
-    search_fields = ('manufacturing_order__id', 'product_name')
+    list_per_page = 50
+    list_display = (
+        'manufacturing_order',
+        'product_name', 
+        'quantity',
+        'status',
+        'fabric_received_status',
+        'bag_number',
+        'receiver_name',
+        'permit_number',
+        'fabric_received_date',
+        'fabric_received_by'
+    )
+    list_filter = (
+        'status',
+        'fabric_received',
+        'fabric_received_date',
+        'cutting_date'
+    )
+    search_fields = (
+        'manufacturing_order__manufacturing_code',
+        'product_name',
+        'bag_number',
+        'receiver_name',
+        'permit_number'
+    )
+    readonly_fields = (
+        'fabric_received_date',
+        'fabric_received_by',
+        'cutting_date'
+    )
+    
+    fieldsets = (
+        ('معلومات أساسية', {
+            'fields': ('manufacturing_order', 'cutting_item', 'order_item', 'product_name', 'quantity', 'specifications', 'status')
+        }),
+        ('بيانات التقطيع', {
+            'fields': ('receiver_name', 'permit_number', 'cutting_date', 'delivery_date')
+        }),
+        ('بيانات استلام الأقمشة', {
+            'fields': ('fabric_received', 'bag_number', 'fabric_received_date', 'fabric_received_by', 'fabric_notes')
+        }),
+    )
+    
+    def fabric_received_status(self, obj):
+        """عرض حالة استلام الأقمشة بشكل مرئي"""
+        if obj.fabric_received:
+            return format_html(
+                '<span style="color: white; background-color: #28a745; padding: 3px 10px; border-radius: 3px; font-weight: bold;">✓ تم الاستلام</span>'
+            )
+        elif obj.has_cutting_data:
+            return format_html(
+                '<span style="color: #856404; background-color: #fff3cd; padding: 3px 10px; border-radius: 3px; font-weight: bold;">⏳ جاهز للاستلام</span>'
+            )
+        else:
+            return format_html(
+                '<span style="color: #721c24; background-color: #f8d7da; padding: 3px 10px; border-radius: 3px; font-weight: bold;">✗ لم يتم التقطيع</span>'
+            )
+    fabric_received_status.short_description = 'حالة الاستلام'
+    
+    def get_queryset(self, request):
+        """تحسين الاستعلامات"""
+        return super().get_queryset(request).select_related(
+            'manufacturing_order',
+            'fabric_received_by',
+            'cutting_item',
+            'order_item'
+        )
 
 # The user management code has been moved to accounts/admin.py
 

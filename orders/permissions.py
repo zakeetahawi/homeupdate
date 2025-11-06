@@ -433,13 +433,29 @@ def order_edit_permission_required(view_func):
 
         # السماح للمدير الأعلى
         if request.user.is_superuser:
-            return view_func(request, *args, **kwargs)
+            # تمرير جميع الـ arguments المحتملة
+            if pk:
+                return view_func(request, pk=pk, *args, **kwargs)
+            elif order_id:
+                return view_func(request, order_id=order_id, *args, **kwargs)
+            elif order_number:
+                return view_func(request, order_number=order_number, *args, **kwargs)
+            elif order_code:
+                return view_func(request, order_code=order_code, *args, **kwargs)
 
         # التحقق من صلاحية التعديل
         if not can_user_edit_order(request.user, order):
             raise PermissionDenied('ليس لديك صلاحية لتعديل هذا الطلب')
 
-        return view_func(request, *args, **kwargs)
+        # تمرير جميع الـ arguments المحتملة
+        if pk:
+            return view_func(request, pk=pk, *args, **kwargs)
+        elif order_id:
+            return view_func(request, order_id=order_id, *args, **kwargs)
+        elif order_number:
+            return view_func(request, order_number=order_number, *args, **kwargs)
+        elif order_code:
+            return view_func(request, order_code=order_code, *args, **kwargs)
 
     return wrapper
 
@@ -482,12 +498,28 @@ def order_delete_permission_required(view_func):
 
         # السماح للمدير الأعلى
         if request.user.is_superuser:
-            return view_func(request, *args, **kwargs)
+            # تمرير جميع الـ arguments المحتملة
+            if pk:
+                return view_func(request, pk=pk, *args, **kwargs)
+            elif order_id:
+                return view_func(request, order_id=order_id, *args, **kwargs)
+            elif order_number:
+                return view_func(request, order_number=order_number, *args, **kwargs)
+            elif order_code:
+                return view_func(request, order_code=order_code, *args, **kwargs)
 
         # التحقق من صلاحية الحذف
         if not can_user_delete_order(request.user, order):
             raise PermissionDenied('ليس لديك صلاحية لحذف هذا الطلب')
 
-        return view_func(request, *args, **kwargs)
+        # تمرير جميع الـ arguments المحتملة
+        if pk:
+            return view_func(request, pk=pk, *args, **kwargs)
+        elif order_id:
+            return view_func(request, order_id=order_id, *args, **kwargs)
+        elif order_number:
+            return view_func(request, order_number=order_number, *args, **kwargs)
+        elif order_code:
+            return view_func(request, order_code=order_code, *args, **kwargs)
 
     return wrapper
