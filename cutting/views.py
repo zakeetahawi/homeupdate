@@ -430,7 +430,7 @@ def bulk_update_items(request, order_id):
 
 @login_required
 def bulk_complete_items(request, order_id):
-    """إكمال مجمع لعناصر أمر التقطيع"""
+    """إكمال مجمع لعناصر أمر التقطيع المختارة"""
     cutting_order = get_object_or_404(CuttingOrder, pk=order_id)
     
     if request.method == 'POST':
@@ -440,6 +440,7 @@ def bulk_complete_items(request, order_id):
             cutter_name = data.get('cutter_name')
             permit_number = data.get('permit_number')
             receiver_name = data.get('receiver_name')
+            item_ids = data.get('item_ids', [])  # IDs العناصر المختارة
             
             if not all([cutter_name, permit_number, receiver_name]):
                 return JsonResponse({
@@ -447,9 +448,26 @@ def bulk_complete_items(request, order_id):
                     'message': 'يجب ملء جميع البيانات المطلوبة'
                 })
             
-            # إكمال جميع العناصر المعلقة
+            if not item_ids:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يجب اختيار عنصر واحد على الأقل'
+                })
+            
+            # التحقق من أن جميع العناصر المختارة معلقة
+            items_to_complete = cutting_order.items.filter(id__in=item_ids)
+            completed_items = items_to_complete.filter(status='completed')
+            
+            if completed_items.exists():
+                completed_names = ', '.join([item.order_item.product.name[:30] for item in completed_items[:3]])
+                return JsonResponse({
+                    'success': False,
+                    'message': f'بعض العناصر المختارة مكتملة بالفعل: {completed_names}{"..." if completed_items.count() > 3 else ""}'
+                })
+            
+            # إكمال العناصر المختارة المعلقة
             completed_count = 0
-            for item in cutting_order.items.filter(status='pending'):
+            for item in items_to_complete.filter(status='pending'):
                 item.mark_as_completed(
                     cutter_name=cutter_name,
                     permit_number=permit_number,
@@ -460,7 +478,8 @@ def bulk_complete_items(request, order_id):
             
             return JsonResponse({
                 'success': True,
-                'message': f'تم إكمال {completed_count} عنصر'
+                'message': f'تم إكمال {completed_count} عنصر بنجاح',
+                'completed_count': completed_count
             })
             
         except Exception as e:
