@@ -21,25 +21,88 @@
         transform: translateY(-2px);
     }
 
-    /* تحسين modal */
+    /* إصلاح شامل للـ Modal - يظهر في وسط الشاشة المرئية حصراً */
+    body.modal-open {
+        overflow: hidden !important;
+    }
+
+    .modal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 1050 !important;
+        display: none !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .modal.show {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
     .modal-backdrop {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 1040 !important;
         background-color: rgba(0,0,0,0.5) !important;
     }
 
-    .modal-lg {
-        max-width: 700px;
+    .modal-dialog {
+        position: static !important;
+        margin: 0 !important;
+        max-width: 600px !important;
+        width: 90% !important;
     }
 
-    .modal-dialog {
-        margin: 30px auto;
+    .modal-dialog-centered {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 100vh !important;
     }
 
     .modal-content {
-        border-radius: 10px;
-        border: none;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        position: relative;
-        z-index: 9999;
+        position: relative !important;
+        border-radius: 15px !important;
+        border: none !important;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4) !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+        width: 100% !important;
+    }
+
+    /* إصلاح SweetAlert2 - يظهر في وسط الشاشة المرئية حصراً */
+    .swal2-container {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 1060 !important;
+        padding: 0 !important;
+        overflow-y: auto !important;
+    }
+
+    .swal2-popup {
+        margin: 0 !important;
+    }
+
+    body.swal2-shown {
+        overflow: hidden !important;
+    }
+
+    body.swal2-height-auto {
+        height: 100% !important;
     }
 
 
@@ -554,11 +617,26 @@ function openItemReceiptModal(itemId, productName, cuttingCode, receiverName, pe
         document.getElementById('bag_number').value = '1';
     });
 
+    // التحويل الفوري لأعلى الصفحة قبل فتح النافذة
+    window.scrollTo(0, 0);
+    
+    // حفظ موقع التمرير وتثبيت الـ body
+    const scrollY = window.scrollY;
+    document.body.style.top = `-${scrollY}px`;
+    
     // فتح modal باستخدام Bootstrap 5
-    const modal = new bootstrap.Modal(document.getElementById('cuttingReceiptModal'));
+    const modalElement = document.getElementById('cuttingReceiptModal');
+    const modal = new bootstrap.Modal(modalElement);
+    
+    // تنظيف عند الإغلاق
+    modalElement.addEventListener('hidden.bs.modal', function () {
+        document.body.style.top = '';
+        window.scrollTo(0, scrollY);
+    }, { once: true });
+    
     modal.show();
 
-    console.log('تم فتح modal بنجاح');
+    console.log('✅ تم فتح modal بنجاح');
 }
 
 // فتح modal استلام أمر التقطيع
@@ -593,11 +671,26 @@ function openCuttingReceiptModal(orderId, orderCode, customerName) {
             console.error('خطأ في جلب بيانات التقطيع:', error);
         });
 
+    // التحويل الفوري لأعلى الصفحة قبل فتح النافذة
+    window.scrollTo(0, 0);
+    
+    // حفظ موقع التمرير وتثبيت الـ body
+    const scrollY = window.scrollY;
+    document.body.style.top = `-${scrollY}px`;
+    
     // فتح modal باستخدام Bootstrap 5
-    const modal = new bootstrap.Modal(document.getElementById('cuttingReceiptModal'));
+    const modalElement = document.getElementById('cuttingReceiptModal');
+    const modal = new bootstrap.Modal(modalElement);
+    
+    // تنظيف عند الإغلاق
+    modalElement.addEventListener('hidden.bs.modal', function () {
+        document.body.style.top = '';
+        window.scrollTo(0, scrollY);
+    }, { once: true });
+    
     modal.show();
 
-    console.log('تم فتح modal بنجاح');
+    console.log('✅ تم فتح modal بنجاح');
 }
 
 // إرسال نموذج استلام عنصر فردي
@@ -641,116 +734,81 @@ function submitCuttingReceipt() {
     // حفظ رقم الشنطة في متغير ثابت للاستخدام في callbacks
     const selectedBagNumber = bagNumber.trim();
 
-    console.log('DEBUG - Before confirmation:');
-    console.log('  bagNumber:', bagNumber);
-    console.log('  selectedBagNumber:', selectedBagNumber);
-    console.log('  useNewBag:', useNewBag);
-    console.log('  useExistingBag:', useExistingBag);
-    console.log('  useExisting:', useExisting);
+    // تعطيل زر الإرسال لمنع الإرسال المتكرر
+    const submitBtn = document.querySelector('#cuttingReceiptModal .btn-success');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الاستلام...';
 
-    // تأكيد الاستلام
-    Swal.fire({
-        title: 'تأكيد الاستلام',
-        html: `
-            <div style="text-align: right; direction: rtl;">
-                <p><strong>رقم الشنطة:</strong> <span class="badge bg-success fs-5">${selectedBagNumber}</span></p>
-                ${useNewBag ? '<p class="text-muted small">شنطة جديدة - اكتب هذا الرقم على الشنطة</p>' : ''}
-                ${useExisting ? '<p class="text-muted small">استخدام رقم موجود</p>' : ''}
-            </div>
-        `,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'تأكيد الاستلام',
-        cancelButtonText: 'إلغاء',
-        confirmButtonColor: '#198754',
-        cancelButtonColor: '#6c757d'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // تعطيل زر الإرسال لمنع الإرسال المتكرر
-            const submitBtn = document.querySelector('#cuttingReceiptModal .btn-success');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الاستلام...';
+    // تحضير البيانات للإرسال
+    const requestData = {
+        bag_number: selectedBagNumber,
+        use_previous_bag: useExisting,
+        previous_bag_number: useExisting ? selectedBagNumber : null,
+        notes: notes
+    };
 
-            // تحضير البيانات للإرسال
-            const requestData = {
-                bag_number: selectedBagNumber,
-                use_previous_bag: useExisting,
-                previous_bag_number: useExisting ? selectedBagNumber : null,
-                notes: notes
-            };
+    // إرسال البيانات لاستلام العنصر الفردي مباشرة
+    fetch(`/manufacturing/receive-item/${itemId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // إغلاق modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('cuttingReceiptModal'));
+            modal.hide();
 
-            console.log('DEBUG - Sending data:', requestData);
-            console.log('DEBUG - selectedBagNumber:', selectedBagNumber);
-            console.log('DEBUG - useExisting:', useExisting);
+            // استخدام رقم الشنطة من الـ response أو من المتغير المحلي
+            const finalBagNumber = data.bag_number || selectedBagNumber;
 
-            // إرسال البيانات لاستلام العنصر الفردي
-            fetch(`/manufacturing/receive-item/${itemId}/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify(requestData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Response data:', data); // للتشخيص
-
-                if (data.success) {
-                    // إغلاق modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('cuttingReceiptModal'));
-                    modal.hide();
-
-                    // استخدام رقم الشنطة من الـ response أو من المتغير المحلي
-                    const finalBagNumber = data.bag_number || selectedBagNumber;
-
-                    console.log('Final bag number:', finalBagNumber); // للتشخيص
-
-                    // إظهار رسالة نجاح مع SweetAlert2
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'تم الاستلام بنجاح!',
-                        html: `
-                            <div style="text-align: center; direction: rtl;">
-                                <div class="alert alert-success mb-3">
-                                    <h3 class="mb-2">رقم الشنطة</h3>
-                                    <div class="badge bg-success" style="font-size: 2rem; padding: 15px 30px;">
-                                        ${finalBagNumber}
-                                    </div>
-                                </div>
-                                ${useNewBag ? '<p class="text-muted">⚠️ يرجى كتابة هذا الرقم على الشنطة الفعلية في المستودع</p>' : ''}
+            // إظهار رسالة نجاح مع SweetAlert2
+            Swal.fire({
+                icon: 'success',
+                title: 'تم الاستلام بنجاح!',
+                html: `
+                    <div style="text-align: center; direction: rtl;">
+                        <div class="alert alert-success mb-3">
+                            <h3 class="mb-2">رقم الشنطة</h3>
+                            <div class="badge bg-success" style="font-size: 2rem; padding: 15px 30px;">
+                                ${finalBagNumber}
                             </div>
-                        `,
-                        confirmButtonText: 'حسناً',
-                        confirmButtonColor: '#198754',
-                        timer: useNewBag ? undefined : 3000,
-                        timerProgressBar: !useNewBag
-                    }).then(() => {
-                        location.reload();
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'خطأ',
-                        text: data.message,
-                        confirmButtonText: 'حسناً'
-                    });
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>تأكيد الاستلام';
-                }
-            })
-            .catch(error => {
-                console.error('خطأ:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'خطأ في الاتصال',
-                    text: 'حدث خطأ أثناء الاتصال بالخادم',
-                    confirmButtonText: 'حسناً'
-                });
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>تأكيد الاستلام';
+                        </div>
+                        ${useNewBag ? '<p class="text-muted">⚠️ يرجى كتابة هذا الرقم على الشنطة الفعلية في المستودع</p>' : ''}
+                    </div>
+                `,
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#198754',
+                timer: useNewBag ? undefined : 3000,
+                timerProgressBar: !useNewBag
+            }).then(() => {
+                location.reload();
             });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'خطأ',
+                text: data.message,
+                confirmButtonText: 'حسناً'
+            });
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>تأكيد الاستلام';
         }
+    })
+    .catch(error => {
+        console.error('خطأ:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ في الاتصال',
+            text: 'حدث خطأ أثناء الاتصال بالخادم',
+            confirmButtonText: 'حسناً'
+        });
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>تأكيد الاستلام';
     });
 }
 
