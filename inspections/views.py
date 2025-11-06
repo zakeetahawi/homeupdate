@@ -536,6 +536,28 @@ def check_upload_status(request, pk):
             'error': str(e)
         })
 
+@login_required
+def check_upload_status_by_code(request, inspection_code):
+    """التحقق من حالة رفع الملف باستخدام كود المعاينة"""
+    try:
+        # تحويل كود المعاينة إلى ID
+        if '-I' in inspection_code:
+            order_number = inspection_code.replace('-I', '')
+            inspection = Inspection.objects.filter(order__order_number=order_number).first()
+            if not inspection:
+                raise Http404("المعاينة غير موجودة")
+        else:
+            inspection_id = inspection_code.replace('#', '').replace('-I', '')
+            inspection = get_object_or_404(Inspection, id=inspection_id)
+        
+        # استدعاء الدالة الأصلية
+        return check_upload_status(request, inspection.pk)
+    except Exception as e:
+        return JsonResponse({
+            'is_uploaded': False,
+            'error': str(e)
+        })
+
     def handle_no_permission(self):
         messages.error(self.request, 'ليس لديك صلاحية لتعديل هذه المعاينة')
         return redirect('inspections:inspection_list')
@@ -693,6 +715,26 @@ def iterate_inspection(request, pk):
     except Exception as e:
         messages.error(request, _('حدث خطأ أثناء تكرار المعاينة: {0}').format(str(e)))
         return redirect('inspections:inspection_detail', pk=pk)
+
+@login_required
+def iterate_inspection_by_code(request, inspection_code):
+    """تكرار المعاينة باستخدام كود المعاينة"""
+    try:
+        # تحويل كود المعاينة إلى ID
+        if '-I' in inspection_code:
+            order_number = inspection_code.replace('-I', '')
+            inspection = Inspection.objects.filter(order__order_number=order_number).first()
+            if not inspection:
+                raise Http404("المعاينة غير موجودة")
+        else:
+            inspection_id = inspection_code.replace('#', '').replace('-I', '')
+            inspection = get_object_or_404(Inspection, id=inspection_id)
+        
+        # استدعاء الدالة الأصلية
+        return iterate_inspection(request, inspection.pk)
+    except Exception as e:
+        messages.error(request, f'حدث خطأ: {str(e)}')
+        return redirect('inspections:inspection_list')
 
 @login_required
 def ajax_duplicate_inspection(request):

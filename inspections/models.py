@@ -315,10 +315,11 @@ class Inspection(models.Model):
         if self.scheduled_date and self.request_date:
             if self.scheduled_date < self.request_date:
                 raise ValidationError(_('تاريخ تنفيذ المعاينة لا يمكن أن يكون قبل تاريخ الطلب'))
-        # Only allow users to create inspections in their branch
-        if self.created_by and not self.created_by.is_superuser:
-            if self.branch != self.created_by.branch:
-                raise ValidationError(_('لا يمكنك إضافة معاينات لفرع آخر'))
+        
+        # ملاحظة: تم إزالة فحص الفرع من هنا لأن:
+        # 1. الـ view يفحص الصلاحيات بالفعل (InspectionUpdateView.test_func)
+        # 2. مديرو النظام يحتاجون تحديث أي معاينة بغض النظر عن نقل الموظفين
+        # 3. الفحص هنا كان يعتمد على created_by وليس المستخدم الحالي
     def save(self, *args, **kwargs):
         if not self.branch and self.created_by:
             self.branch = self.created_by.branch

@@ -183,11 +183,17 @@ class InspectionForm(forms.ModelForm):
         from accounts.models import Salesperson
         self.fields['responsible_employee'].queryset = Salesperson.objects.filter(is_active=True)
         
-        # Set branch if user is not superuser
-        if user and not user.is_superuser:
-            self.fields['branch'].initial = user.branch
-            self.fields['branch'].widget.attrs['readonly'] = True
-            self.fields['branch'].disabled = True
+        # Set branch - السماح لمديري النظام ومديري الفروع بتغيير الفرع
+        if user:
+            is_allowed_to_change_branch = (
+                user.is_superuser or 
+                user.is_staff or 
+                getattr(user, 'is_branch_manager', False)
+            )
+            if not is_allowed_to_change_branch:
+                self.fields['branch'].initial = user.branch
+                self.fields['branch'].widget.attrs['readonly'] = True
+                self.fields['branch'].disabled = True
             
         # قفل تاريخ الطلب عند التعديل والحفاظ على قيمته
         if self.instance.pk:  # في حالة تعديل معاينة موجودة

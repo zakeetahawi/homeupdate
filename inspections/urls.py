@@ -17,9 +17,11 @@ urlpatterns = [
     path('report/create/', views.InspectionReportCreateView.as_view(), name='inspection_report_create'),
     
     # URLs باستخدام كود المعاينة
-    path('inspection/<str:inspection_code>/', views.inspection_detail_by_code, name='inspection_detail_by_code'),
-    path('inspection/<str:inspection_code>/update/', views.inspection_update_by_code, name='inspection_update_by_code'),
-    path('inspection/<str:inspection_code>/delete/', views.inspection_delete_by_code, name='inspection_delete_by_code'),
+    path('<str:inspection_code>/', views.inspection_detail_by_code, name='inspection_detail_by_code'),
+    path('<str:inspection_code>/update/', views.inspection_update_by_code, name='inspection_update_by_code'),
+    path('<str:inspection_code>/delete/', views.inspection_delete_by_code, name='inspection_delete_by_code'),
+    path('<str:inspection_code>/check-upload-status/', views.check_upload_status_by_code, name='check_upload_status_by_code'),
+    path('<str:inspection_code>/iterate/', views.iterate_inspection_by_code, name='iterate_inspection_by_code'),
     
     # URLs القديمة مع إعادة توجيه
     path('<int:pk>/', views.inspection_detail_redirect, name='inspection_detail'),
