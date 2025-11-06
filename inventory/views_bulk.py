@@ -344,6 +344,32 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
         print(f"📁 بدء معالجة ملف: {excel_file.name}")
         print(f"🏢 المستودع الافتراضي: {default_warehouse}")
         print(f"♻️ وضع الرفع: {upload_mode}")
+        
+        # معالجة وضع التهيئة الكاملة
+        if upload_mode == 'full_reset':
+            print("⚠️ وضع التهيئة الكاملة: حذف جميع البيانات القديمة...")
+            with transaction.atomic():
+                from .models import StockTransfer
+                
+                # حذف جميع المعاملات والتحويلات أولاً (بسبب العلاقات الخارجية)
+                deleted_transfers = StockTransfer.objects.all().count()
+                StockTransfer.objects.all().delete()
+                print(f"   ✓ تم حذف {deleted_transfers} تحويل مخزني")
+                
+                deleted_transactions = StockTransaction.objects.all().count()
+                StockTransaction.objects.all().delete()
+                print(f"   ✓ تم حذف {deleted_transactions} معاملة مخزون")
+                
+                # حذف جميع المنتجات
+                deleted_products = Product.objects.all().count()
+                Product.objects.all().delete()
+                print(f"   ✓ تم حذف {deleted_products} منتج")
+                
+                # تسجيل في السجل
+                upload_log.notes = f"تهيئة كاملة: تم حذف {deleted_products} منتج، {deleted_transactions} معاملة، {deleted_transfers} تحويل"
+                upload_log.save()
+                
+                print("✅ اكتمل حذف البيانات القديمة")
 
         file_data = excel_file.read()
         print(f"📊 تم قراءة الملف، الحجم: {len(file_data)} بايت")

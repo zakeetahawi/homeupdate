@@ -121,6 +121,19 @@
                         {% endif %}
                     </div>
 
+                    <!-- تحذير التهيئة الكاملة -->
+                    <div class="alert alert-danger d-none" id="fullResetWarning">
+                        <h6 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> تحذير خطر!</h6>
+                        <p class="mb-1"><strong>وضع التهيئة الكاملة سيقوم بـ:</strong></p>
+                        <ul class="mb-2">
+                            <li>حذف <strong>جميع</strong> المنتجات الحالية</li>
+                            <li>حذف <strong>جميع</strong> معاملات المخزون</li>
+                            <li>حذف <strong>جميع</strong> التحويلات المخزنية</li>
+                            <li>استبدالها بالمنتجات من الملف المرفوع</li>
+                        </ul>
+                        <p class="mb-0 text-danger"><strong>⚠️ هذا الإجراء لا يمكن التراجع عنه!</strong></p>
+                    </div>
+
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
                             <i class="fas fa-upload"></i>
@@ -252,6 +265,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('uploadForm');
     const submitBtn = document.getElementById('submitBtn');
     const fileInput = document.getElementById('{{ form.excel_file.id_for_label }}');
+    const fullResetWarning = document.getElementById('fullResetWarning');
+    const uploadModeRadios = document.querySelectorAll('input[name="upload_mode"]');
+    
+    // مراقبة تغيير وضع الرفع
+    uploadModeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'full_reset') {
+                fullResetWarning.classList.remove('d-none');
+                submitBtn.classList.remove('btn-primary');
+                submitBtn.classList.add('btn-danger');
+                submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> تهيئة كاملة (خطر!)';
+            } else {
+                fullResetWarning.classList.add('d-none');
+                submitBtn.classList.remove('btn-danger');
+                submitBtn.classList.add('btn-primary');
+                submitBtn.innerHTML = '<i class="fas fa-upload"></i> رفع وإضافة المنتجات';
+            }
+        });
+    });
     
     // تغيير النص عند اختيار ملف
     fileInput.addEventListener('change', function() {
@@ -280,6 +312,38 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!fileInput.files || !fileInput.files[0]) {
             e.preventDefault();
             alert('يرجى اختيار ملف إكسل أولاً');
+            return;
+        }
+        
+        const selectedMode = document.querySelector('input[name="upload_mode"]:checked');
+        
+        // تأكيد مزدوج لوضع التهيئة الكاملة
+        if (selectedMode && selectedMode.value === 'full_reset') {
+            e.preventDefault();
+            
+            const firstConfirm = confirm('⚠️ تحذير خطر!\n\nسيتم حذف جميع المنتجات والمعاملات الحالية ولا يمكن التراجع عن هذا الإجراء!\n\nهل أنت متأكد من المتابعة؟');
+            if (!firstConfirm) {
+                return;
+            }
+            
+            const secondConfirm = prompt('للتأكيد، اكتب كلمة "حذف" بالعربي:');
+            if (secondConfirm !== 'حذف') {
+                alert('تم الإلغاء. لم يتم حذف أي شيء.');
+                return;
+            }
+            
+            const finalConfirm = confirm('تأكيد نهائي: هل أنت متأكد 100% من حذف جميع البيانات القديمة؟');
+            if (!finalConfirm) {
+                return;
+            }
+            
+            // السماح بالإرسال
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                جاري حذف البيانات القديمة ورفع الجديدة...
+            `;
+            form.submit();
             return;
         }
         
