@@ -33,13 +33,18 @@
             </div>
             <div class="col-auto">
                 <div class="btn-group" role="group">
-                    {% if has_pending_transfers %}
-                    <a href="{% url 'inventory:stock_transfer_list' %}?status=approved,in_transit" class="btn btn-warning position-relative me-2" title="التحويلات المعلقة">
-                        <i class="fas fa-truck"></i> تحويلات معلقة
+                    <!-- زر التحويلات - يظهر دائماً لمسؤولي المخازن ومديري النظام -->
+                    {% if is_warehouse_manager %}
+                    <a href="{% url 'inventory:stock_transfer_list' %}" 
+                       class="btn {% if has_pending_transfers %}btn-warning{% else %}btn-outline-secondary{% endif %} position-relative me-2" 
+                       title="{% if has_pending_transfers %}لديك {{ pending_transfers_count }} تحويل معلق{% else %}التحويلات المخزنية{% endif %}">
+                        <i class="fas fa-truck"></i> التحويلات
+                        {% if has_pending_transfers %}
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                             {{ pending_transfers_count }}
                             <span class="visually-hidden">تحويلات معلقة</span>
                         </span>
+                        {% endif %}
                     </a>
                     {% endif %}
                     {% block quick_actions %}

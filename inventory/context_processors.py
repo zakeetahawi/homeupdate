@@ -43,8 +43,14 @@ def pending_transfers(request):
             status__in=['approved', 'in_transit']
         ).count()
     
+    # التحقق إذا كان المستخدم مسؤول مخزن
+    is_warehouse_manager = False
+    if not user.is_superuser:
+        is_warehouse_manager = Warehouse.objects.filter(manager=user).exists()
+    
     return {
         'pending_transfers_count': pending_count,
         'pending_transfers': pending_transfers,
-        'has_pending_transfers': pending_count > 0
+        'has_pending_transfers': pending_count > 0,
+        'is_warehouse_manager': is_warehouse_manager or user.is_superuser
     }
