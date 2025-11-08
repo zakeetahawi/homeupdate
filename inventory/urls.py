@@ -160,5 +160,8 @@ urlpatterns = [
     path('api/inventory-value-report/', api_views.inventory_value_report_api, name='inventory_value_report_api'),
     path('api/stock-turnover-analysis/', api_views.stock_turnover_analysis_api, name='stock_turnover_analysis_api'),
     path('api/reorder-recommendations/', api_views.reorder_recommendations_api, name='reorder_recommendations_api'),
+    
+    # Stock Transfers API
+    path('api/pending-transfers/', api_views.pending_transfers_api, name='pending_transfers_api'),
 ]
 

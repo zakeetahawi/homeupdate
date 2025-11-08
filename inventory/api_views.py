@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import json
 
-from .models import Product, StockAlert, StockTransaction, Category, Warehouse
+from .models import Product, StockAlert, StockTransaction, StockTransfer, Category, Warehouse
 from .inventory_utils import (
     get_cached_dashboard_stats,
     get_cached_stock_level,
@@ -689,6 +689,86 @@ def stock_turnover_analysis_api(request):
             'turnover_data': turnover_data,
             'fast_moving_products': [d for d in turnover_data if d['turnover_rate'] > 2][:10],
             'stagnant_products': [d for d in turnover_data if d['turnover_rate'] <= 0.5][:10],
+            'last_updated': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        }, status=500)
+
+
+@require_GET
+@login_required
+def pending_transfers_api(request):
+    """
+    API للحصول على التحويلات المعلقة حسب صلاحيات المستخدم
+    
+    - مدير النظام: يرى جميع التحويلات
+    - مسؤول المخزون: يرى فقط التحويلات الواردة لمستودعاته
+    """
+    try:
+        from .models import Warehouse
+        
+        user = request.user
+        
+        # مدير النظام يرى جميع التحويلات المعلقة
+        if user.is_superuser:
+            pending_transfers = StockTransfer.objects.filter(
+                status__in=['approved', 'in_transit']
+            ).select_related('from_warehouse', 'to_warehouse', 'created_by').order_by('-transfer_date')
+        else:
+            # مسؤول المخزون يرى فقط التحويلات الواردة لمستودعاته
+            managed_warehouses = Warehouse.objects.filter(manager=user)
+            
+            if not managed_warehouses.exists():
+                return JsonResponse({
+                    'success': True,
+                    'count': 0,
+                    'transfers': [],
+                    'message': 'لا توجد مستودعات مسجلة باسمك'
+                })
+            
+            pending_transfers = StockTransfer.objects.filter(
+                to_warehouse__in=managed_warehouses,
+                status__in=['approved', 'in_transit']
+            ).select_related('from_warehouse', 'to_warehouse', 'created_by').order_by('-transfer_date')
+        
+        # بناء البيانات
+        transfers_data = []
+        for transfer in pending_transfers[:20]:  # أول 20
+            transfers_data.append({
+                'id': transfer.id,
+                'transfer_number': transfer.transfer_number,
+                'from_warehouse': {
+                    'id': transfer.from_warehouse.id,
+                    'name': transfer.from_warehouse.name
+                },
+                'to_warehouse': {
+                    'id': transfer.to_warehouse.id,
+                    'name': transfer.to_warehouse.name
+                },
+                'status': transfer.status,
+                'status_display': transfer.get_status_display(),
+                'transfer_date': transfer.transfer_date.isoformat() if transfer.transfer_date else None,
+                'expected_arrival_date': transfer.expected_arrival_date.isoformat() if transfer.expected_arrival_date else None,
+                'created_by': transfer.created_by.get_full_name() if transfer.created_by else 'النظام',
+                'created_at': transfer.created_at.isoformat(),
+                'total_items': transfer.items.count() if hasattr(transfer, 'items') else 0,
+                'reason': transfer.reason or '',
+                'url': f'/inventory/stock-transfer/{transfer.id}/'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'count': pending_transfers.count(),
+            'transfers': transfers_data,
+            'is_superuser': user.is_superuser,
+            'managed_warehouses': [
+                {'id': w.id, 'name': w.name} 
+                for w in Warehouse.objects.filter(manager=user)
+            ] if not user.is_superuser else [],
             'last_updated': timezone.now().isoformat()
         })
         

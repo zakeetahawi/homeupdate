@@ -33,6 +33,15 @@
             </div>
             <div class="col-auto">
                 <div class="btn-group" role="group">
+                    {% if has_pending_transfers %}
+                    <a href="{% url 'inventory:stock_transfer_list' %}?status=approved,in_transit" class="btn btn-warning position-relative me-2" title="التحويلات المعلقة">
+                        <i class="fas fa-truck"></i> تحويلات معلقة
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ pending_transfers_count }}
+                            <span class="visually-hidden">تحويلات معلقة</span>
+                        </span>
+                    </a>
+                    {% endif %}
                     {% block quick_actions %}
                     <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
                         <i class="fas fa-plus"></i> منتج جديد
@@ -45,6 +54,47 @@
             </div>
         </div>
     </div>
+
+    <!-- إشعارات التحويلات المعلقة -->
+    {% if has_pending_transfers %}
+    <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+        <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+                <i class="fas fa-truck fa-2x"></i>
+            </div>
+            <div class="flex-grow-1 ms-3">
+                <h5 class="alert-heading mb-1">
+                    {% if user.is_superuser %}
+                    لديك {{ pending_transfers_count }} تحويل{% if pending_transfers_count > 1 %}ات{% endif %} معلق{% if pending_transfers_count > 1 %}ة{% endif %}
+                    {% else %}
+                    لديك {{ pending_transfers_count }} تحويل{% if pending_transfers_count > 1 %}ات{% endif %} وارد{% if pending_transfers_count > 1 %}ة{% endif %} بحاجة للاستلام
+                    {% endif %}
+                </h5>
+                <p class="mb-2">التحويلات التالية بحاجة للمراجعة والاستلام:</p>
+                <ul class="list-unstyled mb-0">
+                    {% for transfer in pending_transfers|slice:":5" %}
+                    <li class="mb-1">
+                        <a href="{% url 'inventory:stock_transfer_detail' transfer.id %}" class="text-decoration-none">
+                            <strong>#{{ transfer.transfer_number }}</strong>
+                            - من: {{ transfer.from_warehouse.name }}
+                            إلى: {{ transfer.to_warehouse.name }}
+                            - الحالة: <span class="badge bg-info">{{ transfer.get_status_display }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                    {% if pending_transfers_count > 5 %}
+                    <li class="mt-2">
+                        <a href="{% url 'inventory:stock_transfer_list' %}?status=approved,in_transit" class="btn btn-sm btn-outline-warning">
+                            عرض جميع التحويلات ({{ pending_transfers_count }})
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
 
     <!-- المحتوى الرئيسي -->
     <div class="dashboard-content">
