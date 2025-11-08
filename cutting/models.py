@@ -261,6 +261,19 @@ class CuttingOrderItem(models.Model):
         verbose_name='تاريخ التسليم'
     )
     
+    # تاريخ الخروج (تاريخ الإكمال الفعلي)
+    exit_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ الخروج'
+    )
+    
+    # سبب التسجيل بتاريخ سابق
+    backdate_reason = models.TextField(
+        blank=True,
+        verbose_name='سبب التسجيل بتاريخ سابق'
+    )
+    
 
     
     # كمية إضافية
@@ -357,17 +370,53 @@ class CuttingOrderItem(models.Model):
         """الكمية الإجمالية (الأصلية + الإضافية)"""
         return self.order_item.quantity + self.additional_quantity
     
-    def mark_as_completed(self, cutter_name, permit_number, receiver_name, user, notes='', auto_deduct_inventory=True):
+    def mark_as_completed(self, cutter_name, permit_number, receiver_name, user, notes='', 
+                         exit_date=None, backdate_reason='', auto_deduct_inventory=True):
         """تعيين العنصر كمكتمل مع خصم المخزون التلقائي"""
+        from datetime import date, datetime
+        
         self.status = 'completed'
         self.cutter_name = cutter_name
         self.permit_number = permit_number
         self.receiver_name = receiver_name
-        self.cutting_date = timezone.now()
-        self.delivery_date = timezone.now()
         self.notes = notes
         self.updated_by = user
+        
+        # تحديد تاريخ الخروج وتاريخ التقطيع
+        actual_exit_date = exit_date if exit_date else date.today()
+        self.exit_date = actual_exit_date
+        
+        # تاريخ التقطيع هو التاريخ المدخل يدوياً
+        self.cutting_date = datetime.combine(actual_exit_date, datetime.now().time())
+        self.delivery_date = self.cutting_date
+        
+        # تسجيل تاريخ المعاملة الفعلية في الملاحظات
+        transaction_datetime = timezone.now()
+        today = date.today()
+        
+        # إضافة معلومات المعاملة للملاحظات
+        transaction_note = f'[تاريخ المعاملة: {transaction_datetime.strftime("%Y-%m-%d %H:%M")}]'
+        
+        if actual_exit_date < today:
+            # تسجيل بتاريخ سابق
+            self.backdate_reason = backdate_reason or f'تم التسجيل بتاريخ سابق ({actual_exit_date})'
+            backdate_note = f'[تاريخ التقطيع: {actual_exit_date}] {backdate_reason}'
+            
+            if self.notes:
+                self.notes += f'\n{transaction_note}\n{backdate_note}'
+            else:
+                self.notes = f'{transaction_note}\n{backdate_note}'
+        elif actual_exit_date == today:
+            # تسجيل بتاريخ اليوم
+            if self.notes:
+                self.notes += f'\n{transaction_note}'
+            else:
+                self.notes = transaction_note
+        
         self.save()
+        
+        # تحديث حالة الطلب إذا كان نوع المنتجات وتم إكمال جميع العناصر
+        self._update_order_status_if_completed()
 
         # خصم المخزون التلقائي
         if auto_deduct_inventory and not self.inventory_deducted:
@@ -394,6 +443,45 @@ class CuttingOrderItem(models.Model):
                     )
                 except:
                     pass
+    
+    def _update_order_status_if_completed(self):
+        """تحديث حالة الطلب إلى مكتمل إذا كان نوع منتجات وتم إكمال جميع العناصر"""
+        try:
+            # التحقق من نوع الطلب
+            order = self.cutting_order.order
+            if order.order_type != 'products':
+                return
+            
+            # التحقق من حالة الطلب الحالية
+            if order.tracking_status != 'cutting':
+                return
+            
+            # التحقق من إكمال جميع عناصر التقطيع
+            cutting_order = self.cutting_order
+            total_items = cutting_order.items.count()
+            completed_items = cutting_order.items.filter(status='completed').count()
+            
+            # إذا تم إكمال جميع العناصر، حدث حالة الطلب
+            if total_items > 0 and total_items == completed_items:
+                old_status = order.tracking_status
+                order.tracking_status = 'ready'
+                order.save()
+                
+                # تسجيل التغيير في السجل
+                from orders.models import OrderStatusLog
+                OrderStatusLog.objects.create(
+                    order=order,
+                    old_status=old_status,
+                    new_status='ready',
+                    changed_by=self.updated_by,
+                    notes=f'تم تحديث الحالة تلقائياً بعد إكمال جميع عناصر التقطيع ({completed_items}/{total_items})',
+                    change_type='cutting',
+                    is_automatic=True
+                )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في تحديث حالة الطلب: {str(e)}")
     
     def mark_as_rejected(self, reason, user):
         """تعيين العنصر كمرفوض مع عكس خصم المخزون إذا لزم الأمر"""

@@ -546,41 +546,92 @@ function bulkComplete() {
 
 // إكمال عنصر واحد
 function completeItem(itemId) {
+    // تاريخ اليوم بصيغة YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
+    
     Swal.fire({
         title: 'إكمال العنصر',
         html: `
-            <div class="row">
+            <div class="row text-start">
                 <div class="col-12 mb-3">
-                    <label class="form-label">اسم القصاص</label>
+                    <label class="form-label fw-bold">اسم القصاص <span class="text-danger">*</span></label>
                     <input type="text" id="itemCutter" class="form-control" placeholder="اسم القصاص">
                 </div>
                 <div class="col-12 mb-3">
-                    <label class="form-label">رقم الإذن</label>
+                    <label class="form-label fw-bold">رقم الإذن <span class="text-danger">*</span></label>
                     <input type="text" id="itemPermit" class="form-control" placeholder="رقم الإذن">
                 </div>
                 <div class="col-12 mb-3">
-                    <label class="form-label">اسم المستلم</label>
+                    <label class="form-label fw-bold">اسم المستلم <span class="text-danger">*</span></label>
                     <input type="text" id="itemReceiver" class="form-control" placeholder="اسم المستلم">
                 </div>
                 <div class="col-12 mb-3">
-                    <label class="form-label">ملاحظات (اختياري)</label>
-                    <textarea id="itemNotes" class="form-control" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+                    <label class="form-label fw-bold">تاريخ الخروج <span class="text-danger">*</span></label>
+                    <input type="date" id="itemExitDate" class="form-control" value="${today}" max="${today}">
+                    <small class="form-text text-muted">
+                        <i class="fas fa-info-circle"></i> افتراضياً: اليوم. يمكن اختيار تاريخ سابق.
+                    </small>
+                </div>
+                <div class="col-12 mb-3" id="backdateReasonContainer" style="display: none;">
+                    <label class="form-label fw-bold text-warning">
+                        <i class="fas fa-exclamation-triangle"></i> سبب التسجيل بتاريخ سابق <span class="text-danger">*</span>
+                    </label>
+                    <textarea id="itemBackdateReason" class="form-control" rows="2" 
+                              placeholder="مثال: تم التقطيع أمس ولكن تم التسجيل اليوم بسبب..."></textarea>
+                    <small class="form-text text-danger">
+                        يجب إدخال سبب واضح للتسجيل بتاريخ سابق (يحفظ في سجل الطلب)
+                    </small>
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label fw-bold">ملاحظات إضافية (اختياري)</label>
+                    <textarea id="itemNotes" class="form-control" rows="2" placeholder="أي ملاحظات إضافية..."></textarea>
                 </div>
             </div>
         `,
+        width: '600px',
         showCancelButton: true,
         confirmButtonColor: '#28a745',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'إكمال',
-        cancelButtonText: 'إلغاء',
+        confirmButtonText: '<i class="fas fa-check"></i> إكمال',
+        cancelButtonText: '<i class="fas fa-times"></i> إلغاء',
+        didOpen: () => {
+            // عند فتح النافذة، راقب تغيير التاريخ
+            const exitDateInput = document.getElementById('itemExitDate');
+            const reasonContainer = document.getElementById('backdateReasonContainer');
+            
+            exitDateInput.addEventListener('change', function() {
+                const selectedDate = new Date(this.value);
+                const todayDate = new Date(today);
+                
+                // إذا كان التاريخ المختار أقل من اليوم، أظهر حقل السبب
+                if (selectedDate < todayDate) {
+                    reasonContainer.style.display = 'block';
+                    reasonContainer.classList.add('alert', 'alert-warning');
+                } else {
+                    reasonContainer.style.display = 'none';
+                    reasonContainer.classList.remove('alert', 'alert-warning');
+                }
+            });
+        },
         preConfirm: () => {
-            const cutter = document.getElementById('itemCutter').value;
-            const permit = document.getElementById('itemPermit').value;
-            const receiver = document.getElementById('itemReceiver').value;
-            const notes = document.getElementById('itemNotes').value;
+            const cutter = document.getElementById('itemCutter').value.trim();
+            const permit = document.getElementById('itemPermit').value.trim();
+            const receiver = document.getElementById('itemReceiver').value.trim();
+            const notes = document.getElementById('itemNotes').value.trim();
+            const exitDate = document.getElementById('itemExitDate').value;
+            const backdateReason = document.getElementById('itemBackdateReason').value.trim();
 
+            // التحقق من البيانات الأساسية
             if (!cutter || !permit || !receiver) {
-                Swal.showValidationMessage('يجب ملء جميع البيانات المطلوبة');
+                Swal.showValidationMessage('يجب ملء جميع البيانات المطلوبة (القصاص، الإذن، المستلم)');
+                return false;
+            }
+
+            // التحقق من سبب التسجيل بتاريخ سابق
+            const selectedDate = new Date(exitDate);
+            const todayDate = new Date(today);
+            if (selectedDate < todayDate && !backdateReason) {
+                Swal.showValidationMessage('يجب إدخال سبب واضح للتسجيل بتاريخ سابق');
                 return false;
             }
 
@@ -588,11 +639,23 @@ function completeItem(itemId) {
                 cutter_name: cutter,
                 permit_number: permit,
                 receiver_name: receiver,
-                notes: notes
+                notes: notes,
+                exit_date: exitDate,
+                backdate_reason: backdateReason
             };
         }
     }).then((result) => {
         if (result.isConfirmed) {
+            // عرض رسالة تحميل
+            Swal.fire({
+                title: 'جاري الإكمال...',
+                text: 'يرجى الانتظار',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
             fetch(`{% url 'cutting:complete_item' 0 %}`.replace('0', itemId), {
                 method: 'POST',
                 headers: {
@@ -604,8 +667,13 @@ function completeItem(itemId) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    Swal.fire('تم!', 'تم إكمال العنصر بنجاح', 'success')
-                        .then(() => location.reload());
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم بنجاح!',
+                        text: 'تم إكمال العنصر وتسجيل جميع البيانات',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => location.reload());
                 } else {
                     Swal.fire('خطأ!', data.message, 'error');
                 }

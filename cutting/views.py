@@ -381,6 +381,7 @@ def update_cutting_item(request, pk):
 @login_required
 def complete_cutting_item(request, pk):
     """إكمال عنصر التقطيع"""
+    from datetime import datetime, date
     item = get_object_or_404(CuttingOrderItem, pk=pk)
     
     if request.method == 'POST':
@@ -391,6 +392,8 @@ def complete_cutting_item(request, pk):
             permit_number = data.get('permit_number')
             receiver_name = data.get('receiver_name')
             notes = data.get('notes', '')
+            exit_date_str = data.get('exit_date')  # تاريخ الخروج
+            backdate_reason = data.get('backdate_reason', '')  # سبب التسجيل بتاريخ سابق
             
             if not all([cutter_name, permit_number, receiver_name]):
                 return JsonResponse({
@@ -398,12 +401,37 @@ def complete_cutting_item(request, pk):
                     'message': 'يجب ملء جميع البيانات المطلوبة'
                 })
             
+            # معالجة تاريخ الخروج
+            exit_date = None
+            if exit_date_str:
+                try:
+                    exit_date = datetime.strptime(exit_date_str, '%Y-%m-%d').date()
+                    # التحقق من أن التاريخ ليس في المستقبل
+                    if exit_date > date.today():
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'لا يمكن اختيار تاريخ في المستقبل'
+                        })
+                    # إذا كان التاريخ سابق، يجب إدخال السبب
+                    if exit_date < date.today() and not backdate_reason:
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'يجب إدخال سبب التسجيل بتاريخ سابق'
+                        })
+                except ValueError:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'تنسيق تاريخ غير صحيح'
+                    })
+            
             item.mark_as_completed(
                 cutter_name=cutter_name,
                 permit_number=permit_number,
                 receiver_name=receiver_name,
                 user=request.user,
-                notes=notes
+                notes=notes,
+                exit_date=exit_date,
+                backdate_reason=backdate_reason
             )
             
             return JsonResponse({
@@ -500,6 +528,7 @@ def bulk_update_items(request, order_id):
 @login_required
 def bulk_complete_items(request, order_id):
     """إكمال مجمع لعناصر أمر التقطيع المختارة"""
+    from datetime import datetime, date
     cutting_order = get_object_or_404(CuttingOrder, pk=order_id)
     
     if request.method == 'POST':
@@ -510,6 +539,8 @@ def bulk_complete_items(request, order_id):
             permit_number = data.get('permit_number')
             receiver_name = data.get('receiver_name')
             item_ids = data.get('item_ids', [])  # IDs العناصر المختارة
+            exit_date_str = data.get('exit_date')  # تاريخ الخروج
+            backdate_reason = data.get('backdate_reason', '')  # سبب التسجيل بتاريخ سابق
             
             if not all([cutter_name, permit_number, receiver_name]):
                 return JsonResponse({
@@ -522,6 +553,27 @@ def bulk_complete_items(request, order_id):
                     'success': False,
                     'message': 'يجب اختيار عنصر واحد على الأقل'
                 })
+            
+            # معالجة تاريخ الخروج
+            exit_date = None
+            if exit_date_str:
+                try:
+                    exit_date = datetime.strptime(exit_date_str, '%Y-%m-%d').date()
+                    if exit_date > date.today():
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'لا يمكن اختيار تاريخ في المستقبل'
+                        })
+                    if exit_date < date.today() and not backdate_reason:
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'يجب إدخال سبب التسجيل بتاريخ سابق'
+                        })
+                except ValueError:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'تنسيق تاريخ غير صحيح'
+                    })
             
             # التحقق من أن جميع العناصر المختارة معلقة
             items_to_complete = cutting_order.items.filter(id__in=item_ids)
@@ -541,7 +593,9 @@ def bulk_complete_items(request, order_id):
                     cutter_name=cutter_name,
                     permit_number=permit_number,
                     receiver_name=receiver_name,
-                    user=request.user
+                    user=request.user,
+                    exit_date=exit_date,
+                    backdate_reason=backdate_reason
                 )
                 completed_count += 1
             

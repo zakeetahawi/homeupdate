@@ -33,20 +33,44 @@ def pending_transfers(request):
         # مسؤول المخزون يرى فقط التحويلات الواردة لمستودعاته
         managed_warehouses = Warehouse.objects.filter(manager=user)
         
-        pending_transfers = StockTransfer.objects.filter(
-            to_warehouse__in=managed_warehouses,
-            status__in=['approved', 'in_transit']
-        ).select_related('from_warehouse', 'to_warehouse', 'created_by').order_by('-transfer_date')[:10]
+        # إذا كان في مجموعة مسؤول مخزون وليس لديه مستودعات محددة، يرى جميع التحويلات
+        is_in_warehouse_group = user.groups.filter(
+            name__in=['مسؤول مخزون', 'مسؤول مخازن', 'Warehouse Manager', 'مسؤول مستودع']
+        ).exists()
         
-        pending_count = StockTransfer.objects.filter(
-            to_warehouse__in=managed_warehouses,
-            status__in=['approved', 'in_transit']
-        ).count()
+        if managed_warehouses.exists():
+            # لديه مستودعات محددة
+            pending_transfers = StockTransfer.objects.filter(
+                to_warehouse__in=managed_warehouses,
+                status__in=['approved', 'in_transit']
+            ).select_related('from_warehouse', 'to_warehouse', 'created_by').order_by('-transfer_date')[:10]
+            
+            pending_count = StockTransfer.objects.filter(
+                to_warehouse__in=managed_warehouses,
+                status__in=['approved', 'in_transit']
+            ).count()
+        elif is_in_warehouse_group:
+            # في مجموعة مسؤول مخزون بدون مستودعات محددة - يرى جميع التحويلات
+            pending_transfers = StockTransfer.objects.filter(
+                status__in=['approved', 'in_transit']
+            ).select_related('from_warehouse', 'to_warehouse', 'created_by').order_by('-transfer_date')[:10]
+            
+            pending_count = StockTransfer.objects.filter(
+                status__in=['approved', 'in_transit']
+            ).count()
+        else:
+            # ليس لديه صلاحيات
+            pending_transfers = StockTransfer.objects.none()
+            pending_count = 0
     
     # التحقق إذا كان المستخدم مسؤول مخزن
     is_warehouse_manager = False
     if not user.is_superuser:
-        is_warehouse_manager = Warehouse.objects.filter(manager=user).exists()
+        # التحقق من كونه مدير مستودع أو عضو في مجموعة مسؤول مخزون
+        is_warehouse_manager = (
+            Warehouse.objects.filter(manager=user).exists() or
+            user.groups.filter(name__in=['مسؤول مخزون', 'مسؤول مخازن', 'Warehouse Manager', 'مسؤول مستودع']).exists()
+        )
     
     return {
         'pending_transfers_count': pending_count,
