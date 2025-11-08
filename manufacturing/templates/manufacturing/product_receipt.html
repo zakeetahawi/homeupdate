@@ -294,6 +294,19 @@
                                         <i class="fas fa-warehouse"></i>
                                         المستودع: {{ cutting_order.warehouse.name }}
                                     </p>
+                                    <p class="text-muted small mb-1">
+                                        <i class="fas fa-store"></i>
+                                        جهة التسليم: 
+                                        <span class="badge badge-info">
+                                            {% if cutting_order.order.customer.branch %}
+                                                {{ cutting_order.order.customer.branch.name }}
+                                            {% elif cutting_order.order.branch %}
+                                                {{ cutting_order.order.branch.name }}
+                                            {% else %}
+                                                غير محدد
+                                            {% endif %}
+                                        </span>
+                                    </p>
                                 </div>
                                 <div class="col-md-6">
                                     <p class="text-muted small mb-1">
