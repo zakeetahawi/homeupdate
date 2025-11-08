@@ -117,25 +117,74 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
             user_warehouses = self.get_user_warehouses()
             queryset = queryset.filter(warehouse__in=user_warehouses)
 
-        # البحث
+        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
+                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة كأولوية
                 Q(cutting_code__icontains=search) |
                 Q(order__contract_number__icontains=search) |
                 Q(order__customer__name__icontains=search) |
-                Q(order__customer__phone__icontains=search)
+                Q(order__customer__phone__icontains=search) |
+                Q(order__order_number__icontains=search)  # إضافة البحث برقم الطلب
             )
 
-        # فلترة حسب الحالة
+        # فلترة حسب الحالة - تعمل فقط عند الضغط على زر البحث
         status = self.request.GET.get('status')
-        if status:
+        submit_search = self.request.GET.get('submit_search')  # للتحقق من ضغط زر البحث
+        
+        if submit_search and status:
+            # فقط عند الضغط على زر البحث وتحديد حالة، قم بالفلترة
             queryset = queryset.filter(status=status)
         else:
-            # لموظفي المستودع: عرض الطلبات غير المكتملة فقط (إذا لم يتم تحديد حالة معينة)
+            # بشكل افتراضي، عرض جميع الأوامر المرتبطة بالمستودع
+            # المستخدم يرى كل شيء في المستودع عند الدخول الأول
             user = self.request.user
-            if hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
-                queryset = queryset.exclude(status='completed')
+            # عرض جميع الأوامر بشكل افتراضي للمستودعات
+            # لا يتم استبعاد الأوامر المكتملة عند الدخول الأول
+
+        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة كأولوية
+                Q(cutting_code__icontains=search) |
+                Q(order__contract_number__icontains=search) |
+                Q(order__customer__name__icontains=search) |
+                Q(order__customer__phone__icontains=search) |
+                Q(order__order_number__icontains=search)  # إضافة البحث برقم الطلب
+            )
+
+        # فلتر إضافي حسب تاريخ الإنشاء - يعمل فقط عند البحث
+        date_filter = self.request.GET.get('date_filter')
+        if date_filter and submit_search:
+            today = timezone.now().date()
+            if date_filter == 'today':
+                queryset = queryset.filter(created_at__date=today)
+            elif date_filter == 'yesterday':
+                yesterday = today - timezone.timedelta(days=1)
+                queryset = queryset.filter(created_at__date=yesterday)
+            elif date_filter == 'this_week':
+                week_start = today - timezone.timedelta(days=today.weekday())
+                queryset = queryset.filter(created_at__date__gte=week_start)
+            elif date_filter == 'this_month':
+                queryset = queryset.filter(created_at__year=today.year, created_at__month=today.month)
+
+        
+
+        # فلتر حسب نوع الطلب (تسليم المصنع/تسليم الفرع) - يعمل فقط عند البحث
+        order_type = self.request.GET.get('order_type')
+        if order_type and submit_search:
+            if order_type == 'factory':
+                queryset = queryset.filter(
+                    Q(order__selected_types__icontains='installation') |
+                    Q(order__selected_types__icontains='tailoring')
+                )
+            elif order_type == 'branch':
+                queryset = queryset.filter(
+                    Q(order__selected_types__icontains='products') |
+                    Q(order__selected_types__icontains='accessory')
+                )
 
         return queryset.order_by('-created_at')
 
@@ -155,12 +204,30 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        
+        
+        # حساب الإحصائيات
+        queryset = self.get_queryset()
+        pending_count = queryset.filter(status='pending').count()
+        in_progress_count = queryset.filter(status='in_progress').count()
+        completed_count = queryset.filter(status='completed').count()
+        partially_completed_count = queryset.filter(status='partially_completed').count()
+        cancelled_count = queryset.filter(status='cancelled').count()
+        
         context.update({
             'warehouses': self.get_user_warehouses(),
             'current_warehouse': self.kwargs.get('warehouse_id'),
             'status_choices': CuttingOrder.STATUS_CHOICES,
             'search_query': self.request.GET.get('search', ''),
             'current_status': self.request.GET.get('status', ''),
+            'current_date_filter': self.request.GET.get('date_filter', ''),
+            'current_order_type': self.request.GET.get('order_type', ''),
+            'pending_count': pending_count,
+            'in_progress_count': in_progress_count,
+            'completed_count': completed_count,
+            'partially_completed_count': partially_completed_count,
+            'cancelled_count': cancelled_count,
         })
         return context
 
@@ -198,14 +265,16 @@ class CompletedCuttingOrdersView(LoginRequiredMixin, ListView):
                 items__status='completed'
             ).exclude(status='completed').distinct()
 
-        # البحث
+        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
+                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة كأولوية
                 Q(cutting_code__icontains=search) |
                 Q(order__contract_number__icontains=search) |
                 Q(order__customer__name__icontains=search) |
-                Q(order__customer__phone__icontains=search)
+                Q(order__customer__phone__icontains=search) |
+                Q(order__order_number__icontains=search)  # إضافة البحث برقم الطلب
             )
 
         return queryset.order_by('-created_at')
@@ -719,14 +788,16 @@ class CuttingReceiptView(LoginRequiredMixin, ListView):
             Q(order__selected_types__icontains='manufacturing')
         ).distinct().order_by('-created_at')
 
-        # البحث
+        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
+                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة كأولوية
                 Q(cutting_code__icontains=search) |
                 Q(order__contract_number__icontains=search) |
                 Q(order__customer__name__icontains=search) |
-                Q(order__customer__phone__icontains=search)
+                Q(order__customer__phone__icontains=search) |
+                Q(order__order_number__icontains=search)  # إضافة البحث برقم الطلب
             )
 
         return queryset
