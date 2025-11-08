@@ -12,7 +12,7 @@
                 <div class="stat-card-icon">
                     <i class="fas fa-exclamation-triangle"></i>
                 </div>
-                <div class="stat-card-value">{{ active_alerts_count }}</div>
+                <div class="stat-card-value" id="activeAlertsCount">{{ active_alerts_count }}</div>
                 <div class="stat-card-title">تنبيهات نشطة</div>
             </div>
         </div>
@@ -343,3 +343,442 @@
     });
 </script>
 {% endblock %}
+
+<!-- Real-time Dashboard API -->
+<script>
+// Real-time updates for stock alerts
+class StockAlertsManager {
+    constructor() {
+        this.updateInterval = 30000; // 30 seconds
+        this.isUpdating = false;
+        this.init();
+    }
+
+    init() {
+        // Start updating after page load
+        setTimeout(() => {
+            this.startAutoUpdate();
+            this.setupEventListeners();
+        }, 1000);
+        
+        // Stop auto-updates when page is hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.stopAutoUpdate();
+            } else {
+                this.startAutoUpdate();
+            }
+        });
+    }
+
+    setupEventListeners() {
+        // Real-time updates for alert resolution
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.resolve-alert-btn')) {
+                const btn = e.target.closest('.resolve-alert-btn');
+                const alertId = btn.dataset.alertId;
+                this.resolveAlert(alertId);
+            }
+            
+            if (e.target.closest('#resolveAllBtn')) {
+                this.resolveSelectedAlerts();
+            }
+        });
+
+        // Filter changes
+        const filters = ['alert_type', 'status', 'priority', 'date_range'];
+        filters.forEach(filterId => {
+            const filterElement = document.getElementById(filterId);
+            if (filterElement) {
+                filterElement.addEventListener('change', () => {
+                    this.updateAlerts();
+                });
+            }
+        });
+    }
+
+    startAutoUpdate() {
+        if (this.isUpdating) return;
+        
+        this.isUpdating = true;
+        console.log('🔄Starting real-time updates...');
+        
+        // Update immediately
+        this.updateAlerts();
+        
+        // Set interval for periodic updates
+        this.updateIntervalId = setInterval(() => {
+            this.updateAlerts();
+        }, this.updateInterval);
+    }
+
+    stopAutoUpdate() {
+        this.isUpdating = false;
+        if (this.updateIntervalId) {
+            clearInterval(this.updateIntervalId);
+            this.updateIntervalId = null;
+        }
+        console.log('⏸️Stopped real-time updates');
+    }
+
+    async updateAlerts() {
+        if (!this.isUpdating) return;
+
+        try {
+            const response = await fetch('/inventory/api/stock-alerts/', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    this.updateUI(data);
+                    console.log('✅Stock alerts updated successfully');
+                }
+            }
+        } catch (error) {
+            console.error('❌Error fetching stock alerts:', error);
+        }
+    }
+
+    updateUI(data) {
+        // Update statistics cards
+        this.updateStatistics(data.stats);
+        
+        // Update alerts table
+        this.updateAlertsTable(data.alerts);
+        
+        // Show notifications for new alerts
+        this.checkForNewAlerts(data.alerts);
+    }
+
+    updateStatistics(stats) {
+        const updates = {
+            'activeAlertsCount': stats.total_count,
+            'lowStockAlertsCount': stats.by_type.low_stock,
+            'outOfStockAlertsCount': stats.by_type.out_of_stock,
+            'resolvedAlertsCount': stats.total_count - stats.total_count, // Will be updated properly
+        };
+
+        Object.keys(updates).forEach(key => {
+            const element = document.getElementById(key);
+            if (element) {
+                const oldValue = parseInt(element.textContent) || 0;
+                const newValue = updates[key];
+                
+                // Animate number change
+                if (oldValue !== newValue) {
+                    this.animateNumberChange(element, oldValue, newValue);
+                }
+            }
+        });
+    }
+
+    animateNumberChange(element, oldValue, newValue) {
+        element.classList.add('updating');
+        
+        // Simple fade and number change animation
+        element.style.opacity = '0.5';
+        setTimeout(() => {
+            element.textContent = newValue;
+            element.style.opacity = '1';
+            element.classList.remove('updating');
+            
+            // Add pulse effect
+            element.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                element.style.transform = 'scale(1)';
+            }, 200);
+        }, 300);
+    }
+
+    updateAlertsTable(alerts) {
+        const tbody = document.querySelector('table tbody');
+        if (!tbody) return;
+
+        // Store current alerts for comparison
+        const currentAlertIds = new Set();
+        document.querySelectorAll('table tbody tr[data-alert-id]').forEach(row => {
+            currentAlertIds.add(parseInt(row.dataset.alertId));
+        });
+
+        const newAlertIds = new Set(alerts.map(alert => alert.id));
+        
+        // Check for new alerts and show notifications
+        currentAlertIds.forEach(id => {
+            if (!newAlertIds.has(id)) {
+                this.showAlertRemovedNotification(id);
+            }
+        });
+
+        // Update or add alerts
+        alerts.forEach(alert => {
+            const existingRow = tbody.querySelector(`tr[data-alert-id="${alert.id}"]`);
+            
+            if (existingRow) {
+                // Update existing row
+                this.updateAlertRow(existingRow, alert);
+            } else {
+                // Add new row with animation
+                const newRow = this.createAlertRow(alert);
+                tbody.appendChild(newRow);
+                this.animateNewRow(newRow);
+            }
+        });
+
+        // Remove old alerts
+        currentAlertIds.forEach(id => {
+            if (!newAlertIds.has(id)) {
+                const row = tbody.querySelector(`tr[data-alert-id="${id}"]`);
+                if (row) {
+                    this.animateRowRemoval(row);
+                }
+            }
+        });
+    }
+
+    createAlertRow(alert) {
+        const urgencyClass = alert.priority === 'high' ? 'table-danger' : 
+                            alert.priority === 'medium' ? 'table-warning' : 'table-info';
+        
+        const statusBadge = alert.status === 'active' ? '<span class="badge bg-danger">نشط</span>' :
+                         alert.status === 'resolved' ? '<span class="badge bg-success">تم الحل</span>' :
+                         '<span class="badge bg-secondary">تم التجاهل</span>';
+        
+        const priorityBadge = alert.priority === 'high' ? '<span class="badge bg-danger">عالية</span>' :
+                             alert.priority === 'medium' ? '<span class="badge bg-warning">متوسطة</span>' :
+                             '<span class="badge bg-dark">منخفضة</span>';
+
+        const row = document.createElement('tr');
+        row.dataset.alertId = alert.id;
+        row.className = urgencyClass;
+        row.innerHTML = `
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="me-2">
+                        <i class="fas ${alert.alert_type === 'low_stock' ? 'fa-exclamation-triangle text-warning' : 
+                                  alert.alert_type === 'out_of_stock' ? 'fa-times-circle text-danger' : 
+                                  'fa-box text-info'}"></i>
+                    </div>
+                    <div>
+                        <strong>${alert.alert_type === 'low_stock' ? 'مخزون منخفض' : 
+                               alert.alert_type === 'out_of_stock' ? 'نفذ من المخزون' : 
+                               'فائض في المخزون'}</strong>
+                        <div class="text-muted small">${alert.title}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div>
+                    <strong>${alert.product.name}</strong>
+                    <div class="text-muted small">رمز: ${alert.product.code}</div>
+                </div>
+            </td>
+            <td>${priorityBadge}</td>
+            <td>
+                <div class="d-flex justify-content-between">
+                    <span><strong>${alert.current_balance}</strong></span>
+                    <small class="text-muted">/${alert.threshold_limit}</small>
+                </div>
+            </td>
+            <td>
+                <div class="small">${new Date(alert.created_at).toLocaleString('ar-SA')}</div>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <a href="/inventory/product/${alert.product.id}" 
+                       class="btn btn-outline-primary btn-sm" 
+                       title="عرض المنتج">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="/inventory/product/${alert.product.id}/transaction/create" 
+                       class="btn btn-outline-success btn-sm" 
+                       title="إضافة مخزون">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                    ${alert.status === 'active' ? `
+                        <button class="btn btn-outline-warning btn-sm resolve-alert-btn" 
+                                data-alert-id="${alert.id}" 
+                                title="حل التنبيه">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </td>
+        `;
+
+        return row;
+    }
+
+    updateAlertRow(row, alert) {
+        // Update the row content with new data
+        // Implementation for updating existing rows
+        const urgencyClass = alert.priority === 'high' ? 'table-danger' : 
+                            alert.priority === 'medium' ? 'table-warning' : 'table-info';
+        
+        row.className = urgencyClass;
+        // Update other fields as needed
+    }
+
+    animateNewRow(row) {
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(-20px)';
+        
+        setTimeout(() => {
+            row.style.transition = 'all 0.5s ease';
+            row.style.opacity = '1';
+            row.style.transform = 'translateX(0)';
+            
+            setTimeout(() => {
+                row.style.transition = '';
+            }, 500);
+        }, 100);
+    }
+
+    animateRowRemoval(row) {
+        row.style.transition = 'all 0.3s ease';
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(20px)';
+        
+        setTimeout(() => {
+            row.remove();
+        }, 300);
+    }
+
+    checkForNewAlerts(alerts) {
+        // Track new alerts and show browser notifications
+        const newHighPriorityAlerts = alerts.filter(alert => 
+            alert.priority === 'high' && 
+            (new Date(alert.created_at) > (new Date(Date.now() - 60000))) // Last 60 seconds
+        );
+
+        newHighPriorityAlerts.forEach(alert => {
+            this.showBrowserNotification(alert);
+        });
+    }
+
+    showBrowserNotification(alert) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            const notification = new Notification(alert.title, {
+                body: alert.message,
+                icon: '/static/img/alert-icon.png',
+                tag: `stock-alert-${alert.id}`,
+                requireInteraction: true
+            });
+
+            notification.onclick = () => {
+                window.focus();
+                window.open(`/inventory/product/${alert.product.id}`, '_blank');
+            };
+        }
+    }
+
+    showAlertRemovedNotification(alertId) {
+        console.log(`🗑️ Alert ${alertId} was resolved or removed`);
+    }
+
+    async resolveAlert(alertId) {
+        try {
+            const response = await fetch(`/inventory/api/alert/${alertId}/resolve/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': this.getCsrfToken(),
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Show success message
+                    this.showToast('✅', data.message, 'success');
+                    
+                    // Update immediately without waiting for next auto-update
+                    setTimeout(() => this.updateAlerts(), 1000);
+                } else {
+                    this.showToast('❌', data.message, 'error');
+                }
+            }
+        } catch (error) {
+            console.error('Error resolving alert:', error);
+            this.showToast('❌', 'حدث خطأ أثناء حل التنبيه', 'error');
+        }
+    }
+
+    async resolveSelectedAlerts() {
+        const checkboxes = document.querySelectorAll('input[name="selected_alerts"]:checked');
+        const alertIds = Array.from(checkboxes).map(cb => cb.value);
+
+        if (alertIds.length === 0) {
+            this.showToast('⚠️', 'يرجى اختيار تنبيه واحد على الأقل', 'warning');
+            return;
+        }
+
+        const resolvedCount = await Promise.all(
+            alertIds.map(id => this.resolveAlert(id))
+        );
+
+        this.showToast('✅', `تم حل ${alertIds.length} تنبيه بنجاح`, 'success');
+    }
+
+    showToast(icon, message, type = 'info') {
+        // Simple toast implementation using SweetAlert2 if available
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                icon: type === 'success' ? 'success' : type === 'error' ? 'error' : 'info',
+                title: message
+            });
+        }
+    }
+
+    getCsrfToken() {
+        // Get CSRF token from cookies (Django way)
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+}
+
+// Initialize the alerts manager when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    window.stockAlertsManager = new StockAlertsManager();
+    
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+});
+
+// Export for external access
+window.StockAlertsManager = StockAlertsManager;
+</script>
+
+<style>
+.updating {
+    animation: pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+</style>

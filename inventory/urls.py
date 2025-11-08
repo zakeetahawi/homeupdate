@@ -34,6 +34,7 @@ from .views_stock_analysis import (
     product_stock_movement, warehouse_stock_analysis,
     stock_movement_summary, stock_discrepancy_report
 )
+from . import api_views
 
 app_name = 'inventory'
 
@@ -144,5 +145,20 @@ urlpatterns = [
     path('api/product-stock/', get_product_stock, name='api_product_stock'),
     path('api/similar-products/', get_similar_products, name='api_similar_products'),
     path('api/pending-transfers/', get_pending_transfers_for_warehouse, name='api_pending_transfers'),
+
+    # Real-time API Endpoints
+    path('api/dashboard-stats/', api_views.dashboard_stats_api, name='dashboard_stats_api'),
+    path('api/product/<int:product_id>/stock-info/', api_views.product_stock_info_api, name='product_stock_info_api'),
+    path('api/stock-alerts/', api_views.stock_alerts_api, name='stock_alerts_api'),
+    path('api/alert/<int:alert_id>/resolve/', api_views.resolve_alert_api, name='resolve_alert_api'),
+    path('api/warehouse-stock-summary/', api_views.warehouse_stock_summary_api, name='warehouse_stock_summary_api'),
+    path('api/warehouse/<int:warehouse_id>/stock-summary/', api_views.warehouse_stock_summary_api, name='warehouse_stock_summary_id_api'),
+    path('api/category-stock-analysis/', api_views.category_stock_analysis_api, name='category_stock_analysis_api'),
+    path('api/notifications/count/', api_views.get_stock_notifications_count, name='stock_notifications_count_api'),
+    
+    # Advanced Analytics API Endpoints
+    path('api/inventory-value-report/', api_views.inventory_value_report_api, name='inventory_value_report_api'),
+    path('api/stock-turnover-analysis/', api_views.stock_turnover_analysis_api, name='stock_turnover_analysis_api'),
+    path('api/reorder-recommendations/', api_views.reorder_recommendations_api, name='reorder_recommendations_api'),
 ]
 

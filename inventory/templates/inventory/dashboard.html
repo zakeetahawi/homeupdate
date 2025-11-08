@@ -111,9 +111,10 @@
             <div class="icon-card-subtitle">إدارة أوامر التقطيع والخصم</div>
         </a>
 
-        <a href="{% url 'inventory:alert_list' %}" class="icon-card">
+        <a href="{% url 'inventory:alert_list' %}" class="icon-card alert-card">
             <div class="icon-card-icon" style="color: #e74a3b;">
                 <i class="fas fa-bell"></i>
+                <span class="alert-count" id="alertCount">0</span>
             </div>
             <div class="icon-card-title">التنبيهات</div>
             <div class="icon-card-subtitle">تنبيهات المخزون</div>
@@ -150,13 +151,13 @@
         
         <div class="stat-card">
             <div class="stat-card-icon">
-                <i class="fas fa-tags"></i>
+                <i class="fas fa-bell"></i>
             </div>
             <div class="stat-card-content">
-                <div class="stat-card-title">التصنيفات</div>
-                <div class="stat-card-value">{{ total_categories }}</div>
+                <div class="stat-card-title">التنبيهات النشطة</div>
+                <div class="stat-card-value" id="activeAlertsCount">0</div>
                 <div class="stat-card-change positive">
-                    <i class="fas fa-arrow-up"></i> 3% منذ الشهر الماضي
+                    <i class="fas fa-arrow-up"></i> آخر تحديث: الآن
                 </div>
             </div>
         </div>
@@ -329,6 +330,536 @@
         inData: [{% for value in stock_movement_in %}{{ value }},{% endfor %}],
         outData: [{% for value in stock_movement_out %}{{ value }},{% endfor %}]
     };
+
+    // رسم بياني للمخزون حسب الفئة
+    const stockByCategoryChart = document.getElementById('stockByCategoryChart');
+    if (stockByCategoryChart) {
+        new Chart(stockByCategoryChart, {
+            type: 'bar',
+            data: {
+                labels: stockByCategoryData.labels,
+                datasets: [{
+                    label: 'الكمية في المخزون',
+                    data: stockByCategoryData.data,
+                    backgroundColor: [
+                        'rgba(78, 115, 223, 0.8)',
+                        'rgba(28, 200, 138, 0.8)',
+                        'rgba(54, 185, 204, 0.8)',
+                        'rgba(246, 194, 62, 0.8)',
+                        'rgba(231, 74, 59, 0.8)',
+                        'rgba(133, 135, 150, 0.8)',
+                        'rgba(111, 66, 193, 0.8)',
+                        'rgba(253, 126, 20, 0.8)',
+                        'rgba(32, 201, 151, 0.8)',
+                        'rgba(255, 99, 132, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(78, 115, 223, 1)',
+                        'rgba(28, 200, 138, 1)',
+                        'rgba(54, 185, 204, 1)',
+                        'rgba(246, 194, 62, 1)',
+                        'rgba(231, 74, 59, 1)',
+                        'rgba(133, 135, 150, 1)',
+                        'rgba(111, 66, 193, 1)',
+                        'rgba(253, 126, 20, 1)',
+                        'rgba(32, 201, 151, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // رسم بياني لحركة المخزون
+    const stockMovementChart = document.getElementById('stockMovementChart');
+    if (stockMovementChart) {
+        new Chart(stockMovementChart, {
+            type: 'line',
+            data: {
+                labels: stockMovementData.labels,
+                datasets: [
+                    {
+                        label: 'إدخال',
+                        data: stockMovementData.inData,
+                        backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                        borderColor: 'rgba(28, 200, 138, 1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: 'rgba(28, 200, 138, 1)',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: 'rgba(28, 200, 138, 1)',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    },
+                    {
+                        label: 'إخراج',
+                        data: stockMovementData.outData,
+                        backgroundColor: 'rgba(231, 74, 59, 0.1)',
+                        borderColor: 'rgba(231, 74, 59, 1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: 'rgba(231, 74, 59, 1)',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: 'rgba(231, 74, 59, 1)',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: 13
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleFont: {
+                            size: 14
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.parsed.y + ' وحدة';
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+    }
 </script>
-<script src="{% static 'js/inventory-dashboard.js' %}"></script>
+<!-- Real-time Dashboard -->
+<script>
+class InventoryDashboardManager {
+    constructor() {
+        this.updateInterval = 15000; // 15 seconds
+        this.isUpdating = false;
+        this.init();
+    }
+
+    init() {
+        // Start updating after page load
+        setTimeout(() => {
+            this.startAutoUpdate();
+            this.setupEventListeners();
+        }, 1000);
+        
+        // Stop auto-updates when page is hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.stopAutoUpdate();
+            } else {
+                this.startAutoUpdate();
+            }
+        });
+    }
+
+    setupEventListeners() {
+        // Auto-refresh on filter changes
+        const filterElements = document.querySelectorAll('.dashboard-filters select, .dashboard-filters input');
+        filterElements.forEach(element => {
+            element.addEventListener('change', () => {
+                this.updateDashboard();
+            });
+        });
+    }
+
+    startAutoUpdate() {
+        if (this.isUpdating) return;
+        
+        this.isUpdating = true;
+        console.log('🔄Starting dashboard real-time updates...');
+        
+        // Update immediately
+        this.updateDashboard();
+        
+        // Set interval for periodic updates
+        this.updateIntervalId = setInterval(() => {
+            this.updateDashboard();
+        }, this.updateInterval);
+    }
+
+    stopAutoUpdate() {
+        this.isUpdating = false;
+        if (this.updateIntervalId) {
+            clearInterval(this.updateIntervalId);
+            this.updateIntervalId = null;
+        }
+        console.log('⏸️Stopped dashboard updates');
+    }
+
+    async updateDashboard() {
+        if (!this.isUpdating) return;
+
+        try {
+            const response = await fetch('/inventory/api/dashboard-stats/', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    this.updateDashboardUI(data);
+                    console.log('✅Dashboard updated successfully');
+                }
+            }
+        } catch (error) {
+            console.error('❌Error fetching dashboard data:', error);
+        }
+    }
+
+    updateDashboardUI(data) {
+        // Update statistics cards
+        this.updateStatsCards(data.stats);
+        
+        // Update recent alerts
+        this.updateAlertsList(data.recent_alerts);
+        
+        // Update notifications
+        this.updateNotifications(data.notifications);
+        
+        // Update unread count in header
+        this.updateUnreadCount(data.unread_count);
+    }
+
+    updateStatsCards(stats) {
+        const updates = {
+            'totalProducts': stats.total_products,
+            'lowStockCount': stats.low_stock_count,
+            'outOfStockCount': stats.out_of_stock_count,
+            'totalValue': stats.total_value || 0,
+            'activeAlertsCount': stats.active_alerts_count,
+        };
+
+        Object.keys(updates).forEach(key => {
+            const element = document.getElementById(key) || 
+                              document.querySelector(`.${key}`) ||
+                              document.querySelector(`[data-stat="${key}"]`);
+                              
+            if (element) {
+                const elementValue = element.querySelector('.stat-card-value');
+                if (elementValue) {
+                    const oldValue = parseFloat(elementValue.textContent) || 0;
+                    const newValue = parseFloat(updates[key]);
+                    
+                    if (oldValue !== newValue) {
+                        this.animateValueChange(elementValue, oldValue, newValue);
+                    }
+                }
+            }
+        });
+    }
+
+    updateAlertsList(alerts) {
+        const alertsContainer = document.getElementById('recentAlertsList') ||
+                            document.querySelector('.recent-alerts-placeholder');
+        
+        if (!alertsContainer) return;
+
+        const containerTitle = alertsContainer.querySelector('.container-title') ||
+                                 alertsContainer.querySelector('h4');
+        
+        // Show alerts if any exist
+        if (alerts.length > 0) {
+            containerTitle.innerHTML += ` <span class="badge bg-danger ms-2">${alerts.length}</span>`;
+            
+            // Update alerts list or create placeholder
+            const alertsList = alertsContainer.querySelector('.alerts-list');
+            
+            if (alertsList) {
+                alertsList.innerHTML = alerts.slice(0, 5).map(alert => `
+                    <div class="alert-item alert-priority-${alert.priority}">
+                        <div class="alert-info">
+                            <strong>${alert.title}</strong>
+                            <small class="text-muted">${alert.product.name}</small>
+                        </div>
+                        <div class="alert-actions">
+                            <a href="/inventory/product/${alert.product.id}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> عرض
+                            </a>
+                            <button class="btn btn-sm btn-success" 
+                                    onclick="resolveAlert(${alert.id})">
+                                <i class="fas fa-check"></i> حل
+                            </button>
+                        </div>
+                        <div class="alert-time">${new Date(alert.created_at).toLocaleTimeString('ar-SA')}</div>
+                    </div>
+                `).join('');
+            }
+            
+            containerTitle.style.display = 'block';
+        } else {
+            containerTitle.innerHTML = 'أحدث تنبيهات مؤخراً';
+            
+            if (alertsList) {
+                alertsList.innerHTML = '<p class="text-muted">لا يوجد تنبيهات حالياً</p>';
+            }
+        }
+    }
+
+    updateNotifications(notifications) {
+        const notificationsContainer = document.getElementById('dashboardNotifications');
+        
+        if (!notificationsContainer) return;
+
+        if (notifications.length > 0) {
+            notificationsContainer.innerHTML = notifications.slice(0, 3).map(notification => `
+                <div class="notification-item">
+                    <div class="notification-content">
+                        <div class="notification-title">${notification.title}</div>
+                        <div class="notification-message">${notification.message}</div>
+                        <div class="notification-time">${new Date(notification.created_at).toLocaleTimeString('ar-SA')}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            notificationsContainer.style.display = 'block';
+        } else {
+            notificationsContainer.innerHTML = '<p class="text-muted">لا يوجد إشعارات حالياً</p>';
+            notificationsContainer.style.display = 'none';
+        }
+    }
+
+    updateUnreadCount(count) {
+        const unreadCountElement = document.getElementById('dashboardUnreadCount');
+        if (unreadCountElement) {
+            if (count > 0) {
+                unreadCountElement.textContent = count;
+                unreadCountElement.style.display = 'block';
+                unreadCountElement.classList.add('animate-pulse');
+                
+                setTimeout(() => {
+                    unreadCountElement.classList.remove('animate-pulse');
+                }, 2000);
+            } else {
+                unreadCountElement.style.display = 'none';
+            }
+        }
+    }
+
+    animateValueChange(element, oldValue, newValue) {
+        element.style.transition = 'all 0.6s ease';
+        
+        element.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+            element.textContent = newValue.toLocaleString();
+            element.style.transform = 'scale(1)';
+            element.style.transition = '';
+        }, 200);
+    }
+
+    async resolveAlert(alertId) {
+        try {
+            const response = await fetch(`/inventory/api/alert/${alertId}/resolve/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': this.getCsrfToken(),
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Show success message
+                    this.showToast('✅', data.message, 'success');
+                    
+                    // Update immediately
+                    setTimeout(() => this.updateDashboard(), 500);
+                } else {
+                    this.showToast('❌', data.message, 'error');
+                }
+            }
+        } catch (error) {
+            console.error('Error resolving alert:', error);
+            this.showToast('❌', 'حدث خطأ أثناء حل التنبيه', 'error');
+        }
+    }
+
+    showToast(icon, message, type = 'info') {
+        console.log(`🔔 ${icon} ${message}`);
+    }
+
+    getCsrfToken() {
+        return document.cookie.match('csrftoken[^;]+ ')[0])[1] || null;
+    }
+}
+
+// Initialize the dashboard manager when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    window.inventoryDashboardManager = new InventoryDashboardManager();
+});
+</script>
+
+<style>
+.animate-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.alert-card .icon-card-icon {
+    position: relative;
+}
+
+.alert-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.recent-alerts-placeholder {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.alert-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    border-left: 3px solid;
+    margin-bottom: 10px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.alert-priority-high {
+    border-left-color: #dc3545;
+}
+
+.alert-priority-medium {
+    border-left-color: #ffc107;
+}
+
+.alert-priority-low {
+    border-left-color: #17a2b8;
+}
+
+.alert-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.alert-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.alert-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+</style>
 {% endblock %}

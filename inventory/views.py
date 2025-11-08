@@ -67,19 +67,43 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
             status__in=['draft', 'pending']
         ).count()
 
-        # بيانات الرسم البياني للمخزون حسب الفئة - محسن جداً
-        # استعلام مبسط للفئات مع عدد المنتجات فقط
+        # بيانات الرسم البياني للمخزون حسب الفئة - حساب دقيق وكامل
         category_stats = Category.objects.annotate(
             product_count=Count('products')
-        ).filter(product_count__gt=0)[:10]
+        ).filter(product_count__gt=0).order_by('-product_count')[:10]
         
-        context['stock_by_category'] = [
-            {
+        stock_by_category = []
+        for cat in category_stats:
+            # حساب المخزون الفعلي لكل فئة باستخدام استعلام محسّن
+            # استخدام آخر رصيد لكل منتج من الـ transactions
+            latest_balance_subquery = StockTransaction.objects.filter(
+                product=OuterRef('pk')
+            ).order_by('-transaction_date').values('running_balance')[:1]
+            
+            category_products = Product.objects.filter(
+                category=cat
+            ).annotate(
+                stock_level=Subquery(latest_balance_subquery)
+            )
+            
+            # حساب المجموع الكلي للمخزون في الفئة
+            total_stock = 0
+            products_with_stock = 0
+            
+            for product in category_products:
+                stock = product.stock_level if product.stock_level else 0
+                if stock > 0:
+                    total_stock += stock
+                    products_with_stock += 1
+            
+            stock_by_category.append({
                 'name': cat.name,
-                'stock': cat.product_count * 10  # تقدير مبسط
-            }
-            for cat in category_stats
-        ]
+                'stock': int(total_stock),
+                'product_count': cat.product_count,
+                'products_with_stock': products_with_stock
+            })
+        
+        context['stock_by_category'] = stock_by_category
 
         # بيانات الرسم البياني لحركة المخزون - محسن جداً
         # الحصول على تواريخ آخر 7 أيام فقط (بدلاً من 30)
