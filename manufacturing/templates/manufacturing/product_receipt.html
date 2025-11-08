@@ -115,6 +115,33 @@
     .text-primary {
         color: #007bff !important;
     }
+    
+    /* تنسيق قائمة الأصناف */
+    .items-container {
+        max-height: 250px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 8px;
+    }
+    
+    .items-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .items-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .items-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    
+    .items-container::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
 </style>
 {% endblock %}
 
@@ -280,15 +307,52 @@
                                 </div>
                             </div>
                             
+                            <!-- عرض الأصناف -->
+                            <div class="border-top pt-2 mt-2 mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="text-primary mb-0">
+                                        <i class="fas fa-list"></i> الأصناف
+                                    </h6>
+                                    <span class="badge bg-info">{{ cutting_order.items.count }} صنف</span>
+                                </div>
+                                <div class="items-container">
+                                    {% for item in cutting_order.items.all %}
+                                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white rounded">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-box text-info me-2"></i>
+                                                <strong class="small">{{ item.order_item.product.name }}</strong>
+                                            </div>
+                                            <small class="text-muted d-block ms-4">
+                                                <i class="fas fa-balance-scale"></i>
+                                                {{ item.order_item.quantity|floatformat:2 }} {{ item.order_item.product.unit }}
+                                            </small>
+                                        </div>
+                                        <div>
+                                            {% if item.status == 'completed' %}
+                                            <span class="badge badge-success badge-sm">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                            {% elif item.status == 'in_progress' %}
+                                            <span class="badge badge-info badge-sm">
+                                                <i class="fas fa-cut"></i>
+                                            </span>
+                                            {% else %}
+                                            <span class="badge badge-warning badge-sm">
+                                                <i class="fas fa-clock"></i>
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
                             <div class="d-flex gap-2 mt-3">
                                 <button class="btn btn-sm btn-success" 
                                         onclick="startProductReceipt('{{ cutting_order.id }}', '{{ cutting_order.cutting_code }}', '{{ cutting_order.order.customer.name }}')">
                                     <i class="fas fa-plus"></i> استلام المنتج
                                 </button>
-                                <a href="{% url 'cutting:order_detail' cutting_order.id %}" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-eye"></i> عرض التفاصيل
-                                </a>
                             </div>
                         </div>
                     </div>
