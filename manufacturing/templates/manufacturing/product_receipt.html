@@ -221,7 +221,7 @@
                         {% for receipt in recent_receipts %}
                         <tr>
                             <td>
-                                <span class="badge badge-primary">{{ receipt.receipt_number }}</span>
+                                <span class="badge badge-primary text-white">{{ receipt.receipt_number }}</span>
                             </td>
                             <td>{{ receipt.cutting_order.cutting_code }}</td>
                             <td>{{ receipt.cutting_order.order.customer.name }}</td>
@@ -229,7 +229,7 @@
                             <td>{{ receipt.received_by_name }}</td>
                             <td>{{ receipt.receipt_date|date:"Y-m-d H:i" }}</td>
                             <td>
-                                <span class="badge badge-success">
+                                <span class="badge badge-success text-white">
                                     <i class="fas fa-check"></i> مستلم
                                 </span>
                             </td>
@@ -267,7 +267,7 @@
                                     <i class="fas fa-cut text-success"></i>
                                     {{ cutting_order.cutting_code }}
                                 </h6>
-                                <span class="badge badge-success">جاهز للاستلام</span>
+                                <span class="badge badge-success text-white">جاهز للاستلام</span>
                             </div>
                         </div>
                         <div class="card-body">
@@ -297,7 +297,7 @@
                                     <p class="text-muted small mb-1">
                                         <i class="fas fa-store"></i>
                                         جهة التسليم: 
-                                        <span class="badge badge-info">
+                                        <span class="badge badge-info text-white">
                                             {% if cutting_order.order.customer.branch %}
                                                 {{ cutting_order.order.customer.branch.name }}
                                             {% elif cutting_order.order.branch %}
@@ -326,7 +326,7 @@
                                     <h6 class="text-primary mb-0">
                                         <i class="fas fa-list"></i> الأصناف
                                     </h6>
-                                    <span class="badge bg-info">{{ cutting_order.items.count }} صنف</span>
+                                    <span class="badge bg-info text-white">{{ cutting_order.items.count }} صنف</span>
                                 </div>
                                 <div class="items-container">
                                     {% for item in cutting_order.items.all %}
@@ -343,15 +343,15 @@
                                         </div>
                                         <div>
                                             {% if item.status == 'completed' %}
-                                            <span class="badge badge-success badge-sm">
+                                            <span class="badge badge-success badge-sm text-white">
                                                 <i class="fas fa-check"></i>
                                             </span>
                                             {% elif item.status == 'in_progress' %}
-                                            <span class="badge badge-info badge-sm">
+                                            <span class="badge badge-info badge-sm text-white">
                                                 <i class="fas fa-cut"></i>
                                             </span>
                                             {% else %}
-                                            <span class="badge badge-warning badge-sm">
+                                            <span class="badge badge-warning badge-sm text-dark">
                                                 <i class="fas fa-clock"></i>
                                             </span>
                                             {% endif %}
