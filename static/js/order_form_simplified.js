@@ -1112,8 +1112,9 @@ function showPaymentModal() {
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label">المبلغ المدفوع:</label>
-                            <input type="number" id="paid-amount" class="form-control" min="0" value="0" step="0.01">
+                            <label class="form-label">المبلغ المدفوع: <span class="text-danger">*</span></label>
+                            <input type="number" id="paid-amount" class="form-control" min="0" step="0.01" placeholder="أدخل المبلغ المدفوع" required>
+                            <small class="form-text text-muted">يجب إدخال المبلغ المدفوع (يمكن أن يكون صفر إذا لم يتم الدفع بعد)</small>
                         </div>
                         
                         <div class="form-check mb-3">
@@ -1143,9 +1144,26 @@ function showPaymentModal() {
             }
 
             const invoiceNumber = document.getElementById('invoice-number').value.trim();
+            const paidAmountInput = document.getElementById('paid-amount');
+            const paidAmount = paidAmountInput.value.trim();
 
             if (!invoiceNumber) {
                 Swal.showValidationMessage('يجب إدخال رقم فاتورة رئيسي');
+                return false;
+            }
+
+            // التحقق من المبلغ المدفوع - يجب أن يكون قد تم إدخاله (حتى لو كان صفر)
+            if (paidAmount === '' || paidAmount === null || paidAmount === undefined) {
+                Swal.showValidationMessage('يجب إدخال المبلغ المدفوع ');
+                paidAmountInput.focus();
+                return false;
+            }
+
+            // التحقق من أن القيمة رقم صحيح وليس سالب
+            const paidAmountNumber = parseFloat(paidAmount);
+            if (isNaN(paidAmountNumber) || paidAmountNumber < 0) {
+                Swal.showValidationMessage('المبلغ المدفوع يجب أن يكون رقم صحيح وغير سالب');
+                paidAmountInput.focus();
                 return false;
             }
 

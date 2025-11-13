@@ -2037,10 +2037,11 @@ def installation_stats_api(request):
 
         # الطلبات المديونة
         try:
+            # حساب الطلبات التي لديها مبلغ متبقي (مديونية)
+            # نستخدم نفس المنطق المستخدم في debt_orders_list
             orders_with_debt = Order.objects.filter(
-                selected_types__icontains='installation',
-                total_amount__gt=F('paid_amount')
-            ).count()
+                Q(total_amount__gt=F('paid_amount')) | Q(paid_amount__isnull=True)
+            ).exclude(total_amount=0).count()
         except Exception as e:
             orders_with_debt = 0
             print(f"Error in debt calculation: {str(e)}")
@@ -2176,11 +2177,57 @@ def manage_customer_debt(request, order_id):
     )
 
     if request.method == 'POST':
+        # حفظ الحالة الأصلية قبل التعديل
+        was_paid_before = debt.is_paid
+        original_payment_date = debt.payment_date
+
         form = CustomerDebtForm(request.POST, instance=debt)
         if form.is_valid():
-            debt = form.save()
-            messages.success(request, 'تم تحديث مديونية العميل بنجاح')
-            return redirect('installations:dashboard')
+            debt = form.save(commit=False)
+
+            # إذا تم تحديد "تم الدفع" لأول مرة (لم يكن مدفوع من قبل أو لم يكن له تاريخ دفع)
+            if debt.is_paid and (not was_paid_before or not original_payment_date):
+                # تحديث تاريخ الدفع إذا لم يكن موجود
+                if not debt.payment_date:
+                    debt.payment_date = timezone.now()
+
+                # تسجيل الدفعة في جدول الدفعات
+                try:
+                    from orders.models import Payment
+
+                    # إنشاء ملاحظات الدفعة
+                    payment_notes = f'دفعة مديونية'
+                    if debt.payment_receiver_name:
+                        payment_notes += f' - المستلم: {debt.payment_receiver_name}'
+                    if debt.notes:
+                        payment_notes += f' - {debt.notes}'
+
+                    # إنشاء الدفعة
+                    # استخدام رقم الإيصال المُدخل في النموذج (وليس رقم الفاتورة من الطلب)
+                    # استخدام المستخدم الحالي (وليس اسم المستلم المُدخل)
+                    payment = Payment.objects.create(
+                        order=order,
+                        amount=debt.debt_amount,
+                        payment_method='cash',
+                        reference_number=debt.payment_receipt_number or '',  # رقم الإيصال المُدخل
+                        notes=payment_notes,
+                        created_by=request.user  # المستخدم الحالي الذي قام بتسجيل الدفعة
+                    )
+
+                    messages.success(request, f'✅ تم تسجيل الدفعة بمبلغ {debt.debt_amount} وتحديث الطلب بنجاح')
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+                    messages.error(request, f'❌ خطأ في تسجيل الدفعة: {str(e)}')
+                    # لا نحفظ المديونية إذا فشل تسجيل الدفعة
+                    return redirect('installations:manage_customer_debt', order_id=order.id)
+
+            debt.save()
+
+            if not debt.is_paid:
+                messages.success(request, 'تم تحديث مديونية العميل بنجاح')
+
+            return redirect('orders:order_detail_by_number', order_number=order.order_number)
     else:
         form = CustomerDebtForm(instance=debt)
 
@@ -2857,9 +2904,9 @@ def debt_orders_list(request):
     debt_orders_query = Order.objects.filter(
         Exists(unpaid_debts_subquery)
     ).select_related('customer', 'salesperson', 'branch').annotate(
-        debt_amount=F('total_amount') - F('paid_amount')
+        calculated_debt=F('total_amount') - F('paid_amount')
     )
-    
+
     # تطبيق الفلاتر
     if order_status_filter:
         debt_orders_query = debt_orders_query.filter(order_status=order_status_filter)
@@ -2877,9 +2924,9 @@ def debt_orders_list(request):
     # فلتر الشهر
     if month_filter:
         debt_orders_query = debt_orders_query.filter(created_at__month=month_filter)
-    
+
     # ترتيب حسب المبلغ المتبقي (الأعلى أولاً)
-    debt_orders_query = debt_orders_query.order_by('-debt_amount', '-created_at')
+    debt_orders_query = debt_orders_query.order_by('-calculated_debt', '-created_at')
     
     # ترقيم الصفحات
     paginator = Paginator(debt_orders_query, page_size)
@@ -2888,13 +2935,13 @@ def debt_orders_list(request):
     
     # حساب الإجماليات
     total_debt = debt_orders_query.aggregate(
-        total=models.Sum('debt_amount')
+        total=models.Sum('calculated_debt')
     )['total'] or 0
-    
+
     # إحصائيات حسب الحالة
     status_stats = debt_orders_query.values('order_status').annotate(
         count=Count('id'),
-        debt_sum=models.Sum('debt_amount')
+        debt_sum=models.Sum('calculated_debt')
     ).order_by('-debt_sum')
     
     # إعداد خيارات السنوات والشهور

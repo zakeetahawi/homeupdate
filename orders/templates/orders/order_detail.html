@@ -1857,7 +1857,7 @@
                             <th>المبلغ</th>
                             <th>طريقة الدفع</th>
                             <th>تاريخ الدفع</th>
-                            <th>رقم الفاتورة</th>
+                            <th>رقم المرجع</th>
                             <th>ملاحظات</th>
                             <th>تم الإنشاء بواسطة</th>
                             <th>الإجراءات</th>
@@ -1870,7 +1870,7 @@
                             <td>{{ payment.amount|clean_decimal_currency:currency_symbol }}</td>
                             <td>{{ payment.get_payment_method_display }}</td>
                             <td>{{ payment.payment_date|date:"Y-m-d H:i" }}</td>
-                            <td>{{ payment.order.invoice_number|default:"-" }}</td>
+                            <td>{{ payment.reference_number|default:"-" }}</td>
                             <td>{{ payment.notes|default:"-" }}</td>
                             <td>
                                 {% if payment.created_by %}
