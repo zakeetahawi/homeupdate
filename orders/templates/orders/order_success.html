@@ -526,13 +526,112 @@
         location.reload();
     }, 30000);
     {% endif %}
-    
-    // عرض خيار طباعة الفاتورة إذا تم الدفع
+
+    // عرض خيار إدخال رقم العقد للعقود الإلكترونية
     document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
+        const electronicContract = urlParams.get('electronic_contract');
+
+        // إذا كان عقد إلكتروني ولا يوجد رقم عقد، اطلب إدخاله
+        {% if not order.contract_number %}
+        if (electronicContract === '1') {
+            Swal.fire({
+                title: 'إدخال رقم العقد',
+                html: `
+                    <div class="text-start">
+                        <p class="mb-3">تم إنشاء العقد الإلكتروني بنجاح! الرجاء إدخال رقم العقد:</p>
+                        <input type="text" id="contract-number-input" class="form-control" placeholder="رقم العقد" required>
+                    </div>
+                `,
+                icon: 'info',
+                showCancelButton: false,
+                confirmButtonColor: '#28a745',
+                confirmButtonText: '<i class="fas fa-save me-2"></i>حفظ رقم العقد',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                customClass: {
+                    popup: 'swal2-rtl',
+                    confirmButton: 'btn btn-success btn-lg'
+                },
+                buttonsStyling: false,
+                preConfirm: () => {
+                    const contractNumber = document.getElementById('contract-number-input').value;
+                    if (!contractNumber || !contractNumber.trim()) {
+                        Swal.showValidationMessage('الرجاء إدخال رقم العقد');
+                        return false;
+                    }
+                    return contractNumber;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // حفظ رقم العقد عبر AJAX
+                    const contractNumber = result.value;
+
+                    Swal.fire({
+                        title: 'جاري الحفظ...',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    fetch(`/orders/{{ order.pk }}/update-contract-number/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({
+                            contract_number: contractNumber
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                title: 'تم الحفظ!',
+                                text: 'تم حفظ رقم العقد بنجاح',
+                                icon: 'success',
+                                confirmButtonText: 'حسناً',
+                                customClass: {
+                                    popup: 'swal2-rtl'
+                                }
+                            }).then(() => {
+                                // إعادة تحميل الصفحة لعرض رقم العقد
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'خطأ!',
+                                text: data.message || 'حدث خطأ أثناء حفظ رقم العقد',
+                                icon: 'error',
+                                confirmButtonText: 'حسناً',
+                                customClass: {
+                                    popup: 'swal2-rtl'
+                                }
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            title: 'خطأ!',
+                            text: 'حدث خطأ في الاتصال بالخادم',
+                            icon: 'error',
+                            confirmButtonText: 'حسناً',
+                            customClass: {
+                                popup: 'swal2-rtl'
+                            }
+                        });
+                    });
+                }
+            });
+        }
+        {% endif %}
+
         const showPrint = urlParams.get('show_print');
         const paidAmount = urlParams.get('paid_amount');
-        
+
         if (showPrint === '1' && paidAmount) {
             // إظهار حوار SweetAlert لطباعة الفاتورة
             Swal.fire({

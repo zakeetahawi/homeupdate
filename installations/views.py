@@ -3209,15 +3209,146 @@ def daily_schedule(request):
 
 
 @login_required
+def upcoming_installations_schedule(request):
+    """عرض التركيبات القادمة مع المديونيات"""
+    from accounts.models import SystemSettings
+
+    system_settings = SystemSettings.get_settings()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+
+    context = {
+        'currency_symbol': currency_symbol,
+    }
+
+    return render(request, 'installations/upcoming_installations_schedule.html', context)
+
+
+@login_required
+def api_upcoming_installations(request):
+    """API endpoint لجلب التركيبات القادمة مع المديونيات"""
+    from django.http import JsonResponse
+    from decimal import Decimal
+
+    date_str = request.GET.get('date', timezone.now().date().isoformat())
+    branch_id = request.GET.get('branch', '')
+    salesperson_id = request.GET.get('salesperson', '')
+    debt_status = request.GET.get('debt_status', '')
+
+    try:
+        selected_date = timezone.datetime.strptime(date_str, '%Y-%m-%d').date()
+    except:
+        selected_date = timezone.now().date()
+
+    # جلب التركيبات المجدولة لهذا اليوم
+    installations = InstallationSchedule.objects.filter(
+        scheduled_date=selected_date
+    ).exclude(
+        status='cancelled'
+    ).select_related(
+        'order', 'order__customer', 'order__salesperson', 'order__branch', 'team'
+    ).order_by('scheduled_time')
+
+    # تطبيق فلتر الفرع
+    if branch_id:
+        installations = installations.filter(order__branch_id=branch_id)
+
+    # تطبيق فلتر البائع
+    if salesperson_id:
+        installations = installations.filter(order__salesperson_id=salesperson_id)
+
+    # تجهيز البيانات
+    installations_data = []
+    total_debt = Decimal('0')
+    total_paid = Decimal('0')
+    with_debt_count = 0
+
+    for inst in installations:
+        order = inst.order
+        debt_amount = order.debt_amount if hasattr(order, 'debt_amount') else Decimal('0')
+        paid_amount = order.paid_amount if hasattr(order, 'paid_amount') else Decimal('0')
+        total_amount = order.total_amount if hasattr(order, 'total_amount') else Decimal('0')
+
+        # تطبيق فلتر حالة الدفع
+        if debt_status == 'with_debt' and debt_amount <= 0:
+            continue
+        elif debt_status == 'fully_paid' and debt_amount > 0:
+            continue
+
+        if debt_amount > 0:
+            with_debt_count += 1
+            total_debt += debt_amount
+
+        total_paid += paid_amount
+
+        installations_data.append({
+            'installation_id': inst.id,
+            'order_id': order.id,
+            'order_number': order.order_number,
+            'customer_name': order.customer.name,
+            'customer_phone': order.customer.phone if hasattr(order.customer, 'phone') else '',
+            'location_address': inst.location_address or '',
+            'scheduled_time': inst.scheduled_time.strftime('%H:%M') if inst.scheduled_time else '',
+            'invoice_number': order.invoice_number if hasattr(order, 'invoice_number') else '',
+            'contract_number': order.contract_number if hasattr(order, 'contract_number') else '',
+            'total_amount': float(total_amount),
+            'paid_amount': float(paid_amount),
+            'debt_amount': float(debt_amount),
+            'salesperson_name': order.salesperson.get_display_name() if order.salesperson else '',
+            'team_name': inst.team.name if inst.team else '',
+            'status_display': inst.get_status_display(),
+        })
+
+    stats = {
+        'total_count': len(installations_data),
+        'total_debt': float(total_debt),
+        'total_paid': float(total_paid),
+        'with_debt_count': with_debt_count,
+    }
+
+    return JsonResponse({
+        'installations': installations_data,
+        'stats': stats,
+    })
+
+
+@login_required
+def api_upcoming_installations_filters(request):
+    """API endpoint لجلب قوائم الفلاتر (الفروع والبائعين)"""
+    from django.http import JsonResponse
+    from accounts.models import Branch, Salesperson
+
+    # جلب الفروع
+    branches = Branch.objects.filter(is_active=True).values('id', 'name').order_by('name')
+
+    # جلب البائعين من نموذج Salesperson
+    salespersons = Salesperson.objects.filter(
+        is_active=True
+    ).order_by('name')
+
+    # تنسيق أسماء البائعين
+    salespersons_list = []
+    for sp in salespersons:
+        salespersons_list.append({
+            'id': sp.id,
+            'name': sp.get_display_name()
+        })
+
+    return JsonResponse({
+        'branches': list(branches),
+        'salespersons': salespersons_list,
+    })
+
+
+@login_required
 def print_daily_schedule(request):
     """طباعة الجدول اليومي للتركيبات"""
     # نفس منطق daily_schedule ولكن مع template مختلف للطباعة
     from django.db.models import Q
     from manufacturing.models import ManufacturingOrder
-    
+
     # نموذج الفلترة
     form = DailyScheduleForm(request.GET or None)
-    
+
     # استخراج قيم الفلاتر
     selected_date = request.GET.get('date', timezone.now().date().isoformat())
     status_filter = request.GET.get('status', '')

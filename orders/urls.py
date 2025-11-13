@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import dashboard_views
 from . import invoice_views
+from . import contract_views
 from .views import OrdersDashboardView
 
 app_name = 'orders'
@@ -36,6 +37,7 @@ urlpatterns = [
     path('<int:pk>/update/', views.order_update_redirect, name='order_update'),
     path('<int:pk>/delete/', views.order_delete_redirect, name='order_delete'),
     path('<int:pk>/invoice/', views.invoice_print_redirect, name='invoice_print_old'),
+    path('<int:pk>/update-contract-number/', views.update_contract_number, name='update_contract_number'),
     
     path('create/', views.order_create, name='order_create'),
 
@@ -80,4 +82,9 @@ urlpatterns = [
     path('order/<int:order_id>/preview/<int:template_id>/', invoice_views.preview_invoice, name='preview_invoice_template'),
     path('order/<int:order_id>/print/', invoice_views.print_invoice_with_template, name='print_invoice_template'),
     path('order/<int:order_id>/print/<int:template_id>/', invoice_views.print_invoice_with_template, name='print_invoice_with_template'),
+
+    # Contract Management URLs
+    path('order/<int:order_id>/contract/curtains/', contract_views.contract_curtains_manage, name='contract_curtains_manage'),
+    path('order/<int:order_id>/contract/curtains/data/', contract_views.contract_curtains_data, name='contract_curtains_data'),
+    path('order/<int:order_id>/contract/pdf/', contract_views.contract_pdf_view, name='contract_pdf_view'),
 ]

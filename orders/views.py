@@ -1,10 +1,12 @@
 import json
+import logging
 from django.http import JsonResponse, HttpResponse
 import re
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.db.models import Q, Sum, Count
 from django.core.paginator import Paginator
@@ -28,6 +30,8 @@ from inspections.models import Inspection
 from datetime import datetime, timedelta
 from django.db import models
 import traceback
+
+logger = logging.getLogger(__name__)
 from django.utils.translation import gettext_lazy as _
 class OrdersDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'orders/dashboard.html'
@@ -235,6 +239,52 @@ def order_success(request, pk):
     except Order.DoesNotExist:
         messages.error(request, 'الطلب غير موجود.')
         return redirect('orders:order_list')
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_contract_number(request, pk):
+    """تحديث رقم العقد للطلب"""
+    try:
+        order = Order.objects.get(pk=pk)
+
+        # التحقق من الصلاحيات
+        if not request.user.has_perm('orders.change_order'):
+            return JsonResponse({
+                'success': False,
+                'message': 'ليس لديك صلاحية لتعديل هذا الطلب'
+            }, status=403)
+
+        # قراءة البيانات
+        data = json.loads(request.body)
+        contract_number = data.get('contract_number', '').strip()
+
+        if not contract_number:
+            return JsonResponse({
+                'success': False,
+                'message': 'رقم العقد مطلوب'
+            }, status=400)
+
+        # تحديث رقم العقد
+        order.contract_number = contract_number
+        order.save(update_fields=['contract_number'])
+
+        return JsonResponse({
+            'success': True,
+            'message': 'تم حفظ رقم العقد بنجاح',
+            'contract_number': contract_number
+        })
+
+    except Order.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'الطلب غير موجود'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        }, status=500)
 
 @login_required
 def order_detail(request, pk):
@@ -497,20 +547,158 @@ def order_create(request):
                 else:
                     print("Formset errors:", formset.errors)
 
-                messages.success(request, 'تم إنشاء الطلب بنجاح!')
+                # التحقق من طلب إنشاء عقد إلكتروني
+                create_electronic_contract = request.POST.get('create_electronic_contract') == 'true'
+
+                # معالجة بيانات الستائر إذا كان عقد إلكتروني
+                if create_electronic_contract:
+                    contract_curtains_data = request.POST.get('contract_curtains_data')
+                    if contract_curtains_data:
+                        try:
+                            curtains_list = json.loads(contract_curtains_data)
+                            print(f"✅ تم استلام بيانات {len(curtains_list)} ستارة")
+
+                            # حفظ بيانات الستائر
+                            from .contract_models import ContractCurtain
+                            for sequence, curtain_data in enumerate(curtains_list, start=1):
+                                # إنشاء الستارة
+                                curtain = ContractCurtain.objects.create(
+                                    order=order,
+                                    sequence=sequence,
+                                    room_name=curtain_data.get('room_name', ''),
+                                    width=curtain_data.get('width', 0),
+                                    height=curtain_data.get('height', 0)
+                                )
+
+                                # حفظ الأقمشة
+                                fabrics = curtain_data.get('fabrics', [])
+                                for fabric_data in fabrics:
+                                    fabric_type = fabric_data.get('type', '')
+                                    fabric_id = fabric_data.get('fabric_id', '')
+                                    fabric_meters = fabric_data.get('meters', 0)
+                                    fabric_tailoring = fabric_data.get('tailoring', '')
+
+                                    if fabric_type and fabric_meters:
+                                        # حفظ حسب نوع القماش
+                                        if fabric_type == 'light':
+                                            if fabric_id:
+                                                curtain.light_fabric_id = fabric_id
+                                            curtain.light_fabric_meters = fabric_meters
+                                            curtain.light_fabric_tailoring = fabric_tailoring
+                                        elif fabric_type == 'heavy':
+                                            if fabric_id:
+                                                curtain.heavy_fabric_id = fabric_id
+                                            curtain.heavy_fabric_meters = fabric_meters
+                                            curtain.heavy_fabric_tailoring = fabric_tailoring
+                                        elif fabric_type == 'blackout':
+                                            if fabric_id:
+                                                curtain.blackout_fabric_id = fabric_id
+                                            curtain.blackout_fabric_meters = fabric_meters
+                                            curtain.blackout_fabric_tailoring = fabric_tailoring
+
+                                # حفظ الإكسسوارات
+                                accessories = curtain_data.get('accessories', {})
+                                for acc_key, acc_data in accessories.items():
+                                    acc_type = acc_data.get('type', '')
+                                    acc_type_id = acc_data.get('type_id', '')
+                                    acc_quantity = acc_data.get('quantity', 0)
+
+                                    if acc_quantity and int(acc_quantity) > 0:
+                                        # حفظ حسب نوع الإكسسوار
+                                        if acc_key == 'wood':
+                                            curtain.wood_quantity = int(acc_quantity)
+                                            curtain.wood_type = acc_type
+                                        elif acc_key == 'track':
+                                            curtain.track_quantity = int(acc_quantity)
+                                            if acc_type_id:
+                                                curtain.track_type_id = acc_type_id
+                                        elif acc_key == 'pipe':
+                                            curtain.pipe_quantity = int(acc_quantity)
+                                            if acc_type_id:
+                                                curtain.pipe_id = acc_type_id
+                                        elif acc_key == 'bracket':
+                                            curtain.bracket_quantity = int(acc_quantity)
+                                            if acc_type_id:
+                                                curtain.bracket_id = acc_type_id
+                                        elif acc_key == 'finial':
+                                            curtain.finial_quantity = int(acc_quantity)
+                                            if acc_type_id:
+                                                curtain.finial_id = acc_type_id
+                                        elif acc_key == 'ring':
+                                            curtain.ring_quantity = int(acc_quantity)
+                                            if acc_type_id:
+                                                curtain.ring_id = acc_type_id
+                                        elif acc_key == 'hanger':
+                                            curtain.hanger_quantity = int(acc_quantity)
+                                            if acc_type_id:
+                                                curtain.hanger_id = acc_type_id
+                                        elif acc_key == 'valance':
+                                            curtain.valance_quantity = int(acc_quantity)
+                                            if acc_type_id:
+                                                curtain.valance_id = acc_type_id
+
+                                curtain.save()
+                                print(f"✅ تم حفظ الستارة {sequence}: {curtain.room_name}")
+
+                            # توليد العقد الإلكتروني
+                            try:
+                                from .tasks import generate_contract_async
+                                generate_contract_async.delay(order.pk)
+                                print(f"✅ تم جدولة توليد العقد للطلب {order.order_number}")
+                            except Exception as e:
+                                print(f"⚠️ فشل جدولة توليد العقد: {e}")
+
+                            messages.success(request, 'تم إنشاء الطلب والعقد الإلكتروني بنجاح!')
+                        except Exception as e:
+                            import traceback
+                            print(f"❌ خطأ في معالجة بيانات الستائر: {e}")
+                            print(traceback.format_exc())
+                            messages.warning(request, f'تم إنشاء الطلب بنجاح، لكن حدث خطأ في حفظ تفاصيل العقد: {str(e)}')
+                    else:
+                        messages.success(request, 'تم إنشاء الطلب بنجاح! الآن قم بتخصيص تفاصيل العقد.')
+                else:
+                    messages.success(request, 'تم إنشاء الطلب بنجاح!')
 
                 # إذا كان الطلب AJAX، أرجع JSON response
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    # تحديد رابط التوجيه
+                    # إذا كان عقد إلكتروني وتم إرسال بيانات الستائر، لا نوجه لصفحة أخرى
+                    contract_curtains_data = request.POST.get('contract_curtains_data')
+                    if create_electronic_contract and contract_curtains_data:
+                        # تم حفظ العقد بنجاح، التوجيه لصفحة النجاح مع معامل العقد الإلكتروني
+                        if paid_amount > 0:
+                            redirect_url = f'/orders/{order.pk}/success/?show_print=1&paid_amount={paid_amount}&electronic_contract=1'
+                        else:
+                            redirect_url = f'/orders/{order.pk}/success/?electronic_contract=1'
+                    elif create_electronic_contract:
+                        # لم يتم إرسال بيانات الستائر، التوجيه لصفحة التخصيص
+                        redirect_url = f'/orders/order/{order.pk}/contract/curtains/'
+                    elif paid_amount > 0:
+                        redirect_url = f'/orders/{order.pk}/success/?show_print=1&paid_amount={paid_amount}'
+                    else:
+                        redirect_url = f'/orders/{order.pk}/success/'
+
                     return JsonResponse({
                         'success': True,
-                        'message': 'تم إنشاء الطلب بنجاح!',
+                        'message': 'تم إنشاء الطلب بنجاح!' + (' تم حفظ تفاصيل العقد الإلكتروني.' if (create_electronic_contract and contract_curtains_data) else ''),
                         'order_id': order.pk,
                         'order_number': order.order_number,
-                        'redirect_url': f'/orders/{order.pk}/success/' + (f'?show_print=1&paid_amount={paid_amount}' if paid_amount > 0 else '')
+                        'redirect_url': redirect_url,
+                        'create_electronic_contract': create_electronic_contract
                     })
 
-                # إعادة توجيه لصفحة النجاح مع خيار الطباعة
-                if paid_amount > 0:
+                # إعادة التوجيه بناءً على طلب العقد الإلكتروني
+                contract_curtains_data = request.POST.get('contract_curtains_data')
+                if create_electronic_contract and contract_curtains_data:
+                    # تم حفظ العقد بنجاح، التوجيه لصفحة النجاح مع معامل العقد الإلكتروني
+                    if paid_amount > 0:
+                        return redirect(f'/orders/{order.pk}/success/?show_print=1&paid_amount={paid_amount}&electronic_contract=1')
+                    else:
+                        return redirect(f'/orders/{order.pk}/success/?electronic_contract=1')
+                elif create_electronic_contract:
+                    # لم يتم إرسال بيانات الستائر، التوجيه لصفحة التخصيص
+                    return redirect('orders:contract_curtains_manage', order_id=order.pk)
+                elif paid_amount > 0:
                     return redirect(f'/orders/{order.pk}/success/?show_print=1&paid_amount={paid_amount}')
                 else:
                     return redirect('orders:order_success', pk=order.pk)

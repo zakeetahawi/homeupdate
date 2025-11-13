@@ -1,4 +1,5 @@
 from django import template
+from itertools import islice
 from django.utils.safestring import mark_safe
 import json
 import math
@@ -337,3 +338,15 @@ def days_until(date):
 
     delta = date - today
     return delta.days
+
+
+@register.filter
+def batch(iterable, n):
+    """
+    تقسيم قائمة إلى مجموعات بحجم n
+    مثال: {{ curtains|batch:4 }}
+    """
+    n = int(n)
+    items = list(iterable)
+    for i in range(0, len(items), n):
+        yield items[i:i + n]

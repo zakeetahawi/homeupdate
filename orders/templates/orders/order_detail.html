@@ -15,6 +15,9 @@
             <a href="{% url 'orders:order_update' order.pk %}" class="btn btn-primary">
                 <i class="fas fa-edit"></i> تعديل الطلب
             </a>
+            <a href="{% url 'orders:contract_curtains_manage' order.pk %}" class="btn btn-info">
+                <i class="fas fa-file-contract"></i> إدارة ستائر العقد
+            </a>
             <button type="button" class="btn btn-success" onclick="printInvoice('{{ order.order_number }}')">
                 <i class="fas fa-print"></i> طباعة الفاتورة
             </button>
@@ -784,6 +787,69 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Contract Information -->
+            {% with types_list=order.get_selected_types_list %}
+            {% if 'installation' in types_list or 'tailoring' in types_list or order.order_type in 'installation,tailoring' %}
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-contract"></i> معلومات العقد</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 40%">رقم العقد</th>
+                            <td>{{ order.contract_number|default:"لم يتم تحديده" }}</td>
+                        </tr>
+                        {% if order.contract_number_2 %}
+                        <tr>
+                            <th>رقم العقد 2</th>
+                            <td>{{ order.contract_number_2 }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.contract_number_3 %}
+                        <tr>
+                            <th>رقم العقد 3</th>
+                            <td>{{ order.contract_number_3 }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>ملف العقد</th>
+                            <td>
+                                <a href="{% url 'orders:contract_pdf_view' order.pk %}" target="_blank" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-file-pdf"></i> عرض العقد (جديد)
+                                </a>
+                                {% if order.contract_file %}
+                                    <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary ms-2">
+                                        <i class="fas fa-file-pdf"></i> العقد المحفوظ
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>عدد الستائر</th>
+                            <td>
+                                {% with curtain_count=order.contract_curtains.count %}
+                                {% if curtain_count > 0 %}
+                                    <span class="badge bg-success">{{ curtain_count }} ستارة</span>
+                                {% else %}
+                                    <span class="text-muted">لم يتم إضافة ستائر</span>
+                                {% endif %}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th colspan="2" class="text-center">
+                                <a href="{% url 'orders:contract_curtains_manage' order.pk %}" class="btn btn-info w-100">
+                                    <i class="fas fa-edit"></i> إدارة ستائر العقد
+                                </a>
+                            </th>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
         </div>
 
         <!-- Customer Information -->

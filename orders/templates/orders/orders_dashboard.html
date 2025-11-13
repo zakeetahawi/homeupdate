@@ -276,6 +276,42 @@
         </div>
     </div>
 
+    <!-- Quick Access to Upcoming Installations with Debts -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);">
+                <div class="card-body py-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h3 class="text-white mb-2">
+                                <i class="fas fa-calendar-alt me-3"></i>
+                                جدول التركيبات القادمة والمديونيات
+                            </h3>
+                            <p class="text-white mb-0 opacity-75" style="font-size: 1.1rem;">
+                                <i class="fas fa-info-circle me-2"></i>
+                                عرض جدول التركيبات المجدولة للأيام القادمة مع متابعة المديونيات وحالة الدفع لكل طلب
+                            </p>
+                            <p class="text-white mb-0 mt-2 opacity-75">
+                                <i class="fas fa-check-circle me-2"></i>
+                                متاح لجميع من لديهم صلاحية الوصول لقسم الطلبات
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{% url 'installations:daily_schedule' %}" class="btn btn-light btn-lg shadow-sm mb-2 d-block">
+                                <i class="fas fa-calendar-check me-2"></i>
+                                الجدول اليومي
+                            </a>
+                            <a href="{% url 'installations:upcoming_installations_schedule' %}" class="btn btn-warning btn-lg shadow-sm d-block" style="font-size: 1.1rem; font-weight: bold;">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                التركيبات القادمة + المديونيات
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Statistics Section -->
     <div class="mb-4">
         <h3 class="text-center mb-4"><i class="fas fa-chart-bar me-2"></i>إحصائيات عامة</h3>

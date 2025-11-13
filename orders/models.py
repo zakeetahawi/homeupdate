@@ -471,9 +471,11 @@ class Order(models.Model):
                 # لا تعيين افتراضي - يجب أن يكون النوع محدد صراحة
                 raise ValidationError('يجب تحديد نوع الطلب')
 
-            # Contract number validation - only for tailoring and installation
-            if ('tailoring' in selected_types or 'installation' in selected_types) and not self.contract_number:
-                raise ValidationError('رقم العقد مطلوب لخدمات التسليم والتركيب')
+            # Contract validation - only for tailoring and installation
+            if ('tailoring' in selected_types or 'installation' in selected_types):
+                # رقم العقد مطلوب فقط إذا كان هناك ملف عقد مرفوع
+                if self.contract_file and not self.contract_number:
+                    raise ValidationError('رقم العقد مطلوب عند رفع ملف العقد')
 
             # Invoice number validation - required for all types except inspection alone
             if not (len(selected_types) == 1 and selected_types[0] == 'inspection'):
@@ -857,6 +859,12 @@ class Order(models.Model):
     def is_fully_paid(self):
         """التحقق من سداد الطلب بالكامل"""
         return self.remaining_amount <= 0
+
+    @property
+    def debt_amount(self):
+        """حساب مبلغ المديونية (المبلغ المتبقي)"""
+        remaining = self.remaining_amount
+        return remaining if remaining > 0 else Decimal('0')
 
     def calculate_total(self):
         """حساب المبلغ الإجمالي من عناصر الطلب"""
@@ -2745,3 +2753,7 @@ class OrderModificationLog(models.Model):
         if self.new_total_amount is not None:
             return f"{self.new_total_amount} ج.م"
         return "غير محدد"
+
+
+# استيراد نماذج العقود
+from .contract_models import ContractTemplate, ContractCurtain, ContractPrintLog

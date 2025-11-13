@@ -46,6 +46,11 @@ urlpatterns = [
     path('print-daily-schedule/', views.print_daily_schedule, name='print_daily_schedule'),
     path('debt-list/', views.debt_list, name='debt_list'),
 
+    # التركيبات القادمة والمديونيات
+    path('upcoming-installations/', views.upcoming_installations_schedule, name='upcoming_installations_schedule'),
+    path('api/upcoming-installations/', views.api_upcoming_installations, name='api_upcoming_installations'),
+    path('api/upcoming-installations/filters/', views.api_upcoming_installations_filters, name='api_upcoming_installations_filters'),
+
     # URLs المفقودة
     path('installation-list/', views.installation_list, name='installation_list'),
     path('team-management/', views.team_management, name='team_management'),

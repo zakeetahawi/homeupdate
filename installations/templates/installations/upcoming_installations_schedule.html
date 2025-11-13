@@ -1,0 +1,524 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load order_extras %}
+
+{% block title %}التركيبات القادمة والمديونيات - نظام الخواجه{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2.5rem 0;
+    margin-bottom: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+.date-selector-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.date-tab {
+    padding: 6px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    margin: 2px;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: white;
+    font-size: 0.85rem;
+    display: inline-block;
+}
+
+.date-tab:hover {
+    border-color: #667eea;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(102, 126, 234, 0.2);
+}
+
+.date-tab.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+}
+
+.installation-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.installation-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.installation-header {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    padding: 15px 20px;
+}
+
+.debt-badge {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
+}
+
+.paid-badge {
+    background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.info-row {
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.info-value {
+    color: #333;
+    font-weight: 500;
+}
+
+.action-buttons .btn {
+    margin: 3px;
+}
+
+.no-installations {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.no-installations i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.3;
+}
+
+.stats-summary {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 2rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header text-center">
+        <h1><i class="fas fa-calendar-check me-3"></i>التركيبات القادمة والمديونيات</h1>
+        <p class="mb-0">متابعة جدول التركيبات المجدولة مع حالة الدفع والمديونيات</p>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">
+                <i class="fas fa-filter me-2"></i>
+                الفلاتر
+            </h5>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="branch-filter" class="form-label">
+                        <i class="fas fa-building me-1"></i>
+                        الفرع
+                    </label>
+                    <select id="branch-filter" class="form-select">
+                        <option value="">جميع الفروع</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="salesperson-filter" class="form-label">
+                        <i class="fas fa-user-tie me-1"></i>
+                        البائع
+                    </label>
+                    <select id="salesperson-filter" class="form-select">
+                        <option value="">جميع البائعين</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="debt-filter" class="form-label">
+                        <i class="fas fa-money-bill-wave me-1"></i>
+                        حالة الدفع
+                    </label>
+                    <select id="debt-filter" class="form-select">
+                        <option value="">الكل</option>
+                        <option value="with_debt">عليها مديونية فقط</option>
+                        <option value="fully_paid">مدفوعة بالكامل فقط</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 text-end">
+                    <button id="reset-filters" class="btn btn-secondary">
+                        <i class="fas fa-redo me-2"></i>
+                        إعادة تعيين الفلاتر
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Selector -->
+    <div class="date-selector-card">
+        <div class="card-body p-2">
+            <div class="d-flex align-items-center flex-wrap" id="date-tabs">
+                <!-- سيتم ملؤها بـ JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Summary -->
+    <div class="stats-summary" id="stats-summary" style="display: none;">
+        <div class="row">
+            <div class="col-md-3 stat-item">
+                <div class="stat-value" id="total-installations">0</div>
+                <div class="stat-label">إجمالي التركيبات</div>
+            </div>
+            <div class="col-md-3 stat-item">
+                <div class="stat-value text-danger" id="total-debt">0</div>
+                <div class="stat-label">إجمالي المديونيات</div>
+            </div>
+            <div class="col-md-3 stat-item">
+                <div class="stat-value text-success" id="total-paid">0</div>
+                <div class="stat-label">إجمالي المدفوع</div>
+            </div>
+            <div class="col-md-3 stat-item">
+                <div class="stat-value text-warning" id="with-debt-count">0</div>
+                <div class="stat-label">تركيبات بها مديونية</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Installations List -->
+    <div id="installations-container">
+        <div class="no-installations">
+            <i class="fas fa-calendar-times"></i>
+            <h4>اختر تاريخاً لعرض التركيبات</h4>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const currencySymbol = '{{ currency_symbol|default:"ج.م" }}';
+
+// توليد تواريخ الأيام القادمة (اليوم + 14 يوم)
+function generateDateTabs() {
+    const container = document.getElementById('date-tabs');
+    const today = new Date();
+
+    for (let i = 0; i < 15; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+
+        const dateStr = date.toISOString().split('T')[0];
+        const dayName = date.toLocaleDateString('ar-EG', { weekday: 'short' });
+        const dateDisplay = date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
+
+        const tab = document.createElement('div');
+        tab.className = 'date-tab' + (i === 0 ? ' active' : '');
+        tab.dataset.date = dateStr;
+        tab.innerHTML = `
+            <div style="font-weight: bold;">${dayName}</div>
+            <div style="font-size: 0.75rem; margin-top: 2px;">${dateDisplay}</div>
+        `;
+
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.date-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            loadInstallations(dateStr);
+        });
+
+        container.appendChild(tab);
+    }
+
+    // تحميل تركيبات اليوم تلقائياً
+    loadInstallations(today.toISOString().split('T')[0]);
+}
+
+// تحميل التركيبات لتاريخ معين
+function loadInstallations(date) {
+    const container = document.getElementById('installations-container');
+    container.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-3x text-primary"></i><p class="mt-3">جاري التحميل...</p></div>';
+
+    // جمع قيم الفلاتر
+    const branchFilter = document.getElementById('branch-filter').value;
+    const salespersonFilter = document.getElementById('salesperson-filter').value;
+    const debtFilter = document.getElementById('debt-filter').value;
+
+    // بناء URL مع الفلاتر
+    let url = `/installations/api/upcoming-installations/?date=${date}`;
+    if (branchFilter) url += `&branch=${branchFilter}`;
+    if (salespersonFilter) url += `&salesperson=${salespersonFilter}`;
+    if (debtFilter) url += `&debt_status=${debtFilter}`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.installations && data.installations.length > 0) {
+                displayInstallations(data.installations, data.stats);
+            } else {
+                container.innerHTML = `
+                    <div class="no-installations">
+                        <i class="fas fa-calendar-times"></i>
+                        <h4>لا توجد تركيبات مجدولة في هذا اليوم</h4>
+                        <p class="text-muted">جرب اختيار تاريخ آخر</p>
+                    </div>
+                `;
+                document.getElementById('stats-summary').style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    حدث خطأ أثناء تحميل البيانات
+                </div>
+            `;
+        });
+}
+
+// عرض التركيبات
+function displayInstallations(installations, stats) {
+    const container = document.getElementById('installations-container');
+    container.innerHTML = '';
+
+    // عرض الإحصائيات
+    document.getElementById('stats-summary').style.display = 'block';
+    document.getElementById('total-installations').textContent = stats.total_count;
+    document.getElementById('total-debt').textContent = formatCurrency(stats.total_debt);
+    document.getElementById('total-paid').textContent = formatCurrency(stats.total_paid);
+    document.getElementById('with-debt-count').textContent = stats.with_debt_count;
+
+    // إنشاء صف للبطاقات
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    installations.forEach(installation => {
+        const card = createInstallationCard(installation);
+        row.appendChild(card);
+    });
+
+    container.appendChild(row);
+}
+
+// إنشاء بطاقة تركيب
+function createInstallationCard(inst) {
+    const card = document.createElement('div');
+    card.className = 'col-lg-3 col-md-4 col-sm-6 col-12 mb-3';
+
+    const hasDebt = parseFloat(inst.debt_amount) > 0;
+    const debtClass = hasDebt ? 'debt-badge' : 'paid-badge';
+    const debtIcon = hasDebt ? 'fa-exclamation-triangle' : 'fa-check-circle';
+    const debtText = hasDebt ? `مديونية: ${formatCurrency(inst.debt_amount)}` : 'مدفوع';
+
+    card.innerHTML = `
+        <div class="installation-card">
+        <div class="installation-header" style="padding: 10px 15px;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div style="font-weight: bold; font-size: 0.95rem;">
+                    <i class="fas fa-clock me-1"></i>
+                    ${inst.scheduled_time || 'غير محدد'}
+                </div>
+                <span class="${debtClass}" style="padding: 4px 10px; font-size: 0.8rem;">
+                    <i class="fas ${debtIcon}"></i>
+                </span>
+            </div>
+        </div>
+        <div class="card-body p-2">
+            <div class="info-row" style="padding: 5px 0;">
+                <span class="info-label" style="font-size: 0.75rem;"><i class="fas fa-hashtag me-1"></i> طلب:</span>
+                <span class="info-value" style="font-size: 0.8rem;">${inst.order_number}</span>
+            </div>
+            <div class="info-row" style="padding: 5px 0;">
+                <span class="info-label" style="font-size: 0.75rem;"><i class="fas fa-user me-1"></i> عميل:</span>
+                <span class="info-value" style="font-size: 0.8rem;">${inst.customer_name}</span>
+            </div>
+            <div class="info-row" style="padding: 5px 0;">
+                <span class="info-label" style="font-size: 0.75rem;"><i class="fas fa-phone me-1"></i> هاتف:</span>
+                <span class="info-value" style="font-size: 0.8rem;">${inst.customer_phone || 'غير محدد'}</span>
+            </div>
+            <div class="info-row" style="padding: 5px 0;">
+                <span class="info-label" style="font-size: 0.75rem;"><i class="fas fa-file-invoice me-1"></i> فاتورة:</span>
+                <span class="info-value" style="font-size: 0.8rem;">${inst.invoice_number || '-'}</span>
+            </div>
+            <div class="info-row" style="padding: 5px 0;">
+                <span class="info-label" style="font-size: 0.75rem;"><i class="fas fa-dollar-sign me-1"></i> إجمالي:</span>
+                <span class="info-value" style="font-size: 0.8rem;">${formatCurrency(inst.total_amount)}</span>
+            </div>
+            <div class="info-row" style="padding: 5px 0;">
+                <span class="info-label" style="font-size: 0.75rem;"><i class="fas fa-check me-1"></i> مدفوع:</span>
+                <span class="info-value text-success" style="font-size: 0.8rem;">${formatCurrency(inst.paid_amount)}</span>
+            </div>
+            ${hasDebt ? `
+            <div class="info-row" style="padding: 5px 0;">
+                <span class="info-label" style="font-size: 0.75rem;"><i class="fas fa-exclamation-triangle me-1"></i> متبقي:</span>
+                <span class="info-value text-danger" style="font-size: 0.8rem; font-weight: bold;">${formatCurrency(inst.debt_amount)}</span>
+            </div>
+            ` : ''}
+            <div class="info-row" style="padding: 5px 0;">
+                <span class="info-label" style="font-size: 0.75rem;"><i class="fas fa-user-tie me-1"></i> بائع:</span>
+                <span class="info-value" style="font-size: 0.8rem;">${inst.salesperson_name || '-'}</span>
+            </div>
+            <div class="action-buttons mt-2 d-grid gap-1">
+                <a href="/orders/order/${inst.order_number}/" class="btn btn-primary btn-sm" style="font-size: 0.8rem; padding: 4px 8px;">
+                    <i class="fas fa-eye me-1"></i> عرض الطلب
+                </a>
+                ${hasDebt ? `
+                <button class="btn btn-warning btn-sm" style="font-size: 0.8rem; padding: 4px 8px;" onclick="handleDebt('${inst.order_number}', '${inst.customer_name}', ${inst.debt_amount})">
+                    <i class="fas fa-exclamation-triangle me-1"></i> متابعة المديونية
+                </button>
+                ` : ''}
+            </div>
+        </div>
+        </div>
+    `;
+
+    return card;
+}
+
+// تنسيق العملة
+function formatCurrency(amount) {
+    return parseFloat(amount).toLocaleString('ar-EG', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }) + ' ' + currencySymbol;
+}
+
+// معالجة المديونية
+function handleDebt(orderNumber, customerName, debtAmount) {
+    if (confirm(`هل تريد متابعة مديونية العميل ${customerName}؟\nالمبلغ المستحق: ${formatCurrency(debtAmount)}`)) {
+        window.location.href = `/orders/order/${orderNumber}/#payments`;
+    }
+}
+
+// تحميل قوائم الفلاتر
+function loadFilters() {
+    // تحميل الفروع
+    fetch('/installations/api/upcoming-installations/filters/')
+        .then(response => response.json())
+        .then(data => {
+            const branchSelect = document.getElementById('branch-filter');
+            const salespersonSelect = document.getElementById('salesperson-filter');
+
+            // ملء قائمة الفروع
+            if (data.branches) {
+                data.branches.forEach(branch => {
+                    const option = document.createElement('option');
+                    option.value = branch.id;
+                    option.textContent = branch.name;
+                    branchSelect.appendChild(option);
+                });
+            }
+
+            // ملء قائمة البائعين
+            if (data.salespersons) {
+                data.salespersons.forEach(salesperson => {
+                    const option = document.createElement('option');
+                    option.value = salesperson.id;
+                    option.textContent = salesperson.name;
+                    salespersonSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('خطأ في تحميل الفلاتر:', error);
+        });
+}
+
+// إعادة تعيين الفلاتر
+function resetFilters() {
+    document.getElementById('branch-filter').value = '';
+    document.getElementById('salesperson-filter').value = '';
+    document.getElementById('debt-filter').value = '';
+
+    // إعادة تحميل التركيبات
+    const activeTab = document.querySelector('.date-tab.active');
+    if (activeTab) {
+        loadInstallations(activeTab.dataset.date);
+    }
+}
+
+// تهيئة الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    generateDateTabs();
+    loadFilters();
+
+    // إضافة event listeners للفلاتر
+    document.getElementById('branch-filter').addEventListener('change', function() {
+        const activeTab = document.querySelector('.date-tab.active');
+        if (activeTab) {
+            loadInstallations(activeTab.dataset.date);
+        }
+    });
+
+    document.getElementById('salesperson-filter').addEventListener('change', function() {
+        const activeTab = document.querySelector('.date-tab.active');
+        if (activeTab) {
+            loadInstallations(activeTab.dataset.date);
+        }
+    });
+
+    document.getElementById('debt-filter').addEventListener('change', function() {
+        const activeTab = document.querySelector('.date-tab.active');
+        if (activeTab) {
+            loadInstallations(activeTab.dataset.date);
+        }
+    });
+
+    document.getElementById('reset-filters').addEventListener('click', resetFilters);
+});
+</script>
+{% endblock %}
+
+

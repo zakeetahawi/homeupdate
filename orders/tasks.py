@@ -244,3 +244,69 @@ def clear_expired_cache():
     except Exception as e:
         logger.error(f"خطأ في تنظيف التخزين المؤقت: {str(e)}")
         return {'success': False, 'message': str(e)}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def generate_contract_async(self, order_id, template_id=None, user_id=None):
+    """
+    مهمة خلفية لتوليد العقد تلقائياً بعد حفظ الطلب
+
+    Args:
+        order_id: معرف الطلب
+        template_id: معرف قالب العقد (اختياري)
+        user_id: معرف المستخدم الذي أنشأ الطلب
+    """
+    try:
+        from .services.contract_generation_service import ContractGenerationService
+        from .contract_models import ContractTemplate
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+
+        # الحصول على الطلب
+        order = Order.objects.get(pk=order_id)
+
+        # الحصول على المستخدم
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(pk=user_id)
+            except User.DoesNotExist:
+                pass
+
+        # الحصول على القالب
+        template = None
+        if template_id:
+            try:
+                template = ContractTemplate.objects.get(pk=template_id)
+            except ContractTemplate.DoesNotExist:
+                logger.warning(f"القالب {template_id} غير موجود، سيتم استخدام القالب الافتراضي")
+
+        # توليد العقد
+        service = ContractGenerationService(order, template)
+        success = service.save_contract_to_order(user)
+
+        if success:
+            logger.info(f"تم توليد العقد للطلب {order.order_number} بنجاح")
+
+            # رفع العقد إلى Google Drive تلقائياً
+            if order.contract_file:
+                upload_contract_to_drive_async.delay(order_id)
+
+            return {'success': True, 'message': 'تم توليد العقد بنجاح'}
+        else:
+            logger.error(f"فشل في توليد العقد للطلب {order.order_number}")
+            raise self.retry(countdown=60, exc=Exception('فشل في توليد العقد'))
+
+    except Order.DoesNotExist:
+        logger.error(f"الطلب {order_id} غير موجود")
+        return {'success': False, 'message': 'الطلب غير موجود'}
+
+    except Exception as e:
+        logger.error(f"خطأ في توليد العقد للطلب {order_id}: {str(e)}")
+
+        # إعادة المحاولة في حالة الخطأ
+        if self.request.retries < self.max_retries:
+            raise self.retry(countdown=60, exc=e)
+
+        return {'success': False, 'message': str(e)}
