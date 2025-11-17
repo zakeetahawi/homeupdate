@@ -103,6 +103,7 @@ class ManufacturingOrder(models.Model):
         ('custom', 'تفصيل'),
         ('accessory', 'اكسسوار'),
         ('modification', 'تعديل'),
+        ('delivery', 'تسليم'),
     ]
     
     STATUS_CHOICES = [
@@ -334,6 +335,11 @@ class ManufacturingOrder(models.Model):
 
         # إذا كان الطلب مكتمل أو جاهز للتركيب أو تم تسليمه، لا يعتبر متأخر
         if self.status in ['completed', 'ready_install', 'delivered']:
+            return False
+
+        # التحقق من أن نوع الطلب من الأنواع المسموحة للطلبات المتأخرة
+        allowed_types = ['installation', 'custom', 'delivery']
+        if self.order_type not in allowed_types:
             return False
 
         # مقارنة تاريخ التسليم المتوقع مع التاريخ الحالي

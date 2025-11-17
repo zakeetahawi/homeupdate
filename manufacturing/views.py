@@ -169,7 +169,8 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
             today = timezone.now().date()
             queryset = queryset.filter(
                 expected_delivery_date__lt=today,
-                status__in=['pending_approval', 'pending', 'in_progress']
+                status__in=['pending_approval', 'pending', 'in_progress'],
+                order_type__in=['installation', 'custom', 'delivery']
             )
 
         # البحث النصي مع اختيار أعمدة البحث
@@ -1051,7 +1052,8 @@ class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, ListV
             today = timezone.now().date()
             queryset = queryset.filter(
                 expected_delivery_date__lt=today,
-                status__in=['pending_approval', 'pending', 'in_progress']
+                status__in=['pending_approval', 'pending', 'in_progress'],
+                order_type__in=['installation', 'custom', 'delivery']
             )
 
         # فلتر التواريخ
@@ -1105,7 +1107,8 @@ class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         ).count()
         overdue_orders = all_orders.filter(
             expected_delivery_date__lt=timezone.now().date(),
-            status__in=['pending_approval', 'pending', 'in_progress']  # فقط هذه الحالات تعتبر متأخرة
+            status__in=['pending_approval', 'pending', 'in_progress'],  # فقط هذه الحالات تعتبر متأخرة
+            order_type__in=['installation', 'custom', 'delivery']
         ).count()
 
         # الفلاتر المطبقة
@@ -2492,7 +2495,8 @@ class OverdueOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRe
         today = timezone.now().date()
         overdue_queryset = queryset.filter(
             expected_delivery_date__lt=today,
-            status__in=['pending_approval', 'pending', 'in_progress']  # فقط هذه الحالات تعتبر متأخرة
+            status__in=['pending_approval', 'pending', 'in_progress'],  # فقط هذه الحالات تعتبر متأخرة
+            order_type__in=['installation', 'custom', 'delivery']
         ).order_by('expected_delivery_date')
 
         return overdue_queryset

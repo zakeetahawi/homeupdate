@@ -34,10 +34,11 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
             rejected=Count('id', filter=Q(status='rejected')),
             cancelled=Count('id', filter=Q(status='cancelled')),
 
-            # الطلبات المتأخرة
+            # الطلبات المتأخرة - نفس الفلتر المستخدم في الصفحات الأخرى
             overdue=Count('id', filter=Q(
                 expected_delivery_date__lt=today,
-                status__in=['pending_approval', 'pending', 'in_progress']
+                status__in=['pending_approval', 'pending', 'in_progress'],
+                order_type__in=['installation', 'custom', 'delivery']
             )),
         )
 
@@ -217,7 +218,8 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
                     manufacturing_orders__expected_delivery_date__lt=today,
                     manufacturing_orders__status__in=[
                         'pending_approval', 'pending', 'in_progress'
-                    ]
+                    ],
+                    manufacturing_orders__order_type__in=['installation', 'custom', 'delivery']
                 )
             )
         ).order_by('-priority', 'name')
