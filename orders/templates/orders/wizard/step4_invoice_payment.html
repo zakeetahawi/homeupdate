@@ -47,16 +47,16 @@
                 <h6 class="alert-heading">ملخص المبالغ</h6>
                 <div class="d-flex justify-content-between mb-2">
                     <span>المجموع قبل الخصم:</span>
-                    <strong>{{ totals.subtotal }} ريال</strong>
+                    <strong>{{ totals.subtotal }} جنيه</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2 text-danger">
                     <span>إجمالي الخصم:</span>
-                    <strong>{{ totals.total_discount }} ريال</strong>
+                    <strong>{{ totals.total_discount }} جنيه</strong>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between">
                     <span class="h6">المجموع النهائي:</span>
-                    <strong class="h6 text-success">{{ totals.final_total }} ريال</strong>
+                    <strong class="h6 text-success">{{ totals.final_total }} جنيه</strong>
                 </div>
             </div>
             
@@ -85,11 +85,11 @@
                     <i class="fas fa-lightbulb me-1"></i>
                     <strong>💡 تنبيه:</strong> يجب دفع 50% على الأقل من القيمة الإجمالية للمتابعة
                     <br>
-                    <small>الحد الأدنى المطلوب: <strong>{{ totals.minimum_payment|default:"0.00" }} ريال</strong></small>
+                    <small>الحد الأدنى المطلوب: <strong>{{ totals.minimum_payment|default:"0.00" }} جنيه</strong></small>
                 </div>
                 <div class="form-text">
                     <i class="fas fa-info-circle me-1"></i>
-                    المتبقي: <span id="remaining-amount">{{ totals.remaining }}</span> ريال
+                    المتبقي: <span id="remaining-amount">{{ totals.remaining }}</span> جنيه
                 </div>
             </div>
             
@@ -157,8 +157,8 @@ document.getElementById('step4-form').addEventListener('submit', function(e) {
     if (paidAmount < minimumPayment) {
         e.preventDefault();
         alert('⚠️ يجب دفع 50% على الأقل من المبلغ الإجمالي\n' + 
-              'الحد الأدنى المطلوب: ' + minimumPayment.toFixed(2) + ' ريال\n' +
-              'المبلغ المدفوع: ' + paidAmount.toFixed(2) + ' ريال');
+              'الحد الأدنى المطلوب: ' + minimumPayment.toFixed(2) + ' جنيه\n' +
+              'المبلغ المدفوع: ' + paidAmount.toFixed(2) + ' جنيه');
         paidAmountInput.focus();
         return false;
     }
@@ -167,7 +167,7 @@ document.getElementById('step4-form').addEventListener('submit', function(e) {
     if (paidAmount > totalAmount) {
         e.preventDefault();
         alert('❌ المبلغ المدفوع لا يمكن أن يتجاوز المجموع النهائي\n' +
-              'المجموع النهائي: ' + totalAmount.toFixed(2) + ' ريال');
+              'المجموع النهائي: ' + totalAmount.toFixed(2) + ' جنيه');
         paidAmountInput.focus();
         return false;
     }

@@ -278,7 +278,7 @@ class Step4InvoicePaymentForm(forms.ModelForm):
             if paid_amount < minimum_payment:
                 raise ValidationError(
                     f'💡 يجب دفع 50% على الأقل من القيمة الإجمالية. '
-                    f'المبلغ المطلوب: {minimum_payment:.2f} ريال (المدفوع: {paid_amount:.2f} ريال)'
+                    f'المبلغ المطلوب: {minimum_payment:.2f} جنيه (المدفوع: {paid_amount:.2f} جنيه)'
                 )
         
         return paid_amount
