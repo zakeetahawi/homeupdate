@@ -730,6 +730,7 @@ def wizard_finalize(request):
                 order=order,
                 amount=draft.paid_amount,
                 payment_method=draft.payment_method,
+                reference_number=draft.invoice_number or '',  # إضافة رقم الفاتورة كرقم مرجع
                 notes=draft.payment_notes,
                 created_by=request.user,
             )

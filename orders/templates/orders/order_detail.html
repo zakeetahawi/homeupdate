@@ -87,9 +87,19 @@
                                                 تم تحديد المعاينة كطرف العميل
                                             </small>
                                         {% elif order.related_inspection %}
-                                            <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}" class="btn btn-sm btn-info">
-                                                <i class="fas fa-eye me-1"></i>عرض تفاصيل المعاينة
-                                            </a>
+                                            {% if order.related_inspection.inspection_file %}
+                                                <a href="{{ order.related_inspection.inspection_file.url }}" target="_blank" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-file-pdf me-1"></i>عرض ملف المعاينة
+                                                </a>
+                                            {% elif order.related_inspection.google_drive_file_url %}
+                                                <a href="{{ order.related_inspection.google_drive_file_url }}" target="_blank" class="btn btn-sm btn-success">
+                                                    <i class="fab fa-google-drive me-1"></i>عرض ملف المعاينة (Drive)
+                                                </a>
+                                            {% else %}
+                                                <span class="text-warning">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>لا يوجد ملف معاينة
+                                                </span>
+                                            {% endif %}
                                             <br>
                                             {% get_status_badge order.related_inspection.status "inspection" %}
                                             <br><small class="text-muted">
@@ -131,9 +141,19 @@
                                             تم تحديد المعاينة كطرف العميل
                                         </small>
                                     {% elif order.related_inspection %}
-                                        <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}" class="btn btn-sm btn-info">
-                                            <i class="fas fa-eye me-1"></i>عرض تفاصيل المعاينة
-                                        </a>
+                                        {% if order.related_inspection.inspection_file %}
+                                            <a href="{{ order.related_inspection.inspection_file.url }}" target="_blank" class="btn btn-sm btn-success">
+                                                <i class="fas fa-file-pdf me-1"></i>عرض ملف المعاينة
+                                            </a>
+                                        {% elif order.related_inspection.google_drive_file_url %}
+                                            <a href="{{ order.related_inspection.google_drive_file_url }}" target="_blank" class="btn btn-sm btn-success">
+                                                <i class="fab fa-google-drive me-1"></i>عرض ملف المعاينة (Drive)
+                                            </a>
+                                        {% else %}
+                                            <span class="text-warning">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>لا يوجد ملف معاينة
+                                            </span>
+                                        {% endif %}
                                         <br>
                                         {% get_status_badge order.related_inspection.status "inspection" %}
                                         <br><small class="text-muted">
