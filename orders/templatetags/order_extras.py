@@ -268,17 +268,26 @@ def currency_format(amount):
 
 @register.simple_tag
 def paid_percentage(order):
-    """حساب نسبة المبلغ المدفوع من الإجمالي بدون التقريب للأعلى لتفادي 100% مع وجود متبقي"""
+    """حساب نسبة المبلغ المدفوع من الإجمالي النهائي (بعد الخصم)"""
     try:
-        total = float(getattr(order, 'total_amount', 0) or 0)
+        # استخدام المبلغ النهائي بعد الخصم بدلاً من الإجمالي
+        total = float(getattr(order, 'final_price_after_discount', 0) or 0)
+        # إذا لم يكن موجوداً، استخدم final_price
+        if total <= 0:
+            total = float(getattr(order, 'final_price', 0) or 0)
+        
         paid = float(getattr(order, 'paid_amount', 0) or 0)
+        
         if total <= 0:
             return '0%'
+        
         pct_value = math.floor((paid * 100.0) / total)
+        
         # إذا كان هناك متبقي لا تسمح بإظهار 100%
         remaining = float(total - paid)
-        if remaining > 0 and pct_value >= 100:
+        if remaining > 0.01 and pct_value >= 100:  # استخدام 0.01 للتعامل مع أخطاء التقريب
             pct_value = 99
+        
         pct_value = max(0, min(100, pct_value))
         return f"{pct_value}%"
     except Exception:
