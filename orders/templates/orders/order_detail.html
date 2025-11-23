@@ -797,17 +797,23 @@
                         <tr>
                             <th>ملف العقد</th>
                             <td>
-                                <a href="{% url 'orders:contract_pdf_view' order.pk %}" target="_blank" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-file-pdf"></i> عرض العقد
-                                </a>
                                 {% if order.contract_file %}
-                                    <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-outline-success ms-2">
-                                        <i class="fas fa-download"></i> تحميل المحفوظ
+                                    <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-file-pdf"></i> عرض ملف العقد
                                     </a>
+                                    {% if user.is_superuser or user.is_staff %}
+                                        <button type="button" class="btn btn-sm btn-outline-warning ms-2" onclick="regenerateContract({{ order.pk }})" title="إعادة توليد العقد (سيتم أرشفة العقد الحالي)">
+                                            <i class="fas fa-sync-alt"></i> إعادة التوليد
+                                        </button>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">لم يتم توليد العقد بعد</span>
+                                    {% if user.is_superuser or user.is_staff %}
+                                        <button type="button" class="btn btn-sm btn-success ms-2" onclick="regenerateContract({{ order.pk }})" title="توليد ملف العقد">
+                                            <i class="fas fa-file-pdf"></i> توليد العقد
+                                        </button>
+                                    {% endif %}
                                 {% endif %}
-                                <button type="button" class="btn btn-sm btn-outline-warning ms-2" onclick="regenerateContract({{ order.pk }})">
-                                    <i class="fas fa-sync-alt"></i> إعادة التوليد
-                                </button>
                             </td>
                         </tr>
                         <tr>
