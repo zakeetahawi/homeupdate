@@ -786,11 +786,269 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // زر حفظ العقد الإلكتروني
+    const saveElectronicContractBtn = document.getElementById('save-electronic-contract-btn');
+    if (saveElectronicContractBtn) {
+        saveElectronicContractBtn.addEventListener('click', function() {
+            saveOrderWithElectronicContract();
+        });
+    }
+});
+
+/**
+ * حفظ الطلب مع العقد الإلكتروني
+ */
+function saveOrderWithElectronicContract() {
+    // التحقق من وجود ستائر
+    if (!window.contractCurtains || window.contractCurtains.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'تنبيه',
+            text: 'يجب إضافة ستارة واحدة على الأقل',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+
+    // التحقق من صحة البيانات
+    let hasErrors = false;
+    window.contractCurtains.forEach((curtain, index) => {
+        if (!curtain.room_name || !curtain.width || !curtain.height) {
+            hasErrors = true;
+        }
+    });
+
+    if (hasErrors) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'بيانات ناقصة',
+            text: 'يرجى ملء جميع الحقول المطلوبة (اسم الغرفة، العرض، الارتفاع) لكل ستارة',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+
+    // إضافة بيانات الستائر للنموذج
+    const form = document.querySelector('form') || document.getElementById('order-form');
+
+    if (!form) {
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'لم يتم العثور على النموذج'
+        });
+        return;
+    }
+
+    // إغلاق المودال
+    const modal = bootstrap.Modal.getInstance(document.getElementById('electronicContractModal'));
+    if (modal) {
+        modal.hide();
+    }
+
+    // عرض رسالة تأكيد
+    Swal.fire({
+        icon: 'info',
+        title: 'جاري الحفظ...',
+        text: 'جاري حفظ الطلب مع تفاصيل العقد الإلكتروني',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // جمع بيانات النموذج
+    const formData = new FormData(form);
+
+    // إضافة علامة العقد الإلكتروني
+    formData.set('create_electronic_contract', 'true');
+
+    // إضافة بيانات الستائر كـ JSON
+    formData.set('contract_curtains_data', JSON.stringify(window.contractCurtains));
+
+    console.log('✅ بيانات الستائر:', window.contractCurtains);
+
+    // إرسال النموذج عبر AJAX
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        // التحقق من حالة الاستجابة
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw { status: response.status, data: data };
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'تم الحفظ!',
+                text: data.message,
+                confirmButtonText: 'حسناً',
+                allowOutsideClick: false
+            }).then(() => {
+                // التوجيه لصفحة النجاح
+                window.location.href = data.redirect_url;
+            });
+        } else {
+            // عرض الأخطاء
+            let errorMessage = data.message || 'حدث خطأ أثناء حفظ الطلب';
+
+            // إذا كانت هناك أخطاء في الحقول
+            if (data.errors) {
+                errorMessage += '<br><br><div class="text-start"><ul>';
+                for (const [field, errors] of Object.entries(data.errors)) {
+                    errorMessage += `<li><strong>${field}:</strong> ${errors.join(', ')}</li>`;
+                }
+                errorMessage += '</ul></div>';
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'خطأ في الحفظ',
+                html: errorMessage,
+                confirmButtonText: 'حسناً'
+            });
+        }
+    })
+    .catch(error => {
+        console.error('خطأ:', error);
+
+        // إذا كان الخطأ من الـ backend
+        if (error.data) {
+            let errorMessage = error.data.message || 'حدث خطأ أثناء حفظ الطلب';
+
+            // إذا كانت هناك أخطاء في الحقول
+            if (error.data.errors) {
+                errorMessage += '<br><br><div class="text-start"><ul>';
+                for (const [field, errors] of Object.entries(error.data.errors)) {
+                    errorMessage += `<li><strong>${field}:</strong> ${errors.join(', ')}</li>`;
+                }
+                errorMessage += '</ul></div>';
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'خطأ في الحفظ',
+                html: errorMessage,
+                confirmButtonText: 'حسناً'
+            });
+        } else {
+            // خطأ في الاتصال
+            Swal.fire({
+                icon: 'error',
+                title: 'خطأ في الاتصال',
+                text: 'حدث خطأ في الاتصال بالخادم',
+                confirmButtonText: 'حسناً'
+            });
+        }
+    });
+}
 </script>
 
 <!-- إضافة Modal الباركود -->
 {% include 'includes/order_barcode_scanner_modal.html' %}
 
+<!-- Modal العقد الإلكتروني -->
+<div class="modal fade" id="electronicContractModal" tabindex="-1" aria-labelledby="electronicContractModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="electronicContractModalLabel">
+                    <i class="fas fa-file-signature me-2"></i>
+                    تخصيص تفاصيل العقد الإلكتروني
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto;">
+                <div class="container-fluid">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        قم بإضافة تفاصيل الستائر (الغرف، المقاسات، الأقمشة، الإكسسوارات) لإنشاء العقد الإلكتروني
+                    </div>
+
+                    <!-- قائمة الستائر -->
+                    <div id="curtains-list-modal" class="mb-3">
+                        <!-- سيتم إضافة الستائر هنا ديناميكياً -->
+                    </div>
+
+                    <!-- زر إضافة ستارة جديدة -->
+                    <button type="button" class="btn btn-success" id="add-curtain-modal-btn">
+                        <i class="fas fa-plus me-1"></i>
+                        إضافة ستارة جديدة
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>
+                    إلغاء
+                </button>
+                <button type="button" class="btn btn-primary" id="save-electronic-contract-btn">
+                    <i class="fas fa-save me-1"></i>
+                    حفظ الطلب مع العقد الإلكتروني
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- قالب بطاقة الستارة في المودال -->
+<template id="curtain-modal-template">
+    <div class="curtain-card-modal mb-4" data-curtain-index="">
+        <div class="curtain-header">
+            <span class="curtain-title"><i class="fas fa-th me-2"></i>ستارة <span class="curtain-number"></span></span>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeCurtainModal(this)">
+                <i class="fas fa-trash"></i> حذف
+            </button>
+        </div>
+
+        <!-- المعلومات الأساسية -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label">اسم الغرفة <span class="text-danger">*</span></label>
+                <input type="text" class="form-control room-name-input" placeholder="مثال: غرفة النوم الرئيسية" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">العرض (متر) <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" class="form-control width-input" placeholder="مثال: 3.5" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الارتفاع (متر) <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" class="form-control height-input" placeholder="مثال: 2.8" required>
+            </div>
+        </div>
+
+        <!-- قسم الأقمشة -->
+        <div class="fabric-section-modal mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0"><i class="fas fa-cut me-2"></i>الأقمشة</h6>
+                <button type="button" class="btn btn-sm btn-success" onclick="addFabricToModal(this)">
+                    <i class="fas fa-plus me-1"></i> إضافة قماش
+                </button>
+            </div>
+            <div class="fabrics-container">
+                <!-- سيتم إضافة الأقمشة هنا -->
+            </div>
+        </div>
+
+        <!-- قسم الإكسسوارات -->
+        <div class="accessories-section-modal">
+            <h6 class="mb-3"><i class="fas fa-tools me-2"></i>الإكسسوارات (اختياري)</h6>
+            <div class="row g-3 accessories-grid-modal">
+                <!-- سيتم إضافة الإكسسوارات هنا -->
+            </div>
+        </div>
+    </div>
+</template>
 
 <!-- قالب القماش -->
 <template id="fabric-modal-template">

@@ -401,9 +401,10 @@
                                         <div class="card-body text-center">
                                             <h6>ملف العقد</h6>
                                             {% if manufacturing_order.order.contract_file %}
+                                                <!-- عقد PDF مرفوع -->
                                                 <div class="mb-2">
                                                     <a href="{{ manufacturing_order.order.contract_file.url }}" target="_blank" class="btn btn-success">
-                                                        <i class="fas fa-file-pdf"></i> عرض ملف العقد (محلي)
+                                                        <i class="fas fa-file-pdf"></i> عرض ملف العقد (PDF)
                                                     </a>
                                                 </div>
                                                 {% if manufacturing_order.order.is_contract_uploaded_to_drive and manufacturing_order.order.contract_google_drive_file_url %}
@@ -413,6 +414,14 @@
                                                     </a>
                                                 </div>
                                                 {% endif %}
+                                            {% elif manufacturing_order.order.contract_curtains.exists %}
+                                                <!-- عقد إلكتروني (ستائر) -->
+                                                <div class="mb-2">
+                                                    <a href="{% url 'orders:contract_pdf_view' manufacturing_order.order.id %}" target="_blank" class="btn btn-primary">
+                                                        <i class="fas fa-file-pdf"></i> عرض العقد الإلكتروني (PDF)
+                                                    </a>
+                                                </div>
+                                                <small class="text-muted">عقد إلكتروني - {{ manufacturing_order.order.contract_curtains.count }} ستارة</small>
                                             {% else %}
                                                 <p class="text-muted">لم يتم رفع ملف العقد</p>
                                             {% endif %}

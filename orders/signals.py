@@ -467,17 +467,23 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
         MANUFACTURING_TYPES = {'installation', 'tailoring', 'accessory'}
         
         order_types = set()
-        try:
-            # selected_types is stored as a JSON string, so we need to parse it.
-            parsed_types = json.loads(instance.selected_types)
-            if isinstance(parsed_types, list):
-                order_types = set(parsed_types)
-            # print(f"Successfully parsed types: {order_types}")
-        except (json.JSONDecodeError, TypeError):
-            # print(f"Could not parse selected_types. Value was: {instance.selected_types}")
-            # Fallback for plain string if needed, though not expected
-            if isinstance(instance.selected_types, str):
+        
+        # selected_types is a JSONField that returns a Python list directly
+        if isinstance(instance.selected_types, list):
+            order_types = set(instance.selected_types)
+        elif isinstance(instance.selected_types, str):
+            # Fallback: try to parse as JSON string
+            try:
+                parsed_types = json.loads(instance.selected_types)
+                if isinstance(parsed_types, list):
+                    order_types = set(parsed_types)
+                else:
+                    order_types = {instance.selected_types}
+            except (json.JSONDecodeError, TypeError, ValueError):
+                # Single string value
                 order_types = {instance.selected_types}
+        
+        # print(f"Parsed order_types: {order_types}")
 
         if order_types.intersection(MANUFACTURING_TYPES):
             # print(f"MATCH FOUND: Order types {order_types} intersect with {MANUFACTURING_TYPES}. Creating manufacturing order...")

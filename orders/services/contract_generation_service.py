@@ -45,6 +45,12 @@ class ContractGenerationService:
             delta = self.order.expected_delivery_date - self.order.created_at.date()
             working_days = delta.days
         
+        # حساب إجمالي الأمتار من جميع الأقمشة
+        total_meters = 0
+        for curtain in curtains:
+            for fabric in curtain.fabrics.all():
+                total_meters += float(fabric.meters) if fabric.meters else 0
+        
         # تجهيز البيانات للقالب
         context = {
             'order': self.order,
@@ -53,6 +59,7 @@ class ContractGenerationService:
             'template': self.template,
             'settings': system_settings,  # إضافة إعدادات النظام
             'working_days': working_days,  # إضافة عدد أيام التشغيل
+            'total_meters': total_meters,  # إجمالي الأمتار
             'company_name': self.template.company_name,
             'company_logo': self.template.company_logo,
             'company_address': self.template.company_address,

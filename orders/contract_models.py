@@ -1,5 +1,5 @@
 """
-نماذج قوالب العقود
+نماذج العقود
 """
 from django.db import models
 from django.conf import settings
@@ -176,43 +176,6 @@ class ContractTemplate(models.Model):
         self.usage_count += 1
         self.last_used = timezone.now()
         self.save(update_fields=['usage_count', 'last_used'])
-
-    def clone_template(self, new_name):
-        """إنشاء نسخة من القالب"""
-        clone = ContractTemplate.objects.create(
-            name=new_name,
-            template_type='custom',
-            company_name=self.company_name,
-            company_address=self.company_address,
-            company_phone=self.company_phone,
-            company_email=self.company_email,
-            company_website=self.company_website,
-            company_tax_number=self.company_tax_number,
-            company_commercial_register=self.company_commercial_register,
-            primary_color=self.primary_color,
-            secondary_color=self.secondary_color,
-            accent_color=self.accent_color,
-            font_family=self.font_family,
-            font_size=self.font_size,
-            page_size=self.page_size,
-            page_margins=self.page_margins,
-            html_content=self.html_content,
-            css_styles=self.css_styles,
-            advanced_settings=self.advanced_settings.copy(),
-            show_company_logo=self.show_company_logo,
-            show_order_details=self.show_order_details,
-            show_customer_details=self.show_customer_details,
-            show_items_table=self.show_items_table,
-            show_payment_details=self.show_payment_details,
-            show_terms=self.show_terms,
-            show_signatures=self.show_signatures,
-            header_text=self.header_text,
-            footer_text=self.footer_text,
-            terms_text=self.terms_text,
-            is_active=True,
-            is_default=False
-        )
-        return clone
 
 
 class ContractCurtain(models.Model):
@@ -590,47 +553,7 @@ class ContractCurtain(models.Model):
             raise ValidationError(errors)
 
 
-class ContractPrintLog(models.Model):
-    """سجل طباعة العقود"""
-
-    PRINT_TYPE_CHOICES = [
-        ('auto', 'طباعة تلقائية'),
-        ('manual', 'طباعة يدوية'),
-    ]
-
-    order = models.ForeignKey(
-        'orders.Order',
-        on_delete=models.CASCADE,
-        related_name='contract_print_logs',
-        verbose_name='الطلب'
-    )
-    template = models.ForeignKey(
-        ContractTemplate,
-        on_delete=models.SET_NULL,
-        null=True,
-        verbose_name='القالب المستخدم'
-    )
-    printed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        verbose_name='تمت الطباعة بواسطة'
-    )
-    print_type = models.CharField(
-        max_length=10,
-        choices=PRINT_TYPE_CHOICES,
-        default='manual',
-        verbose_name='نوع الطباعة'
-    )
-    printed_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الطباعة')
-
-    class Meta:
-        verbose_name = 'سجل طباعة عقد'
-        verbose_name_plural = 'سجلات طباعة العقود'
-        ordering = ['-printed_at']
-
-    def __str__(self):
-        return f'طباعة عقد {self.order.order_number} - {self.printed_at.strftime("%Y-%m-%d %H:%M")}'
+# تم حذف ContractPrintLog - يرجى استخدام نظام الويزارد
 
 
 class CurtainFabric(models.Model):
@@ -892,6 +815,50 @@ class CurtainAccessory(models.Model):
         
         if errors:
             raise ValidationError(errors)
+
+
+class ContractPrintLog(models.Model):
+    """سجل طباعة العقود"""
+
+    PRINT_TYPE_CHOICES = [
+        ('auto', 'طباعة تلقائية'),
+        ('manual', 'طباعة يدوية'),
+    ]
+
+    order = models.ForeignKey(
+        'orders.Order',
+        on_delete=models.CASCADE,
+        related_name='contract_print_logs',
+        verbose_name='الطلب'
+    )
+    template = models.ForeignKey(
+        ContractTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name='القالب المستخدم'
+    )
+    printed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name='تمت الطباعة بواسطة'
+    )
+    print_type = models.CharField(
+        max_length=10,
+        choices=PRINT_TYPE_CHOICES,
+        default='manual',
+        verbose_name='نوع الطباعة'
+    )
+    printed_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الطباعة')
+
+    class Meta:
+        verbose_name = 'سجل طباعة عقد'
+        verbose_name_plural = 'سجلات طباعة العقود'
+        ordering = ['-printed_at']
+
+    def __str__(self):
+        return f'طباعة عقد {self.order.order_number} - {self.printed_at.strftime("%Y-%m-%d %H:%M")}'
+
 
 
 

@@ -2809,7 +2809,8 @@ class OrderModificationLog(models.Model):
 
 
 # استيراد نماذج العقود
-from .contract_models import ContractTemplate, ContractCurtain, ContractPrintLog
+from .contract_models import ContractCurtain
+# تم حذف ContractTemplate و ContractPrintLog - يرجى استخدام نظام الويزارد
 
 # استيراد نماذج الويزارد
 from .wizard_models import DraftOrder, DraftOrderItem

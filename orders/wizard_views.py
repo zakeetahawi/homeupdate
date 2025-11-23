@@ -29,6 +29,37 @@ from customers.models import Customer
 logger = logging.getLogger(__name__)
 
 
+def get_total_steps(draft):
+    """
+    حساب عدد الخطوات الفعلي بناءً على نوع الطلب
+    """
+    if draft and draft.selected_type:
+        # إذا كان النوع يحتاج عقد، 6 خطوات، وإلا 5 خطوات
+        needs_contract = draft.selected_type in ['installation', 'tailoring', 'accessory']
+        return 6 if needs_contract else 5
+    return 6  # افتراضياً 6 خطوات
+
+
+def get_step_number(draft, logical_step):
+    """
+    تحويل رقم الخطوة المنطقي إلى رقم الخطوة الفعلي
+    عند تخطي خطوة العقد، الخطوة 6 تصبح 5
+    """
+    if logical_step <= 4:
+        return logical_step
+    
+    needs_contract = draft.selected_type in ['installation', 'tailoring', 'accessory']
+    
+    if logical_step == 5 and needs_contract:
+        return 5  # خطوة العقد
+    elif logical_step == 6 and needs_contract:
+        return 6  # خطوة المراجعة
+    elif logical_step >= 5 and not needs_contract:
+        return 5  # تخطي خطوة العقد، المراجعة تصبح الخطوة 5
+    
+    return logical_step
+
+
 @login_required
 def wizard_start(request):
     """
@@ -153,9 +184,20 @@ def wizard_step(request, step):
     elif step == 4:
         return wizard_step_4_invoice_payment(request, draft)
     elif step == 5:
-        return wizard_step_5_contract(request, draft)
+        # الخطوة 5 يمكن أن تكون العقد أو المراجعة حسب نوع الطلب
+        needs_contract = draft.selected_type in ['installation', 'tailoring', 'accessory']
+        if needs_contract:
+            return wizard_step_5_contract(request, draft)
+        else:
+            return wizard_step_6_review(request, draft)  # المراجعة تصبح الخطوة 5
     elif step == 6:
-        return wizard_step_6_review(request, draft)
+        # الخطوة 6 موجودة فقط للأنواع التي تحتاج عقد
+        needs_contract = draft.selected_type in ['installation', 'tailoring', 'accessory']
+        if needs_contract:
+            return wizard_step_6_review(request, draft)
+        else:
+            # تم تخطي خطوة العقد، توجيه للخطوة 5
+            return redirect('orders:wizard_step', step=5)
     else:
         messages.error(request, 'خطوة غير صحيحة')
         return redirect('orders:wizard_step', step=1)
@@ -192,13 +234,15 @@ def wizard_step_1_basic_info(request, draft):
     else:
         form = Step1BasicInfoForm(instance=draft, user=request.user)
     
+    total_steps = get_total_steps(draft)
+    
     context = {
         'draft': draft,
         'form': form,
         'current_step': 1,
-        'total_steps': 6,
+        'total_steps': total_steps,
         'step_title': 'البيانات الأساسية',
-        'progress_percentage': 16.67,
+        'progress_percentage': round((1 / total_steps) * 100, 2),
     }
     
     return render(request, 'orders/wizard/step1_basic_info.html', context)
@@ -235,13 +279,15 @@ def wizard_step_2_order_type(request, draft):
     else:
         form = Step2OrderTypeForm(instance=draft, customer=draft.customer)
     
+    total_steps = get_total_steps(draft)
+    
     context = {
         'draft': draft,
         'form': form,
         'current_step': 2,
-        'total_steps': 6,
+        'total_steps': total_steps,
         'step_title': 'نوع الطلب',
-        'progress_percentage': 33.34,
+        'progress_percentage': round((2 / total_steps) * 100, 2),
     }
     
     return render(request, 'orders/wizard/step2_order_type.html', context)
@@ -253,13 +299,15 @@ def wizard_step_3_order_items(request, draft):
     """
     items = draft.items.all()
     
+    total_steps = get_total_steps(draft)
+    
     context = {
         'draft': draft,
         'items': items,
         'current_step': 3,
-        'total_steps': 6,
+        'total_steps': total_steps,
         'step_title': 'عناصر الطلب',
-        'progress_percentage': 50.00,
+        'progress_percentage': round((3 / total_steps) * 100, 2),
         'totals': draft.calculate_totals(),
     }
     
@@ -275,12 +323,17 @@ def wizard_add_item(request):
     try:
         data = json.loads(request.body)
         
-        # الحصول على المسودة
-        draft = get_object_or_404(
-            DraftOrder,
+        # الحصول على المسودة الأحدث
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
-        )
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم العثور على مسودة نشطة'
+            }, status=404)
         
         # الحصول على المنتج
         product = get_object_or_404(Product, pk=data.get('product_id'))
@@ -330,12 +383,17 @@ def wizard_remove_item(request, item_id):
     حذف عنصر من مسودة الطلب (AJAX)
     """
     try:
-        # الحصول على المسودة
-        draft = get_object_or_404(
-            DraftOrder,
+        # الحصول على المسودة الأحدث
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
-        )
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم العثور على مسودة نشطة'
+            }, status=404)
         
         # حذف العنصر
         item = get_object_or_404(DraftOrderItem, pk=item_id, draft_order=draft)
@@ -365,11 +423,16 @@ def wizard_complete_step_3(request):
     إكمال الخطوة 3 (عناصر الطلب)
     """
     try:
-        draft = get_object_or_404(
-            DraftOrder,
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
-        )
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم العثور على مسودة نشطة'
+            }, status=404)
         
         # التحقق من وجود عناصر
         if not draft.items.exists():
@@ -412,9 +475,9 @@ def wizard_step_4_invoice_payment(request, draft):
             draft.mark_step_complete(4)
             
             # تحديد الخطوة التالية بناءً على نوع الطلب
-            # إذا كان النوع يحتاج عقد، انتقل للخطوة 5، وإلا للخطوة 6
+            # إذا كان النوع يحتاج عقد، انتقل للخطوة 5 (العقد)، وإلا للخطوة 5 (المراجعة)
             needs_contract = draft.selected_type in ['installation', 'tailoring', 'accessory']
-            next_step = 5 if needs_contract else 6
+            next_step = 5  # دائماً الخطوة 5 (العقد أو المراجعة)
             draft.current_step = next_step
             draft.save()
             
@@ -439,14 +502,15 @@ def wizard_step_4_invoice_payment(request, draft):
     
     # حساب المجاميع
     totals = draft.calculate_totals()
+    total_steps = get_total_steps(draft)
     
     context = {
         'draft': draft,
         'form': form,
         'current_step': 4,
-        'total_steps': 6,
+        'total_steps': total_steps,
         'step_title': 'تفاصيل الفاتورة والدفع',
-        'progress_percentage': 66.67,
+        'progress_percentage': round((4 / total_steps) * 100, 2),
         'totals': totals,
     }
     
@@ -461,6 +525,8 @@ def wizard_step_5_contract(request, draft):
     if request.method == 'POST':
         # تحديد الخطوة كمكتملة
         draft.mark_step_complete(5)
+        draft.current_step = 6
+        draft.save()
         
         # الرد برسالة نجاح
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -497,14 +563,16 @@ def wizard_step_5_contract(request, draft):
             'available_quantity': float(item.quantity - used),
         })
     
+    total_steps = get_total_steps(draft)
+    
     context = {
         'draft': draft,
         'curtains': curtains,
         'order_items': items_with_usage,
         'current_step': 5,
-        'total_steps': 6,
+        'total_steps': total_steps,
         'step_title': 'العقد',
-        'progress_percentage': 83.34,
+        'progress_percentage': round((5 / total_steps) * 100, 2),
     }
     
     return render(request, 'orders/wizard/step5_contract.html', context)
@@ -512,7 +580,7 @@ def wizard_step_5_contract(request, draft):
 
 def wizard_step_6_review(request, draft):
     """
-    الخطوة 6: المراجعة والتأكيد
+    الخطوة 6 (أو 5 للأنواع بدون عقد): المراجعة والتأكيد
     """
     items = draft.items.all()
     totals = draft.calculate_totals()
@@ -534,6 +602,11 @@ def wizard_step_6_review(request, draft):
         if hasattr(inspection, 'inspection_file') and inspection.inspection_file:
             inspection_file_url = inspection.inspection_file.url
     
+    # حساب رقم الخطوة الفعلي (5 أو 6)
+    needs_contract = draft.selected_type in ['installation', 'tailoring', 'accessory']
+    actual_step = 6 if needs_contract else 5
+    total_steps = get_total_steps(draft)
+    
     context = {
         'draft': draft,
         'items': items,
@@ -542,8 +615,8 @@ def wizard_step_6_review(request, draft):
         'contract_file_url': contract_file_url,
         'inspection': inspection,
         'inspection_file_url': inspection_file_url,
-        'current_step': 6,
-        'total_steps': 6,
+        'current_step': actual_step,
+        'total_steps': total_steps,
         'step_title': 'المراجعة والتأكيد',
         'progress_percentage': 100,
     }
@@ -559,12 +632,17 @@ def wizard_finalize(request):
     تحويل المسودة إلى طلب نهائي
     """
     try:
-        # الحصول على المسودة
-        draft = get_object_or_404(
-            DraftOrder,
+        # الحصول على المسودة الأحدث
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
-        )
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم العثور على مسودة نشطة'
+            }, status=404)
         
         # التحقق من اكتمال جميع الخطوات المطلوبة (الخطوة 5 اختيارية)
         required_steps = [1, 2, 3, 4]
@@ -693,11 +771,14 @@ def wizard_cancel(request):
     إلغاء الويزارد وحذف المسودة
     """
     try:
-        draft = get_object_or_404(
-            DraftOrder,
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
-        )
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            messages.info(request, 'لا توجد مسودة نشطة للإلغاء')
+            return redirect('orders:order_list')
         
         if request.method == "POST":
             draft.delete()
@@ -725,12 +806,17 @@ def wizard_add_curtain(request):
     إضافة ستارة جديدة إلى العقد الإلكتروني مع الأقمشة والإكسسوارات
     """
     try:
-        # الحصول على المسودة الحالية
-        draft = get_object_or_404(
-            DraftOrder,
+        # الحصول على المسودة الأحدث
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
-        )
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم العثور على مسودة نشطة'
+            }, status=404)
         
         # الحصول على البيانات
         try:
@@ -936,12 +1022,17 @@ def wizard_edit_curtain(request, curtain_id):
     POST: حفظ التعديلات
     """
     try:
-        # الحصول على المسودة الحالية
-        draft = get_object_or_404(
-            DraftOrder,
+        # الحصول على المسودة الأحدث
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
-        )
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم العثور على مسودة نشطة'
+            }, status=404)
         
         # الحصول على الستارة
         curtain = get_object_or_404(
@@ -1180,12 +1271,17 @@ def wizard_remove_curtain(request, curtain_id):
     حذف ستارة من العقد الإلكتروني
     """
     try:
-        # الحصول على المسودة الحالية
-        draft = get_object_or_404(
-            DraftOrder,
+        # الحصول على المسودة الأحدث
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
-        )
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم العثور على مسودة نشطة'
+            }, status=404)
         
         # حذف الستارة
         curtain = get_object_or_404(
@@ -1216,12 +1312,17 @@ def wizard_upload_contract(request):
     رفع ملف PDF للعقد
     """
     try:
-        # الحصول على المسودة الحالية
-        draft = get_object_or_404(
-            DraftOrder,
+        # الحصول على المسودة الأحدث
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
-        )
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم العثور على مسودة نشطة'
+            }, status=404)
         
         # التحقق من وجود الملف
         if 'contract_file' not in request.FILES:
@@ -1267,12 +1368,17 @@ def wizard_remove_contract_file(request):
     حذف ملف العقد المرفوع
     """
     try:
-        # الحصول على المسودة الحالية
-        draft = get_object_or_404(
-            DraftOrder,
+        # الحصول على المسودة الأحدث
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
-        )
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم العثور على مسودة نشطة'
+            }, status=404)
         
         # حذف الملف
         if draft.contract_file:

@@ -695,6 +695,11 @@
                         {% else %}{{ service }}{% endif %}
                     </span>
                     {% endfor %}
+                    {% if total_meters %}
+                    <div style="font-size: 11px; color: #666; margin-top: 3px; margin-right: 5px;">
+                        ({{ total_meters|floatformat:2 }} متر)
+                    </div>
+                    {% endif %}
                 {% endif %}
             </div>
             

@@ -1,7 +1,6 @@
 """
-صفحات إدارة العقود - نظام جديد
-تم حذف النظام القديم بالكامل
-النظام الجديد يعتمد على الويزارد 100%
+صفحات إدارة العقود - نظام الويزارد فقط
+تم حذف نظام القوالب القديم
 """
 import logging
 from django.shortcuts import get_object_or_404
@@ -10,8 +9,7 @@ from django.http import HttpResponse
 from django.views.decorators.http import require_http_methods
 
 from .models import Order
-from .contract_models import ContractTemplate, ContractPrintLog
-from .services.contract_generation_service import ContractGenerationService
+from .contract_models import ContractCurtain
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +19,12 @@ logger = logging.getLogger(__name__)
 def contract_pdf_view(request, order_id):
     """
     عرض/تحميل العقد بصيغة PDF
-    يستخدم القالب الجديد المحسّن من Google Sheets
+    يستخدم نظام الويزارد فقط
     """
     try:
         order = get_object_or_404(Order, id=order_id)
         
         # التحقق من وجود ستائر للعقد
-        from .contract_models import ContractCurtain
         curtains = ContractCurtain.objects.filter(order=order).prefetch_related('fabrics', 'accessories')
         
         if not curtains.exists():
@@ -37,19 +34,11 @@ def contract_pdf_view(request, order_id):
                 status=404
             )
         
-        # الحصول على القالب (افتراضي أو مخصص)
-        template = ContractTemplate.get_default_template()
+        # توليد PDF باستخدام خدمة توليد العقود
+        from .services.contract_generation_service import ContractGenerationService
         
-        # توليد PDF
-        service = ContractGenerationService(order, template)
+        service = ContractGenerationService(order, template=None)
         pdf_file = service.generate_pdf()
-        
-        # تسجيل الطباعة
-        ContractPrintLog.objects.create(
-            order=order,
-            template=template,
-            printed_by=request.user
-        )
         
         # إرجاع PDF
         response = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
