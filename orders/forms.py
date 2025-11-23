@@ -436,19 +436,14 @@ class OrderForm(forms.ModelForm):
         # التحقق من رقم العقد وملف العقد للتركيب والتفصيل والإكسسوار
         contract_required_types = ['installation', 'tailoring', 'accessory']
         if selected_type in contract_required_types:
-            # التحقق من ملف العقد أو العقد الإلكتروني
-            # إذا كان هناك طلب لإنشاء عقد إلكتروني، لا نطلب ملف العقد أو رقم العقد الآن
-            create_electronic_contract = self.data.get('create_electronic_contract') == 'true'
+            # التحقق من رقم العقد
+            contract_number = cleaned_data.get('contract_number')
+            if not contract_number or not contract_number.strip():
+                self.add_error('contract_number', 'رقم العقد مطلوب لهذا النوع من الطلبات')
 
-            # رقم العقد مطلوب فقط إذا لم يكن عقد إلكتروني
-            if not create_electronic_contract:
-                contract_number = cleaned_data.get('contract_number')
-                if not contract_number or not contract_number.strip():
-                    self.add_error('contract_number', 'رقم العقد مطلوب لهذا النوع من الطلبات')
-
-            # ملف العقد مطلوب فقط إذا لم يكن عقد إلكتروني
-            if not create_electronic_contract and 'contract_file' not in self.files:
-                self.add_error('contract_file', 'ملف العقد مطلوب لهذا النوع من الطلبات (أو اختر إنشاء عقد إلكتروني)')
+            # ملف العقد مطلوب
+            if 'contract_file' not in self.files:
+                self.add_error('contract_file', 'ملف العقد مطلوب لهذا النوع من الطلبات')
 
         # التحقق من المعاينة المرتبطة للخدمات الأخرى (غير المعاينة) فقط
         if selected_type != 'inspection':
