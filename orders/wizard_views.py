@@ -155,19 +155,34 @@ def wizard_step(request, step):
     """
     عرض خطوة معينة من الويزارد
     """
-    # الحصول على المسودة الحالية أو إنشاء واحدة جديدة
-    draft = DraftOrder.objects.filter(
-        created_by=request.user,
-        is_completed=False
-    ).order_by('-updated_at').first()
+    # التحقق من وجود معرف المسودة في الجلسة (وضع التعديل)
+    draft_id = request.session.get('wizard_draft_id')
     
-    if not draft:
-        # إذا لم توجد مسودة، إنشاء واحدة جديدة
-        draft = DraftOrder.objects.create(
+    if draft_id:
+        # وضع التعديل - استخدام المسودة من الجلسة
+        try:
+            draft = DraftOrder.objects.get(pk=draft_id, created_by=request.user)
+        except DraftOrder.DoesNotExist:
+            # المسودة غير موجودة، حذف من الجلسة
+            del request.session['wizard_draft_id']
+            if 'editing_order_id' in request.session:
+                del request.session['editing_order_id']
+            messages.error(request, 'المسودة غير موجودة')
+            return redirect('orders:wizard_start')
+    else:
+        # وضع الإنشاء العادي - البحث عن آخر مسودة نشطة
+        draft = DraftOrder.objects.filter(
             created_by=request.user,
-            current_step=1
-        )
-        return redirect('orders:wizard_step', step=1)
+            is_completed=False
+        ).order_by('-updated_at').first()
+        
+        if not draft:
+            # إذا لم توجد مسودة، إنشاء واحدة جديدة
+            draft = DraftOrder.objects.create(
+                created_by=request.user,
+                current_step=1
+            )
+            return redirect('orders:wizard_step', step=1)
     
     # التحقق من إمكانية الوصول للخطوة
     if not draft.can_access_step(step):
@@ -236,6 +251,16 @@ def wizard_step_1_basic_info(request, draft):
     
     total_steps = get_total_steps(draft)
     
+    # التحقق من وضع التعديل
+    editing_order_id = request.session.get('editing_order_id')
+    editing_mode = editing_order_id is not None
+    editing_order = None
+    if editing_mode:
+        try:
+            editing_order = Order.objects.get(pk=editing_order_id)
+        except Order.DoesNotExist:
+            pass
+    
     context = {
         'draft': draft,
         'form': form,
@@ -243,6 +268,8 @@ def wizard_step_1_basic_info(request, draft):
         'total_steps': total_steps,
         'step_title': 'البيانات الأساسية',
         'progress_percentage': round((1 / total_steps) * 100, 2),
+        'editing_mode': editing_mode,
+        'editing_order': editing_order,
     }
     
     return render(request, 'orders/wizard/step1_basic_info.html', context)
@@ -698,6 +725,8 @@ def wizard_finalize(request):
             final_price=draft.final_total,
             paid_amount=draft.paid_amount,
             created_by=request.user,
+            creation_method='wizard',
+            source_draft_id=draft.id,
         )
         
         # نقل ملف العقد إذا وجد
@@ -1460,3 +1489,150 @@ def view_contract_template(request, order_id):
     }
     
     return render(request, 'orders/contract_template.html', context)
+
+
+@login_required
+def wizard_edit_order(request, order_pk):
+    """
+    تعديل طلب منشأ عبر الويزارد
+    Edit an order created via wizard
+    """
+    # الحصول على الطلب
+    order = get_object_or_404(Order, pk=order_pk)
+    
+    # التحقق من الصلاحيات
+    if not request.user.has_perm('orders.change_order'):
+        if order.created_by != request.user:
+            messages.error(request, 'ليس لديك صلاحية لتعديل هذا الطلب')
+            return redirect('orders:order_detail_by_number', order_number=order.order_number)
+    
+    # التحقق من أن الطلب منشأ عبر الويزارد
+    if order.creation_method != 'wizard':
+        messages.warning(request, 'هذا الطلب لم ينشأ عبر الويزارد. سيتم توجيهك للتعديل التقليدي.')
+        return redirect('orders:order_update', pk=order.pk)
+    
+    try:
+        # البحث عن المسودة المرتبطة
+        if order.source_draft_id:
+            draft = DraftOrder.objects.get(pk=order.source_draft_id)
+        else:
+            # إنشاء مسودة جديدة من الطلب الحالي
+            draft = _create_draft_from_order(order, request.user)
+        
+        # حفظ معرف المسودة في الجلسة
+        request.session['wizard_draft_id'] = draft.pk
+        request.session['editing_order_id'] = order.pk
+        
+        # توجيه للخطوة الأولى
+        messages.success(request, 'تم تحميل بيانات الطلب. يمكنك الآن تعديلها.')
+        return redirect('orders:wizard_step', step=1)
+    
+    except DraftOrder.DoesNotExist:
+        # إنشاء مسودة جديدة من الطلب
+        draft = _create_draft_from_order(order, request.user)
+        request.session['wizard_draft_id'] = draft.pk
+        request.session['editing_order_id'] = order.pk
+        
+        messages.success(request, 'تم تحميل بيانات الطلب. يمكنك الآن تعديلها.')
+        return redirect('orders:wizard_step', step=1)
+    
+    except Exception as e:
+        logger.error(f"Error editing order via wizard: {e}")
+        messages.error(request, f'حدث خطأ أثناء تحميل بيانات الطلب: {str(e)}')
+        return redirect('orders:order_detail_by_number', order_number=order.order_number)
+
+
+def _create_draft_from_order(order, user):
+    """
+    إنشاء مسودة من طلب موجود
+    Create draft from existing order
+    """
+    from .contract_models import ContractCurtain, CurtainFabric, CurtainAccessory
+    
+    # إنشاء المسودة
+    draft = DraftOrder.objects.create(
+        created_by=user,
+        customer=order.customer,
+        branch=order.branch,
+        salesperson=order.salesperson,
+        status=order.status,
+        selected_type=order.get_selected_types_list()[0] if order.get_selected_types_list() else None,
+        notes=order.notes,
+        invoice_number=order.invoice_number,
+        invoice_number_2=order.invoice_number_2,
+        invoice_number_3=order.invoice_number_3,
+        contract_number=order.contract_number,
+        contract_number_2=order.contract_number_2,
+        contract_number_3=order.contract_number_3,
+        contract_file=order.contract_file,
+        payment_method='cash',  # افتراضي
+        paid_amount=order.paid_amount,
+        related_inspection=order.related_inspection,
+        related_inspection_type=order.related_inspection_type,
+        current_step=1,
+        completed_steps=[1, 2, 3, 4]  # تم إكمال الخطوات الأساسية
+    )
+    
+    # نسخ العناصر
+    item_mapping = {}  # خريطة لربط العناصر القديمة بالجديدة
+    for item in order.items.all():
+        new_item = DraftOrderItem.objects.create(
+            draft_order=draft,
+            product=item.product,
+            quantity=item.quantity,
+            unit_price=item.unit_price,
+            discount_percentage=item.discount_percentage,
+            item_type=item.item_type,
+            notes=item.notes
+        )
+        item_mapping[item.id] = new_item
+    
+    # نسخ الستائر والأقمشة والإكسسوارات
+    for curtain in order.contract_curtains.all():
+        # إنشاء ستارة جديدة مرتبطة بالمسودة
+        new_curtain = ContractCurtain.objects.create(
+            draft_order=draft,
+            order=None,  # مسودة فقط
+            room_name=curtain.room_name,
+            width=curtain.width,
+            height=curtain.height,
+            installation_type=curtain.installation_type,
+            curtain_box_width=curtain.curtain_box_width,
+            curtain_box_depth=curtain.curtain_box_depth,
+            notes=curtain.notes,
+            sequence=curtain.sequence
+        )
+        
+        # نسخ الأقمشة
+        for fabric in curtain.fabrics.all():
+            CurtainFabric.objects.create(
+                curtain=new_curtain,
+                draft_order_item=item_mapping.get(fabric.draft_order_item_id) if fabric.draft_order_item_id else None,
+                fabric_type=fabric.fabric_type,
+                fabric_name=fabric.fabric_name,
+                pieces=fabric.pieces,
+                meters=fabric.meters,
+                tailoring_type=fabric.tailoring_type,
+                sequence=fabric.sequence
+            )
+        
+        # نسخ الإكسسوارات
+        for accessory in curtain.accessories.all():
+            CurtainAccessory.objects.create(
+                curtain=new_curtain,
+                draft_order_item=item_mapping.get(accessory.draft_order_item_id) if accessory.draft_order_item_id else None,
+                accessory_name=accessory.accessory_name,
+                count=accessory.count,
+                size=accessory.size,
+                quantity=accessory.quantity,
+                color=accessory.color
+            )
+    
+    # حساب المجاميع
+    draft.calculate_totals()
+    
+    # ربط المسودة بالطلب
+    order.source_draft_id = draft.pk
+    order.save(update_fields=['source_draft_id'])
+    
+    return draft

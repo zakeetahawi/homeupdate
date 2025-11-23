@@ -2,6 +2,20 @@
 {% load static %}
 
 {% block wizard_content %}
+
+<!-- رسالة وضع التعديل -->
+{% if editing_mode and editing_order %}
+<div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+    <i class="fas fa-edit me-2"></i>
+    <strong>وضع التعديل:</strong> 
+    أنت الآن تقوم بتعديل الطلب 
+    <a href="{% url 'orders:order_detail_by_number' editing_order.order_number %}" target="_blank" class="alert-link">
+        #{{ editing_order.order_number }}
+    </a>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
 <form method="post" id="step1-form">
     {% csrf_token %}
     

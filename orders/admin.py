@@ -13,7 +13,10 @@ from .models import (
 )
 from django import forms
 import json
-# from .extended_models import ExtendedOrder, AccessoryItem, FabricOrder # Deletion
+
+# استيراد إدارة الويزارد والإعدادات
+from . import wizard_admin
+from . import admin_settings
 
 
 class YearFilter(admin.SimpleListFilter):

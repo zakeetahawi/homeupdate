@@ -1,0 +1,32 @@
+{% comment %}
+قالب أزرار إنشاء الطلبات
+Order Create Buttons Template
+{% endcomment %}
+
+{% if show_wizard and show_legacy %}
+    {# كلا النظامين مفعّلين #}
+    <div class="btn-group" role="group">
+        <a href="{% url 'orders:wizard_start' %}" class="btn btn-primary">
+            <i class="fas fa-magic"></i> طلب جديد (ويزارد)
+        </a>
+        <a href="{% url 'orders:order_create' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> طلب جديد (عادي)
+        </a>
+    </div>
+{% elif show_wizard %}
+    {# الويزارد فقط #}
+    <a href="{% url 'orders:wizard_start' %}" class="btn btn-primary btn-lg">
+        <i class="fas fa-magic"></i> طلب جديد
+    </a>
+{% elif show_legacy %}
+    {# النظام القديم فقط #}
+    <a href="{% url 'orders:order_create' %}" class="btn btn-success btn-lg">
+        <i class="fas fa-plus"></i> طلب جديد
+    </a>
+{% else %}
+    {# لا يوجد نظام مفعّل #}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        لم يتم تفعيل أي نظام لإنشاء الطلبات. يرجى مراجعة الإعدادات.
+    </div>
+{% endif %}

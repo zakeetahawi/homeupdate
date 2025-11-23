@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load decimal_filters %}
 {% load unified_status_tags %}
+{% load system_settings_tags %}
 
 {% block title %}تفاصيل الطلب - نظام الخواجه{% endblock %}
 
@@ -12,9 +13,15 @@
             <a href="{% url 'orders:order_list' %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-right"></i> العودة للقائمة
             </a>
-            <a href="{% url 'orders:order_update' order.pk %}" class="btn btn-primary">
-                <i class="fas fa-edit"></i> تعديل الطلب
-            </a>
+            {% if order.creation_method == 'wizard' and order.source_draft_id %}
+                <a href="{% url 'orders:wizard_edit_order' order.pk %}" class="btn btn-primary">
+                    <i class="fas fa-magic"></i> تعديل الطلب (ويزارد)
+                </a>
+            {% else %}
+                <a href="{% url 'orders:order_update' order.pk %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> تعديل الطلب
+                </a>
+            {% endif %}
             <button type="button" class="btn btn-success" onclick="printInvoice('{{ order.order_number }}')">
                 <i class="fas fa-print"></i> طباعة الفاتورة
             </button>

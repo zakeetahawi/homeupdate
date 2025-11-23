@@ -70,6 +70,31 @@ class Order(models.Model):
         ('fabric', 'قماش'),
         ('accessory', 'إكسسوار'),
     ]
+    
+    # تتبع طريقة إنشاء الطلب
+    CREATION_METHOD_CHOICES = [
+        ('wizard', 'نظام الويزارد'),
+        ('legacy', 'النظام القديم'),
+        ('api', 'API'),
+        ('import', 'استيراد'),
+    ]
+    
+    creation_method = models.CharField(
+        max_length=20,
+        choices=CREATION_METHOD_CHOICES,
+        default='legacy',
+        verbose_name='طريقة الإنشاء',
+        help_text='الطريقة المستخدمة لإنشاء الطلب'
+    )
+    
+    # معرف المسودة المرتبطة (إذا تم إنشاؤه من الويزارد)
+    source_draft_id = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name='معرف المسودة',
+        help_text='معرف مسودة الويزارد التي تم إنشاء الطلب منها'
+    )
+    
     customer = models.ForeignKey(
         'customers.Customer',
         on_delete=models.CASCADE,
