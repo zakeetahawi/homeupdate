@@ -240,7 +240,7 @@
                         {% if order.contract_number %}
                         <div class="info-item">
                             <span class="info-label">رقم العقد:</span>
-                            <span class="info-value">{{ order.contract_number }}</span>
+                            <span class="info-value" dir="ltr">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
                         </div>
                         {% endif %}
                         {% if order.contract_number_2 %}

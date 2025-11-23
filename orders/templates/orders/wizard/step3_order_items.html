@@ -1,0 +1,326 @@
+{% extends 'orders/wizard/base_wizard.html' %}
+{% load static %}
+
+{% block wizard_content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Add Item Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>إضافة عنصر جديد
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">المنتج <span class="text-danger">*</span></label>
+                        <select id="product-select" class="form-select">
+                            <option value="">-- اختر المنتج --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">الكمية <span class="text-danger">*</span></label>
+                        <input type="number" id="item-quantity" class="form-control" min="0.001" step="0.001" value="1">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">السعر <span class="text-danger">*</span></label>
+                        <input type="number" id="item-price" class="form-control" min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">الخصم %</label>
+                        <input type="number" id="item-discount" class="form-control" min="0" max="100" step="0.01" value="0">
+                    </div>
+                    <div class="col-md-6 mb-3 d-flex align-items-end">
+                        <button type="button" class="btn btn-success w-100" onclick="addItem()">
+                            <i class="fas fa-plus me-2"></i>إضافة
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Items List -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>العناصر المضافة
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="items-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>المنتج</th>
+                                <th>الكمية</th>
+                                <th>السعر</th>
+                                <th>الخصم</th>
+                                <th>الإجمالي</th>
+                                <th>النهائي</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-tbody">
+                            {% for item in items %}
+                            <tr data-item-id="{{ item.id }}">
+                                <td>{{ item.product.name }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ item.unit_price }}</td>
+                                <td>{{ item.discount_percentage }}%</td>
+                                <td>{{ item.total_price }}</td>
+                                <td class="fw-bold">{{ item.final_price }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-danger" 
+                                            onclick="removeItem({{ item.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr id="no-items-row">
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                                    <p class="mb-0">لم يتم إضافة عناصر بعد</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Sidebar -->
+    <div class="col-md-4">
+        <div class="card sticky-top" style="top: 20px;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-calculator me-2"></i>الملخص
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>المجموع قبل الخصم:</span>
+                    <strong id="subtotal">{{ totals.subtotal|default:"0.00" }} ج.م</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-danger">
+                    <span>إجمالي الخصم:</span>
+                    <strong id="total-discount">{{ totals.total_discount|default:"0.00" }} ج.م</strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="h5">المجموع النهائي:</span>
+                    <strong class="h5 text-success" id="final-total">{{ totals.final_total|default:"0.00" }} ج.م</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="wizard-actions mt-4">
+    <div>
+        <a href="{% url 'orders:wizard_cancel' %}" class="btn btn-wizard btn-wizard-danger me-2">
+            <i class="fas fa-times me-2"></i>إلغاء
+        </a>
+        <a href="{% url 'orders:wizard_step' step=2 %}" class="btn btn-wizard btn-wizard-secondary">
+            <i class="fas fa-arrow-right me-2"></i>السابق
+        </a>
+    </div>
+    <div>
+        <button type="button" class="btn btn-wizard btn-wizard-primary" onclick="completeStep3()">
+            <i class="fas fa-arrow-left me-2"></i>التالي
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // تفعيل Select2 للمنتجات مع البحث عبر AJAX
+    $('#product-select').select2({
+        placeholder: 'ابحث عن المنتج...',
+        allowClear: true,
+        dir: 'rtl',
+        ajax: {
+            url: '{% url "orders:products_search_api" %}',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+                return {
+                    q: params.term,
+                    page: params.page || 1
+                };
+            },
+            processResults: function (data) {
+                return {
+                    results: data.results.map(item => ({
+                        id: item.id,
+                        text: item.name,
+                        price: item.price
+                    })),
+                    pagination: {
+                        more: data.has_more
+                    }
+                };
+            }
+        }
+    });
+    
+    // تحديث السعر عند اختيار المنتج
+    $('#product-select').on('select2:select', function(e) {
+        const data = e.params.data;
+        if (data.price) {
+            $('#item-price').val(data.price);
+        }
+    });
+});
+
+function addItem() {
+    const productId = $('#product-select').val();
+    const quantity = $('#item-quantity').val();
+    const unitPrice = $('#item-price').val();
+    const discountPercentage = $('#item-discount').val();
+    
+    if (!productId || !quantity || !unitPrice) {
+        alert('يرجى ملء جميع الحقول المطلوبة');
+        return;
+    }
+    
+    fetch('{% url "orders:wizard_add_item" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            product_id: productId,
+            quantity: quantity,
+            unit_price: unitPrice,
+            discount_percentage: discountPercentage
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            addItemToTable(data.item);
+            updateTotals(data.totals);
+            clearForm();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء إضافة العنصر');
+    });
+}
+
+function addItemToTable(item) {
+    const noItemsRow = document.getElementById('no-items-row');
+    if (noItemsRow) {
+        noItemsRow.remove();
+    }
+    
+    const tbody = document.getElementById('items-tbody');
+    const row = document.createElement('tr');
+    row.dataset.itemId = item.id;
+    row.innerHTML = `
+        <td>${item.product_name}</td>
+        <td>${item.quantity}</td>
+        <td>${item.unit_price}</td>
+        <td>${item.discount_percentage}%</td>
+        <td>${item.total_price}</td>
+        <td class="fw-bold">${item.final_price}</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeItem(${item.id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(row);
+}
+
+function removeItem(itemId) {
+    if (!confirm('هل أنت متأكد من حذف هذا العنصر؟')) {
+        return;
+    }
+    
+    fetch(`{% url 'orders:wizard_remove_item' 0 %}`.replace('0', itemId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.querySelector(`tr[data-item-id="${itemId}"]`).remove();
+            updateTotals(data.totals);
+            
+            // إذا لم يعد هناك عناصر
+            const tbody = document.getElementById('items-tbody');
+            if (tbody.children.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="no-items-row">
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                            <p class="mb-0">لم يتم إضافة عناصر بعد</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء حذف العنصر');
+    });
+}
+
+function updateTotals(totals) {
+    document.getElementById('subtotal').textContent = totals.subtotal.toFixed(2) + ' ج.م';
+    document.getElementById('total-discount').textContent = totals.total_discount.toFixed(2) + ' ج.م';
+    document.getElementById('final-total').textContent = totals.final_total.toFixed(2) + ' ج.م';
+}
+
+function clearForm() {
+    $('#product-select').val(null).trigger('change');
+    $('#item-quantity').val('1');
+    $('#item-price').val('');
+    $('#item-discount').val('0');
+}
+
+function completeStep3() {
+    fetch('{% url "orders:wizard_complete_step_3" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = `/orders/wizard/step/${data.next_step}/`;
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ');
+    });
+}
+</script>
+{% endblock %}

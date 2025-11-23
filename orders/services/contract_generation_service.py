@@ -35,12 +35,24 @@ class ContractGenerationService:
         # الحصول على ستائر العقد
         curtains = ContractCurtain.objects.filter(order=self.order).order_by('sequence')
         
+        # الحصول على إعدادات النظام للعملة
+        from accounts.models import SystemSettings
+        system_settings = SystemSettings.get_settings()
+        
+        # حساب عدد أيام التشغيل
+        working_days = None
+        if self.order.expected_delivery_date and self.order.created_at:
+            delta = self.order.expected_delivery_date - self.order.created_at.date()
+            working_days = delta.days
+        
         # تجهيز البيانات للقالب
         context = {
             'order': self.order,
             'customer': self.order.customer,
             'curtains': curtains,
             'template': self.template,
+            'settings': system_settings,  # إضافة إعدادات النظام
+            'working_days': working_days,  # إضافة عدد أيام التشغيل
             'company_name': self.template.company_name,
             'company_logo': self.template.company_logo,
             'company_address': self.template.company_address,
@@ -59,14 +71,8 @@ class ContractGenerationService:
             'terms_text': self.template.terms_text,
         }
         
-        # إذا كان هناك محتوى HTML مخصص، استخدمه
-        if self.template.html_content:
-            from django.template import Template, Context
-            template_obj = Template(self.template.html_content)
-            html_content = template_obj.render(Context(context))
-        else:
-            # استخدام القالب الافتراضي
-            html_content = render_to_string('orders/contract_pdf_template.html', context)
+        # استخدام القالب الجديد
+        html_content = render_to_string('orders/contract_template.html', context)
         
         return html_content
     
@@ -86,59 +92,26 @@ class ContractGenerationService:
         # CSS إضافي من القالب
         css_content = self.template.css_styles if self.template.css_styles else ''
         
-        # CSS أساسي للعقد
-        base_css = f"""
-        @page {{
-            size: {self.template.page_size};
-            margin: {self.template.page_margins}mm;
-        }}
-        body {{
-            font-family: {self.template.font_family};
-            font-size: {self.template.font_size}px;
+        # CSS أساسي للعقد - مناسب لصفحة عمودية
+        base_css = """
+        @page {
+            size: A4 portrait;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Arial', 'Segoe UI', Tahoma, sans-serif;
+            font-size: 9px;
             direction: rtl;
             text-align: right;
-        }}
-        .contract-header {{
-            background-color: {self.template.primary_color};
-            color: white;
-            padding: 20px;
-            margin-bottom: 20px;
-        }}
-        .curtain-section {{
-            border: 2px solid {self.template.secondary_color};
-            padding: 15px;
-            margin-bottom: 15px;
-            page-break-inside: avoid;
-        }}
-        .curtain-title {{
-            background-color: {self.template.accent_color};
-            padding: 10px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 10px;
-        }}
-        table th, table td {{
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: right;
-        }}
-        table th {{
-            background-color: {self.template.secondary_color};
-            color: white;
-        }}
-        .footer {{
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px solid {self.template.primary_color};
-        }}
+            color: #000;
+        }
         """
         
-        # دمج CSS
-        full_css = base_css + '\n' + css_content
+        # دمج CSS - CSS الإضافي من القالب فقط إذا كان موجوداً
+        if css_content:
+            full_css = base_css + '\n' + css_content
+        else:
+            full_css = base_css
         
         # توليد PDF
         pdf_file = BytesIO()

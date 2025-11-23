@@ -9,7 +9,8 @@ from django.http import HttpResponseRedirect
 from datetime import datetime
 from .models import (
     Order, OrderItem, Payment, OrderStatusLog, 
-    ManufacturingDeletionLog, DeliveryTimeSettings
+    ManufacturingDeletionLog, DeliveryTimeSettings,
+    ContractTemplate
 )
 from django import forms
 import json
@@ -696,3 +697,83 @@ class OrderStatusLogAdmin(admin.ModelAdmin):
             return obj.notes[:50] + '...' if len(obj.notes) > 50 else obj.notes
         return '-'
     notes_truncated.short_description = 'ملاحظات'
+
+
+@admin.register(ContractTemplate)
+class ContractTemplateAdmin(admin.ModelAdmin):
+    """لوحة تحكم قوالب العقود"""
+    
+    list_display = ('name', 'template_type', 'is_active', 'is_default', 'color_preview', 'created_at')
+    list_filter = ('is_active', 'is_default', 'template_type', 'created_at')
+    search_fields = ('name', 'company_name')
+    
+    fieldsets = (
+        ('معلومات القالب', {
+            'fields': ('name', 'template_type', 'is_active', 'is_default')
+        }),
+        ('معلومات الشركة', {
+            'fields': ('company_name', 'company_logo', 'company_phone')
+        }),
+        ('الألوان والخطوط', {
+            'fields': ('primary_color', 'secondary_color', 'accent_color', 'font_family', 'font_size'),
+            'classes': ('collapse',),
+        }),
+        ('إعدادات الصفحة', {
+            'fields': ('page_size', 'page_margins'),
+            'classes': ('collapse',),
+        }),
+        ('محتوى مخصص (متقدم)', {
+            'fields': ('html_content', 'css_styles'),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    readonly_fields = ('created_at', 'updated_at')
+    
+    def color_preview(self, obj):
+        """معاينة الألوان"""
+        return format_html(
+            '<div style="display: flex; gap: 5px;">'
+            '<div style="width: 20px; height: 20px; background: {}; border: 1px solid #ddd; border-radius: 3px;"></div>'
+            '<div style="width: 20px; height: 20px; background: {}; border: 1px solid #ddd; border-radius: 3px;"></div>'
+            '<div style="width: 20px; height: 20px; background: {}; border: 1px solid #ddd; border-radius: 3px;"></div>'
+            '</div>',
+            obj.primary_color, obj.secondary_color, obj.accent_color
+        )
+    color_preview.short_description = 'معاينة الألوان'
+    
+    def save_model(self, request, obj, form, change):
+        """حفظ القالب مع ضمان قالب افتراضي واحد فقط"""
+        if obj.is_default:
+            ContractTemplate.objects.filter(is_default=True).exclude(pk=obj.pk).update(is_default=False)
+        
+        if not change:
+            obj.created_by = request.user
+        
+        super().save_model(request, obj, form, change)
+    
+    actions = ['make_default', 'activate_templates', 'deactivate_templates']
+    
+    def make_default(self, request, queryset):
+        """جعل القالب افتراضياً"""
+        if queryset.count() > 1:
+            self.message_user(request, 'يمكنك فقط اختيار قالب واحد كافتراضي', level='error')
+            return
+        
+        ContractTemplate.objects.filter(is_default=True).update(is_default=False)
+        queryset.update(is_default=True, is_active=True)
+        self.message_user(request, 'تم تعيين القالب كافتراضي بنجاح')
+    make_default.short_description = 'جعل القالب افتراضياً'
+    
+    def activate_templates(self, request, queryset):
+        """تفعيل القوالب"""
+        count = queryset.update(is_active=True)
+        self.message_user(request, f'تم تفعيل {count} قالب بنجاح')
+    activate_templates.short_description = 'تفعيل القوالب المحددة'
+    
+    def deactivate_templates(self, request, queryset):
+        """إلغاء تفعيل القوالب"""
+        count = queryset.update(is_active=False)
+        self.message_user(request, f'تم إلغاء تفعيل {count} قالب بنجاح')
+    deactivate_templates.short_description = 'إلغاء تفعيل القوالب المحددة'
+

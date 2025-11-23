@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}قائمة المسودات المحفوظة{% endblock %}
+
+{% block extra_css %}
+<style>
+    .drafts-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .draft-card {
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border: none;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+    }
+    
+    .draft-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    
+    .draft-card-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-bottom: 2px solid #e2e8f0;
+        padding: 15px 20px;
+        border-radius: 12px 12px 0 0;
+    }
+    
+    .draft-card-body {
+        padding: 20px;
+    }
+    
+    .step-badge {
+        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .draft-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .btn-continue {
+        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+        border: none;
+        color: white;
+        padding: 8px 20px;
+        font-weight: 600;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-continue:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+    }
+    
+    .btn-delete {
+        background: #dc3545;
+        border: none;
+        color: white;
+        padding: 8px 15px;
+        font-weight: 600;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-delete:hover {
+        background: #c82333;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid drafts-container">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-file-alt me-2"></i>
+                {{ title }}
+            </h2>
+            <p class="text-muted mb-0">
+                عدد المسودات: {{ drafts|length }}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'orders:wizard_start_new' %}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>
+                إنشاء طلب جديد
+            </a>
+            <a href="{% url 'orders:order_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-right me-2"></i>
+                العودة للطلبات
+            </a>
+        </div>
+    </div>
+
+    {% if drafts %}
+        <div class="row">
+            {% for draft in drafts %}
+            <div class="col-lg-6 col-xl-4">
+                <div class="card draft-card">
+                    <div class="card-header draft-card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                {% if draft.customer %}
+                                    <i class="fas fa-user me-1"></i>
+                                    {{ draft.customer.name }}
+                                {% else %}
+                                    <i class="fas fa-user-slash me-1 text-muted"></i>
+                                    <span class="text-muted">لم يتم تحديد العميل</span>
+                                {% endif %}
+                            </h6>
+                            <span class="step-badge">
+                                الخطوة {{ draft.current_step }}/6
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body draft-card-body">
+                        <!-- Draft Information -->
+                        <div class="mb-3">
+                            <div class="draft-meta">
+                                <i class="fas fa-clock me-1"></i>
+                                آخر تحديث: {{ draft.updated_at|date:"Y/m/d H:i" }}
+                            </div>
+                            <div class="draft-meta">
+                                <i class="fas fa-user-edit me-1"></i>
+                                أنشأ بواسطة: {{ draft.created_by.get_full_name|default:draft.created_by.username }}
+                            </div>
+                            {% if draft.branch %}
+                            <div class="draft-meta">
+                                <i class="fas fa-building me-1"></i>
+                                الفرع: {{ draft.branch.name }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Current Step -->
+                        <div class="mb-3">
+                            <small class="text-muted">الخطوة الحالية:</small>
+                            <div class="fw-bold">{{ draft.get_current_step_display }}</div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'orders:wizard_step' step=draft.current_step %}" class="btn btn-continue">
+                                <i class="fas fa-play me-1"></i>
+                                متابعة
+                            </a>
+                            
+                            {% if request.user == draft.created_by or request.user.is_superuser or request.user.groups.all|length > 0 %}
+                            <form method="post" action="{% url 'orders:wizard_delete_draft' draft_id=draft.id %}" 
+                                  style="display: inline;" 
+                                  onsubmit="return confirm('هل أنت متأكد من حذف هذه المسودة؟')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-delete btn-sm">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <h4>لا توجد مسودات محفوظة</h4>
+            <p class="mb-4">يبدو أنه لا توجد مسودات محفوظة حالياً. يمكنك بدء طلب جديد الآن.</p>
+            <a href="{% url 'orders:wizard_start_new' %}" class="btn btn-success btn-lg">
+                <i class="fas fa-plus me-2"></i>
+                إنشاء طلب جديد
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// تحديث تلقائي كل 30 ثانية
+setTimeout(function() {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

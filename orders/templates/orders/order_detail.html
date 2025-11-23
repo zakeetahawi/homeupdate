@@ -15,9 +15,6 @@
             <a href="{% url 'orders:order_update' order.pk %}" class="btn btn-primary">
                 <i class="fas fa-edit"></i> تعديل الطلب
             </a>
-            <a href="{% url 'orders:contract_curtains_manage' order.pk %}" class="btn btn-info">
-                <i class="fas fa-file-contract"></i> إدارة ستائر العقد
-            </a>
             <button type="button" class="btn btn-success" onclick="printInvoice('{{ order.order_number }}')">
                 <i class="fas fa-print"></i> طباعة الفاتورة
             </button>
@@ -65,24 +62,8 @@
                         {% with types_list=order.get_selected_types_list %}
                         {% if types_list and types_list|length == 1 %}
                             {% if types_list.0 == 'inspection' %}
-                                {# لا تعرض رقم العقد وملف العقد والمعاينة المرتبطة #}
+                                {# لا تعرض ملف العقد والمعاينة المرتبطة #}
                             {% else %}
-                                <tr>
-                                    <th>رقم العقد</th>
-                                    <td>{{ order.contract_number|default:'-' }}</td>
-                                </tr>
-                                {% if order.contract_number_2 %}
-                                <tr>
-                                    <th>رقم العقد الإضافي 2</th>
-                                    <td>{{ order.contract_number_2 }}</td>
-                                </tr>
-                                {% endif %}
-                                {% if order.contract_number_3 %}
-                                <tr>
-                                    <th>رقم العقد الإضافي 3</th>
-                                    <td>{{ order.contract_number_3 }}</td>
-                                </tr>
-                                {% endif %}
                                 <tr>
                                     <th>ملف العقد</th>
                                     <td>
@@ -113,7 +94,9 @@
                                             {% get_status_badge order.related_inspection.status "inspection" %}
                                             <br><small class="text-muted">
                                                 {% if order.related_inspection.contract_number %}
-                                                    {{ order.related_inspection.contract_number }}
+                                                    <span dir="ltr" style="font-weight: bold; color: #a67c52;">
+                                                        {{ order.related_inspection.branch.id|default:"1" }}-{{ order.related_inspection.inspection_code|stringformat:"04d" }}-{{ order.related_inspection.created_at|date:"ym" }}-{{ order.related_inspection.contract_number|default:"00" }}
+                                                    </span>
                                                 {% else %}
                                                     {{ order.related_inspection.inspection_code }}
                                                 {% endif %} - {{ order.related_inspection.created_at|date:"Y-m-d" }}
@@ -125,22 +108,6 @@
                                 </tr>
                             {% endif %}
                         {% else %}
-                            <tr>
-                                <th>رقم العقد</th>
-                                <td>{{ order.contract_number|default:'-' }}</td>
-                            </tr>
-                            {% if order.contract_number_2 %}
-                            <tr>
-                                <th>رقم العقد الإضافي 2</th>
-                                <td>{{ order.contract_number_2 }}</td>
-                            </tr>
-                            {% endif %}
-                            {% if order.contract_number_3 %}
-                            <tr>
-                                <th>رقم العقد الإضافي 3</th>
-                                <td>{{ order.contract_number_3 }}</td>
-                            </tr>
-                            {% endif %}
                             <tr>
                                 <th>ملف العقد</th>
                                 <td>
@@ -171,7 +138,9 @@
                                         {% get_status_badge order.related_inspection.status "inspection" %}
                                         <br><small class="text-muted">
                                             {% if order.related_inspection.contract_number %}
-                                                {{ order.related_inspection.contract_number }}
+                                                <span dir="ltr" style="font-weight: bold; color: #a67c52;">
+                                                    {{ order.related_inspection.branch.id|default:"1" }}-{{ order.related_inspection.inspection_code|stringformat:"04d" }}-{{ order.related_inspection.created_at|date:"ym" }}-{{ order.related_inspection.contract_number|default:"00" }}
+                                                </span>
                                             {% else %}
                                                 {{ order.related_inspection.inspection_code }}
                                             {% endif %} - {{ order.related_inspection.created_at|date:"Y-m-d" }}
@@ -799,18 +768,30 @@
                     <table class="table table-bordered">
                         <tr>
                             <th style="width: 40%">رقم العقد</th>
-                            <td>{{ order.contract_number|default:"لم يتم تحديده" }}</td>
+                            <td>
+                                <span dir="ltr" style="font-weight: bold; color: #a67c52;">
+                                    {{ order.order_number }}-{{ order.contract_number|default:"c1" }}
+                                </span>
+                            </td>
                         </tr>
                         {% if order.contract_number_2 %}
                         <tr>
-                            <th>رقم العقد 2</th>
-                            <td>{{ order.contract_number_2 }}</td>
+                            <th>رقم العقد الإضافي 2</th>
+                            <td>
+                                <span dir="ltr" style="font-weight: bold; color: #a67c52;">
+                                    {{ order.contract_number_2 }}
+                                </span>
+                            </td>
                         </tr>
                         {% endif %}
                         {% if order.contract_number_3 %}
                         <tr>
-                            <th>رقم العقد 3</th>
-                            <td>{{ order.contract_number_3 }}</td>
+                            <th>رقم العقد الإضافي 3</th>
+                            <td>
+                                <span dir="ltr" style="font-weight: bold; color: #a67c52;">
+                                    {{ order.contract_number_3 }}
+                                </span>
+                            </td>
                         </tr>
                         {% endif %}
                         <tr>
@@ -837,13 +818,6 @@
                                 {% endif %}
                                 {% endwith %}
                             </td>
-                        </tr>
-                        <tr>
-                            <th colspan="2" class="text-center">
-                                <a href="{% url 'orders:contract_curtains_manage' order.pk %}" class="btn btn-info w-100">
-                                    <i class="fas fa-edit"></i> إدارة ستائر العقد
-                                </a>
-                            </th>
                         </tr>
                     </table>
                 </div>
@@ -1183,24 +1157,6 @@
                         <tr>
                             <th>رقم الفاتورة الإضافي 3</th>
                             <td>{{ order.invoice_number_3 }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if order.contract_number %}
-                        <tr>
-                            <th>رقم العقد</th>
-                            <td>{{ order.contract_number }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if order.contract_number_2 %}
-                        <tr>
-                            <th>رقم العقد الإضافي 2</th>
-                            <td>{{ order.contract_number_2 }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if order.contract_number_3 %}
-                        <tr>
-                            <th>رقم العقد الإضافي 3</th>
-                            <td>{{ order.contract_number_3 }}</td>
                         </tr>
                         {% endif %}
                         <tr>

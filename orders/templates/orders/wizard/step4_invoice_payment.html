@@ -1,0 +1,141 @@
+{% extends 'orders/wizard/base_wizard.html' %}
+{% load static %}
+
+{% block wizard_content %}
+<form method="post" id="step4-form">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <h5 class="mb-3">
+                <i class="fas fa-file-invoice me-2"></i>تفاصيل الفاتورة
+            </h5>
+            
+            <!-- Invoice Numbers -->
+            <div class="mb-3">
+                <label for="{{ form.invoice_number.id_for_label }}" class="form-label fw-bold">
+                    <i class="fas fa-receipt me-2"></i>رقم الفاتورة الرئيسي
+                </label>
+                {{ form.invoice_number }}
+                {% if form.invoice_number.errors %}
+                    <div class="text-danger mt-1">{{ form.invoice_number.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.invoice_number_2.id_for_label }}" class="form-label">
+                    رقم فاتورة إضافي 1
+                </label>
+                {{ form.invoice_number_2 }}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.invoice_number_3.id_for_label }}" class="form-label">
+                    رقم فاتورة إضافي 2
+                </label>
+                {{ form.invoice_number_3 }}
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <h5 class="mb-3">
+                <i class="fas fa-money-bill-wave me-2"></i>معلومات الدفع
+            </h5>
+            
+            <!-- Payment Summary -->
+            <div class="alert alert-info mb-4">
+                <h6 class="alert-heading">ملخص المبالغ</h6>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>المجموع قبل الخصم:</span>
+                    <strong>{{ totals.subtotal }} ج.م</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-danger">
+                    <span>إجمالي الخصم:</span>
+                    <strong>{{ totals.total_discount }} ج.م</strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span class="h6">المجموع النهائي:</span>
+                    <strong class="h6 text-success">{{ totals.final_total }} ج.م</strong>
+                </div>
+            </div>
+            
+            <!-- Payment Method -->
+            <div class="mb-3">
+                <label for="{{ form.payment_method.id_for_label }}" class="form-label fw-bold">
+                    <i class="fas fa-credit-card me-2"></i>طريقة الدفع
+                </label>
+                {{ form.payment_method }}
+            </div>
+            
+            <!-- Paid Amount -->
+            <div class="mb-3">
+                <label for="{{ form.paid_amount.id_for_label }}" class="form-label fw-bold">
+                    <i class="fas fa-dollar-sign me-2"></i>المبلغ المدفوع
+                </label>
+                {{ form.paid_amount }}
+                {% if form.paid_amount.errors %}
+                    <div class="text-danger mt-1">{{ form.paid_amount.errors }}</div>
+                {% endif %}
+                <div class="form-text">
+                    <i class="fas fa-info-circle me-1"></i>
+                    المتبقي: <span id="remaining-amount">{{ totals.remaining }}</span> ج.م
+                </div>
+            </div>
+            
+            <!-- Payment Notes -->
+            <div class="mb-3">
+                <label for="{{ form.payment_notes.id_for_label }}" class="form-label">
+                    <i class="fas fa-sticky-note me-2"></i>ملاحظات الدفع
+                </label>
+                {{ form.payment_notes }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="wizard-actions">
+        <div>
+            <a href="{% url 'orders:wizard_cancel' %}" class="btn btn-wizard btn-wizard-danger me-2">
+                <i class="fas fa-times me-2"></i>إلغاء
+            </a>
+            <a href="{% url 'orders:wizard_step' step=3 %}" class="btn btn-wizard btn-wizard-secondary">
+                <i class="fas fa-arrow-right me-2"></i>السابق
+            </a>
+        </div>
+        <div>
+            <button type="submit" class="btn btn-wizard btn-wizard-primary">
+                <i class="fas fa-arrow-left me-2"></i>التالي
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+// حساب المبلغ المتبقي تلقائياً
+document.getElementById('{{ form.paid_amount.id_for_label }}').addEventListener('input', function() {
+    const totalAmount = {{ totals.final_total }};
+    const paidAmount = parseFloat(this.value) || 0;
+    const remaining = totalAmount - paidAmount;
+    
+    document.getElementById('remaining-amount').textContent = remaining.toFixed(2);
+    
+    // تحذير إذا تجاوز المبلغ المدفوع الإجمالي
+    if (paidAmount > totalAmount) {
+        this.classList.add('is-invalid');
+        alert('المبلغ المدفوع لا يمكن أن يتجاوز المجموع النهائي');
+    } else {
+        this.classList.remove('is-invalid');
+    }
+});
+
+// معالجة إرسال النموذج
+document.getElementById('step4-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    submitWizardStep(this);
+});
+</script>
+{% endblock %}

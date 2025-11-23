@@ -222,13 +222,39 @@ class ContractCurtain(models.Model):
         ('rings', 'حلقات'),
         ('tape', 'شريط'),
         ('snap', 'كبس'),
+        ('double_fold', 'كسرة مزدوجة'),
+        ('triple_fold', 'كسرة ثلاثية'),
+        ('pencil_pleat', 'كسرة قلم'),
+        ('eyelet', 'عراوي'),
+        ('tab_top', 'عروة علوية'),
+    ]
+    
+    INSTALLATION_TYPE_CHOICES = [
+        ('wall_gypsum', 'حائط - جبس'),
+        ('wall_concrete', 'حائط - مسلح'),
+        ('ceiling_gypsum', 'سقف - جبس'),
+        ('ceiling_concrete', 'سقف - مسلح'),
+        ('curtain_box_concrete', 'بيت ستارة مسلح'),
+        ('curtain_box_gypsum', 'بيت ستارة جبس'),
     ]
 
     order = models.ForeignKey(
-        'orders.Order',
+        'Order',
         on_delete=models.CASCADE,
         related_name='contract_curtains',
-        verbose_name='الطلب'
+        verbose_name='الطلب',
+        null=True,
+        blank=True
+    )
+    
+    # دعم المسودات - للويزارد
+    draft_order = models.ForeignKey(
+        'DraftOrder',
+        on_delete=models.CASCADE,
+        related_name='contract_curtains',
+        verbose_name='مسودة الطلب',
+        null=True,
+        blank=True
     )
 
     # ترتيب الستارة في العقد
@@ -247,6 +273,32 @@ class ContractCurtain(models.Model):
         decimal_places=2,
         verbose_name='الطول',
         help_text='بالمتر'
+    )
+    
+    # نوع التركيب
+    installation_type = models.CharField(
+        max_length=30,
+        choices=INSTALLATION_TYPE_CHOICES,
+        blank=True,
+        verbose_name='نوع التركيب'
+    )
+    
+    # مقاسات بيت الستارة (بالسنتيمتر - تظهر فقط عند اختيار بيت ستارة)
+    curtain_box_width = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='عرض بيت الستارة (سم)',
+        help_text='بالسنتيمتر - يُملأ عند اختيار بيت ستارة مسلح أو جبس'
+    )
+    curtain_box_depth = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='عمق بيت الستارة (سم)',
+        help_text='بالسنتيمتر - يُملأ عند اختيار بيت ستارة مسلح أو جبس'
     )
 
     # صورة موديل الستارة
@@ -579,5 +631,267 @@ class ContractPrintLog(models.Model):
 
     def __str__(self):
         return f'طباعة عقد {self.order.order_number} - {self.printed_at.strftime("%Y-%m-%d %H:%M")}'
+
+
+class CurtainFabric(models.Model):
+    """
+    نموذج مبسط للأقمشة المرتبطة بالستارة
+    يدعم كلاً من الطلبات النهائية والمسودات
+    """
+    FABRIC_TYPES = [
+        ('light', 'خفيف'),
+        ('heavy', 'ثقيل'),
+        ('blackout', 'بلاك أوت'),
+        ('additional', 'إضافي'),
+    ]
+    
+    TAILORING_TYPES = [
+        ('rings', 'حلقات'),
+        ('tape', 'شريط'),
+        ('snap', 'كبس'),
+        ('double_fold', 'كسرة مزدوجة'),
+        ('triple_fold', 'كسرة ثلاثية'),
+        ('pencil_pleat', 'كسرة قلم'),
+        ('eyelet', 'عراوي'),
+        ('tab_top', 'عروة علوية'),
+    ]
+    
+    curtain = models.ForeignKey(
+        ContractCurtain,
+        on_delete=models.CASCADE,
+        related_name='fabrics',
+        verbose_name='الستارة'
+    )
+    
+    # ربط بعنصر الفاتورة (يدعم OrderItem و DraftOrderItem)
+    order_item = models.ForeignKey(
+        'OrderItem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='curtain_fabrics',
+        verbose_name='عنصر الفاتورة (النهائي)',
+        help_text='القماش من عناصر الفاتورة النهائية'
+    )
+    
+    # ربط بعنصر المسودة
+    draft_order_item = models.ForeignKey(
+        'DraftOrderItem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='curtain_fabrics',
+        verbose_name='عنصر المسودة',
+        help_text='القماش من عناصر مسودة الطلب'
+    )
+    
+    fabric_type = models.CharField(
+        max_length=20,
+        choices=FABRIC_TYPES,
+        verbose_name='نوع القماش'
+    )
+    fabric_name = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name='اسم القماش'
+    )
+    pieces = models.IntegerField(
+        default=1,
+        verbose_name='عدد القطع'
+    )
+    meters = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0,
+        verbose_name='عدد الأمتار'
+    )
+    tailoring_type = models.CharField(
+        max_length=20,
+        choices=TAILORING_TYPES,
+        blank=True,
+        verbose_name='نوع التفصيل'
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name='ملاحظات القماش',
+        help_text='ملاحظات خاصة بهذا القماش'
+    )
+    sequence = models.IntegerField(
+        default=0,
+        verbose_name='الترتيب'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'قماش الستارة'
+        verbose_name_plural = 'أقمشة الستائر'
+        ordering = ['curtain', 'sequence']
+    
+    def __str__(self):
+        if self.order_item:
+            return f"{self.get_fabric_type_display()} - {self.order_item.product.name} ({self.meters}م)"
+        elif self.draft_order_item:
+            return f"{self.get_fabric_type_display()} - {self.draft_order_item.product.name} ({self.meters}م)"
+        return f"{self.get_fabric_type_display()} - {self.fabric_name} ({self.meters}م)"
+    
+    def clean(self):
+        """التحقق من صحة البيانات"""
+        from django.core.exceptions import ValidationError
+        errors = {}
+        
+        # التحقق من عدم تجاوز الكمية المتاحة للطلبات النهائية
+        if self.order_item and self.meters:
+            # حساب إجمالي ما تم استخدامه من هذا العنصر
+            used_total = CurtainFabric.objects.filter(
+                order_item=self.order_item
+            ).exclude(pk=self.pk).aggregate(
+                total=models.Sum('meters')
+            )['total'] or 0
+            
+            available = self.order_item.quantity - used_total
+            
+            if self.meters > available:
+                errors['meters'] = f'الكمية المطلوبة ({self.meters}م) أكبر من المتاح ({available}م من {self.order_item.quantity}م)'
+        
+        # التحقق من عدم تجاوز الكمية المتاحة للمسودات
+        if self.draft_order_item and self.meters:
+            # حساب إجمالي ما تم استخدامه من هذا العنصر في المسودات
+            used_total = CurtainFabric.objects.filter(
+                draft_order_item=self.draft_order_item
+            ).exclude(pk=self.pk).aggregate(
+                total=models.Sum('meters')
+            )['total'] or 0
+            
+            available = self.draft_order_item.quantity - used_total
+            
+            if self.meters > available:
+                errors['meters'] = f'الكمية المطلوبة ({self.meters}م) أكبر من المتاح ({available}م من {self.draft_order_item.quantity}م)'
+        
+        if errors:
+            raise ValidationError(errors)
+
+
+class CurtainAccessory(models.Model):
+    """
+    نموذج مبسط للإكسسوارات المرتبطة بالستارة
+    """
+    curtain = models.ForeignKey(
+        ContractCurtain,
+        on_delete=models.CASCADE,
+        related_name='accessories',
+        verbose_name='الستارة'
+    )
+    
+    # ربط بعنصر الفاتورة (يدعم OrderItem و DraftOrderItem)
+    order_item = models.ForeignKey(
+        'OrderItem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='curtain_accessories',
+        verbose_name='عنصر الفاتورة (النهائي)',
+        help_text='الإكسسوار من عناصر الفاتورة النهائية'
+    )
+    
+    # ربط بعنصر المسودة
+    draft_order_item = models.ForeignKey(
+        'DraftOrderItem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='curtain_accessories',
+        verbose_name='عنصر المسودة',
+        help_text='الإكسسوار من عناصر مسودة الطلب'
+    )
+    
+    accessory_name = models.CharField(
+        max_length=200,
+        verbose_name='اسم الإكسسوار'
+    )
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        default=1,
+        verbose_name='الكمية الإجمالية',
+        help_text='الكمية الإجمالية = العدد × المقاس'
+    )
+    count = models.IntegerField(
+        default=1,
+        verbose_name='العدد',
+        help_text='عدد القطع'
+    )
+    size = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        default=1,
+        verbose_name='المقاس',
+        help_text='المقاس لكل قطعة'
+    )
+    color = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='اللون'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'إكسسوار الستارة'
+        verbose_name_plural = 'إكسسوارات الستائر'
+    
+    def __str__(self):
+        parts = [self.accessory_name]
+        if self.count and self.size:
+            parts.append(f"({self.count} × {self.size} = {self.quantity})")
+        elif self.quantity:
+            parts.append(f"({self.quantity})")
+        if self.color:
+            parts.append(self.color)
+        return " - ".join(parts)
+    
+    def save(self, *args, **kwargs):
+        """حساب الكمية الإجمالية تلقائياً"""
+        # Calculate quantity = count × size
+        if self.count and self.size:
+            self.quantity = self.count * self.size
+        super().save(*args, **kwargs)
+    
+    def clean(self):
+        """التحقق من صحة البيانات"""
+        from django.core.exceptions import ValidationError
+        errors = {}
+        
+        # التحقق من عدم تجاوز الكمية المتاحة للطلبات النهائية
+        if self.order_item and self.quantity:
+            # حساب إجمالي ما تم استخدامه من هذا العنصر
+            used_total = CurtainAccessory.objects.filter(
+                order_item=self.order_item
+            ).exclude(pk=self.pk).aggregate(
+                total=models.Sum('quantity')
+            )['total'] or 0
+            
+            available = self.order_item.quantity - used_total
+            
+            if self.quantity > available:
+                errors['quantity'] = f'الكمية المطلوبة ({self.quantity}) أكبر من المتاح ({available} من {self.order_item.quantity})'
+        
+        # التحقق من عدم تجاوز الكمية المتاحة للمسودات
+        if self.draft_order_item and self.quantity:
+            # حساب إجمالي ما تم استخدامه من هذا العنصر في المسودات
+            used_total = CurtainAccessory.objects.filter(
+                draft_order_item=self.draft_order_item
+            ).exclude(pk=self.pk).aggregate(
+                total=models.Sum('quantity')
+            )['total'] or 0
+            
+            available = self.draft_order_item.quantity - used_total
+            
+            if self.quantity > available:
+                errors['quantity'] = f'الكمية المطلوبة ({self.quantity}) أكبر من المتاح ({available} من {self.draft_order_item.quantity})'
+        
+        if errors:
+            raise ValidationError(errors)
+
 
 

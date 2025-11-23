@@ -508,6 +508,10 @@ class Order(models.Model):
             if not self.expected_delivery_date:
                 self.expected_delivery_date = self.calculate_expected_delivery_date()
 
+            # توليد رقم العقد تلقائياً إذا لم يكن موجوداً
+            if not self.contract_number and ('tailoring' in selected_types or 'installation' in selected_types):
+                self.contract_number = self.generate_unique_contract_number()
+
             # معالجة حالة طلبات المنتجات
             if 'products' in selected_types:
                 # طلبات المنتجات تبدأ بحالة "قيد الانتظار"
@@ -703,6 +707,55 @@ class Order(models.Model):
             # Use a fallback order number if we can't generate one
             import uuid
             return f"ORD-{str(uuid.uuid4())[:8]}"
+
+    def generate_unique_contract_number(self):
+        """توليد رقم عقد فريد بصيغة c1, c2, c3, إلخ"""
+        if not self.customer:
+            return "c1"
+        
+        try:
+            # البحث عن آخر رقم عقد لهذا العميل يبدأ بـ "c"
+            last_orders = Order.objects.filter(
+                customer=self.customer,
+                contract_number__isnull=False,
+                contract_number__startswith='c'
+            ).exclude(pk=self.pk).order_by('-contract_number')
+            
+            next_num = 1
+            if last_orders.exists():
+                # Extract the highest contract number
+                for order in last_orders:
+                    try:
+                        # Extract number from format like "c1", "c2", etc.
+                        contract_num_str = order.contract_number.lower()
+                        if contract_num_str.startswith('c'):
+                            num = int(contract_num_str[1:])
+                            if num >= next_num:
+                                next_num = num + 1
+                    except (ValueError, IndexError):
+                        continue
+            
+            # التأكد من عدم تكرار رقم العقد
+            max_attempts = 100
+            for attempt in range(max_attempts):
+                potential_contract_number = f"c{next_num}"
+                
+                # التحقق من عدم وجود رقم مكرر (باستثناء الطلب الحالي)
+                if not Order.objects.filter(
+                    customer=self.customer,
+                    contract_number=potential_contract_number
+                ).exclude(pk=self.pk).exists():
+                    return potential_contract_number
+                
+                next_num += 1
+            
+            # إذا فشل في العثور على رقم فريد، استخدم رقم عشوائي كبير
+            import random
+            return f"c{random.randint(100, 999)}"
+            
+        except Exception as e:
+            logger.error(f"Error generating contract number: {e}")
+            return "c1"
 
     def upload_contract_to_google_drive(self):
         """رفع ملف العقد إلى Google Drive"""
@@ -2757,3 +2810,6 @@ class OrderModificationLog(models.Model):
 
 # استيراد نماذج العقود
 from .contract_models import ContractTemplate, ContractCurtain, ContractPrintLog
+
+# استيراد نماذج الويزارد
+from .wizard_models import DraftOrder, DraftOrderItem

@@ -3,6 +3,8 @@ from . import views
 from . import dashboard_views
 from . import invoice_views
 from . import contract_views
+from . import wizard_views
+from . import api_views
 from .views import OrdersDashboardView
 
 app_name = 'orders'
@@ -13,6 +15,29 @@ urlpatterns = [
     
     # الجدول الشامل للطلبات
     path('all/', views.order_list, name='order_list'),
+    
+    # API Endpoints
+    path('api/products/search/', api_views.products_search_api, name='products_search_api'),
+    
+    # Wizard URLs - Multi-step order creation
+    path('wizard/', wizard_views.wizard_start, name='wizard_start'),
+    path('wizard/new/', wizard_views.wizard_start_new, name='wizard_start_new'),
+    path('wizard/drafts/', wizard_views.wizard_drafts_list, name='wizard_drafts_list'),
+    path('wizard/draft/<int:draft_id>/delete/', wizard_views.wizard_delete_draft, name='wizard_delete_draft'),
+    path('wizard/step/<int:step>/', wizard_views.wizard_step, name='wizard_step'),
+    path('wizard/add-item/', wizard_views.wizard_add_item, name='wizard_add_item'),
+    path('wizard/remove-item/<int:item_id>/', wizard_views.wizard_remove_item, name='wizard_remove_item'),
+    path('wizard/complete-step-3/', wizard_views.wizard_complete_step_3, name='wizard_complete_step_3'),
+    path('wizard/finalize/', wizard_views.wizard_finalize, name='wizard_finalize'),
+    path('wizard/cancel/', wizard_views.wizard_cancel, name='wizard_cancel'),
+    path('wizard/add-curtain/', wizard_views.wizard_add_curtain, name='wizard_add_curtain'),
+    path('wizard/edit-curtain/<int:curtain_id>/', wizard_views.wizard_edit_curtain, name='wizard_edit_curtain'),
+    path('wizard/remove-curtain/<int:curtain_id>/', wizard_views.wizard_remove_curtain, name='wizard_remove_curtain'),
+    path('wizard/upload-contract/', wizard_views.wizard_upload_contract, name='wizard_upload_contract'),
+    path('wizard/remove-contract-file/', wizard_views.wizard_remove_contract_file, name='wizard_remove_contract_file'),
+    
+    # عرض العقد الإلكتروني
+    path('order/<int:order_id>/contract/view/', wizard_views.view_contract_template, name='view_contract_template'),
 
     # صفحات الطلبات المنفصلة حسب النوع
     path('inspection/', dashboard_views.inspection_orders, name='inspection_orders'),
@@ -84,7 +109,11 @@ urlpatterns = [
     path('order/<int:order_id>/print/<int:template_id>/', invoice_views.print_invoice_with_template, name='print_invoice_with_template'),
 
     # Contract Management URLs
-    path('order/<int:order_id>/contract/curtains/', contract_views.contract_curtains_manage, name='contract_curtains_manage'),
-    path('order/<int:order_id>/contract/curtains/data/', contract_views.contract_curtains_data, name='contract_curtains_data'),
+    
+    # ✅ تم حذف النظام القديم - استخدم الويزارد
+    # path('order/<int:order_id>/contract/curtains/', ...) - محذوف
+    # path('order/<int:order_id>/contract/curtains/data/', ...) - محذوف
+    
+    # عرض PDF فقط
     path('order/<int:order_id>/contract/pdf/', contract_views.contract_pdf_view, name='contract_pdf_view'),
 ]

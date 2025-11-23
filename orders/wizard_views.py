@@ -1,0 +1,1323 @@
+"""
+Views للويزارد متعدد الخطوات لإنشاء الطلبات
+Multi-Step Order Creation Wizard Views
+"""
+import json
+import logging
+from decimal import Decimal
+from django.db import transaction, models
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib import messages
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+
+from .wizard_models import (
+    DraftOrder, DraftOrderItem
+)
+from .wizard_forms import (
+    Step1BasicInfoForm, Step2OrderTypeForm, Step3OrderItemForm,
+    Step4InvoicePaymentForm
+)
+from .models import Order, OrderItem, Payment
+from .contract_models import ContractCurtain, CurtainFabric, CurtainAccessory
+from inventory.models import Product
+from customers.models import Customer
+
+logger = logging.getLogger(__name__)
+
+
+@login_required
+def wizard_start(request):
+    """
+    بداية الويزارد - عرض المسودات المحفوظة أو إنشاء مسودة جديدة
+    """
+    # البحث عن المسودات غير المكتملة للمستخدم (بناءً على صلاحياته)
+    from accounts.models import Department
+    
+    if request.user.is_superuser or request.user.groups.filter(name='مدير نظام').exists():
+        # مدير النظام - عرض جميع المسودات
+        user_drafts = DraftOrder.objects.filter(is_completed=False)
+    elif request.user.groups.filter(name='مدير عام').exists():
+        # مدير عام - عرض جميع المسودات  
+        user_drafts = DraftOrder.objects.filter(is_completed=False)
+    elif request.user.groups.filter(name='مدير منطقة').exists():
+        # مدير منطقة - عرض مسودات الفروع المرتبطة به
+        user_branches = request.user.branches.all()
+        user_drafts = DraftOrder.objects.filter(
+            is_completed=False,
+            branch__in=user_branches
+        )
+    else:
+        # المستخدم العادي - عرض مسوداته فقط
+        user_drafts = DraftOrder.objects.filter(
+            created_by=request.user,
+            is_completed=False
+        )
+    
+    # إذا كان هناك مسودات، توجيه إلى قائمة المسودات
+    if user_drafts.exists():
+        return redirect('orders:wizard_drafts_list')
+    else:
+        # إنشاء مسودة جديدة مباشرة
+        draft = DraftOrder.objects.create(
+            created_by=request.user,
+            current_step=1
+        )
+        return redirect('orders:wizard_step', step=1)
+
+
+@login_required
+def wizard_start_new(request):
+    """
+    إنشاء مسودة جديدة مباشرة (تجاوز المسودات الموجودة)
+    """
+    draft = DraftOrder.objects.create(
+        created_by=request.user,
+        current_step=1
+    )
+    return redirect('orders:wizard_step', step=1)
+
+
+@login_required
+def wizard_drafts_list(request):
+    """
+    عرض قائمة المسودات المحفوظة بناءً على صلاحيات المستخدم
+    """
+    from accounts.models import Department
+    
+    # تحديد الاستعلام بناءً على صلاحيات المستخدم
+    if request.user.is_superuser or request.user.groups.filter(name='مدير نظام').exists():
+        # مدير النظام - عرض جميع المسودات
+        drafts = DraftOrder.objects.filter(is_completed=False).select_related('created_by', 'customer', 'branch')
+    elif request.user.groups.filter(name='مدير عام').exists():
+        # مدير عام - عرض جميع المسودات
+        drafts = DraftOrder.objects.filter(is_completed=False).select_related('created_by', 'customer', 'branch')
+    elif request.user.groups.filter(name='مدير منطقة').exists():
+        # مدير منطقة - عرض مسودات الفروع المرتبطة به
+        user_branches = request.user.branches.all()
+        drafts = DraftOrder.objects.filter(
+            is_completed=False,
+            branch__in=user_branches
+        ).select_related('created_by', 'customer', 'branch')
+    else:
+        # المستخدم العادي - عرض مسوداته فقط
+        drafts = DraftOrder.objects.filter(
+            created_by=request.user,
+            is_completed=False
+        ).select_related('customer', 'branch')
+    
+    drafts = drafts.order_by('-updated_at')
+    
+    context = {
+        'drafts': drafts,
+        'title': 'قائمة المسودات المحفوظة'
+    }
+    
+    return render(request, 'orders/wizard/drafts_list.html', context)
+
+
+@login_required
+def wizard_step(request, step):
+    """
+    عرض خطوة معينة من الويزارد
+    """
+    # الحصول على المسودة الحالية أو إنشاء واحدة جديدة
+    draft = DraftOrder.objects.filter(
+        created_by=request.user,
+        is_completed=False
+    ).order_by('-updated_at').first()
+    
+    if not draft:
+        # إذا لم توجد مسودة، إنشاء واحدة جديدة
+        draft = DraftOrder.objects.create(
+            created_by=request.user,
+            current_step=1
+        )
+        return redirect('orders:wizard_step', step=1)
+    
+    # التحقق من إمكانية الوصول للخطوة
+    if not draft.can_access_step(step):
+        messages.warning(request, 'يجب إكمال الخطوات السابقة أولاً')
+        return redirect('orders:wizard_step', step=draft.current_step)
+    
+    # توجيه للدالة المناسبة حسب الخطوة
+    if step == 1:
+        return wizard_step_1_basic_info(request, draft)
+    elif step == 2:
+        return wizard_step_2_order_type(request, draft)
+    elif step == 3:
+        return wizard_step_3_order_items(request, draft)
+    elif step == 4:
+        return wizard_step_4_invoice_payment(request, draft)
+    elif step == 5:
+        return wizard_step_5_contract(request, draft)
+    elif step == 6:
+        return wizard_step_6_review(request, draft)
+    else:
+        messages.error(request, 'خطوة غير صحيحة')
+        return redirect('orders:wizard_step', step=1)
+
+
+def wizard_step_1_basic_info(request, draft):
+    """
+    الخطوة 1: البيانات الأساسية
+    """
+    if request.method == 'POST':
+        form = Step1BasicInfoForm(request.POST, instance=draft, user=request.user)
+        if form.is_valid():
+            form.save()
+            draft.mark_step_complete(1)
+            draft.current_step = 2
+            draft.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'next_step': 2,
+                    'message': 'تم حفظ البيانات الأساسية بنجاح'
+                })
+            
+            messages.success(request, 'تم حفظ البيانات الأساسية بنجاح')
+            return redirect('orders:wizard_step', step=2)
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors,
+                    'message': 'يرجى تصحيح الأخطاء'
+                }, status=400)
+    else:
+        form = Step1BasicInfoForm(instance=draft, user=request.user)
+    
+    context = {
+        'draft': draft,
+        'form': form,
+        'current_step': 1,
+        'total_steps': 6,
+        'step_title': 'البيانات الأساسية',
+        'progress_percentage': 16.67,
+    }
+    
+    return render(request, 'orders/wizard/step1_basic_info.html', context)
+
+
+def wizard_step_2_order_type(request, draft):
+    """
+    الخطوة 2: نوع الطلب
+    """
+    if request.method == 'POST':
+        form = Step2OrderTypeForm(request.POST, instance=draft, customer=draft.customer)
+        if form.is_valid():
+            form.save()
+            draft.mark_step_complete(2)
+            draft.current_step = 3
+            draft.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'next_step': 3,
+                    'message': 'تم حفظ نوع الطلب بنجاح'
+                })
+            
+            messages.success(request, 'تم حفظ نوع الطلب بنجاح')
+            return redirect('orders:wizard_step', step=3)
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors,
+                    'message': 'يرجى تصحيح الأخطاء'
+                }, status=400)
+    else:
+        form = Step2OrderTypeForm(instance=draft, customer=draft.customer)
+    
+    context = {
+        'draft': draft,
+        'form': form,
+        'current_step': 2,
+        'total_steps': 6,
+        'step_title': 'نوع الطلب',
+        'progress_percentage': 33.34,
+    }
+    
+    return render(request, 'orders/wizard/step2_order_type.html', context)
+
+
+def wizard_step_3_order_items(request, draft):
+    """
+    الخطوة 3: عناصر الطلب
+    """
+    items = draft.items.all()
+    
+    context = {
+        'draft': draft,
+        'items': items,
+        'current_step': 3,
+        'total_steps': 6,
+        'step_title': 'عناصر الطلب',
+        'progress_percentage': 50.00,
+        'totals': draft.calculate_totals(),
+    }
+    
+    return render(request, 'orders/wizard/step3_order_items.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def wizard_add_item(request):
+    """
+    إضافة عنصر لمسودة الطلب (AJAX)
+    """
+    try:
+        data = json.loads(request.body)
+        
+        # الحصول على المسودة
+        draft = get_object_or_404(
+            DraftOrder,
+            created_by=request.user,
+            is_completed=False
+        )
+        
+        # الحصول على المنتج
+        product = get_object_or_404(Product, pk=data.get('product_id'))
+        
+        # إنشاء العنصر
+        item = DraftOrderItem.objects.create(
+            draft_order=draft,
+            product=product,
+            quantity=Decimal(str(data.get('quantity', 1))),
+            unit_price=Decimal(str(data.get('unit_price', product.price))),
+            discount_percentage=Decimal(str(data.get('discount_percentage', 0))),
+            item_type=data.get('item_type', 'product'),
+            notes=data.get('notes', '')
+        )
+        
+        # إعادة حساب المجاميع
+        totals = draft.calculate_totals()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إضافة العنصر بنجاح',
+            'item': {
+                'id': item.id,
+                'product_name': product.name,
+                'quantity': float(item.quantity),
+                'unit_price': float(item.unit_price),
+                'discount_percentage': float(item.discount_percentage),
+                'total_price': float(item.total_price),
+                'discount_amount': float(item.discount_amount),
+                'final_price': float(item.final_price),
+            },
+            'totals': totals
+        })
+    
+    except Exception as e:
+        logger.error(f"Error adding item to draft: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        }, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def wizard_remove_item(request, item_id):
+    """
+    حذف عنصر من مسودة الطلب (AJAX)
+    """
+    try:
+        # الحصول على المسودة
+        draft = get_object_or_404(
+            DraftOrder,
+            created_by=request.user,
+            is_completed=False
+        )
+        
+        # حذف العنصر
+        item = get_object_or_404(DraftOrderItem, pk=item_id, draft_order=draft)
+        item.delete()
+        
+        # إعادة حساب المجاميع
+        totals = draft.calculate_totals()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم حذف العنصر بنجاح',
+            'totals': totals
+        })
+    
+    except Exception as e:
+        logger.error(f"Error removing item from draft: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        }, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def wizard_complete_step_3(request):
+    """
+    إكمال الخطوة 3 (عناصر الطلب)
+    """
+    try:
+        draft = get_object_or_404(
+            DraftOrder,
+            created_by=request.user,
+            is_completed=False
+        )
+        
+        # التحقق من وجود عناصر
+        if not draft.items.exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'يجب إضافة عنصر واحد على الأقل'
+            }, status=400)
+        
+        # تحديد الخطوة كمكتملة
+        draft.mark_step_complete(3)
+        draft.current_step = 4
+        draft.save()
+        
+        return JsonResponse({
+            'success': True,
+            'next_step': 4,
+            'message': 'تم حفظ العناصر بنجاح'
+        })
+    
+    except Exception as e:
+        logger.error(f"Error completing step 3: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        }, status=400)
+
+
+def wizard_step_4_invoice_payment(request, draft):
+    """
+    الخطوة 4: تفاصيل الفاتورة والدفع
+    """
+    if request.method == 'POST':
+        form = Step4InvoicePaymentForm(
+            request.POST,
+            instance=draft,
+            draft_order=draft
+        )
+        if form.is_valid():
+            form.save()
+            draft.mark_step_complete(4)
+            
+            # تحديد الخطوة التالية بناءً على نوع الطلب
+            # إذا كان النوع يحتاج عقد، انتقل للخطوة 5، وإلا للخطوة 6
+            needs_contract = draft.selected_type in ['installation', 'tailoring', 'accessory']
+            next_step = 5 if needs_contract else 6
+            draft.current_step = next_step
+            draft.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'next_step': next_step,
+                    'message': 'تم حفظ تفاصيل الفاتورة والدفع بنجاح'
+                })
+            
+            messages.success(request, 'تم حفظ تفاصيل الفاتورة والدفع بنجاح')
+            return redirect('orders:wizard_step', step=next_step)
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors,
+                    'message': 'يرجى تصحيح الأخطاء'
+                }, status=400)
+    else:
+        form = Step4InvoicePaymentForm(instance=draft, draft_order=draft)
+    
+    # حساب المجاميع
+    totals = draft.calculate_totals()
+    
+    context = {
+        'draft': draft,
+        'form': form,
+        'current_step': 4,
+        'total_steps': 6,
+        'step_title': 'تفاصيل الفاتورة والدفع',
+        'progress_percentage': 66.67,
+        'totals': totals,
+    }
+    
+    return render(request, 'orders/wizard/step4_invoice_payment.html', context)
+
+
+def wizard_step_5_contract(request, draft):
+    """
+    الخطوة 5: العقد الإلكتروني أو PDF
+    """
+    # معالجة POST - تحديد الخطوة كمكتملة
+    if request.method == 'POST':
+        # تحديد الخطوة كمكتملة
+        draft.mark_step_complete(5)
+        
+        # الرد برسالة نجاح
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': 'تم حفظ بيانات العقد'
+            })
+        else:
+            # إعادة توجيه إلى الخطوة التالية
+            return redirect('orders:wizard_step', step=6)
+    
+    # الحصول على الستائر المرتبطة بالمسودة
+    curtains = ContractCurtain.objects.filter(draft_order=draft).order_by('sequence')
+    
+    # الحصول على عناصر الفاتورة (الأقمشة فقط)
+    order_items = draft.items.filter(
+        item_type__in=['fabric', 'product']
+    ).select_related('product')
+    
+    # حساب الكميات المتاحة لكل عنصر
+    items_with_usage = []
+    for item in order_items:
+        used = CurtainFabric.objects.filter(
+            order_item__isnull=False,
+            curtain__draft_order=draft,
+            order_item__product=item.product
+        ).aggregate(total=models.Sum('meters'))['total'] or 0
+        
+        items_with_usage.append({
+            'id': item.id,
+            'name': item.product.name,
+            'total_quantity': float(item.quantity),
+            'used_quantity': float(used),
+            'available_quantity': float(item.quantity - used),
+        })
+    
+    context = {
+        'draft': draft,
+        'curtains': curtains,
+        'order_items': items_with_usage,
+        'current_step': 5,
+        'total_steps': 6,
+        'step_title': 'العقد',
+        'progress_percentage': 83.34,
+    }
+    
+    return render(request, 'orders/wizard/step5_contract.html', context)
+
+
+def wizard_step_6_review(request, draft):
+    """
+    الخطوة 6: المراجعة والتأكيد
+    """
+    items = draft.items.all()
+    totals = draft.calculate_totals()
+    
+    # الحصول على الستائر إن وجدت
+    curtains = ContractCurtain.objects.filter(draft_order=draft).order_by('sequence')
+    
+    # الحصول على ملف العقد إذا كان موجوداً
+    contract_file_url = None
+    if draft.contract_file:
+        contract_file_url = draft.contract_file.url
+    
+    # الحصول على المعاينة المرتبطة إن وُجدت
+    inspection = None
+    inspection_file_url = None
+    if draft.related_inspection:
+        inspection = draft.related_inspection
+        # البحث عن ملف المعاينة
+        if hasattr(inspection, 'inspection_file') and inspection.inspection_file:
+            inspection_file_url = inspection.inspection_file.url
+    
+    context = {
+        'draft': draft,
+        'items': items,
+        'curtains': curtains,
+        'totals': totals,
+        'contract_file_url': contract_file_url,
+        'inspection': inspection,
+        'inspection_file_url': inspection_file_url,
+        'current_step': 6,
+        'total_steps': 6,
+        'step_title': 'المراجعة والتأكيد',
+        'progress_percentage': 100,
+    }
+    
+    return render(request, 'orders/wizard/step6_review.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+@transaction.atomic
+def wizard_finalize(request):
+    """
+    تحويل المسودة إلى طلب نهائي
+    """
+    try:
+        # الحصول على المسودة
+        draft = get_object_or_404(
+            DraftOrder,
+            created_by=request.user,
+            is_completed=False
+        )
+        
+        # التحقق من اكتمال جميع الخطوات المطلوبة (الخطوة 5 اختيارية)
+        required_steps = [1, 2, 3, 4]
+        for step in required_steps:
+            if step not in draft.completed_steps:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'يجب إكمال الخطوة {step} أولاً'
+                }, status=400)
+        
+        # التحقق من وجود عناصر
+        if not draft.items.exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'يجب إضافة عنصر واحد على الأقل'
+            }, status=400)
+        
+        # إنشاء الطلب النهائي
+        order = Order.objects.create(
+            customer=draft.customer,
+            salesperson=draft.salesperson,
+            branch=draft.branch,
+            status=draft.status,
+            notes=draft.notes,
+            selected_types=[draft.selected_type] if draft.selected_type else [],
+            related_inspection=draft.related_inspection,
+            related_inspection_type=draft.related_inspection_type,
+            invoice_number=draft.invoice_number,
+            invoice_number_2=draft.invoice_number_2,
+            invoice_number_3=draft.invoice_number_3,
+            contract_number=draft.contract_number,
+            contract_number_2=draft.contract_number_2,
+            contract_number_3=draft.contract_number_3,
+            total_amount=draft.subtotal,
+            final_price=draft.final_total,
+            paid_amount=draft.paid_amount,
+            created_by=request.user,
+        )
+        
+        # نقل ملف العقد إذا وجد
+        if draft.contract_file:
+            order.contract_file = draft.contract_file
+            order.save(update_fields=['contract_file'])
+        
+        # نقل الستائر من المسودة إلى الطلب النهائي
+        curtains = ContractCurtain.objects.filter(draft_order=draft)
+        for curtain in curtains:
+            curtain.order = order
+            curtain.draft_order = None
+            curtain.save(update_fields=['order', 'draft_order'])
+        
+        # نقل العناصر
+        for draft_item in draft.items.all():
+            OrderItem.objects.create(
+                order=order,
+                product=draft_item.product,
+                quantity=draft_item.quantity,
+                unit_price=draft_item.unit_price,
+                discount_percentage=draft_item.discount_percentage,
+                item_type=draft_item.item_type,
+                notes=draft_item.notes,
+            )
+        
+        # إنشاء الدفعة إذا وجد مبلغ مدفوع
+        if draft.paid_amount > 0:
+            Payment.objects.create(
+                order=order,
+                amount=draft.paid_amount,
+                payment_method=draft.payment_method,
+                notes=draft.payment_notes,
+                created_by=request.user,
+            )
+        
+        # تحديد المسودة كمكتملة
+        draft.is_completed = True
+        draft.completed_at = timezone.now()
+        draft.final_order = order
+        draft.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إنشاء الطلب بنجاح',
+            'order_id': order.pk,
+            'order_number': order.order_number,
+            'redirect_url': f'/orders/order/{order.order_number}/'
+        })
+    
+    except Exception as e:
+        logger.error(f"Error finalizing draft order: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def wizard_delete_draft(request, draft_id):
+    """
+    حذف مسودة معينة - يجب أن يكون المستخدم صاحب المسودة أو له صلاحيات إدارية
+    """
+    try:
+        draft = get_object_or_404(DraftOrder, id=draft_id)
+        
+        # التحقق من الصلاحيات
+        if not (request.user == draft.created_by or 
+                request.user.is_superuser or 
+                request.user.groups.filter(name__in=['مدير نظام', 'مدير عام']).exists()):
+            messages.error(request, 'ليس لديك صلاحية لحذف هذه المسودة')
+            return redirect('orders:wizard_drafts_list')
+        
+        draft.delete()
+        messages.success(request, 'تم حذف المسودة بنجاح')
+        
+    except Exception as e:
+        logger.error(f"Error deleting draft: {e}")
+        messages.error(request, f'حدث خطأ أثناء حذف المسودة: {str(e)}')
+    
+    return redirect('orders:wizard_drafts_list')
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def wizard_cancel(request):
+    """
+    إلغاء الويزارد وحذف المسودة
+    """
+    try:
+        draft = get_object_or_404(
+            DraftOrder,
+            created_by=request.user,
+            is_completed=False
+        )
+        
+        if request.method == "POST":
+            draft.delete()
+            messages.success(request, 'تم إلغاء عملية إنشاء الطلب')
+            return redirect('orders:order_list')
+        else:
+            # GET request - show confirmation page
+            context = {
+                'draft': draft,
+                'title': 'تأكيد إلغاء الطلب'
+            }
+            return render(request, 'orders/wizard/cancel_confirm.html', context)
+    
+    except Exception as e:
+        logger.error(f"Error canceling wizard: {e}")
+        messages.error(request, f'حدث خطأ: {str(e)}')
+        return redirect('orders:order_list')
+
+
+@login_required
+@require_http_methods(["POST"])
+@transaction.atomic
+def wizard_add_curtain(request):
+    """
+    إضافة ستارة جديدة إلى العقد الإلكتروني مع الأقمشة والإكسسوارات
+    """
+    try:
+        # الحصول على المسودة الحالية
+        draft = get_object_or_404(
+            DraftOrder,
+            created_by=request.user,
+            is_completed=False
+        )
+        
+        # الحصول على البيانات
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error in wizard_add_curtain: {e}")
+            logger.error(f"Request body: {request.body[:500]}")
+            return JsonResponse({
+                'success': False,
+                'message': f'خطأ في تنسيق البيانات: {str(e)}'
+            }, status=400)
+        
+        room_name = data.get('room_name', '').strip()
+        width = data.get('width')
+        height = data.get('height')
+        fabrics_data = data.get('fabrics', [])
+        accessories_data = data.get('accessories', [])
+        
+        # Log received data for debugging
+        logger.info(f"Adding curtain - Room: {room_name}, Width: {width}, Height: {height}")
+        logger.info(f"Fabrics: {len(fabrics_data)}, Accessories: {len(accessories_data)}")
+        
+        # التحقق من البيانات الأساسية
+        if not room_name:
+            return JsonResponse({
+                'success': False,
+                'message': 'يرجى إدخال اسم الغرفة'
+            }, status=400)
+        
+        if not width or not height:
+            return JsonResponse({
+                'success': False,
+                'message': 'يرجى إدخال العرض والارتفاع'
+            }, status=400)
+        
+        try:
+            width = Decimal(str(width))
+            height = Decimal(str(height))
+            
+            if width <= 0 or height <= 0:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يجب أن تكون القيم أكبر من صفر'
+                }, status=400)
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'success': False,
+                'message': 'قيم غير صحيحة للعرض أو الارتفاع'
+            }, status=400)
+        
+        # الحصول على آخر sequence
+        last_curtain = ContractCurtain.objects.filter(draft_order=draft).order_by('-sequence').first()
+        next_sequence = (last_curtain.sequence + 1) if last_curtain else 1
+        
+        # الحصول على نوع التركيب وبيانات بيت الستارة
+        installation_type = data.get('installation_type', '')
+        curtain_box_width = data.get('curtain_box_width')
+        curtain_box_depth = data.get('curtain_box_depth')
+        notes = data.get('notes', '').strip()
+        
+        # إنشاء الستارة
+        curtain = ContractCurtain.objects.create(
+            draft_order=draft,
+            sequence=next_sequence,
+            room_name=room_name,
+            width=width,
+            height=height,
+            installation_type=installation_type,
+            curtain_box_width=Decimal(str(curtain_box_width)) if curtain_box_width else None,
+            curtain_box_depth=Decimal(str(curtain_box_depth)) if curtain_box_depth else None,
+            notes=notes
+        )
+        
+        # إضافة الأقمشة
+        for idx, fabric_data in enumerate(fabrics_data):
+            try:
+                # الحصول على draft_order_item إذا كان موجوداً
+                draft_order_item = None
+                item_id = fabric_data.get('item_id')
+                if item_id:
+                    try:
+                        draft_order_item = draft.items.get(id=item_id)
+                        logger.info(f"Found draft item: {draft_order_item.product.name}")
+                    except Exception as e:
+                        logger.warning(f"Could not find draft item {item_id}: {e}")
+                
+                fabric = CurtainFabric(
+                    curtain=curtain,
+                    draft_order_item=draft_order_item,  # استخدام draft_order_item بدلاً من order_item
+                    fabric_type=fabric_data.get('type', 'light'),
+                    fabric_name=fabric_data.get('name', ''),
+                    pieces=int(fabric_data.get('pieces', 1)),
+                    meters=Decimal(str(fabric_data.get('meters', 0))),
+                    tailoring_type=fabric_data.get('tailoring', ''),
+                    sequence=idx + 1
+                )
+                
+                # التحقق من الصحة قبل الحفظ
+                try:
+                    fabric.full_clean()
+                    fabric.save()
+                    logger.info(f"Saved fabric: {fabric.fabric_name} - {fabric.meters}m")
+                except ValidationError as ve:
+                    # إرجاع رسالة خطأ واضحة للمستخدم
+                    error_msgs = []
+                    for field, errors in ve.message_dict.items():
+                        error_msgs.extend(errors)
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'خطأ في الكمية: ' + ', '.join(error_msgs)
+                    }, status=400)
+                    
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Error adding fabric: {e}")
+                return JsonResponse({
+                    'success': False,
+                    'message': f'خطأ في إضافة القماش: {str(e)}'
+                }, status=400)
+        
+        # إضافة الإكسسوارات
+        for accessory_data in accessories_data:
+            try:
+                # الحصول على draft_order_item إذا كان موجوداً
+                draft_order_item = None
+                item_id = accessory_data.get('item_id')
+                if item_id:
+                    try:
+                        draft_order_item = draft.items.get(id=item_id)
+                        logger.info(f"Found draft item for accessory: {draft_order_item.product.name}")
+                    except Exception as e:
+                        logger.warning(f"Could not find draft item {item_id}: {e}")
+                
+                # Get count and size, calculate quantity
+                count = int(accessory_data.get('count', 1))
+                size = Decimal(str(accessory_data.get('size', 1)))
+                quantity = Decimal(str(accessory_data.get('quantity', count * size)))
+                
+                accessory = CurtainAccessory(
+                    curtain=curtain,
+                    draft_order_item=draft_order_item,
+                    accessory_name=accessory_data.get('name', ''),
+                    count=count,
+                    size=size,
+                    quantity=quantity,
+                    color=accessory_data.get('color', '')
+                )
+                
+                # التحقق من الصحة قبل الحفظ
+                try:
+                    accessory.full_clean()
+                    accessory.save()
+                    logger.info(f"Saved accessory: {accessory.accessory_name} - count: {count} × size: {size} = quantity: {quantity}")
+                except ValidationError as ve:
+                    # إرجاع رسالة خطأ واضحة للمستخدم
+                    error_msgs = []
+                    for field, errors in ve.message_dict.items():
+                        error_msgs.extend(errors)
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'خطأ في كمية الإكسسوار: ' + ', '.join(error_msgs)
+                    }, status=400)
+                    
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Error adding accessory: {e}")
+                return JsonResponse({
+                    'success': False,
+                    'message': f'خطأ في إضافة الإكسسوار: {str(e)}'
+                }, status=400)
+        
+        # تحديث نوع العقد إلى إلكتروني
+        draft.contract_type = 'electronic'
+        draft.save(update_fields=['contract_type'])
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إضافة الستارة بنجاح',
+            'curtain': {
+                'id': curtain.id,
+                'room_name': curtain.room_name,
+                'width': float(curtain.width),
+                'height': float(curtain.height),
+                'fabrics_count': curtain.fabrics.count(),
+                'accessories_count': curtain.accessories.count()
+            }
+        })
+    
+    except Exception as e:
+        logger.error(f"Error adding curtain: {e}", exc_info=True)
+        logger.error(f"Request data: {request.body[:500] if request.body else 'No body'}")
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ أثناء حفظ الستارة: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+@transaction.atomic
+def wizard_edit_curtain(request, curtain_id):
+    """
+    تعديل ستارة موجودة في العقد الإلكتروني
+    GET: جلب بيانات الستارة
+    POST: حفظ التعديلات
+    """
+    try:
+        # الحصول على المسودة الحالية
+        draft = get_object_or_404(
+            DraftOrder,
+            created_by=request.user,
+            is_completed=False
+        )
+        
+        # الحصول على الستارة
+        curtain = get_object_or_404(
+            ContractCurtain,
+            id=curtain_id,
+            draft_order=draft
+        )
+        
+        if request.method == 'GET':
+            # إرجاع بيانات الستارة للتعديل
+            fabrics_data = []
+            for fabric in curtain.fabrics.all():
+                fabrics_data.append({
+                    'type': fabric.fabric_type,
+                    'type_display': fabric.get_fabric_type_display(),
+                    'name': fabric.fabric_name,
+                    'item_id': str(fabric.draft_order_item_id) if fabric.draft_order_item_id else None,
+                    'meters': float(fabric.meters),
+                    'pieces': fabric.pieces,
+                    'tailoring': fabric.tailoring_type or '',
+                    'tailoring_display': fabric.get_tailoring_type_display() if fabric.tailoring_type else '-'
+                })
+            
+            accessories_data = []
+            for accessory in curtain.accessories.all():
+                accessories_data.append({
+                    'name': accessory.accessory_name,
+                    'quantity': float(accessory.quantity),
+                    'count': accessory.count,
+                    'size': float(accessory.size),
+                    'color': accessory.color or '',
+                    'item_id': accessory.draft_order_item_id if accessory.draft_order_item else None,
+                    'source': 'invoice' if accessory.draft_order_item else 'external'
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'curtain': {
+                    'id': curtain.id,
+                    'room_name': curtain.room_name,
+                    'width': float(curtain.width),
+                    'height': float(curtain.height),
+                    'installation_type': curtain.installation_type or '',
+                    'curtain_box_width': float(curtain.curtain_box_width) if curtain.curtain_box_width else None,
+                    'curtain_box_depth': float(curtain.curtain_box_depth) if curtain.curtain_box_depth else None,
+                    'notes': curtain.notes or '',
+                    'fabrics': fabrics_data,
+                    'accessories': accessories_data
+                }
+            })
+        
+        elif request.method == 'POST':
+            # حفظ التعديلات
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error in wizard_edit_curtain: {e}")
+                return JsonResponse({
+                    'success': False,
+                    'message': f'خطأ في تنسيق البيانات: {str(e)}'
+                }, status=400)
+            
+            room_name = data.get('room_name', '').strip()
+            width = data.get('width')
+            height = data.get('height')
+            fabrics_data = data.get('fabrics', [])
+            accessories_data = data.get('accessories', [])
+            
+            # التحقق من البيانات الأساسية
+            if not room_name:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يرجى إدخال اسم الغرفة'
+                }, status=400)
+            
+            if not width or not height:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يرجى إدخال العرض والارتفاع'
+                }, status=400)
+            
+            try:
+                width = Decimal(str(width))
+                height = Decimal(str(height))
+                
+                if width <= 0 or height <= 0:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'يجب أن تكون القيم أكبر من صفر'
+                    }, status=400)
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'قيم غير صحيحة للعرض أو الارتفاع'
+                }, status=400)
+            
+            # تحديث بيانات الستارة
+            curtain.room_name = room_name
+            curtain.width = width
+            curtain.height = height
+            
+            # تحديث نوع التركيب وبيانات بيت الستارة
+            installation_type = data.get('installation_type', '')
+            curtain_box_width = data.get('curtain_box_width')
+            curtain_box_depth = data.get('curtain_box_depth')
+            notes = data.get('notes', '').strip()
+            
+            curtain.installation_type = installation_type
+            curtain.curtain_box_width = Decimal(str(curtain_box_width)) if curtain_box_width else None
+            curtain.curtain_box_depth = Decimal(str(curtain_box_depth)) if curtain_box_depth else None
+            curtain.notes = notes
+            
+            curtain.save()
+            
+            # حذف الأقمشة والإكسسوارات القديمة
+            curtain.fabrics.all().delete()
+            curtain.accessories.all().delete()
+            
+            # إضافة الأقمشة الجديدة
+            for idx, fabric_data in enumerate(fabrics_data):
+                try:
+                    draft_order_item = None
+                    item_id = fabric_data.get('item_id')
+                    if item_id:
+                        try:
+                            draft_order_item = draft.items.get(id=item_id)
+                        except Exception as e:
+                            logger.warning(f"Could not find draft item {item_id}: {e}")
+                    
+                    fabric = CurtainFabric(
+                        curtain=curtain,
+                        draft_order_item=draft_order_item,
+                        fabric_type=fabric_data.get('type', 'light'),
+                        fabric_name=fabric_data.get('name', ''),
+                        pieces=int(fabric_data.get('pieces', 1)),
+                        meters=Decimal(str(fabric_data.get('meters', 0))),
+                        tailoring_type=fabric_data.get('tailoring', ''),
+                        sequence=idx + 1
+                    )
+                    
+                    try:
+                        fabric.full_clean()
+                        fabric.save()
+                    except ValidationError as ve:
+                        error_msgs = []
+                        for field, errors in ve.message_dict.items():
+                            error_msgs.extend(errors)
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'خطأ في الكمية: ' + ', '.join(error_msgs)
+                        }, status=400)
+                        
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error adding fabric: {e}")
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'خطأ في إضافة القماش: {str(e)}'
+                    }, status=400)
+            
+            # إضافة الإكسسوارات الجديدة
+            for accessory_data in accessories_data:
+                try:
+                    # الحصول على draft_order_item إذا كان موجوداً
+                    draft_order_item = None
+                    item_id = accessory_data.get('item_id')
+                    if item_id:
+                        try:
+                            draft_order_item = draft.items.get(id=item_id)
+                            logger.info(f"Found draft item for accessory: {draft_order_item.product.name}")
+                        except Exception as e:
+                            logger.warning(f"Could not find draft item {item_id}: {e}")
+                    
+                    # Get count and size, calculate quantity
+                    count = int(accessory_data.get('count', 1))
+                    size = Decimal(str(accessory_data.get('size', 1)))
+                    quantity = Decimal(str(accessory_data.get('quantity', count * size)))
+                    
+                    accessory = CurtainAccessory(
+                        curtain=curtain,
+                        draft_order_item=draft_order_item,
+                        accessory_name=accessory_data.get('name', ''),
+                        count=count,
+                        size=size,
+                        quantity=quantity,
+                        color=accessory_data.get('color', '')
+                    )
+                    
+                    # التحقق من الصحة قبل الحفظ
+                    try:
+                        accessory.full_clean()
+                        accessory.save()
+                        logger.info(f"Saved accessory: {accessory.accessory_name} - count: {count} × size: {size} = quantity: {quantity}")
+                    except ValidationError as ve:
+                        # إرجاع رسالة خطأ واضحة للمستخدم
+                        error_msgs = []
+                        for field, errors in ve.message_dict.items():
+                            error_msgs.extend(errors)
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'خطأ في كمية الإكسسوار: ' + ', '.join(error_msgs)
+                        }, status=400)
+                        
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error adding accessory: {e}")
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'خطأ في إضافة الإكسسوار: {str(e)}'
+                    }, status=400)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'تم تعديل الستارة بنجاح',
+                'curtain': {
+                    'id': curtain.id,
+                    'room_name': curtain.room_name,
+                    'width': float(curtain.width),
+                    'height': float(curtain.height),
+                    'fabrics_count': curtain.fabrics.count(),
+                    'accessories_count': curtain.accessories.count()
+                }
+            })
+    
+    except Exception as e:
+        logger.error(f"Error editing curtain: {e}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ أثناء تعديل الستارة: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@transaction.atomic
+def wizard_remove_curtain(request, curtain_id):
+    """
+    حذف ستارة من العقد الإلكتروني
+    """
+    try:
+        # الحصول على المسودة الحالية
+        draft = get_object_or_404(
+            DraftOrder,
+            created_by=request.user,
+            is_completed=False
+        )
+        
+        # حذف الستارة
+        curtain = get_object_or_404(
+            ContractCurtain,
+            id=curtain_id,
+            draft_order=draft
+        )
+        curtain.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم حذف الستارة بنجاح'
+        })
+    
+    except Exception as e:
+        logger.error(f"Error removing curtain: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ أثناء حذف الستارة: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@transaction.atomic
+def wizard_upload_contract(request):
+    """
+    رفع ملف PDF للعقد
+    """
+    try:
+        # الحصول على المسودة الحالية
+        draft = get_object_or_404(
+            DraftOrder,
+            created_by=request.user,
+            is_completed=False
+        )
+        
+        # التحقق من وجود الملف
+        if 'contract_file' not in request.FILES:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم رفع أي ملف'
+            }, status=400)
+        
+        contract_file = request.FILES['contract_file']
+        
+        # التحقق من نوع الملف
+        if not contract_file.name.lower().endswith('.pdf'):
+            return JsonResponse({
+                'success': False,
+                'message': 'يجب أن يكون الملف بصيغة PDF'
+            }, status=400)
+        
+        # حفظ الملف
+        draft.contract_file = contract_file
+        draft.contract_type = 'pdf'
+        draft.save(update_fields=['contract_file', 'contract_type'])
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم رفع ملف العقد بنجاح',
+            'file_name': contract_file.name,
+            'file_url': draft.contract_file.url if draft.contract_file else None
+        })
+    
+    except Exception as e:
+        logger.error(f"Error uploading contract file: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ أثناء رفع الملف: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@transaction.atomic
+def wizard_remove_contract_file(request):
+    """
+    حذف ملف العقد المرفوع
+    """
+    try:
+        # الحصول على المسودة الحالية
+        draft = get_object_or_404(
+            DraftOrder,
+            created_by=request.user,
+            is_completed=False
+        )
+        
+        # حذف الملف
+        if draft.contract_file:
+            draft.contract_file.delete()
+        
+        draft.contract_type = None
+        draft.save(update_fields=['contract_type'])
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم حذف ملف العقد بنجاح'
+        })
+    
+    except Exception as e:
+        logger.error(f"Error removing contract file: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ أثناء حذف الملف: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def view_contract_template(request, order_id):
+    """
+    عرض العقد الإلكتروني بتنسيق HTML للطباعة أو التحويل إلى PDF
+    View electronic contract in HTML format for printing or PDF conversion
+    """
+    # الحصول على الطلب
+    order = get_object_or_404(Order, id=order_id)
+    
+    # التحقق من الصلاحيات
+    if not request.user.has_perm('orders.view_order'):
+        if order.created_by != request.user:
+            messages.error(request, 'ليس لديك صلاحية لعرض هذا العقد')
+            return redirect('orders:order_list')
+    
+    # الحصول على ستائر العقد
+    curtains = ContractCurtain.objects.filter(order=order).prefetch_related(
+        'fabrics', 'accessories'
+    ).order_by('id')
+    
+    context = {
+        'order': order,
+        'curtains': curtains,
+        'is_print_view': request.GET.get('print', False)
+    }
+    
+    return render(request, 'orders/contract_template.html', context)

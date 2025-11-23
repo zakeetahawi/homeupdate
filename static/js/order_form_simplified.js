@@ -1809,7 +1809,8 @@ function addFabricToContainer(container, curtainIndex) {
         fabric_id: '',
         pieces: 1,
         meters: '',
-        tailoring: ''
+        tailoring: '',
+        notes: ''
     });
 
     // ملء قائمة اسم القماش من عناصر الطلب
@@ -1834,6 +1835,7 @@ function addFabricToContainer(container, curtainIndex) {
     const piecesInput = fabricItem.querySelector('.fabric-pieces-input');
     const metersInput = fabricItem.querySelector('.fabric-meters-input');
     const tailoringInput = fabricItem.querySelector('.fabric-tailoring-input');
+    const notesInput = fabricItem.querySelector('.fabric-notes-input');
 
     typeInput.addEventListener('change', (e) => {
         window.contractCurtains[curtainIndex].fabrics[fabricIndex].type = e.target.value;
@@ -1855,6 +1857,10 @@ function addFabricToContainer(container, curtainIndex) {
 
     tailoringInput.addEventListener('change', (e) => {
         window.contractCurtains[curtainIndex].fabrics[fabricIndex].tailoring = e.target.value;
+    });
+
+    notesInput.addEventListener('input', (e) => {
+        window.contractCurtains[curtainIndex].fabrics[fabricIndex].notes = e.target.value;
     });
 
     container.appendChild(fabricItem);
@@ -1940,7 +1946,8 @@ function addAccessoriesToCurtain(card, curtainIndex) {
                 </div>
                 <div class="acc-fields" style="display: none;">
                     ${typeField}
-                    <input type="number" class="form-control form-control-sm acc-quantity" placeholder="العدد" min="0">
+                    <input type="number" class="form-control form-control-sm mb-1 acc-quantity" placeholder="العدد" min="0">
+                    <textarea class="form-control form-control-sm acc-notes" rows="2" placeholder="ملاحظات (اختياري)" style="font-size: 11px;"></textarea>
                 </div>
             </div>
         `;
@@ -1949,6 +1956,7 @@ function addAccessoriesToCurtain(card, curtainIndex) {
         const fields = accDiv.querySelector('.acc-fields');
         const typeInput = accDiv.querySelector('.acc-type');
         const quantityInput = accDiv.querySelector('.acc-quantity');
+        const notesInput = accDiv.querySelector('.acc-notes');
 
         // ملء القائمة المنسدلة إذا كانت موجودة
         if (acc.hasSelect && typeInput.tagName === 'SELECT') {
@@ -1966,6 +1974,7 @@ function addAccessoriesToCurtain(card, curtainIndex) {
                 delete window.contractCurtains[curtainIndex].accessories[acc.key];
                 typeInput.value = '';
                 quantityInput.value = '';
+                notesInput.value = '';
             }
         });
 
@@ -1987,6 +1996,13 @@ function addAccessoriesToCurtain(card, curtainIndex) {
                 window.contractCurtains[curtainIndex].accessories[acc.key] = {};
             }
             window.contractCurtains[curtainIndex].accessories[acc.key].quantity = e.target.value;
+        });
+
+        notesInput.addEventListener('input', (e) => {
+            if (!window.contractCurtains[curtainIndex].accessories[acc.key]) {
+                window.contractCurtains[curtainIndex].accessories[acc.key] = {};
+            }
+            window.contractCurtains[curtainIndex].accessories[acc.key].notes = e.target.value;
         });
 
         accessoriesGrid.appendChild(accDiv);

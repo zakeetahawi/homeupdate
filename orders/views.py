@@ -696,8 +696,8 @@ def order_create(request):
                     else:
                         return redirect(f'/orders/{order.pk}/success/?electronic_contract=1')
                 elif create_electronic_contract:
-                    # لم يتم إرسال بيانات الستائر، التوجيه لصفحة التخصيص
-                    return redirect('orders:contract_curtains_manage', order_id=order.pk)
+                    # لم يتم إرسال بيانات الستائر، التوجيه لصفحة النجاح
+                    return redirect('orders:order_success', pk=order.pk)
                 elif paid_amount > 0:
                     return redirect(f'/orders/{order.pk}/success/?show_print=1&paid_amount={paid_amount}')
                 else:

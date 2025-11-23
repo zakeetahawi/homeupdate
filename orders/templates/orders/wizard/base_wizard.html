@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}إنشاء طلب جديد - الخطوة {{ current_step }} من {{ total_steps }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wizard-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .progress-wizard {
+        margin-bottom: 30px;
+    }
+    
+    .wizard-progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: linear-gradient(90deg, #198754 0%, #146c43 100%);
+        transition: width 0.3s ease;
+    }
+    
+    .wizard-steps {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        position: relative;
+    }
+    
+    .wizard-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+    }
+    
+    .wizard-step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e9ecef;
+        color: #6c757d;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-bottom: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .wizard-step.active .wizard-step-number {
+        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+    }
+    
+    .wizard-step.completed .wizard-step-number {
+        background: #198754;
+        color: white;
+    }
+    
+    .wizard-step-title {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .wizard-step.active .wizard-step-title {
+        color: #198754;
+        font-weight: 600;
+    }
+    
+    .wizard-card {
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        border: none;
+    }
+    
+    .wizard-card-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-bottom: 2px solid #e2e8f0;
+        padding: 20px;
+        border-radius: 12px 12px 0 0;
+    }
+    
+    .wizard-card-body {
+        padding: 30px;
+    }
+    
+    .wizard-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .btn-wizard {
+        padding: 12px 30px;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-wizard-primary {
+        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+        border: none;
+        color: white;
+    }
+    
+    .btn-wizard-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(25, 135, 84, 0.4);
+    }
+    
+    .btn-wizard-secondary {
+        background: #6c757d;
+        border: none;
+        color: white;
+    }
+    
+    .btn-wizard-danger {
+        background: #dc3545;
+        border: none;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wizard-container">
+    <!-- Progress Bar -->
+    <div class="progress-wizard">
+        <div class="progress" style="height: 8px; border-radius: 4px;">
+            <div class="wizard-progress-bar" role="progressbar" 
+                 style="width: {{ progress_percentage }}%"
+                 aria-valuenow="{{ progress_percentage }}" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
+            </div>
+        </div>
+        
+        <!-- Steps Indicator -->
+        <div class="wizard-steps">
+            <div class="wizard-step {% if current_step >= 1 %}{% if current_step == 1 %}active{% elif current_step > 1 %}completed{% endif %}{% endif %}">
+                <div class="wizard-step-number">
+                    {% if current_step > 1 %}
+                        <i class="fas fa-check"></i>
+                    {% else %}
+                        1
+                    {% endif %}
+                </div>
+                <div class="wizard-step-title">البيانات الأساسية</div>
+            </div>
+            
+            <div class="wizard-step {% if current_step >= 2 %}{% if current_step == 2 %}active{% elif current_step > 2 %}completed{% endif %}{% endif %}">
+                <div class="wizard-step-number">
+                    {% if current_step > 2 %}
+                        <i class="fas fa-check"></i>
+                    {% else %}
+                        2
+                    {% endif %}
+                </div>
+                <div class="wizard-step-title">نوع الطلب</div>
+            </div>
+            
+            <div class="wizard-step {% if current_step >= 3 %}{% if current_step == 3 %}active{% elif current_step > 3 %}completed{% endif %}{% endif %}">
+                <div class="wizard-step-number">
+                    {% if current_step > 3 %}
+                        <i class="fas fa-check"></i>
+                    {% else %}
+                        3
+                    {% endif %}
+                </div>
+                <div class="wizard-step-title">عناصر الطلب</div>
+            </div>
+            
+            <div class="wizard-step {% if current_step >= 4 %}{% if current_step == 4 %}active{% elif current_step > 4 %}completed{% endif %}{% endif %}">
+                <div class="wizard-step-number">
+                    {% if current_step > 4 %}
+                        <i class="fas fa-check"></i>
+                    {% else %}
+                        4
+                    {% endif %}
+                </div>
+                <div class="wizard-step-title">الفاتورة والدفع</div>
+            </div>
+            
+            <div class="wizard-step {% if current_step >= 5 %}{% if current_step == 5 %}active{% elif current_step > 5 %}completed{% endif %}{% endif %}">
+                <div class="wizard-step-number">
+                    {% if current_step > 5 %}
+                        <i class="fas fa-check"></i>
+                    {% else %}
+                        5
+                    {% endif %}
+                </div>
+                <div class="wizard-step-title">العقد الإلكتروني</div>
+            </div>
+            
+            <div class="wizard-step {% if current_step == 6 %}active{% endif %}">
+                <div class="wizard-step-number">6</div>
+                <div class="wizard-step-title">المراجعة</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="card wizard-card">
+        <div class="card-header wizard-card-header">
+            <h4 class="mb-0">
+                <i class="fas fa-{{ step_icon|default:'shopping-cart' }} me-2"></i>
+                {{ step_title }}
+            </h4>
+        </div>
+        <div class="card-body wizard-card-body">
+            {% block wizard_content %}
+            <!-- محتوى الخطوة سيتم إدراجه هنا -->
+            {% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// دالة عامة لإرسال النموذج عبر AJAX
+function submitWizardStep(formElement, nextStepUrl) {
+    const formData = new FormData(formElement);
+    
+    fetch(formElement.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // الانتقال للخطوة التالية
+            window.location.href = nextStepUrl || `/orders/wizard/step/${data.next_step}/`;
+        } else {
+            // عرض الأخطاء
+            showErrors(data.errors || data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء الحفظ');
+    });
+}
+
+function showErrors(errors) {
+    if (typeof errors === 'string') {
+        alert(errors);
+    } else {
+        let errorMessage = '';
+        for (const [field, msgs] of Object.entries(errors)) {
+            errorMessage += `${field}: ${msgs.join(', ')}\n`;
+        }
+        alert(errorMessage);
+    }
+}
+</script>
+{% endblock %}

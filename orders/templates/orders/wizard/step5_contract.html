@@ -1,0 +1,1492 @@
+{% extends 'orders/wizard/base_wizard.html' %}
+{% load static %}
+
+{% block wizard_content %}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>
+    أضف تفاصيل الستائر للعقد الإلكتروني.
+    <br>
+    <small class="text-muted">هذه الخطوة اختيارية، يمكنك تخطيها والانتقال للمراجعة النهائية.</small>
+</div>
+
+<!-- Electronic Contract Section (Always Visible) -->
+<div id="electronicContractSection">
+    <!-- Curtains List -->
+    <div id="curtains-list" class="mb-4">
+        {% for curtain in curtains %}
+        <div class="card mb-3 curtain-card" data-curtain-id="{{ curtain.id }}">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-th me-2"></i>{{ curtain.room_name }}
+                </h6>
+                <div>
+                    <button type="button" class="btn btn-sm btn-primary me-2" onclick="editCurtain({{ curtain.id }})">
+                        <i class="fas fa-edit"></i> تعديل
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeCurtain({{ curtain.id }})">
+                        <i class="fas fa-trash"></i> حذف
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <strong>المقاسات:</strong> {{ curtain.width }}م × {{ curtain.height }}م
+                    </div>
+                    <div class="col-md-3">
+                        <strong>نوع التركيب:</strong> 
+                        {% if curtain.installation_type %}
+                            {{ curtain.get_installation_type_display }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>الأقمشة:</strong> {{ curtain.fabrics.count }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>الإكسسوارات:</strong> {{ curtain.accessories.count }}
+                    </div>
+                </div>
+                
+                {% if curtain.curtain_box_width or curtain.curtain_box_depth %}
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="alert alert-info mb-0 py-2">
+                            <i class="fas fa-ruler-combined me-2"></i>
+                            <strong>مقاسات بيت الستارة:</strong>
+                            {% if curtain.curtain_box_width %}العرض: {{ curtain.curtain_box_width }}م{% endif %}
+                            {% if curtain.curtain_box_width and curtain.curtain_box_depth %} - {% endif %}
+                            {% if curtain.curtain_box_depth %}العمق: {{ curtain.curtain_box_depth }}م{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if curtain.fabrics.exists %}
+                <div class="mt-3">
+                    <strong class="text-primary">
+                        <i class="fas fa-cut me-1"></i>الأقمشة:
+                    </strong>
+                    <div class="row g-2 mt-1">
+                        {% for fabric in curtain.fabrics.all %}
+                        <div class="col-md-6">
+                            <div class="card border-{% if fabric.fabric_type == 'light' %}warning{% elif fabric.fabric_type == 'heavy' %}danger{% elif fabric.fabric_type == 'blackout' %}dark{% else %}secondary{% endif %}">
+                                <div class="card-body py-2 px-3">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-{% if fabric.fabric_type == 'light' %}warning{% elif fabric.fabric_type == 'heavy' %}danger{% elif fabric.fabric_type == 'blackout' %}dark{% else %}secondary{% endif %} me-2">
+                                            {{ fabric.get_fabric_type_display }}
+                                        </span>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold">
+                                                {% if fabric.order_item %}
+                                                    {{ fabric.order_item.product.name }}
+                                                {% else %}
+                                                    {{ fabric.fabric_name|default:"غير محدد" }}
+                                                {% endif %}
+                                            </div>
+                                            <small class="text-muted">
+                                                {{ fabric.meters }}م × {{ fabric.pieces }} قطعة
+                                                {% if fabric.tailoring_type %}
+                                                    - {{ fabric.get_tailoring_type_display }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if curtain.accessories.exists %}
+                <div class="mt-3">
+                    <strong class="text-success">
+                        <i class="fas fa-puzzle-piece me-1"></i>الإكسسوارات:
+                    </strong>
+                    <div class="row g-2 mt-1">
+                        {% for accessory in curtain.accessories.all %}
+                        <div class="col-md-6">
+                            <div class="card border-success">
+                                <div class="card-body py-2 px-3">
+                                    <div class="fw-bold">{{ accessory.accessory_name }}</div>
+                                    <small class="text-muted">
+                                        العدد: {{ accessory.quantity }}
+                                        {% if accessory.size %}
+                                            - المقاس: {{ accessory.size }}
+                                        {% endif %}
+                                        {% if accessory.color %}
+                                            - اللون: {{ accessory.color }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if curtain.notes %}
+                <div class="mt-3">
+                    <div class="alert alert-warning mb-0">
+                        <strong>
+                            <i class="fas fa-sticky-note me-1"></i>ملاحظات:
+                        </strong>
+                        <div class="mt-1">{{ curtain.notes }}</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-5" id="no-curtains-message">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p class="mb-0">لم يتم إضافة ستائر بعد</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Add Curtain Button -->
+    <div class="text-center mb-4">
+        <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#addCurtainModal">
+            <i class="fas fa-plus me-2"></i>إضافة ستارة جديدة
+        </button>
+    </div>
+</div>
+
+<!-- PDF Contract Section -->
+
+<!-- Actions -->
+<div class="wizard-actions">
+    <div>
+        <a href="{% url 'orders:wizard_cancel' %}" class="btn btn-wizard btn-wizard-danger me-2">
+            <i class="fas fa-times me-2"></i>إلغاء
+        </a>
+        <a href="{% url 'orders:wizard_step' step=4 %}" class="btn btn-wizard btn-wizard-secondary">
+            <i class="fas fa-arrow-right me-2"></i>السابق
+        </a>
+    </div>
+    <div>
+        <button type="button" class="btn btn-wizard btn-wizard-primary" onclick="proceedToNextStep()">
+            <i class="fas fa-arrow-left me-2"></i>التالي
+        </button>
+    </div>
+</div>
+
+<!-- Modal: Add Curtain -->
+<div class="modal fade" id="addCurtainModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>إضافة ستارة جديدة
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Step 1: Basic Curtain Info -->
+                <div id="curtainBasicInfo">
+                    <h6 class="text-primary mb-3">
+                        <i class="fas fa-info-circle me-2"></i>المعلومات الأساسية
+                    </h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">اسم الغرفة <span class="text-danger">*</span></label>
+                            <input type="text" id="curtain-room-name" class="form-control" 
+                                   placeholder="مثال: غرفة النوم الرئيسية">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">العرض (متر) <span class="text-danger">*</span></label>
+                            <input type="number" id="curtain-width" class="form-control" 
+                                   min="0.01" step="0.01" placeholder="3.5">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">الطول (متر) <span class="text-danger">*</span></label>
+                            <input type="number" id="curtain-height" class="form-control" 
+                                   min="0.01" step="0.01" placeholder="2.8">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">نوع التركيب <span class="text-danger">*</span></label>
+                            <select id="curtain-installation-type" class="form-select" onchange="toggleCurtainBoxFields()">
+                                <option value="">اختر نوع التركيب</option>
+                                <option value="wall_gypsum">حائط - جبس</option>
+                                <option value="wall_concrete">حائط - مسلح</option>
+                                <option value="ceiling_gypsum">سقف - جبس</option>
+                                <option value="ceiling_concrete">سقف - مسلح</option>
+                                <option value="curtain_box_concrete">بيت ستارة مسلح</option>
+                                <option value="curtain_box_gypsum">بيت ستارة جبس</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Curtain Box Fields (shown only for curtain_box_concrete and curtain_box_gypsum) -->
+                    <div id="curtainBoxFields" class="row g-3 mt-2" style="display: none;">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">عرض بيت الستارة (سم) <span class="text-danger">*</span></label>
+                            <input type="number" id="curtain-box-width" class="form-control" 
+                                   min="1" step="1" placeholder="مثال: 25">
+                            <small class="text-muted">أدخل عرض بيت الستارة بالسنتيمتر</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">عمق بيت الستارة (سم) <span class="text-danger">*</span></label>
+                            <input type="number" id="curtain-box-depth" class="form-control" 
+                                   min="1" step="1" placeholder="مثال: 30">
+                            <small class="text-muted">أدخل عمق بيت الستارة بالسنتيمتر</small>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary mt-3" onclick="showFabricsSection()">
+                        <i class="fas fa-arrow-left me-2"></i>التالي - إضافة الأقمشة
+                    </button>
+                </div>
+                
+                <!-- Step 2: Fabrics Section (Hidden initially) -->
+                <div id="fabricsSection" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>الستارة:</strong> <span id="summary-room-name"></span> - 
+                        <span id="summary-width"></span>م × <span id="summary-height"></span>م
+                        <button type="button" class="btn btn-sm btn-link" onclick="editBasicInfo()">
+                            <i class="fas fa-edit"></i> تعديل
+                        </button>
+                    </div>
+                    
+                    <h6 class="text-primary mb-3">
+                        <i class="fas fa-cut me-2"></i>الأقمشة
+                    </h6>
+                    
+                    <!-- Fabrics List -->
+                    <div id="fabricsList" class="mb-3"></div>
+                    
+                    <!-- Add Fabric Form -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">إضافة قماش جديد</h6>
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <label class="form-label">نوع القماش <span class="text-danger">*</span></label>
+                                    <select id="fabric-type" class="form-select">
+                                        <option value="">اختر النوع</option>
+                                        <option value="light">خفيف</option>
+                                        <option value="heavy">ثقيل</option>
+                                        <option value="blackout">بلاك أوت</option>
+                                        <option value="additional">إضافي</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">اسم القماش <span class="text-danger">*</span></label>
+                                    <select id="fabric-name" class="form-select" onchange="updateFabricQuantityInfo(this)">
+                                        <option value="">اختر القماش من الفاتورة</option>
+                                        {% for item in draft.items.all %}
+                                        <option value="{{ item.id }}" data-available="{{ item.quantity }}" data-name="{{ item.product.name }}">
+                                            {{ item.product.name }} - متوفر: <span class="available-qty-{{ item.id }}">{{ item.quantity }}</span> متر
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="text-muted mt-1" id="fabric-qty-hint" style="display:none;">
+                                        <i class="fas fa-info-circle"></i> المتبقي للاختيار: <span id="remaining-qty">0</span> متر
+                                    </small>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">الكمية (متر)</label>
+                                    <input type="number" id="fabric-meters" class="form-control" 
+                                           min="0.01" step="0.01" placeholder="5.5">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">عدد القطع</label>
+                                    <input type="number" id="fabric-pieces" class="form-control" 
+                                           min="1" step="1" value="1">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">طريقة التفصيل</label>
+                                    <select id="fabric-tailoring" class="form-select">
+                                        <option value="">اختر</option>
+                                        <option value="rings">حلقات</option>
+                                        <option value="tape">شريط</option>
+                                        <option value="snap">كبس</option>
+                                        <option value="double_fold">كسرة مزدوجة</option>
+                                        <option value="triple_fold">كسرة ثلاثية</option>
+                                        <option value="pencil_pleat">كسرة قلم</option>
+                                        <option value="eyelet">عراوي</option>
+                                        <option value="tab_top">عروة علوية</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-success mt-2" onclick="addFabricToList()">
+                                <i class="fas fa-plus me-1"></i>إضافة القماش
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" onclick="backToBasicInfo()">
+                            <i class="fas fa-arrow-right me-2"></i>السابق
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="showAccessoriesSection()">
+                            <i class="fas fa-arrow-left me-2"></i>التالي - الإكسسوارات
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 3: Accessories Section (Hidden initially) -->
+                <div id="accessoriesSection" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>الستارة:</strong> <span id="summary2-room-name"></span> - 
+                        الأقمشة: <span id="summary-fabrics-count">0</span>
+                    </div>
+                    
+                    <h6 class="text-primary mb-3">
+                        <i class="fas fa-puzzle-piece me-2"></i>الإكسسوارات
+                    </h6>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="hasAccessories" onchange="toggleAccessoriesFields()">
+                        <label class="form-check-label fw-bold" for="hasAccessories">
+                            مع إكسسوار
+                        </label>
+                    </div>
+                    
+                    <!-- Accessories Fields (Hidden initially) -->
+                    <div id="accessoriesFields" style="display: none;">
+                        <!-- Accessories List -->
+                        <div id="accessoriesList" class="mb-3"></div>
+                        
+                        <!-- Add Accessory Form -->
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">إضافة إكسسوار</h6>
+                                
+                                <!-- Accessory Source Selection -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">المصدر</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="accessorySource" id="accessoryFromInvoice" value="invoice" checked onchange="toggleAccessorySource()">
+                                        <label class="btn btn-outline-primary" for="accessoryFromInvoice">
+                                            <i class="fas fa-list me-1"></i>من الفاتورة
+                                        </label>
+                                        
+                                        <input type="radio" class="btn-check" name="accessorySource" id="accessoryExternal" value="external" onchange="toggleAccessorySource()">
+                                        <label class="btn btn-outline-success" for="accessoryExternal">
+                                            <i class="fas fa-plus-circle me-1"></i>إكسسوار خارجي
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <!-- From Invoice Section -->
+                                <div id="accessoryInvoiceSection">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-4">
+                                            <label class="form-label">الإكسسوار <span class="text-danger">*</span></label>
+                                            <select id="accessory-from-invoice" class="form-select" onchange="updateAccessoryQuantityInfo(this)">
+                                                <option value="">اختر الإكسسوار من الفاتورة</option>
+                                                {% for item in draft.items.all %}
+                                                <option value="{{ item.id }}" 
+                                                        data-available="{{ item.quantity }}" 
+                                                        data-name="{{ item.product.name }}"
+                                                        data-is-fabric="false"
+                                                        class="accessory-item-option">
+                                                    {{ item.product.name }} - متوفر: <span class="available-acc-{{ item.id }}">{{ item.quantity }}</span>
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                            <small class="text-muted mt-1" id="accessory-qty-hint" style="display:none;">
+                                                <i class="fas fa-info-circle"></i> المتبقي: <span id="remaining-acc-qty">0</span>
+                                            </small>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">العدد</label>
+                                            <input type="number" id="accessory-invoice-quantity" class="form-control" 
+                                                   min="1" step="1" value="1">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">المقاس (رقم)</label>
+                                            <input type="number" id="accessory-invoice-size" class="form-control" 
+                                                   min="0.01" step="0.01" value="1"
+                                                   placeholder="مثال: 2، 1.5">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">اللون</label>
+                                            <input type="text" id="accessory-invoice-color" class="form-control" 
+                                                   placeholder="أبيض، ذهبي...">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">&nbsp;</label>
+                                            <button type="button" class="btn btn-success w-100" onclick="addAccessoryFromInvoice()">
+                                                <i class="fas fa-plus me-1"></i>إضافة
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- External Accessory Section -->
+                                <div id="accessoryExternalSection" style="display: none;">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-3">
+                                            <label class="form-label">اسم الإكسسوار <span class="text-danger">*</span></label>
+                                            <input type="text" id="accessory-external-name" class="form-control" 
+                                                   placeholder="مثال: كورنيش، عصا...">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">العدد</label>
+                                            <input type="number" id="accessory-external-quantity" class="form-control" 
+                                                   min="1" step="1" value="1">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">المقاس (رقم)</label>
+                                            <input type="number" id="accessory-external-size" class="form-control" 
+                                                   min="0.01" step="0.01" value="1"
+                                                   placeholder="مثال: 2، 1.5">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">اللون</label>
+                                            <input type="text" id="accessory-external-color" class="form-control" 
+                                                   placeholder="أبيض، ذهبي...">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">&nbsp;</label>
+                                            <button type="button" class="btn btn-success w-100" onclick="addExternalAccessory()">
+                                                <i class="fas fa-plus me-1"></i>إضافة
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="customAccessoryName" style="display: none;" class="mb-2">
+                                    <input type="text" id="accessory-custom-name" class="form-control" 
+                                           placeholder="أدخل اسم الإكسسوار">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-3">
+                        <button type="button" class="btn btn-secondary" onclick="backToFabricsSection()">
+                            <i class="fas fa-arrow-right me-2"></i>السابق
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="showNotesSection()">
+                            <i class="fas fa-arrow-left me-2"></i>التالي - حفظ الستارة
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 4: Notes Section (Hidden initially) -->
+                <div id="notesSection" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>الستارة:</strong> <span id="summary3-room-name"></span> - 
+                        الأقمشة: <span id="summary2-fabrics-count">0</span> - 
+                        الإكسسوارات: <span id="summary-accessories-count">0</span>
+                    </div>
+                    
+                    <!-- ملاحظات الستارة -->
+                    <div class="card mt-3" style="border-left: 4px solid #6c757d;">
+                        <div class="card-body">
+                            <h6 class="mb-3">
+                                <i class="fas fa-sticky-note me-2"></i>ملاحظات الستارة (اختياري)
+                            </h6>
+                            <textarea id="curtain-notes" class="form-control" rows="3" 
+                                      placeholder="أضف أي ملاحظات خاصة بهذه الستارة (ألوان الأقمشة، تفاصيل الإكسسوارات، إلخ)"></textarea>
+                            <small class="text-muted">هذه الملاحظات ستظهر في العقد النهائي</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-3">
+                        <button type="button" class="btn btn-secondary" onclick="backToAccessoriesSection()">
+                            <i class="fas fa-arrow-right me-2"></i>السابق
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="saveCurtainComplete()">
+                            <i class="fas fa-save me-2"></i>حفظ الستارة
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+// Global variables to store curtain data
+let tempFabrics = [];
+let tempAccessories = [];
+let fabricUsageTracker = {}; // Track how much of each fabric has been used
+let editingCurtainId = null; // Track if we're editing an existing curtain
+
+// Initialize fabric usage tracker from draft items
+{% for item in draft.items.all %}
+fabricUsageTracker['{{ item.id }}'] = {
+    total: parseFloat('{{ item.quantity }}'),
+    used: 0,
+    name: '{{ item.product.name|escapejs }}'
+};
+{% endfor %}
+
+// Calculate used quantities from existing curtain fabrics
+function calculateUsedQuantities() {
+    // Reset usage
+    for (let key in fabricUsageTracker) {
+        fabricUsageTracker[key].used = 0;
+    }
+    
+    // Add from existing curtains on the page
+    {% for curtain in curtains %}
+        {% for fabric in curtain.fabrics.all %}
+            {% if fabric.draft_order_item_id %}
+                if (fabricUsageTracker['{{ fabric.draft_order_item_id }}']) {
+                    fabricUsageTracker['{{ fabric.draft_order_item_id }}'].used += parseFloat('{{ fabric.meters }}');
+                }
+            {% endif %}
+        {% endfor %}
+        
+        {% for accessory in curtain.accessories.all %}
+            {% if accessory.draft_order_item_id %}
+                if (fabricUsageTracker['{{ accessory.draft_order_item_id }}']) {
+                    fabricUsageTracker['{{ accessory.draft_order_item_id }}'].used += parseFloat('{{ accessory.quantity }}');
+                }
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+    
+    // Add from temp fabrics in current modal
+    tempFabrics.forEach(fabric => {
+        if (fabric.item_id && fabricUsageTracker[fabric.item_id]) {
+            fabricUsageTracker[fabric.item_id].used += parseFloat(fabric.meters);
+        }
+    });
+    
+    // Add from temp accessories in current modal
+    tempAccessories.forEach(accessory => {
+        if (accessory.item_id && fabricUsageTracker[accessory.item_id]) {
+            fabricUsageTracker[accessory.item_id].used += parseFloat(accessory.quantity);
+        }
+    });
+    
+    // Update the select options to show remaining quantities and hide fully used items
+    updateFabricSelectOptions();
+}
+
+// Update fabric select options to show remaining quantities and hide fully used items
+function updateFabricSelectOptions() {
+    const fabricSelect = document.getElementById('fabric-name');
+    const accessorySelect = document.getElementById('accessory-from-invoice');
+    
+    // Update fabric select
+    if (fabricSelect) {
+        Array.from(fabricSelect.options).forEach(option => {
+            if (option.value === '') return; // Skip placeholder option
+            
+            const itemId = option.value;
+            const tracker = fabricUsageTracker[itemId];
+            if (tracker) {
+                const remaining = tracker.total - tracker.used;
+                
+                // Update the displayed quantity
+                const qtySpan = document.querySelector(`.available-qty-${itemId}`);
+                if (qtySpan) {
+                    qtySpan.textContent = remaining.toFixed(3).replace(/\.?0+$/, '');
+                }
+                
+                // Hide option if fully used
+                if (remaining <= 0.001) { // Using small epsilon for floating point comparison
+                    option.style.display = 'none';
+                    option.disabled = true;
+                } else {
+                    option.style.display = '';
+                    option.disabled = false;
+                }
+            }
+        });
+    }
+    
+    // Update accessory select similarly
+    if (accessorySelect) {
+        Array.from(accessorySelect.options).forEach(option => {
+            if (option.value === '') return;
+            
+            const itemId = option.value;
+            const tracker = fabricUsageTracker[itemId];
+            if (tracker) {
+                const remaining = tracker.total - tracker.used;
+                
+                const qtySpan = document.querySelector(`.available-acc-${itemId}`);
+                if (qtySpan) {
+                    qtySpan.textContent = remaining.toFixed(3).replace(/\.?0+$/, '');
+                }
+                
+                if (remaining <= 0.001) {
+                    option.style.display = 'none';
+                    option.disabled = true;
+                } else {
+                    option.style.display = '';
+                    option.disabled = false;
+                }
+            }
+        });
+    }
+}
+
+// Update quantity info when fabric is selected
+function updateFabricQuantityInfo(selectElement) {
+    const selectedItemId = selectElement.value;
+    if (!selectedItemId || !fabricUsageTracker[selectedItemId]) {
+        document.getElementById('fabric-qty-hint').style.display = 'none';
+        return;
+    }
+    
+    calculateUsedQuantities();
+    
+    const tracker = fabricUsageTracker[selectedItemId];
+    const remaining = tracker.total - tracker.used;
+    
+    // Show remaining with proper decimal formatting
+    document.getElementById('remaining-qty').textContent = remaining.toFixed(3).replace(/\.?0+$/, '');
+    document.getElementById('fabric-qty-hint').style.display = 'block';
+    
+    // Update max attribute on meters input
+    const metersInput = document.getElementById('fabric-meters');
+    metersInput.setAttribute('max', remaining);
+    
+    // Auto-fill with remaining quantity if empty
+    if (!metersInput.value && remaining > 0) {
+        metersInput.value = remaining.toFixed(3).replace(/\.?0+$/, '');
+    }
+}
+
+// Toggle between electronic and PDF contract
+function toggleContractType(type) {
+    if (type === 'electronic') {
+        document.getElementById('electronicContractSection').style.display = 'block';
+        document.getElementById('pdfContractSection').style.display = 'none';
+    } else {
+        document.getElementById('electronicContractSection').style.display = 'none';
+        document.getElementById('pdfContractSection').style.display = 'block';
+    }
+}
+
+// Toggle curtain box fields based on installation type
+function toggleCurtainBoxFields() {
+    const installationType = document.getElementById('curtain-installation-type').value;
+    const curtainBoxFields = document.getElementById('curtainBoxFields');
+    
+    if (installationType === 'curtain_box_concrete' || installationType === 'curtain_box_gypsum') {
+        curtainBoxFields.style.display = 'block';
+        // Make fields required
+        document.getElementById('curtain-box-width').setAttribute('required', 'required');
+        document.getElementById('curtain-box-depth').setAttribute('required', 'required');
+    } else {
+        curtainBoxFields.style.display = 'none';
+        // Remove required attribute and clear values
+        document.getElementById('curtain-box-width').removeAttribute('required');
+        document.getElementById('curtain-box-depth').removeAttribute('required');
+        document.getElementById('curtain-box-width').value = '';
+        document.getElementById('curtain-box-depth').value = '';
+    }
+}
+
+// Show fabrics section after basic info
+function showFabricsSection() {
+    const roomName = document.getElementById('curtain-room-name').value.trim();
+    const width = parseFloat(document.getElementById('curtain-width').value);
+    const height = parseFloat(document.getElementById('curtain-height').value);
+    const installationType = document.getElementById('curtain-installation-type').value;
+    
+    if (!roomName || !width || !height || !installationType) {
+        alert('يرجى ملء جميع الحقول الأساسية (اسم الغرفة، العرض، الارتفاع، ونوع التركيب)');
+        return;
+    }
+    
+    if (width <= 0 || height <= 0) {
+        alert('يجب أن تكون القيم أكبر من صفر');
+        return;
+    }
+    
+    // Check if curtain box fields are required and filled
+    if (installationType === 'curtain_box_concrete' || installationType === 'curtain_box_gypsum') {
+        const boxWidth = parseFloat(document.getElementById('curtain-box-width').value);
+        const boxDepth = parseFloat(document.getElementById('curtain-box-depth').value);
+        
+        if (!boxWidth || !boxDepth) {
+            alert('يرجى إدخال عرض وعمق بيت الستارة');
+            return;
+        }
+        
+        if (boxWidth <= 0 || boxDepth <= 0) {
+            alert('يجب أن تكون قيم بيت الستارة أكبر من صفر');
+            return;
+        }
+    }
+    
+    // Update summary
+    document.getElementById('summary-room-name').textContent = roomName;
+    document.getElementById('summary-width').textContent = width.toFixed(2);
+    document.getElementById('summary-height').textContent = height.toFixed(2);
+    document.getElementById('summary2-room-name').textContent = roomName;
+    
+    // Hide basic info, show fabrics
+    document.getElementById('curtainBasicInfo').style.display = 'none';
+    document.getElementById('fabricsSection').style.display = 'block';
+}
+
+function editBasicInfo() {
+    document.getElementById('curtainBasicInfo').style.display = 'block';
+    document.getElementById('fabricsSection').style.display = 'none';
+}
+
+function backToBasicInfo() {
+    editBasicInfo();
+}
+
+// Add fabric to temporary list
+function addFabricToList() {
+    const fabricType = document.getElementById('fabric-type').value;
+    const fabricSelect = document.getElementById('fabric-name');
+    const fabricItemId = fabricSelect.value;
+    const metersInput = document.getElementById('fabric-meters');
+    const meters = parseFloat(metersInput.value);
+    const pieces = parseInt(document.getElementById('fabric-pieces').value);
+    const tailoring = document.getElementById('fabric-tailoring').value;
+    
+    if (!fabricType) {
+        alert('يرجى اختيار نوع القماش');
+        return;
+    }
+    
+    if (!fabricItemId) {
+        alert('يرجى اختيار القماش من الفاتورة');
+        return;
+    }
+    
+    if (!meters || meters <= 0 || isNaN(meters)) {
+        alert('يرجى إدخال كمية صحيحة');
+        return;
+    }
+    
+    if (!pieces || pieces <= 0) {
+        alert('يرجى إدخال عدد قطع صحيح');
+        return;
+    }
+    
+    // Validate quantity against available
+    calculateUsedQuantities();
+    const tracker = fabricUsageTracker[fabricItemId];
+    const remaining = tracker.total - tracker.used;
+    
+    // Use epsilon for floating point comparison
+    if (meters > remaining + 0.001) {
+        alert(`الكمية المطلوبة (${meters.toFixed(3)} متر) أكبر من المتوفر (${remaining.toFixed(3)} متر)\nالمتبقي من ${tracker.name}: ${remaining.toFixed(3)} متر`);
+        return;
+    }
+    
+    const fabricName = fabricSelect.options[fabricSelect.selectedIndex].getAttribute('data-name');
+    
+    const fabric = {
+        type: fabricType,
+        type_display: document.getElementById('fabric-type').options[document.getElementById('fabric-type').selectedIndex].text,
+        name: fabricName,
+        item_id: fabricItemId,
+        meters: meters,
+        pieces: pieces,
+        tailoring: tailoring,
+        tailoring_display: tailoring ? document.getElementById('fabric-tailoring').options[document.getElementById('fabric-tailoring').selectedIndex].text : '-'
+    };
+    
+    tempFabrics.push(fabric);
+    updateFabricsList();
+    
+    // Clear form
+    document.getElementById('fabric-type').value = '';
+    document.getElementById('fabric-name').value = '';
+    metersInput.value = '';
+    document.getElementById('fabric-pieces').value = '1';
+    document.getElementById('fabric-tailoring').value = '';
+    document.getElementById('fabric-qty-hint').style.display = 'none';
+    
+    // Recalculate to update tracking and hide fully used items
+    calculateUsedQuantities();
+}
+
+function updateFabricsList() {
+    const list = document.getElementById('fabricsList');
+    
+    if (tempFabrics.length === 0) {
+        list.innerHTML = '<div class="alert alert-warning">لم يتم إضافة أقمشة بعد</div>';
+        return;
+    }
+    
+    let html = '';
+    tempFabrics.forEach((fabric, index) => {
+        const colorClass = fabric.type === 'light' ? 'warning' : 
+                          fabric.type === 'heavy' ? 'danger' : 
+                          fabric.type === 'blackout' ? 'dark' : 'secondary';
+        
+        // Format meters to remove trailing zeros
+        const metersFormatted = parseFloat(fabric.meters).toFixed(3).replace(/\.?0+$/, '');
+        
+        html += `
+            <div class="card mb-2 border-${colorClass}">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-${colorClass}">${fabric.type_display}</span>
+                            <strong>${fabric.name}</strong> - 
+                            ${metersFormatted}م × ${fabric.pieces} قطعة
+                            ${fabric.tailoring ? ' - ' + fabric.tailoring_display : ''}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeFabric(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    list.innerHTML = html;
+    document.getElementById('summary-fabrics-count').textContent = tempFabrics.length;
+}
+
+function removeFabric(index) {
+    tempFabrics.splice(index, 1);
+    updateFabricsList();
+    // Recalculate to update available quantities
+    calculateUsedQuantities();
+}
+
+// Show accessories section
+function showAccessoriesSection() {
+    if (tempFabrics.length === 0) {
+        if (!confirm('لم تقم بإضافة أي أقمشة. هل تريد المتابعة؟')) {
+            return;
+        }
+    }
+    
+    document.getElementById('fabricsSection').style.display = 'none';
+    document.getElementById('accessoriesSection').style.display = 'block';
+    document.getElementById('notesSection').style.display = 'none';
+}
+
+function backToFabricsSection() {
+    document.getElementById('accessoriesSection').style.display = 'none';
+    document.getElementById('fabricsSection').style.display = 'block';
+    document.getElementById('notesSection').style.display = 'none';
+}
+
+// Show notes section
+function showNotesSection() {
+    // Update summary
+    const roomName = document.getElementById('curtain-room-name').value;
+    document.getElementById('summary3-room-name').textContent = roomName;
+    document.getElementById('summary2-fabrics-count').textContent = tempFabrics.length;
+    document.getElementById('summary-accessories-count').textContent = tempAccessories.length;
+    
+    document.getElementById('accessoriesSection').style.display = 'none';
+    document.getElementById('fabricsSection').style.display = 'none';
+    document.getElementById('notesSection').style.display = 'block';
+}
+
+function backToAccessoriesSection() {
+    document.getElementById('notesSection').style.display = 'none';
+    document.getElementById('accessoriesSection').style.display = 'block';
+    document.getElementById('fabricsSection').style.display = 'none';
+}
+
+// Toggle accessories fields
+function toggleAccessoriesFields() {
+    const hasAccessories = document.getElementById('hasAccessories').checked;
+    document.getElementById('accessoriesFields').style.display = hasAccessories ? 'block' : 'none';
+}
+
+// Toggle between invoice and external accessory
+function toggleAccessorySource() {
+    const invoiceChecked = document.getElementById('accessoryFromInvoice').checked;
+    document.getElementById('accessoryInvoiceSection').style.display = invoiceChecked ? 'block' : 'none';
+    document.getElementById('accessoryExternalSection').style.display = invoiceChecked ? 'none' : 'block';
+}
+
+// Add accessory from invoice
+function addAccessoryFromInvoice() {
+    const select = document.getElementById('accessory-from-invoice');
+    const itemId = select.value;
+    const countInput = document.getElementById('accessory-invoice-quantity');
+    const count = parseFloat(countInput.value);
+    const sizeInput = document.getElementById('accessory-invoice-size');
+    const size = parseFloat(sizeInput.value);
+    const color = document.getElementById('accessory-invoice-color').value.trim();
+    
+    if (!itemId) {
+        alert('يرجى اختيار الإكسسوار من الفاتورة');
+        return;
+    }
+    
+    if (!count || count <= 0 || isNaN(count)) {
+        alert('يرجى إدخال عدد صحيح');
+        return;
+    }
+    
+    if (!size || size <= 0 || isNaN(size)) {
+        alert('يرجى إدخال مقاس صحيح');
+        return;
+    }
+    
+    // Calculate total quantity = count × size
+    const totalQuantity = count * size;
+    
+    // Calculate remaining quantity for this item
+    calculateUsedQuantities();
+    const tracker = fabricUsageTracker[itemId];
+    if (!tracker) {
+        alert('خطأ: لم يتم العثور على بيانات العنصر');
+        return;
+    }
+    
+    const remaining = tracker.total - tracker.used;
+    
+    if (totalQuantity > remaining + 0.001) {
+        alert(`الكمية المطلوبة (${count} × ${size} = ${totalQuantity.toFixed(3)}) أكبر من المتوفر (${remaining.toFixed(3)})`);
+        return;
+    }
+    
+    const option = select.options[select.selectedIndex];
+    const accessoryName = option.dataset.name;
+    
+    const accessory = {
+        name: accessoryName,
+        quantity: totalQuantity,  // Store calculated quantity
+        count: count,             // Store count separately for display
+        size: size,               // Store size as number
+        color: color,
+        source: 'invoice',
+        item_id: itemId
+    };
+    
+    tempAccessories.push(accessory);
+    updateAccessoriesList();
+    
+    // Clear
+    select.value = '';
+    countInput.value = '1';
+    sizeInput.value = '1';
+    document.getElementById('accessory-invoice-color').value = '';
+    document.getElementById('accessory-qty-hint').style.display = 'none';
+    
+    // Recalculate to update available quantities
+    calculateUsedQuantities();
+}
+
+// Add external accessory
+function addExternalAccessory() {
+    const name = document.getElementById('accessory-external-name').value.trim();
+    const countInput = document.getElementById('accessory-external-quantity');
+    const count = parseFloat(countInput.value);
+    const sizeInput = document.getElementById('accessory-external-size');
+    const size = parseFloat(sizeInput.value);
+    const color = document.getElementById('accessory-external-color').value.trim();
+    
+    if (!name) {
+        alert('يرجى إدخال اسم الإكسسوار');
+        return;
+    }
+    
+    if (!count || count <= 0 || isNaN(count)) {
+        alert('يرجى إدخال عدد صحيح');
+        return;
+    }
+    
+    if (!size || size <= 0 || isNaN(size)) {
+        alert('يرجى إدخال مقاس صحيح');
+        return;
+    }
+    
+    // Calculate total quantity = count × size
+    const totalQuantity = count * size;
+    
+    const accessory = {
+        name: name,
+        quantity: totalQuantity,  // Store calculated quantity
+        count: count,             // Store count separately for display
+        size: size,               // Store size as number
+        color: color,
+        source: 'external'
+    };
+    
+    tempAccessories.push(accessory);
+    updateAccessoriesList();
+    
+    // Clear
+    document.getElementById('accessory-external-name').value = '';
+    countInput.value = '1';
+    sizeInput.value = '1';
+    document.getElementById('accessory-external-color').value = '';
+}
+
+// Update accessory quantity info
+function updateAccessoryQuantityInfo(select) {
+    const selectedItemId = select.value;
+    if (!selectedItemId || !fabricUsageTracker[selectedItemId]) {
+        document.getElementById('accessory-qty-hint').style.display = 'none';
+        return;
+    }
+    
+    calculateUsedQuantities();
+    
+    const tracker = fabricUsageTracker[selectedItemId];
+    const remaining = tracker.total - tracker.used;
+    
+    document.getElementById('remaining-acc-qty').textContent = remaining.toFixed(3).replace(/\.?0+$/, '');
+    document.getElementById('accessory-qty-hint').style.display = 'block';
+    
+    // Auto-fill with remaining quantity if empty
+    const quantityInput = document.getElementById('accessory-invoice-quantity');
+    if (!quantityInput.value && remaining > 0) {
+        quantityInput.value = remaining.toFixed(3).replace(/\.?0+$/, '');
+    }
+}
+
+
+// Handle custom accessory name
+document.addEventListener('DOMContentLoaded', function() {
+    const accessorySelect = document.getElementById('accessory-name');
+    if (accessorySelect) {
+        accessorySelect.addEventListener('change', function() {
+            const customDiv = document.getElementById('customAccessoryName');
+            if (this.value === 'other') {
+                customDiv.style.display = 'block';
+            } else {
+                customDiv.style.display = 'none';
+            }
+        });
+    }
+    
+    // Initialize fabric usage tracker and update select options on page load
+    calculateUsedQuantities();
+    
+    // Listen for modal shown event to refresh quantities
+    const addCurtainModal = document.getElementById('addCurtainModal');
+    if (addCurtainModal) {
+        addCurtainModal.addEventListener('show.bs.modal', function() {
+            // Reset temp arrays when opening modal for new curtain
+            if (!editingCurtainId) {
+                tempFabrics = [];
+                tempAccessories = [];
+            }
+            // Recalculate and update select options
+            calculateUsedQuantities();
+        });
+    }
+});
+
+// Add accessory to list
+function addAccessoryToList() {
+    let accessoryName = document.getElementById('accessory-name').value;
+    const quantity = parseInt(document.getElementById('accessory-quantity').value);
+    const color = document.getElementById('accessory-color').value.trim();
+    
+    if (!accessoryName) {
+        alert('يرجى اختيار الإكسسوار');
+        return;
+    }
+    
+    if (accessoryName === 'other') {
+        const customName = document.getElementById('accessory-custom-name').value.trim();
+        if (!customName) {
+            alert('يرجى إدخال اسم الإكسسوار');
+            return;
+        }
+        accessoryName = customName;
+    } else {
+        accessoryName = document.getElementById('accessory-name').options[document.getElementById('accessory-name').selectedIndex].text;
+    }
+    
+    if (!quantity || quantity <= 0) {
+        alert('يرجى إدخال كمية صحيحة');
+        return;
+    }
+    
+    const accessory = {
+        name: accessoryName,
+        quantity: quantity,
+        color: color
+    };
+    
+    tempAccessories.push(accessory);
+    updateAccessoriesList();
+    
+    // Clear form
+    document.getElementById('accessory-name').value = '';
+    document.getElementById('accessory-quantity').value = '1';
+    document.getElementById('accessory-color').value = '';
+    document.getElementById('customAccessoryName').style.display = 'none';
+    document.getElementById('accessory-custom-name').value = '';
+}
+
+function updateAccessoriesList() {
+    const list = document.getElementById('accessoriesList');
+    
+    if (tempAccessories.length === 0) {
+        list.innerHTML = '<div class="alert alert-info">لم يتم إضافة إكسسوارات بعد</div>';
+        return;
+    }
+    
+    let html = '';
+    tempAccessories.forEach((accessory, index) => {
+        const colorText = accessory.color ? ` - <span class="badge bg-info">${accessory.color}</span>` : '';
+        
+        // Show count × size if both available, otherwise show quantity
+        let quantityDisplay = '';
+        if (accessory.count && accessory.size) {
+            const countFormatted = parseFloat(accessory.count).toFixed(0);
+            const sizeFormatted = parseFloat(accessory.size).toFixed(3).replace(/\.?0+$/, '');
+            const totalFormatted = parseFloat(accessory.quantity).toFixed(3).replace(/\.?0+$/, '');
+            quantityDisplay = `العدد: ${countFormatted} × المقاس: ${sizeFormatted} = <strong>${totalFormatted}</strong>`;
+        } else if (accessory.size && typeof accessory.size === 'number') {
+            const sizeFormatted = parseFloat(accessory.size).toFixed(3).replace(/\.?0+$/, '');
+            quantityDisplay = `المقاس: ${sizeFormatted}`;
+        } else {
+            const quantityFormatted = parseFloat(accessory.quantity).toFixed(3).replace(/\.?0+$/, '');
+            quantityDisplay = `الكمية: ${quantityFormatted}`;
+        }
+        
+        html += `
+            <div class="card mb-2 border-primary">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${accessory.name}</strong>${colorText}
+                            <br>
+                            <small class="text-muted">${quantityDisplay}</small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeAccessory(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    list.innerHTML = html;
+}
+
+function removeAccessory(index) {
+    tempAccessories.splice(index, 1);
+    updateAccessoriesList();
+    // Recalculate to update available quantities
+    calculateUsedQuantities();
+}
+
+// Save complete curtain with fabrics and accessories
+function saveCurtainComplete() {
+    const roomName = document.getElementById('curtain-room-name').value.trim();
+    const width = parseFloat(document.getElementById('curtain-width').value);
+    const height = parseFloat(document.getElementById('curtain-height').value);
+    const installationType = document.getElementById('curtain-installation-type').value;
+    const notes = document.getElementById('curtain-notes').value.trim();
+    
+    if (!roomName || !width || !height || !installationType) {
+        alert('يرجى ملء جميع الحقول الأساسية (اسم الغرفة، العرض، الارتفاع، ونوع التركيب)');
+        return;
+    }
+    
+    // Prepare curtain data
+    const curtainData = {
+        room_name: roomName,
+        width: width,
+        height: height,
+        installation_type: installationType,
+        fabrics: tempFabrics,
+        accessories: tempAccessories,
+        notes: notes
+    };
+    
+    // Add curtain box fields if applicable
+    if (installationType === 'curtain_box_concrete' || installationType === 'curtain_box_gypsum') {
+        const boxWidth = parseFloat(document.getElementById('curtain-box-width').value);
+        const boxDepth = parseFloat(document.getElementById('curtain-box-depth').value);
+        
+        if (!boxWidth || !boxDepth) {
+            alert('يرجى إدخال عرض وعمق بيت الستارة');
+            return;
+        }
+        
+        curtainData.curtain_box_width = boxWidth;
+        curtainData.curtain_box_depth = boxDepth;
+    }
+    
+    // Determine URL based on edit mode
+    const url = editingCurtainId 
+        ? `{% url "orders:wizard_edit_curtain" 0 %}`.replace('0', editingCurtainId)
+        : '{% url "orders:wizard_add_curtain" %}';
+    
+    // Send to server
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(curtainData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reset and reload
+            resetCurtainModal();
+            location.reload();
+        } else {
+            alert(data.message || 'حدث خطأ أثناء حفظ الستارة');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء حفظ الستارة');
+    });
+}
+
+function resetCurtainModal() {
+    tempFabrics = [];
+    tempAccessories = [];
+    editingCurtainId = null; // Reset edit mode
+    document.getElementById('curtain-room-name').value = '';
+    document.getElementById('curtain-width').value = '';
+    document.getElementById('curtain-height').value = '';
+    document.getElementById('curtain-installation-type').value = '';
+    document.getElementById('curtain-box-width').value = '';
+    document.getElementById('curtain-box-depth').value = '';
+    document.getElementById('curtain-notes').value = '';
+    document.getElementById('curtainBoxFields').style.display = 'none';
+    document.getElementById('hasAccessories').checked = false;
+    document.getElementById('curtainBasicInfo').style.display = 'block';
+    document.getElementById('fabricsSection').style.display = 'none';
+    document.getElementById('accessoriesSection').style.display = 'none';
+    document.getElementById('notesSection').style.display = 'none';
+    document.getElementById('accessoriesFields').style.display = 'none';
+    
+    // Update modal title
+    document.querySelector('#addCurtainModal .modal-title').innerHTML = '<i class="fas fa-plus me-2"></i>إضافة ستارة جديدة';
+}
+
+// Edit curtain function
+function editCurtain(curtainId) {
+    // Fetch curtain data
+    fetch(`{% url 'orders:wizard_edit_curtain' 0 %}`.replace('0', curtainId), {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Set edit mode
+            editingCurtainId = curtainId;
+            
+            // Update modal title
+            document.querySelector('#addCurtainModal .modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>تعديل الستارة';
+            
+            // Fill basic info
+            document.getElementById('curtain-room-name').value = data.curtain.room_name;
+            document.getElementById('curtain-width').value = data.curtain.width;
+            document.getElementById('curtain-height').value = data.curtain.height;
+            document.getElementById('curtain-installation-type').value = data.curtain.installation_type || '';
+            
+            // Fill curtain box fields if present
+            if (data.curtain.curtain_box_width) {
+                document.getElementById('curtain-box-width').value = data.curtain.curtain_box_width;
+            }
+            if (data.curtain.curtain_box_depth) {
+                document.getElementById('curtain-box-depth').value = data.curtain.curtain_box_depth;
+            }
+            
+            // Fill notes if present
+            if (data.curtain.notes) {
+                document.getElementById('curtain-notes').value = data.curtain.notes;
+            }
+            
+            // Toggle curtain box fields visibility
+            toggleCurtainBoxFields();
+            
+            // Load fabrics
+            tempFabrics = data.curtain.fabrics || [];
+            
+            // Load accessories
+            tempAccessories = data.curtain.accessories || [];
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addCurtainModal'));
+            modal.show();
+            
+            // Go directly to fabrics section if there are fabrics
+            if (tempFabrics.length > 0) {
+                showFabricsSection();
+                updateFabricsList();
+            }
+        } else {
+            alert(data.message || 'حدث خطأ أثناء تحميل بيانات الستارة');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء تحميل بيانات الستارة');
+    });
+}
+
+// Reset modal when closed
+$('#addCurtainModal').on('hidden.bs.modal', function() {
+    resetCurtainModal();
+});
+
+
+function removeCurtain(curtainId) {
+    if (!confirm('هل أنت متأكد من حذف هذه الستارة؟')) {
+        return;
+    }
+    
+    fetch(`{% url 'orders:wizard_remove_curtain' 0 %}`.replace('0', curtainId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.querySelector(`[data-curtain-id="${curtainId}"]`).remove();
+            
+            // إذا لم يعد هناك ستائر
+            if (document.querySelectorAll('.curtain-card').length === 0) {
+                document.getElementById('curtains-list').innerHTML = `
+                    <div class="text-center text-muted py-5" id="no-curtains-message">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p class="mb-0">لم يتم إضافة ستائر بعد</p>
+                    </div>
+                `;
+            }
+        } else {
+            alert(data.message || 'حدث خطأ أثناء حذف الستارة');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء حذف الستارة');
+    });
+}
+
+function uploadContractFile() {
+    const fileInput = document.getElementById('contractFileInput');
+    
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        alert('يرجى اختيار ملف');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        alert('يجب أن يكون الملف بصيغة PDF');
+        fileInput.value = ''; // إعادة تعيين الحقل
+        return;
+    }
+    
+    // إظهار مؤشر التحميل
+    const uploadProgress = document.getElementById('uploadProgress');
+    if (uploadProgress) {
+        uploadProgress.style.display = 'block';
+    }
+    
+    const formData = new FormData();
+    formData.append('contract_file', file);
+    
+    fetch('{% url "orders:wizard_upload_contract" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (uploadProgress) {
+            uploadProgress.style.display = 'none';
+        }
+        
+        if (data.success) {
+            // إعادة تحميل الصفحة لعرض الملف المرفوع
+            location.reload();
+        } else {
+            alert(data.message || 'حدث خطأ أثناء رفع الملف');
+            fileInput.value = ''; // إعادة تعيين الحقل
+        }
+    })
+    .catch(error => {
+        if (uploadProgress) {
+            uploadProgress.style.display = 'none';
+        }
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء رفع الملف');
+        fileInput.value = ''; // إعادة تعيين الحقل
+    });
+}
+
+function proceedToNextStep() {
+    // التحقق من وجود عقد (إلكتروني أو PDF)
+    const hasElectronicContract = document.querySelectorAll('.curtain-card').length > 0;
+    const hasPdfContract = {% if draft.contract_file %}true{% else %}false{% endif %};
+    
+    if (!hasElectronicContract && !hasPdfContract) {
+        // لم يتم إضافة أي عقد - التأكيد من المستخدم
+        if (confirm('لم تقم بإضافة عقد. هل تريد المتابعة بدون عقد؟')) {
+            // الانتقال إلى الخطوة التالية
+            window.location.href = '{% url "orders:wizard_step" step=6 %}';
+        }
+    } else {
+        // تم إضافة عقد - حفظ الخطوة والانتقال
+        fetch('{% url "orders:wizard_step" step=5 %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => {
+            // الانتقال إلى الخطوة التالية
+            window.location.href = '{% url "orders:wizard_step" step=6 %}';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // الانتقال رغم الخطأ
+            window.location.href = '{% url "orders:wizard_step" step=6 %}';
+        });
+    }
+}
+
+function removeContractFile() {
+    if (!confirm('هل أنت متأكد من حذف ملف العقد؟')) {
+        return;
+    }
+    
+    fetch('{% url "orders:wizard_remove_contract_file" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('تم حذف الملف بنجاح');
+            location.reload();
+        } else {
+            alert(data.message || 'حدث خطأ أثناء حذف الملف');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء حذف الملف');
+    });
+}
+</script>
+{% endblock %}

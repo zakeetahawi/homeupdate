@@ -467,8 +467,11 @@
                 
                 <div class="d-grid gap-2">
                     {% if perms.orders.add_order %}
-                    <a href="{% url 'orders:order_create' %}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>إنشاء طلب جديد
+                    <a href="{% url 'orders:wizard_start' %}" class="btn btn-success btn-lg">
+                        <i class="fas fa-magic me-2"></i>إنشاء طلب جديد (ويزارد)
+                    </a>
+                    <a href="{% url 'orders:order_create' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-2"></i>إنشاء طلب (الطريقة التقليدية)
                     </a>
                     {% endif %}
                     

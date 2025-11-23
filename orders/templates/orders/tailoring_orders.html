@@ -202,7 +202,7 @@
                         </td>
                         <td class="text-center">
                             {% if order.contract_number %}
-                                <span class="fw-bold text-primary">{{ order.contract_number }}</span>
+                                <span class="fw-bold text-primary" dir="ltr">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
                                 {% if order.contract_number_2 %}
                                     <br><span class="fw-bold text-primary">{{ order.contract_number_2 }}</span>
                                 {% endif %}
