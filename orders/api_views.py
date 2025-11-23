@@ -25,14 +25,13 @@ def products_search_api(request):
         # البحث في المنتجات
         products = Product.objects.select_related('category')
         
-        # البحث بالباركود له أولوية
+        # البحث بالباركود له أولوية (باستخدام code)
         if barcode:
-            products = products.filter(barcode=barcode)
+            products = products.filter(code=barcode)
         elif query:
             products = products.filter(
                 Q(name__icontains=query) |
                 Q(code__icontains=query) |
-                Q(barcode__icontains=query) |
                 Q(category__name__icontains=query)
             )
         
@@ -52,8 +51,7 @@ def products_search_api(request):
                 'id': product.id,
                 'text': product.name,
                 'name': product.name,
-                'code': product.code,
-                'barcode': product.barcode if hasattr(product, 'barcode') else '',
+                'code': product.code if product.code else '',
                 'price': float(product.price) if product.price else 0.0,
                 'category': product.category.name if product.category else '',
             })

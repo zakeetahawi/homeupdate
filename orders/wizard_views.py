@@ -365,7 +365,12 @@ def wizard_add_item(request):
                 'discount_amount': float(item.discount_amount),
                 'final_price': float(item.final_price),
             },
-            'totals': totals
+            'totals': {
+                'subtotal': float(totals['subtotal']),
+                'total_discount': float(totals['total_discount']),
+                'final_total': float(totals['final_total']),
+                'remaining': float(totals['remaining'])
+            }
         })
     
     except Exception as e:
@@ -405,7 +410,12 @@ def wizard_remove_item(request, item_id):
         return JsonResponse({
             'success': True,
             'message': 'تم حذف العنصر بنجاح',
-            'totals': totals
+            'totals': {
+                'subtotal': float(totals['subtotal']),
+                'total_discount': float(totals['total_discount']),
+                'final_total': float(totals['final_total']),
+                'remaining': float(totals['remaining'])
+            }
         })
     
     except Exception as e:

@@ -12,25 +12,14 @@
                 </h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label fw-bold">
-                            <i class="fas fa-barcode me-2"></i>الباركود
-                        </label>
-                        <div class="input-group">
-                            <input type="text" id="barcode-input" class="form-control" 
-                                   placeholder="امسح الباركود أو أدخله يدوياً"
-                                   autocomplete="off">
-                            <button class="btn btn-primary" type="button" id="scan-barcode-btn">
-                                <i class="fas fa-camera me-1"></i>مسح بالكاميرا
-                            </button>
-                        </div>
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            يمكنك مسح الباركود أو البحث عن المنتج من القائمة
-                        </small>
-                    </div>
+                <!-- زر إضافة بالباركود -->
+                <div class="text-center mb-3">
+                    <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#wizardBarcodeScannerModal"
+                            style="border-radius: 12px; border-width: 2px;">
+                        <i class="fas fa-barcode me-2"></i> إضافة بالباركود
+                    </button>
                 </div>
+                
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold">المنتج <span class="text-danger">*</span></label>
@@ -404,9 +393,20 @@ function removeItem(itemId) {
 }
 
 function updateTotals(totals) {
-    document.getElementById('subtotal').textContent = totals.subtotal.toFixed(2) + ' ج.م';
-    document.getElementById('total-discount').textContent = totals.total_discount.toFixed(2) + ' ج.م';
-    document.getElementById('final-total').textContent = totals.final_total.toFixed(2) + ' ج.م';
+    // التحقق من أن totals كائن صحيح وليس null
+    if (!totals || typeof totals !== 'object') {
+        console.error('❌ خطأ: totals غير صحيح', totals);
+        return;
+    }
+    
+    // تحويل القيم إلى أرقام وإضافة قيم افتراضية
+    const subtotal = parseFloat(totals.subtotal) || 0;
+    const totalDiscount = parseFloat(totals.total_discount) || 0;
+    const finalTotal = parseFloat(totals.final_total) || 0;
+    
+    document.getElementById('subtotal').textContent = subtotal.toFixed(2) + ' ج.م';
+    document.getElementById('total-discount').textContent = totalDiscount.toFixed(2) + ' ج.م';
+    document.getElementById('final-total').textContent = finalTotal.toFixed(2) + ' ج.م';
 }
 
 function clearForm() {
@@ -437,135 +437,112 @@ function completeStep3() {
     });
 }
 
-// ماسح الباركود
-let barcodeScanner = null;
+// سيتم استخدام نظام الباركود من النموذج القديم
 
-document.getElementById('scan-barcode-btn').addEventListener('click', function() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('المتصفح لا يدعم الوصول للكاميرا');
+// دالة عامة لإضافة المنتج المفحوص للطلب من الباركود
+window.addScannedProductToWizard = function(productId, productName, productCode, productPrice) {
+    const quantityInput = document.getElementById('scannedProductQuantity');
+    const discountSelect = document.getElementById('scannedProductDiscount');
+    
+    if (!quantityInput) {
+        console.error('❌ حقل الكمية غير موجود');
         return;
     }
     
-    // إنشاء modal للكاميرا
-    const modalHTML = `
-        <div class="modal fade" id="barcodeScannerModal" tabindex="-1">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">
-                            <i class="fas fa-camera me-2"></i>مسح الباركود
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body text-center">
-                        <p class="text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            يمكنك استخدام قارئ باركود USB أو إدخال الباركود يدوياً
-                        </p>
-                        <div class="mb-3">
-                            <input type="text" class="form-control form-control-lg text-center" 
-                                   id="modal-barcode-input" placeholder="أدخل الباركود هنا"
-                                   autocomplete="off" autofocus>
-                        </div>
-                        <button type="button" class="btn btn-primary" onclick="processModalBarcode()">
-                            <i class="fas fa-search me-1"></i>بحث
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    let quantity;
+    let discount = 0;
     
-    // إزالة modal القديم إن وجد
-    const oldModal = document.getElementById('barcodeScannerModal');
-    if (oldModal) {
-        oldModal.remove();
-    }
-    
-    // إضافة modal جديد
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    const modal = new bootstrap.Modal(document.getElementById('barcodeScannerModal'));
-    modal.show();
-    
-    // التركيز على حقل الإدخال
-    document.getElementById('barcodeScannerModal').addEventListener('shown.bs.modal', function() {
-        document.getElementById('modal-barcode-input').focus();
-    });
-    
-    // مسح عند الضغط على Enter
-    document.getElementById('modal-barcode-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            processModalBarcode();
-        }
-    });
-});
-
-async function processModalBarcode() {
-    const barcode = document.getElementById('modal-barcode-input').value.trim();
-    
-    if (!barcode) {
-        alert('يرجى إدخال الباركود');
-        return;
-    }
-    
-    // البحث عن المنتج
     try {
-        const response = await fetch(`{% url 'orders:search_products' %}?barcode=${encodeURIComponent(barcode)}`);
-        const data = await response.json();
+        const quantityStr = quantityInput.value.trim();
+        if (!quantityStr) {
+            alert('يرجى إدخال الكمية');
+            quantityInput.focus();
+            return;
+        }
         
-        if (data.results && data.results.length > 0) {
-            const product = data.results[0];
-            
-            // ملء البيانات
-            document.getElementById('barcode-input').value = barcode;
-            document.getElementById('product-select').value = product.id;
-            document.getElementById('item-price').value = product.price;
-            
-            // إضافة المنتج مباشرة
-            addItem();
-            
-            // إغلاق modal
-            bootstrap.Modal.getInstance(document.getElementById('barcodeScannerModal')).hide();
-            
-            // رسالة نجاح
-            showToast('success', `✅ تمت إضافة ${product.text}`);
-        } else {
-            showToast('error', '❌ لم يتم العثور على المنتج');
+        quantity = Number(quantityStr);
+        
+        if (isNaN(quantity) || !isFinite(quantity)) {
+            alert('يرجى إدخال كمية صحيحة');
+            quantityInput.focus();
+            return;
+        }
+        
+        if (quantity <= 0) {
+            alert('يجب أن تكون الكمية أكبر من صفر');
+            quantityInput.focus();
+            return;
+        }
+        
+        // الحصول على قيمة الخصم
+        if (discountSelect) {
+            discount = Number(discountSelect.value) || 0;
         }
     } catch (error) {
-        console.error('Error:', error);
-        showToast('error', '❌ حدث خطأ أثناء البحث');
+        console.error('❌ خطأ في معالجة الكمية:', error);
+        alert('خطأ في معالجة الكمية');
+        return;
     }
-}
-
-function showToast(type, message) {
-    const toastHTML = `
-        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" 
-             role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">${message}</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    
+    // ملء الحقول وإضافة المنتج
+    const productSelect = document.getElementById('product-select');
+    if (productSelect) {
+        // إضافة المنتج للقائمة إذا لم يكن موجوداً
+        let optionExists = false;
+        for (let option of productSelect.options) {
+            if (option.value == productId) {
+                optionExists = true;
+                break;
+            }
+        }
+        
+        if (!optionExists) {
+            const newOption = new Option(productName, productId, false, true);
+            productSelect.add(newOption);
+        } else {
+            productSelect.value = productId;
+        }
+        
+        $(productSelect).trigger('change');
+    }
+    
+    // ملء السعر والكمية والخصم
+    document.getElementById('item-price').value = productPrice;
+    document.getElementById('item-quantity').value = quantity;
+    document.getElementById('item-discount').value = discount;
+    
+    // إضافة العنصر
+    addItem();
+    
+    // إغلاق الـ modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('wizardBarcodeScannerModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    // رسالة نجاح
+    const scanStatus = document.getElementById('wizardScanStatus');
+    if (scanStatus) {
+        scanStatus.innerHTML = `
+            <div class="alert alert-success border-0 shadow-sm text-center" style="border-radius: 15px;">
+                <i class="fas fa-check-circle fa-3x mb-3" style="color: #28a745;"></i>
+                <h5 class="fw-bold">تمت الإضافة بنجاح!</h5>
+                <p class="mb-3">تم إضافة <strong>${productName}</strong> بكمية <strong>${quantity}</strong>${discount > 0 ? ` بخصم <strong>${discount}%</strong>` : ''}</p>
             </div>
-        </div>
-    `;
-    
-    let toastContainer = document.querySelector('.toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-        document.body.appendChild(toastContainer);
+        `;
+        
+        // تنظيف الرسالة بعد 3 ثوان
+        setTimeout(() => {
+            scanStatus.innerHTML = '';
+        }, 3000);
     }
     
-    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
-    const toastElement = toastContainer.lastElementChild;
-    const toast = new bootstrap.Toast(toastElement);
-    toast.show();
-    
-    toastElement.addEventListener('hidden.bs.toast', () => {
-        toastElement.remove();
-    });
-}
+    console.log('✅ تم إضافة المنتج للطلب:', {productId, productName, quantity, productPrice, discount});
+};
+
 </script>
+
+<!-- Modal الباركود للويزارد -->
+{% include 'includes/wizard_barcode_scanner_modal.html' %}
+
 {% endblock %}
