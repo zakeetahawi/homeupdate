@@ -264,16 +264,11 @@ class Step4InvoicePaymentForm(forms.ModelForm):
     def clean_paid_amount(self):
         paid_amount = self.cleaned_data.get('paid_amount') or Decimal('0')
         
-        # التحقق من أن المبلغ المدفوع لا يتجاوز الإجمالي
+        # السماح بدفع مبلغ يتجاوز الإجمالي
         if self.draft_order:
             final_total = self.draft_order.final_total or Decimal('0')
             
-            if paid_amount > final_total:
-                raise ValidationError(
-                    f'المبلغ المدفوع ({paid_amount}) لا يمكن أن يتجاوز الإجمالي ({final_total})'
-                )
-            
-            # التحقق من الحد الأدنى للدفع (50%)
+            # التحقق من الحد الأدنى للدفع (50%) فقط
             minimum_payment = final_total * Decimal('0.5')
             if paid_amount < minimum_payment:
                 raise ValidationError(

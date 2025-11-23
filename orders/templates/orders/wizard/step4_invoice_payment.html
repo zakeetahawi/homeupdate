@@ -139,10 +139,8 @@ paidAmountInput.addEventListener('input', function() {
     // إزالة الحدود السابقة
     this.classList.remove('is-invalid', 'is-valid');
     
-    // تحذير إذا تجاوز المبلغ المدفوع الإجمالي
-    if (paidAmount > totalAmount) {
-        this.classList.add('is-invalid');
-    } else if (paidAmount >= minimumPayment) {
+    // السماح بتجاوز المبلغ الإجمالي
+    if (paidAmount >= minimumPayment) {
         this.classList.add('is-valid');
     } else if (paidAmount > 0) {
         this.classList.add('is-invalid');
@@ -153,7 +151,7 @@ paidAmountInput.addEventListener('input', function() {
 document.getElementById('step4-form').addEventListener('submit', function(e) {
     const paidAmount = parseFloat(paidAmountInput.value) || 0;
     
-    // التحقق من الحد الأدنى
+    // التحقق من الحد الأدنى فقط
     if (paidAmount < minimumPayment) {
         e.preventDefault();
         alert('⚠️ يجب دفع 50% على الأقل من المبلغ الإجمالي\n' + 
@@ -163,13 +161,18 @@ document.getElementById('step4-form').addEventListener('submit', function(e) {
         return false;
     }
     
-    // التحقق من عدم تجاوز الإجمالي
+    // تنبيه إذا تجاوز المبلغ الإجمالي (بدون منع الإرسال)
     if (paidAmount > totalAmount) {
-        e.preventDefault();
-        alert('❌ المبلغ المدفوع لا يمكن أن يتجاوز المجموع النهائي\n' +
-              'المجموع النهائي: ' + totalAmount.toFixed(2) + ' جنيه');
-        paidAmountInput.focus();
-        return false;
+        const overpayment = paidAmount - totalAmount;
+        if (!confirm('⚠️ تنبيه: المبلغ المدفوع يتجاوز المجموع النهائي\n\n' +
+                     'المجموع النهائي: ' + totalAmount.toFixed(2) + ' جنيه\n' +
+                     'المبلغ المدفوع: ' + paidAmount.toFixed(2) + ' جنيه\n' +
+                     'المبلغ الزائد: ' + overpayment.toFixed(2) + ' جنيه\n\n' +
+                     'هل تريد المتابعة؟')) {
+            e.preventDefault();
+            paidAmountInput.focus();
+            return false;
+        }
     }
     
     submitWizardStep(this);
