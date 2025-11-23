@@ -145,13 +145,13 @@ class SystemSettings(models.Model):
     def get_settings(cls):
         """الحصول على إعدادات النظام (Singleton)"""
         # التحقق من الكاش أولاً
-        settings = cache.get('system_settings')
+        settings = cache.get('orders_system_settings')
         if settings is None:
             settings, _ = cls.objects.get_or_create(
                 name='default',
                 defaults=cls._get_default_settings()
             )
-            cache.set('system_settings', settings, 3600)  # Cache for 1 hour
+            cache.set('orders_system_settings', settings, 3600)  # Cache for 1 hour
         return settings
     
     @classmethod
@@ -188,14 +188,14 @@ class SystemSettings(models.Model):
         """حفظ الإعدادات وتحديث الكاش"""
         super().save(*args, **kwargs)
         # مسح الكاش عند التحديث
-        cache.delete('system_settings')
+        cache.delete('orders_system_settings')
         # تحديث الكاش
-        cache.set('system_settings', self, 3600)
+        cache.set('orders_system_settings', self, 3600)
     
     @classmethod
     def invalidate_cache(cls):
         """مسح الكاش"""
-        cache.delete('system_settings')
+        cache.delete('orders_system_settings')
     
     # === دوال مساعدة للحصول على القيم ===
     

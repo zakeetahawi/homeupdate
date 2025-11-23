@@ -498,9 +498,12 @@ class Order(models.Model):
 
             # Contract validation - only for tailoring and installation
             if ('tailoring' in selected_types or 'installation' in selected_types):
-                # رقم العقد مطلوب فقط إذا كان هناك ملف عقد مرفوع
+                # رقم العقد مطلوب فقط إذا كان هناك ملف عقد مرفوع يدوياً (ليس من الويزارد)
+                # في الويزارد، العقد الإلكتروني يُولد تلقائياً ولا يحتاج رقم عقد مسبق
                 if self.contract_file and not self.contract_number:
-                    raise ValidationError('رقم العقد مطلوب عند رفع ملف العقد')
+                    # استثناء: الطلبات المُنشأة عبر الويزارد لا تحتاج رقم عقد
+                    if self.creation_method != 'wizard':
+                        raise ValidationError('رقم العقد مطلوب عند رفع ملف العقد')
 
             # Invoice number validation - required for all types except inspection alone
             if not (len(selected_types) == 1 and selected_types[0] == 'inspection'):
@@ -2888,3 +2891,6 @@ from .contract_models import ContractCurtain
 
 # استيراد نماذج الويزارد
 from .wizard_models import DraftOrder, DraftOrderItem
+
+# استيراد إعدادات النظام
+from .models_settings import SystemSettings

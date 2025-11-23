@@ -1,4 +1,5 @@
-from .models import Department, CompanyInfo, SystemSettings, BranchMessage
+from .models import Department, CompanyInfo, BranchMessage
+from accounts.models import SystemSettings as AccountsSystemSettings
 from django.utils import timezone
 from accounts.models import FooterSettings
 from django.core.cache import cache
@@ -130,9 +131,9 @@ def system_settings(request):
     if not settings:
         try:
             # الحصول على الإعدادات أو إنشاؤها إذا لم تكن موجودة
-            settings, created = SystemSettings.objects.get_or_create(pk=1)
+            settings, created = AccountsSystemSettings.objects.get_or_create(pk=1)
             # تخزين في الذاكرة المؤقتة لمدة ساعة
-            cache.set('system_settings', settings, 3600)
+            cache.set('accounts_system_settings', settings, 3600)
         except Exception:
             # إرجاع قيم افتراضية في حالة حدوث خطأ
             return {

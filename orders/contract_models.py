@@ -688,8 +688,12 @@ class CurtainFabric(models.Model):
             
             available = self.draft_order_item.quantity - used_total
             
+            # تحذير فقط، لا نمنع الحفظ في وضع المسودة
             if self.meters > available:
-                errors['meters'] = f'الكمية المطلوبة ({self.meters}م) أكبر من المتاح ({available}م من {self.draft_order_item.quantity}م)'
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f'الكمية المطلوبة ({self.meters}م) أكبر من المتاح ({available}م من {self.draft_order_item.quantity}م)')
+                # لا نضيف للـ errors في وضع المسودة - فقط تحذير
         
         if errors:
             raise ValidationError(errors)
@@ -810,8 +814,12 @@ class CurtainAccessory(models.Model):
             
             available = self.draft_order_item.quantity - used_total
             
+            # تحذير فقط، لا نمنع الحفظ في وضع المسودة
             if self.quantity > available:
-                errors['quantity'] = f'الكمية المطلوبة ({self.quantity}) أكبر من المتاح ({available} من {self.draft_order_item.quantity})'
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f'الكمية المطلوبة ({self.quantity}) أكبر من المتاح ({available} من {self.draft_order_item.quantity})')
+                # لا نضيف للـ errors في وضع المسودة - فقط تحذير
         
         if errors:
             raise ValidationError(errors)

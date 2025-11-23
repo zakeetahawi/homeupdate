@@ -387,7 +387,7 @@ TEMPLATES = [
                 'crm.context_processors.admin_stats',
                 'crm.context_processors.jazzmin_extras',
                 'inventory.context_processors.pending_transfers',
-                'orders.middleware_settings.system_settings_context',  # إعدادات نظام الطلبات
+                'orders.middleware_settings.order_system_settings_context',  # إعدادات نظام الطلبات
             ],
         },
     },

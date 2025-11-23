@@ -350,11 +350,16 @@ def wizard_add_item(request):
     try:
         data = json.loads(request.body)
         
-        # الحصول على المسودة الأحدث
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        draft_id = request.session.get('wizard_draft_id')
+        
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).order_by('-updated_at').first()
         
         if not draft:
             return JsonResponse({
@@ -415,11 +420,16 @@ def wizard_remove_item(request, item_id):
     حذف عنصر من مسودة الطلب (AJAX)
     """
     try:
-        # الحصول على المسودة الأحدث
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        draft_id = request.session.get('wizard_draft_id')
+        
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).order_by('-updated_at').first()
         
         if not draft:
             return JsonResponse({
@@ -460,10 +470,16 @@ def wizard_complete_step_3(request):
     إكمال الخطوة 3 (عناصر الطلب)
     """
     try:
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        draft_id = request.session.get('wizard_draft_id')
+        
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).order_by('-updated_at').first()
         
         if not draft:
             return JsonResponse({
@@ -677,11 +693,16 @@ def wizard_finalize(request):
     تحويل المسودة إلى طلب نهائي
     """
     try:
-        # الحصول على المسودة الأحدث
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        draft_id = request.session.get('wizard_draft_id')
+        
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).order_by('-updated_at').first()
         
         if not draft:
             return JsonResponse({
@@ -705,34 +726,81 @@ def wizard_finalize(request):
                 'message': 'يجب إضافة عنصر واحد على الأقل'
             }, status=400)
         
-        # إنشاء الطلب النهائي
-        order = Order.objects.create(
-            customer=draft.customer,
-            salesperson=draft.salesperson,
-            branch=draft.branch,
-            status=draft.status,
-            notes=draft.notes,
-            selected_types=[draft.selected_type] if draft.selected_type else [],
-            related_inspection=draft.related_inspection,
-            related_inspection_type=draft.related_inspection_type,
-            invoice_number=draft.invoice_number,
-            invoice_number_2=draft.invoice_number_2,
-            invoice_number_3=draft.invoice_number_3,
-            contract_number=draft.contract_number,
-            contract_number_2=draft.contract_number_2,
-            contract_number_3=draft.contract_number_3,
-            total_amount=draft.subtotal,
-            final_price=draft.final_total,
-            paid_amount=draft.paid_amount,
-            created_by=request.user,
-            creation_method='wizard',
-            source_draft_id=draft.id,
-        )
+        # التحقق من وضع التعديل
+        editing_order_id = request.session.get('editing_order_id')
+        logger.info(f"Finalize - editing_order_id from session: {editing_order_id}")
+        logger.info(f"Finalize - wizard_draft_id from session: {request.session.get('wizard_draft_id')}")
         
-        # نقل ملف العقد إذا وجد
-        if draft.contract_file:
-            order.contract_file = draft.contract_file
-            order.save(update_fields=['contract_file'])
+        if editing_order_id:
+            # وضع التعديل - تحديث الطلب الموجود
+            try:
+                order = Order.objects.get(pk=editing_order_id)
+                
+                # تحديث بيانات الطلب
+                order.customer = draft.customer
+                order.salesperson = draft.salesperson
+                order.branch = draft.branch
+                order.status = draft.status
+                order.notes = draft.notes
+                order.selected_types = [draft.selected_type] if draft.selected_type else []
+                order.related_inspection = draft.related_inspection
+                order.related_inspection_type = draft.related_inspection_type
+                order.invoice_number = draft.invoice_number
+                order.invoice_number_2 = draft.invoice_number_2
+                order.invoice_number_3 = draft.invoice_number_3
+                order.contract_number = draft.contract_number
+                order.contract_number_2 = draft.contract_number_2
+                order.contract_number_3 = draft.contract_number_3
+                order.total_amount = draft.subtotal
+                order.final_price = draft.final_total
+                order.paid_amount = draft.paid_amount
+                
+                # نقل ملف العقد إذا وجد
+                if draft.contract_file:
+                    order.contract_file = draft.contract_file
+                
+                order.save()
+                
+                # حذف العناصر القديمة
+                order.items.all().delete()
+                
+                # حذف الستائر القديمة
+                order.contract_curtains.all().delete()
+                
+                logger.info(f"Updating existing order {order.order_number}")
+                
+            except Order.DoesNotExist:
+                logger.error(f"Order {editing_order_id} not found, creating new order instead")
+                editing_order_id = None  # إنشاء طلب جديد
+        
+        if not editing_order_id:
+            # وضع الإنشاء - إنشاء طلب جديد
+            order = Order.objects.create(
+                customer=draft.customer,
+                salesperson=draft.salesperson,
+                branch=draft.branch,
+                status=draft.status,
+                notes=draft.notes,
+                selected_types=[draft.selected_type] if draft.selected_type else [],
+                related_inspection=draft.related_inspection,
+                related_inspection_type=draft.related_inspection_type,
+                invoice_number=draft.invoice_number,
+                invoice_number_2=draft.invoice_number_2,
+                invoice_number_3=draft.invoice_number_3,
+                contract_number=draft.contract_number,
+                contract_number_2=draft.contract_number_2,
+                contract_number_3=draft.contract_number_3,
+                total_amount=draft.subtotal,
+                final_price=draft.final_total,
+                paid_amount=draft.paid_amount,
+                contract_file=draft.contract_file if draft.contract_file else None,  # نقل ملف العقد مباشرة
+                created_by=request.user,
+                creation_method='wizard',
+                source_draft_id=draft.id,
+            )
+            logger.info(f"Created new order {order.order_number}")
+        
+        # لا حاجة لنقل contract_file هنا - تم نقله في عملية الإنشاء/التحديث
         
         # نقل الستائر من المسودة إلى الطلب النهائي
         curtains = ContractCurtain.objects.filter(draft_order=draft)
@@ -755,11 +823,16 @@ def wizard_finalize(request):
         
         # إنشاء الدفعة إذا وجد مبلغ مدفوع
         if draft.paid_amount > 0:
+            # في وضع التعديل، نحدث الدفعة الموجودة أو ننشئ جديدة
+            if editing_order_id:
+                # حذف الدفعات القديمة
+                order.payments.all().delete()
+            
             Payment.objects.create(
                 order=order,
                 amount=draft.paid_amount,
                 payment_method=draft.payment_method,
-                reference_number=draft.invoice_number or '',  # إضافة رقم الفاتورة كرقم مرجع
+                reference_number=draft.invoice_number or '',
                 notes=draft.payment_notes,
                 created_by=request.user,
             )
@@ -769,6 +842,12 @@ def wizard_finalize(request):
         draft.completed_at = timezone.now()
         draft.final_order = order
         draft.save()
+        
+        # مسح معرفات الجلسة للتعديل
+        if 'editing_order_id' in request.session:
+            del request.session['editing_order_id']
+        if 'wizard_draft_id' in request.session:
+            del request.session['wizard_draft_id']
         
         # توليد ملف العقد تلقائياً وحفظه
         try:
@@ -786,7 +865,7 @@ def wizard_finalize(request):
         
         return JsonResponse({
             'success': True,
-            'message': 'تم إنشاء الطلب بنجاح',
+            'message': 'تم حفظ الطلب بنجاح' if editing_order_id else 'تم إنشاء الطلب بنجاح',
             'order_id': order.pk,
             'order_number': order.order_number,
             'redirect_url': f'/orders/order/{order.order_number}/'
@@ -833,10 +912,16 @@ def wizard_cancel(request):
     إلغاء الويزارد وحذف المسودة
     """
     try:
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        draft_id = request.session.get('wizard_draft_id')
+        
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).order_by('-updated_at').first()
         
         if not draft:
             messages.info(request, 'لا توجد مسودة نشطة للإلغاء')
@@ -868,11 +953,16 @@ def wizard_add_curtain(request):
     إضافة ستارة جديدة إلى العقد الإلكتروني مع الأقمشة والإكسسوارات
     """
     try:
-        # الحصول على المسودة الأحدث
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        draft_id = request.session.get('wizard_draft_id')
+        
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).order_by('-updated_at').first()
         
         if not draft:
             return JsonResponse({
@@ -900,6 +990,7 @@ def wizard_add_curtain(request):
         # Log received data for debugging
         logger.info(f"Adding curtain - Room: {room_name}, Width: {width}, Height: {height}")
         logger.info(f"Fabrics: {len(fabrics_data)}, Accessories: {len(accessories_data)}")
+        logger.info(f"Full data: {json.dumps(data, ensure_ascii=False)[:500]}")
         
         # التحقق من البيانات الأساسية
         if not room_name:
@@ -983,16 +1074,17 @@ def wizard_add_curtain(request):
                     logger.info(f"Saved fabric: {fabric.fabric_name} - {fabric.meters}m")
                 except ValidationError as ve:
                     # إرجاع رسالة خطأ واضحة للمستخدم
+                    logger.error(f"Validation error for fabric: {ve}")
                     error_msgs = []
                     for field, errors in ve.message_dict.items():
-                        error_msgs.extend(errors)
+                        error_msgs.append(f"{field}: {', '.join(errors)}")
                     return JsonResponse({
                         'success': False,
-                        'message': 'خطأ في الكمية: ' + ', '.join(error_msgs)
+                        'message': 'خطأ في بيانات القماش: ' + ' | '.join(error_msgs)
                     }, status=400)
                     
             except (ValueError, TypeError) as e:
-                logger.warning(f"Error adding fabric: {e}")
+                logger.error(f"Error adding fabric: {e}", exc_info=True)
                 return JsonResponse({
                     'success': False,
                     'message': f'خطأ في إضافة القماش: {str(e)}'
@@ -1033,16 +1125,17 @@ def wizard_add_curtain(request):
                     logger.info(f"Saved accessory: {accessory.accessory_name} - count: {count} × size: {size} = quantity: {quantity}")
                 except ValidationError as ve:
                     # إرجاع رسالة خطأ واضحة للمستخدم
+                    logger.error(f"Validation error for accessory: {ve}")
                     error_msgs = []
                     for field, errors in ve.message_dict.items():
-                        error_msgs.extend(errors)
+                        error_msgs.append(f"{field}: {', '.join(errors)}")
                     return JsonResponse({
                         'success': False,
-                        'message': 'خطأ في كمية الإكسسوار: ' + ', '.join(error_msgs)
+                        'message': 'خطأ في بيانات الإكسسوار: ' + ' | '.join(error_msgs)
                     }, status=400)
                     
             except (ValueError, TypeError) as e:
-                logger.warning(f"Error adding accessory: {e}")
+                logger.error(f"Error adding accessory: {e}", exc_info=True)
                 return JsonResponse({
                     'success': False,
                     'message': f'خطأ في إضافة الإكسسوار: {str(e)}'
@@ -1084,11 +1177,16 @@ def wizard_edit_curtain(request, curtain_id):
     POST: حفظ التعديلات
     """
     try:
-        # الحصول على المسودة الأحدث
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        draft_id = request.session.get('wizard_draft_id')
+        
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).order_by('-updated_at').first()
         
         if not draft:
             return JsonResponse({
@@ -1333,11 +1431,16 @@ def wizard_remove_curtain(request, curtain_id):
     حذف ستارة من العقد الإلكتروني
     """
     try:
-        # الحصول على المسودة الأحدث
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        draft_id = request.session.get('wizard_draft_id')
+        
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).order_by('-updated_at').first()
         
         if not draft:
             return JsonResponse({
@@ -1374,11 +1477,16 @@ def wizard_upload_contract(request):
     رفع ملف PDF للعقد
     """
     try:
-        # الحصول على المسودة الأحدث
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        draft_id = request.session.get('wizard_draft_id')
+        
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).order_by('-updated_at').first()
         
         if not draft:
             return JsonResponse({
@@ -1430,11 +1538,16 @@ def wizard_remove_contract_file(request):
     حذف ملف العقد المرفوع
     """
     try:
-        # الحصول على المسودة الأحدث
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        draft_id = request.session.get('wizard_draft_id')
+        
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).order_by('-updated_at').first()
         
         if not draft:
             return JsonResponse({
@@ -1512,27 +1625,19 @@ def wizard_edit_order(request, order_pk):
         return redirect('orders:order_update', pk=order.pk)
     
     try:
-        # البحث عن المسودة المرتبطة
-        if order.source_draft_id:
-            draft = DraftOrder.objects.get(pk=order.source_draft_id)
-        else:
-            # إنشاء مسودة جديدة من الطلب الحالي
-            draft = _create_draft_from_order(order, request.user)
+        # إنشاء مسودة جديدة من الطلب الحالي للتعديل
+        # لا نستخدم المسودة القديمة لأنها قد تكون تم تعديلها أو حذف بياناتها
+        draft = _create_draft_from_order(order, request.user)
         
         # حفظ معرف المسودة في الجلسة
         request.session['wizard_draft_id'] = draft.pk
         request.session['editing_order_id'] = order.pk
+        request.session.modified = True  # التأكد من حفظ الجلسة
+        
+        logger.info(f"Edit mode activated - Order: {order.pk}, Draft: {draft.pk}")
+        logger.info(f"Session keys after setting: {list(request.session.keys())}")
         
         # توجيه للخطوة الأولى
-        messages.success(request, 'تم تحميل بيانات الطلب. يمكنك الآن تعديلها.')
-        return redirect('orders:wizard_step', step=1)
-    
-    except DraftOrder.DoesNotExist:
-        # إنشاء مسودة جديدة من الطلب
-        draft = _create_draft_from_order(order, request.user)
-        request.session['wizard_draft_id'] = draft.pk
-        request.session['editing_order_id'] = order.pk
-        
         messages.success(request, 'تم تحميل بيانات الطلب. يمكنك الآن تعديلها.')
         return redirect('orders:wizard_step', step=1)
     

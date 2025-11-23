@@ -3,7 +3,7 @@ Middleware لإضافة متغيرات النظام إلى كل طلب
 System Settings Context Middleware
 """
 from django.utils.functional import SimpleLazyObject
-from .models_settings import SystemSettings
+from .models import SystemSettings
 
 
 def get_system_settings(request):
@@ -30,14 +30,14 @@ class SystemSettingsMiddleware:
         return response
 
 
-def system_settings_context(request):
+def order_system_settings_context(request):
     """
-    Context processor لإضافة إعدادات النظام للقوالب
+    Context processor لإضافة إعدادات نظام الطلبات للقوالب
     """
     settings = SystemSettings.get_settings()
     
     return {
-        'system_settings': settings,
+        'order_system_settings': settings,
         'wizard_enabled': settings.order_system in ['wizard', 'both'] and not settings.hide_wizard_system,
         'legacy_enabled': settings.order_system in ['legacy', 'both'] and not settings.hide_legacy_system,
         'show_wizard_button': settings.order_system in ['wizard', 'both'] and not settings.hide_wizard_system,
