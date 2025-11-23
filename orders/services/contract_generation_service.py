@@ -60,6 +60,8 @@ class ContractGenerationService:
             'settings': system_settings,  # إضافة إعدادات النظام
             'working_days': working_days,  # إضافة عدد أيام التشغيل
             'total_meters': total_meters,  # إجمالي الأمتار
+            'MEDIA_URL': settings.MEDIA_URL,  # إضافة MEDIA_URL
+            'MEDIA_ROOT': settings.MEDIA_ROOT,  # إضافة MEDIA_ROOT
             'company_name': self.template.company_name,
             'company_logo': self.template.company_logo,
             'company_address': self.template.company_address,

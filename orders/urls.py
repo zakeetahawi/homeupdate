@@ -116,4 +116,7 @@ urlpatterns = [
     
     # عرض PDF فقط
     path('order/<int:order_id>/contract/pdf/', contract_views.contract_pdf_view, name='contract_pdf_view'),
+    
+    # إعادة توليد العقد
+    path('order/<int:order_id>/contract/regenerate/', contract_views.regenerate_contract_pdf, name='regenerate_contract_pdf'),
 ]
