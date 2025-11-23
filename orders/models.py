@@ -521,17 +521,34 @@ class Order(models.Model):
 
             # تحديث حالة التحقق من الدفع تلقائياً
             # إذا تم دفع المبلغ كاملاً، تحديث payment_verified إلى True
-            if self.is_fully_paid and not self.payment_verified:
-                self.payment_verified = True
-            elif not self.is_fully_paid and self.payment_verified:
-                # إذا كان هناك مبلغ متبقي، إلغاء التحقق
-                self.payment_verified = False
+            # تخطي هذا للطلبات الجديدة لتجنب الوصول إلى العلاقات قبل الحفظ
+            if not is_new:
+                if self.is_fully_paid and not self.payment_verified:
+                    self.payment_verified = True
+                elif not self.is_fully_paid and self.payment_verified:
+                    # إذا كان هناك مبلغ متبقي، إلغاء التحقق
+                    self.payment_verified = False
 
             # حفظ الطلب أولاً للحصول على مفتاح أساسي
             super().save(*args, **kwargs)
             # التأكد من أن الطلب تم حفظه بنجاح
             if not self.pk:
                 raise models.ValidationError('فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي')
+            
+            # للطلبات الجديدة، تحديث payment_verified بعد الحفظ
+            if is_new:
+                def update_payment_verified():
+                    try:
+                        order = Order.objects.get(pk=self.pk)
+                        if order.is_fully_paid and not order.payment_verified:
+                            Order.objects.filter(pk=self.pk).update(payment_verified=True)
+                        elif not order.is_fully_paid and order.payment_verified:
+                            Order.objects.filter(pk=self.pk).update(payment_verified=False)
+                    except Order.DoesNotExist:
+                        pass
+                
+                from django.db import transaction
+                transaction.on_commit(update_payment_verified)
 
             # جدولة رفع ملف العقد إلى Google Drive بشكل غير متزامن
             # استخدام transaction.on_commit للتأكد من اكتمال المعاملة قبل الرفع

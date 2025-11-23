@@ -42,7 +42,13 @@ class ContractGenerationService:
         # حساب عدد أيام التشغيل
         working_days = None
         if self.order.expected_delivery_date and self.order.created_at:
-            delta = self.order.expected_delivery_date - self.order.created_at.date()
+            # تحويل created_at إلى date للمقارنة الصحيحة
+            created_date = self.order.created_at.date() if hasattr(self.order.created_at, 'date') else self.order.created_at
+            delivery_date = self.order.expected_delivery_date
+            # التأكد من أن كلاهما date objects
+            if hasattr(delivery_date, 'date'):
+                delivery_date = delivery_date.date()
+            delta = delivery_date - created_date
             working_days = delta.days
         
         # حساب إجمالي الأمتار من جميع الأقمشة

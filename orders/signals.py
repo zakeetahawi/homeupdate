@@ -460,75 +460,80 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
     They follow a different workflow (cutting for products, inspection for inspections).
     """
     if created:
-        # print(f"--- SIGNAL TRIGGERED for Order PK: {instance.pk} ---")
-        # print(f"Raw selected_types from instance: {instance.selected_types}")
-        
-        # فقط هذه الأنواع تنشئ أوامر تصنيع - المنتجات والمعاينات مستثناة تماماً
-        MANUFACTURING_TYPES = {'installation', 'tailoring', 'accessory'}
-        
-        order_types = set()
-        
-        # selected_types is a JSONField that returns a Python list directly
-        if isinstance(instance.selected_types, list):
-            order_types = set(instance.selected_types)
-        elif isinstance(instance.selected_types, str):
-            # Fallback: try to parse as JSON string
-            try:
-                parsed_types = json.loads(instance.selected_types)
-                if isinstance(parsed_types, list):
-                    order_types = set(parsed_types)
-                else:
+        # استخدام transaction.on_commit للتأكد من اكتمال المعاملة قبل إنشاء أمر التصنيع
+        def create_manufacturing_order():
+            # print(f"--- SIGNAL TRIGGERED for Order PK: {instance.pk} ---")
+            # print(f"Raw selected_types from instance: {instance.selected_types}")
+            
+            # فقط هذه الأنواع تنشئ أوامر تصنيع - المنتجات والمعاينات مستثناة تماماً
+            MANUFACTURING_TYPES = {'installation', 'tailoring', 'accessory'}
+            
+            order_types = set()
+            
+            # selected_types is a JSONField that returns a Python list directly
+            if isinstance(instance.selected_types, list):
+                order_types = set(instance.selected_types)
+            elif isinstance(instance.selected_types, str):
+                # Fallback: try to parse as JSON string
+                try:
+                    parsed_types = json.loads(instance.selected_types)
+                    if isinstance(parsed_types, list):
+                        order_types = set(parsed_types)
+                    else:
+                        order_types = {instance.selected_types}
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    # Single string value
                     order_types = {instance.selected_types}
-            except (json.JSONDecodeError, TypeError, ValueError):
-                # Single string value
-                order_types = {instance.selected_types}
-        
-        # print(f"Parsed order_types: {order_types}")
+            
+            # print(f"Parsed order_types: {order_types}")
 
-        if order_types.intersection(MANUFACTURING_TYPES):
-            # print(f"MATCH FOUND: Order types {order_types} intersect with {MANUFACTURING_TYPES}. Creating manufacturing order...")
+            if order_types.intersection(MANUFACTURING_TYPES):
+                # print(f"MATCH FOUND: Order types {order_types} intersect with {MANUFACTURING_TYPES}. Creating manufacturing order...")
 
-            # Determine the appropriate order_type for manufacturing
-            manufacturing_order_type = ''
-            if 'installation' in order_types:
-                manufacturing_order_type = 'installation'
-            elif 'tailoring' in order_types:
-                manufacturing_order_type = 'custom'
-            elif 'accessory' in order_types:
-                manufacturing_order_type = 'accessory'
+                # Determine the appropriate order_type for manufacturing
+                manufacturing_order_type = ''
+                if 'installation' in order_types:
+                    manufacturing_order_type = 'installation'
+                elif 'tailoring' in order_types:
+                    manufacturing_order_type = 'custom'
+                elif 'accessory' in order_types:
+                    manufacturing_order_type = 'accessory'
 
-            # Use a transaction to ensure both creations happen or neither.
-            from django.db import transaction
-            with transaction.atomic():
-                from datetime import timedelta
-                expected_date = instance.expected_delivery_date or (instance.created_at + timedelta(days=15)).date()
+                # Use a transaction to ensure both creations happen or neither.
+                from django.db import transaction
+                with transaction.atomic():
+                    from datetime import timedelta
+                    expected_date = instance.expected_delivery_date or (instance.created_at + timedelta(days=15)).date()
 
-                # import ManufacturingOrder here to avoid circular import at module load
-                from manufacturing.models import ManufacturingOrder
+                    # import ManufacturingOrder here to avoid circular import at module load
+                    from manufacturing.models import ManufacturingOrder
 
-                mfg_order, created_mfg = ManufacturingOrder.objects.get_or_create(
-                    order=instance,
-                    defaults={
-                        'order_type': manufacturing_order_type,
-                        'status': 'pending_approval',
-                        'notes': instance.notes,
-                        'order_date': instance.created_at.date(),
-                        'expected_delivery_date': expected_date,
-                        'contract_number': instance.contract_number,
-                        'invoice_number': instance.invoice_number,
-                    }
-                )
-
-                # Also update the original order's tracking status
-                if created_mfg:
-                    # تحديث بدون إطلاق الإشارات لتجنب الrecursion
-                    Order.objects.filter(pk=instance.pk).update(
-                        tracking_status='factory',
-                        order_status='pending_approval'
+                    mfg_order, created_mfg = ManufacturingOrder.objects.get_or_create(
+                        order=instance,
+                        defaults={
+                            'order_type': manufacturing_order_type,
+                            'status': 'pending_approval',
+                            'notes': instance.notes,
+                            'order_date': instance.created_at.date(),
+                            'expected_delivery_date': expected_date,
+                            'contract_number': instance.contract_number,
+                            'invoice_number': instance.invoice_number,
+                        }
                     )
-                    # print(f"SUCCESS: Created ManufacturingOrder PK: {mfg_order.pk} and updated Order PK: {instance.pk} tracking_status to 'factory'")
-                else:
-                    pass  # ManufacturingOrder already existed
+
+                    # Also update the original order's tracking status
+                    if created_mfg:
+                        # تحديث بدون إطلاق الإشارات لتجنب الrecursion
+                        Order.objects.filter(pk=instance.pk).update(
+                            tracking_status='factory',
+                            order_status='pending_approval'
+                        )
+                        # print(f"SUCCESS: Created ManufacturingOrder PK: {mfg_order.pk} and updated Order PK: {instance.pk} tracking_status to 'factory'")
+                    else:
+                        pass  # ManufacturingOrder already existed
+        
+        from django.db import transaction
+        transaction.on_commit(create_manufacturing_order)
 
 @receiver(post_save, sender='manufacturing.ManufacturingOrder')
 def sync_order_from_manufacturing(sender, instance, created, **kwargs):
@@ -585,66 +590,71 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
     إنشاء معاينة تلقائية عند إنشاء طلب من نوع معاينة
     """
     if created:
-        order_types = instance.get_selected_types_list()
-        print(f"🔍 تم إنشاء طلب جديد {instance.order_number}")
-        print(f"📋 selected_types (raw): {instance.selected_types}")
-        print(f"📋 الأنواع المستخرجة: {order_types}")
-        print(f"📋 نوع البيانات: {type(order_types)}")
+        # استخدام transaction.on_commit للتأكد من اكتمال المعاملة قبل إنشاء المعاينة
+        def create_inspection():
+            order_types = instance.get_selected_types_list()
+            print(f"🔍 تم إنشاء طلب جديد {instance.order_number}")
+            print(f"📋 selected_types (raw): {instance.selected_types}")
+            print(f"📋 الأنواع المستخرجة: {order_types}")
+            print(f"📋 نوع البيانات: {type(order_types)}")
 
-        if 'inspection' in order_types:
-            print(f"📋 الطلب {instance.order_number} من نوع معاينة - سيتم إنشاء معاينة تلقائية")
-            try:
-                from django.db import transaction
-                with transaction.atomic():
-                    from inspections.models import Inspection
-                    # استخدم تاريخ الطلب كـ request_date
-                    request_date = instance.order_date.date() if instance.order_date else timezone.now().date()
-                    # لا نحدد تاريخ مجدول - سيتم تحديده يدوياً من قسم المعاينات
-                    scheduled_date = None
-                    # التحقق من البائع وإعداد المعاين
-                    inspector = instance.created_by
-                    responsible_employee = None
+            if 'inspection' in order_types:
+                print(f"📋 الطلب {instance.order_number} من نوع معاينة - سيتم إنشاء معاينة تلقائية")
+                try:
+                    from django.db import transaction
+                    with transaction.atomic():
+                        from inspections.models import Inspection
+                        # استخدم تاريخ الطلب كـ request_date
+                        request_date = instance.order_date.date() if instance.order_date else timezone.now().date()
+                        # لا نحدد تاريخ مجدول - سيتم تحديده يدوياً من قسم المعاينات
+                        scheduled_date = None
+                        # التحقق من البائع وإعداد المعاين
+                        inspector = instance.created_by
+                        responsible_employee = None
 
-                    # إذا كان البائع له حساب مستخدم، استخدمه كمعاين
-                    if instance.salesperson and instance.salesperson.user:
-                        inspector = instance.salesperson.user
-                        responsible_employee = instance.salesperson
-                    elif instance.salesperson:
-                        # البائع موجود لكن بدون حساب مستخدم
-                        responsible_employee = instance.salesperson
-                        inspector = instance.created_by  # استخدم منشئ الطلب كمعاين
+                        # إذا كان البائع له حساب مستخدم، استخدمه كمعاين
+                        if instance.salesperson and instance.salesperson.user:
+                            inspector = instance.salesperson.user
+                            responsible_employee = instance.salesperson
+                        elif instance.salesperson:
+                            # البائع موجود لكن بدون حساب مستخدم
+                            responsible_employee = instance.salesperson
+                            inspector = instance.created_by  # استخدم منشئ الطلب كمعاين
 
-                    print(f"📋 المعاين: {inspector}")
-                    print(f"📋 الموظف المسؤول: {responsible_employee}")
+                        print(f"📋 المعاين: {inspector}")
+                        print(f"📋 الموظف المسؤول: {responsible_employee}")
 
-                    inspection = Inspection.objects.create(
-                        customer=instance.customer,
-                        branch=instance.branch,
-                        inspector=inspector,
-                        responsible_employee=responsible_employee,
-                        order=instance,
-                        contract_number=instance.contract_number,  # إضافة رقم العقد
-                        is_from_orders=True,
-                        request_date=request_date,
-                        scheduled_date=scheduled_date,  # None - غير مجدولة
-                        status='pending',  # قيد الانتظار - يتم الجدولة يدوياً
-                        notes=f'معاينة للطلب رقم {instance.order_number}',
-                        order_notes=instance.notes,
-                        created_by=instance.created_by,
-                        windows_count=1  # قيمة افتراضية
-                    )
-                    print(f"✅ تم إنشاء معاينة للطلب {instance.order_number} - معرف المعاينة: {inspection.id} (قيد الانتظار)")
-                    Order.objects.filter(pk=instance.pk).update(
-                        tracking_status='processing',
-                        order_status='pending'
-                    )
-            except Exception as e:
-                import traceback
-                error_msg = f"❌ خطأ في إنشاء معاينة للطلب {instance.order_number}: {str(e)}"
-                print(f"\033[31m{error_msg}\033[0m")
-                traceback.print_exc()
-        else:
-            pass
+                        inspection = Inspection.objects.create(
+                            customer=instance.customer,
+                            branch=instance.branch,
+                            inspector=inspector,
+                            responsible_employee=responsible_employee,
+                            order=instance,
+                            contract_number=instance.contract_number,  # إضافة رقم العقد
+                            is_from_orders=True,
+                            request_date=request_date,
+                            scheduled_date=scheduled_date,  # None - غير مجدولة
+                            status='pending',  # قيد الانتظار - يتم الجدولة يدوياً
+                            notes=f'معاينة للطلب رقم {instance.order_number}',
+                            order_notes=instance.notes,
+                            created_by=instance.created_by,
+                            windows_count=1  # قيمة افتراضية
+                        )
+                        print(f"✅ تم إنشاء معاينة للطلب {instance.order_number} - معرف المعاينة: {inspection.id} (قيد الانتظار)")
+                        Order.objects.filter(pk=instance.pk).update(
+                            tracking_status='processing',
+                            order_status='pending'
+                        )
+                except Exception as e:
+                    import traceback
+                    error_msg = f"❌ خطأ في إنشاء معاينة للطلب {instance.order_number}: {str(e)}"
+                    print(f"\033[31m{error_msg}\033[0m")
+                    traceback.print_exc()
+            else:
+                pass
+        
+        from django.db import transaction
+        transaction.on_commit(create_inspection)
 
 
 def set_default_delivery_option(order):
@@ -686,13 +696,18 @@ def create_production_order(order):
 def order_post_save(sender, instance, created, **kwargs):
     """معالج حفظ الطلب"""
     if created:
-        # إنشاء سجل حالة أولية باستخدام النموذج المحسن
-        OrderStatusLog.create_detailed_log(
-            order=instance,
-            change_type='creation',
-            changed_by=getattr(instance, 'created_by', None),
-            notes='تم إنشاء الطلب'
-        )
+        # استخدام transaction.on_commit للتأكد من اكتمال المعاملة قبل إنشاء السجلات
+        def create_status_log():
+            # إنشاء سجل حالة أولية باستخدام النموذج المحسن
+            OrderStatusLog.create_detailed_log(
+                order=instance,
+                change_type='creation',
+                changed_by=getattr(instance, 'created_by', None),
+                notes='تم إنشاء الطلب'
+            )
+        
+        from django.db import transaction
+        transaction.on_commit(create_status_log)
     else:
         # التحقق من تغيير الحالة
         if hasattr(instance, '_tracking_status_changed') and instance._tracking_status_changed:
