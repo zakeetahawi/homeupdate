@@ -602,14 +602,22 @@ class Order(models.Model):
 
     def notify_status_change(self, old_status, new_status, changed_by=None, notes=''):
         """إرسال إشعار عند تغيير حالة تتبع الطلب"""
-        # إنشاء سجل لتغيير الحالة فقط
-        OrderStatusLog.objects.create(
-            order=self,
-            old_status=old_status,
-            new_status=new_status,
-            changed_by=changed_by,
-            notes=notes
-        )
+        from django.db import transaction
+        
+        # استخدام transaction.on_commit لضمان أن الطلب تم حفظه قبل إنشاء السجل
+        def create_log():
+            try:
+                OrderStatusLog.objects.create(
+                    order=self,
+                    old_status=old_status,
+                    new_status=new_status,
+                    changed_by=changed_by,
+                    notes=notes
+                )
+            except Exception as e:
+                logger.error(f"خطأ في إنشاء سجل تغيير الحالة: {e}")
+        
+        transaction.on_commit(create_log)
 
 
     def calculate_expected_delivery_date(self):
