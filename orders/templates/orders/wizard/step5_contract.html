@@ -279,7 +279,7 @@
                                 <div class="col-md-3">
                                     <label class="form-label">اسم القماش <span class="text-danger">*</span></label>
                                     <select id="fabric-name" class="form-select" onchange="updateFabricQuantityInfo(this)">
-                                        <option value="">اختر القماش من الفاتورة</option>
+                                        <option value="">اختر القماش من المرجع</option>
                                         {% for item in draft.items.all %}
                                         <option value="{{ item.id }}" data-available="{{ item.quantity }}" data-name="{{ item.product.name }}">
                                             {{ item.product.name }} - متوفر: <span class="available-qty-{{ item.id }}">{{ item.quantity }}</span> متر
@@ -366,7 +366,7 @@
                                     <div class="btn-group w-100" role="group">
                                         <input type="radio" class="btn-check" name="accessorySource" id="accessoryFromInvoice" value="invoice" checked onchange="toggleAccessorySource()">
                                         <label class="btn btn-outline-primary" for="accessoryFromInvoice">
-                                            <i class="fas fa-list me-1"></i>من الفاتورة
+                                            <i class="fas fa-list me-1"></i>من المرجع
                                         </label>
                                         
                                         <input type="radio" class="btn-check" name="accessorySource" id="accessoryExternal" value="external" onchange="toggleAccessorySource()">
@@ -382,7 +382,7 @@
                                         <div class="col-md-4">
                                             <label class="form-label">الإكسسوار <span class="text-danger">*</span></label>
                                             <select id="accessory-from-invoice" class="form-select" onchange="updateAccessoryQuantityInfo(this)">
-                                                <option value="">اختر الإكسسوار من الفاتورة</option>
+                                                <option value="">اختر الإكسسوار من المرجع</option>
                                                 {% for item in draft.items.all %}
                                                 <option value="{{ item.id }}" 
                                                         data-available="{{ item.quantity }}" 
@@ -757,7 +757,7 @@ function addFabricToList() {
     }
     
     if (!fabricItemId) {
-        alert('يرجى اختيار القماش من الفاتورة');
+        alert('يرجى اختيار القماش من المرجع');
         return;
     }
     
@@ -919,7 +919,7 @@ function addAccessoryFromInvoice() {
     const color = document.getElementById('accessory-invoice-color').value.trim();
     
     if (!itemId) {
-        alert('يرجى اختيار الإكسسوار من الفاتورة');
+        alert('يرجى اختيار الإكسسوار من المرجع');
         return;
     }
     

@@ -47,12 +47,43 @@ class Step1BasicInfoForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # تعيين الفرع الافتراضي من المستخدم
-        if user and hasattr(user, 'branch') and user.branch:
-            self.fields['branch'].initial = user.branch
+        # العميل: حقل إجباري بدون اختيار افتراضي
+        self.fields['customer'].empty_label = "اختر العميل..."
+        self.fields['customer'].required = True
         
-        # تحميل البائعين النشطين فقط
-        self.fields['salesperson'].queryset = Salesperson.objects.filter(is_active=True)
+        # الفرع: تلقائي حسب فرع الموظف (إلا للـ admin)
+        if user:
+            if user.is_superuser:
+                # المدير يستطيع اختيار أي فرع
+                self.fields['branch'].queryset = Branch.objects.filter(is_active=True)
+            elif hasattr(user, 'branch') and user.branch:
+                # الموظف: الفرع الافتراضي هو فرعه
+                self.fields['branch'].initial = user.branch
+                # إذا كان له فروع متعددة (مدير منطقة)
+                if hasattr(user, 'managed_branches'):
+                    managed = user.managed_branches.filter(is_active=True)
+                    if managed.exists():
+                        self.fields['branch'].queryset = managed
+                    else:
+                        # فرعه فقط
+                        self.fields['branch'].queryset = Branch.objects.filter(id=user.branch.id)
+                else:
+                    # فرعه فقط
+                    self.fields['branch'].queryset = Branch.objects.filter(id=user.branch.id)
+        
+        # البائع: فقط البائعين المرتبطين بالفرع
+        if self.instance and self.instance.branch:
+            self.fields['salesperson'].queryset = Salesperson.objects.filter(
+                branch=self.instance.branch,
+                is_active=True
+            )
+        elif user and hasattr(user, 'branch') and user.branch:
+            self.fields['salesperson'].queryset = Salesperson.objects.filter(
+                branch=user.branch,
+                is_active=True
+            )
+        else:
+            self.fields['salesperson'].queryset = Salesperson.objects.filter(is_active=True)
 
 
 class Step2OrderTypeForm(forms.ModelForm):
@@ -99,6 +130,16 @@ class Step3OrderItemForm(forms.ModelForm):
     """
     نموذج إضافة عنصر طلب
     """
+    barcode = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'امسح الباركود أو أدخله يدوياً',
+            'id': 'barcode-input'
+        }),
+        label='الباركود'
+    )
+    
     class Meta:
         model = DraftOrderItem
         fields = ['product', 'quantity', 'unit_price', 'discount_percentage', 'item_type', 'notes']
@@ -117,15 +158,16 @@ class Step3OrderItemForm(forms.ModelForm):
                 'class': 'form-control',
                 'min': '0',
                 'step': '0.01',
-                'required': True
+                'required': True,
+                'readonly': True,  # السعر من النظام فقط
+                'style': 'background-color: #e9ecef;'
             }),
-            'discount_percentage': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'max': '100',
-                'step': '0.01',
-                'value': '0'
-            }),
+            'discount_percentage': forms.Select(
+                choices=[(i, f'{i}%') for i in range(0, 16)],
+                attrs={
+                    'class': 'form-select',
+                }
+            ),
             'item_type': forms.Select(attrs={
                 'class': 'form-select'
             }),
@@ -135,6 +177,15 @@ class Step3OrderItemForm(forms.ModelForm):
             }),
         }
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # إعادة ترتيب الحقول
+        self.order_fields(['barcode', 'product', 'quantity', 'unit_price', 'discount_percentage', 'item_type', 'notes'])
+    
+    def order_fields(self, field_order):
+        """إعادة ترتيب الحقول"""
+        self.fields = {key: self.fields[key] for key in field_order if key in self.fields}
+    
     def clean_quantity(self):
         quantity = self.cleaned_data.get('quantity')
         if quantity and quantity <= 0:
@@ -143,6 +194,12 @@ class Step3OrderItemForm(forms.ModelForm):
     
     def clean_unit_price(self):
         unit_price = self.cleaned_data.get('unit_price')
+        product = self.cleaned_data.get('product')
+        
+        # السعر يأتي من المنتج تلقائياً
+        if product and product.price:
+            return product.price
+        
         if unit_price and unit_price < 0:
             raise ValidationError('السعر لا يمكن أن يكون سالباً')
         return unit_price
@@ -150,7 +207,7 @@ class Step3OrderItemForm(forms.ModelForm):
 
 class Step4InvoicePaymentForm(forms.ModelForm):
     """
-    الخطوة 4: تفاصيل الفاتورة والدفع
+    الخطوة 4: تفاصيل المرجع والدفع
     """
     class Meta:
         model = DraftOrder
@@ -162,15 +219,15 @@ class Step4InvoicePaymentForm(forms.ModelForm):
         widgets = {
             'invoice_number': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'رقم الفاتورة الرئيسي'
+                'placeholder': 'رقم المرجع الرئيسي'
             }),
             'invoice_number_2': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'رقم فاتورة إضافي (اختياري)'
+                'placeholder': 'رقم مرجع إضافي (اختياري)'
             }),
             'invoice_number_3': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'رقم فاتورة إضافي (اختياري)'
+                'placeholder': 'رقم مرجع إضافي (اختياري)'
             }),
             'contract_number': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -205,13 +262,23 @@ class Step4InvoicePaymentForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
     
     def clean_paid_amount(self):
-        paid_amount = self.cleaned_data.get('paid_amount')
+        paid_amount = self.cleaned_data.get('paid_amount') or Decimal('0')
         
         # التحقق من أن المبلغ المدفوع لا يتجاوز الإجمالي
-        if self.draft_order and paid_amount:
-            if paid_amount > self.draft_order.final_total:
+        if self.draft_order:
+            final_total = self.draft_order.final_total or Decimal('0')
+            
+            if paid_amount > final_total:
                 raise ValidationError(
-                    f'المبلغ المدفوع ({paid_amount}) لا يمكن أن يتجاوز الإجمالي ({self.draft_order.final_total})'
+                    f'المبلغ المدفوع ({paid_amount}) لا يمكن أن يتجاوز الإجمالي ({final_total})'
+                )
+            
+            # التحقق من الحد الأدنى للدفع (50%)
+            minimum_payment = final_total * Decimal('0.5')
+            if paid_amount < minimum_payment:
+                raise ValidationError(
+                    f'💡 يجب دفع 50% على الأقل من القيمة الإجمالية. '
+                    f'المبلغ المطلوب: {minimum_payment:.2f} ريال (المدفوع: {paid_amount:.2f} ريال)'
                 )
         
         return paid_amount

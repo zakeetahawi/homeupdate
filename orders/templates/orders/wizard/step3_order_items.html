@@ -13,6 +13,25 @@
             </div>
             <div class="card-body">
                 <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-barcode me-2"></i>الباركود
+                        </label>
+                        <div class="input-group">
+                            <input type="text" id="barcode-input" class="form-control" 
+                                   placeholder="امسح الباركود أو أدخله يدوياً"
+                                   autocomplete="off">
+                            <button class="btn btn-primary" type="button" id="scan-barcode-btn">
+                                <i class="fas fa-camera me-1"></i>مسح بالكاميرا
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            يمكنك مسح الباركود أو البحث عن المنتج من القائمة
+                        </small>
+                    </div>
+                </div>
+                <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold">المنتج <span class="text-danger">*</span></label>
                         <select id="product-select" class="form-select">
@@ -25,13 +44,19 @@
                     </div>
                     <div class="col-md-3 mb-3">
                         <label class="form-label fw-bold">السعر <span class="text-danger">*</span></label>
-                        <input type="number" id="item-price" class="form-control" min="0" step="0.01">
+                        <input type="number" id="item-price" class="form-control" min="0" step="0.01" 
+                               readonly style="background-color: #e9ecef;">
+                        <small class="text-muted">من النظام</small>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">الخصم %</label>
-                        <input type="number" id="item-discount" class="form-control" min="0" max="100" step="0.01" value="0">
+                        <label class="form-label fw-bold">الخصم</label>
+                        <select id="item-discount" class="form-select">
+                            {% for i in "0123456789012345"|make_list %}
+                                <option value="{{ forloop.counter0 }}">{{ forloop.counter0 }}%</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-md-6 mb-3 d-flex align-items-end">
                         <button type="button" class="btn btn-success w-100" onclick="addItem()">
@@ -166,7 +191,8 @@ $(document).ready(function() {
                     results: data.results.map(item => ({
                         id: item.id,
                         text: item.name,
-                        price: item.price
+                        price: item.price,
+                        barcode: item.barcode
                     })),
                     pagination: {
                         more: data.has_more
@@ -183,7 +209,95 @@ $(document).ready(function() {
             $('#item-price').val(data.price);
         }
     });
+    
+    // معالجة الباركود
+    let barcodeBuffer = '';
+    let barcodeTimeout;
+    
+    $('#barcode-input').on('keypress', function(e) {
+        if (e.which === 13) { // Enter key
+            e.preventDefault();
+            searchByBarcode($(this).val());
+            $(this).val('');
+            barcodeBuffer = '';
+        }
+    });
+    
+    // المسح التلقائي للباركود
+    $(document).on('keypress', function(e) {
+        // تجاهل إذا كان المستخدم يكتب في حقل
+        if ($(e.target).is('input, textarea, select')) {
+            return;
+        }
+        
+        clearTimeout(barcodeTimeout);
+        
+        if (e.which === 13) { // Enter من الماسح
+            if (barcodeBuffer.length > 0) {
+                searchByBarcode(barcodeBuffer);
+                $('#barcode-input').val('');
+                barcodeBuffer = '';
+            }
+        } else {
+            barcodeBuffer += String.fromCharCode(e.which);
+            
+            // مسح البفر بعد 100ms (الماسح أسرع من الكتابة اليدوية)
+            barcodeTimeout = setTimeout(function() {
+                barcodeBuffer = '';
+            }, 100);
+        }
+    });
 });
+
+function searchByBarcode(barcode) {
+    if (!barcode) return;
+    
+    fetch(`{% url "orders:products_search_api" %}?barcode=${encodeURIComponent(barcode)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.results && data.results.length > 0) {
+                const product = data.results[0];
+                
+                // تحديد المنتج في Select2
+                const option = new Option(product.name, product.id, true, true);
+                $('#product-select').append(option).trigger('change');
+                
+                // تحديث السعر
+                if (product.price) {
+                    $('#item-price').val(product.price);
+                }
+                
+                // التركيز على الكمية
+                $('#item-quantity').focus().select();
+                
+                // إظهار رسالة نجاح
+                showToast('success', `تم العثور على المنتج: ${product.name}`);
+            } else {
+                showToast('error', 'لم يتم العثور على منتج بهذا الباركود');
+                $('#barcode-input').val(barcode);
+            }
+        })
+        .catch(error => {
+            console.error('Error searching for product:', error);
+            showToast('error', 'حدث خطأ أثناء البحث عن المنتج');
+        });
+}
+
+function showToast(type, message) {
+    // إنشاء toast بسيط
+    const toast = $(`
+        <div class="alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed" 
+             style="top: 80px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 300px;">
+            ${message}
+        </div>
+    `);
+    
+    $('body').append(toast);
+    
+    setTimeout(() => {
+        toast.fadeOut(() => toast.remove());
+    }, 3000);
+}
 
 function addItem() {
     const productId = $('#product-select').val();
@@ -320,6 +434,137 @@ function completeStep3() {
     .catch(error => {
         console.error('Error:', error);
         alert('حدث خطأ');
+    });
+}
+
+// ماسح الباركود
+let barcodeScanner = null;
+
+document.getElementById('scan-barcode-btn').addEventListener('click', function() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('المتصفح لا يدعم الوصول للكاميرا');
+        return;
+    }
+    
+    // إنشاء modal للكاميرا
+    const modalHTML = `
+        <div class="modal fade" id="barcodeScannerModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-camera me-2"></i>مسح الباركود
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <p class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            يمكنك استخدام قارئ باركود USB أو إدخال الباركود يدوياً
+                        </p>
+                        <div class="mb-3">
+                            <input type="text" class="form-control form-control-lg text-center" 
+                                   id="modal-barcode-input" placeholder="أدخل الباركود هنا"
+                                   autocomplete="off" autofocus>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="processModalBarcode()">
+                            <i class="fas fa-search me-1"></i>بحث
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // إزالة modal القديم إن وجد
+    const oldModal = document.getElementById('barcodeScannerModal');
+    if (oldModal) {
+        oldModal.remove();
+    }
+    
+    // إضافة modal جديد
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    const modal = new bootstrap.Modal(document.getElementById('barcodeScannerModal'));
+    modal.show();
+    
+    // التركيز على حقل الإدخال
+    document.getElementById('barcodeScannerModal').addEventListener('shown.bs.modal', function() {
+        document.getElementById('modal-barcode-input').focus();
+    });
+    
+    // مسح عند الضغط على Enter
+    document.getElementById('modal-barcode-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            processModalBarcode();
+        }
+    });
+});
+
+async function processModalBarcode() {
+    const barcode = document.getElementById('modal-barcode-input').value.trim();
+    
+    if (!barcode) {
+        alert('يرجى إدخال الباركود');
+        return;
+    }
+    
+    // البحث عن المنتج
+    try {
+        const response = await fetch(`{% url 'orders:search_products' %}?barcode=${encodeURIComponent(barcode)}`);
+        const data = await response.json();
+        
+        if (data.results && data.results.length > 0) {
+            const product = data.results[0];
+            
+            // ملء البيانات
+            document.getElementById('barcode-input').value = barcode;
+            document.getElementById('product-select').value = product.id;
+            document.getElementById('item-price').value = product.price;
+            
+            // إضافة المنتج مباشرة
+            addItem();
+            
+            // إغلاق modal
+            bootstrap.Modal.getInstance(document.getElementById('barcodeScannerModal')).hide();
+            
+            // رسالة نجاح
+            showToast('success', `✅ تمت إضافة ${product.text}`);
+        } else {
+            showToast('error', '❌ لم يتم العثور على المنتج');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('error', '❌ حدث خطأ أثناء البحث');
+    }
+}
+
+function showToast(type, message) {
+    const toastHTML = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" 
+             role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
     });
 }
 </script>

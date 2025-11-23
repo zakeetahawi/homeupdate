@@ -502,6 +502,14 @@ def wizard_step_4_invoice_payment(request, draft):
     
     # حساب المجاميع
     totals = draft.calculate_totals()
+    
+    # إضافة الحد الأدنى للدفع (50%)
+    from decimal import Decimal
+    final_total = totals.get('final_total', Decimal('0'))
+    if isinstance(final_total, float):
+        final_total = Decimal(str(final_total))
+    totals['minimum_payment'] = (final_total * Decimal('0.5')).quantize(Decimal('0.01'))
+    
     total_steps = get_total_steps(draft)
     
     context = {
@@ -509,7 +517,7 @@ def wizard_step_4_invoice_payment(request, draft):
         'form': form,
         'current_step': 4,
         'total_steps': total_steps,
-        'step_title': 'تفاصيل الفاتورة والدفع',
+        'step_title': 'تفاصيل المرجع والدفع',
         'progress_percentage': round((4 / total_steps) * 100, 2),
         'totals': totals,
     }

@@ -14,19 +14,25 @@ def products_search_api(request):
     """
     API endpoint للبحث عن المنتجات
     يستخدم في Select2 للويزارد
+    يدعم البحث بالباركود
     """
     try:
         query = request.GET.get('q', '').strip()
+        barcode = request.GET.get('barcode', '').strip()
         page = int(request.GET.get('page', 1))
         page_size = 20
         
-        # البحث في المنتجات (بدون is_active لأنه غير موجود)
+        # البحث في المنتجات
         products = Product.objects.select_related('category')
         
-        if query:
+        # البحث بالباركود له أولوية
+        if barcode:
+            products = products.filter(barcode=barcode)
+        elif query:
             products = products.filter(
                 Q(name__icontains=query) |
                 Q(code__icontains=query) |
+                Q(barcode__icontains=query) |
                 Q(category__name__icontains=query)
             )
         
@@ -47,6 +53,7 @@ def products_search_api(request):
                 'text': product.name,
                 'name': product.name,
                 'code': product.code,
+                'barcode': product.barcode if hasattr(product, 'barcode') else '',
                 'price': float(product.price) if product.price else 0.0,
                 'category': product.category.name if product.category else '',
             })

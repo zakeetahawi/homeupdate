@@ -41,6 +41,19 @@
                             {% endif %}
                         </div>
                         <h5>{{ choice.1 }}</h5>
+                        <small class="text-muted d-block mt-2">
+                            {% if choice.0 == 'accessory' %}
+                                🔧 موجه إلى ورشة الإكسسوار
+                            {% elif choice.0 == 'installation' %}
+                                🏭 موجه إلى المصنع
+                            {% elif choice.0 == 'tailoring' %}
+                                📦 موجه إلى المصنع
+                            {% elif choice.0 == 'inspection' %}
+                                👁️ موجه لقسم المعاينات
+                            {% elif choice.0 == 'products' %}
+                                📦 موجه للمخازن
+                            {% endif %}
+                        </small>
                     </div>
                 </div>
             </div>

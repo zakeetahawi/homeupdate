@@ -8,13 +8,13 @@
     <div class="row">
         <div class="col-md-6">
             <h5 class="mb-3">
-                <i class="fas fa-file-invoice me-2"></i>تفاصيل الفاتورة
+                <i class="fas fa-file-invoice me-2"></i>تفاصيل المرجع
             </h5>
             
             <!-- Invoice Numbers -->
             <div class="mb-3">
                 <label for="{{ form.invoice_number.id_for_label }}" class="form-label fw-bold">
-                    <i class="fas fa-receipt me-2"></i>رقم الفاتورة الرئيسي
+                    <i class="fas fa-receipt me-2"></i>رقم المرجع الرئيسي
                 </label>
                 {{ form.invoice_number }}
                 {% if form.invoice_number.errors %}
@@ -24,14 +24,14 @@
             
             <div class="mb-3">
                 <label for="{{ form.invoice_number_2.id_for_label }}" class="form-label">
-                    رقم فاتورة إضافي 1
+                    رقم مرجع إضافي 1
                 </label>
                 {{ form.invoice_number_2 }}
             </div>
             
             <div class="mb-3">
                 <label for="{{ form.invoice_number_3.id_for_label }}" class="form-label">
-                    رقم فاتورة إضافي 2
+                    رقم مرجع إضافي 2
                 </label>
                 {{ form.invoice_number_3 }}
             </div>
@@ -47,16 +47,16 @@
                 <h6 class="alert-heading">ملخص المبالغ</h6>
                 <div class="d-flex justify-content-between mb-2">
                     <span>المجموع قبل الخصم:</span>
-                    <strong>{{ totals.subtotal }} ج.م</strong>
+                    <strong>{{ totals.subtotal }} ريال</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2 text-danger">
                     <span>إجمالي الخصم:</span>
-                    <strong>{{ totals.total_discount }} ج.م</strong>
+                    <strong>{{ totals.total_discount }} ريال</strong>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between">
                     <span class="h6">المجموع النهائي:</span>
-                    <strong class="h6 text-success">{{ totals.final_total }} ج.م</strong>
+                    <strong class="h6 text-success">{{ totals.final_total }} ريال</strong>
                 </div>
             </div>
             
@@ -72,14 +72,24 @@
             <div class="mb-3">
                 <label for="{{ form.paid_amount.id_for_label }}" class="form-label fw-bold">
                     <i class="fas fa-dollar-sign me-2"></i>المبلغ المدفوع
+                    <span class="text-danger">*</span>
                 </label>
                 {{ form.paid_amount }}
                 {% if form.paid_amount.errors %}
-                    <div class="text-danger mt-1">{{ form.paid_amount.errors }}</div>
+                    <div class="alert alert-danger mt-2 py-2">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        {{ form.paid_amount.errors }}
+                    </div>
                 {% endif %}
+                <div class="alert alert-warning mt-2 py-2">
+                    <i class="fas fa-lightbulb me-1"></i>
+                    <strong>💡 تنبيه:</strong> يجب دفع 50% على الأقل من القيمة الإجمالية للمتابعة
+                    <br>
+                    <small>الحد الأدنى المطلوب: <strong>{{ totals.minimum_payment|default:"0.00" }} ريال</strong></small>
+                </div>
                 <div class="form-text">
                     <i class="fas fa-info-circle me-1"></i>
-                    المتبقي: <span id="remaining-amount">{{ totals.remaining }}</span> ج.م
+                    المتبقي: <span id="remaining-amount">{{ totals.remaining }}</span> ريال
                 </div>
             </div>
             
@@ -116,25 +126,52 @@
 {{ block.super }}
 <script>
 // حساب المبلغ المتبقي تلقائياً
-document.getElementById('{{ form.paid_amount.id_for_label }}').addEventListener('input', function() {
-    const totalAmount = {{ totals.final_total }};
+const totalAmount = {{ totals.final_total }};
+const minimumPayment = {{ totals.minimum_payment }};
+const paidAmountInput = document.getElementById('{{ form.paid_amount.id_for_label }}');
+
+paidAmountInput.addEventListener('input', function() {
     const paidAmount = parseFloat(this.value) || 0;
     const remaining = totalAmount - paidAmount;
     
     document.getElementById('remaining-amount').textContent = remaining.toFixed(2);
     
+    // إزالة الحدود السابقة
+    this.classList.remove('is-invalid', 'is-valid');
+    
     // تحذير إذا تجاوز المبلغ المدفوع الإجمالي
     if (paidAmount > totalAmount) {
         this.classList.add('is-invalid');
-        alert('المبلغ المدفوع لا يمكن أن يتجاوز المجموع النهائي');
-    } else {
-        this.classList.remove('is-invalid');
+    } else if (paidAmount >= minimumPayment) {
+        this.classList.add('is-valid');
+    } else if (paidAmount > 0) {
+        this.classList.add('is-invalid');
     }
 });
 
 // معالجة إرسال النموذج
 document.getElementById('step4-form').addEventListener('submit', function(e) {
-    e.preventDefault();
+    const paidAmount = parseFloat(paidAmountInput.value) || 0;
+    
+    // التحقق من الحد الأدنى
+    if (paidAmount < minimumPayment) {
+        e.preventDefault();
+        alert('⚠️ يجب دفع 50% على الأقل من المبلغ الإجمالي\n' + 
+              'الحد الأدنى المطلوب: ' + minimumPayment.toFixed(2) + ' ريال\n' +
+              'المبلغ المدفوع: ' + paidAmount.toFixed(2) + ' ريال');
+        paidAmountInput.focus();
+        return false;
+    }
+    
+    // التحقق من عدم تجاوز الإجمالي
+    if (paidAmount > totalAmount) {
+        e.preventDefault();
+        alert('❌ المبلغ المدفوع لا يمكن أن يتجاوز المجموع النهائي\n' +
+              'المجموع النهائي: ' + totalAmount.toFixed(2) + ' ريال');
+        paidAmountInput.focus();
+        return false;
+    }
+    
     submitWizardStep(this);
 });
 </script>

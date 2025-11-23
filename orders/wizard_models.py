@@ -112,6 +112,19 @@ class DraftOrder(models.Model):
         verbose_name='نوع المعاينة المرتبطة'
     )
     
+    # مقاسات طرف العميل
+    customer_side_measurements = models.BooleanField(
+        default=False,
+        verbose_name='مقاسات طرف العميل'
+    )
+    measurement_agreement_file = models.FileField(
+        upload_to='measurements/agreements/%Y/%m/',
+        blank=True,
+        null=True,
+        verbose_name='اتفاقية المقاسات (PDF)',
+        help_text='يجب رفع ملف PDF لاتفاقية المقاسات'
+    )
+    
     # الخطوة 4: تفاصيل الفاتورة
     invoice_number = models.CharField(max_length=100, blank=True, null=True, verbose_name='رقم الفاتورة الرئيسي')
     invoice_number_2 = models.CharField(max_length=100, blank=True, null=True, verbose_name='رقم فاتورة إضافي 1')
@@ -233,10 +246,10 @@ class DraftOrder(models.Model):
         self.save(update_fields=['subtotal', 'total_discount', 'final_total'])
         
         return {
-            'subtotal': float(self.subtotal),
-            'total_discount': float(self.total_discount),
-            'final_total': float(self.final_total),
-            'remaining': float(self.final_total - self.paid_amount)
+            'subtotal': self.subtotal,
+            'total_discount': self.total_discount,
+            'final_total': self.final_total,
+            'remaining': self.final_total - self.paid_amount
         }
     
     def mark_step_complete(self, step_number):
