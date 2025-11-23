@@ -542,6 +542,54 @@ class OrderAdmin(admin.ModelAdmin):
             return obj.get_clean_quantity_display()
         return str(obj.quantity) if obj.quantity else '0'
     quantity_display.short_description = 'الكمية'
+    
+    def delete_queryset(self, request, queryset):
+        """
+        حذف مجموعة من الطلبات بشكل آمن
+        يستدعي دالة delete() لكل طلب لضمان حذف السجلات المرتبطة
+        """
+        from django.db import connection, transaction
+        
+        deleted_count = 0
+        failed_count = 0
+        
+        for order in queryset:
+            try:
+                # استخدام transaction لضمان الحذف الآمن
+                with transaction.atomic():
+                    # حذف سجلات OrderStatusLog أولاً
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            "DELETE FROM orders_orderstatuslog WHERE order_id = %s", 
+                            [order.pk]
+                        )
+                    
+                    # حذف الطلب (سيحذف العناصر المرتبطة تلقائياً)
+                    order.delete()
+                    deleted_count += 1
+                    
+            except Exception as e:
+                failed_count += 1
+                self.message_user(
+                    request,
+                    f'خطأ في حذف الطلب {order.order_number}: {str(e)}',
+                    level='ERROR'
+                )
+        
+        # رسالة نجاح
+        if deleted_count > 0:
+            self.message_user(
+                request,
+                f'تم حذف {deleted_count} طلب بنجاح',
+                level='SUCCESS'
+            )
+        
+        if failed_count > 0:
+            self.message_user(
+                request,
+                f'فشل حذف {failed_count} طلب',
+                level='WARNING'
+            )
 
 @admin.register(DeliveryTimeSettings)
 class DeliveryTimeSettingsAdmin(admin.ModelAdmin):
