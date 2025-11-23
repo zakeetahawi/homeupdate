@@ -118,10 +118,25 @@ class Step2OrderTypeForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         selected_type = cleaned_data.get('selected_type')
+        related_inspection = cleaned_data.get('related_inspection')
+        related_inspection_type = cleaned_data.get('related_inspection_type')
         
         # التحقق من اختيار نوع الطلب
         if not selected_type:
             raise ValidationError('يجب اختيار نوع الطلب')
+        
+        # التحقق من اختيار المعاينة عندما تكون متاحة
+        # فقط في أنواع الطلبات التي تتطلب معاينة (تركيب، تفصيل، إكسسوار)
+        if selected_type in ['installation', 'tailoring', 'accessory']:
+            # التحقق من وجود معاينات متاحة
+            available_inspections = self.fields['related_inspection'].queryset
+            
+            if available_inspections.exists():
+                # يجب اختيار معاينة فعلية أو اختيار "طرف العميل"
+                if not related_inspection and related_inspection_type != 'customer_side':
+                    raise ValidationError({
+                        'related_inspection': 'يجب اختيار معاينة مرتبطة أو تحديد "طرف العميل"'
+                    })
         
         return cleaned_data
 
@@ -260,6 +275,19 @@ class Step4InvoicePaymentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.draft_order = kwargs.pop('draft_order', None)
         super().__init__(*args, **kwargs)
+        
+        # جعل رقم المرجع الرئيسي إجبارياً
+        self.fields['invoice_number'].required = True
+        self.fields['invoice_number'].widget.attrs['required'] = 'required'
+    
+    def clean_invoice_number(self):
+        """التحقق من رقم المرجع الرئيسي"""
+        invoice_number = self.cleaned_data.get('invoice_number')
+        
+        if not invoice_number or not invoice_number.strip():
+            raise ValidationError('رقم المرجع الرئيسي إجباري')
+        
+        return invoice_number.strip()
     
     def clean_paid_amount(self):
         paid_amount = self.cleaned_data.get('paid_amount') or Decimal('0')

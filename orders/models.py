@@ -519,6 +519,14 @@ class Order(models.Model):
                     self.order_status = 'pending'
                     self.tracking_status = 'pending'
 
+            # تحديث حالة التحقق من الدفع تلقائياً
+            # إذا تم دفع المبلغ كاملاً، تحديث payment_verified إلى True
+            if self.is_fully_paid and not self.payment_verified:
+                self.payment_verified = True
+            elif not self.is_fully_paid and self.payment_verified:
+                # إذا كان هناك مبلغ متبقي، إلغاء التحقق
+                self.payment_verified = False
+
             # حفظ الطلب أولاً للحصول على مفتاح أساسي
             super().save(*args, **kwargs)
             # التأكد من أن الطلب تم حفظه بنجاح
@@ -526,40 +534,50 @@ class Order(models.Model):
                 raise models.ValidationError('فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي')
 
             # جدولة رفع ملف العقد إلى Google Drive بشكل غير متزامن
+            # استخدام transaction.on_commit للتأكد من اكتمال المعاملة قبل الرفع
             if self.contract_file and not self.is_contract_uploaded_to_drive:
-                try:
-                    # استخدام مهمة خلفية لرفع الملف
-                    from .tasks import upload_contract_to_drive_async
-                    upload_contract_to_drive_async.delay(self.pk)
-                    logger.info(f"تم جدولة رفع ملف العقد للطلب {self.order_number}")
-                except Exception as e:
-                    logger.error(f"خطأ في جدولة رفع ملف العقد للطلب {self.order_number}: {str(e)}")
-                    # في حالة فشل الجدولة، نحاول الرفع المباشر كبديل
+                def schedule_contract_upload():
                     try:
-                        success, message = self.upload_contract_to_google_drive()
-                        if success:
-                            logger.info(f"تم رفع ملف العقد للطلب {self.order_number} بنجاح (مباشر)")
-                        else:
-                            logger.warning(f"فشل في رفع ملف العقد للطلب {self.order_number}: {message}")
-                    except Exception as e2:
-                        logger.error(f"خطأ في رفع ملف العقد للطلب {self.order_number}: {str(e2)}")
+                        # استخدام مهمة خلفية لرفع الملف
+                        from .tasks import upload_contract_to_drive_async
+                        upload_contract_to_drive_async.delay(self.pk)
+                        logger.info(f"تم جدولة رفع ملف العقد للطلب {self.order_number}")
+                    except Exception as e:
+                        logger.error(f"خطأ في جدولة رفع ملف العقد للطلب {self.order_number}: {str(e)}")
+                        # في حالة فشل الجدولة، نحاول الرفع المباشر كبديل
+                        try:
+                            order_instance = Order.objects.get(pk=self.pk)
+                            success, message = order_instance.upload_contract_to_google_drive()
+                            if success:
+                                logger.info(f"تم رفع ملف العقد للطلب {self.order_number} بنجاح (مباشر)")
+                            else:
+                                logger.warning(f"فشل في رفع ملف العقد للطلب {self.order_number}: {message}")
+                        except Exception as e2:
+                            logger.error(f"خطأ في رفع ملف العقد للطلب {self.order_number}: {str(e2)}")
+                
+                from django.db import transaction
+                transaction.on_commit(schedule_contract_upload)
             # جدولة حساب السعر النهائي بشكل غير متزامن لتجنب البطء
+            # استخدام transaction.on_commit للتأكد من اكتمال المعاملة قبل الحساب
             if is_new or 'final_price' not in kwargs.get('update_fields', []):
-                try:
-                    from .tasks import calculate_order_totals_async
-                    calculate_order_totals_async.delay(self.pk)
-                except Exception as e:
-                    # في حالة فشل الجدولة، نحسب السعر مباشرة
+                def schedule_totals_calculation():
                     try:
-                        final_price = self.calculate_final_price()
-                        if self.final_price != final_price:
-                            self.final_price = final_price
-                            self.total_amount = final_price
-                            super().save(update_fields=['final_price', 'total_amount'])
-                    except Exception as calc_error:
-                        logger.error(f"خطأ في حساب السعر النهائي للطلب {self.order_number}: {str(calc_error)}")
-                        self.final_price = 0
-                        super().save(update_fields=['final_price'])
+                        from .tasks import calculate_order_totals_async
+                        calculate_order_totals_async.delay(self.pk)
+                    except Exception as e:
+                        # في حالة فشل الجدولة، نحسب السعر مباشرة
+                        try:
+                            final_price = self.calculate_final_price()
+                            if self.final_price != final_price:
+                                Order.objects.filter(pk=self.pk).update(
+                                    final_price=final_price,
+                                    total_amount=final_price
+                                )
+                        except Exception as calc_error:
+                            logger.error(f"خطأ في حساب السعر النهائي للطلب {self.order_number}: {str(calc_error)}")
+                
+                from django.db import transaction
+                transaction.on_commit(schedule_totals_calculation)
 
             # إنشاء الإشعارات المناسبة
             # تم إزالة استدعاءات دوال الإشعارات
