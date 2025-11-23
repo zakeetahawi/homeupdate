@@ -13,6 +13,7 @@ def clean_decimal(value):
     - 1.000 -> 1
     - 10.500 -> 10.5
     - 0.001 -> 0.001
+    - 0E-7 -> 0
     """
     if value is None:
         return ''
@@ -27,6 +28,11 @@ def clean_decimal(value):
             pass
         else:
             return str(value)
+        
+        # معالجة الأرقام الصغيرة جداً (قريبة من الصفر)
+        # إذا كانت القيمة المطلقة أقل من 0.01، اعتبرها صفر
+        if abs(value) < Decimal('0.01'):
+            return '0'
         
         # إزالة الأصفار الزائدة بعد الفاصلة
         # تحويل إلى string وإزالة الأصفار من النهاية

@@ -899,6 +899,12 @@ class Order(models.Model):
         # استخدام المبلغ النهائي بعد الخصم بدلاً من المبلغ الإجمالي قبل الخصم
         final_amount = self.final_price_after_discount
         remaining = final_amount - paid_dec
+        
+        # معالجة الأرقام الصغيرة جداً (أخطاء التقريب)
+        # إذا كان المتبقي أقل من 0.01 في القيمة المطلقة، اعتبره صفر
+        if abs(remaining) < Decimal('0.01'):
+            return Decimal('0')
+        
         return remaining
 
     @property
