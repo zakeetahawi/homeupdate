@@ -5,6 +5,18 @@
 <form method="post" id="step2-form">
     {% csrf_token %}
     
+    <!-- عرض أخطاء النموذج العامة -->
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>خطأ:</strong>
+            {% for error in form.non_field_errors %}
+                {{ error }}
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+    
     <div class="mb-4">
         <h5 class="mb-3">
             <i class="fas fa-tags me-2"></i>اختر نوع الطلب
@@ -73,23 +85,29 @@
                 </h5>
             </div>
             <div class="card-body">
+                <!-- عرض أخطاء حقل المعاينة -->
                 {% if form.related_inspection.errors %}
                     <div class="alert alert-danger">
-                        {{ form.related_inspection.errors }}
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        {% for error in form.related_inspection.errors %}
+                            {{ error }}
+                        {% endfor %}
                     </div>
                 {% endif %}
                 
                 <!-- خيار المعاينة الفعلية -->
                 <div class="mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="inspection_choice" 
-                               id="use_existing_inspection" value="existing" 
-                               onchange="toggleInspectionChoice()">
-                        <label class="form-check-label fw-bold" for="use_existing_inspection">
-                            <i class="fas fa-list me-2"></i>اختيار معاينة موجودة
-                        </label>
+                    <div class="inspection-choice-card" onclick="selectInspectionType('existing')">
+                        <div class="choice-header">
+                            <input class="form-check-input inspection-checkbox" type="checkbox" 
+                                   id="use_existing_inspection" value="existing" 
+                                   onchange="toggleInspectionChoice(event)">
+                            <label class="form-check-label fw-bold" for="use_existing_inspection">
+                                <i class="fas fa-list me-2"></i>اختيار معاينة موجودة
+                            </label>
+                        </div>
                     </div>
-                    <div id="inspection-select-wrapper" class="mt-2" style="display: none; padding-right: 2rem;">
+                    <div id="inspection-select-wrapper" class="mt-2 inspection-details" style="display: none;">
                         <label for="{{ form.related_inspection.id_for_label }}" class="form-label">
                             المعاينة المرتبطة
                         </label>
@@ -103,17 +121,19 @@
                 
                 <!-- خيار طرف العميل -->
                 <div class="mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="inspection_choice" 
-                               id="use_customer_inspection" value="customer_side" 
-                               onchange="toggleInspectionChoice()">
-                        <label class="form-check-label fw-bold" for="use_customer_inspection">
-                            <i class="fas fa-user-plus me-2"></i>إضافة معاينة طرف العميل
-                        </label>
-                    </div>
-                    <div class="form-text text-muted" style="padding-right: 2rem;">
-                        <i class="fas fa-info-circle me-1"></i>
-                        سيتم إنشاء طلب بدون معاينة فعلية (طرف العميل)
+                    <div class="inspection-choice-card" onclick="selectInspectionType('customer_side')">
+                        <div class="choice-header">
+                            <input class="form-check-input inspection-checkbox" type="checkbox" 
+                                   id="use_customer_inspection" value="customer_side" 
+                                   onchange="toggleInspectionChoice(event)">
+                            <label class="form-check-label fw-bold" for="use_customer_inspection">
+                                <i class="fas fa-user-plus me-2"></i>إضافة معاينة طرف العميل
+                            </label>
+                        </div>
+                        <div class="form-text text-muted choice-description">
+                            <i class="fas fa-info-circle me-1"></i>
+                            سيتم إنشاء طلب بدون معاينة فعلية (طرف العميل)
+                        </div>
                     </div>
                 </div>
                 
@@ -219,12 +239,145 @@
     .order-type-card small {
         font-size: 13px;
     }
+    
+    /* تحسينات checkboxes للمعاينة */
+    .inspection-choice-card {
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .inspection-choice-card:hover {
+        border-color: #a67c52;
+        background: #fafafa;
+    }
+    
+    .inspection-choice-card:active {
+        transform: scale(0.98);
+    }
+    
+    .inspection-choice-card.selected {
+        border-color: #28a745;
+        background: #f0fdf4;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+    }
+    
+    .choice-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .inspection-checkbox {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        border-radius: 6px;
+        border: 2px solid #6c757d;
+        cursor: pointer;
+        flex-shrink: 0;
+        margin: 0;
+    }
+    
+    .inspection-checkbox:checked {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    
+    .choice-header label {
+        margin: 0;
+        cursor: pointer;
+        flex: 1;
+        font-size: 15px;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    
+    .choice-description {
+        margin-top: 8px;
+        margin-right: 36px;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    
+    .inspection-details {
+        margin-right: 36px;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-right: 3px solid #28a745;
+    }
+    
+    /* تحسين قسم المعاينة للموبايل */
+    #related-inspection-section {
+        margin-top: 20px;
+    }
+    
+    #related-inspection-section .card-header h5 {
+        font-size: 16px;
+    }
+    
+    #related-inspection-section .form-check-label {
+        font-size: 15px;
+        padding: 10px 0;
+    }
+    
+    #related-inspection-section .form-text {
+        font-size: 13px;
+    }
+    
+    /* تحسينات checkboxes للموبايل */
+    .inspection-choice-card {
+        padding: 18px;
+        margin-bottom: 15px;
+    }
+    
+    .inspection-checkbox {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+    }
+    
+    .choice-header label {
+        font-size: 16px;
+    }
+    
+    .choice-description {
+        font-size: 14px;
+        margin-right: 40px;
+    }
+    
+    .inspection-details {
+        margin-right: 40px;
+        padding: 15px;
+    }
+    
+    /* تحسين أزرار التنقل للموبايل */
+    .wizard-actions {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding: 15px;
+        margin: 0 -15px;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        z-index: 100;
+    }
 }
 </style>
 
 <script>
 // اكتشاف الجهاز المحمول
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const isMobile = window.innerWidth <= 768;
+
+console.log('🔧 تهيئة صفحة اختيار نوع الطلب...');
+console.log('📱 جهاز محمول:', isMobile);
+console.log('👆 شاشة لمس:', isTouchDevice);
 
 function selectOrderType(type) {
     console.log('تحديد نوع الطلب:', type);
@@ -263,22 +416,77 @@ function selectOrderType(type) {
     }
 }
 
-function toggleInspectionChoice() {
+function selectInspectionType(type) {
+    const existingChoice = document.getElementById('use_existing_inspection');
+    const customerChoice = document.getElementById('use_customer_inspection');
+    const existingCard = existingChoice.closest('.inspection-choice-card');
+    const customerCard = customerChoice.closest('.inspection-choice-card');
+    
+    // إلغاء التحديد من الجميع أولاً
+    existingChoice.checked = false;
+    customerChoice.checked = false;
+    existingCard.classList.remove('selected');
+    customerCard.classList.remove('selected');
+    
+    // تحديد الخيار المطلوب
+    if (type === 'existing') {
+        existingChoice.checked = true;
+        existingCard.classList.add('selected');
+    } else if (type === 'customer_side') {
+        customerChoice.checked = true;
+        customerCard.classList.add('selected');
+    }
+    
+    // تطبيق التغييرات
+    toggleInspectionChoice();
+}
+
+function toggleInspectionChoice(event) {
+    // منع الحدث من الانتشار إذا كان من checkbox
+    if (event) {
+        event.stopPropagation();
+    }
+    
     const existingChoice = document.getElementById('use_existing_inspection');
     const customerChoice = document.getElementById('use_customer_inspection');
     const inspectionSelectWrapper = document.getElementById('inspection-select-wrapper');
     const inspectionSelect = document.querySelector('select[name="{{ form.related_inspection.name }}"]');
     const inspectionTypeInput = document.getElementById('id_related_inspection_type');
+    const existingCard = existingChoice.closest('.inspection-choice-card');
+    const customerCard = customerChoice.closest('.inspection-choice-card');
     
+    // ضمان أن يكون واحد فقط محدد (سلوك radio)
+    if (existingChoice.checked && customerChoice.checked) {
+        // إذا تم تحديد الاثنين، إلغاء الآخر
+        if (event && event.target === existingChoice) {
+            customerChoice.checked = false;
+            customerCard.classList.remove('selected');
+        } else {
+            existingChoice.checked = false;
+            existingCard.classList.remove('selected');
+        }
+    }
+    
+    // تحديث العرض
     if (existingChoice.checked) {
         // إظهار قائمة المعاينات
         inspectionSelectWrapper.style.display = 'block';
         inspectionTypeInput.value = 'inspection';
+        existingCard.classList.add('selected');
+        customerCard.classList.remove('selected');
     } else if (customerChoice.checked) {
         // إخفاء قائمة المعاينات وتعيين القيمة
         inspectionSelectWrapper.style.display = 'none';
         inspectionSelect.value = '';  // إلغاء التحديد
         inspectionTypeInput.value = 'customer_side';
+        customerCard.classList.add('selected');
+        existingCard.classList.remove('selected');
+    } else {
+        // لا شيء محدد
+        inspectionSelectWrapper.style.display = 'none';
+        inspectionTypeInput.value = '';
+        existingCard.classList.remove('selected');
+        customerCard.classList.remove('selected');
     }
 }
 
@@ -333,11 +541,31 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleInspectionChoice();
         }
     }
+    
+    // إذا كان هناك أخطاء في حقل المعاينة، إظهار القسم والتمرير إليه
+    {% if form.related_inspection.errors %}
+    console.log('⚠️ يوجد خطأ في حقل المعاينة - عرض القسم');
+    const relatedInspectionSection = document.getElementById('related-inspection-section');
+    if (relatedInspectionSection) {
+        relatedInspectionSection.style.display = 'block';
+        
+        // إضافة حد أحمر للتنبيه
+        relatedInspectionSection.style.border = '3px solid #dc3545';
+        relatedInspectionSection.style.borderRadius = '8px';
+        
+        // التمرير للقسم
+        setTimeout(() => {
+            relatedInspectionSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    }
+    {% endif %}
 });
 
 // معالجة إرسال النموذج
 document.getElementById('step2-form').addEventListener('submit', function(e) {
     e.preventDefault();
+    
+    console.log('🔍 بدء التحقق من صحة النموذج...');
     
     const selectedType = document.querySelector('input[name="{{ form.selected_type.name }}"]:checked');
     if (!selectedType) {
@@ -345,30 +573,180 @@ document.getElementById('step2-form').addEventListener('submit', function(e) {
         return;
     }
     
+    console.log('✅ نوع الطلب:', selectedType.value);
+    
     // التحقق من اختيار المعاينة للأنواع المطلوبة
     const typesRequiringInspection = ['installation', 'tailoring', 'accessory'];
     if (typesRequiringInspection.includes(selectedType.value)) {
+        console.log('⚠️ هذا النوع يتطلب معاينة أو طرف العميل');
+        
         const relatedInspectionSection = document.getElementById('related-inspection-section');
         const inspectionSelect = document.querySelector('select[name="{{ form.related_inspection.name }}"]');
-        const hasAvailableInspections = inspectionSelect && inspectionSelect.options.length > 1; // > 1 لأن الخيار الأول فارغ
+        const existingChoice = document.getElementById('use_existing_inspection');
+        const customerChoice = document.getElementById('use_customer_inspection');
         
-        if (hasAvailableInspections) {
-            const existingChoice = document.getElementById('use_existing_inspection');
-            const customerChoice = document.getElementById('use_customer_inspection');
+        // التحقق من وجود معاينات متاحة
+        const hasAvailableInspections = inspectionSelect && inspectionSelect.options.length > 1; // > 1 لأن الخيار الأول فارغ
+        console.log('📋 عدد المعاينات المتاحة:', inspectionSelect ? inspectionSelect.options.length - 1 : 0);
+        
+        // ⚠️ التحقق الإلزامي: يجب اختيار معاينة أو طرف العميل في جميع الأحوال
+        if (!existingChoice.checked && !customerChoice.checked) {
+            console.error('❌ لم يتم اختيار معاينة أو طرف العميل');
             
-            if (!existingChoice.checked && !customerChoice.checked) {
-                alert('يرجى اختيار معاينة مرتبطة أو تحديد "طرف العميل"');
+            // رسالة خطأ محسّنة للموبايل
+            if (isMobile) {
+                // إضافة تنبيه مرئي أكبر
+                showMobileAlert('⚠️ تنبيه إلزامي', 
+                    hasAvailableInspections 
+                        ? 'يرجى اختيار معاينة مرتبطة أو تحديد "طرف العميل" قبل المتابعة' 
+                        : 'يجب تحديد "طرف العميل" للمتابعة (لا توجد معاينات متاحة)', 
+                    'warning');
+                
+                // تمييز القسم بحد أحمر
+                if (relatedInspectionSection) {
+                    relatedInspectionSection.style.border = '3px solid #dc3545';
+                    relatedInspectionSection.style.borderRadius = '8px';
+                    setTimeout(() => {
+                        relatedInspectionSection.style.border = '';
+                    }, 3000);
+                }
+            } else {
+                alert(hasAvailableInspections 
+                    ? 'يرجى اختيار معاينة مرتبطة أو تحديد "طرف العميل"'
+                    : 'يجب تحديد "طرف العميل" للمتابعة (لا توجد معاينات متاحة)');
+            }
+            
+            // التمرير للقسم المطلوب
+            if (relatedInspectionSection) {
+                relatedInspectionSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+        }
+        
+        // إذا تم اختيار معاينة موجودة، يجب اختيار واحدة من القائمة
+        if (existingChoice.checked) {
+            if (!hasAvailableInspections) {
+                console.error('❌ لا توجد معاينات متاحة للاختيار');
+                
+                if (isMobile) {
+                    showMobileAlert('⚠️ تنبيه', 'لا توجد معاينات متاحة. يرجى تحديد "طرف العميل"', 'warning');
+                } else {
+                    alert('لا توجد معاينات متاحة. يرجى تحديد "طرف العميل"');
+                }
                 return;
             }
             
-            if (existingChoice.checked && !inspectionSelect.value) {
-                alert('يرجى اختيار معاينة من القائمة');
+            if (!inspectionSelect.value) {
+                console.error('❌ لم يتم اختيار معاينة من القائمة');
+                
+                if (isMobile) {
+                    showMobileAlert('⚠️ تنبيه', 'يرجى اختيار معاينة من القائمة', 'warning');
+                } else {
+                    alert('يرجى اختيار معاينة من القائمة');
+                }
+                
+                // التركيز على select
+                if (inspectionSelect) {
+                    inspectionSelect.focus();
+                    inspectionSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
                 return;
             }
         }
+        
+        console.log('✅ تم اختيار المعاينة بشكل صحيح');
+        console.log('   - معاينة موجودة:', existingChoice.checked);
+        console.log('   - طرف العميل:', customerChoice.checked);
+        if (existingChoice.checked && inspectionSelect) {
+            console.log('   - المعاينة المختارة:', inspectionSelect.value);
+        }
+    } else {
+        console.log('ℹ️ هذا النوع لا يتطلب معاينة');
     }
     
+    console.log('✅ جميع التحققات نجحت - إرسال النموذج...');
     submitWizardStep(this);
 });
+
+// دالة لعرض رسائل تنبيه محسّنة للموبايل
+function showMobileAlert(title, message, type = 'info') {
+    // إنشاء modal بسيط
+    const alertDiv = document.createElement('div');
+    alertDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        z-index: 10000;
+        max-width: 90%;
+        min-width: 280px;
+        text-align: center;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    const colorMap = {
+        'warning': '#ffc107',
+        'error': '#dc3545',
+        'success': '#28a745',
+        'info': '#17a2b8'
+    };
+    
+    alertDiv.innerHTML = `
+        <style>
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translate(-50%, -60%);
+                }
+                to {
+                    opacity: 1;
+                    transform: translate(-50%, -50%);
+                }
+            }
+        </style>
+        <div style="font-size: 48px; margin-bottom: 15px;">${title}</div>
+        <div style="font-size: 18px; margin-bottom: 20px; line-height: 1.5; color: #333;">${message}</div>
+        <button onclick="this.closest('div').remove(); document.getElementById('mobile-alert-overlay').remove();" 
+                style="
+                    background: ${colorMap[type] || '#17a2b8'};
+                    color: white;
+                    border: none;
+                    padding: 12px 30px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    min-width: 120px;
+                    -webkit-tap-highlight-color: transparent;
+                ">
+            حسناً
+        </button>
+    `;
+    
+    // إنشاء overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'mobile-alert-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 9999;
+    `;
+    
+    overlay.onclick = function() {
+        alertDiv.remove();
+        overlay.remove();
+    };
+    
+    document.body.appendChild(overlay);
+    document.body.appendChild(alertDiv);
+}
 </script>
 {% endblock %}
