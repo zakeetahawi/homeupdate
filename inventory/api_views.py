@@ -878,3 +878,133 @@ def reorder_recommendations_api(request):
             'success': False,
             'message': f'حدث خطأ: {str(e)}'
         }, status=500)
+
+
+@require_GET
+@login_required
+def bulk_upload_status_api(request, log_id):
+    """
+    API للحصول على حالة عملية الرفع بالجملة
+    """
+    from .models import BulkUploadLog
+    
+    try:
+        upload_log = get_object_or_404(BulkUploadLog, id=log_id)
+        
+        # التحقق من الصلاحيات
+        if upload_log.created_by != request.user and not request.user.is_staff:
+            return JsonResponse({
+                'success': False,
+                'message': 'غير مصرح'
+            }, status=403)
+        
+        # حساب النسبة المئوية
+        percent = 0
+        if upload_log.total_rows > 0:
+            percent = int((upload_log.processed_count / upload_log.total_rows) * 100)
+        
+        return JsonResponse({
+            'success': True,
+            'status': upload_log.status,
+            'status_display': upload_log.get_status_display(),
+            'total_rows': upload_log.total_rows,
+            'processed_count': upload_log.processed_count,
+            'created_count': upload_log.created_count,
+            'updated_count': upload_log.updated_count,
+            'skipped_count': upload_log.skipped_count,
+            'error_count': upload_log.error_count,
+            'percent': percent,
+            'is_completed': upload_log.status in ['completed', 'completed_with_errors', 'failed'],
+            'summary': upload_log.summary,
+            'created_warehouses': upload_log.created_warehouses,
+            'created_at': upload_log.created_at.isoformat(),
+            'completed_at': upload_log.completed_at.isoformat() if upload_log.completed_at else None,
+            'duration': upload_log.duration
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        }, status=500)
+
+
+@require_POST
+@login_required
+def manage_warehouse_api(request):
+    """
+    API لإدارة المستودعات (تحديث، حذف، اعتماد كمستودعات أقمشة)
+    """
+    try:
+        action = request.POST.get('action')
+        warehouse_ids = json.loads(request.POST.get('warehouse_ids', '[]'))
+        
+        if not warehouse_ids:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم تحديد مستودعات'
+            }, status=400)
+        
+        warehouses = Warehouse.objects.filter(id__in=warehouse_ids)
+        
+        if action == 'mark_as_fabric':
+            # اعتماد كمستودعات رسمية للأقمشة
+            if hasattr(Warehouse, 'is_official_fabric_warehouse'):
+                count = warehouses.update(is_official_fabric_warehouse=True)
+                return JsonResponse({
+                    'success': True,
+                    'message': f'تم اعتماد {count} مستودع كمستودعات رسمية للأقمشة',
+                    'count': count
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'الحقل غير متوفر في النموذج'
+                }, status=400)
+        
+        elif action == 'unmark_as_fabric':
+            # إلغاء الاعتماد
+            if hasattr(Warehouse, 'is_official_fabric_warehouse'):
+                count = warehouses.update(is_official_fabric_warehouse=False)
+                return JsonResponse({
+                    'success': True,
+                    'message': f'تم إلغاء اعتماد {count} مستودع',
+                    'count': count
+                })
+        
+        elif action == 'delete_empty':
+            # حذف المستودعات الفارغة
+            deleted = []
+            for wh in warehouses:
+                # التحقق من عدم وجود معاملات
+                if not wh.stock_transactions.exists():
+                    deleted.append(wh.name)
+                    wh.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'تم حذف {len(deleted)} مستودع فارغ',
+                'deleted': deleted,
+                'count': len(deleted)
+            })
+        
+        elif action == 'deactivate':
+            # تعطيل المستودعات
+            count = warehouses.update(is_active=False)
+            return JsonResponse({
+                'success': True,
+                'message': f'تم تعطيل {count} مستودع',
+                'count': count
+            })
+        
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'إجراء غير معروف'
+            }, status=400)
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        }, status=500)

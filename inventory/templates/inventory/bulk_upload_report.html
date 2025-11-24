@@ -372,5 +372,89 @@
             display: none !important;
         }
     }
+    
+    .progress-container {
+        position: relative;
+    }
+    
+    .progress-text {
+        position: absolute;
+        width: 100%;
+        text-align: center;
+        top: 50%;
+        transform: translateY(-50%);
+        font-weight: bold;
+        color: #000;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadLogId = {{ upload_log.id }};
+    const status = '{{ upload_log.status }}';
+    
+    // تتبع فوري للعمليات قيد المعالجة
+    if (status === 'processing') {
+        // إضافة شريط تقدم فوري
+        const progressHtml = `
+            <div id="liveProgress" class="alert alert-info">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">
+                        <i class="fas fa-sync fa-spin"></i> جاري المعالجة...
+                    </h6>
+                    <span id="percentText" class="badge bg-primary fs-6">0%</span>
+                </div>
+                <div class="progress" style="height: 25px;">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                         style="width: 0%"></div>
+                </div>
+                <div class="mt-2 small text-muted">
+                    <span id="processedCount">0</span> من <span id="totalRows">0</span> صف
+                    <span class="mx-2">|</span>
+                    <span class="text-success">✅ <span id="createdCount">0</span> جديد</span>
+                    <span class="mx-1">•</span>
+                    <span class="text-info">🔄 <span id="updatedCount">0</span> محدث</span>
+                    <span class="mx-1">•</span>
+                    <span class="text-warning">⏭️ <span id="skippedCount">0</span> متخطى</span>
+                </div>
+            </div>
+        `;
+        
+        // إدراج في بداية المحتوى
+        const container = document.querySelector('.card-body');
+        if (container) {
+            container.insertAdjacentHTML('afterbegin', progressHtml);
+        }
+        
+        // تحديث تلقائي كل ثانية
+        const interval = setInterval(function() {
+            fetch(`/inventory/api/bulk-upload/${uploadLogId}/status/`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        updateProgress(data);
+                        
+                        if (data.is_completed) {
+                            clearInterval(interval);
+                            location.reload();  // إعادة تحميل لإظهار النتائج النهائية
+                        }
+                    }
+                })
+                .catch(err => console.error('خطأ:', err));
+        }, 1000);  // كل ثانية!
+        
+        function updateProgress(data) {
+            document.getElementById('progressBar').style.width = data.percent + '%';
+            document.getElementById('percentText').textContent = data.percent + '%';
+            document.getElementById('processedCount').textContent = data.processed_count;
+            document.getElementById('totalRows').textContent = data.total_rows;
+            document.getElementById('createdCount').textContent = data.created_count;
+            document.getElementById('updatedCount').textContent = data.updated_count;
+            document.getElementById('skippedCount').textContent = data.skipped_count;
+        }
+    }
+});
+</script>
 {% endblock %}

@@ -92,10 +92,19 @@
                         {% endif %}
                     </h4>
                     <div class="data-table-actions">
-                        <div class="btn-group" role="group">
+                        <div class="btn-group me-2" role="group">
                             <button type="button" class="btn btn-outline-secondary active" data-filter="all">الكل</button>
                             <button type="button" class="btn btn-outline-success" data-filter="active">نشط</button>
                             <button type="button" class="btn btn-outline-danger" data-filter="inactive">غير نشط</button>
+                            <button type="button" class="btn btn-outline-info" data-filter="fabric">أقمشة</button>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-success" onclick="markSelectedAsFabric()">
+                                <i class="fas fa-check"></i> اعتماد كأقمشة
+                            </button>
+                            <button type="button" class="btn btn-sm btn-warning" onclick="deleteEmptyWarehouses()">
+                                <i class="fas fa-trash"></i> حذف الفارغة
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -104,30 +113,43 @@
                         <table class="table table-striped table-hover">
                             <thead>
                                 <tr>
+                                    <th><input type="checkbox" id="selectAll"></th>
                                     <th>اسم المستودع</th>
                                     <th>الرمز</th>
                                     <th>الفرع</th>
                                     <th>المدير</th>
-                                    <th>العنوان</th>
                                     <th>عدد المنتجات</th>
+                                    <th>نوع</th>
                                     <th>الحالة</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for warehouse in warehouses %}
-                                <tr class="warehouse-row {% if not warehouse.is_active %}inactive{% else %}active{% endif %}">
+                                <tr class="warehouse-row {% if not warehouse.is_active %}inactive{% else %}active{% endif %} {% if warehouse.is_official_fabric_warehouse %}fabric{% endif %}" data-warehouse-id="{{ warehouse.id }}">
+                                    <td><input type="checkbox" class="warehouse-checkbox" value="{{ warehouse.id }}"></td>
                                     <td>
                                         <strong>{{ warehouse.name }}</strong>
+                                        {% if warehouse.is_official_fabric_warehouse %}
+                                        <span class="badge bg-info ms-1" title="مستودع رسمي للأقمشة">
+                                            <i class="fas fa-tshirt"></i>
+                                        </span>
+                                        {% endif %}
                                     </td>
                                     <td>{{ warehouse.code }}</td>
                                     <td>{{ warehouse.branch.name|default:"-" }}</td>
                                     <td>{{ warehouse.manager.get_full_name|default:"-" }}</td>
-                                    <td>{{ warehouse.address|default:"-" }}</td>
                                     <td>
                                         <span class="badge bg-info">
                                             {{ warehouse.product_count|default:0 }}
                                         </span>
+                                    </td>
+                                    <td>
+                                        {% if warehouse.is_official_fabric_warehouse %}
+                                        <span class="badge bg-primary">أقمشة</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">عام</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if warehouse.is_active %}
@@ -358,9 +380,138 @@
                 console.error('خطأ في رسم الجدول البياني للحالة:', chartError);
             }
         }
+        
+        // تحديد/إلغاء تحديد الكل
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.warehouse-checkbox');
+        
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => {
+                    if (cb.closest('tr').style.display !== 'none') {
+                        cb.checked = this.checked;
+                    }
+                });
+            });
+        }
+        
+        // الفلترة
+        const filterButtons = document.querySelectorAll('[data-filter]');
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // إزالة active من جميع الأزرار
+                filterButtons.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filter = this.dataset.filter;
+                const rows = document.querySelectorAll('.warehouse-row');
+                
+                rows.forEach(row => {
+                    const isActive = row.classList.contains('active');
+                    const isFabric = row.classList.contains('fabric');
+                    
+                    if (filter === 'all') {
+                        row.style.display = '';
+                    } else if (filter === 'active') {
+                        row.style.display = isActive ? '' : 'none';
+                    } else if (filter === 'inactive') {
+                        row.style.display = !isActive ? '' : 'none';
+                    } else if (filter === 'fabric') {
+                        row.style.display = isFabric ? '' : 'none';
+                    }
+                });
+            });
+        });
+        
         } catch (error) {
             console.error('خطأ في JavaScript:', error);
         }
     });
+    
+    // اعتماد المستودعات المحددة كمستودعات أقمشة
+    function markSelectedAsFabric() {
+        const selected = getSelectedWarehouseIds();
+        if (selected.length === 0) {
+            alert('يرجى تحديد مستودعات أولاً');
+            return;
+        }
+        
+        if (!confirm(`هل تريد اعتماد ${selected.length} مستودع كمستودعات رسمية للأقمشة؟`)) {
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('action', 'mark_as_fabric');
+        formData.append('warehouse_ids', JSON.stringify(selected));
+        formData.append('csrfmiddlewaretoken', getCsrfToken());
+        
+        fetch('/inventory/api/warehouse/manage/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('حدث خطأ: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('خطأ:', error);
+            alert('حدث خطأ في الاتصال');
+        });
+    }
+    
+    // حذف المستودعات الفارغة المحددة
+    function deleteEmptyWarehouses() {
+        const selected = getSelectedWarehouseIds();
+        if (selected.length === 0) {
+            alert('يرجى تحديد مستودعات أولاً');
+            return;
+        }
+        
+        if (!confirm(`سيتم حذف المستودعات الفارغة فقط (بدون معاملات). هل تريد المتابعة؟`)) {
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('action', 'delete_empty');
+        formData.append('warehouse_ids', JSON.stringify(selected));
+        formData.append('csrfmiddlewaretoken', getCsrfToken());
+        
+        fetch('/inventory/api/warehouse/manage/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                if (data.deleted && data.deleted.length > 0) {
+                    alert('تم حذف: ' + data.deleted.join(', '));
+                }
+                location.reload();
+            } else {
+                alert('حدث خطأ: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('خطأ:', error);
+            alert('حدث خطأ في الاتصال');
+        });
+    }
+    
+    // الحصول على IDs المستودعات المحددة
+    function getSelectedWarehouseIds() {
+        const checkboxes = document.querySelectorAll('.warehouse-checkbox:checked');
+        return Array.from(checkboxes).map(cb => parseInt(cb.value));
+    }
+    
+    // الحصول على CSRF token
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
 </script>
 {% endblock %}

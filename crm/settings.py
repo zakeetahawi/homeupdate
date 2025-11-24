@@ -1225,10 +1225,11 @@ PRODUCT_UPDATE_CONFIG = {
 
 # تطبيق الإعدادات على Celery للعمليات الكبيرة
 CELERY_TASK_ANNOTATIONS = {
-    '*': {
-        'rate_limit': '10/m',
-        'time_limit': 300,
-        'soft_time_limit': 240,
+    # استثناء: رفع المنتجات بالجملة - بدون قيود سرعة
+    'inventory.tasks_optimized.bulk_upload_products_fast': {
+        'rate_limit': None,  # بدون حد - سرعة قصوى
+        'time_limit': 600,
+        'soft_time_limit': 540,
     },
     'orders.tasks.upload_file_to_google_drive': {
         'rate_limit': '5/m',

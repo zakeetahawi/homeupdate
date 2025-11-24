@@ -56,6 +56,15 @@ app.conf.update(
         'orders.tasks.cleanup_failed_uploads': {'queue': 'maintenance'},
     },
     
+    # إعدادات التحكم بالمهام - استثناءات محددة
+    task_annotations={
+        'inventory.tasks_optimized.bulk_upload_products_fast': {
+            'rate_limit': None,  # بدون حد للسرعة القصوى
+            'time_limit': 600,
+            'soft_time_limit': 540,
+        },
+    },
+    
     # إعدادات المهام الدورية المحسنة
     beat_schedule={
         'cleanup-database-connections': {
@@ -105,11 +114,26 @@ app.conf.update(
             'schedule': 3600.0,  # كل ساعة
             'options': {'queue': 'maintenance'}
         },
+        
+        # مهام المخزون
+        'cleanup-old-warehouse-data': {
+            'task': 'inventory.tasks.cleanup_old_warehouse_data',
+            'schedule': crontab(hour=2, minute=0),  # يومياً في الساعة 2 صباحاً
+            'options': {'queue': 'maintenance'}
+        },
+        'sync-official-fabric-warehouses': {
+            'task': 'inventory.tasks.sync_official_fabric_warehouses',
+            'schedule': crontab(hour=3, minute=0, day_of_week=1),  # كل اثنين الساعة 3 صباحاً
+            'options': {'queue': 'default'}
+        },
     },
 )
 
 # اكتشاف المهام تلقائياً من جميع التطبيقات المثبتة
 app.autodiscover_tasks()
+
+# تحميل المهام المحسّنة للمخزون يدوياً
+app.autodiscover_tasks(['inventory'], related_name='tasks_optimized')
 
 # إعدادات إضافية محسنة للأمان والأداء
 app.conf.update(

@@ -73,7 +73,7 @@ class Product(models.Model):
     ]
     
     name = models.CharField(max_length=255)
-    code = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    code = models.CharField(max_length=100, unique=True, null=True, blank=True)  # زيادة من 50 إلى 100 حرف
     price = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(_('العملة'), max_length=3, choices=CURRENCY_CHOICES, default='EGP')
     unit = models.CharField(_('الوحدة'), max_length=10, choices=UNIT_CHOICES, default='piece')
@@ -223,6 +223,11 @@ class Warehouse(models.Model):
     )
     address = models.TextField(_('العنوان'), blank=True)
     is_active = models.BooleanField(_('نشط'), default=True)
+    is_official_fabric_warehouse = models.BooleanField(
+        _('مستودع رسمي للأقمشة'), 
+        default=False,
+        help_text=_('تحديد إذا كان هذا المستودع معتمد رسمياً لتخزين الأقمشة')
+    )
     notes = models.TextField(_('ملاحظات'), blank=True)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
@@ -948,6 +953,7 @@ class BulkUploadLog(models.Model):
         default='processing'
     )
     file_name = models.CharField(_('اسم الملف'), max_length=255)
+    task_id = models.CharField(_('معرّف المهمة'), max_length=255, blank=True, null=True)
     warehouse = models.ForeignKey(
         Warehouse,
         on_delete=models.SET_NULL,

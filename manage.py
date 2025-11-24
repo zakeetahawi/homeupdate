@@ -92,24 +92,26 @@ def start_celery():
         if not worker_running:
             print_colored("تشغيل Celery Worker...", 'blue')
             worker_name = f"worker-{os.getpid()}"
+            # فتح ملف اللوج
+            log_file = open('/tmp/celery_worker_dev.log', 'a')
             subprocess.Popen([
                 'celery', '-A', 'crm', 'worker',
-                '--loglevel=info', '--detach',
+                '--loglevel=info',
+                '--pool=solo',
                 f'--hostname={worker_name}@%h',
-                f'--pidfile={worker_pid_file}',
-                '--logfile=/tmp/celery_worker_dev.log'
-            ])
+                f'--pidfile={worker_pid_file}'
+            ], stdout=log_file, stderr=log_file, start_new_session=True)
 
         # تشغيل Beat إذا لم يكن يعمل
         if not beat_running:
             print_colored("تشغيل Celery Beat...", 'blue')
+            beat_log_file = open('/tmp/celery_beat_dev.log', 'a')
             subprocess.Popen([
                 'celery', '-A', 'crm', 'beat',
-                '--loglevel=info', '--detach',
+                '--loglevel=info',
                 f'--pidfile={beat_pid_file}',
-                '--logfile=/tmp/celery_beat_dev.log',
                 '--schedule=/tmp/celerybeat-schedule-dev'
-            ])
+            ], stdout=beat_log_file, stderr=beat_log_file, start_new_session=True)
 
         time.sleep(2)
         print_colored("Celery Worker و Beat يعملان", 'green')

@@ -19,9 +19,10 @@ from .cache_utils import invalidate_product_cache
 
 logger = logging.getLogger(__name__)
 
-def get_or_create_warehouse(warehouse_name, user):
+def get_or_create_warehouse(warehouse_name, user, is_fabric_warehouse=False):
     """
     الحصول على المستودع أو إنشاؤه إذا لم يكن موجوداً
+    مع دعم تحديد المستودعات الرسمية للأقمشة
     """
     if not warehouse_name or str(warehouse_name).strip().lower() in ['', 'nan', 'none']:
         return None
@@ -32,6 +33,10 @@ def get_or_create_warehouse(warehouse_name, user):
     warehouse = Warehouse.objects.filter(name__iexact=warehouse_name).first()
 
     if warehouse:
+        # تحديث حالة المستودع إذا كان للأقمشة
+        if is_fabric_warehouse and not getattr(warehouse, 'is_official_fabric_warehouse', False):
+            warehouse.is_official_fabric_warehouse = True
+            warehouse.save()
         return warehouse
 
     # إنشاء كود تلقائي للمستودع
@@ -39,7 +44,7 @@ def get_or_create_warehouse(warehouse_name, user):
     # إزالة المسافات والرموز الخاصة لإنشاء الكود
     code_base = re.sub(r'[^\w\u0600-\u06FF]', '', warehouse_name)[:10]
     if not code_base:
-        code_base = 'WH'
+        code_base = 'FABRIC' if is_fabric_warehouse else 'WH'
 
     # التأكد من عدم تكرار الكود
     counter = 1
@@ -49,15 +54,21 @@ def get_or_create_warehouse(warehouse_name, user):
         code = f"{code_base}{counter:03d}"
 
     # إنشاء المستودع الجديد
-    warehouse = Warehouse.objects.create(
-        name=warehouse_name,
-        code=code,
-        is_active=True,
-        notes=f'تم إنشاؤه تلقائياً من رفع المنتجات بالجملة',
-        created_by=user
-    )
+    warehouse_data = {
+        'name': warehouse_name,
+        'code': code,
+        'is_active': True,
+        'notes': f'تم إنشاؤه تلقائياً من رفع المنتجات بالجملة' + (' - مستودع رسمي للأقمشة' if is_fabric_warehouse else ''),
+        'created_by': user
+    }
+    
+    # إضافة الحقل إذا كان موجوداً في النموذج
+    if hasattr(Warehouse, 'is_official_fabric_warehouse'):
+        warehouse_data['is_official_fabric_warehouse'] = is_fabric_warehouse
+    
+    warehouse = Warehouse.objects.create(**warehouse_data)
 
-    print(f"✅ تم إنشاء مستودع جديد: {warehouse.name} ({warehouse.code})")
+    print(f"✅ تم إنشاء مستودع جديد: {warehouse.name} ({warehouse.code})" + (' [أقمشة]' if is_fabric_warehouse else ''))
     return warehouse
 
 def safe_read_excel(file_data):
@@ -227,52 +238,58 @@ def safe_read_excel(file_data):
 @login_required
 def product_bulk_upload(request):
     """
-    عرض لرفع المنتجات بالجملة من ملف إكسل
+    رفع المنتجات بالجملة - محسّن
     """
     if request.method == 'POST':
         form = ProductExcelUploadForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                result = process_excel_upload(
-                    form.cleaned_data['excel_file'],
-                    form.cleaned_data['warehouse'],
-                    form.cleaned_data['upload_mode'],
-                    request.user
+                # استخدام المعالجة السريعة دائماً
+                from .tasks_optimized import bulk_upload_products_fast
+                
+                # قراءة الملف
+                excel_file = form.cleaned_data['excel_file']
+                file_content = excel_file.read()
+                warehouse = form.cleaned_data['warehouse']
+                upload_mode = form.cleaned_data['upload_mode']
+                
+                # إنشاء سجل
+                upload_log = BulkUploadLog.objects.create(
+                    upload_type='products',
+                    file_name=excel_file.name,
+                    warehouse=warehouse,
+                    options={'upload_mode': upload_mode},
+                    created_by=request.user,
+                    status='processing'
                 )
-                if result['success']:
-                    success_message = _('تم رفع {} منتج بنجاح. {} منتج محدث، {} منتج جديد').format(
-                        result['total_processed'],
-                        result['updated_count'],
-                        result['created_count']
-                    )
-
-                    # إضافة معلومات المستودعات المُنشأة
-                    if result.get('created_warehouses'):
-                        warehouses_list = ', '.join(result['created_warehouses'])
-                        success_message += f'. تم إنشاء المستودعات التالية: {warehouses_list}'
-
-                    messages.success(request, success_message)
-                    
-                    # إضافة رابط لعرض التقرير
-                    if result.get('upload_log_id'):
-                        messages.info(
-                            request, 
-                            _('لعرض تقرير تفصيلي بالعملية <a href="{}">اضغط هنا</a>').format(
-                                f"/inventory/bulk-upload-report/{result['upload_log_id']}/"
-                            )
-                        )
-                    
-                    if result['errors']:
-                        for error in result['errors'][:5]:
-                            messages.warning(request, error)
-                        if len(result['errors']) > 5:
-                            messages.warning(request, _('وهناك {} أخطاء أخرى...').format(len(result['errors']) - 5))
-                else:
-                    messages.error(request, _('فشل في معالجة الملف: {}').format(result['message']))
+                
+                # إطلاق المهمة
+                task = bulk_upload_products_fast.delay(
+                    upload_log.id,
+                    file_content,
+                    warehouse.id if warehouse else None,
+                    upload_mode,
+                    request.user.id
+                )
+                
+                # حفظ task_id في السجل
+                upload_log.task_id = task.id
+                upload_log.save(update_fields=['task_id'])
+                
+                logger.info(f"✅ مهمة رفع أُطلقت: {task.id} - Log: {upload_log.id}")
+                
+                messages.success(
+                    request,
+                    _(f'🚀 تم إطلاق عملية الرفع السريع. <a href="/inventory/bulk-upload-report/{upload_log.id}/" class="alert-link">متابعة التقدم</a>'),
+                    extra_tags='safe'
+                )
+                
+                return redirect('inventory:bulk_upload_report', log_id=upload_log.id)
+                
             except Exception as e:
-                print(f"🚨 خطأ في رفع المنتجات: {str(e)}")
+                logger.error(f"خطأ في رفع المنتجات: {e}")
                 traceback.print_exc()
-                logger.error(f"Error in bulk upload: {str(e)}")
+                messages.error(request, f'حدث خطأ: {str(e)}')
                 messages.error(request, _('حدث خطأ أثناء معالجة الملف: {}').format(str(e)))
             return redirect('inventory:product_bulk_upload')
     else:

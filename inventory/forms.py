@@ -22,7 +22,7 @@ class ProductExcelUploadForm(forms.Form):
     )
     
     warehouse = forms.ModelChoiceField(
-        queryset=Warehouse.objects.filter(is_active=True),
+        queryset=Warehouse.objects.none(),  # سيتم تعيينه في __init__
         label=_('المستودع الافتراضي'),
         required=False,
         empty_label=_('سيتم إنشاء المستودعات تلقائياً من الملف'),
@@ -31,20 +31,25 @@ class ProductExcelUploadForm(forms.Form):
     )
     
     UPLOAD_MODE_CHOICES = [
-        ('add_to_existing', _('إضافة للكميات الموجودة (تحديث البيانات + إضافة الكمية)')),
-        ('replace_quantity', _('استبدال الكميات (تحديث البيانات + استبدال الكمية بالكامل)')),
-        ('new_only', _('المنتجات الجديدة فقط (تجاهل المنتجات الموجودة)')),
-        ('full_reset', _('⚠️ تهيئة كاملة (حذف كل المنتجات القديمة واستبدالها بالجديدة) - خطر!'))
+        ('smart_update', _('🔄 تحديث ذكي (يحدث البيانات وينقل للمستودع الصحيح) - موصى به')),
+        ('merge_warehouses', _('🔀 دمج المخازن (يجمع الأصناف المكررة في مستودعاتها الصحيحة)')),
+        ('add_only', _('➕ إضافة فقط (المنتجات الجديدة فقط، تجاهل الموجود)')),
+        ('clean_start', _('⚠️ مسح وبدء من جديد (حذف الكل والبدء من الصفر) - خطر!'))
     ]
     
     upload_mode = forms.ChoiceField(
         choices=UPLOAD_MODE_CHOICES,
         label=_('وضع الرفع'),
-        initial='add_to_existing',
+        initial='smart_update',
         required=True,
         widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
-        help_text=_('اختر كيفية التعامل مع المنتجات الموجودة في النظام')
+        help_text=_('التحديث الذكي ينقل المنتجات للمستودعات الصحيحة تلقائياً ويمنع التكرار')
     )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # تحميل المستودعات النشطة فقط عند إنشاء النموذج
+        self.fields['warehouse'].queryset = Warehouse.objects.filter(is_active=True).order_by('name')
 
     def clean_excel_file(self):
         file = self.cleaned_data.get('excel_file')
@@ -138,7 +143,7 @@ class BulkStockUpdateForm(forms.Form):
     )
     
     warehouse = forms.ModelChoiceField(
-        queryset=Warehouse.objects.filter(is_active=True),
+        queryset=Warehouse.objects.none(),  # سيتم تعيينه في __init__
         label=_('المستودع'),
         required=True,
         empty_label=_('اختر المستودع'),
@@ -165,6 +170,11 @@ class BulkStockUpdateForm(forms.Form):
             'placeholder': _('مثال: جرد، تصحيح، إلخ')
         })
     )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # تحميل المستودعات النشطة فقط عند إنشاء النموذج
+        self.fields['warehouse'].queryset = Warehouse.objects.filter(is_active=True).order_by('name')
 
     def clean_excel_file(self):
         file = self.cleaned_data.get('excel_file')
@@ -250,7 +260,7 @@ class ProductForm(forms.ModelForm):
     """
     # إضافة حقول إضافية غير موجودة في النموذج
     warehouse = forms.ModelChoiceField(
-        queryset=Warehouse.objects.filter(is_active=True),
+        queryset=Warehouse.objects.none(),  # سيتم تعيينه في __init__
         label=_('المستودع'),
         required=True,
         empty_label=_('اختر المستودع'),
@@ -288,6 +298,9 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # تحميل المستودعات النشطة
+        self.fields['warehouse'].queryset = Warehouse.objects.filter(is_active=True).order_by('name')
+        
         self.fields['category'].queryset = Category.objects.all()
         self.fields['category'].empty_label = _('اختر الفئة')
 

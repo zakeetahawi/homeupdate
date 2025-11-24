@@ -23,6 +23,9 @@ from .views_bulk_reports import (
     bulk_upload_log_list, bulk_upload_report,
     latest_bulk_upload_report, bulk_upload_error_detail
 )
+from .views_duplicate_check import (
+    check_duplicates, merge_duplicate, merge_all_duplicates
+)
 from .views_stock_transfer import (
     stock_transfer_list, stock_transfer_detail,
     stock_transfer_edit, stock_transfer_submit, stock_transfer_approve,
@@ -115,6 +118,11 @@ urlpatterns = [
     path('latest-bulk-upload-report/', latest_bulk_upload_report, name='latest_bulk_upload_report'),
     path('latest-bulk-upload-report/<str:upload_type>/', latest_bulk_upload_report, name='latest_bulk_upload_report_type'),
     path('bulk-upload-error/<int:error_id>/', bulk_upload_error_detail, name='bulk_upload_error_detail'),
+    
+    # Duplicate Products Check & Merge
+    path('check-duplicates/', check_duplicates, name='check_duplicates'),
+    path('merge-duplicate/<int:product_id>/', merge_duplicate, name='merge_duplicate'),
+    path('merge-all-duplicates/', merge_all_duplicates, name='merge_all_duplicates'),
 
     # API Endpoints
     path('api/product/<int:pk>/', views.product_api_detail, name='product_api_detail'),
@@ -160,6 +168,10 @@ urlpatterns = [
     path('api/inventory-value-report/', api_views.inventory_value_report_api, name='inventory_value_report_api'),
     path('api/stock-turnover-analysis/', api_views.stock_turnover_analysis_api, name='stock_turnover_analysis_api'),
     path('api/reorder-recommendations/', api_views.reorder_recommendations_api, name='reorder_recommendations_api'),
+    
+    # Bulk Upload API Endpoints
+    path('api/bulk-upload/<int:log_id>/status/', api_views.bulk_upload_status_api, name='bulk_upload_status_api'),
+    path('api/warehouse/manage/', api_views.manage_warehouse_api, name='manage_warehouse_api'),
     
     # Stock Transfers API
     path('api/pending-transfers/', api_views.pending_transfers_api, name='pending_transfers_api'),
