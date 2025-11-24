@@ -264,12 +264,15 @@ def product_bulk_upload(request):
                 )
                 
                 # إطلاق المهمة
+                auto_delete_empty = form.cleaned_data.get('auto_delete_empty_warehouses', False)
+                
                 task = bulk_upload_products_fast.delay(
                     upload_log.id,
                     file_content,
                     warehouse.id if warehouse else None,
                     upload_mode,
-                    request.user.id
+                    request.user.id,
+                    auto_delete_empty=auto_delete_empty
                 )
                 
                 # حفظ task_id في السجل

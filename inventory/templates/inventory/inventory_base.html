@@ -80,6 +80,12 @@
                     <span>مواقع التخزين</span>
                 </a>
             </li>
+            <li class="{% if active_menu == 'warehouse_cleanup' %}active{% endif %}">
+                <a href="{% url 'inventory:warehouse_cleanup' %}">
+                    <i class="fas fa-broom"></i>
+                    <span>تنظيف المستودعات</span>
+                </a>
+            </li>
             <li class="menu-header">التقارير</li>
             <li class="{% if active_menu == 'inventory_reports' %}active{% endif %}">
                 <a href="{% url 'inventory:report_list' %}">

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, time_limit=600, soft_time_limit=540, rate_limit=None)
-def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, upload_mode, user_id):
+def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, upload_mode, user_id, auto_delete_empty=False):
     """
     رفع المنتجات بالجملة - نظام ذكي محسّن
     الأوضاع:
@@ -24,11 +24,14 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
     - merge_warehouses: دمج الأصناف المكررة  
     - add_only: إضافة الجديد فقط
     - clean_start: مسح كامل وبدء من جديد
+    
+    Args:
+        auto_delete_empty: حذف المستودعات الفارغة بعد الانتهاء
     """
     from .models import (BulkUploadLog, Product, Category, Warehouse, 
                          StockTransaction, BulkUploadError)
     from .smart_upload_logic import (smart_update_product, clean_start_reset,
-                                     add_stock_transaction)
+                                     add_stock_transaction, delete_empty_warehouses)
     
     logger.info(f"🚀 بدء الرفع الذكي - Log: {upload_log_id} - الوضع: {upload_mode}")
     
@@ -64,7 +67,16 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
         categories_cache = {c.name: c for c in Category.objects.all()}
         warehouses_cache = {w.name: w for w in Warehouse.objects.filter(is_active=True)}
         
-        stats = {'created': 0, 'updated': 0, 'moved': 0, 'merged': 0, 'skipped': 0, 'errors': 0}
+        stats = {
+            'created': 0, 
+            'updated': 0, 
+            'moved': 0, 
+            'merged': 0, 
+            'skipped': 0, 
+            'errors': 0,
+            'cutting_updated': 0,
+            'cutting_split': 0
+        }
         
         # معالجة بدفعات سريعة
         batch_size = 100
@@ -153,6 +165,12 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
                                 row_data=row.to_dict()
                             ))
                         
+                        # تتبع تحديثات أوامر التقطيع 🔥
+                        if 'cutting_orders_updated' in result:
+                            stats['cutting_updated'] += result['cutting_orders_updated']
+                        if 'cutting_orders_split' in result:
+                            stats['cutting_split'] += result['cutting_orders_split']
+                        
                         # إضافة الكمية إذا كانت موجودة (فقط إذا لم يتم النقل)
                         if quantity > 0 and result['product'] and target_wh and result['action'] != 'moved':
                             add_stock_transaction(result['product'], target_wh, quantity, user, 'رفع من Excel')
@@ -211,6 +229,10 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
             summary_parts.append(f"🔄 {stats['updated']} محدث")
         if stats['moved'] > 0:
             summary_parts.append(f"📦 {stats['moved']} نُقل للمستودع الصحيح")
+        if stats['cutting_updated'] > 0:
+            summary_parts.append(f"🔪 {stats['cutting_updated']} أمر تقطيع محدث")
+        if stats['cutting_split'] > 0:
+            summary_parts.append(f"🔀 {stats['cutting_split']} أمر تقطيع منقسم")
         if stats['skipped'] > 0:
             summary_parts.append(f"⏭️ {stats['skipped']} متخطى")
         if stats['errors'] > 0:
@@ -222,10 +244,23 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
         
         logger.info("🎉 اكتمل الرفع بنجاح!")
         
+        # حذف المستودعات الفارغة إذا طُلب ذلك
+        deleted_warehouses = []
+        if auto_delete_empty:
+            logger.info("🗑️ بدء حذف المستودعات الفارغة...")
+            delete_result = delete_empty_warehouses(user)
+            deleted_warehouses = delete_result.get('warehouses', [])
+            
+            if deleted_warehouses:
+                logger.info(f"✅ تم حذف {len(deleted_warehouses)} مستودع: {', '.join(deleted_warehouses)}")
+                upload_log.summary = summary + f" | 🗑️ حُذف {len(deleted_warehouses)} مستودع فارغ"
+                upload_log.save(update_fields=['summary'])
+        
         return {
             'status': 'success',
             'stats': stats,
-            'upload_log_id': upload_log_id
+            'upload_log_id': upload_log_id,
+            'deleted_warehouses': deleted_warehouses
         }
     
     except Exception as e:

@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}تنظيف المستودعات الفارغة{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-broom"></i> تنظيف المستودعات الفارغة
+                    </h6>
+                    <a href="{% url 'inventory:warehouse_list' %}" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-arrow-right"></i> رجوع للمستودعات
+                    </a>
+                </div>
+                <div class="card-body">
+                    
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert">
+                                    <span>&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    {% if empty_warehouses %}
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>{{ total_empty }}</strong> مستودع فارغ |
+                        <strong>{{ can_delete_count }}</strong> يمكن حذفه بأمان
+                    </div>
+                    
+                    <form method="post" id="cleanupForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <button type="submit" name="action" value="delete_all_empty" 
+                                    class="btn btn-danger" 
+                                    onclick="return confirm('⚠️ هل أنت متأكد من حذف جميع المستودعات الفارغة التي يمكن حذفها؟')">
+                                <i class="fas fa-trash-alt"></i> حذف الكل ({{ can_delete_count }})
+                            </button>
+                            
+                            <button type="submit" name="action" value="delete_selected" 
+                                    class="btn btn-warning"
+                                    onclick="return confirm('⚠️ هل أنت متأكد من حذف المستودعات المحددة؟')">
+                                <i class="fas fa-check-square"></i> حذف المحدد
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th width="50">
+                                            <input type="checkbox" id="selectAll">
+                                        </th>
+                                        <th>اسم المستودع</th>
+                                        <th>المخزون</th>
+                                        <th>أوامر تقطيع نشطة</th>
+                                        <th>طلبات نشطة</th>
+                                        <th>أوامر منتهية</th>
+                                        <th>آخر نشاط</th>
+                                        <th>الحالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in empty_warehouses %}
+                                    <tr class="{% if item.can_delete %}table-success{% else %}table-warning{% endif %}">
+                                        <td>
+                                            {% if item.can_delete %}
+                                            <input type="checkbox" name="warehouse_ids" 
+                                                   value="{{ item.warehouse.id }}" 
+                                                   class="warehouse-checkbox">
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong>{{ item.warehouse.name }}</strong>
+                                            {% if item.is_official %}
+                                            <span class="badge badge-info">مستودع أقمشة رسمي</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-secondary">{{ item.total_stock }} وحدة</span>
+                                        </td>
+                                        <td>
+                                            {% if item.active_cutting > 0 %}
+                                            <span class="badge badge-danger">{{ item.active_cutting }}</span>
+                                            {% else %}
+                                            <span class="badge badge-success">0</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.active_orders > 0 %}
+                                            <span class="badge badge-danger">{{ item.active_orders }}</span>
+                                            {% else %}
+                                            <span class="badge badge-success">0</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small>
+                                                تقطيع: {{ item.completed_cutting }} | 
+                                                طلبات: {{ item.completed_orders }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <small>{{ item.last_activity|date:"Y-m-d H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            {% if item.can_delete %}
+                                            <span class="badge badge-success">✅ يمكن الحذف</span>
+                                            {% elif item.is_official %}
+                                            <span class="badge badge-info">🔒 محمي (أقمشة)</span>
+                                            {% elif item.active_cutting > 0 or item.active_orders > 0 %}
+                                            <span class="badge badge-warning">⚠️ له أوامر نشطة</span>
+                                            {% else %}
+                                            <span class="badge badge-secondary">ℹ️ محجوز</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                    
+                    {% else %}
+                    
+                    <div class="alert alert-success text-center">
+                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                        <h4>✨ رائع! لا توجد مستودعات فارغة</h4>
+                        <p class="mb-0">جميع المستودعات تحتوي على مخزون</p>
+                    </div>
+                    
+                    {% endif %}
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// تحديد/إلغاء تحديد الكل
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.warehouse-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+</script>
+
+{% endblock %}

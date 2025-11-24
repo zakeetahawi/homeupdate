@@ -46,6 +46,14 @@ class ProductExcelUploadForm(forms.Form):
         help_text=_('التحديث الذكي ينقل المنتجات للمستودعات الصحيحة تلقائياً ويمنع التكرار')
     )
     
+    auto_delete_empty_warehouses = forms.BooleanField(
+        label=_('🗑️ حذف المستودعات الفارغة تلقائياً'),
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        help_text=_('تفعيل هذا الخيار سيحذف المستودعات التي لا تحتوي على أي مخزون بعد انتهاء عملية الرفع')
+    )
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # تحميل المستودعات النشطة فقط عند إنشاء النموذج

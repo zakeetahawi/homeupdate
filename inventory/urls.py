@@ -19,6 +19,7 @@ from .views_reports import (
 from .views_bulk import (
     product_bulk_upload, bulk_stock_update, download_excel_template
 )
+from . import views_warehouse_cleanup
 from .views_bulk_reports import (
     bulk_upload_log_list, bulk_upload_report,
     latest_bulk_upload_report, bulk_upload_error_detail
@@ -87,6 +88,7 @@ urlpatterns = [
     path('warehouse/<int:pk>/update/', warehouse_update, name='warehouse_update'),
     path('warehouse/<int:pk>/delete/', warehouse_delete, name='warehouse_delete'),
     path('warehouse/<int:pk>/', warehouse_detail, name='warehouse_detail'),
+    path('warehouses/cleanup/', views_warehouse_cleanup.warehouse_cleanup_view, name='warehouse_cleanup'),
 
     # Warehouse Locations
     path('warehouse-locations/', warehouse_location_list, name='warehouse_location_list'),

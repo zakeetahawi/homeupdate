@@ -1,9 +1,11 @@
 """
 منطق الرفع الذكي للمخزون - يمنع التكرارات وينقل للمستودعات الصحيحة
+ويحدث أوامر التقطيع تلقائياً
 """
 
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 from decimal import Decimal
 import logging
 
@@ -156,6 +158,11 @@ def move_product_to_correct_warehouse(product, target_warehouse, new_quantity, u
         result['moved'] = True
         result['from_warehouse'] = current_wh.name
         
+        # تحديث أوامر التقطيع 🔥
+        cutting_update = update_cutting_orders_after_move(product, current_wh, target_warehouse, user)
+        result['cutting_orders_updated'] = cutting_update.get('updated', 0)
+        result['cutting_orders_split'] = cutting_update.get('split', 0)
+        
         return result
     
     # المنتج موجود في عدة مستودعات (تكرار!)
@@ -190,6 +197,19 @@ def move_product_to_correct_warehouse(product, target_warehouse, new_quantity, u
         result['moved'] = True
         result['from_warehouse'] = f"{len(current_stocks)} مستودعات"
         result['total_merged_quantity'] = float(total_quantity)
+        
+        # تحديث أوامر التقطيع لكل المستودعات المدموجة 🔥
+        total_cutting_updated = 0
+        total_cutting_split = 0
+        
+        for stock in current_stocks:
+            old_wh = Warehouse.objects.get(id=stock['warehouse'])
+            cutting_update = update_cutting_orders_after_move(product, old_wh, target_warehouse, user)
+            total_cutting_updated += cutting_update.get('updated', 0)
+            total_cutting_split += cutting_update.get('split', 0)
+        
+        result['cutting_orders_updated'] = total_cutting_updated
+        result['cutting_orders_split'] = total_cutting_split
         
         return result
     
@@ -323,3 +343,267 @@ def clean_start_reset():
         'deleted_transactions': deleted_transactions,
         'deleted_transfers': deleted_transfers
     }
+
+
+def update_cutting_orders_after_move(product, old_warehouse, new_warehouse, user):
+    """
+    تحديث أوامر التقطيع بعد نقل المنتج للمستودع الصحيح
+    
+    Args:
+        product: Product - المنتج المنقول
+        old_warehouse: Warehouse - المستودع القديم
+        new_warehouse: Warehouse - المستودع الجديد
+        user: User - المستخدم
+        
+    Returns:
+        dict - إحصائيات التحديث
+    """
+    try:
+        from cutting.models import CuttingOrder, CuttingOrderItem
+        
+        # أوامر التقطيع المتأثرة (غير المكتملة فقط)
+        affected_orders = CuttingOrder.objects.filter(
+            items__order_item__product=product,
+            status__in=['pending', 'in_progress'],
+            warehouse=old_warehouse
+        ).distinct()
+        
+        if not affected_orders.exists():
+            return {
+                'updated': 0,
+                'split': 0,
+                'total_affected': 0,
+                'message': 'لا توجد أوامر تقطيع متأثرة'
+            }
+        
+        updated_count = 0
+        split_count = 0
+        
+        logger.info(f"🔍 فحص {affected_orders.count()} أمر تقطيع متأثر...")
+        
+        for cutting_order in affected_orders:
+            # فحص: هل كل المنتجات في الأمر يجب أن تكون في المستودع الجديد؟
+            all_items_should_be_in_new_warehouse = True
+            
+            for item in cutting_order.items.all():
+                item_product = item.order_item.product
+                
+                # إذا كان المنتج هو المنتج المنقول → نعم
+                if item_product.id == product.id:
+                    continue
+                
+                # إذا كان منتج آخر، نفحص مستودعه الحالي
+                from .models import StockTransaction
+                latest_stock = StockTransaction.objects.filter(
+                    product=item_product
+                ).values('warehouse').annotate(
+                    total=Sum('quantity')
+                ).filter(total__gt=0).first()
+                
+                if latest_stock and latest_stock['warehouse'] != new_warehouse.id:
+                    all_items_should_be_in_new_warehouse = False
+                    break
+            
+            if all_items_should_be_in_new_warehouse:
+                # حالة بسيطة: نقل الأمر بالكامل للمستودع الجديد
+                cutting_order.warehouse = new_warehouse
+                cutting_order.notes = (cutting_order.notes or '') + \
+                    f"\n📦 [تحديث تلقائي] تم تحديث المستودع من '{old_warehouse.name}' إلى '{new_warehouse.name}' - {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+                cutting_order.save()
+                updated_count += 1
+                
+                logger.info(f"✅ تحديث أمر تقطيع {cutting_order.cutting_code}: {old_warehouse.name} → {new_warehouse.name}")
+            else:
+                # حالة معقدة: تقسيم الأمر
+                new_order = split_cutting_order(cutting_order, product, new_warehouse, user)
+                split_count += 1
+                
+                logger.info(f"🔀 تقسيم أمر تقطيع {cutting_order.cutting_code} → {new_order.cutting_code}")
+        
+        result = {
+            'updated': updated_count,
+            'split': split_count,
+            'total_affected': affected_orders.count(),
+            'message': f'تم تحديث {updated_count} أمر، تقسيم {split_count} أمر'
+        }
+        
+        # إرسال إشعار إذا تم التحديث 🔔
+        if updated_count > 0 or split_count > 0:
+            try:
+                from notifications.models import Notification
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                
+                notification_msg = f"تم تحديث {updated_count + split_count} أمر تقطيع بعد نقل '{product.name}' من '{old_warehouse.name}' إلى '{new_warehouse.name}'"
+                
+                notification = Notification.objects.create(
+                    title='تحديث أوامر التقطيع تلقائياً',
+                    message=notification_msg,
+                    notification_type='cutting_order_created',  # استخدام نوع موجود
+                    priority='normal',
+                    created_by=user
+                )
+                
+                # إضافة visibility للمستخدمين المعنيين (cutting staff + admins)
+                cutting_users = User.objects.filter(
+                    groups__name__in=['Cutting', 'Admin', 'Manager']
+                ).distinct()
+                
+                notification.visible_to.set(cutting_users)
+                
+                logger.info(f"✅ تم إرسال إشعار لـ {cutting_users.count()} مستخدم")
+            except Exception as e:
+                logger.warning(f"⚠️ فشل إرسال الإشعار: {e}")
+        
+        logger.info(f"📊 نتيجة تحديث أوامر التقطيع: {result}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ خطأ في تحديث أوامر التقطيع: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'updated': 0,
+            'split': 0,
+            'total_affected': 0,
+            'error': str(e)
+        }
+
+
+def split_cutting_order(original_order, moved_product, new_warehouse, user):
+    """
+    تقسيم أمر تقطيع عند نقل منتج لمستودع مختلف
+    
+    Args:
+        original_order: CuttingOrder - الأمر الأصلي
+        moved_product: Product - المنتج المنقول
+        new_warehouse: Warehouse - المستودع الجديد
+        user: User - المستخدم
+        
+    Returns:
+        CuttingOrder - الأمر الجديد
+    """
+    from cutting.models import CuttingOrder, CuttingOrderItem
+    import uuid
+    
+    # إنشاء كود فريد للأمر الجديد
+    new_code = f"{original_order.cutting_code}-S{uuid.uuid4().hex[:4].upper()}"
+    
+    # إنشاء أمر جديد للمستودع الجديد
+    new_order = CuttingOrder.objects.create(
+        cutting_code=new_code,
+        order=original_order.order,
+        warehouse=new_warehouse,
+        status='pending',
+        created_by=user,
+        assigned_to=original_order.assigned_to,
+        notes=f"🔀 منقول من أمر {original_order.cutting_code} بعد نقل منتج '{moved_product.name}' للمستودع '{new_warehouse.name}'"
+    )
+    
+    # نقل العناصر المتعلقة بالمنتج المنقول
+    items_to_move = original_order.items.filter(order_item__product=moved_product)
+    
+    moved_items_count = 0
+    for item in items_to_move:
+        # إنشاء نسخة في الأمر الجديد
+        CuttingOrderItem.objects.create(
+            cutting_order=new_order,
+            order_item=item.order_item,
+            status=item.status,
+            cutter_name=item.cutter_name,
+            permit_number=item.permit_number,
+            receiver_name=item.receiver_name,
+            notes=item.notes
+        )
+        
+        # حذف من الأمر القديم
+        item.delete()
+        moved_items_count += 1
+    
+    # تحديث ملاحظات الأمر القديم
+    original_order.notes = (original_order.notes or '') + \
+        f"\n🔀 [تقسيم تلقائي] تم نقل {moved_items_count} عنصر لأمر جديد {new_order.cutting_code} - {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+    original_order.save()
+    
+    logger.info(f"🔀 تقسيم ناجح: {original_order.cutting_code} → {new_order.cutting_code} ({moved_items_count} عنصر)")
+    
+    return new_order
+
+
+def delete_empty_warehouses(user):
+    """
+    حذف المستودعات الفارغة التي لا تحتوي على مخزون ولا أوامر نشطة
+    
+    Args:
+        user: User - المستخدم الذي يقوم بالحذف
+        
+    Returns:
+        dict - إحصائيات الحذف
+    """
+    from .models import Warehouse, StockTransaction
+    from django.db.models import Sum
+    from cutting.models import CuttingOrder
+    
+    try:
+        logger.info("🔍 البحث عن المستودعات الفارغة...")
+        
+        # البحث عن المستودعات الفارغة
+        empty_warehouses = []
+        
+        for warehouse in Warehouse.objects.all():
+            # حساب المخزون الحالي
+            total_stock = StockTransaction.objects.filter(
+                warehouse=warehouse
+            ).aggregate(total=Sum('quantity'))['total'] or 0
+            
+            # عد أوامر التقطيع النشطة
+            active_cutting = CuttingOrder.objects.filter(
+                warehouse=warehouse,
+                status__in=['pending', 'in_progress']
+            ).count()
+            
+            # إذا كان فارغاً ولا يوجد له أوامر تقطيع نشطة
+            if total_stock == 0 and active_cutting == 0:
+                # تأكد أنه ليس مستودع أقمشة رسمي
+                if not warehouse.is_official_fabric_warehouse:
+                    empty_warehouses.append({
+                        'warehouse': warehouse,
+                        'name': warehouse.name,
+                        'last_activity': warehouse.updated_at
+                    })
+        
+        if not empty_warehouses:
+            logger.info("✅ لا توجد مستودعات فارغة للحذف")
+            return {
+                'deleted': 0,
+                'warehouses': [],
+                'message': 'لا توجد مستودعات فارغة'
+            }
+        
+        # حذف المستودعات الفارغة
+        deleted_names = []
+        for item in empty_warehouses:
+            warehouse = item['warehouse']
+            deleted_names.append(warehouse.name)
+            
+            logger.warning(f"🗑️ حذف مستودع فارغ: {warehouse.name}")
+            warehouse.delete()
+        
+        result = {
+            'deleted': len(deleted_names),
+            'warehouses': deleted_names,
+            'message': f'تم حذف {len(deleted_names)} مستودع فارغ'
+        }
+        
+        logger.info(f"✅ {result['message']}: {', '.join(deleted_names)}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ خطأ في حذف المستودعات الفارغة: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'deleted': 0,
+            'warehouses': [],
+            'error': str(e)
+        }

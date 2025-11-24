@@ -9,8 +9,11 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">إضافة مستودع جديد</h5>
+                    <a href="{% url 'inventory:warehouse_cleanup' %}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-broom"></i> تنظيف المستودعات الفارغة
+                    </a>
                 </div>
                 <div class="card-body">
                     <form method="post" action="{% url 'inventory:warehouse_create' %}">
@@ -92,6 +95,9 @@
                         {% endif %}
                     </h4>
                     <div class="data-table-actions">
+                        <a href="/inventory/warehouses/cleanup/" class="btn btn-warning me-2" title="تنظيف المستودعات الفارغة">
+                            <i class="fas fa-broom"></i> تنظيف المستودعات
+                        </a>
                         <div class="btn-group me-2" role="group">
                             <button type="button" class="btn btn-outline-secondary active" data-filter="all">الكل</button>
                             <button type="button" class="btn btn-outline-success" data-filter="active">نشط</button>
