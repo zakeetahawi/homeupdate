@@ -1786,8 +1786,8 @@ def wizard_edit_options(request, order_pk):
 @login_required
 def wizard_edit_type(request, order_pk):
     """
-    تعديل نوع الطلب مباشرة بدون مسودة
-    Edit order type directly without draft
+    تعديل نوع الطلب والخدمة - يستخدم أنواع الخدمات من نظام التخصيص
+    Edit order type and service - uses service types from customization system
     """
     order = get_object_or_404(Order, pk=order_pk)
     
@@ -1797,48 +1797,44 @@ def wizard_edit_type(request, order_pk):
             messages.error(request, 'ليس لديك صلاحية لتعديل هذا الطلب')
             return redirect('orders:order_detail_by_number', order_number=order.order_number)
     
+    # جلب أنواع الخدمات من نظام التخصيص
+    from .wizard_customization_models import WizardFieldOption
+    service_types = WizardFieldOption.get_active_options('service_type')
+    
     if request.method == 'POST':
         old_type = order.selected_types[0] if order.selected_types else None
         new_type = request.POST.get('selected_type')
         
-        # خريطة عرض الأنواع
-        type_display_map = {
-            'installation': 'تركيب ستائر',
-            'tailoring': 'تفصيل ستائر',
-            'delivery': 'تسليم',
-            'washing': 'غسيل',
-            'accessory': 'إكسسوارات فقط',
-        }
-        
         if new_type and new_type != old_type:
-            # تحديث النوع
+            # الحصول على اسم النوع من نظام التخصيص
+            old_option = WizardFieldOption.objects.filter(
+                field_type='service_type',
+                value=old_type,
+                is_active=True
+            ).first()
+            
+            new_option = WizardFieldOption.objects.filter(
+                field_type='service_type',
+                value=new_type,
+                is_active=True
+            ).first()
+            
+            old_display = old_option.display_name if old_option else old_type
+            new_display = new_option.display_name if new_option else new_type
+            
+            # تحديث النوع والخدمة
             order.selected_types = [new_type]
-            order.save(update_fields=['selected_types'])
+            order.service_types = [new_type]  # تحديث نوع الخدمة أيضاً
+            order.save(update_fields=['selected_types', 'service_types'])
             
-            old_display = type_display_map.get(old_type, old_type)
-            new_display = type_display_map.get(new_type, new_type)
-            
-            logger.info(f"Order type changed: {order.order_number} from {old_type} to {new_type}")
-            messages.success(request, f'تم تغيير نوع الطلب من "{old_display}" إلى "{new_display}" بنجاح')
+            logger.info(f"Order type and service changed: {order.order_number} from {old_type} to {new_type}")
+            messages.success(request, f'تم تغيير نوع الطلب والخدمة من "{old_display}" إلى "{new_display}" بنجاح')
             
             return redirect('orders:order_detail_by_number', order_number=order.order_number)
     
-    # عرض نموذج تعديل النوع
-    from .wizard_forms import Step2OrderTypeForm
-    
-    # إنشاء مسودة مؤقتة لاستخدام النموذج
-    temp_draft = DraftOrder(
-        customer=order.customer,
-        selected_type=order.selected_types[0] if order.selected_types else None,
-        related_inspection=order.related_inspection,
-        related_inspection_type=order.related_inspection_type,
-    )
-    
-    form = Step2OrderTypeForm(instance=temp_draft, customer=order.customer)
-    
     context = {
         'order': order,
-        'form': form,
+        'service_types': service_types,
     }
     
     return render(request, 'orders/wizard/edit_type.html', context)

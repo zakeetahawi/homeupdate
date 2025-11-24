@@ -159,57 +159,38 @@
             <h4 style="margin-bottom: 20px; color: #333;">اختر النوع الجديد:</h4>
             
             <div class="type-options">
+                {% for service_type in service_types %}
                 <div class="type-option">
-                    <input type="radio" name="selected_type" value="installation" id="type_installation"
-                           {% if order.selected_types.0 == 'installation' %}checked{% endif %}>
-                    <label for="type_installation">
-                        <span class="type-icon"><i class="fas fa-tools"></i></span>
-                        تركيب ستائر
+                    <input type="radio" name="selected_type" value="{{ service_type.value }}" 
+                           id="type_{{ service_type.value }}"
+                           {% if order.selected_types.0 == service_type.value %}checked{% endif %}>
+                    <label for="type_{{ service_type.value }}">
+                        <span class="type-icon">
+                            {% if service_type.value == 'installation' %}
+                                <i class="fas fa-tools"></i>
+                            {% elif service_type.value == 'tailoring' %}
+                                <i class="fas fa-cut"></i>
+                            {% elif service_type.value == 'products' %}
+                                <i class="fas fa-box"></i>
+                            {% elif service_type.value == 'accessory' %}
+                                <i class="fas fa-tags"></i>
+                            {% elif service_type.value == 'inspection' %}
+                                <i class="fas fa-search"></i>
+                            {% else %}
+                                <i class="fas fa-circle"></i>
+                            {% endif %}
+                        </span>
+                        {{ service_type.display_name }}
                     </label>
                 </div>
-
-                <div class="type-option">
-                    <input type="radio" name="selected_type" value="tailoring" id="type_tailoring"
-                           {% if order.selected_types.0 == 'tailoring' %}checked{% endif %}>
-                    <label for="type_tailoring">
-                        <span class="type-icon"><i class="fas fa-cut"></i></span>
-                        تفصيل ستائر
-                    </label>
-                </div>
-
-                <div class="type-option">
-                    <input type="radio" name="selected_type" value="delivery" id="type_delivery"
-                           {% if order.selected_types.0 == 'delivery' %}checked{% endif %}>
-                    <label for="type_delivery">
-                        <span class="type-icon"><i class="fas fa-truck"></i></span>
-                        تسليم
-                    </label>
-                </div>
-
-                <div class="type-option">
-                    <input type="radio" name="selected_type" value="washing" id="type_washing"
-                           {% if order.selected_types.0 == 'washing' %}checked{% endif %}>
-                    <label for="type_washing">
-                        <span class="type-icon"><i class="fas fa-tint"></i></span>
-                        غسيل
-                    </label>
-                </div>
-
-                <div class="type-option">
-                    <input type="radio" name="selected_type" value="accessory" id="type_accessory"
-                           {% if order.selected_types.0 == 'accessory' %}checked{% endif %}>
-                    <label for="type_accessory">
-                        <span class="type-icon"><i class="fas fa-tags"></i></span>
-                        إكسسوارات فقط
-                    </label>
-                </div>
+                {% endfor %}
             </div>
 
             <div class="form-actions">
                 <button type="submit" class="btn-save">
                     <i class="fas fa-save"></i> حفظ التعديلات
                 </button>
-                <a href="{% url 'orders:wizard_edit_options' order.pk %}" class="btn-cancel">
+                <a href="{% url 'orders:order_detail_by_number' order.order_number %}" class="btn-cancel">
                     <i class="fas fa-times"></i> إلغاء
                 </a>
             </div>
