@@ -90,6 +90,11 @@ def smart_update_product(product_data, warehouse, user, upload_mode):
         unit=product_data.get('unit', 'piece')
     )
     
+    # إضافة الكمية الأولية للمنتج الجديد
+    quantity = product_data.get('quantity', 0)
+    if quantity > 0 and warehouse:
+        add_stock_transaction(product, warehouse, quantity, user, 'إنشاء من Excel')
+    
     result['action'] = 'created'
     result['product'] = product
     result['message'] = 'تم الإنشاء'

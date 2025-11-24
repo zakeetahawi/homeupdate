@@ -171,9 +171,8 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
                         if 'cutting_orders_split' in result:
                             stats['cutting_split'] += result['cutting_orders_split']
                         
-                        # إضافة الكمية إذا كانت موجودة (فقط إذا لم يتم النقل)
-                        if quantity > 0 and result['product'] and target_wh and result['action'] != 'moved':
-                            add_stock_transaction(result['product'], target_wh, quantity, user, 'رفع من Excel')
+                        # ملاحظة: دالة smart_update_product تتعامل مع إضافة الكميات داخلياً
+                        # لا حاجة لإضافة الكمية هنا لتجنب التكرار
                     
                     except Exception as e:
                         logger.error(f"خطأ صف {idx}: {e}")
