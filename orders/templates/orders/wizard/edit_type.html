@@ -59,6 +59,9 @@
         border-radius: 10px;
         cursor: pointer;
         transition: all 0.3s;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        -webkit-user-select: none;
     }
     
     .type-option:hover {
@@ -66,11 +69,17 @@
         background: #f8f9ff;
     }
     
+    .type-option:active {
+        transform: scale(0.98);
+        background: #f0f2ff;
+    }
+    
     .type-option input[type="radio"] {
         margin-left: 12px;
         width: 20px;
         height: 20px;
         cursor: pointer;
+        pointer-events: none; /* منع التداخل مع click events */
     }
     
     .type-option label {
@@ -80,11 +89,17 @@
         display: flex;
         align-items: center;
         font-size: 16px;
+        pointer-events: none; /* منع التداخل مع click events */
     }
     
     .type-option input[type="radio"]:checked + label {
         color: #667eea;
         font-weight: 600;
+    }
+    
+    .type-option.selected {
+        border-color: #667eea;
+        background: #f8f9ff;
     }
     
     .type-icon {
@@ -110,11 +125,17 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
     }
     
     .btn-save:hover {
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-save:active {
+        transform: translateY(0);
     }
     
     .btn-cancel {
@@ -129,11 +150,90 @@
         transition: all 0.3s;
         text-decoration: none;
         display: inline-block;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
     }
     
     .btn-cancel:hover {
         background: #5a6268;
         color: white;
+    }
+    
+    .btn-cancel:active {
+        transform: scale(0.98);
+    }
+    
+    /* تحسينات الموبايل */
+    @media (max-width: 768px) {
+        .edit-type-container {
+            margin: 20px auto;
+            padding: 15px;
+        }
+        
+        .order-header {
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .order-header h2 {
+            font-size: 18px;
+        }
+        
+        .form-card {
+            padding: 20px;
+        }
+        
+        .type-option {
+            padding: 18px 15px;
+            min-height: 60px;
+        }
+        
+        .type-option input[type="radio"] {
+            width: 24px;
+            height: 24px;
+            margin-left: 15px;
+        }
+        
+        .type-option label {
+            font-size: 16px;
+        }
+        
+        .type-icon {
+            font-size: 22px;
+            margin-left: 12px;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .btn-save,
+        .btn-cancel {
+            width: 100%;
+            padding: 16px 30px;
+            font-size: 16px !important;
+            min-height: 52px;
+        }
+        
+        .current-type {
+            font-size: 14px;
+            padding: 12px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .edit-type-container {
+            padding: 10px;
+        }
+        
+        .form-card {
+            padding: 15px;
+        }
+        
+        .type-option {
+            padding: 16px 12px;
+        }
     }
 </style>
 {% endblock %}
@@ -205,15 +305,44 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('editTypeForm');
     const typeOptions = document.querySelectorAll('.type-option');
     
-    // تفعيل النقر على الـ div بالكامل
+    // تحسين اللمس على الموبايل - استخدام touchend بدلاً من click
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
     typeOptions.forEach(option => {
-        option.addEventListener('click', function(e) {
-            if (e.target.tagName !== 'INPUT') {
-                const radio = this.querySelector('input[type="radio"]');
+        // منع السلوك الافتراضي للنقر المتعدد
+        option.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+        
+        const eventType = isTouchDevice ? 'touchend' : 'click';
+        
+        option.addEventListener(eventType, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // تفعيل الراديو بوتون
+            const radio = this.querySelector('input[type="radio"]');
+            if (radio && !radio.checked) {
                 radio.checked = true;
+                
+                // إزالة التحديد من باقي الخيارات
+                typeOptions.forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                
+                // تأثير بصري للمسة
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
             }
-        });
+        }, { passive: false });
     });
+    
+    // تحديد الخيار المفعّل عند التحميل
+    const checkedRadio = document.querySelector('input[name="selected_type"]:checked');
+    if (checkedRadio) {
+        checkedRadio.closest('.type-option').classList.add('selected');
+    }
     
     // تأكيد عند التغيير
     form.addEventListener('submit', function(e) {

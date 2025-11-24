@@ -123,6 +123,126 @@
         border: none;
         color: white;
     }
+    
+    /* تحسينات الهواتف المحمولة للويزارد */
+    @media (max-width: 768px) {
+        .wizard-container {
+            padding: 0 10px;
+        }
+        
+        .wizard-steps {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 10px;
+        }
+        
+        .wizard-step {
+            min-width: 80px;
+        }
+        
+        .wizard-step-number {
+            width: 36px;
+            height: 36px;
+            font-size: 14px;
+        }
+        
+        .wizard-step-title {
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+        
+        .wizard-card-header {
+            padding: 15px;
+        }
+        
+        .wizard-card-header h4 {
+            font-size: 16px;
+        }
+        
+        .wizard-card-body {
+            padding: 15px;
+        }
+        
+        .wizard-actions {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn-wizard {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 16px !important;
+            min-height: 48px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        /* منع التكبير المزدوج على الحقول */
+        .form-control,
+        .form-select,
+        select,
+        input,
+        textarea {
+            font-size: 16px !important;
+            min-height: 48px;
+            padding: 12px 15px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        /* تحسين Select2 للموبايل */
+        .select2-container .select2-selection--single {
+            height: 48px !important;
+            font-size: 16px !important;
+        }
+        
+        .select2-container .select2-selection--single .select2-selection__rendered {
+            line-height: 46px !important;
+            font-size: 16px !important;
+        }
+        
+        .select2-container .select2-selection--single .select2-selection__arrow {
+            height: 46px !important;
+        }
+        
+        /* تحسين الـ Labels */
+        .form-label {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        /* منع إخفاء العناصر عند اللمس */
+        * {
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        /* تحسين الصفوف */
+        .row {
+            margin-left: -8px;
+            margin-right: -8px;
+        }
+        
+        .col,
+        [class*="col-"] {
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .wizard-step {
+            min-width: 60px;
+        }
+        
+        .wizard-step-title {
+            font-size: 0.65rem;
+        }
+        
+        .wizard-card-body {
+            padding: 12px;
+        }
+    }
 </style>
 {% endblock %}
 

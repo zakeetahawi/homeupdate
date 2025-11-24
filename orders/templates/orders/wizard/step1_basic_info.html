@@ -21,13 +21,21 @@
     
     <div class="row">
         <div class="col-md-6">
-            <!-- Customer -->
+            <!-- Customer Search with Select2 -->
             <div class="mb-4">
-                <label for="{{ form.customer.id_for_label }}" class="form-label fw-bold">
+                <label for="customer_search_select" class="form-label fw-bold">
                     <i class="fas fa-user me-2"></i>العميل
                     <span class="text-danger">*</span>
                 </label>
+                
+                <!-- حقل البحث بـ Select2 -->
+                <select id="customer_search_select" class="form-select" style="width: 100%;">
+                    <option value="">-- ابحث عن العميل --</option>
+                </select>
+                
+                <!-- الحقل المخفي للقيمة -->
                 {{ form.customer }}
+                
                 {% if form.customer.errors %}
                     <div class="text-danger mt-1">
                         {{ form.customer.errors }}
@@ -35,7 +43,7 @@
                 {% endif %}
                 <div class="form-text">
                     <i class="fas fa-info-circle me-1"></i>
-                    اختر العميل من القائمة
+                    اكتب اسم العميل أو رقم الهاتف للبحث (حرفين على الأقل)
                 </div>
             </div>
             
@@ -124,26 +132,329 @@
 {% block extra_js %}
 {{ block.super }}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<style>
+/* تحسينات Select2 للعملاء */
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-container .select2-selection--single {
+    height: 48px !important;
+    font-size: 16px !important;
+    border: 2px solid #e9ecef !important;
+    border-radius: 8px !important;
+    transition: all 0.3s ease;
+}
+
+.select2-container--open .select2-selection--single {
+    border-color: #198754 !important;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25) !important;
+}
+
+.select2-container .select2-selection--single .select2-selection__rendered {
+    line-height: 44px !important;
+    padding-right: 15px !important;
+    padding-left: 40px !important;
+    font-size: 16px !important;
+    color: #212529;
+}
+
+.select2-container .select2-selection--single .select2-selection__arrow {
+    height: 44px !important;
+    left: 10px !important;
+}
+
+.select2-container .select2-selection--single .select2-selection__placeholder {
+    color: #6c757d;
+}
+
+/* نتائج البحث */
+.select2-dropdown {
+    border: 2px solid #198754 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    font-size: 16px !important;
+}
+
+.select2-results__option {
+    padding: 12px 15px !important;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.select2-results__option--highlighted {
+    background-color: #f0fdf4 !important;
+    color: #198754 !important;
+}
+
+.select2-results__option--selected {
+    background-color: #dcfce7 !important;
+    color: #198754 !important;
+}
+
+.select2-results__option .fw-bold {
+    font-weight: 600 !important;
+    color: #198754;
+    font-size: 15px;
+}
+
+.select2-results__option .text-muted {
+    color: #6c757d !important;
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+/* رسالة البحث والتحميل */
+.select2-search--dropdown .select2-search__field {
+    font-size: 16px !important;
+    padding: 10px 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+}
+
+.select2-search--dropdown .select2-search__field:focus {
+    border-color: #198754;
+    outline: none;
+}
+
+.select2-results__message {
+    padding: 15px;
+    text-align: center;
+    color: #6c757d;
+}
+
+/* إخفاء select الأصلي */
+#{{ form.customer.id_for_label }} {
+    display: none !important;
+}
+
+/* تحسينات للقوائم المنسدلة العادية (الفرع، البائع، الحالة) */
+.form-select {
+    font-size: 16px !important;
+    min-height: 48px;
+    padding: 12px 40px 12px 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: left 12px center;
+    background-size: 16px;
+    transition: all 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.form-select:focus {
+    border-color: #198754;
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+/* تحسينات الموبايل */
+@media (max-width: 768px) {
+    .select2-container .select2-selection--single {
+        min-height: 52px !important;
+    }
+    
+    .select2-container .select2-selection--single .select2-selection__rendered {
+        line-height: 48px !important;
+    }
+    
+    .select2-dropdown {
+        font-size: 16px !important;
+    }
+    
+    .select2-results__option {
+        min-height: 60px;
+        padding: 14px 15px !important;
+    }
+    
+    .select2-search--dropdown .select2-search__field {
+        font-size: 16px !important;
+        min-height: 48px;
+    }
+    
+    /* القوائم العادية على الموبايل */
+    .form-select {
+        min-height: 52px !important;
+        font-size: 16px !important;
+    }
+}
+</style>
 
 <script>
 $(document).ready(function() {
-    // تفعيل Select2 للعملاء
-    $('#{{ form.customer.id_for_label }}').select2({
-        placeholder: 'ابحث عن العميل...',
+    console.log('تهيئة Select2 للبحث عن العملاء في الويزارد...');
+    
+    // تهيئة Select2 للبحث عن العملاء مع AJAX
+    const searchSelect = $('#customer_search_select');
+    
+    searchSelect.select2({
+        theme: 'bootstrap-5',
+        language: 'ar',
+        placeholder: 'ابحث عن العميل بالاسم أو الهاتف...',
         allowClear: true,
-        dir: 'rtl'
+        minimumInputLength: 2,
+        dir: 'rtl',
+        ajax: {
+            url: '/customers/api/customers/',
+            dataType: 'json',
+            delay: 300,
+            data: function (params) {
+                return {
+                    q: params.term,
+                    page: params.page || 1
+                };
+            },
+            processResults: function (data, params) {
+                console.log('نتائج البحث:', data);
+                
+                if (data.error || !data.results) {
+                    return { results: [] };
+                }
+                
+                return {
+                    results: data.results.map(function(customer) {
+                        return {
+                            id: customer.id,
+                            text: customer.name + ' - ' + customer.phone,
+                            customer: customer
+                        };
+                    }),
+                    pagination: {
+                        more: data.pagination && data.pagination.more
+                    }
+                };
+            },
+            cache: true
+        },
+        templateResult: function(customer) {
+            if (customer.loading) {
+                return $('<div><i class="fas fa-spinner fa-spin me-2"></i>جاري البحث...</div>');
+            }
+            
+            if (!customer.customer) {
+                return customer.text;
+            }
+            
+            const c = customer.customer;
+            return $(`
+                <div class="customer-result">
+                    <div class="fw-bold">
+                        <i class="fas fa-user me-2"></i>${c.name}
+                    </div>
+                    <div class="text-muted small">
+                        <i class="fas fa-phone me-2"></i>${c.phone}
+                        ${c.email ? ' - <i class="fas fa-envelope me-1"></i>' + c.email : ''}
+                    </div>
+                </div>
+            `);
+        },
+        templateSelection: function(customer) {
+            if (!customer.customer) {
+                return customer.text || 'ابحث عن العميل...';
+            }
+            return customer.customer.name + ' - ' + customer.customer.phone;
+        },
+        language: {
+            inputTooShort: function () {
+                return 'اكتب حرفين على الأقل للبحث';
+            },
+            searching: function () {
+                return 'جاري البحث...';
+            },
+            noResults: function () {
+                return 'لا توجد نتائج';
+            },
+            errorLoading: function () {
+                return 'حدث خطأ في تحميل النتائج';
+            }
+        }
+    });
+
+    // عند اختيار عميل
+    searchSelect.on('select2:select', function (e) {
+        const data = e.params.data;
+        console.log('✅ تم اختيار العميل:', data);
+
+        const customerId = data.id || (data.customer && data.customer.id);
+        const customerName = data.text || (data.customer && (data.customer.name + ' - ' + data.customer.phone));
+
+        if (customerId) {
+            const customerField = $('#{{ form.customer.id_for_label }}');
+            
+            // التحقق من وجود الخيار في القائمة
+            const optionExists = customerField.find('option[value="' + customerId + '"]').length > 0;
+            
+            if (!optionExists) {
+                // إضافة الخيار الجديد
+                const newOption = new Option(customerName, customerId, true, true);
+                customerField.append(newOption);
+                console.log('✅ تم إضافة خيار جديد:', customerId);
+            }
+            
+            // تعيين القيمة
+            customerField.val(customerId);
+            customerField.removeClass('is-invalid').addClass('is-valid');
+            customerField.trigger('change');
+            
+            console.log('✅ تم تعيين العميل في الحقل المخفي:', customerField.val());
+        }
+    });
+
+    // عند إزالة اختيار العميل
+    searchSelect.on('select2:clear', function (e) {
+        console.log('⚠️ تم إزالة اختيار العميل');
+        
+        const customerField = $('#{{ form.customer.id_for_label }}');
+        customerField.val('');
+        customerField.removeClass('is-valid').addClass('is-invalid');
+        customerField.trigger('change');
     });
     
-    // تفعيل Select2 للحقول الأخرى
-    $('#{{ form.branch.id_for_label }}, #{{ form.salesperson.id_for_label }}').select2({
-        dir: 'rtl'
-    });
+    // استعادة القيمة المحددة مسبقاً (في حالة التعديل)
+    const customerField = $('#{{ form.customer.id_for_label }}');
+    const selectedValue = customerField.val();
+    
+    if (selectedValue) {
+        const selectedText = customerField.find('option:selected').text();
+        const newOption = new Option(selectedText, selectedValue, true, true);
+        searchSelect.append(newOption).trigger('change');
+        console.log('✅ تم استعادة القيمة المحددة مسبقاً:', selectedValue);
+    }
+    
+    // الفرع والبائع: قوائم منسدلة عادية بدون Select2 (للموبايل والديسكتوب)
+    const branchField = document.getElementById('{{ form.branch.id_for_label }}');
+    const salespersonField = document.getElementById('{{ form.salesperson.id_for_label }}');
+    
+    if (branchField) {
+        branchField.classList.add('form-select');
+    }
+    
+    if (salespersonField) {
+        salespersonField.classList.add('form-select');
+    }
+    
+    console.log('✅ تم تطبيق القوائم المنسدلة العادية للفرع والبائع');
 });
 
 // معالجة إرسال النموذج
 document.getElementById('step1-form').addEventListener('submit', function(e) {
     e.preventDefault();
+    
+    // التحقق من اختيار العميل
+    const customerField = document.getElementById('{{ form.customer.id_for_label }}');
+    if (!customerField || !customerField.value) {
+        alert('يرجى اختيار العميل');
+        $('#customer_search_select').select2('open');
+        return;
+    }
+    
     submitWizardStep(this);
 });
 </script>
