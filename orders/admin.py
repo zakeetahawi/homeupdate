@@ -14,9 +14,11 @@ from .models import (
 from django import forms
 import json
 
-# استيراد إدارة الويزارد والإعدادات
+# استيراد إدارة الويزارد
 from . import wizard_admin
-from . import admin_settings
+
+# استيراد إدارة تخصيص الويزارد
+from . import wizard_customization_admin
 
 
 class YearFilter(admin.SimpleListFilter):

@@ -37,6 +37,12 @@ urlpatterns = [
     path('wizard/remove-contract-file/', wizard_views.wizard_remove_contract_file, name='wizard_remove_contract_file'),
     path('wizard/edit-order/<int:order_pk>/', wizard_views.wizard_edit_order, name='wizard_edit_order'),
     
+    # Wizard Edit Options - خيارات التعديل الذكية
+    path('wizard/edit-options/<int:order_pk>/', wizard_views.wizard_edit_options, name='wizard_edit_options'),
+    path('wizard/edit-type/<int:order_pk>/', wizard_views.wizard_edit_type, name='wizard_edit_type'),
+    path('wizard/edit-items/<int:order_pk>/', wizard_views.wizard_edit_items, name='wizard_edit_items'),
+    path('wizard/edit-contract/<int:order_pk>/', wizard_views.wizard_edit_contract, name='wizard_edit_contract'),
+    
     # عرض العقد الإلكتروني
     path('order/<int:order_id>/contract/view/', wizard_views.view_contract_template, name='view_contract_template'),
 

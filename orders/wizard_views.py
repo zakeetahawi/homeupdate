@@ -624,12 +624,19 @@ def wizard_step_5_contract(request, draft):
             'available_quantity': float(item.quantity - used),
         })
     
+    # الحصول على خيارات طرق التفصيل من نظام التخصيص
+    from .wizard_customization_models import WizardFieldOption
+    tailoring_options = WizardFieldOption.get_active_options('tailoring_type')
+    installation_options = WizardFieldOption.get_active_options('installation_type')
+    
     total_steps = get_total_steps(draft)
     
     context = {
         'draft': draft,
         'curtains': curtains,
         'order_items': items_with_usage,
+        'tailoring_options': tailoring_options,
+        'installation_options': installation_options,
         'current_step': 5,
         'total_steps': total_steps,
         'step_title': 'العقد',
@@ -1741,3 +1748,191 @@ def _create_draft_from_order(order, user):
     order.save(update_fields=['source_draft_id'])
     
     return draft
+
+
+@login_required
+def wizard_edit_options(request, order_pk):
+    """
+    صفحة خيارات التعديل - يختار المستخدم نوع التعديل المطلوب
+    Edit options page - user chooses type of edit needed
+    """
+    order = get_object_or_404(Order, pk=order_pk)
+    
+    # التحقق من الصلاحيات
+    if not request.user.has_perm('orders.change_order'):
+        if order.created_by != request.user:
+            messages.error(request, 'ليس لديك صلاحية لتعديل هذا الطلب')
+            return redirect('orders:order_detail_by_number', order_number=order.order_number)
+    
+    # التحقق من أن الطلب منشأ عبر الويزارد
+    if order.creation_method != 'wizard':
+        messages.warning(request, 'هذا الطلب لم ينشأ عبر الويزارد. سيتم توجيهك للتعديل التقليدي.')
+        return redirect('orders:order_update', pk=order.pk)
+    
+    # التحقق من وجود عقد
+    has_contract = order.selected_types and any(
+        t in ['installation', 'tailoring', 'accessory'] 
+        for t in order.selected_types
+    )
+    
+    context = {
+        'order': order,
+        'has_contract': has_contract,
+    }
+    
+    return render(request, 'orders/wizard/edit_options.html', context)
+
+
+@login_required
+def wizard_edit_type(request, order_pk):
+    """
+    تعديل نوع الطلب مباشرة بدون مسودة
+    Edit order type directly without draft
+    """
+    order = get_object_or_404(Order, pk=order_pk)
+    
+    # التحقق من الصلاحيات
+    if not request.user.has_perm('orders.change_order'):
+        if order.created_by != request.user:
+            messages.error(request, 'ليس لديك صلاحية لتعديل هذا الطلب')
+            return redirect('orders:order_detail_by_number', order_number=order.order_number)
+    
+    if request.method == 'POST':
+        old_type = order.selected_types[0] if order.selected_types else None
+        new_type = request.POST.get('selected_type')
+        
+        # خريطة عرض الأنواع
+        type_display_map = {
+            'installation': 'تركيب ستائر',
+            'tailoring': 'تفصيل ستائر',
+            'delivery': 'تسليم',
+            'washing': 'غسيل',
+            'accessory': 'إكسسوارات فقط',
+        }
+        
+        if new_type and new_type != old_type:
+            # تحديث النوع
+            order.selected_types = [new_type]
+            order.save(update_fields=['selected_types'])
+            
+            old_display = type_display_map.get(old_type, old_type)
+            new_display = type_display_map.get(new_type, new_type)
+            
+            logger.info(f"Order type changed: {order.order_number} from {old_type} to {new_type}")
+            messages.success(request, f'تم تغيير نوع الطلب من "{old_display}" إلى "{new_display}" بنجاح')
+            
+            return redirect('orders:order_detail_by_number', order_number=order.order_number)
+    
+    # عرض نموذج تعديل النوع
+    from .wizard_forms import Step2OrderTypeForm
+    
+    # إنشاء مسودة مؤقتة لاستخدام النموذج
+    temp_draft = DraftOrder(
+        customer=order.customer,
+        selected_type=order.selected_types[0] if order.selected_types else None,
+        related_inspection=order.related_inspection,
+        related_inspection_type=order.related_inspection_type,
+    )
+    
+    form = Step2OrderTypeForm(instance=temp_draft, customer=order.customer)
+    
+    context = {
+        'order': order,
+        'form': form,
+    }
+    
+    return render(request, 'orders/wizard/edit_type.html', context)
+
+
+@login_required
+def wizard_edit_items(request, order_pk):
+    """
+    تعديل عناصر الطلب - فتح الويزارد في الخطوة 3
+    Edit order items - open wizard at step 3
+    """
+    order = get_object_or_404(Order, pk=order_pk)
+    
+    # التحقق من الصلاحيات
+    if not request.user.has_perm('orders.change_order'):
+        if order.created_by != request.user:
+            messages.error(request, 'ليس لديك صلاحية لتعديل هذا الطلب')
+            return redirect('orders:order_detail_by_number', order_number=order.order_number)
+    
+    try:
+        # إنشاء مسودة من الطلب
+        draft = _create_draft_from_order(order, request.user)
+        
+        # تحديد أن المسودة وصلت للخطوة 3
+        draft.mark_step_complete(1)
+        draft.mark_step_complete(2)
+        draft.current_step = 3
+        draft.save()
+        
+        # حفظ معرفات الجلسة
+        request.session['wizard_draft_id'] = draft.pk
+        request.session['editing_order_id'] = order.pk
+        request.session.modified = True
+        
+        logger.info(f"Edit items mode - Order: {order.pk}, Draft: {draft.pk}")
+        
+        # توجيه للخطوة 3
+        messages.info(request, 'يمكنك الآن تعديل عناصر الطلب')
+        return redirect('orders:wizard_step', step=3)
+    
+    except Exception as e:
+        logger.error(f"Error editing items: {e}")
+        messages.error(request, f'حدث خطأ: {str(e)}')
+        return redirect('orders:order_detail_by_number', order_number=order.order_number)
+
+
+@login_required
+def wizard_edit_contract(request, order_pk):
+    """
+    تعديل العقد - فتح الويزارد في الخطوة 5
+    Edit contract - open wizard at step 5
+    """
+    order = get_object_or_404(Order, pk=order_pk)
+    
+    # التحقق من الصلاحيات
+    if not request.user.has_perm('orders.change_order'):
+        if order.created_by != request.user:
+            messages.error(request, 'ليس لديك صلاحية لتعديل هذا الطلب')
+            return redirect('orders:order_detail_by_number', order_number=order.order_number)
+    
+    # التحقق من وجود عقد
+    has_contract = order.selected_types and any(
+        t in ['installation', 'tailoring', 'accessory'] 
+        for t in order.selected_types
+    )
+    
+    if not has_contract:
+        messages.error(request, 'هذا الطلب لا يحتوي على عقد')
+        return redirect('orders:order_detail_by_number', order_number=order.order_number)
+    
+    try:
+        # إنشاء مسودة من الطلب
+        draft = _create_draft_from_order(order, request.user)
+        
+        # تحديد أن المسودة وصلت للخطوة 5
+        draft.mark_step_complete(1)
+        draft.mark_step_complete(2)
+        draft.mark_step_complete(3)
+        draft.mark_step_complete(4)
+        draft.current_step = 5
+        draft.save()
+        
+        # حفظ معرفات الجلسة
+        request.session['wizard_draft_id'] = draft.pk
+        request.session['editing_order_id'] = order.pk
+        request.session.modified = True
+        
+        logger.info(f"Edit contract mode - Order: {order.pk}, Draft: {draft.pk}")
+        
+        # توجيه للخطوة 5
+        messages.info(request, 'يمكنك الآن تعديل تفاصيل العقد')
+        return redirect('orders:wizard_step', step=5)
+    
+    except Exception as e:
+        logger.error(f"Error editing contract: {e}")
+        messages.error(request, f'حدث خطأ: {str(e)}')
+        return redirect('orders:order_detail_by_number', order_number=order.order_number)

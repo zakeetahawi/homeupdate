@@ -23,7 +23,7 @@ from .permissions import (
     order_edit_permission_required,
     order_delete_permission_required
 )
-from accounts.models import Branch, Salesperson, Department, SystemSettings
+from accounts.models import Branch, Salesperson, Department
 from customers.models import Customer
 from inventory.models import Product
 from inspections.models import Inspection
@@ -156,9 +156,8 @@ def order_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Get currency symbol from system settings
-    system_settings = SystemSettings.get_settings()
-    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+    # Get currency symbol
+    currency_symbol = 'ج.م'
 
     # معلومات فلتر السنة
     available_years = Order.objects.dates('order_date', 'year', order='DESC')
@@ -320,9 +319,8 @@ def order_detail(request, pk):
                 created_at__gte=order.created_at
             ).order_by('-created_at')
 
-    # Get currency symbol from system settings
-    system_settings = SystemSettings.get_settings()
-    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+    # Get currency symbol
+    currency_symbol = 'ج.م'
     
     # Get rejection logs if manufacturing order exists
     rejection_logs = []
@@ -934,9 +932,8 @@ def payment_create(request, order_pk):
         initial_data = {'reference_number': order.invoice_number or ''}
         form = PaymentForm(initial=initial_data)
 
-    # Get currency symbol from system settings
-    system_settings = SystemSettings.get_settings()
-    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+    # Get currency symbol
+    currency_symbol = 'ج.م'
 
     context = {
         'form': form,
@@ -1204,9 +1201,8 @@ def order_detail_by_number(request, order_number):
     # Check if there are manual modifications
     has_manual_modifications = order.modification_logs.filter(is_manual_modification=True).exists()
     
-    # Get currency symbol from system settings
-    system_settings = SystemSettings.get_settings()
-    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
+    # Get currency symbol
+    currency_symbol = 'ج.م'
     
     # Get rejection logs if manufacturing order exists
     rejection_logs = []

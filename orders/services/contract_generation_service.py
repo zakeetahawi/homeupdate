@@ -35,10 +35,6 @@ class ContractGenerationService:
         # الحصول على ستائر العقد
         curtains = ContractCurtain.objects.filter(order=self.order).order_by('sequence')
         
-        # الحصول على إعدادات النظام للعملة
-        from accounts.models import SystemSettings
-        system_settings = SystemSettings.get_settings()
-        
         # حساب عدد أيام التشغيل
         working_days = None
         if self.order.expected_delivery_date and self.order.created_at:
@@ -63,7 +59,6 @@ class ContractGenerationService:
             'customer': self.order.customer,
             'curtains': curtains,
             'template': self.template,
-            'settings': system_settings,  # إضافة إعدادات النظام
             'working_days': working_days,  # إضافة عدد أيام التشغيل
             'total_meters': total_meters,  # إجمالي الأمتار
             'MEDIA_URL': settings.MEDIA_URL,  # إضافة MEDIA_URL

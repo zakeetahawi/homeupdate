@@ -192,14 +192,23 @@ class ContractCurtain(models.Model):
         ('tab_top', 'عروة علوية'),
     ]
     
-    INSTALLATION_TYPE_CHOICES = [
-        ('wall_gypsum', 'حائط - جبس'),
-        ('wall_concrete', 'حائط - مسلح'),
-        ('ceiling_gypsum', 'سقف - جبس'),
-        ('ceiling_concrete', 'سقف - مسلح'),
-        ('curtain_box_concrete', 'بيت ستارة مسلح'),
-        ('curtain_box_gypsum', 'بيت ستارة جبس'),
-    ]
+    # ملاحظة: INSTALLATION_TYPE_CHOICES تم نقلها لنظام التخصيص
+    # استخدم WizardFieldOption.get_choices_for_field('installation_type')
+    
+    @classmethod
+    def get_installation_choices(cls):
+        """الحصول على خيارات أنواع التركيب من نظام التخصيص"""
+        try:
+            from .wizard_customization_models import WizardFieldOption
+            return WizardFieldOption.get_choices_for_field('installation_type')
+        except Exception:
+            # القيم الافتراضية في حالة الخطأ
+            return [
+                ('wall_mount', 'تركيب جداري'),
+                ('ceiling_mount', 'تركيب سقفي'),
+                ('curtain_box', 'بيت ستارة'),
+                ('rod_only', 'قضيب فقط'),
+            ]
 
     order = models.ForeignKey(
         'Order',
@@ -240,10 +249,10 @@ class ContractCurtain(models.Model):
     
     # نوع التركيب
     installation_type = models.CharField(
-        max_length=30,
-        choices=INSTALLATION_TYPE_CHOICES,
+        max_length=50,
         blank=True,
-        verbose_name='نوع التركيب'
+        verbose_name='نوع التركيب',
+        help_text='نوع التركيب - يتم جلب الخيارات من نظام التخصيص'
     )
     
     # مقاسات بيت الستارة (بالسنتيمتر - تظهر فقط عند اختيار بيت ستارة)
@@ -530,6 +539,39 @@ class ContractCurtain(models.Model):
 
     def __str__(self):
         return f'{self.room_name} - {self.order.order_number}'
+    
+    def get_installation_type_display(self):
+        """الحصول على اسم نوع التركيب المعروض"""
+        if not self.installation_type:
+            return '-'
+        
+        try:
+            from .wizard_customization_models import WizardFieldOption
+            option = WizardFieldOption.objects.filter(
+                field_type='installation_type',
+                value=self.installation_type,
+                is_active=True
+            ).first()
+            
+            if option:
+                return option.display_name
+        except Exception:
+            pass
+        
+        # القيم الافتراضية في حالة عدم وجود الخيار
+        default_display = {
+            'wall_mount': 'تركيب جداري',
+            'ceiling_mount': 'تركيب سقفي',
+            'curtain_box': 'بيت ستارة',
+            'rod_only': 'قضيب فقط',
+            'wall_gypsum': 'حائط - جبس',
+            'wall_concrete': 'حائط - مسلح',
+            'ceiling_gypsum': 'سقف - جبس',
+            'ceiling_concrete': 'سقف - مسلح',
+            'curtain_box_concrete': 'بيت ستارة مسلح',
+            'curtain_box_gypsum': 'بيت ستارة جبس',
+        }
+        return default_display.get(self.installation_type, self.installation_type)
 
     def clean(self):
         """التحقق من صحة البيانات"""
@@ -568,16 +610,27 @@ class CurtainFabric(models.Model):
         ('additional', 'إضافي'),
     ]
     
-    TAILORING_TYPES = [
-        ('rings', 'حلقات'),
-        ('tape', 'شريط'),
-        ('snap', 'كبس'),
-        ('double_fold', 'كسرة مزدوجة'),
-        ('triple_fold', 'كسرة ثلاثية'),
-        ('pencil_pleat', 'كسرة قلم'),
-        ('eyelet', 'عراوي'),
-        ('tab_top', 'عروة علوية'),
-    ]
+    # ملاحظة: TAILORING_TYPES تم نقلها لنظام التخصيص
+    # استخدم WizardFieldOption.get_choices_for_field('tailoring_type')
+    
+    @classmethod
+    def get_tailoring_choices(cls):
+        """الحصول على خيارات طرق التفصيل من نظام التخصيص"""
+        try:
+            from .wizard_customization_models import WizardFieldOption
+            return WizardFieldOption.get_choices_for_field('tailoring_type')
+        except Exception:
+            # القيم الافتراضية في حالة الخطأ
+            return [
+                ('rings', 'حلقات'),
+                ('tape', 'شريط'),
+                ('snap', 'كبس'),
+                ('double_fold', 'كسرة مزدوجة'),
+                ('triple_fold', 'كسرة ثلاثية'),
+                ('pencil_pleat', 'كسرة قلم'),
+                ('eyelet', 'عراوي'),
+                ('tab_top', 'عروة علوية'),
+            ]
     
     curtain = models.ForeignKey(
         ContractCurtain,
@@ -629,10 +682,10 @@ class CurtainFabric(models.Model):
         verbose_name='عدد الأمتار'
     )
     tailoring_type = models.CharField(
-        max_length=20,
-        choices=TAILORING_TYPES,
+        max_length=50,  # زيادة الطول لدعم القيم المخصصة
         blank=True,
-        verbose_name='نوع التفصيل'
+        verbose_name='نوع التفصيل',
+        help_text='طريقة التفصيل - يتم جلب الخيارات من نظام التخصيص'
     )
     notes = models.TextField(
         blank=True,
@@ -657,6 +710,37 @@ class CurtainFabric(models.Model):
         elif self.draft_order_item:
             return f"{self.get_fabric_type_display()} - {self.draft_order_item.product.name} ({self.meters}م)"
         return f"{self.get_fabric_type_display()} - {self.fabric_name} ({self.meters}م)"
+    
+    def get_tailoring_type_display(self):
+        """الحصول على اسم طريقة التفصيل المعروض"""
+        if not self.tailoring_type:
+            return '-'
+        
+        try:
+            from .wizard_customization_models import WizardFieldOption
+            option = WizardFieldOption.objects.filter(
+                field_type='tailoring_type',
+                value=self.tailoring_type,
+                is_active=True
+            ).first()
+            
+            if option:
+                return option.display_name
+        except Exception:
+            pass
+        
+        # القيم الافتراضية في حالة عدم وجود الخيار
+        default_display = {
+            'rings': 'حلقات',
+            'tape': 'شريط',
+            'snap': 'كبس',
+            'double_fold': 'كسرة مزدوجة',
+            'triple_fold': 'كسرة ثلاثية',
+            'pencil_pleat': 'كسرة قلم',
+            'eyelet': 'عراوي',
+            'tab_top': 'عروة علوية',
+        }
+        return default_display.get(self.tailoring_type, self.tailoring_type)
     
     def clean(self):
         """التحقق من صحة البيانات"""

@@ -212,12 +212,13 @@
                             <label class="form-label fw-bold">نوع التركيب <span class="text-danger">*</span></label>
                             <select id="curtain-installation-type" class="form-select" onchange="toggleCurtainBoxFields()">
                                 <option value="">اختر نوع التركيب</option>
-                                <option value="wall_gypsum">حائط - جبس</option>
-                                <option value="wall_concrete">حائط - مسلح</option>
-                                <option value="ceiling_gypsum">سقف - جبس</option>
-                                <option value="ceiling_concrete">سقف - مسلح</option>
-                                <option value="curtain_box_concrete">بيت ستارة مسلح</option>
-                                <option value="curtain_box_gypsum">بيت ستارة جبس</option>
+                                {% for option in installation_options %}
+                                <option value="{{ option.value }}" 
+                                        data-curtain-box="{{ option.extra_data.requires_curtain_box|default:'false' }}"
+                                        {% if option.is_default %}selected{% endif %}>
+                                    {{ option.display_name }}
+                                </option>
+                                {% endfor %}
                             </select>
                         </div>
                     </div>
@@ -304,14 +305,11 @@
                                     <label class="form-label">طريقة التفصيل</label>
                                     <select id="fabric-tailoring" class="form-select">
                                         <option value="">اختر</option>
-                                        <option value="rings">حلقات</option>
-                                        <option value="tape">شريط</option>
-                                        <option value="snap">كبس</option>
-                                        <option value="double_fold">كسرة مزدوجة</option>
-                                        <option value="triple_fold">كسرة ثلاثية</option>
-                                        <option value="pencil_pleat">كسرة قلم</option>
-                                        <option value="eyelet">عراوي</option>
-                                        <option value="tab_top">عروة علوية</option>
+                                        {% for option in tailoring_options %}
+                                        <option value="{{ option.value }}" {% if option.is_default %}selected{% endif %}>
+                                            {{ option.display_name }}
+                                        </option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                             </div>

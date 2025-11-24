@@ -985,10 +985,17 @@ class Order(models.Model):
     def is_customer_credit(self):
         """التحقق من وجود رصيد للعميل (دفع أكثر من المطلوب)"""
         return self.remaining_amount < 0
+    
     @property
     def is_fully_paid(self):
         """التحقق من سداد الطلب بالكامل"""
         return self.remaining_amount <= 0
+    
+    @property
+    def has_contract(self):
+        """التحقق من وجود عقد في الطلب"""
+        types_list = self.get_selected_types_list()
+        return any(t in ['installation', 'tailoring', 'accessory'] for t in types_list)
 
     @property
     def debt_amount(self):
@@ -2041,8 +2048,8 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='المبلغ')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='cash', verbose_name='طريقة الدفع')
     payment_date = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الدفع')
-    reference_number = models.CharField(max_length=100, blank=True, verbose_name='رقم المرجع')
-    notes = models.TextField(blank=True, verbose_name='ملاحظات')
+    reference_number = models.CharField(max_length=100, blank=True, null=True, verbose_name='رقم المرجع')
+    notes = models.TextField(blank=True, null=True, verbose_name='ملاحظات')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='تم الإنشاء بواسطة')
     class Meta:
         verbose_name = 'دفعة'
@@ -2891,6 +2898,8 @@ from .contract_models import ContractCurtain
 
 # استيراد نماذج الويزارد
 from .wizard_models import DraftOrder, DraftOrderItem
-
-# استيراد إعدادات النظام
-from .models_settings import SystemSettings
+from .wizard_customization_models import (
+    WizardFieldOption, 
+    WizardStepConfiguration, 
+    WizardGlobalSettings
+)
