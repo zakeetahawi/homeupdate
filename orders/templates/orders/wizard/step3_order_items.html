@@ -34,7 +34,7 @@
                     <div class="col-md-3 mb-3">
                         <label class="form-label fw-bold">السعر <span class="text-danger">*</span></label>
                         <input type="number" id="item-price" class="form-control" min="0" step="0.01" 
-                               readonly style="background-color: #e9ecef;">
+                               value="0" readonly style="background-color: #e9ecef;">
                         <small class="text-muted">من النظام</small>
                     </div>
                 </div>
@@ -388,7 +388,8 @@ $(document).ready(function() {
         const data = e.params.data;
         console.log('✅ تم اختيار المنتج:', data);
         
-        if (data.price) {
+        // السماح بالسعر صفر - التحقق من null/undefined فقط
+        if (data.price !== null && data.price !== undefined) {
             $('#item-price').val(data.price);
             console.log('✅ تم تحديث السعر:', data.price);
         }
@@ -455,8 +456,8 @@ function searchByBarcode(barcode) {
                 const option = new Option(product.name, product.id, true, true);
                 $('#product-select').append(option).trigger('change');
                 
-                // تحديث السعر
-                if (product.price) {
+                // تحديث السعر - السماح بصفر
+                if (product.price !== null && product.price !== undefined) {
                     $('#item-price').val(product.price);
                 }
                 
@@ -498,7 +499,8 @@ function addItem() {
     const unitPrice = $('#item-price').val();
     const discountPercentage = $('#item-discount').val();
     
-    if (!productId || !quantity || !unitPrice) {
+    // التحقق من الحقول - السماح بالسعر صفر
+    if (!productId || !quantity || unitPrice === '' || unitPrice === null || unitPrice === undefined) {
         alert('يرجى ملء جميع الحقول المطلوبة');
         return;
     }
@@ -616,7 +618,7 @@ function updateTotals(totals) {
 function clearForm() {
     $('#product-select').val(null).trigger('change');
     $('#item-quantity').val('1');
-    $('#item-price').val('');
+    $('#item-price').val('0');
     $('#item-discount').val('0');
 }
 
@@ -710,8 +712,8 @@ window.addScannedProductToWizard = function(productId, productName, productCode,
         $(productSelect).trigger('change');
     }
     
-    // ملء السعر والكمية والخصم
-    document.getElementById('item-price').value = productPrice;
+    // ملء السعر والكمية والخصم - السماح بصفر
+    document.getElementById('item-price').value = productPrice !== null && productPrice !== undefined ? productPrice : 0;
     document.getElementById('item-quantity').value = quantity;
     document.getElementById('item-discount').value = discount;
     
