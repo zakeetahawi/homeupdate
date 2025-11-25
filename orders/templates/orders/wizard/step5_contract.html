@@ -2,6 +2,25 @@
 {% load static %}
 
 {% block wizard_content %}
+<style>
+/* ضمان عمل التمرير في النافذة المنبثقة */
+#addCurtainModal .modal-dialog-scrollable .modal-body {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+#addCurtainModal .modal-content {
+    max-height: 90vh;
+}
+
+/* تحسين عرض المحتوى في الشاشات الصغيرة */
+@media (max-height: 768px) {
+    #addCurtainModal .modal-dialog-scrollable .modal-body {
+        max-height: calc(100vh - 150px);
+    }
+}
+</style>
+
 <div class="alert alert-info mb-4">
     <i class="fas fa-info-circle me-2"></i>
     أضف تفاصيل الستائر للعقد الإلكتروني.
@@ -178,7 +197,7 @@
 
 <!-- Modal: Add Curtain -->
 <div class="modal fade" id="addCurtainModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
