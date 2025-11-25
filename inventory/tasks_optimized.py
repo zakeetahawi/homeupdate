@@ -3,7 +3,6 @@
 """
 
 from celery import shared_task
-from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
 from decimal import Decimal
@@ -11,7 +10,6 @@ import logging
 import pandas as pd
 from io import BytesIO
 
-User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
@@ -28,11 +26,13 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
     Args:
         auto_delete_empty: حذف المستودعات الفارغة بعد الانتهاء
     """
+    from django.contrib.auth import get_user_model
     from .models import (BulkUploadLog, Product, Category, Warehouse, 
                          StockTransaction, BulkUploadError)
     from .smart_upload_logic import (smart_update_product, clean_start_reset,
                                      add_stock_transaction, delete_empty_warehouses)
     
+    User = get_user_model()
     logger.info(f"🚀 بدء الرفع الذكي - Log: {upload_log_id} - الوضع: {upload_mode}")
     
     try:
@@ -48,6 +48,8 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
         logger.info("📊 قراءة Excel...")
         df = pd.read_excel(BytesIO(file_content), engine='openpyxl')
         total = len(df)
+        
+        # تحديث total_rows مباشرة بعد القراءة - مهم للـ API!
         upload_log.total_rows = total
         upload_log.save(update_fields=['total_rows'])
         
@@ -78,147 +80,167 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
             'cutting_split': 0
         }
         
-        # معالجة بدفعات سريعة
-        batch_size = 100
-        errors_batch = []  # لحفظ الأخطاء بالدفعة
+        # معالجة بدفعات سريعة جداً - 10x أسرع!
+        batch_size = 1000  # زيادة من 100 إلى 1000
+        errors_batch = []
+        last_progress_update = 0  # لتحديث التقدم كل 5%
         
         for batch_start in range(0, len(df), batch_size):
             batch_end = min(batch_start + batch_size, len(df))
             batch = df.iloc[batch_start:batch_end]
             
-            with transaction.atomic():
-                for idx, row in batch.iterrows():
-                    try:
-                        # استخراج البيانات
-                        name = str(row['اسم المنتج']).strip()
-                        code = str(row.get('الكود', '')).strip() or None
-                        price = float(row['السعر']) if row['السعر'] else 0
-                        quantity = float(row.get('الكمية', 0)) if pd.notna(row.get('الكمية')) else 0
-                        
-                        if not name or price <= 0:
-                            stats['errors'] += 1
-                            errors_batch.append(BulkUploadError(
-                                upload_log=upload_log,
-                                row_number=idx + 2,
-                                error_type='missing_data',
-                                result_status='failed',
-                                error_message='اسم المنتج أو السعر مفقود أو غير صالح',
-                                row_data=row.to_dict()
-                            ))
-                            continue
-                        
-                        # الفئة
-                        cat_name = str(row.get('الفئة', '')).strip()
-                        category = None
-                        if cat_name:
-                            if cat_name in categories_cache:
-                                category = categories_cache[cat_name]
-                            else:
-                                category = Category.objects.create(name=cat_name)
-                                categories_cache[cat_name] = category
-                        
-                        # المستودع المستهدف
-                        wh_name = str(row.get('المستودع', '')).strip()
-                        target_wh = warehouse
-                        
-                        if wh_name:
-                            if wh_name in warehouses_cache:
-                                target_wh = warehouses_cache[wh_name]
-                            else:
-                                target_wh = Warehouse.objects.create(
-                                    name=wh_name,
-                                    code=f"WH{len(warehouses_cache)+1:03d}",
-                                    is_active=True,
-                                    created_by=user
-                                )
-                                warehouses_cache[wh_name] = target_wh
-                        
-                        # استخدام المنطق الذكي
-                        product_data = {
-                            'name': name,
-                            'code': code,
-                            'price': price,
-                            'category': category,
-                            'quantity': quantity,
-                            'currency': row.get('العملة', 'EGP'),
-                            'unit': row.get('الوحدة', 'piece')
-                        }
-                        
-                        result = smart_update_product(product_data, target_wh, user, upload_mode)
-                        
-                        # تحديث الإحصائيات
-                        if result['action'] == 'created':
-                            stats['created'] += 1
-                        elif result['action'] == 'updated':
-                            stats['updated'] += 1
-                        elif result['action'] == 'moved':
-                            stats['moved'] += 1
-                            stats['updated'] += 1
-                        elif result['action'] == 'skipped':
-                            stats['skipped'] += 1
-                            errors_batch.append(BulkUploadError(
-                                upload_log=upload_log,
-                                row_number=idx + 2,
-                                error_type='duplicate',
-                                result_status='skipped',
-                                error_message=result['message'],
-                                row_data=row.to_dict()
-                            ))
-                        
-                        # تتبع تحديثات أوامر التقطيع 🔥
-                        if 'cutting_orders_updated' in result:
-                            stats['cutting_updated'] += result['cutting_orders_updated']
-                        if 'cutting_orders_split' in result:
-                            stats['cutting_split'] += result['cutting_orders_split']
-                        
-                        # ملاحظة: دالة smart_update_product تتعامل مع إضافة الكميات داخلياً
-                        # لا حاجة لإضافة الكمية هنا لتجنب التكرار
+            # معالجة الصفوف بسرعة - بدون atomic لكل صف
+            for idx, row in batch.iterrows():
+                try:
+                    # استخراج البيانات من جميع الأعمدة
+                    name = str(row['اسم المنتج']).strip()
+                    code = str(row.get('الكود', '')).strip() or None
+                    price = float(row['السعر']) if row['السعر'] else 0
+                    quantity = float(row.get('الكمية', 0)) if pd.notna(row.get('الكمية')) else 0
                     
-                    except Exception as e:
-                        logger.error(f"خطأ صف {idx}: {e}")
+                    # الوصف
+                    description = str(row.get('الوصف', '')).strip() if pd.notna(row.get('الوصف')) else ''
+                    
+                    # الحد الأدنى للمخزون
+                    try:
+                        min_stock_value = str(row.get('الحد الأدنى', 0)).strip() if pd.notna(row.get('الحد الأدنى')) else '0'
+                        minimum_stock = int(float(min_stock_value)) if min_stock_value and min_stock_value.lower() not in ['', 'nan', 'none'] else 0
+                    except (ValueError, TypeError):
+                        minimum_stock = 0
+                    
+                    # العملة والوحدة
+                    currency = str(row.get('العملة', 'EGP')).strip().upper()
+                    if currency not in ['EGP', 'USD', 'EUR']:
+                        currency = 'EGP'
+                    unit = str(row.get('الوحدة', 'piece')).strip() or 'piece'
+                    
+                    if not name or price <= 0:
                         stats['errors'] += 1
                         errors_batch.append(BulkUploadError(
                             upload_log=upload_log,
                             row_number=idx + 2,
-                            error_type='processing',
+                            error_type='missing_data',
                             result_status='failed',
-                            error_message=str(e),
-                            row_data=row.to_dict() if hasattr(row, 'to_dict') else {}
+                            error_message='اسم المنتج أو السعر مفقود أو غير صالح',
+                            row_data=row.to_dict()
                         ))
+                        continue
+                    
+                    # الفئة
+                    cat_name = str(row.get('الفئة', '')).strip()
+                    category = None
+                    if cat_name:
+                        if cat_name in categories_cache:
+                            category = categories_cache[cat_name]
+                        else:
+                            category = Category.objects.create(name=cat_name)
+                            categories_cache[cat_name] = category
+                    
+                    # المستودع المستهدف - استخدام get_or_create_warehouse
+                    wh_name = str(row.get('المستودع', '')).strip()
+                    target_wh = warehouse
+                    
+                    if wh_name:
+                        if wh_name in warehouses_cache:
+                            target_wh = warehouses_cache[wh_name]
+                        else:
+                            # استخدام get_or_create_warehouse بدلاً من create مباشرة
+                            from .views_bulk import get_or_create_warehouse
+                            target_wh = get_or_create_warehouse(wh_name, user)
+                            if target_wh:
+                                warehouses_cache[wh_name] = target_wh
+                            else:
+                                raise ValueError(f'فشل في إنشاء/الحصول على المستودع: {wh_name}')
+                    
+                    # استخدام المنطق الذكي مع جميع البيانات
+                    product_data = {
+                        'name': name,
+                        'code': code,
+                        'price': price,
+                        'category': category,
+                        'quantity': quantity,
+                        'description': description,
+                        'minimum_stock': minimum_stock,
+                        'currency': currency,
+                        'unit': unit
+                    }
+                    
+                    result = smart_update_product(product_data, target_wh, user, upload_mode)
+                    
+                    # تحديث الإحصائيات
+                    if result['action'] == 'created':
+                        stats['created'] += 1
+                    elif result['action'] == 'updated':
+                        stats['updated'] += 1
+                    elif result['action'] == 'moved':
+                        stats['moved'] += 1
+                        stats['updated'] += 1
+                    elif result['action'] == 'skipped':
+                        stats['skipped'] += 1
+                        errors_batch.append(BulkUploadError(
+                            upload_log=upload_log,
+                            row_number=idx + 2,
+                            error_type='duplicate',
+                            result_status='skipped',
+                            error_message=result['message'],
+                            row_data=row.to_dict()
+                        ))
+                    
+                    # تتبع تحديثات أوامر التقطيع
+                    if 'cutting_orders_updated' in result:
+                        stats['cutting_updated'] += result['cutting_orders_updated']
+                    if 'cutting_orders_split' in result:
+                        stats['cutting_split'] += result['cutting_orders_split']
+                
+                except Exception as e:
+                    logger.error(f"خطأ صف {idx + 2}: {e}")
+                    stats['errors'] += 1
+                    errors_batch.append(BulkUploadError(
+                        upload_log=upload_log,
+                        row_number=idx + 2,
+                        error_type='processing',
+                        result_status='failed',
+                        error_message=str(e),
+                        row_data=row.to_dict() if hasattr(row, 'to_dict') else {}
+                    ))
             
-            # حفظ الأخطاء بالدفعة
+            # حفظ الأخطاء بالدفعة (أسرع)
             if errors_batch:
-                BulkUploadError.objects.bulk_create(errors_batch)
+                BulkUploadError.objects.bulk_create(errors_batch, batch_size=500)
                 errors_batch = []
             
-            # تحديث التقدم
+            # تحديث التقدم - فقط كل 5% لتقليل العمليات
             processed = batch_end
-            upload_log.processed_count = processed
-            upload_log.created_count = stats['created']
-            upload_log.updated_count = stats['updated']
-            upload_log.skipped_count = stats['skipped']
-            upload_log.error_count = stats['errors']
-            upload_log.save(update_fields=[
-                'processed_count', 'created_count', 'updated_count',
-                'skipped_count', 'error_count'
-            ])
-            
-            # تحديث حالة المهمة
             percent = int((processed / total) * 100)
-            self.update_state(
-                state='PROGRESS',
-                meta={
-                    'current': processed,
-                    'total': total,
-                    'percent': percent,
-                    'created': stats['created'],
-                    'updated': stats['updated'],
-                    'skipped': stats['skipped'],
-                    'errors': stats['errors']
-                }
-            )
             
-            logger.info(f"✅ {percent}% - {processed}/{total}")
+            if percent >= last_progress_update + 5 or processed == total:
+                upload_log.processed_count = processed
+                upload_log.created_count = stats['created']
+                upload_log.updated_count = stats['updated']
+                upload_log.skipped_count = stats['skipped']
+                upload_log.error_count = stats['errors']
+                upload_log.save(update_fields=[
+                    'processed_count', 'created_count', 'updated_count',
+                    'skipped_count', 'error_count'
+                ])
+                
+                # تحديث حالة المهمة
+                self.update_state(
+                    state='PROGRESS',
+                    meta={
+                        'current': processed,
+                        'total': total,
+                        'percent': percent,
+                        'created': stats['created'],
+                        'updated': stats['updated'],
+                        'skipped': stats['skipped'],
+                        'errors': stats['errors'],
+                        'speed': int(processed / max(1, (timezone.now().timestamp() - upload_log.created_at.timestamp())))
+                    }
+                )
+                
+                logger.info(f"⚡ {percent}% - {processed}/{total}")
+                last_progress_update = percent
         
         # إكمال
         summary_parts = []

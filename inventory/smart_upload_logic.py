@@ -52,10 +52,21 @@ def smart_update_product(product_data, warehouse, user, upload_mode):
             
             # التحديث الذكي أو الدمج
             if upload_mode in ['smart_update', 'merge_warehouses']:
-                # تحديث بيانات المنتج
+                # تحديث بيانات المنتج بجميع الحقول
                 product.name = name
                 product.price = product_data.get('price', product.price)
                 product.category = product_data.get('category', product.category)
+                
+                # تحديث الحقول الإضافية
+                if 'description' in product_data and product_data['description']:
+                    product.description = product_data['description']
+                if 'minimum_stock' in product_data:
+                    product.minimum_stock = product_data['minimum_stock']
+                if 'currency' in product_data:
+                    product.currency = product_data['currency']
+                if 'unit' in product_data:
+                    product.unit = product_data['unit']
+                
                 product.save()
                 
                 # نقل المخزون للمستودع الصحيح إذا لزم الأمر
@@ -80,12 +91,14 @@ def smart_update_product(product_data, warehouse, user, upload_mode):
         except Product.DoesNotExist:
             pass  # سيتم إنشاؤه أدناه
     
-    # إنشاء منتج جديد
+    # إنشاء منتج جديد بجميع البيانات
     product = Product.objects.create(
         name=name,
         code=code,
         price=product_data.get('price'),
         category=product_data.get('category'),
+        description=product_data.get('description', ''),
+        minimum_stock=product_data.get('minimum_stock', 0),
         currency=product_data.get('currency', 'EGP'),
         unit=product_data.get('unit', 'piece')
     )
@@ -222,19 +235,25 @@ def move_product_to_correct_warehouse(product, target_warehouse, new_quantity, u
 
 
 def add_stock_transaction(product, warehouse, quantity, user, notes):
-    """إضافة معاملة مخزون (دخول)"""
+    """إضافة معاملة مخزون (دخول) - محسّن للسرعة"""
     from .models import StockTransaction
+    from django.db import connection
     
     if quantity <= 0:
         return
     
-    # الحصول على آخر رصيد
-    last_trans = StockTransaction.objects.filter(
-        product=product,
-        warehouse=warehouse
-    ).order_by('-transaction_date', '-id').first()
+    # استعلام مباشر أسرع من ORM
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT running_balance 
+            FROM inventory_stocktransaction 
+            WHERE product_id = %s AND warehouse_id = %s 
+            ORDER BY transaction_date DESC, id DESC 
+            LIMIT 1
+        """, [product.id, warehouse.id])
+        row = cursor.fetchone()
+        previous_balance = row[0] if row else 0
     
-    previous_balance = last_trans.running_balance if last_trans else 0
     new_balance = Decimal(str(previous_balance)) + Decimal(str(quantity))
     
     StockTransaction.objects.create(
@@ -246,24 +265,31 @@ def add_stock_transaction(product, warehouse, quantity, user, notes):
         reference='رفع سريع',
         notes=notes,
         created_by=user,
-        running_balance=float(new_balance)
+        running_balance=float(new_balance),
+        transaction_date=timezone.now()
     )
 
 
 def remove_stock_transaction(product, warehouse, quantity, user, notes):
-    """إزالة معاملة مخزون (خروج)"""
+    """إزالة معاملة مخزون (خروج) - محسّن للسرعة"""
     from .models import StockTransaction
+    from django.db import connection
     
     if quantity <= 0:
         return
     
-    # الحصول على آخر رصيد
-    last_trans = StockTransaction.objects.filter(
-        product=product,
-        warehouse=warehouse
-    ).order_by('-transaction_date', '-id').first()
+    # استعلام مباشر أسرع
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT running_balance 
+            FROM inventory_stocktransaction 
+            WHERE product_id = %s AND warehouse_id = %s 
+            ORDER BY transaction_date DESC, id DESC 
+            LIMIT 1
+        """, [product.id, warehouse.id])
+        row = cursor.fetchone()
+        previous_balance = row[0] if row else 0
     
-    previous_balance = last_trans.running_balance if last_trans else 0
     new_balance = Decimal(str(previous_balance)) - Decimal(str(quantity))
     
     StockTransaction.objects.create(
@@ -275,7 +301,8 @@ def remove_stock_transaction(product, warehouse, quantity, user, notes):
         reference='نقل ذكي',
         notes=notes,
         created_by=user,
-        running_balance=float(new_balance)
+        running_balance=float(new_balance),
+        transaction_date=timezone.now()
     )
 
 

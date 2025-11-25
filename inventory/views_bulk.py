@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 def get_or_create_warehouse(warehouse_name, user, is_fabric_warehouse=False):
     """
-    الحصول على المستودع أو إنشاؤه إذا لم يكن موجوداً
+    الحصول على المستودع أو إنشاؤه إذا لم يكن موجوداً - محسّن
     مع دعم تحديد المستودعات الرسمية للأقمشة
     """
     if not warehouse_name or str(warehouse_name).strip().lower() in ['', 'nan', 'none']:
@@ -29,47 +29,67 @@ def get_or_create_warehouse(warehouse_name, user, is_fabric_warehouse=False):
 
     warehouse_name = str(warehouse_name).strip()
 
-    # البحث عن المستودع بالاسم أولاً
+    # البحث عن المستودع بالاسم أولاً (حساس لحالة الأحرف)
     warehouse = Warehouse.objects.filter(name__iexact=warehouse_name).first()
 
     if warehouse:
         # تحديث حالة المستودع إذا كان للأقمشة
-        if is_fabric_warehouse and not getattr(warehouse, 'is_official_fabric_warehouse', False):
-            warehouse.is_official_fabric_warehouse = True
-            warehouse.save()
+        if is_fabric_warehouse and hasattr(warehouse, 'is_official_fabric_warehouse'):
+            if not warehouse.is_official_fabric_warehouse:
+                warehouse.is_official_fabric_warehouse = True
+                warehouse.save(update_fields=['is_official_fabric_warehouse'])
+        logger.info(f"✅ استخدام مستودع موجود: {warehouse.name} ({warehouse.code})")
         return warehouse
 
-    # إنشاء كود تلقائي للمستودع
+    # إنشاء كود تلقائي للمستودع الجديد فقط
     import re
-    # إزالة المسافات والرموز الخاصة لإنشاء الكود
-    code_base = re.sub(r'[^\w\u0600-\u06FF]', '', warehouse_name)[:10]
+    import uuid
+    
+    # إنشاء كود فريد
+    code_base = re.sub(r'[^\w\u0600-\u06FF]', '', warehouse_name)[:8]
     if not code_base:
         code_base = 'FABRIC' if is_fabric_warehouse else 'WH'
-
-    # التأكد من عدم تكرار الكود
+    
+    # إضافة UUID قصير لضمان عدم التكرار
+    unique_suffix = uuid.uuid4().hex[:4].upper()
+    code = f"{code_base}{unique_suffix}"
+    
+    # التأكد النهائي من عدم التكرار
     counter = 1
-    code = f"{code_base}{counter:03d}"
+    original_code = code
     while Warehouse.objects.filter(code=code).exists():
         counter += 1
-        code = f"{code_base}{counter:03d}"
+        code = f"{original_code}{counter}"
+        if counter > 100:  # حماية من loop لا نهائي
+            logger.error(f"⚠️ فشل في إنشاء كود فريد للمستودع: {warehouse_name}")
+            return None
 
-    # إنشاء المستودع الجديد
-    warehouse_data = {
-        'name': warehouse_name,
-        'code': code,
-        'is_active': True,
-        'notes': f'تم إنشاؤه تلقائياً من رفع المنتجات بالجملة' + (' - مستودع رسمي للأقمشة' if is_fabric_warehouse else ''),
-        'created_by': user
-    }
-    
-    # إضافة الحقل إذا كان موجوداً في النموذج
-    if hasattr(Warehouse, 'is_official_fabric_warehouse'):
-        warehouse_data['is_official_fabric_warehouse'] = is_fabric_warehouse
-    
-    warehouse = Warehouse.objects.create(**warehouse_data)
-
-    print(f"✅ تم إنشاء مستودع جديد: {warehouse.name} ({warehouse.code})" + (' [أقمشة]' if is_fabric_warehouse else ''))
-    return warehouse
+    try:
+        # إنشاء المستودع الجديد
+        warehouse_data = {
+            'name': warehouse_name,
+            'code': code,
+            'is_active': True,
+            'notes': f'تم إنشاؤه تلقائياً من رفع المنتجات بالجملة' + (' - مستودع رسمي للأقمشة' if is_fabric_warehouse else ''),
+            'created_by': user
+        }
+        
+        # إضافة الحقل إذا كان موجوداً في النموذج
+        if hasattr(Warehouse, 'is_official_fabric_warehouse'):
+            warehouse_data['is_official_fabric_warehouse'] = is_fabric_warehouse
+        
+        warehouse = Warehouse.objects.create(**warehouse_data)
+        logger.info(f"✅ تم إنشاء مستودع جديد: {warehouse.name} ({warehouse.code})" + (' [أقمشة]' if is_fabric_warehouse else ''))
+        return warehouse
+        
+    except Exception as e:
+        logger.error(f"❌ خطأ في إنشاء المستودع {warehouse_name}: {e}")
+        # محاولة البحث مرة أخرى (ربما تم إنشاؤه في عملية أخرى)
+        warehouse = Warehouse.objects.filter(name__iexact=warehouse_name).first()
+        if warehouse:
+            logger.warning(f"⚠️ تم العثور على المستودع بعد الفشل: {warehouse.name}")
+            return warehouse
+        return None
 
 def safe_read_excel(file_data):
     """

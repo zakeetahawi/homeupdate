@@ -884,9 +884,10 @@ def reorder_recommendations_api(request):
 @login_required
 def bulk_upload_status_api(request, log_id):
     """
-    API للحصول على حالة عملية الرفع بالجملة
+    API محسّن للحصول على حالة عملية الرفع - real-time!
     """
     from .models import BulkUploadLog
+    from celery.result import AsyncResult
     
     try:
         upload_log = get_object_or_404(BulkUploadLog, id=log_id)
@@ -900,8 +901,35 @@ def bulk_upload_status_api(request, log_id):
         
         # حساب النسبة المئوية
         percent = 0
+        speed = 0
+        eta_seconds = 0
+        
         if upload_log.total_rows > 0:
             percent = int((upload_log.processed_count / upload_log.total_rows) * 100)
+            
+            # حساب السرعة (صف/ثانية)
+            if upload_log.created_at:
+                elapsed = (timezone.now() - upload_log.created_at).total_seconds()
+                if elapsed > 0:
+                    speed = int(upload_log.processed_count / elapsed)
+                    
+                    # حساب الوقت المتبقي
+                    remaining_rows = upload_log.total_rows - upload_log.processed_count
+                    if speed > 0:
+                        eta_seconds = int(remaining_rows / speed)
+        
+        # محاولة الحصول على معلومات من Celery task
+        task_info = {}
+        if upload_log.task_id:
+            try:
+                task_result = AsyncResult(upload_log.task_id)
+                if task_result.state == 'PROGRESS' and task_result.info:
+                    task_info = task_result.info
+                    # استخدام السرعة من المهمة إذا كانت متوفرة
+                    if 'speed' in task_info:
+                        speed = task_info['speed']
+            except:
+                pass
         
         return JsonResponse({
             'success': True,
@@ -914,15 +942,20 @@ def bulk_upload_status_api(request, log_id):
             'skipped_count': upload_log.skipped_count,
             'error_count': upload_log.error_count,
             'percent': percent,
+            'speed': speed,  # صف/ثانية
+            'eta_seconds': eta_seconds,  # الوقت المتبقي
             'is_completed': upload_log.status in ['completed', 'completed_with_errors', 'failed'],
             'summary': upload_log.summary,
             'created_warehouses': upload_log.created_warehouses,
             'created_at': upload_log.created_at.isoformat(),
             'completed_at': upload_log.completed_at.isoformat() if upload_log.completed_at else None,
-            'duration': upload_log.duration
+            'duration': upload_log.duration,
+            'task_info': task_info  # معلومات إضافية من المهمة
         })
         
     except Exception as e:
+        import logging
+        logging.error(f"Error in bulk_upload_status_api: {e}")
         return JsonResponse({
             'success': False,
             'message': f'حدث خطأ: {str(e)}'

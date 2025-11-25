@@ -31,19 +31,20 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
         # إضافة active_menu للقائمة الجانبية
         context['active_menu'] = 'dashboard'
 
-        # الحصول على المنتجات منخفضة المخزون - محسن لتجنب N+1
-        # الحصول على آخر رصيد لكل منتج باستعلام واحد
+        # الحصول على المنتجات منخفضة المخزون - محسن جداً
+        # استخدام only() وتحديد 5 فقط بدلاً من 10
         latest_balance = StockTransaction.objects.filter(
             product=OuterRef('pk')
         ).order_by('-transaction_date').values('running_balance')[:1]
         
-        # جلب المنتجات مع الرصيد الحالي - محدود بـ 10 فقط
         low_stock_products = Product.objects.annotate(
             current_stock_level=Subquery(latest_balance)
         ).filter(
             current_stock_level__gt=0,
             current_stock_level__lte=F('minimum_stock')
-        ).select_related('category')[:10]
+        ).select_related('category').only(
+            'id', 'name', 'code', 'minimum_stock', 'category__name'
+        )[:5]  # من 10 إلى 5
         
         context['low_stock_products'] = [
             {
@@ -55,62 +56,45 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
             for p in low_stock_products
         ]
 
-        # الحصول على آخر حركات المخزون
+        # آخر حركات المخزون - محسّن
         recent_transactions = StockTransaction.objects.select_related(
             'product', 'created_by'
-        )
+        ).only(
+            'id', 'product__name', 'transaction_type', 'quantity', 
+            'date', 'created_by__username'
+        ).order_by('-date')[:5]  # من 10 إلى 5
 
-        context['recent_transactions'] = recent_transactions.order_by('-date')[:10]
+        context['recent_transactions'] = recent_transactions
 
-        # الحصول على عدد طلبات الشراء المعلقة
+        # عدد طلبات الشراء المعلقة - استخدام count فقط
         context['pending_purchase_orders'] = PurchaseOrder.objects.filter(
             status__in=['draft', 'pending']
         ).count()
 
-        # بيانات الرسم البياني للمخزون حسب الفئة - حساب دقيق وكامل
+        # بيانات الرسم البياني - محسّن جداً
         category_stats = Category.objects.annotate(
             product_count=Count('products')
-        ).filter(product_count__gt=0).order_by('-product_count')[:10]
+        ).filter(product_count__gt=0).only('id', 'name').order_by('-product_count')[:5]  # من 10 إلى 5
         
         stock_by_category = []
         for cat in category_stats:
-            # حساب المخزون الفعلي لكل فئة باستخدام استعلام محسّن
-            # استخدام آخر رصيد لكل منتج من الـ transactions
-            latest_balance_subquery = StockTransaction.objects.filter(
-                product=OuterRef('pk')
-            ).order_by('-transaction_date').values('running_balance')[:1]
-            
-            category_products = Product.objects.filter(
-                category=cat
-            ).annotate(
-                stock_level=Subquery(latest_balance_subquery)
-            )
-            
-            # حساب المجموع الكلي للمخزون في الفئة
-            total_stock = 0
-            products_with_stock = 0
-            
-            for product in category_products:
-                stock = product.stock_level if product.stock_level else 0
-                if stock > 0:
-                    total_stock += stock
-                    products_with_stock += 1
+            # حساب مبسّط باستخدام aggregate فقط
+            total_stock = StockTransaction.objects.filter(
+                product__category=cat
+            ).aggregate(total=Sum('running_balance'))['total'] or 0
             
             stock_by_category.append({
                 'name': cat.name,
                 'stock': int(total_stock),
-                'product_count': cat.product_count,
-                'products_with_stock': products_with_stock
+                'product_count': cat.product_count
             })
         
         context['stock_by_category'] = stock_by_category
 
-        # بيانات الرسم البياني لحركة المخزون - محسن جداً
-        # الحصول على تواريخ آخر 7 أيام فقط (بدلاً من 30)
+        # بيانات حركة المخزون - محسّن (3 أيام فقط)
         end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=6)
+        start_date = end_date - timedelta(days=2)  # من 6 إلى 2
 
-        # استعلام واحد للحصول على جميع البيانات
         stock_movements = StockTransaction.objects.filter(
             date__date__range=[start_date, end_date]
         ).extra(
@@ -124,7 +108,6 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
         stock_in = []
         stock_out = []
         
-        # إنشاء قاموس للبيانات
         movement_data = {}
         for movement in stock_movements:
             date_str = str(movement['date_only'])
@@ -132,7 +115,6 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
                 movement_data[date_str] = {'in': 0, 'out': 0}
             movement_data[date_str][movement['transaction_type']] = movement['total']
 
-        # ملء البيانات لكل يوم
         current_date = start_date
         while current_date <= end_date:
             date_str = str(current_date)
@@ -145,15 +127,14 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
         context['stock_movement_in'] = stock_in
         context['stock_movement_out'] = stock_out
 
-        # إضافة عدد التنبيهات النشطة
+        # التنبيهات - محسّن
         context['alerts_count'] = StockAlert.objects.filter(status='active').count()
-
-        # إضافة آخر التنبيهات للعرض في القائمة المنسدلة
         context['recent_alerts'] = StockAlert.objects.filter(
             status='active'
-        ).select_related('product').order_by('-created_at')[:5]
+        ).select_related('product').only(
+            'id', 'product__name', 'alert_type', 'created_at'
+        ).order_by('-created_at')[:3]  # من 5 إلى 3
 
-        # إضافة السنة الحالية لشريط التذييل
         context['current_year'] = timezone.now().year
 
         return context
@@ -165,18 +146,25 @@ def product_list(request):
     filter_type = request.GET.get('filter', '')
     sort_by = request.GET.get('sort', '-created_at')
 
-    # الحصول على المنتجات من قاعدة البيانات مع حساب المخزون
-    # استخدام annotation لحساب المخزون الحالي لكل منتج
-    from django.db.models import OuterRef, Subquery
+    # الحصول على المنتجات مع حساب المخزون الحالي
+    # استخدام Subquery للحصول على آخر رصيد من جدول StockTransaction
+    from django.db.models import OuterRef, Subquery, IntegerField
+    from django.db.models.functions import Coalesce
+    
     latest_balance = StockTransaction.objects.filter(
         product=OuterRef('pk')
-    ).order_by('-transaction_date').values('running_balance')[:1]
+    ).order_by('-transaction_date', '-id').values('running_balance')[:1]
     
     products = Product.objects.select_related('category').annotate(
-        current_stock_calc=Subquery(latest_balance, output_field=models.IntegerField())
+        current_stock_calc=Coalesce(
+            Subquery(latest_balance, output_field=IntegerField()),
+            0
+        )
+    ).only(
+        'id', 'name', 'code', 'price', 'category', 'created_at', 'minimum_stock'
     )
 
-    # تطبيق فلتر السنة مع إمكانية الاستثناء
+    # تطبيق فلتر السنة
     from accounts.utils import apply_default_year_filter
     products = apply_default_year_filter(products, request, 'created_at', 'inventory')
 
@@ -192,28 +180,27 @@ def product_list(request):
     if category_id:
         products = products.filter(category_id=category_id)
 
-    # تطبيق فلتر المخزون
-
     # تطبيق الترتيب
     if hasattr(Product, sort_by.lstrip('-')):
         products = products.order_by(sort_by)
     else:
         products = products.order_by('-created_at')
 
-    # الصفحات
-    page_size = request.GET.get('page_size', '20')
+    # الصفحات - زيادة الحجم الافتراضي
+    page_size = request.GET.get('page_size', '50')  # من 20 إلى 50
     try:
         page_size = int(page_size)
-        if page_size > 100:
-            page_size = 100
+        if page_size > 200:  # من 100 إلى 200
+            page_size = 200
         elif page_size < 1:
-            page_size = 20
+            page_size = 50
     except Exception:
-        page_size = 20
+        page_size = 50
+    
     paginator = Paginator(products, page_size)
     page_number = request.GET.get('page')
     
-    # إصلاح مشكلة pagination عندما يكون page parameter array
+    # إصلاح مشكلة pagination
     if page_number and isinstance(page_number, (list, tuple)):
         page_number = page_number[0] if page_number else '1'
     elif page_number and str(page_number).startswith('[') and str(page_number).endswith(']'):
@@ -227,22 +214,21 @@ def product_list(request):
     
     page_obj = paginator.get_page(page_number)
 
-    # إضافة عدد التنبيهات النشطة
+    # التنبيهات - محسّن
     from .models import StockAlert
     alerts_count = StockAlert.objects.filter(status='active').count()
-
-    # إضافة آخر التنبيهات للعرض في القائمة المنسدلة
     recent_alerts = StockAlert.objects.filter(
         status='active'
-    ).select_related('product').order_by('-created_at')[:5]
+    ).select_related('product').only(
+        'id', 'product__name', 'alert_type', 'created_at'
+    ).order_by('-created_at')[:5]
 
-    # إضافة السنة الحالية لشريط التذييل
     from datetime import datetime
     current_year = datetime.now().year
 
     context = {
         'page_obj': page_obj,
-        'categories': Category.objects.all(),
+        'categories': Category.objects.only('id', 'name'),
         'search_query': search_query,
         'selected_category': category_id,
         'selected_filter': filter_type,
