@@ -132,9 +132,6 @@ app.conf.update(
 # اكتشاف المهام تلقائياً من جميع التطبيقات المثبتة
 app.autodiscover_tasks()
 
-# تحميل المهام المحسّنة للمخزون يدوياً
-app.autodiscover_tasks(['inventory'], related_name='tasks_optimized')
-
 # إعدادات إضافية محسنة للأمان والأداء
 app.conf.update(
     # إعدادات الأمان
@@ -321,6 +318,15 @@ if not settings.DEBUG:
 # تسجيل معلومات التهيئة
 import logging
 logger = logging.getLogger(__name__)
+
+# تحميل المهام المحسّنة للمخزون يدوياً - إصلاح التسجيل
+# استيراد المهام المحسنة مباشرة لضمان تسجيلها
+try:
+    import inventory.tasks_optimized
+    logger.info("✅ تم تحميل inventory.tasks_optimized بنجاح")
+except ImportError as e:
+    logger.error(f"❌ فشل في تحميل inventory.tasks_optimized: {e}")
+
 logger.info("تم تهيئة Celery بنجاح")
 logger.info(f"Broker URL: {app.conf.broker_url}")
 logger.info(f"Result Backend: {app.conf.result_backend}")
