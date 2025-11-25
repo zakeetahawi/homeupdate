@@ -18,10 +18,18 @@
             margin: 0.5cm;
         }
         
+        @page {
+            @bottom-center {
+                content: "صفحة " counter(page) " من " counter(pages);
+                font-size: 10px;
+                color: #666;
+            }
+        }
+        
         body {
             font-family: 'Cairo', 'Arial', sans-serif;
-            font-size: 13px;
-            line-height: 1.3;
+            font-size: 11px;
+            line-height: 1.2;
             color: #000;
             background: white;
             direction: rtl;
@@ -51,7 +59,7 @@
             max-width: 100%;
             margin: 0 auto;
             background: transparent;
-            padding: 10px;
+            padding: 2px;
             position: relative;
             z-index: 1;
         }
@@ -61,9 +69,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 3px 0 5px 0;
+            padding: 0;
             border-bottom: 2px solid #a67c52;
-            margin-bottom: 6px;
+            margin-bottom: 2px;
             position: relative;
         }
         
@@ -85,7 +93,7 @@
         }
         
         .contract-number-main {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
             color: #a67c52;
             direction: ltr;
@@ -95,12 +103,12 @@
         
         .service-badge {
             display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 16px;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 14px;
             font-weight: 700;
             color: white;
-            margin-left: 6px;
+            margin-left: 4px;
         }
         
         .badge-tailoring { background: #16a085; }
@@ -111,7 +119,7 @@
         .badge-inspection { background: #e74c3c; }
         
         .order-status-text {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
             color: #666;
         }
@@ -119,10 +127,10 @@
         .vip-badge {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 16px;
+            gap: 3px;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 14px;
             font-weight: 700;
             color: white;
             background: linear-gradient(135deg, #d4af37 0%, #f4e5a1 50%, #d4af37 100%);
@@ -130,17 +138,17 @@
         }
         
         .vip-crown {
-            font-size: 18px;
+            font-size: 16px;
         }
         
         .logo-box {
             position: absolute;
             left: 0;
             top: 0;
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             border: 2px solid #a67c52;
-            border-radius: 6px;
+            border-radius: 5px;
             overflow: hidden;
             background: white;
             display: flex;
@@ -157,34 +165,34 @@
         .cards-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4px;
-            margin-bottom: 6px;
+            gap: 2px;
+            margin-bottom: 2px;
             width: 100%;
         }
         
         .info-card {
             background: #f8f5f0;
             border: 1.5px solid #a67c52;
-            border-radius: 6px;
-            padding: 2px 3px;
+            border-radius: 4px;
+            padding: 1px 2px;
             width: 100%;
             box-sizing: border-box;
         }
         
         .card-title {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
             color: #a67c52;
-            margin-bottom: 2px;
+            margin-bottom: 0;
             border-bottom: 1px solid #d4a574;
-            padding-bottom: 1px;
+            padding-bottom: 0;
         }
         
         .card-row {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 2px;
+            margin-bottom: 0;
         }
         
         .card-row:last-child {
@@ -192,15 +200,15 @@
         }
         
         .card-label {
-            font-size: 13px;
+            font-size: 11px;
             color: #888;
             font-weight: 600;
             display: block;
-            margin-bottom: 1px;
+            margin-bottom: 0px;
         }
         
         .card-value {
-            font-size: 13px;
+            font-size: 11px;
             color: #000;
             font-weight: 700;
             overflow: hidden;
@@ -211,38 +219,38 @@
         .curtain-count-badge {
             background: #a67c52;
             color: white;
-            padding: 2px 6px;
+            padding: 2px 5px;
             border-radius: 3px;
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
             display: inline-block;
         }
         
         .salesperson-phone {
-            font-size: 13px;
+            font-size: 11px;
             color: #666;
             font-weight: 400;
             display: block;
-            margin-top: 1px;
+            margin-top: 0px;
         }
         
         
         /* === CURTAINS SECTION === */
         .section-title {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 700;
             color: #000;
-            margin: 6px 0 5px 0;
-            padding-right: 6px;
+            margin: 2px 0 1px 0;
+            padding-right: 5px;
             border-right: 3px solid #a67c52;
         }
         
         .curtain-row {
             background: white;
             border: 2px solid #a67c52;
-            border-radius: 6px;
-            padding: 2px;
-            margin-bottom: 4px;
+            border-radius: 4px;
+            padding: 1px;
+            margin-bottom: 2px;
             page-break-inside: avoid;
             width: 100%;
             box-sizing: border-box;
@@ -252,13 +260,13 @@
         .curtain-header {
             background: white;
             border: 2px solid #a67c52;
-            border-radius: 4px;
-            padding: 4px 5px;
-            margin-bottom: 3px;
+            border-radius: 3px;
+            padding: 1px 3px;
+            margin-bottom: 1px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 6px;
+            gap: 3px;
             width: 100%;
             box-sizing: border-box;
         }
@@ -274,23 +282,23 @@
         }
         
         .curtain-number {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 700;
             color: #a67c52;
             white-space: nowrap;
             display: inline;
-            margin-left: 12px;
+            margin-left: 10px;
         }
         
         .curtain-name {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 700;
             color: #000;
             white-space: nowrap;
             display: inline;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 150px;
+            max-width: 130px;
         }
         
         .curtain-dimensions {
@@ -311,23 +319,23 @@
         }
         
         .dim-label {
-            font-size: 13px;
+            font-size: 11px;
             color: #000;
             font-weight: 600;
             white-space: nowrap;
             flex-shrink: 0;
-            margin-left: 6px;
+            margin-left: 4px;
         }
         
         .dim-badge {
             color: #8b6f47;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 900;
             white-space: nowrap;
             flex-shrink: 0;
             direction: ltr;
             display: inline-block;
-            margin-left: 20px;
+            margin-left: 15px;
         }
         
         .dim-badge.height-badge {
@@ -344,10 +352,10 @@
         }
         
         .curtain-type {
-            font-size: 13px;
+            font-size: 11px;
             color: #666;
             background: #f0f0f0;
-            padding: 3px 10px;
+            padding: 2px 8px;
             border-radius: 4px;
             white-space: nowrap;
         }
@@ -355,9 +363,9 @@
         .box-dimensions {
             background: transparent;
             border: 1px solid #d4a574;
-            padding: 3px 10px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 13px;
+            font-size: 11px;
             color: #8b6f47;
             white-space: nowrap;
         }
@@ -366,7 +374,7 @@
         .curtain-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 3px;
+            gap: 1px;
             width: 100%;
             box-sizing: border-box;
         }
@@ -382,11 +390,11 @@
         }
         
         .section-header {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
             color: #a67c52;
-            margin-bottom: 2px;
-            padding-bottom: 1px;
+            margin-bottom: 0;
+            padding-bottom: 0;
             border-bottom: 1px solid #d4a574;
             display: flex;
             align-items: center;
@@ -394,28 +402,28 @@
         }
         
         .section-icon {
-            font-size: 14px;
+            font-size: 12px;
         }
         
         .fabric-block {
             background: white;
-            padding: 4px 5px;
-            border-radius: 4px;
-            margin-bottom: 3px;
+            padding: 1px 2px;
+            border-radius: 3px;
+            margin-bottom: 1px;
             border: 1px solid #d4a574;
         }
         
         .fabric-name-line {
             display: flex;
             align-items: center;
-            margin-bottom: 3px;
-            gap: 8px;
+            margin-bottom: 1px;
+            gap: 4px;
             flex-wrap: nowrap;
             width: 100%;
         }
         
         .fabric-name-bold {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
             color: #000;
             flex: 1;
@@ -423,19 +431,19 @@
             text-overflow: ellipsis;
             white-space: nowrap;
             min-width: 0;
-            margin-left: 8px;
+            margin-left: 6px;
         }
         
         .fabric-type-badge {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 5px;
-            font-size: 13px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
             font-weight: 700;
             color: white;
             white-space: nowrap;
             flex: 0 0 auto;
-            margin-left: 24px;
+            margin-left: 18px;
         }
         
         .fabric-type-badge.light {
@@ -457,7 +465,7 @@
         }
         
         .fabric-meters {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
             color: #2980b9;
             white-space: nowrap;
@@ -466,23 +474,23 @@
         
         .fabric-specs {
             display: flex;
-            gap: 4px;
+            gap: 2px;
             flex-wrap: wrap;
             align-items: center;
         }
         
         .fabric-spec-item {
             background: #f8f5f0;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 13px;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 11px;
             border: 1px solid #d4a574;
         }
         
         .fabric-spec-item.large {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
-            padding: 4px 8px;
+            padding: 3px 6px;
         }
         
         .spec-label-text {
@@ -491,13 +499,13 @@
         }
         
         .fabric-notes {
-            margin-top: 4px;
-            font-size: 13px;
+            margin-top: 1px;
+            font-size: 11px;
             color: #666;
             background: #fffbf0;
-            padding: 4px 6px;
-            border-radius: 4px;
-            border-right: 3px solid #f39c12;
+            padding: 1px 3px;
+            border-radius: 3px;
+            border-right: 2px solid #f39c12;
         }
         
         /* Accessories Section */
@@ -511,11 +519,11 @@
         }
         
         .acc-title-text {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
             color: #d35400;
-            margin-bottom: 2px;
-            padding-bottom: 1px;
+            margin-bottom: 0;
+            padding-bottom: 0;
             border-bottom: 1px solid #f0a373;
             display: flex;
             align-items: center;
@@ -523,13 +531,13 @@
         }
         
         .acc-icon-emoji {
-            font-size: 14px;
+            font-size: 12px;
         }
         
         .accessories-items {
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 1px;
         }
         
         .accessory-row {
@@ -544,7 +552,7 @@
         
         .acc-name-text {
             font-weight: 700;
-            font-size: 13px;
+            font-size: 11px;
             color: #000;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -560,75 +568,87 @@
         .acc-qty-pill {
             background: #d35400;
             color: white;
-            padding: 2px 5px;
-            border-radius: 6px;
-            font-size: 13px;
+            padding: 2px 4px;
+            border-radius: 5px;
+            font-size: 11px;
             font-weight: 700;
         }
         
         .acc-size-pill {
             background: #16a085;
             color: white;
-            padding: 2px 5px;
-            border-radius: 6px;
-            font-size: 13px;
+            padding: 2px 4px;
+            border-radius: 5px;
+            font-size: 11px;
             font-weight: 700;
-            margin-left: 4px;
+            margin-left: 3px;
         }
         
         .acc-color-pill {
             color: #666;
-            font-size: 13px;
+            font-size: 11px;
             background: #f5f5f5;
-            padding: 2px 5px;
-            border-radius: 4px;
+            padding: 2px 4px;
+            border-radius: 3px;
         }
         
         /* Curtain Notes Section - Full Width */
         .curtain-notes-section {
             background: #fffbf0;
-            border: 1.5px solid #f39c12;
-            border-radius: 4px;
-            padding: 4px 6px;
-            margin-top: 3px;
+            border: 1px solid #f39c12;
+            border-radius: 3px;
+            padding: 1px 3px;
+            margin-top: 1px;
             width: 100%;
             box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            gap: 3px;
         }
         
         .notes-header {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
             color: #f39c12;
-            margin-bottom: 3px;
-            padding-bottom: 2px;
-            border-bottom: 1px solid #f39c12;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
+            white-space: nowrap;
         }
         
         .notes-icon {
-            font-size: 14px;
+            font-size: 12px;
         }
         
         .notes-content {
-            font-size: 13px;
+            font-size: 11px;
             color: #333;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            line-height: 1.3;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
         }
         
         /* === FOOTER === */
         .footer-section {
-            margin-top: 10px;
-            padding: 6px;
+            margin-top: 3px;
+            padding: 3px;
             background: #f8f5f0;
             border: 1px solid #a67c52;
             border-radius: 4px;
             display: flex;
             justify-content: space-around;
             align-items: center;
+            page-break-inside: avoid;
+        }
+        
+        .page-number {
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+            page-break-inside: avoid;
         }
         
         .signature-box {
@@ -636,22 +656,22 @@
         }
         
         .sig-line {
-            width: 80px;
+            width: 70px;
             border-top: 2px solid #a67c52;
-            margin: 0 auto 3px;
-            padding-top: 3px;
+            margin: 0 auto 1px;
+            padding-top: 1px;
         }
         
         .sig-label {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
             color: #a67c52;
         }
         
         .sig-name {
-            font-size: 13px;
+            font-size: 11px;
             color: #666;
-            margin-top: 2px;
+            margin-top: 0;
         }
         
         .print-btn {
@@ -947,11 +967,9 @@
             {% if curtain.notes %}
             <div class="curtain-notes-section">
                 <div class="notes-header">
-                    <span class="notes-icon">📝</span> ملاحظات الستارة
+                    <span class="notes-icon">📝</span> ملاحظة:
                 </div>
-                <div class="notes-content">
-                    {{ curtain.notes }}
-                </div>
+                <div class="notes-content">{{ curtain.notes }}</div>
             </div>
             {% endif %}
         </div>
@@ -974,6 +992,12 @@
                 <div class="sig-label">تاريخ الطباعة</div>
                 <div class="sig-name">{% now "Y/m/d H:i" %}</div>
             </div>
+        </div>
+        
+        <div class="page-number">
+            <script>
+                document.write('صفحة ' + '<span class="page"></span>' + ' من ' + '<span class="pages"></span>');
+            </script>
         </div>
     </div>
 </body>
