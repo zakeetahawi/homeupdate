@@ -245,6 +245,11 @@
             border-right: 3px solid #a67c52;
         }
         
+        .curtains-container {
+            padding-right: 30px;
+            position: relative;
+        }
+        
         .curtain-row {
             background: white;
             border: 2px solid #a67c52;
@@ -254,6 +259,21 @@
             page-break-inside: avoid;
             width: 100%;
             box-sizing: border-box;
+            position: relative;
+        }
+        
+        .curtain-contract-number {
+            position: absolute;
+            right: -25px;
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+            transform-origin: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: #a67c52;
+            white-space: nowrap;
+            letter-spacing: 1px;
+            direction: ltr;
         }
         
         /* Curtain Header */
@@ -836,8 +856,10 @@
         <!-- CURTAINS -->
         <div class="section-title">تفاصيل الستائر</div>
         
+        <div class="curtains-container">
         {% for curtain in curtains %}
         <div class="curtain-row">
+            <div class="curtain-contract-number">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</div>
             <!-- Curtain Header -->
             <div class="curtain-header">
                 <!-- Right: Number + Name -->
@@ -978,6 +1000,7 @@
             لم يتم إضافة ستائر لهذا العقد
         </div>
         {% endfor %}
+        </div>
         
         <!-- FOOTER -->
         <div class="footer-section">
