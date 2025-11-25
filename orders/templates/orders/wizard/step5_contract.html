@@ -13,6 +13,15 @@
     max-height: 90vh;
 }
 
+/* ضمان ظهور النافذة في وسط الشاشة */
+#addCurtainModal .modal-dialog {
+    margin: 1.75rem auto;
+}
+
+#addCurtainModal.show .modal-dialog {
+    transform: none;
+}
+
 /* تحسين عرض المحتوى في الشاشات الصغيرة */
 @media (max-height: 768px) {
     #addCurtainModal .modal-dialog-scrollable .modal-body {
@@ -1337,6 +1346,23 @@ function editCurtain(curtainId) {
             const modal = new bootstrap.Modal(document.getElementById('addCurtainModal'));
             modal.show();
             
+            // التمرير إلى أعلى الصفحة عند فتح النافذة
+            setTimeout(function() {
+                const modalElement = document.getElementById('addCurtainModal');
+                const modalBody = modalElement.querySelector('.modal-body');
+                
+                // إعادة تمرير محتوى النافذة إلى الأعلى
+                if (modalBody) {
+                    modalBody.scrollTop = 0;
+                }
+                
+                // إعادة تمرير الصفحة إلى الأعلى لرؤية النافذة
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }, 100);
+            
             // Go directly to fabrics section if there are fabrics
             if (tempFabrics.length > 0) {
                 showFabricsSection();
@@ -1357,6 +1383,16 @@ $('#addCurtainModal').on('hidden.bs.modal', function() {
     resetCurtainModal();
 });
 
+// إعادة تمرير النافذة إلى الأعلى عند فتحها
+$('#addCurtainModal').on('show.bs.modal', function() {
+    // التمرير إلى أعلى الصفحة فوراً
+    $('html, body').scrollTop(0);
+});
+
+$('#addCurtainModal').on('shown.bs.modal', function() {
+    // إعادة تمرير محتوى النافذة إلى الأعلى
+    $(this).find('.modal-body').scrollTop(0);
+});
 
 function removeCurtain(curtainId) {
     if (!confirm('هل أنت متأكد من حذف هذه الستارة؟')) {
