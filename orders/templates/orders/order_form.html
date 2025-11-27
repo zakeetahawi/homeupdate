@@ -668,7 +668,7 @@
                                 <!-- Invoice Image Upload - صورة الفاتورة -->
                                 <div class="mb-4 invoice-image-field" id="invoice-image-container" style="display: none;">
                                     <label for="id_invoice_image" class="form-label fw-bold">
-                                        <i class="fas fa-image me-1"></i>صورة الفاتورة
+                                        <i class="fas fa-image me-1"></i>صورة الفاتورة الرئيسية
                                         <span class="text-danger">*</span>
                                     </label>
                                     <input type="file" name="invoice_image" id="id_invoice_image" 
@@ -688,6 +688,23 @@
                                     <!-- معاينة الصورة -->
                                     <div id="invoice-image-preview" class="mt-2" style="display: none;">
                                         <img src="" alt="معاينة صورة الفاتورة" class="img-thumbnail" style="max-height: 200px;">
+                                    </div>
+                                    
+                                    <!-- صور إضافية للفاتورة -->
+                                    <div class="mt-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-images me-1"></i>صور إضافية للفاتورة (اختياري)
+                                        </label>
+                                        <div id="additional-images-container">
+                                            <!-- سيتم إضافة حقول الصور الإضافية هنا -->
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-invoice-image-btn">
+                                            <i class="fas fa-plus me-1"></i>إضافة صورة أخرى
+                                        </button>
+                                        <div class="form-text text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            يمكنك إضافة حتى 4 صور إضافية للفاتورة
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -856,6 +873,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 reader.readAsDataURL(file);
             } else {
                 invoiceImagePreview.style.display = 'none';
+            }
+        });
+    }
+    
+    // إدارة الصور الإضافية للفاتورة
+    const addImageBtn = document.getElementById('add-invoice-image-btn');
+    const additionalImagesContainer = document.getElementById('additional-images-container');
+    let imageCount = 0;
+    const maxImages = 4;
+    
+    if (addImageBtn && additionalImagesContainer) {
+        addImageBtn.addEventListener('click', function() {
+            if (imageCount >= maxImages) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'تحذير',
+                    text: 'لا يمكن إضافة أكثر من 4 صور إضافية',
+                    confirmButtonText: 'حسناً'
+                });
+                return;
+            }
+            
+            imageCount++;
+            const imageDiv = document.createElement('div');
+            imageDiv.className = 'mb-2 additional-image-item';
+            imageDiv.innerHTML = `
+                <div class="input-group">
+                    <input type="file" name="additional_invoice_images" class="form-control" accept="image/*">
+                    <button type="button" class="btn btn-outline-danger remove-image-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            additionalImagesContainer.appendChild(imageDiv);
+            
+            // إضافة حدث الحذف
+            imageDiv.querySelector('.remove-image-btn').addEventListener('click', function() {
+                imageDiv.remove();
+                imageCount--;
+                if (imageCount < maxImages) {
+                    addImageBtn.style.display = 'inline-block';
+                }
+            });
+            
+            if (imageCount >= maxImages) {
+                addImageBtn.style.display = 'none';
             }
         });
     }

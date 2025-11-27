@@ -38,28 +38,66 @@
                 {{ form.invoice_number_3 }}
             </div>
             
-            <!-- Invoice Image -->
+            <!-- Invoice Images - صور الفاتورة المتعددة -->
             <div class="mb-3">
-                <label for="{{ form.invoice_image.id_for_label }}" class="form-label fw-bold">
-                    <i class="fas fa-image me-2"></i>صورة الفاتورة
+                <label class="form-label fw-bold">
+                    <i class="fas fa-images me-2"></i>صور الفاتورة
                     {% if draft.selected_type != 'inspection' %}
                     <span class="text-danger">*</span>
                     {% endif %}
                 </label>
-                {{ form.invoice_image }}
-                {% if draft.invoice_image %}
-                    <div class="mt-2">
-                        <a href="{{ draft.invoice_image.url }}" target="_blank" class="btn btn-sm btn-outline-success">
-                            <i class="fas fa-eye me-1"></i>عرض الصورة الحالية
-                        </a>
+                
+                <!-- عرض الصور الحالية -->
+                <div id="current-images" class="mb-3">
+                    {% if draft.invoice_image %}
+                        <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between">
+                            <div>
+                                <i class="fas fa-image me-2 text-success"></i>
+                                <span>صورة الفاتورة الرئيسية</span>
+                            </div>
+                            <div>
+                                <a href="{{ draft.invoice_image.url }}" target="_blank" class="btn btn-sm btn-outline-success me-1">
+                                    <i class="fas fa-eye me-1"></i>عرض
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% for img in draft.invoice_images_new.all %}
+                        <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between">
+                            <div>
+                                <i class="fas fa-image me-2 text-success"></i>
+                                <span>صورة {{ forloop.counter }}</span>
+                            </div>
+                            <div>
+                                <a href="{{ img.image.url }}" target="_blank" class="btn btn-sm btn-outline-success me-1">
+                                    <i class="fas fa-eye me-1"></i>عرض
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteInvoiceImage({{ img.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- حقول رفع الصور -->
+                <div id="invoice-images-container">
+                    <div class="invoice-image-input mb-2">
+                        {{ form.invoice_image }}
                     </div>
-                {% endif %}
+                </div>
+                
+                <!-- زر إضافة صورة جديدة -->
+                <button type="button" class="btn btn-sm btn-outline-primary" id="add-invoice-image" onclick="addInvoiceImageField()">
+                    <i class="fas fa-plus me-1"></i>إضافة صورة إضافية
+                </button>
+                
                 {% if form.invoice_image.errors %}
-                    <div class="text-danger mt-1">{{ form.invoice_image.errors }}</div>
+                    <div class="text-danger mt-2">{{ form.invoice_image.errors }}</div>
                 {% endif %}
-                <div class="form-text">
+                <div class="form-text mt-2">
                     <i class="fas fa-info-circle me-1"></i>
-                    يُسمح بصور JPG, PNG, GIF, WEBP - أقصى حجم 10 ميجابايت
+                    يُسمح بصور JPG, PNG, GIF, WEBP - أقصى حجم 10 ميجابايت لكل صورة
                 </div>
             </div>
         </div>
@@ -154,6 +192,69 @@
 
 {% block extra_js %}
 {{ block.super }}
+
+<!-- JavaScript Functions - دوال عامة -->
+<script>
+// إضافة حقل صورة جديد - دالة عامة يمكن الوصول إليها من onclick
+let imageFieldCounter = 1;
+window.addInvoiceImageField = function() {
+    const container = document.getElementById('invoice-images-container');
+    if (!container) {
+        console.error('Container not found');
+        return;
+    }
+    
+    const newField = document.createElement('div');
+    newField.className = 'invoice-image-input mb-2 d-flex gap-2';
+    newField.innerHTML = `
+        <input type="file" name="additional_invoice_image_${imageFieldCounter}" 
+               class="form-control" accept="image/*">
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    container.appendChild(newField);
+    imageFieldCounter++;
+    console.log('Added new image field');
+}
+
+// حذف صورة فاتورة - دالة عامة
+window.deleteInvoiceImage = function(imageId) {
+    Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'سيتم حذف هذه الصورة نهائياً',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، احذف',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/orders/wizard/delete-invoice-image/${imageId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم الحذف!', 'تم حذف الصورة بنجاح', 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('خطأ!', data.error || 'حدث خطأ أثناء الحذف', 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال بالخادم', 'error');
+            });
+        }
+    });
+}
+</script>
+
 <script>
 // بيانات المسودة
 const customerId = {{ draft.customer.id|default:"null" }};
@@ -274,6 +375,8 @@ paidAmountInput.addEventListener('input', function() {
         this.classList.add('is-invalid');
     }
 });
+
+// إزالة الدوال المكررة التي كانت هنا - تم نقلها إلى window object أعلاه
 
 // معالجة إرسال النموذج
 document.getElementById('step4-form').addEventListener('submit', function(e) {

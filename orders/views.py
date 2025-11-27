@@ -429,6 +429,16 @@ def order_create(request):
                 if not order.pk:
                     raise Exception("فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي")
 
+                # 4.5. معالجة الصور الإضافية للفاتورة
+                additional_images = request.FILES.getlist('additional_invoice_images')
+                if additional_images:
+                    from .models import OrderInvoiceImage
+                    for img in additional_images:
+                        OrderInvoiceImage.objects.create(
+                            order=order,
+                            image=img
+                        )
+
                 # 5. معالجة المنتجات المحددة إن وجدت
                 selected_products_json = request.POST.get('selected_products', '')
                 print("selected_products_json:", selected_products_json)

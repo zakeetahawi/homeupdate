@@ -107,9 +107,12 @@
                                     <span class="text-muted">غير محدد</span>
                                 {% endif %}
                             {% endwith %}
-                            {% if cutting_order.order.invoice_image %}
+                            {% if cutting_order.order.invoice_image or cutting_order.order.invoice_images.exists %}
                             <button type="button" class="btn btn-sm btn-light ms-2" onclick="showInvoiceImage()">
-                                <i class="fas fa-file-invoice text-success"></i> عرض صورة الفاتورة
+                                <i class="fas fa-file-invoice text-success"></i> عرض صور الفاتورة
+                                {% if cutting_order.order.invoice_images.exists %}
+                                <span class="badge bg-info text-dark">{{ cutting_order.order.invoice_images.count|add:1 }}</span>
+                                {% endif %}
                             </button>
                             {% else %}
                             <span class="badge bg-secondary ms-2">
@@ -434,39 +437,70 @@
     </div>
 </div>
 
-<!-- Modal لعرض صورة الفاتورة -->
-{% if cutting_order.order.invoice_image %}
+<!-- Modal لعرض صورة/صور الفاتورة -->
+{% if cutting_order.order.invoice_image or cutting_order.order.invoice_images.exists %}
 <script>
 function showInvoiceImage() {
+    // جمع جميع الصور
+    let imagesHtml = '';
+    let imageUrls = [];
+    
+    {% if cutting_order.order.invoice_image %}
+    imageUrls.push('{{ cutting_order.order.invoice_image.url }}');
+    imagesHtml += `
+        <div class="mb-3">
+            <h6 class="text-start"><i class="fas fa-image me-2"></i>الصورة الرئيسية</h6>
+            <img src="{{ cutting_order.order.invoice_image.url }}" alt="صورة الفاتورة الرئيسية" 
+                 class="img-fluid rounded shadow mb-2" style="max-width: 100%; height: auto; cursor: pointer;"
+                 onclick="window.open('{{ cutting_order.order.invoice_image.url }}', '_blank')">
+        </div>
+    `;
+    {% endif %}
+    
+    {% for img in cutting_order.order.invoice_images.all %}
+    imageUrls.push('{{ img.image.url }}');
+    imagesHtml += `
+        <div class="mb-3">
+            <h6 class="text-start"><i class="fas fa-image me-2"></i>صورة {{ forloop.counter }}</h6>
+            <img src="{{ img.image.url }}" alt="صورة الفاتورة {{ forloop.counter }}" 
+                 class="img-fluid rounded shadow mb-2" style="max-width: 100%; height: auto; cursor: pointer;"
+                 onclick="window.open('{{ img.image.url }}', '_blank')">
+        </div>
+    `;
+    {% endfor %}
+    
     Swal.fire({
-        title: '<i class="fas fa-file-invoice text-success me-2"></i>صورة الفاتورة',
+        title: '<i class="fas fa-file-invoice text-success me-2"></i>صور الفاتورة',
         html: `
-            <div class="text-center">
-                <img src="{{ cutting_order.order.invoice_image.url }}" alt="صورة الفاتورة" class="img-fluid rounded shadow" style="max-width: 100%; height: auto;">
+            <div class="text-center" style="max-height: 600px; overflow-y: auto;">
+                ${imagesHtml}
             </div>
         `,
-        width: '800px',
+        width: '900px',
         showCloseButton: true,
         showCancelButton: true,
         showConfirmButton: true,
         confirmButtonColor: '#007bff',
         cancelButtonColor: '#28a745',
-        confirmButtonText: '<i class="fas fa-external-link-alt me-1"></i>فتح في نافذة جديدة',
-        cancelButtonText: '<i class="fas fa-download me-1"></i>تحميل الصورة',
+        confirmButtonText: '<i class="fas fa-download me-1"></i>تحميل جميع الصور',
+        cancelButtonText: '<i class="fas fa-times me-1"></i>إغلاق',
         reverseButtons: true
     }).then((result) => {
         if (result.isConfirmed) {
-            window.open('{{ cutting_order.order.invoice_image.url }}', '_blank');
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-            // تحميل الصورة
-            var link = document.createElement('a');
-            link.href = '{{ cutting_order.order.invoice_image.url }}';
-            link.download = 'invoice_image';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // تحميل جميع الصور
+            imageUrls.forEach((url, index) => {
+                setTimeout(() => {
+                    var link = document.createElement('a');
+                    link.href = url;
+                    link.download = `invoice_image_${index + 1}`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }, index * 200);
+            });
         }
     });
+}
 }
 </script>
 {% endif %}

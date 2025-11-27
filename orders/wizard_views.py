@@ -526,6 +526,17 @@ def wizard_step_4_invoice_payment(request, draft):
         )
         if form.is_valid():
             form.save()
+            
+            # معالجة الصور الإضافية
+            from .wizard_models import DraftOrderInvoiceImage
+            for key in request.FILES:
+                if key.startswith('additional_invoice_image_'):
+                    image = request.FILES[key]
+                    DraftOrderInvoiceImage.objects.create(
+                        draft_order=draft,
+                        image=image
+                    )
+            
             draft.mark_step_complete(4)
             
             # تحديد الخطوة التالية بناءً على نوع الطلب
@@ -577,6 +588,25 @@ def wizard_step_4_invoice_payment(request, draft):
     }
     
     return render(request, 'orders/wizard/step4_invoice_payment.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_draft_invoice_image(request, image_id):
+    """حذف صورة فاتورة من المسودة"""
+    from .wizard_models import DraftOrderInvoiceImage
+    try:
+        image = DraftOrderInvoiceImage.objects.get(id=image_id)
+        # التحقق من أن المستخدم هو من أنشأ المسودة
+        if image.draft_order.created_by != request.user:
+            return JsonResponse({'success': False, 'error': 'غير مصرح لك بحذف هذه الصورة'}, status=403)
+        
+        image.delete()
+        return JsonResponse({'success': True})
+    except DraftOrderInvoiceImage.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'الصورة غير موجودة'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 def wizard_step_5_contract(request, draft):
@@ -773,6 +803,20 @@ def wizard_finalize(request):
                 
                 order.save()
                 
+                # نقل الصور الإضافية للفاتورة
+                from .models import OrderInvoiceImage
+                from .wizard_models import DraftOrderInvoiceImage
+                
+                # حذف الصور القديمة إذا وجدت
+                order.invoice_images.all().delete()
+                
+                # نقل الصور الجديدة
+                for draft_img in draft.invoice_images_new.all():
+                    OrderInvoiceImage.objects.create(
+                        order=order,
+                        image=draft_img.image
+                    )
+                
                 # حذف العناصر القديمة
                 order.items.all().delete()
                 
@@ -811,6 +855,17 @@ def wizard_finalize(request):
                 creation_method='wizard',
                 source_draft_id=draft.id,
             )
+            
+            # نقل الصور الإضافية للفاتورة
+            from .models import OrderInvoiceImage
+            from .wizard_models import DraftOrderInvoiceImage
+            
+            for draft_img in draft.invoice_images_new.all():
+                OrderInvoiceImage.objects.create(
+                    order=order,
+                    image=draft_img.image
+                )
+            
             logger.info(f"Created new order {order.order_number}")
         
         # لا حاجة لنقل contract_file هنا - تم نقله في عملية الإنشاء/التحديث

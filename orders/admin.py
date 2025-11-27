@@ -9,7 +9,8 @@ from django.http import HttpResponseRedirect
 from datetime import datetime
 from .models import (
     Order, OrderItem, Payment, OrderStatusLog, 
-    ManufacturingDeletionLog, DeliveryTimeSettings
+    ManufacturingDeletionLog, DeliveryTimeSettings,
+    OrderInvoiceImage
 )
 from django import forms
 import json
@@ -751,5 +752,28 @@ class OrderStatusLogAdmin(admin.ModelAdmin):
     notes_truncated.short_description = 'ملاحظات'
 
 
+@admin.register(OrderInvoiceImage)
+class OrderInvoiceImageAdmin(admin.ModelAdmin):
+    """إدارة صور الفاتورة"""
+    list_display = ['id', 'order_link', 'image_preview', 'uploaded_at']
+    list_filter = ['uploaded_at']
+    search_fields = ['order__order_number', 'order__invoice_number']
+    readonly_fields = ['uploaded_at', 'image_preview']
+    
+    def order_link(self, obj):
+        """رابط للطلب"""
+        url = reverse('admin:orders_order_change', args=[obj.order.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.order.order_number)
+    order_link.short_description = 'الطلب'
+    
+    def image_preview(self, obj):
+        """معاينة الصورة"""
+        if obj.image:
+            return format_html('<img src="{}" style="max-height: 100px; max-width: 200px;" />', obj.image.url)
+        return '-'
+    image_preview.short_description = 'معاينة'
+
+
 # تم إزالة ContractTemplateAdmin - يرجى استخدام نظام الويزارد لإنشاء العقود
+
 

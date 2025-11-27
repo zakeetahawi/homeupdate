@@ -11,6 +11,32 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 
 
+class DraftOrderInvoiceImage(models.Model):
+    """صور الفاتورة المتعددة لمسودة الطلب"""
+    draft_order = models.ForeignKey(
+        'DraftOrder',
+        on_delete=models.CASCADE,
+        related_name='invoice_images_new',
+        verbose_name='مسودة الطلب'
+    )
+    image = models.ImageField(
+        upload_to='invoices/images/drafts/%Y/%m/',
+        verbose_name='صورة الفاتورة'
+    )
+    uploaded_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الرفع'
+    )
+    
+    class Meta:
+        verbose_name = 'صورة فاتورة مسودة'
+        verbose_name_plural = 'صور فواتير المسودات'
+        ordering = ['uploaded_at']
+    
+    def __str__(self):
+        return f"صورة فاتورة مسودة {self.draft_order.id} - {self.uploaded_at.strftime('%Y-%m-%d')}"
+
+
 class DraftOrder(models.Model):
     """
     مسودة الطلب - تحتفظ بالبيانات أثناء عملية الإنشاء متعددة الخطوات

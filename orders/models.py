@@ -41,6 +41,33 @@ def validate_invoice_image(value):
             raise ValidationError('حجم الصورة يجب أن يكون أقل من 10 ميجابايت')
 
 
+class OrderInvoiceImage(models.Model):
+    """صور الفاتورة المتعددة للطلب"""
+    order = models.ForeignKey(
+        'Order',
+        on_delete=models.CASCADE,
+        related_name='invoice_images',
+        verbose_name='الطلب'
+    )
+    image = models.ImageField(
+        upload_to='invoices/images/%Y/%m/',
+        validators=[validate_invoice_image],
+        verbose_name='صورة الفاتورة'
+    )
+    uploaded_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاريخ الرفع'
+    )
+    
+    class Meta:
+        verbose_name = 'صورة فاتورة'
+        verbose_name_plural = 'صور الفواتير'
+        ordering = ['uploaded_at']
+    
+    def __str__(self):
+        return f"صورة فاتورة {self.order.invoice_number} - {self.uploaded_at.strftime('%Y-%m-%d')}"
+
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('normal', 'عادي'),
