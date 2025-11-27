@@ -6,6 +6,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from inventory.models import Product
+from .models import Order
 
 
 @login_required
@@ -71,5 +72,140 @@ def products_search_api(request):
             'results': [],
             'has_more': False,
             'total': 0,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def check_invoice_number_api(request):
+    """
+    API endpoint للتحقق من تكرار رقم المرجع للعميل نفسه
+    يُرجع تحذيراً إذا كان الرقم مستخدماً مسبقاً مع نفس نوع الطلب
+    """
+    import json
+    try:
+        # دعم GET و POST
+        if request.method == 'POST':
+            try:
+                data = json.loads(request.body)
+                invoice_number = data.get('invoice_number', '').strip()
+                customer_id = data.get('customer_id', '')
+                order_type = data.get('order_type', '')
+                current_order_id = data.get('current_order_id', '')
+            except json.JSONDecodeError:
+                invoice_number = request.POST.get('invoice_number', '').strip()
+                customer_id = request.POST.get('customer_id', '')
+                order_type = request.POST.get('order_type', '')
+                current_order_id = request.POST.get('current_order_id', '')
+        else:
+            invoice_number = request.GET.get('invoice_number', '').strip()
+            customer_id = request.GET.get('customer_id', '')
+            order_type = request.GET.get('order_type', '')
+            current_order_id = request.GET.get('current_order_id', '')
+        
+        if not invoice_number or not customer_id:
+            return JsonResponse({
+                'exists': False,
+                'message': ''
+            })
+        
+        # البحث عن طلبات بنفس رقم المرجع للعميل نفسه
+        existing_orders = Order.objects.filter(
+            customer_id=customer_id
+        ).filter(
+            Q(invoice_number=invoice_number) |
+            Q(invoice_number_2=invoice_number) |
+            Q(invoice_number_3=invoice_number)
+        )
+        
+        # استثناء الطلب الحالي في حالة التعديل
+        if current_order_id:
+            existing_orders = existing_orders.exclude(pk=current_order_id)
+        
+        # التحقق من وجود طلب بنفس النوع
+        duplicate_found = False
+        duplicate_order = None
+        same_type = False
+        existing_order_types = []
+        
+        # تحويل order_type إلى lowercase للمقارنة الصحيحة
+        order_type_lower = order_type.lower().strip() if order_type else ''
+        
+        for existing_order in existing_orders:
+            try:
+                existing_types = existing_order.get_selected_types_list()
+                existing_order_types = existing_types  # للتصحيح
+                
+                # تحويل الأنواع المخزنة إلى lowercase
+                existing_types_lower = [t.lower().strip() for t in existing_types if t]
+                
+                if order_type_lower and order_type_lower in existing_types_lower:
+                    duplicate_found = True
+                    duplicate_order = existing_order
+                    same_type = True
+                    break
+                elif not duplicate_found:
+                    duplicate_found = True
+                    duplicate_order = existing_order
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error checking order types: {e}")
+                duplicate_found = True
+                duplicate_order = existing_order
+        
+        if duplicate_found and duplicate_order:
+            # الحصول على أسماء الأنواع للعرض
+            type_names = {
+                'inspection': 'معاينة',
+                'installation': 'تركيب',
+                'accessory': 'إكسسوار',
+                'tailoring': 'تسليم',
+                'products': 'منتجات',
+                'fabric': 'أقمشة',
+                'transport': 'نقل'
+            }
+            
+            existing_types_display = duplicate_order.get_selected_types_list()
+            existing_types_arabic = [type_names.get(t, t) for t in existing_types_display]
+            current_type_arabic = type_names.get(order_type_lower, order_type)
+            
+            if same_type:
+                return JsonResponse({
+                    'exists': True,
+                    'same_type': True,
+                    'can_proceed': False,
+                    'order_number': duplicate_order.order_number,
+                    'existing_types': existing_types_display,
+                    'current_type': order_type,
+                    'message': f'⚠️ رقم المرجع "{invoice_number}" مستخدم مسبقاً لهذا العميل في طلب من نفس النوع ({current_type_arabic}) - رقم الطلب: {duplicate_order.order_number}. لا يمكن المتابعة.',
+                    'title': 'رقم المرجع مكرر - نفس النوع'
+                })
+            else:
+                return JsonResponse({
+                    'exists': True,
+                    'same_type': False,
+                    'can_proceed': True,
+                    'order_number': duplicate_order.order_number,
+                    'existing_types': existing_types_display,
+                    'current_type': order_type,
+                    'message': f'ℹ️ رقم المرجع "{invoice_number}" مستخدم لهذا العميل في طلب آخر ({", ".join(existing_types_arabic)}) - رقم الطلب: {duplicate_order.order_number}. يمكنك المتابعة لأن النوع مختلف ({current_type_arabic}).',
+                    'title': 'رقم المرجع موجود - نوع مختلف'
+                })
+        
+        return JsonResponse({
+            'exists': False,
+            'message': ''
+        })
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in check_invoice_number_api: {e}")
+        
+        return JsonResponse({
+            'exists': False,
+            'message': '',
             'error': str(e)
         }, status=500)

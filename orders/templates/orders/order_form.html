@@ -665,6 +665,32 @@
                                     {% endif %}
                                 </div>
                                 
+                                <!-- Invoice Image Upload - صورة الفاتورة -->
+                                <div class="mb-4 invoice-image-field" id="invoice-image-container" style="display: none;">
+                                    <label for="id_invoice_image" class="form-label fw-bold">
+                                        <i class="fas fa-image me-1"></i>صورة الفاتورة
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="file" name="invoice_image" id="id_invoice_image" 
+                                           class="form-control" accept="image/*">
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        يجب إرفاق صورة الفاتورة (JPG, PNG, GIF, WEBP) - أقل من 10 ميجابايت
+                                    </div>
+                                    {% if form.invoice_image.errors %}
+                                    <div class="alert alert-danger mt-2">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        {% for error in form.invoice_image.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <!-- معاينة الصورة -->
+                                    <div id="invoice-image-preview" class="mt-2" style="display: none;">
+                                        <img src="" alt="معاينة صورة الفاتورة" class="img-thumbnail" style="max-height: 200px;">
+                                    </div>
+                                </div>
+                                
                                 <!-- Related Inspection -->
                                 <div class="mb-4 related-inspection-field" style="display: none;">
                                     <label for="{{ form.related_inspection.id_for_label }}" class="form-label fw-bold">
@@ -785,8 +811,55 @@ document.addEventListener('DOMContentLoaded', function() {
             addCurtainToModal();
         });
     }
-
-</script>
+    
+    // معاينة صورة الفاتورة عند اختيارها
+    const invoiceImageInput = document.getElementById('id_invoice_image');
+    const invoiceImagePreview = document.getElementById('invoice-image-preview');
+    
+    if (invoiceImageInput && invoiceImagePreview) {
+        invoiceImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // التحقق من نوع الملف
+                if (!file.type.startsWith('image/')) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'خطأ في نوع الملف',
+                        text: 'يرجى اختيار ملف صورة فقط (JPG, PNG, GIF, WEBP)',
+                        confirmButtonText: 'حسناً'
+                    });
+                    invoiceImageInput.value = '';
+                    invoiceImagePreview.style.display = 'none';
+                    return;
+                }
+                
+                // التحقق من حجم الملف (أقل من 10 ميجابايت)
+                if (file.size > 10 * 1024 * 1024) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'الملف كبير جداً',
+                        text: 'حجم الصورة يجب أن يكون أقل من 10 ميجابايت',
+                        confirmButtonText: 'حسناً'
+                    });
+                    invoiceImageInput.value = '';
+                    invoiceImagePreview.style.display = 'none';
+                    return;
+                }
+                
+                // عرض المعاينة
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = invoiceImagePreview.querySelector('img');
+                    img.src = e.target.result;
+                    invoiceImagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                invoiceImagePreview.style.display = 'none';
+            }
+        });
+    }
+});</script>
 
 <!-- إضافة Modal الباركود -->
 {% include 'includes/order_barcode_scanner_modal.html' %}

@@ -11,6 +11,27 @@ window.isSubmitting = false;
 window.submissionStartTime = null;
 window.progressInterval = null;
 
+// دالة للحصول على CSRF Token
+function getCSRFToken() {
+    // محاولة الحصول من الكوكيز
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    
+    if (cookieValue) {
+        return cookieValue;
+    }
+    
+    // محاولة الحصول من عنصر مخفي
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput) {
+        return csrfInput.value;
+    }
+    
+    return '';
+}
+
 // دالة لإظهار مؤشر التقدم المحسن
 function showProgressIndicator() {
     if (window.isSubmitting) {
@@ -535,21 +556,26 @@ function updateFormFields() {
 
     const showForContract = ['installation', 'tailoring', 'accessory'].includes(selectedType);
     const showRelatedInspection = ['installation', 'tailoring', 'accessory'].includes(selectedType);
+    // إظهار صورة الفاتورة لجميع الأنواع ما عدا المعاينة
+    const showInvoiceImage = selectedType !== 'inspection' && selectedType !== '';
 
     console.log('🔍 نوع الطلب:', selectedType);
     console.log('🔍 إظهار حقول العقد:', showForContract);
     console.log('🔍 إظهار المعاينة المرتبطة:', showRelatedInspection);
+    console.log('🔍 إظهار صورة الفاتورة:', showInvoiceImage);
 
     // إظهار/إخفاء حقول العقد
     const contractFields = document.querySelectorAll('.contract-field');
     const contractElectronicBtnField = document.querySelector('.contract-electronic-btn-field');
     const contractFileField = document.querySelector('.contract-file-field');
     const relatedInspectionField = document.querySelector('.related-inspection-field');
+    const invoiceImageField = document.getElementById('invoice-image-container');
 
     console.log('🔍 عدد حقول العقد:', contractFields.length);
     console.log('🔍 حقل زر العقد الإلكتروني:', contractElectronicBtnField ? 'موجود' : 'غير موجود');
     console.log('🔍 حقل ملف العقد:', contractFileField ? 'موجود' : 'غير موجود');
     console.log('🔍 حقل المعاينة المرتبطة:', relatedInspectionField ? 'موجود' : 'غير موجود');
+    console.log('🔍 حقل صورة الفاتورة:', invoiceImageField ? 'موجود' : 'غير موجود');
 
     contractFields.forEach(field => {
         if (field) field.style.display = showForContract ? 'block' : 'none';
@@ -566,6 +592,11 @@ function updateFormFields() {
 
     if (relatedInspectionField) {
         relatedInspectionField.style.display = showRelatedInspection ? 'block' : 'none';
+    }
+
+    // إظهار/إخفاء حقل صورة الفاتورة
+    if (invoiceImageField) {
+        invoiceImageField.style.display = showInvoiceImage ? 'block' : 'none';
     }
     
     // إعادة التحقق من النموذج
@@ -1051,6 +1082,153 @@ function selectProduct(item) {
     setupTotalCalculation();
 }
 
+// متغير لتخزين حالة حظر رقم الفاتورة المكرر
+window.invoiceNumberBlocked = false;
+
+// دالة التحقق الفوري من تكرار رقم الفاتورة (تظهر رسالة مباشرة)
+function checkInvoiceNumberDuplicate(invoiceNumber) {
+    const feedbackDiv = document.getElementById('invoice-number-feedback');
+    
+    if (!invoiceNumber) {
+        if (feedbackDiv) {
+            feedbackDiv.style.display = 'none';
+            feedbackDiv.innerHTML = '';
+        }
+        window.invoiceNumberBlocked = false;
+        return;
+    }
+    
+    // الحصول على customer_id
+    const customerIdInput = document.getElementById('id_customer') || 
+                           document.querySelector('[name="customer"]') ||
+                           document.getElementById('customer');
+    if (!customerIdInput || !customerIdInput.value) {
+        console.log('لم يتم اختيار عميل بعد');
+        return;
+    }
+    const customerId = customerIdInput.value;
+    
+    // الحصول على نوع الطلب (يدعم أسماء متعددة للحقل)
+    const orderTypeRadio = document.querySelector('input[name="order_type_selector"]:checked') ||
+                          document.querySelector('input[name="order_type"]:checked') ||
+                          document.querySelector('input[name="selected_types"]:checked');
+    const orderType = orderTypeRadio ? orderTypeRadio.value : '';
+    
+    console.log('التحقق من رقم الفاتورة:', { invoiceNumber, customerId, orderType });
+    
+    // إظهار مؤشر التحميل
+    if (feedbackDiv) {
+        feedbackDiv.style.display = 'block';
+        feedbackDiv.innerHTML = '<span class="text-muted"><i class="bi bi-hourglass-split"></i> جاري التحقق...</span>';
+    }
+    
+    // إرسال طلب للتحقق
+    fetch('/orders/api/check-invoice-number/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            invoice_number: invoiceNumber,
+            customer_id: customerId,
+            order_type: orderType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (feedbackDiv) {
+            if (data.exists) {
+                if (data.same_type) {
+                    // مكرر لنفس نوع الطلب - خطأ
+                    feedbackDiv.style.display = 'block';
+                    feedbackDiv.innerHTML = `
+                        <div class="alert alert-danger py-2 mb-0">
+                            <i class="bi bi-x-circle-fill me-2"></i>
+                            <strong>${data.title}</strong><br>
+                            ${data.message}
+                        </div>
+                    `;
+                    window.invoiceNumberBlocked = true;
+                } else {
+                    // مكرر لنوع طلب مختلف - تحذير
+                    feedbackDiv.style.display = 'block';
+                    feedbackDiv.innerHTML = `
+                        <div class="alert alert-warning py-2 mb-0">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <strong>${data.title}</strong><br>
+                            ${data.message}
+                        </div>
+                    `;
+                    window.invoiceNumberBlocked = false;
+                }
+            } else {
+                // رقم جديد - صحيح
+                feedbackDiv.style.display = 'block';
+                feedbackDiv.innerHTML = `
+                    <div class="alert alert-success py-2 mb-0">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        رقم الفاتورة متاح
+                    </div>
+                `;
+                window.invoiceNumberBlocked = false;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('خطأ في التحقق من رقم الفاتورة:', error);
+        if (feedbackDiv) {
+            feedbackDiv.style.display = 'none';
+        }
+        window.invoiceNumberBlocked = false;
+    });
+}
+
+// دالة التحقق غير المتزامن (للاستخدام في preConfirm)
+async function checkInvoiceNumberDuplicateAsync(invoiceNumber) {
+    if (!invoiceNumber) {
+        return { exists: false };
+    }
+    
+    // الحصول على customer_id
+    const customerIdInput = document.getElementById('id_customer') || 
+                           document.querySelector('[name="customer"]') ||
+                           document.getElementById('customer');
+    if (!customerIdInput || !customerIdInput.value) {
+        console.log('لم يتم اختيار عميل بعد');
+        return { exists: false };
+    }
+    const customerId = customerIdInput.value;
+    
+    // الحصول على نوع الطلب (يدعم أسماء متعددة للحقل)
+    const orderTypeRadio = document.querySelector('input[name="order_type_selector"]:checked') ||
+                          document.querySelector('input[name="order_type"]:checked') ||
+                          document.querySelector('input[name="selected_types"]:checked');
+    const orderType = orderTypeRadio ? orderTypeRadio.value : '';
+    
+    console.log('التحقق غير المتزامن من رقم الفاتورة:', { invoiceNumber, customerId, orderType });
+    
+    try {
+        const response = await fetch('/orders/api/check-invoice-number/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                invoice_number: invoiceNumber,
+                customer_id: customerId,
+                order_type: orderType
+            })
+        });
+        
+        return await response.json();
+    } catch (error) {
+        console.error('خطأ في التحقق من رقم الفاتورة:', error);
+        return { exists: false };
+    }
+}
+
 // عرض نافذة الدفع والفوترة
 function showPaymentModal() {
     // التحقق من وجود عناصر
@@ -1091,6 +1269,7 @@ function showPaymentModal() {
                         <div class="mb-3">
                             <label class="form-label">رقم الفاتورة الرئيسي *</label>
                             <input type="text" id="invoice-number" class="form-control" required>
+                            <div id="invoice-number-feedback" class="mt-2" style="display: none;"></div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -1136,7 +1315,23 @@ function showPaymentModal() {
         confirmButtonText: 'حفظ الطلب',
         cancelButtonText: 'إلغاء',
         width: '600px',
-        preConfirm: () => {
+        didOpen: () => {
+            // إضافة مستمع للتحقق الفوري من رقم الفاتورة
+            const invoiceInput = document.getElementById('invoice-number');
+            if (invoiceInput) {
+                let checkTimeout;
+                invoiceInput.addEventListener('input', function() {
+                    clearTimeout(checkTimeout);
+                    checkTimeout = setTimeout(() => {
+                        checkInvoiceNumberDuplicate(this.value.trim());
+                    }, 500);
+                });
+                invoiceInput.addEventListener('blur', function() {
+                    checkInvoiceNumberDuplicate(this.value.trim());
+                });
+            }
+        },
+        preConfirm: async () => {
             // التحقق من عدم وجود إرسال جاري
             if (window.isSubmitting) {
                 Swal.showValidationMessage('جاري إرسال الطلب، يرجى الانتظار...');
@@ -1149,6 +1344,13 @@ function showPaymentModal() {
 
             if (!invoiceNumber) {
                 Swal.showValidationMessage('يجب إدخال رقم فاتورة رئيسي');
+                return false;
+            }
+
+            // التحقق من تكرار رقم الفاتورة قبل الحفظ
+            const duplicateCheck = await checkInvoiceNumberDuplicateAsync(invoiceNumber);
+            if (duplicateCheck && duplicateCheck.exists && duplicateCheck.same_type) {
+                Swal.showValidationMessage(duplicateCheck.message);
                 return false;
             }
 
@@ -1339,6 +1541,26 @@ function performValidation() {
         }
     }
 
+    // التحقق من صورة الفاتورة (مطلوبة لجميع الأنواع ما عدا المعاينة)
+    if (selectedOrderType && selectedOrderType.value !== 'inspection') {
+        const invoiceImageField = document.getElementById('id_invoice_image');
+        if (invoiceImageField) {
+            const hasFile = invoiceImageField.files && invoiceImageField.files.length > 0;
+            
+            if (!hasFile) {
+                isValid = false;
+                errors.push('صورة الفاتورة');
+                if (!invoiceImageField.classList.contains('is-invalid')) {
+                    invoiceImageField.classList.add('is-invalid');
+                }
+            } else {
+                if (invoiceImageField.classList.contains('is-invalid')) {
+                    invoiceImageField.classList.remove('is-invalid');
+                }
+            }
+        }
+    }
+
     // تحديث حالة الأزرار بكفاءة
     updateButtonStates(isValid, errors);
 }
@@ -1404,7 +1626,7 @@ function setupFormEvents() {
     }
     
     // مستمعات التحقق الفوري
-    const fieldsToWatch = ['id_customer', 'id_salesperson', 'id_branch', 'id_contract_number'];
+    const fieldsToWatch = ['id_customer', 'id_salesperson', 'id_branch', 'id_contract_number', 'id_invoice_image'];
     fieldsToWatch.forEach(fieldId => {
         const element = document.getElementById(fieldId);
         if (element) {

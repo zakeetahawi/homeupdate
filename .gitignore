@@ -123,3 +123,4 @@ tmp/
 .project
 .classpath
 .settings/
+dump.rdb

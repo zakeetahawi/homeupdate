@@ -193,7 +193,8 @@ class OrderForm(forms.ModelForm):
             'customer', 'status', 'invoice_number',
             'contract_number', 'contract_file', 'branch', 'tracking_status',
             'notes', 'selected_types', 'delivery_type', 'delivery_address', 'salesperson',
-            'invoice_number_2', 'invoice_number_3', 'contract_number_2', 'contract_number_3'
+            'invoice_number_2', 'invoice_number_3', 'contract_number_2', 'contract_number_3',
+            'invoice_image'
         ]
         widgets = {
             'customer': forms.Select(attrs={
@@ -206,7 +207,7 @@ class OrderForm(forms.ModelForm):
                 'data-help': 'حدد وضع العميل (عادي أو VIP)'
             }),
             'tracking_status': forms.Select(attrs={'class': 'form-select form-select-sm'}),
-            'invoice_number': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+            'invoice_number': forms.TextInput(attrs={'class': 'form-control form-control-sm', 'id': 'invoice_number_field'}),
             'invoice_number_2': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
             'invoice_number_3': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
             'branch': forms.Select(attrs={'class': 'form-select form-select-sm'}),
@@ -217,6 +218,12 @@ class OrderForm(forms.ModelForm):
                 'class': 'form-control form-control-sm',
                 'accept': '.pdf',
                 'data-help': 'يجب أن يكون الملف من نوع PDF وأقل من 50 ميجابايت'
+            }),
+            'invoice_image': forms.FileInput(attrs={
+                'class': 'form-control form-control-sm',
+                'accept': 'image/*',
+                'id': 'invoice_image_field',
+                'data-help': 'يجب إرفاق صورة الفاتورة (JPG, PNG, GIF, WEBP)'
             }),
             'notes': forms.Textarea(attrs={'class': 'form-control notes-field', 'rows': 6}),
             'delivery_type': forms.RadioSelect(attrs={'class': 'form-check-input'}),
@@ -432,6 +439,37 @@ class OrderForm(forms.ModelForm):
         if selected_type != 'inspection':  # رقم الفاتورة غير مطلوب للمعاينة
             if not invoice_number or not invoice_number.strip():
                 self.add_error('invoice_number', 'رقم الفاتورة مطلوب لهذا النوع من الطلبات')
+            else:
+                # التحقق من تكرار رقم المرجع للعميل نفسه مع نفس نوع الطلب
+                customer = cleaned_data.get('customer')
+                if customer and invoice_number:
+                    invoice_number = invoice_number.strip()
+                    # البحث عن طلبات سابقة للعميل بنفس رقم المرجع ونفس نوع الطلب
+                    from django.db.models import Q
+                    existing_orders = Order.objects.filter(
+                        customer=customer
+                    ).filter(
+                        Q(invoice_number=invoice_number) |
+                        Q(invoice_number_2=invoice_number) |
+                        Q(invoice_number_3=invoice_number)
+                    )
+                    
+                    # استثناء الطلب الحالي في حالة التعديل
+                    if self.instance and self.instance.pk:
+                        existing_orders = existing_orders.exclude(pk=self.instance.pk)
+                    
+                    # التحقق من وجود طلب بنفس النوع
+                    for existing_order in existing_orders:
+                        try:
+                            existing_types = existing_order.get_selected_types_list()
+                            if selected_type in existing_types:
+                                self.add_error(
+                                    'invoice_number',
+                                    f'⚠️ رقم المرجع "{invoice_number}" مستخدم مسبقاً لهذا العميل في طلب من نفس النوع (رقم الطلب: {existing_order.order_number})'
+                                )
+                                break
+                        except:
+                            pass
 
         # التحقق من رقم العقد وملف العقد للتركيب والتفصيل والإكسسوار
         contract_required_types = ['installation', 'tailoring', 'accessory']
@@ -463,6 +501,15 @@ class OrderForm(forms.ModelForm):
         else:
             # للمعاينات: إفراغ قيمة المعاينة المرتبطة
             cleaned_data['related_inspection'] = ''
+        
+        # التحقق من صورة الفاتورة (إجبارية لجميع الأنواع ما عدا المعاينة)
+        if selected_type != 'inspection':
+            invoice_image = cleaned_data.get('invoice_image')
+            # التحقق مما إذا كانت الصورة موجودة مسبقاً أو تم رفعها الآن
+            has_existing_image = self.instance and self.instance.pk and self.instance.invoice_image
+            if not invoice_image and not has_existing_image:
+                self.add_error('invoice_image', 'يجب إرفاق صورة الفاتورة')
+        
         return cleaned_data
 
     def save(self, commit=True):

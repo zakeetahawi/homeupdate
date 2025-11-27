@@ -778,6 +778,29 @@
                             <th>تاريخ التحديث</th>
                             <td>{{ order.updated_at|date:"Y-m-d H:i" }}</td>
                         </tr>
+                        
+                        <!-- صورة الفاتورة -->
+                        {% with types_list=order.get_selected_types_list %}
+                        {% if 'inspection' not in types_list %}
+                        <tr>
+                            <th>صورة الفاتورة</th>
+                            <td>
+                                {% if order.invoice_image %}
+                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#invoiceImageModal">
+                                        <i class="fas fa-image me-1"></i>عرض صورة الفاتورة
+                                    </button>
+                                    <a href="{{ order.invoice_image.url }}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                                        <i class="fas fa-external-link-alt me-1"></i>فتح في نافذة جديدة
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-image me-1"></i>لم يتم رفع صورة الفاتورة
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endwith %}
 
                     </table>
                 </div>
@@ -1194,6 +1217,22 @@
                             <td>{{ order.invoice_number_3 }}</td>
                         </tr>
                         {% endif %}
+                        <!-- صورة الفاتورة -->
+                        <tr>
+                            <th>صورة الفاتورة</th>
+                            <td>
+                                {% if order.invoice_image %}
+                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#invoiceImageModal">
+                                        <i class="fas fa-image me-1"></i> عرض صورة الفاتورة
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-image me-1"></i>
+                                        لم يتم إرفاق صورة الفاتورة
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
                         <tr>
                             <th>تم التحقق من الدفع</th>
                             <td>
@@ -1907,6 +1946,66 @@
 
 
 </div>
+
+<!-- Modal for Invoice Image -->
+{% if order.invoice_image %}
+<div class="modal fade" id="invoiceImageModal" tabindex="-1" aria-labelledby="invoiceImageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="invoiceImageModalLabel">
+                    <i class="fas fa-image me-2"></i>صورة الفاتورة - طلب رقم {{ order.order_number }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-0">
+                <img src="{{ order.invoice_image.url }}" alt="صورة الفاتورة" class="img-fluid" style="max-height: 70vh; width: auto;">
+            </div>
+            <div class="modal-footer justify-content-center">
+                <a href="{{ order.invoice_image.url }}" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-external-link-alt me-1"></i>فتح في نافذة جديدة
+                </a>
+                <a href="{{ order.invoice_image.url }}" download class="btn btn-success">
+                    <i class="fas fa-download me-1"></i>تحميل الصورة
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal for Invoice Image -->
+{% if order.invoice_image %}
+<div class="modal fade" id="invoiceImageModal" tabindex="-1" aria-labelledby="invoiceImageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="invoiceImageModalLabel">
+                    <i class="fas fa-image me-2"></i>صورة الفاتورة - طلب #{{ order.order_number }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-3">
+                <img src="{{ order.invoice_image.url }}" alt="صورة الفاتورة" class="img-fluid rounded shadow" style="max-height: 70vh; width: auto;">
+            </div>
+            <div class="modal-footer">
+                <a href="{{ order.invoice_image.url }}" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-external-link-alt me-1"></i>فتح في نافذة جديدة
+                </a>
+                <a href="{{ order.invoice_image.url }}" download class="btn btn-success">
+                    <i class="fas fa-download me-1"></i>تحميل الصورة
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Modal for Reply to Rejection -->
 <div class="modal fade" id="replyToRejectionModal" tabindex="-1" aria-labelledby="replyToRejectionModalLabel" aria-hidden="true">

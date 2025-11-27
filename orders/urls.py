@@ -18,6 +18,7 @@ urlpatterns = [
     
     # API Endpoints
     path('api/products/search/', api_views.products_search_api, name='products_search_api'),
+    path('api/check-invoice-number/', api_views.check_invoice_number_api, name='check_invoice_number_api'),
     
     # Wizard URLs - Multi-step order creation
     path('wizard/', wizard_views.wizard_start, name='wizard_start'),

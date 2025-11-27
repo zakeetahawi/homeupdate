@@ -28,6 +28,19 @@ def validate_pdf_file(value):
             raise ValidationError('حجم الملف يجب أن يكون أقل من 50 ميجابايت')
 
 
+def validate_invoice_image(value):
+    """التحقق من أن الملف المرفوع هو صورة"""
+    if value:
+        ext = os.path.splitext(value.name)[1].lower()
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        if ext not in valid_extensions:
+            raise ValidationError('يجب أن يكون الملف صورة (JPG, PNG, GIF, WEBP)')
+        
+        # التحقق من حجم الملف (أقل من 10 ميجابايت)
+        if value.size > 10 * 1024 * 1024:
+            raise ValidationError('حجم الصورة يجب أن يكون أقل من 10 ميجابايت')
+
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('normal', 'عادي'),
@@ -281,6 +294,15 @@ class Order(models.Model):
         null=True,
         blank=True,
         verbose_name='رقم العقد الإضافي 3'
+    )
+    # صورة الفاتورة (إجبارية لجميع الأنواع ما عدا المعاينة)
+    invoice_image = models.ImageField(
+        upload_to='invoices/images/%Y/%m/',
+        null=True,
+        blank=True,
+        validators=[validate_invoice_image],
+        verbose_name='صورة الفاتورة',
+        help_text='يجب إرفاق صورة الفاتورة (JPG, PNG, GIF, WEBP) - أقل من 10 ميجابايت'
     )
     contract_file = models.FileField(
         upload_to='contracts/',

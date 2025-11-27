@@ -132,6 +132,14 @@ class DraftOrder(models.Model):
     contract_number = models.CharField(max_length=100, blank=True, null=True, verbose_name='رقم العقد الرئيسي')
     contract_number_2 = models.CharField(max_length=100, blank=True, null=True, verbose_name='رقم عقد إضافي 1')
     contract_number_3 = models.CharField(max_length=100, blank=True, null=True, verbose_name='رقم عقد إضافي 2')
+    # صورة الفاتورة (إجبارية)
+    invoice_image = models.ImageField(
+        upload_to='invoices/images/drafts/%Y/%m/',
+        blank=True,
+        null=True,
+        verbose_name='صورة الفاتورة',
+        help_text='يجب إرفاق صورة الفاتورة (JPG, PNG, GIF, WEBP)'
+    )
     
     # الخطوة 5: العقد (إما إلكتروني أو ملف PDF)
     contract_type = models.CharField(

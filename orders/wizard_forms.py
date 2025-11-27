@@ -229,12 +229,14 @@ class Step4InvoicePaymentForm(forms.ModelForm):
         fields = [
             'invoice_number', 'invoice_number_2', 'invoice_number_3',
             'contract_number', 'contract_number_2', 'contract_number_3',
+            'invoice_image',
             'payment_method', 'paid_amount', 'payment_notes'
         ]
         widgets = {
             'invoice_number': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'رقم المرجع الرئيسي'
+                'placeholder': 'رقم المرجع الرئيسي',
+                'id': 'invoice_number_field'
             }),
             'invoice_number_2': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -255,6 +257,11 @@ class Step4InvoicePaymentForm(forms.ModelForm):
             'contract_number_3': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'رقم عقد إضافي (اختياري)'
+            }),
+            'invoice_image': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*',
+                'id': 'invoice_image_field'
             }),
             'payment_method': forms.Select(attrs={
                 'class': 'form-select'
@@ -279,15 +286,60 @@ class Step4InvoicePaymentForm(forms.ModelForm):
         # جعل رقم المرجع الرئيسي إجبارياً
         self.fields['invoice_number'].required = True
         self.fields['invoice_number'].widget.attrs['required'] = 'required'
+        
+        # جعل صورة الفاتورة إجبارية (إلا للمعاينة)
+        if self.draft_order and self.draft_order.selected_type != 'inspection':
+            self.fields['invoice_image'].required = True
+            self.fields['invoice_image'].widget.attrs['required'] = 'required'
     
     def clean_invoice_number(self):
-        """التحقق من رقم المرجع الرئيسي"""
+        """التحقق من رقم المرجع الرئيسي وعدم تكراره للعميل نفسه مع نفس النوع"""
         invoice_number = self.cleaned_data.get('invoice_number')
         
         if not invoice_number or not invoice_number.strip():
             raise ValidationError('رقم المرجع الرئيسي إجباري')
         
-        return invoice_number.strip()
+        invoice_number = invoice_number.strip()
+        
+        # التحقق من تكرار رقم المرجع للعميل نفسه مع نفس نوع الطلب
+        if self.draft_order and self.draft_order.customer and self.draft_order.selected_type:
+            from orders.models import Order
+            from django.db.models import Q
+            
+            existing_orders = Order.objects.filter(
+                customer=self.draft_order.customer
+            ).filter(
+                Q(invoice_number=invoice_number) |
+                Q(invoice_number_2=invoice_number) |
+                Q(invoice_number_3=invoice_number)
+            )
+            
+            # التحقق من وجود طلب بنفس النوع
+            for existing_order in existing_orders:
+                try:
+                    existing_types = existing_order.get_selected_types_list()
+                    if self.draft_order.selected_type in existing_types:
+                        raise ValidationError(
+                            f'⚠️ رقم المرجع "{invoice_number}" مستخدم مسبقاً لهذا العميل في طلب من نفس النوع (رقم الطلب: {existing_order.order_number})'
+                        )
+                except ValidationError:
+                    raise
+                except:
+                    pass
+        
+        return invoice_number
+    
+    def clean_invoice_image(self):
+        """التحقق من صورة الفاتورة"""
+        invoice_image = self.cleaned_data.get('invoice_image')
+        
+        # صورة الفاتورة إجبارية لجميع الأنواع ما عدا المعاينة
+        if self.draft_order and self.draft_order.selected_type != 'inspection':
+            # التحقق مما إذا كانت الصورة موجودة مسبقاً أو تم رفعها الآن
+            if not invoice_image and not (self.draft_order and self.draft_order.invoice_image):
+                raise ValidationError('يجب إرفاق صورة الفاتورة')
+        
+        return invoice_image
     
     def clean_paid_amount(self):
         paid_amount = self.cleaned_data.get('paid_amount') or Decimal('0')

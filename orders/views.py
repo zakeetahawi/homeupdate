@@ -2140,3 +2140,62 @@ def order_status_history(request, order_id):
     }
     
     return render(request, 'orders/status_history.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def check_invoice_duplicate(request):
+    """
+    API للتحقق من تكرار رقم الفاتورة للعميل نفسه مع نفس نوع الطلب
+    """
+    try:
+        data = json.loads(request.body)
+        customer_id = data.get('customer_id')
+        invoice_number = data.get('invoice_number', '').strip()
+        order_type = data.get('order_type', '')
+        current_order_id = data.get('current_order_id')  # للتعديل
+        
+        if not customer_id or not invoice_number:
+            return JsonResponse({
+                'is_duplicate': False,
+                'message': ''
+            })
+        
+        # البحث عن طلبات سابقة للعميل بنفس رقم المرجع
+        existing_orders = Order.objects.filter(
+            customer_id=customer_id
+        ).filter(
+            Q(invoice_number=invoice_number) |
+            Q(invoice_number_2=invoice_number) |
+            Q(invoice_number_3=invoice_number)
+        )
+        
+        # استثناء الطلب الحالي في حالة التعديل
+        if current_order_id:
+            existing_orders = existing_orders.exclude(pk=current_order_id)
+        
+        # التحقق من وجود طلب بنفس النوع
+        for existing_order in existing_orders:
+            try:
+                existing_types = existing_order.get_selected_types_list()
+                if order_type in existing_types:
+                    return JsonResponse({
+                        'is_duplicate': True,
+                        'message': f'⚠️ رقم المرجع "{invoice_number}" مستخدم مسبقاً لهذا العميل في طلب من نفس النوع (رقم الطلب: {existing_order.order_number})',
+                        'order_number': existing_order.order_number
+                    })
+            except:
+                pass
+        
+        return JsonResponse({
+            'is_duplicate': False,
+            'message': ''
+        })
+        
+    except Exception as e:
+        logger.error(f"خطأ في التحقق من تكرار رقم الفاتورة: {str(e)}")
+        return JsonResponse({
+            'is_duplicate': False,
+            'message': '',
+            'error': str(e)
+        })

@@ -520,6 +520,7 @@ def wizard_step_4_invoice_payment(request, draft):
     if request.method == 'POST':
         form = Step4InvoicePaymentForm(
             request.POST,
+            request.FILES,
             instance=draft,
             draft_order=draft
         )
@@ -766,6 +767,10 @@ def wizard_finalize(request):
                 if draft.contract_file:
                     order.contract_file = draft.contract_file
                 
+                # نقل صورة الفاتورة إذا وجدت
+                if draft.invoice_image:
+                    order.invoice_image = draft.invoice_image
+                
                 order.save()
                 
                 # حذف العناصر القديمة
@@ -801,6 +806,7 @@ def wizard_finalize(request):
                 final_price=draft.final_total,
                 paid_amount=draft.paid_amount,
                 contract_file=draft.contract_file if draft.contract_file else None,  # نقل ملف العقد مباشرة
+                invoice_image=draft.invoice_image if draft.invoice_image else None,  # نقل صورة الفاتورة
                 created_by=request.user,
                 creation_method='wizard',
                 source_draft_id=draft.id,

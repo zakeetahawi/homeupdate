@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block wizard_content %}
-<form method="post" id="step4-form">
+<form method="post" id="step4-form" enctype="multipart/form-data">
     {% csrf_token %}
     
     <div class="row">
@@ -15,8 +15,10 @@
             <div class="mb-3">
                 <label for="{{ form.invoice_number.id_for_label }}" class="form-label fw-bold">
                     <i class="fas fa-receipt me-2"></i>رقم المرجع الرئيسي
+                    <span class="text-danger">*</span>
                 </label>
                 {{ form.invoice_number }}
+                <div id="invoice-number-warning" class="mt-2" style="display: none;"></div>
                 {% if form.invoice_number.errors %}
                     <div class="text-danger mt-1">{{ form.invoice_number.errors }}</div>
                 {% endif %}
@@ -34,6 +36,31 @@
                     رقم مرجع إضافي 2
                 </label>
                 {{ form.invoice_number_3 }}
+            </div>
+            
+            <!-- Invoice Image -->
+            <div class="mb-3">
+                <label for="{{ form.invoice_image.id_for_label }}" class="form-label fw-bold">
+                    <i class="fas fa-image me-2"></i>صورة الفاتورة
+                    {% if draft.selected_type != 'inspection' %}
+                    <span class="text-danger">*</span>
+                    {% endif %}
+                </label>
+                {{ form.invoice_image }}
+                {% if draft.invoice_image %}
+                    <div class="mt-2">
+                        <a href="{{ draft.invoice_image.url }}" target="_blank" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-eye me-1"></i>عرض الصورة الحالية
+                        </a>
+                    </div>
+                {% endif %}
+                {% if form.invoice_image.errors %}
+                    <div class="text-danger mt-1">{{ form.invoice_image.errors }}</div>
+                {% endif %}
+                <div class="form-text">
+                    <i class="fas fa-info-circle me-1"></i>
+                    يُسمح بصور JPG, PNG, GIF, WEBP - أقصى حجم 10 ميجابايت
+                </div>
             </div>
         </div>
         
@@ -114,21 +141,122 @@
             </a>
         </div>
         <div>
-            <button type="submit" class="btn btn-wizard btn-wizard-primary">
+            <button type="submit" class="btn btn-wizard btn-wizard-primary" id="submit-btn">
                 <i class="fas fa-arrow-left me-2"></i>التالي
             </button>
         </div>
     </div>
 </form>
+
+<!-- Sweet Alert for duplicate warning -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}
 
 {% block extra_js %}
 {{ block.super }}
 <script>
+// بيانات المسودة
+const customerId = {{ draft.customer.id|default:"null" }};
+const orderType = "{{ draft.selected_type|default:'' }}";
+const checkInvoiceUrl = "{% url 'orders:check_invoice_number_api' %}";
+
 // حساب المبلغ المتبقي تلقائياً
 const totalAmount = {{ totals.final_total }};
 const minimumPayment = {{ totals.minimum_payment }};
 const paidAmountInput = document.getElementById('{{ form.paid_amount.id_for_label }}');
+const invoiceNumberInput = document.getElementById('{{ form.invoice_number.id_for_label }}') || 
+                           document.getElementById('id_invoice_number') ||
+                           document.querySelector('[name="invoice_number"]');
+
+// متغير لتتبع حالة التحقق
+let invoiceNumberValid = true;
+let checkTimeout = null;
+
+// التحقق من رقم المرجع عند الكتابة
+if (invoiceNumberInput) {
+    invoiceNumberInput.addEventListener('input', function() {
+        // إلغاء أي تحقق سابق
+        if (checkTimeout) {
+            clearTimeout(checkTimeout);
+        }
+        
+        // تأخير التحقق لتجنب الاستعلامات المتكررة
+        checkTimeout = setTimeout(function() {
+            checkInvoiceNumber(invoiceNumberInput.value);
+        }, 500);
+    });
+    
+    // التحقق عند مغادرة الحقل
+    invoiceNumberInput.addEventListener('blur', function() {
+        if (checkTimeout) {
+            clearTimeout(checkTimeout);
+        }
+        checkInvoiceNumber(invoiceNumberInput.value);
+    });
+}
+
+function checkInvoiceNumber(invoiceNumber) {
+    const warningDiv = document.getElementById('invoice-number-warning');
+    
+    if (!invoiceNumber || !customerId) {
+        warningDiv.style.display = 'none';
+        invoiceNumberValid = true;
+        return;
+    }
+    
+    fetch(`${checkInvoiceUrl}?invoice_number=${encodeURIComponent(invoiceNumber)}&customer_id=${customerId}&order_type=${orderType}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                if (data.same_type) {
+                    // نفس النوع - لا يمكن المتابعة
+                    invoiceNumberValid = false;
+                    warningDiv.innerHTML = `
+                        <div class="alert alert-danger py-2">
+                            <i class="fas fa-times-circle me-2"></i>
+                            <strong>خطأ:</strong> ${data.message}
+                        </div>
+                    `;
+                    warningDiv.style.display = 'block';
+                    
+                    // عرض SweetAlert
+                    Swal.fire({
+                        icon: 'error',
+                        title: data.title,
+                        html: data.message,
+                        confirmButtonText: 'حسناً',
+                        confirmButtonColor: '#dc3545'
+                    });
+                } else {
+                    // نوع مختلف - تحذير فقط
+                    invoiceNumberValid = true;
+                    warningDiv.innerHTML = `
+                        <div class="alert alert-warning py-2">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>تنبيه:</strong> ${data.message}
+                        </div>
+                    `;
+                    warningDiv.style.display = 'block';
+                    
+                    // عرض SweetAlert تحذيري
+                    Swal.fire({
+                        icon: 'warning',
+                        title: data.title,
+                        html: data.message,
+                        confirmButtonText: 'حسناً، متابعة',
+                        confirmButtonColor: '#ffc107'
+                    });
+                }
+            } else {
+                invoiceNumberValid = true;
+                warningDiv.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error checking invoice number:', error);
+            invoiceNumberValid = true;
+        });
+}
 
 paidAmountInput.addEventListener('input', function() {
     const paidAmount = parseFloat(this.value) || 0;
@@ -149,30 +277,61 @@ paidAmountInput.addEventListener('input', function() {
 
 // معالجة إرسال النموذج
 document.getElementById('step4-form').addEventListener('submit', function(e) {
+    // التحقق من صحة رقم المرجع
+    if (!invoiceNumberValid) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'لا يمكن المتابعة',
+            text: 'رقم المرجع مستخدم مسبقاً لهذا العميل في طلب من نفس النوع. يرجى استخدام رقم مرجع مختلف.',
+            confirmButtonText: 'حسناً',
+            confirmButtonColor: '#dc3545'
+        });
+        return false;
+    }
+    
     const paidAmount = parseFloat(paidAmountInput.value) || 0;
     
     // التحقق من الحد الأدنى فقط
     if (paidAmount < minimumPayment) {
         e.preventDefault();
-        alert('⚠️ يجب دفع 50% على الأقل من المبلغ الإجمالي\n' + 
-              'الحد الأدنى المطلوب: ' + minimumPayment.toFixed(2) + ' جنيه\n' +
-              'المبلغ المدفوع: ' + paidAmount.toFixed(2) + ' جنيه');
+        Swal.fire({
+            icon: 'warning',
+            title: 'المبلغ المدفوع غير كافٍ',
+            html: `يجب دفع 50% على الأقل من المبلغ الإجمالي<br>
+                   <strong>الحد الأدنى المطلوب:</strong> ${minimumPayment.toFixed(2)} جنيه<br>
+                   <strong>المبلغ المدفوع:</strong> ${paidAmount.toFixed(2)} جنيه`,
+            confirmButtonText: 'حسناً',
+            confirmButtonColor: '#ffc107'
+        });
         paidAmountInput.focus();
         return false;
     }
     
     // تنبيه إذا تجاوز المبلغ الإجمالي (بدون منع الإرسال)
     if (paidAmount > totalAmount) {
+        e.preventDefault();
         const overpayment = paidAmount - totalAmount;
-        if (!confirm('⚠️ تنبيه: المبلغ المدفوع يتجاوز المجموع النهائي\n\n' +
-                     'المجموع النهائي: ' + totalAmount.toFixed(2) + ' جنيه\n' +
-                     'المبلغ المدفوع: ' + paidAmount.toFixed(2) + ' جنيه\n' +
-                     'المبلغ الزائد: ' + overpayment.toFixed(2) + ' جنيه\n\n' +
-                     'هل تريد المتابعة؟')) {
-            e.preventDefault();
-            paidAmountInput.focus();
-            return false;
-        }
+        Swal.fire({
+            icon: 'question',
+            title: 'تأكيد المبلغ الزائد',
+            html: `المبلغ المدفوع يتجاوز المجموع النهائي<br>
+                   <strong>المجموع النهائي:</strong> ${totalAmount.toFixed(2)} جنيه<br>
+                   <strong>المبلغ المدفوع:</strong> ${paidAmount.toFixed(2)} جنيه<br>
+                   <strong>المبلغ الزائد:</strong> ${overpayment.toFixed(2)} جنيه`,
+            showCancelButton: true,
+            confirmButtonText: 'نعم، متابعة',
+            cancelButtonText: 'لا، تعديل',
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                submitWizardStep(document.getElementById('step4-form'));
+            } else {
+                paidAmountInput.focus();
+            }
+        });
+        return false;
     }
     
     submitWizardStep(this);
