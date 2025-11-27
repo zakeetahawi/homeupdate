@@ -107,6 +107,15 @@
                                     <span class="text-muted">غير محدد</span>
                                 {% endif %}
                             {% endwith %}
+                            {% if cutting_order.order.invoice_image %}
+                            <button type="button" class="btn btn-sm btn-light ms-2" data-bs-toggle="modal" data-bs-target="#invoiceImageModal">
+                                <i class="fas fa-file-invoice text-success"></i> عرض صورة الفاتورة
+                            </button>
+                            {% else %}
+                            <span class="badge bg-secondary ms-2">
+                                <i class="fas fa-image-slash"></i> لا توجد صورة فاتورة
+                            </span>
+                            {% endif %}
                         </p>
                         {% if cutting_order.order.customer.branch %}
                         <p class="mb-1">
@@ -424,6 +433,36 @@
         </div>
     </div>
 </div>
+
+<!-- Modal لعرض صورة الفاتورة -->
+{% if cutting_order.order.invoice_image %}
+<div class="modal fade" id="invoiceImageModal" tabindex="-1" aria-labelledby="invoiceImageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="invoiceImageModalLabel">
+                    <i class="fas fa-file-invoice me-2"></i>صورة الفاتورة
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <img src="{{ cutting_order.order.invoice_image.url }}" alt="صورة الفاتورة" class="img-fluid rounded shadow" style="max-height: 70vh; width: auto;">
+            </div>
+            <div class="modal-footer">
+                <a href="{{ cutting_order.order.invoice_image.url }}" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-external-link-alt me-1"></i>فتح في نافذة جديدة
+                </a>
+                <a href="{{ cutting_order.order.invoice_image.url }}" download class="btn btn-success">
+                    <i class="fas fa-download me-1"></i>تحميل الصورة
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

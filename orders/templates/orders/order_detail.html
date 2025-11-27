@@ -307,6 +307,11 @@
                                                 <i class="fas fa-play"></i> بدء التقطيع
                                             </button>
                                             {% endif %}
+                                            {% if order.invoice_image %}
+                                            <button type="button" class="btn btn-sm btn-info ms-1" data-bs-toggle="modal" data-bs-target="#invoiceImageModal">
+                                                <i class="fas fa-file-invoice me-1"></i>عرض الفاتورة
+                                            </button>
+                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>
@@ -778,29 +783,6 @@
                             <th>تاريخ التحديث</th>
                             <td>{{ order.updated_at|date:"Y-m-d H:i" }}</td>
                         </tr>
-                        
-                        <!-- صورة الفاتورة -->
-                        {% with types_list=order.get_selected_types_list %}
-                        {% if 'inspection' not in types_list %}
-                        <tr>
-                            <th>صورة الفاتورة</th>
-                            <td>
-                                {% if order.invoice_image %}
-                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#invoiceImageModal">
-                                        <i class="fas fa-image me-1"></i>عرض صورة الفاتورة
-                                    </button>
-                                    <a href="{{ order.invoice_image.url }}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
-                                        <i class="fas fa-external-link-alt me-1"></i>فتح في نافذة جديدة
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted">
-                                        <i class="fas fa-image me-1"></i>لم يتم رفع صورة الفاتورة
-                                    </span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% endwith %}
 
                     </table>
                 </div>
