@@ -117,13 +117,17 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
             user_warehouses = self.get_user_warehouses()
             queryset = queryset.filter(warehouse__in=user_warehouses)
 
-        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي
+        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي (يشمل جميع أرقام الفواتير والعقود)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
-                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة كأولوية
+                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة الأساسي
+                Q(order__invoice_number_2__icontains=search) |  # رقم الفاتورة الإضافي 2
+                Q(order__invoice_number_3__icontains=search) |  # رقم الفاتورة الإضافي 3
                 Q(cutting_code__icontains=search) |
                 Q(order__contract_number__icontains=search) |
+                Q(order__contract_number_2__icontains=search) |  # رقم العقد الإضافي 2
+                Q(order__contract_number_3__icontains=search) |  # رقم العقد الإضافي 3
                 Q(order__customer__name__icontains=search) |
                 Q(order__customer__phone__icontains=search) |
                 Q(order__order_number__icontains=search)  # إضافة البحث برقم الطلب
@@ -142,18 +146,6 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
             user = self.request.user
             # عرض جميع الأوامر بشكل افتراضي للمستودعات
             # لا يتم استبعاد الأوامر المكتملة عند الدخول الأول
-
-        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي
-        search = self.request.GET.get('search')
-        if search:
-            queryset = queryset.filter(
-                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة كأولوية
-                Q(cutting_code__icontains=search) |
-                Q(order__contract_number__icontains=search) |
-                Q(order__customer__name__icontains=search) |
-                Q(order__customer__phone__icontains=search) |
-                Q(order__order_number__icontains=search)  # إضافة البحث برقم الطلب
-            )
 
         # فلتر إضافي حسب تاريخ الإنشاء - يعمل فقط عند البحث
         date_filter = self.request.GET.get('date_filter')
@@ -265,13 +257,17 @@ class CompletedCuttingOrdersView(LoginRequiredMixin, ListView):
                 items__status='completed'
             ).exclude(status='completed').distinct()
 
-        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي
+        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي (يشمل جميع أرقام الفواتير والعقود)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
-                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة كأولوية
+                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة الأساسي
+                Q(order__invoice_number_2__icontains=search) |  # رقم الفاتورة الإضافي 2
+                Q(order__invoice_number_3__icontains=search) |  # رقم الفاتورة الإضافي 3
                 Q(cutting_code__icontains=search) |
                 Q(order__contract_number__icontains=search) |
+                Q(order__contract_number_2__icontains=search) |  # رقم العقد الإضافي 2
+                Q(order__contract_number_3__icontains=search) |  # رقم العقد الإضافي 3
                 Q(order__customer__name__icontains=search) |
                 Q(order__customer__phone__icontains=search) |
                 Q(order__order_number__icontains=search)  # إضافة البحث برقم الطلب
@@ -842,13 +838,17 @@ class CuttingReceiptView(LoginRequiredMixin, ListView):
             Q(order__selected_types__icontains='manufacturing')
         ).distinct().order_by('-created_at')
 
-        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي
+        # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي (يشمل جميع أرقام الفواتير والعقود)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
-                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة كأولوية
+                Q(order__invoice_number__icontains=search) |  # بحث برقم الفاتورة الأساسي
+                Q(order__invoice_number_2__icontains=search) |  # رقم الفاتورة الإضافي 2
+                Q(order__invoice_number_3__icontains=search) |  # رقم الفاتورة الإضافي 3
                 Q(cutting_code__icontains=search) |
                 Q(order__contract_number__icontains=search) |
+                Q(order__contract_number_2__icontains=search) |  # رقم العقد الإضافي 2
+                Q(order__contract_number_3__icontains=search) |  # رقم العقد الإضافي 3
                 Q(order__customer__name__icontains=search) |
                 Q(order__customer__phone__icontains=search) |
                 Q(order__order_number__icontains=search)  # إضافة البحث برقم الطلب

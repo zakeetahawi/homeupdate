@@ -150,11 +150,11 @@
                     <thead class="table-light">
                         <tr>
                             <th width="15%">كود التقطيع</th>
-                            <th width="20%">اسم العميل</th>
-                            <th width="15%">رقم العقد</th>
+                            <th width="18%">اسم العميل</th>
+                            <th width="20%">أرقام الفواتير/العقود</th>
                             <th width="12%">تاريخ الإنشاء</th>
                             <th width="10%">عدد العناصر</th>
-                            <th width="15%">المستودع</th>
+                            <th width="12%">المستودع</th>
                             <th width="13%">إجراءات</th>
                         </tr>
                     </thead>
@@ -168,7 +168,22 @@
                                 </a>
                             </td>
                             <td>{{ cutting_order.order.customer.name }}</td>
-                            <td>{{ cutting_order.order.contract_number|default:"غير محدد" }}</td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% with all_invoices=cutting_order.order.get_all_invoice_numbers %}
+                                        {% for invoice in all_invoices %}
+                                            <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">{{ invoice }}</span>
+                                        {% empty %}
+                                            <span class="text-muted" style="font-size: 0.7rem;">-</span>
+                                        {% endfor %}
+                                    {% endwith %}
+                                    {% with all_contracts=cutting_order.order.get_all_contract_numbers %}
+                                        {% for contract in all_contracts %}
+                                            <span class="badge bg-secondary" style="font-size: 0.7rem;">{{ contract }}</span>
+                                        {% endfor %}
+                                    {% endwith %}
+                                </div>
+                            </td>
                             <td>{{ cutting_order.created_at|date:"Y-m-d" }}</td>
                             <td>
                                 <span class="badge badge-primary">{{ cutting_order.items.count }}</span>

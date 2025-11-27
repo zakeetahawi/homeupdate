@@ -112,7 +112,7 @@ class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
                 queryset = queryset.filter(status=status)
             if is_duplicated == '1':
                 queryset = queryset.filter(notes__contains='تكرار من المعاينة رقم:')
-            # بحث شامل متعدد الحقول
+            # بحث شامل متعدد الحقول (يشمل جميع أرقام الفواتير والعقود)
             if q:
                 queryset = queryset.filter(
                     Q(order__order_number__icontains=q) |
@@ -120,6 +120,11 @@ class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
                     Q(order__customer__code__icontains=q) |
                     Q(order__customer__phone__icontains=q) |
                     Q(order__contract_number__icontains=q) |
+                    Q(order__contract_number_2__icontains=q) |
+                    Q(order__contract_number_3__icontains=q) |
+                    Q(order__invoice_number__icontains=q) |
+                    Q(order__invoice_number_2__icontains=q) |
+                    Q(order__invoice_number_3__icontains=q) |
                     Q(order__id__icontains=q) |
                     Q(order__customer__phone2__icontains=q) |
                     Q(order__customer__email__icontains=q) |

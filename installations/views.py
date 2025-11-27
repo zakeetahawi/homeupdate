@@ -421,7 +421,11 @@ def installation_list(request):
                       Q(order__customer__location_type__icontains=search) | \
                       Q(order__salesperson__name__icontains=search) | \
                       Q(order__contract_number__icontains=search) | \
-                      Q(order__invoice_number__icontains=search)
+                      Q(order__contract_number_2__icontains=search) | \
+                      Q(order__contract_number_3__icontains=search) | \
+                      Q(order__invoice_number__icontains=search) | \
+                      Q(order__invoice_number_2__icontains=search) | \
+                      Q(order__invoice_number_3__icontains=search)
             scheduled_query = scheduled_query.filter(search_q)
         
         # إضافة التركيبات المجدولة للقائمة - تحسين: استخدام list comprehension بدلاً من حلقة
@@ -473,7 +477,11 @@ def installation_list(request):
                       Q(order__customer__location_type__icontains=search) | \
                       Q(order__salesperson__name__icontains=search) | \
                       Q(order__contract_number__icontains=search) | \
-                      Q(order__invoice_number__icontains=search)
+                      Q(order__contract_number_2__icontains=search) | \
+                      Q(order__contract_number_3__icontains=search) | \
+                      Q(order__invoice_number__icontains=search) | \
+                      Q(order__invoice_number_2__icontains=search) | \
+                      Q(order__invoice_number_3__icontains=search)
             ready_manufacturing_query = ready_manufacturing_query.filter(search_q)
 
         if branch_filter:
@@ -1670,13 +1678,18 @@ def daily_schedule(request):
         if branch:
             installations = installations.filter(order__branch=branch)
 
-        # بحث شامل متعدد الحقول
+        # بحث شامل متعدد الحقول (يشمل جميع أرقام الفواتير والعقود)
         if search:
             installations = installations.filter(
                 Q(order__order_number__icontains=search) |
                 Q(order__customer__name__icontains=search) |
                 Q(order__customer__phone__icontains=search) |
                 Q(order__contract_number__icontains=search) |
+                Q(order__contract_number_2__icontains=search) |
+                Q(order__contract_number_3__icontains=search) |
+                Q(order__invoice_number__icontains=search) |
+                Q(order__invoice_number_2__icontains=search) |
+                Q(order__invoice_number_3__icontains=search) |
                 Q(order__customer__phone2__icontains=search) |
                 Q(order__customer__email__icontains=search) |
                 Q(order__salesperson__name__icontains=search) |
@@ -3219,13 +3232,17 @@ def daily_schedule(request):
     if branch_filter:
         installations_query = installations_query.filter(order__branch_id=branch_filter)
     
-    # تطبيق فلاتر البحث
+    # تطبيق فلاتر البحث (يشمل جميع أرقام الفواتير والعقود)
     if search:
         search_q = Q(order__order_number__icontains=search) | \
                   Q(order__customer__name__icontains=search) | \
                   Q(order__customer__phone__icontains=search) | \
                   Q(order__contract_number__icontains=search) | \
-                  Q(order__invoice_number__icontains=search)
+                  Q(order__contract_number_2__icontains=search) | \
+                  Q(order__contract_number_3__icontains=search) | \
+                  Q(order__invoice_number__icontains=search) | \
+                  Q(order__invoice_number_2__icontains=search) | \
+                  Q(order__invoice_number_3__icontains=search)
         installations_query = installations_query.filter(search_q)
     
     # ترتيب النتائج حسب الوقت المجدول
@@ -3434,13 +3451,17 @@ def print_daily_schedule(request):
     if branch_filter:
         installations_query = installations_query.filter(order__branch_id=branch_filter)
     
-    # تطبيق فلاتر البحث
+    # تطبيق فلاتر البحث (يشمل جميع أرقام الفواتير والعقود)
     if search:
         search_q = Q(order__order_number__icontains=search) | \
                   Q(order__customer__name__icontains=search) | \
                   Q(order__customer__phone__icontains=search) | \
                   Q(order__contract_number__icontains=search) | \
-                  Q(order__invoice_number__icontains=search)
+                  Q(order__contract_number_2__icontains=search) | \
+                  Q(order__contract_number_3__icontains=search) | \
+                  Q(order__invoice_number__icontains=search) | \
+                  Q(order__invoice_number_2__icontains=search) | \
+                  Q(order__invoice_number_3__icontains=search)
         installations_query = installations_query.filter(search_q)
     
     # ترتيب النتائج حسب الوقت المجدول

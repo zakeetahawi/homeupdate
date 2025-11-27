@@ -39,7 +39,11 @@ class OrderService(BaseService[Order]):
                 Q(order_number__icontains=search_term) |
                 Q(customer__name__icontains=search_term) |
                 Q(invoice_number__icontains=search_term) |
-                Q(contract_number__icontains=search_term)
+                Q(invoice_number_2__icontains=search_term) |
+                Q(invoice_number_3__icontains=search_term) |
+                Q(contract_number__icontains=search_term) |
+                Q(contract_number_2__icontains=search_term) |
+                Q(contract_number_3__icontains=search_term)
             )
 
         return queryset.select_related('customer', 'salesperson', 'branch', 'created_by')

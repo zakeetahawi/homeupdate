@@ -950,6 +950,38 @@ class Order(models.Model):
         arabic_types = [type_map.get(t, t) for t in types_list]
         return ', '.join(arabic_types)
 
+    def get_all_invoice_numbers(self):
+        """الحصول على جميع أرقام الفواتير كقائمة"""
+        invoices = []
+        if self.invoice_number:
+            invoices.append(self.invoice_number)
+        if self.invoice_number_2:
+            invoices.append(self.invoice_number_2)
+        if self.invoice_number_3:
+            invoices.append(self.invoice_number_3)
+        return invoices
+
+    def get_all_invoice_numbers_display(self):
+        """عرض جميع أرقام الفواتير كنص مفصول بفاصلة"""
+        invoices = self.get_all_invoice_numbers()
+        return ', '.join(invoices) if invoices else 'غير محدد'
+
+    def get_all_contract_numbers(self):
+        """الحصول على جميع أرقام العقود كقائمة"""
+        contracts = []
+        if self.contract_number:
+            contracts.append(self.contract_number)
+        if self.contract_number_2:
+            contracts.append(self.contract_number_2)
+        if self.contract_number_3:
+            contracts.append(self.contract_number_3)
+        return contracts
+
+    def get_all_contract_numbers_display(self):
+        """عرض جميع أرقام العقود كنص مفصول بفاصلة"""
+        contracts = self.get_all_contract_numbers()
+        return ', '.join(contracts) if contracts else 'غير محدد'
+
     @property
     def remaining_amount(self):
         """Calculate remaining amount to be paid"""

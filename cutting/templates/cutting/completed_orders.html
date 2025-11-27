@@ -106,7 +106,7 @@
                         <tr>
                             <th>كود التقطيع</th>
                             <th>العميل</th>
-                            <th>رقم العقد</th>
+                            <th>أرقام الفواتير/العقود</th>
                             <th>المستودع</th>
                             <th>عدد العناصر</th>
                             <th>العناصر المكتملة</th>
@@ -125,7 +125,22 @@
                                 </a>
                             </td>
                             <td>{{ order.order.customer.name }}</td>
-                            <td>{{ order.order.contract_number|default:"غير محدد" }}</td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% with all_invoices=order.order.get_all_invoice_numbers %}
+                                        {% for invoice in all_invoices %}
+                                            <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">{{ invoice }}</span>
+                                        {% empty %}
+                                            <span class="text-muted" style="font-size: 0.7rem;">-</span>
+                                        {% endfor %}
+                                    {% endwith %}
+                                    {% with all_contracts=order.order.get_all_contract_numbers %}
+                                        {% for contract in all_contracts %}
+                                            <span class="badge bg-secondary" style="font-size: 0.7rem;">{{ contract }}</span>
+                                        {% endfor %}
+                                    {% endwith %}
+                                </div>
+                            </td>
                             <td>{{ order.warehouse.name }}</td>
                             <td><span class="badge bg-primary">{{ order.total_items }}</span></td>
                             <td><span class="badge bg-success">{{ order.completed_items }}</span></td>

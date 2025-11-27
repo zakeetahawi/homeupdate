@@ -258,7 +258,18 @@
                                 <div class="row text-muted" style="font-size: 0.75rem;">
                                     <div class="col-12">
                                         <div class="mb-1"><i class="fas fa-user"></i> {{ cutting_order.order.customer.name|truncatechars:20 }}</div>
-                                        <div class="mb-1"><i class="fas fa-receipt"></i> <span class="badge badge-warning text-dark" style="font-size: 0.65rem;">{{ cutting_order.order.invoice_number|default:"غير محدد" }}</span></div>
+                                        <div class="mb-1">
+                                            <i class="fas fa-receipt"></i>
+                                            {% with all_invoices=cutting_order.order.get_all_invoice_numbers %}
+                                                {% if all_invoices %}
+                                                    {% for invoice in all_invoices %}
+                                                        <span class="badge badge-warning text-dark" style="font-size: 0.6rem;">{{ invoice }}</span>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="text-muted" style="font-size: 0.6rem;">غير محدد</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </div>
                                     </div>
                                 </div>
 

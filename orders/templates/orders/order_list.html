@@ -371,6 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <tr>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">رقم الطلب</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">العميل</th>
+                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 120px; word-break: break-word; white-space: normal;">رقم المرجع</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 110px; word-break: break-word; white-space: normal;">تاريخ الطلب</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 110px; word-break: break-word; white-space: normal;">تاريخ التسليم</th>
                             <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 80px; word-break: break-word; white-space: normal;">نوع الطلب</th>
@@ -395,6 +396,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <a href="{% url 'customers:customer_detail' order.customer.pk %}" style="color: var(--primary); text-decoration: none; font-weight: bold;">
                                     <strong>{{ order.customer.name }}</strong>
                                 </a>
+                            </td>
+                            <td class="text-center" style="padding: 0.15rem 0.2rem;">
+                                <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                    {% with all_invoices=order.get_all_invoice_numbers %}
+                                        {% for invoice in all_invoices %}
+                                            <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">{{ invoice }}</span>
+                                        {% empty %}
+                                            <span class="text-muted" style="font-size: 0.75rem;">-</span>
+                                        {% endfor %}
+                                    {% endwith %}
+                                </div>
                             </td>
                             <td class="text-center" style="padding: 0.2rem 0.3rem; white-space: nowrap;">
                                 <span>{{ order.order_date|date:"Y-m-d" }}</span>

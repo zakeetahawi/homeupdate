@@ -84,14 +84,29 @@
                         </p>
                         <p class="mb-1">
                             <i class="fas fa-file-contract"></i>
-                            رقم العقد: {{ cutting_order.order.contract_number|default:"غير محدد" }}
+                            رقم العقد:
+                            {% with all_contracts=cutting_order.order.get_all_contract_numbers %}
+                                {% if all_contracts %}
+                                    {% for contract in all_contracts %}
+                                        <span class="badge bg-secondary text-white me-1">{{ contract }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            {% endwith %}
                         </p>
                         <p class="mb-1">
                             <i class="fas fa-receipt"></i>
-                            رقم الفاتورة:
-                            <span class="badge badge-warning text-dark font-weight-bold">
-                                {{ cutting_order.order.invoice_number|default:"غير محدد" }}
-                            </span>
+                            أرقام الفواتير:
+                            {% with all_invoices=cutting_order.order.get_all_invoice_numbers %}
+                                {% if all_invoices %}
+                                    {% for invoice in all_invoices %}
+                                        <span class="badge badge-warning text-dark font-weight-bold me-1">{{ invoice }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            {% endwith %}
                         </p>
                         {% if cutting_order.order.customer.branch %}
                         <p class="mb-1">

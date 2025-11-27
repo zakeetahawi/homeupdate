@@ -187,13 +187,17 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
             pass
 
         if search:
-            # إذا لم يحدد المستخدم أعمدة أو اختار 'all'، نفذ البحث الشامل كما كان
+            # إذا لم يحدد المستخدم أعمدة أو اختار 'all'، نفذ البحث الشامل كما كان (يشمل جميع أرقام الفواتير والعقود)
             if not search_columns or 'all' in search_columns:
                 queryset = queryset.filter(
                     Q(order__id__icontains=search) |
                     Q(order__order_number__icontains=search) |
                     Q(contract_number__icontains=search) |
+                    Q(order__contract_number_2__icontains=search) |
+                    Q(order__contract_number_3__icontains=search) |
                     Q(invoice_number__icontains=search) |
+                    Q(order__invoice_number_2__icontains=search) |
+                    Q(order__invoice_number_3__icontains=search) |
                     Q(exit_permit_number__icontains=search) |
                     Q(order__customer__name__icontains=search) |
                     Q(order__salesperson__name__icontains=search) |
@@ -205,12 +209,12 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
                     Q(expected_delivery_date__icontains=search)
                 )
             else:
-                # خريطة الأعمدة المدعومة إلى شروط Q
+                # خريطة الأعمدة المدعومة إلى شروط Q (مع دعم جميع أرقام الفواتير والعقود)
                 column_map = {
                     'order_number': Q(order__order_number__icontains=search),
                     'customer_name': Q(order__customer__name__icontains=search),
-                    'contract_number': Q(contract_number__icontains=search),
-                    'invoice_number': Q(invoice_number__icontains=search),
+                    'contract_number': Q(contract_number__icontains=search) | Q(order__contract_number_2__icontains=search) | Q(order__contract_number_3__icontains=search),
+                    'invoice_number': Q(invoice_number__icontains=search) | Q(order__invoice_number_2__icontains=search) | Q(order__invoice_number_3__icontains=search),
                     'branch': Q(order__branch__name__icontains=search),
                 }
 
@@ -594,7 +598,7 @@ class VIPOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRequir
         # تطبيق فلترة السنة الافتراضية
         queryset = apply_default_year_filter(queryset, self.request, 'order_date')
 
-        # تطبيق فلاتر البحث إذا وجدت
+        # تطبيق فلاتر البحث إذا وجدت (يشمل جميع أرقام الفواتير والعقود)
         search_query = self.request.GET.get('search', '').strip()
         if search_query:
             from django.db.models import Q
@@ -602,7 +606,11 @@ class VIPOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRequir
                 Q(order__order_number__icontains=search_query) |
                 Q(order__customer__name__icontains=search_query) |
                 Q(contract_number__icontains=search_query) |
-                Q(invoice_number__icontains=search_query)
+                Q(order__contract_number_2__icontains=search_query) |
+                Q(order__contract_number_3__icontains=search_query) |
+                Q(invoice_number__icontains=search_query) |
+                Q(order__invoice_number_2__icontains=search_query) |
+                Q(order__invoice_number_3__icontains=search_query)
             )
 
         # فلترة حسب الحالة
@@ -2477,6 +2485,11 @@ class OverdueOrdersListView(PaginationFixMixin, LoginRequiredMixin, PermissionRe
                 Q(order__id__icontains=search) |
                 Q(order__order_number__icontains=search) |
                 Q(contract_number__icontains=search) |
+                Q(order__contract_number_2__icontains=search) |
+                Q(order__contract_number_3__icontains=search) |
+                Q(order__invoice_number__icontains=search) |
+                Q(order__invoice_number_2__icontains=search) |
+                Q(order__invoice_number_3__icontains=search) |
                 Q(order__customer__name__icontains=search)
             )
 
@@ -2777,12 +2790,17 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
             Q(cutting_order__order__selected_types__icontains='accessory')
         ).distinct().order_by('-cutting_date', '-cutting_order__created_at')
 
-        # البحث
+        # البحث (يشمل جميع أرقام الفواتير والعقود)
         search = self.request.GET.get('search', '').strip()
         if search:
             cutting_items = cutting_items.filter(
                 Q(cutting_order__cutting_code__icontains=search) |
                 Q(cutting_order__order__contract_number__icontains=search) |
+                Q(cutting_order__order__contract_number_2__icontains=search) |
+                Q(cutting_order__order__contract_number_3__icontains=search) |
+                Q(cutting_order__order__invoice_number__icontains=search) |
+                Q(cutting_order__order__invoice_number_2__icontains=search) |
+                Q(cutting_order__order__invoice_number_3__icontains=search) |
                 Q(cutting_order__order__customer__name__icontains=search) |
                 Q(order_item__product__name__icontains=search)
             )
