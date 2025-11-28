@@ -95,10 +95,11 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=2)  # من 6 إلى 2
 
+        from django.db.models.functions import TruncDate
         stock_movements = StockTransaction.objects.filter(
             date__date__range=[start_date, end_date]
-        ).extra(
-            select={'date_only': 'DATE(date)'}
+        ).annotate(
+            date_only=TruncDate('date')
         ).values('date_only', 'transaction_type').annotate(
             total=Sum('quantity')
         ).order_by('date_only', 'transaction_type')

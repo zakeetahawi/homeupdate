@@ -363,11 +363,10 @@ def restore_detail(request, pk):
 
 # API Endpoints للحصول على حالة المهام
 
-@csrf_exempt
 @login_required
 @user_passes_test(is_staff_or_superuser)
 def backup_status_api(request, pk):
-    """API للحصول على حالة النسخ الاحتياطي"""
+    """API للحصول على حالة النسخ الاحتياطي - محمي بـ CSRF"""
     try:
         status = backup_manager.get_backup_status(pk)
         return JsonResponse(status)
@@ -375,11 +374,10 @@ def backup_status_api(request, pk):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@csrf_exempt
 @login_required
 @user_passes_test(is_staff_or_superuser)
 def restore_status_api(request, pk):
-    """API للحصول على حالة الاستعادة"""
+    """API للحصول على حالة الاستعادة - محمي بـ CSRF"""
     try:
         status = backup_manager.get_restore_status(pk)
         return JsonResponse(status)

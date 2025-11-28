@@ -4,6 +4,7 @@
 
 from django.utils import timezone
 from django.db.models import Count, Sum, Q, F, Max
+from django.db.models.functions import ExtractMonth, ExtractYear, TruncDate
 from datetime import datetime, timedelta
 from customers.models import Customer
 from orders.models import Order
@@ -313,14 +314,14 @@ def get_enhanced_chart_data(branch_filter, selected_year, show_all_years=False):
 
 
 def get_single_year_chart_data(branch_filter, year):
-    """بيانات الرسوم البيانية لسنة واحدة"""
+    """بيانات الرسوم البيانية لسنة واحدة - محسّن بدون SQL injection"""
     # بيانات شهرية للطلبات
     orders_monthly = Order.objects.filter(order_date__year=year)
     if branch_filter != "all":
         orders_monthly = orders_monthly.filter(branch_id=branch_filter)
 
     orders_by_month = (
-        orders_monthly.extra(select={"month": "EXTRACT(month FROM order_date)"})
+        orders_monthly.annotate(month=ExtractMonth("order_date"))
         .values("month")
         .annotate(count=Count("id"), amount=Sum("total_amount"))
         .order_by("month")
@@ -332,7 +333,7 @@ def get_single_year_chart_data(branch_filter, year):
         customers_monthly = customers_monthly.filter(branch_id=branch_filter)
 
     customers_by_month = (
-        customers_monthly.extra(select={"month": "EXTRACT(month FROM created_at)"})
+        customers_monthly.annotate(month=ExtractMonth("created_at"))
         .values("month")
         .annotate(count=Count("id"))
         .order_by("month")
@@ -344,7 +345,7 @@ def get_single_year_chart_data(branch_filter, year):
         inspections_monthly = inspections_monthly.filter(branch_id=branch_filter)
 
     inspections_by_month = (
-        inspections_monthly.extra(select={"month": "EXTRACT(month FROM created_at)"})
+        inspections_monthly.annotate(month=ExtractMonth("created_at"))
         .values("month")
         .annotate(count=Count("id"))
         .order_by("month")
@@ -360,14 +361,14 @@ def get_single_year_chart_data(branch_filter, year):
 
 
 def get_multi_year_chart_data(branch_filter):
-    """بيانات الرسوم البيانية لعدة سنوات"""
+    """بيانات الرسوم البيانية لعدة سنوات - محسّن بدون SQL injection"""
     # بيانات سنوية للطلبات
     orders_yearly = Order.objects.all()
     if branch_filter != "all":
         orders_yearly = orders_yearly.filter(branch_id=branch_filter)
 
     orders_by_year = (
-        orders_yearly.extra(select={"year": "EXTRACT(year FROM order_date)"})
+        orders_yearly.annotate(year=ExtractYear("order_date"))
         .values("year")
         .annotate(count=Count("id"), amount=Sum("total_amount"))
         .order_by("year")
@@ -379,7 +380,7 @@ def get_multi_year_chart_data(branch_filter):
         customers_yearly = customers_yearly.filter(branch_id=branch_filter)
 
     customers_by_year = (
-        customers_yearly.extra(select={"year": "EXTRACT(year FROM created_at)"})
+        customers_yearly.annotate(year=ExtractYear("created_at"))
         .values("year")
         .annotate(count=Count("id"))
         .order_by("year")
@@ -391,7 +392,7 @@ def get_multi_year_chart_data(branch_filter):
         inspections_yearly = inspections_yearly.filter(branch_id=branch_filter)
 
     inspections_by_year = (
-        inspections_yearly.extra(select={"year": "EXTRACT(year FROM created_at)"})
+        inspections_yearly.annotate(year=ExtractYear("created_at"))
         .values("year")
         .annotate(count=Count("id"))
         .order_by("year")

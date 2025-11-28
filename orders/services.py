@@ -89,11 +89,12 @@ class OrderService(BaseService[Order]):
         )
 
         # إحصائيات حسب الشهر (آخر 6 أشهر)
+        from django.db.models.functions import ExtractMonth
         six_months_ago = timezone.now() - timedelta(days=180)
         monthly_stats = queryset.filter(
             created_at__gte=six_months_ago
-        ).extra(
-            select={'month': "EXTRACT(MONTH FROM created_at)"}
+        ).annotate(
+            month=ExtractMonth('created_at')
         ).values('month').annotate(
             count=Count('id'),
             amount=Sum('final_price')

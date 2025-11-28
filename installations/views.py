@@ -2306,10 +2306,9 @@ def debt_list(request):
 
 
 @login_required
-@csrf_exempt
 @require_http_methods(["POST"])
 def schedule_manufacturing_order(request, manufacturing_order_id):
-    """جدولة أمر التصنيع للتركيب - يدوية"""
+    """جدولة أمر التصنيع للتركيب - يدوية - محمي بـ CSRF"""
     try:
         from manufacturing.models import ManufacturingOrder
         manufacturing_order = get_object_or_404(ManufacturingOrder, id=manufacturing_order_id)

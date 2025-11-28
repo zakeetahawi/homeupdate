@@ -7,6 +7,8 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
+from django.core.cache import cache
+from django.http import HttpResponseForbidden
 
 from .models import CompanyInfo, FormField, Department, Salesperson, Branch, Role, UserRole
 from .forms import CompanyInfoForm, FormFieldForm, DepartmentForm, SalespersonForm, RoleForm, RoleAssignForm
@@ -18,11 +20,32 @@ User = get_user_model()
 
 def login_view(request):
     """
-    View for user login
+    View for user login with rate limiting
     """
     import logging
     import traceback
     logger = logging.getLogger('django')
+
+    # Rate Limiting - حماية ضد هجمات Brute Force
+    if request.method == 'POST':
+        ip = request.META.get('REMOTE_ADDR', 'unknown')
+        attempts_key = f'login_attempts_{ip}'
+        block_key = f'login_blocked_{ip}'
+        
+        # التحقق من الحظر
+        if cache.get(block_key):
+            logger.warning(f"🔒 Blocked login attempt from IP: {ip}")
+            messages.error(request, 'تم حظر الوصول مؤقتاً بسبب محاولات تسجيل دخول متعددة فاشلة. حاول مرة أخرى بعد 15 دقيقة.')
+            return HttpResponseForbidden('تم حظر الوصول مؤقتاً')
+        
+        # عد المحاولات الفاشلة
+        attempts = cache.get(attempts_key, 0)
+        if attempts >= 5:
+            # حظر لمدة 15 دقيقة بعد 5 محاولات فاشلة
+            cache.set(block_key, True, 900)  # 15 دقيقة
+            logger.warning(f"🚫 IP {ip} blocked after {attempts} failed attempts")
+            messages.error(request, 'تم تجاوز عدد المحاولات المسموح به. تم حظر الوصول لمدة 15 دقيقة.')
+            return HttpResponseForbidden('تم حظر الوصول مؤقتاً')
 
     # إعداد نموذج تسجيل الدخول الافتراضي
     form = AuthenticationForm()
@@ -57,12 +80,30 @@ def login_view(request):
                     user = authenticate(request=request, username=username, password=password)
 
                     if user is not None:
+                        # نجاح تسجيل الدخول - إعادة تعيين المحاولات
+                        ip = request.META.get('REMOTE_ADDR', 'unknown')
+                        attempts_key = f'login_attempts_{ip}'
+                        cache.delete(attempts_key)
+                        
                         login(request, user)
+                        logger.info(f"✅ Successful login for user: {username} from IP: {ip}")
                         messages.success(request, f'مرحباً بك {username}!')
                         next_url = request.GET.get('next', 'home')
                         return redirect(next_url)
                     else:
-                        messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة.')
+                        # فشل تسجيل الدخول - زيادة عدد المحاولات
+                        ip = request.META.get('REMOTE_ADDR', 'unknown')
+                        attempts_key = f'login_attempts_{ip}'
+                        attempts = cache.get(attempts_key, 0) + 1
+                        cache.set(attempts_key, attempts, 300)  # 5 دقائق
+                        
+                        remaining = 5 - attempts
+                        logger.warning(f"❌ Failed login attempt for user: {username} from IP: {ip} ({remaining} attempts remaining)")
+                        
+                        if remaining > 0:
+                            messages.error(request, f'اسم المستخدم أو كلمة المرور غير صحيحة. محاولات متبقية: {remaining}')
+                        else:
+                            messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة.')
                 else:
                     messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة.')
             except Exception as auth_error:

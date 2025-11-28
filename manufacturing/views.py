@@ -15,6 +15,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from django.db.models import Q, Count, Sum, F, Case, When, Value, IntegerField
 from django.db import models
 from django.utils import timezone
@@ -1391,10 +1392,12 @@ from .models import ManufacturingOrder
 logger = logging.getLogger(__name__)
 
 @require_http_methods(["POST"])
-@csrf_exempt
+@login_required
 def update_order_status(request, pk):
     """
     API endpoint to update the status of a manufacturing order.
+    محمي بـ CSRF و login_required
+    
     Expected POST data: {'status': 'new_status'}
     """
     # logger.info(f"[update_order_status] Starting update for order {pk}")  # معطل لتجنب الرسائل الكثيرة
@@ -1634,8 +1637,9 @@ def update_order_status(request, pk):
 
 
 @require_http_methods(["POST"])
-@csrf_exempt
+@login_required
 def update_exit_permit(request, pk):
+    """محمي بـ CSRF و login_required"""
     if not request.user.has_perm('manufacturing.change_manufacturingorder'):
         return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية لتحديث إذن الخروج'}, status=403)
     
@@ -2078,11 +2082,11 @@ def get_order_details(request, pk):
         }, status=500)
 
 
-@csrf_exempt
 @require_POST
+@login_required
 def send_reply(request, pk):
     """
-    Send reply to rejection notification
+    Send reply to rejection notification - محمي بـ CSRF و login_required
     """
     from django.utils import timezone
     

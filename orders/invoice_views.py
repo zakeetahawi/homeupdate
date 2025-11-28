@@ -176,9 +176,8 @@ def template_list(request):
 
 
 @staff_member_required
-@csrf_exempt
 def save_template(request):
-    """حفظ قالب الفاتورة"""
+    """حفظ قالب الفاتورة - محمي بـ CSRF"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'طريقة غير مسموحة'})
     
@@ -567,9 +566,8 @@ def export_template(request, template_id):
 
 
 @staff_member_required
-@csrf_exempt
 def import_template(request):
-    """استيراد قالب الفاتورة"""
+    """استيراد قالب الفاتورة - محمي بـ CSRF"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'طريقة غير مسموحة'})
     

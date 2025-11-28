@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg
+from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
@@ -1676,7 +1677,7 @@ def ajax_complaint_stats(request):
         'overdue': queryset.filter(status='overdue').count(),
         'by_type': list(queryset.values('complaint_type__name').annotate(count=Count('id'))),
         'by_status': list(queryset.values('status').annotate(count=Count('id'))),
-        'by_date': list(queryset.extra(select={'date': "date(created_at)"})
+        'by_date': list(queryset.annotate(date=TruncDate('created_at'))
                       .values('date')
                       .annotate(count=Count('id'))
                       .order_by('date'))

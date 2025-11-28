@@ -22,12 +22,17 @@ def print_colored(message, color='green'):
 def start_redis():
     """تشغيل Redis/Valkey"""
     try:
-        # فحص إذا كان يعمل بالفعل
-        result = subprocess.run(['pgrep', '-x', 'valkey-server|redis-server'],
-                              capture_output=True, text=True, shell=True)
-        if result.returncode == 0:
-            print_colored("Redis/Valkey يعمل بالفعل", 'cyan')
-            return True
+        # فحص إذا كان يعمل بالفعل - بدون shell=True لتحسين الأمان
+        for service in ['valkey-server', 'redis-server']:
+            result = subprocess.run(
+                ['pgrep', '-x', service],
+                capture_output=True, 
+                text=True,
+                shell=False  # ✅ آمن - لا يستخدم shell
+            )
+            if result.returncode == 0:
+                print_colored(f"{service} يعمل بالفعل", 'cyan')
+                return True
     except Exception:
         pass
 

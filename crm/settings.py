@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
 
+# تحميل متغيرات البيئة من .env
+from dotenv import load_dotenv
+load_dotenv()
+
 # ======================================
 # Enhanced Logging Configuration
 # ======================================
@@ -264,12 +268,32 @@ ADMINS = [
 ]
 MANAGERS = ADMINS
 
-# --- إعدادات الأمان ---
+# --- إعدادات الأمان المحسّنة ---
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-development-key-for-jazzmin-testing-only-change-in-production-123456789')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if os.environ.get('DEVELOPMENT_MODE', 'False').lower() == 'true':
+        # مفتاح للتطوير فقط - يتم توليده عشوائياً
+        import secrets
+        SECRET_KEY = 'dev-insecure-' + secrets.token_hex(32)
+        print("⚠️  WARNING: Using development SECRET_KEY. Set SECRET_KEY in environment for production!")
+    else:
+        raise ImproperlyConfigured(
+            "SECRET_KEY must be set in environment variables. "
+            "Generate one using: python -c 'import secrets; print(secrets.token_hex(50))'"
+        )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+# تحذير إذا كان DEBUG مفعّل بدون وضع التطوير
+if DEBUG and not os.environ.get('DEVELOPMENT_MODE'):
+    import warnings
+    warnings.warn(
+        "⚠️  DEBUG is True without DEVELOPMENT_MODE! This may be production!",
+        RuntimeWarning,
+        stacklevel=2
+    )
 
 # إعدادات لتقليل الرسائل غير الضرورية وتحسين الأداء
 SILENCED_SYSTEM_CHECKS = [
@@ -283,9 +307,30 @@ if not DEBUG:
     logging.getLogger('django.request').setLevel(logging.ERROR)
     logging.getLogger('django.db.backends').setLevel(logging.ERROR)
 
-# إعداد ALLOWED_HOSTS مبسط
-ALLOWED_HOSTS = ['*']  # السماح لجميع النطاقات
-# تم تبسيط ALLOWED_HOSTS
+# إعداد ALLOWED_HOSTS الآمن
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '[::1]',  # IPv6 localhost
+    'elkhawaga.uk',
+    'www.elkhawaga.uk',
+    '.elkhawaga.uk',  # جميع النطاقات الفرعية
+]
+
+# إضافة نطاقات إضافية من متغيرات البيئة
+if extra_hosts := os.environ.get('EXTRA_ALLOWED_HOSTS'):
+    ALLOWED_HOSTS.extend([host.strip() for host in extra_hosts.split(',')])
+
+# في التطوير فقط - السماح لجميع المضيفين المحليين
+if DEBUG and os.environ.get('DEVELOPMENT_MODE'):
+    ALLOWED_HOSTS.extend([
+        '192.168.*.*',
+        '10.*.*.*',
+        '*.local',
+        '*.ngrok.io',
+        '*.trycloudflare.com',
+    ])
+    print(f"🔧 Development mode: ALLOWED_HOSTS = {ALLOWED_HOSTS}")
 
 # Application definition
 INSTALLED_APPS = [
@@ -337,6 +382,9 @@ MIDDLEWARE = [
     'crm.middleware.emergency_connection.EmergencyConnectionMiddleware',  # إدارة الاتصالات الطارئة
     'orders.middleware.CurrentUserMiddleware',  # تتبع المستخدم الحالي
     'django.middleware.security.SecurityMiddleware',
+    # CSP معطل في التطوير - سيتم تفعيله في الإنتاج فقط
+    # 'csp.middleware.CSPMiddleware',  # Content Security Policy
+    'corsheaders.middleware.CorsMiddleware',  # يجب أن يكون قبل CommonMiddleware
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -626,17 +674,66 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
-# Security Settings for Production
-if not DEBUG and os.environ.get('ENABLE_SSL_SECURITY', 'false').lower() == 'true':
-    # HTTPS/SSL Settings
-    SECURE_SSL_REDIRECT = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# ============================================
+# 🔒 Security Settings - محسّن وآمن
+# ============================================
 
-    # Session and CSRF Settings
+if not DEBUG:
+    # HTTPS/SSL Settings
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True').lower() == 'true'
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    
+    # HSTS (HTTP Strict Transport Security)
+    SECURE_HSTS_SECONDS = 31536000  # سنة واحدة
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    
+    # Session Security
     SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_AGE = 1209600  # أسبوعين
+    
+    # CSRF Security
+    CSRF_COOKIE_SECURE = True
     CSRF_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    CSRF_TRUSTED_ORIGINS = [
+        'https://elkhawaga.uk',
+        'https://www.elkhawaga.uk',
+    ]
+    
+    # Browser Security Headers
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_REFERRER_POLICY = 'same-origin'
+    
+    # Content Security Policy (CSP) - مفعّل للإنتاج
+    CSP_DEFAULT_SRC = ("'self'",)
+    CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com")
+    CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "fonts.googleapis.com")
+    CSP_IMG_SRC = ("'self'", "data:", "https:", "blob:")
+    CSP_FONT_SRC = ("'self'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "fonts.gstatic.com")
+    CSP_CONNECT_SRC = ("'self'",)
+    CSP_FRAME_ANCESTORS = ("'none'",)
+    CSP_BASE_URI = ("'self'",)
+    CSP_FORM_ACTION = ("'self'",)
+    
+else:
+    # Development Settings - أقل تقييداً للتطوير
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_HTTPONLY = True  # دائماً مفعّل
+    CSRF_COOKIE_HTTPONLY = True  # دائماً مفعّل
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'SAMEORIGIN'  # أقل تقييداً في التطوير
+    
+    # CSP في وضع التطوير - معطل أو مرن جداً
+    # تعطيل CSP في التطوير لتجنب مشاكل التحميل
+    CSP_ENABLED = False  # تعطيل CSP بالكامل في التطوير
 
     # HSTS Settings
     SECURE_HSTS_SECONDS = 31536000  # سنة واحدة
@@ -743,22 +840,19 @@ CSRF_TRUSTED_ORIGINS = [
     'https://admin.elkhawaga.uk',
 ] + CORS_ALLOWED_ORIGINS
 
-# إعدادات CSRF موحدة ومحسنة
-CSRF_COOKIE_SAMESITE = 'Lax'
+# إعدادات CSRF موحدة ومحسنة - تمت إزالة التكرار
 CSRF_COOKIE_HTTPONLY = False  # يجب أن يكون False للسماح لـ JavaScript بالوصول
-CSRF_COOKIE_SECURE = False if DEBUG else True  # آمن في الإنتاج فقط
 CSRF_USE_SESSIONS = False
 CSRF_FAILURE_VIEW = 'crm.csrf_views.csrf_failure'  # صفحة خطأ CSRF مخصصة
+# CSRF_COOKIE_SECURE و CSRF_COOKIE_SAMESITE - انظر قسم Security Settings أعلاه
 
-# إعدادات Session موحدة
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+# إعدادات Session موحدة - محسّنة للأمان والأداء
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'  # أسرع من db فقط
 SESSION_CACHE_ALIAS = 'session'
-SESSION_COOKIE_AGE = 86400 * 7  # 7 أيام
-SESSION_COOKIE_SECURE = False  # اجعلها True إذا كنت تستخدم HTTPS فقط
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_NAME = 'elkhawaga_sessionid'  # اسم مخصص غير قابل للتخمين
+SESSION_SAVE_EVERY_REQUEST = False  # تحسين الأداء
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # يبقى المستخدم مسجلاً حتى بعد إغلاق المتصفح
+# SESSION_COOKIE_AGE, SESSION_COOKIE_SECURE - انظر قسم Security Settings أعلاه
 
 # إعدادات جدولة المهام
 APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"
@@ -874,21 +968,10 @@ SECURITY_SETTINGS = {
 }
 
 # Advanced Security Settings
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+# Additional Security Headers - تمت إزالة التكرار
+# جميع إعدادات الأمان موجودة في قسم Security Settings أعلاه
 
-# Session Security
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE = 3600  # 1 hour
-
-# CSRF Protection - تم نقل الإعدادات إلى الأعلى لتجنب التكرار
-
-# Password Security
+# Password Security - محسّنة
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -896,7 +979,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
         'OPTIONS': {
-            'min_length': 8,
+            'min_length': 8,  # 8 أحرف على الأقل
         }
     },
     {
@@ -905,6 +988,13 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+]
+
+# Password Hashers - محسّنة للأمان
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',  # افتراضي Django - آمن
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 
 # Rate Limiting (if using django-ratelimit)
