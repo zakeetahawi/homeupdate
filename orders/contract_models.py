@@ -763,21 +763,33 @@ class CurtainFabric(models.Model):
         
         # التحقق من عدم تجاوز الكمية المتاحة للمسودات
         if self.draft_order_item and self.meters:
-            # حساب إجمالي ما تم استخدامه من هذا العنصر في المسودات
-            used_total = CurtainFabric.objects.filter(
+            from django.db.models import Sum
+            from decimal import Decimal
+            
+            # حساب ما تم استخدامه من الأقمشة (من نفس العنصر)
+            used_in_fabrics = CurtainFabric.objects.filter(
                 draft_order_item=self.draft_order_item
             ).exclude(pk=self.pk).aggregate(
-                total=models.Sum('meters')
-            )['total'] or 0
+                total=Sum('meters')
+            )['total'] or Decimal('0')
             
+            # حساب ما تم استخدامه من الإكسسوارات (من نفس العنصر)
+            used_in_accessories = CurtainAccessory.objects.filter(
+                draft_order_item=self.draft_order_item
+            ).aggregate(
+                total=Sum('quantity')
+            )['total'] or Decimal('0')
+            
+            # إجمالي المستخدم
+            used_total = used_in_fabrics + used_in_accessories
             available = self.draft_order_item.quantity - used_total
             
-            # تحذير فقط، لا نمنع الحفظ في وضع المسودة
+            # منع الحفظ إذا تجاوز الكمية المتاحة
             if self.meters > available:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f'الكمية المطلوبة ({self.meters}م) أكبر من المتاح ({available}م من {self.draft_order_item.quantity}م)')
-                # لا نضيف للـ errors في وضع المسودة - فقط تحذير
+                errors['meters'] = (
+                    f'الكمية المطلوبة ({self.meters}م) أكبر من المتاح '
+                    f'({available}م من أصل {self.draft_order_item.quantity}م)'
+                )
         
         if errors:
             raise ValidationError(errors)
@@ -889,21 +901,33 @@ class CurtainAccessory(models.Model):
         
         # التحقق من عدم تجاوز الكمية المتاحة للمسودات
         if self.draft_order_item and self.quantity:
-            # حساب إجمالي ما تم استخدامه من هذا العنصر في المسودات
-            used_total = CurtainAccessory.objects.filter(
+            from django.db.models import Sum
+            from decimal import Decimal
+            
+            # حساب ما تم استخدامه من الإكسسوارات (من نفس العنصر)
+            used_in_accessories = CurtainAccessory.objects.filter(
                 draft_order_item=self.draft_order_item
             ).exclude(pk=self.pk).aggregate(
-                total=models.Sum('quantity')
-            )['total'] or 0
+                total=Sum('quantity')
+            )['total'] or Decimal('0')
             
+            # حساب ما تم استخدامه من الأقمشة (من نفس العنصر)
+            used_in_fabrics = CurtainFabric.objects.filter(
+                draft_order_item=self.draft_order_item
+            ).aggregate(
+                total=Sum('meters')
+            )['total'] or Decimal('0')
+            
+            # إجمالي المستخدم
+            used_total = used_in_accessories + used_in_fabrics
             available = self.draft_order_item.quantity - used_total
             
-            # تحذير فقط، لا نمنع الحفظ في وضع المسودة
+            # منع الحفظ إذا تجاوز الكمية المتاحة
             if self.quantity > available:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f'الكمية المطلوبة ({self.quantity}) أكبر من المتاح ({available} من {self.draft_order_item.quantity})')
-                # لا نضيف للـ errors في وضع المسودة - فقط تحذير
+                errors['quantity'] = (
+                    f'الكمية المطلوبة ({self.quantity}) أكبر من المتاح '
+                    f'({available} من أصل {self.draft_order_item.quantity})'
+                )
         
         if errors:
             raise ValidationError(errors)

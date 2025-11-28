@@ -287,10 +287,23 @@ class Step4InvoicePaymentForm(forms.ModelForm):
         self.fields['invoice_number'].required = True
         self.fields['invoice_number'].widget.attrs['required'] = 'required'
         
-        # جعل صورة الفاتورة إجبارية (إلا للمعاينة)
+        # جعل صورة الفاتورة إجبارية فقط إذا لم توجد صور محفوظة
         if self.draft_order and self.draft_order.selected_type != 'inspection':
-            self.fields['invoice_image'].required = True
-            self.fields['invoice_image'].widget.attrs['required'] = 'required'
+            # التحقق من وجود صور محفوظة
+            has_saved_images = (
+                (self.draft_order.invoice_image) or 
+                (self.draft_order.invoice_images_new.exists())
+            )
+            
+            # إذا لم توجد صور محفوظة، الحقل إجباري
+            if not has_saved_images:
+                self.fields['invoice_image'].required = True
+                self.fields['invoice_image'].widget.attrs['required'] = 'required'
+            else:
+                # إذا وجدت صور، الحقل اختياري
+                self.fields['invoice_image'].required = False
+                if 'required' in self.fields['invoice_image'].widget.attrs:
+                    del self.fields['invoice_image'].widget.attrs['required']
     
     def clean_invoice_number(self):
         """التحقق من رقم المرجع الرئيسي وعدم تكراره للعميل نفسه مع نفس النوع"""
@@ -335,9 +348,15 @@ class Step4InvoicePaymentForm(forms.ModelForm):
         
         # صورة الفاتورة إجبارية لجميع الأنواع ما عدا المعاينة
         if self.draft_order and self.draft_order.selected_type != 'inspection':
-            # التحقق مما إذا كانت الصورة موجودة مسبقاً أو تم رفعها الآن
-            if not invoice_image and not (self.draft_order and self.draft_order.invoice_image):
-                raise ValidationError('يجب إرفاق صورة الفاتورة')
+            # التحقق من وجود صورة محفوظة أو صورة جديدة
+            has_saved_images = (
+                (self.draft_order.invoice_image) or 
+                (self.draft_order.invoice_images_new.exists())
+            )
+            
+            # إذا لم توجد صور محفوظة ولم يتم رفع صورة جديدة
+            if not invoice_image and not has_saved_images:
+                raise ValidationError('يجب إرفاق صورة الفاتورة على الأقل')
         
         return invoice_image
     

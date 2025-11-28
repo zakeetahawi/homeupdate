@@ -310,8 +310,8 @@
                                     <select id="fabric-name" class="form-select" onchange="updateFabricQuantityInfo(this)">
                                         <option value="">اختر القماش من المرجع</option>
                                         {% for item in draft.items.all %}
-                                        <option value="{{ item.id }}" data-available="{{ item.quantity }}" data-name="{{ item.product.name }}">
-                                            {{ item.product.name }} - متوفر: <span class="available-qty-{{ item.id }}">{{ item.quantity }}</span> متر
+                                        <option value="{{ item.id }}" data-available="{{ item.quantity|stringformat:'f' }}" data-name="{{ item.product.name }}">
+                                            {{ item.product.name }} - متوفر: <span class="available-qty-{{ item.id }}">{{ item.quantity|floatformat:"-3" }}</span> متر
                                         </option>
                                         {% endfor %}
                                     </select>
@@ -411,11 +411,11 @@
                                                 <option value="">اختر الإكسسوار من المرجع</option>
                                                 {% for item in draft.items.all %}
                                                 <option value="{{ item.id }}" 
-                                                        data-available="{{ item.quantity }}" 
+                                                        data-available="{{ item.quantity|stringformat:'f' }}" 
                                                         data-name="{{ item.product.name }}"
                                                         data-is-fabric="false"
                                                         class="accessory-item-option">
-                                                    {{ item.product.name }} - متوفر: <span class="available-acc-{{ item.id }}">{{ item.quantity }}</span>
+                                                    {{ item.product.name }} - متوفر: <span class="available-acc-{{ item.id }}">{{ item.quantity|floatformat:"-3" }}</span>
                                                 </option>
                                                 {% endfor %}
                                             </select>
@@ -546,7 +546,7 @@ let editingCurtainId = null; // Track if we're editing an existing curtain
 // Initialize fabric usage tracker from draft items
 {% for item in draft.items.all %}
 fabricUsageTracker['{{ item.id }}'] = {
-    total: parseFloat('{{ item.quantity }}'),
+    total: parseFloat('{{ item.quantity|stringformat:"f" }}'),
     used: 0,
     name: '{{ item.product.name|escapejs }}'
 };
@@ -1408,17 +1408,8 @@ function removeCurtain(curtainId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            document.querySelector(`[data-curtain-id="${curtainId}"]`).remove();
-            
-            // إذا لم يعد هناك ستائر
-            if (document.querySelectorAll('.curtain-card').length === 0) {
-                document.getElementById('curtains-list').innerHTML = `
-                    <div class="text-center text-muted py-5" id="no-curtains-message">
-                        <i class="fas fa-inbox fa-3x mb-3"></i>
-                        <p class="mb-0">لم يتم إضافة ستائر بعد</p>
-                    </div>
-                `;
-            }
+            // إعادة تحميل الصفحة لتحديث الكميات المتاحة
+            location.reload();
         } else {
             alert(data.message || 'حدث خطأ أثناء حذف الستارة');
         }

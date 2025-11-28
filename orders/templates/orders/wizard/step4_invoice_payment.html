@@ -82,9 +82,20 @@
                 
                 <!-- حقول رفع الصور -->
                 <div id="invoice-images-container">
+                    {% if not draft.invoice_image and not draft.invoice_images_new.exists %}
+                    <!-- الحقل الأول إجباري فقط إذا لم توجد صور محفوظة -->
                     <div class="invoice-image-input mb-2">
                         {{ form.invoice_image }}
                     </div>
+                    {% else %}
+                    <!-- إذا كانت هناك صور محفوظة، الحقل الأول اختياري مع زر حذف -->
+                    <div class="invoice-image-input mb-2 d-flex gap-2">
+                        <input type="file" name="invoice_image" class="form-control" accept="image/*" id="invoice_image_field">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
                 
                 <!-- زر إضافة صورة جديدة -->

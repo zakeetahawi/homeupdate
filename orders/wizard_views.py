@@ -641,11 +641,20 @@ def wizard_step_5_contract(request, draft):
     # حساب الكميات المتاحة لكل عنصر
     items_with_usage = []
     for item in order_items:
-        used = CurtainFabric.objects.filter(
-            order_item__isnull=False,
-            curtain__draft_order=draft,
-            order_item__product=item.product
-        ).aggregate(total=models.Sum('meters'))['total'] or 0
+        # حساب الكمية المستخدمة من الأقمشة (في المسودة الحالية)
+        used_fabrics = CurtainFabric.objects.filter(
+            draft_order_item=item,
+            curtain__draft_order=draft
+        ).aggregate(total=models.Sum('meters'))['total'] or Decimal('0')
+        
+        # حساب الكمية المستخدمة من الإكسسوارات (في المسودة الحالية)
+        used_accessories = CurtainAccessory.objects.filter(
+            draft_order_item=item,
+            curtain__draft_order=draft
+        ).aggregate(total=models.Sum('quantity'))['total'] or Decimal('0')
+        
+        # إجمالي المستخدم
+        used = used_fabrics + used_accessories
         
         items_with_usage.append({
             'id': item.id,
