@@ -16,7 +16,6 @@ from accounts.models import Branch, DashboardYearSettings
 from complaints.models import Complaint, ComplaintType
 from django.contrib.auth.models import User
 from django.db.models import Avg, Case, When, IntegerField, DurationField
-from django.db.models.functions import Extract
 
 
 def get_customers_statistics(
