@@ -1,10 +1,14 @@
 from django.urls import path
 from . import views, api_views
+from .orders_report_views import orders_report_view
 
 app_name = 'reports'
 
 # Main urlpatterns for reports app. Include seller-activity routes alongside the standard CRUD/dashboard routes.
 urlpatterns = [
+    # Orders Report - تقرير الطلبات
+    path('orders/', orders_report_view, name='orders_report'),
+    
     # Seller activity report index/detail/csv
     path('seller-activity/', views.seller_customer_activity_index, name='seller_customer_activity_index'),
     path('seller-activity/<int:report_id>/', views.seller_customer_activity_view, name='seller_customer_activity'),
