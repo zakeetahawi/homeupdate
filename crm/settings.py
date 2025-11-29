@@ -357,6 +357,7 @@ INSTALLED_APPS = [
     'installations',
     'complaints.apps.ComplaintsConfig',  # نظام إدارة الشكاوى
     'notifications.apps.NotificationsConfig',  # نظام الإشعارات المتكامل
+    'accounting.apps.AccountingConfig',  # النظام المحاسبي المتكامل
     'odoo_db_manager.apps.OdooDbManagerConfig',
     'backup_system.apps.BackupSystemConfig',  # نظام النسخ الاحتياطي والاستعادة الجديد
 

@@ -559,36 +559,71 @@ function calculateUsedQuantities() {
         fabricUsageTracker[key].used = 0;
     }
     
-    // Add from existing curtains on the page
+    // Helper function to find item by name
+    function findItemIdByName(name) {
+        for (let key in fabricUsageTracker) {
+            if (fabricUsageTracker[key].name === name) {
+                return key;
+            }
+        }
+        return null;
+    }
+    
+    // Add from existing curtains on the page (exclude the curtain being edited)
     {% for curtain in curtains %}
-        {% for fabric in curtain.fabrics.all %}
-            {% if fabric.draft_order_item_id %}
-                if (fabricUsageTracker['{{ fabric.draft_order_item_id }}']) {
-                    fabricUsageTracker['{{ fabric.draft_order_item_id }}'].used += parseFloat('{{ fabric.meters }}');
-                }
-            {% endif %}
-        {% endfor %}
-        
-        {% for accessory in curtain.accessories.all %}
-            {% if accessory.draft_order_item_id %}
-                if (fabricUsageTracker['{{ accessory.draft_order_item_id }}']) {
-                    fabricUsageTracker['{{ accessory.draft_order_item_id }}'].used += parseFloat('{{ accessory.quantity }}');
-                }
-            {% endif %}
-        {% endfor %}
+        // Skip the curtain being edited to avoid double counting
+        if (editingCurtainId !== {{ curtain.id }} && String(editingCurtainId) !== '{{ curtain.id }}') {
+            {% for fabric in curtain.fabrics.all %}
+                {% if fabric.draft_order_item_id %}
+                    if (fabricUsageTracker['{{ fabric.draft_order_item_id }}']) {
+                        fabricUsageTracker['{{ fabric.draft_order_item_id }}'].used += parseFloat('{{ fabric.meters }}');
+                    }
+                {% else %}
+                    // البحث بالاسم إذا لم يكن هناك draft_order_item_id
+                    var fabricItemId = findItemIdByName('{{ fabric.fabric_name|escapejs }}');
+                    if (fabricItemId && fabricUsageTracker[fabricItemId]) {
+                        fabricUsageTracker[fabricItemId].used += parseFloat('{{ fabric.meters }}');
+                    }
+                {% endif %}
+            {% endfor %}
+            
+            {% for accessory in curtain.accessories.all %}
+                {% if accessory.draft_order_item_id %}
+                    if (fabricUsageTracker['{{ accessory.draft_order_item_id }}']) {
+                        fabricUsageTracker['{{ accessory.draft_order_item_id }}'].used += parseFloat('{{ accessory.quantity }}');
+                    }
+                {% else %}
+                    // البحث بالاسم إذا لم يكن هناك draft_order_item_id
+                    var accItemId = findItemIdByName('{{ accessory.accessory_name|escapejs }}');
+                    if (accItemId && fabricUsageTracker[accItemId]) {
+                        fabricUsageTracker[accItemId].used += parseFloat('{{ accessory.quantity }}');
+                    }
+                {% endif %}
+            {% endfor %}
+        }
     {% endfor %}
     
     // Add from temp fabrics in current modal
     tempFabrics.forEach(fabric => {
-        if (fabric.item_id && fabricUsageTracker[fabric.item_id]) {
-            fabricUsageTracker[fabric.item_id].used += parseFloat(fabric.meters);
+        let itemId = String(fabric.item_id);
+        // إذا لم يكن هناك item_id، ابحث بالاسم
+        if (!itemId || itemId === 'null' || itemId === 'undefined') {
+            itemId = findItemIdByName(fabric.name);
+        }
+        if (itemId && fabricUsageTracker[itemId]) {
+            fabricUsageTracker[itemId].used += parseFloat(fabric.meters);
         }
     });
     
     // Add from temp accessories in current modal
     tempAccessories.forEach(accessory => {
-        if (accessory.item_id && fabricUsageTracker[accessory.item_id]) {
-            fabricUsageTracker[accessory.item_id].used += parseFloat(accessory.quantity);
+        let itemId = String(accessory.item_id);
+        // إذا لم يكن هناك item_id، ابحث بالاسم
+        if (!itemId || itemId === 'null' || itemId === 'undefined') {
+            itemId = findItemIdByName(accessory.name);
+        }
+        if (itemId && fabricUsageTracker[itemId]) {
+            fabricUsageTracker[itemId].used += parseFloat(accessory.quantity);
         }
     });
     
@@ -884,8 +919,8 @@ function removeFabric(index) {
 }
 
 // Show accessories section
-function showAccessoriesSection() {
-    if (tempFabrics.length === 0) {
+function showAccessoriesSection(skipFabricCheck = false) {
+    if (!skipFabricCheck && tempFabrics.length === 0) {
         if (!confirm('لم تقم بإضافة أي أقمشة. هل تريد المتابعة؟')) {
             return;
         }
@@ -1298,6 +1333,9 @@ function resetCurtainModal() {
 
 // Edit curtain function
 function editCurtain(curtainId) {
+    // Set edit mode FIRST before any async operations
+    editingCurtainId = curtainId;
+    
     // Fetch curtain data
     fetch(`{% url 'orders:wizard_edit_curtain' 0 %}`.replace('0', curtainId), {
         method: 'GET',
@@ -1308,9 +1346,6 @@ function editCurtain(curtainId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Set edit mode
-            editingCurtainId = curtainId;
-            
             // Update modal title
             document.querySelector('#addCurtainModal .modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>تعديل الستارة';
             
@@ -1368,6 +1403,15 @@ function editCurtain(curtainId) {
                 showFabricsSection();
                 updateFabricsList();
             }
+            
+            // Show accessories section if there are accessories
+            if (tempAccessories.length > 0) {
+                showAccessoriesSection(true); // Skip fabric check when loading from edit
+                updateAccessoriesList();
+            }
+            
+            // Recalculate used quantities after loading edit data
+            calculateUsedQuantities();
         } else {
             alert(data.message || 'حدث خطأ أثناء تحميل بيانات الستارة');
         }
@@ -1381,6 +1425,8 @@ function editCurtain(curtainId) {
 // Reset modal when closed
 $('#addCurtainModal').on('hidden.bs.modal', function() {
     resetCurtainModal();
+    // Recalculate quantities after modal is closed
+    calculateUsedQuantities();
 });
 
 // إعادة تمرير النافذة إلى الأعلى عند فتحها
@@ -1392,6 +1438,9 @@ $('#addCurtainModal').on('show.bs.modal', function() {
 $('#addCurtainModal').on('shown.bs.modal', function() {
     // إعادة تمرير محتوى النافذة إلى الأعلى
     $(this).find('.modal-body').scrollTop(0);
+    
+    // Recalculate quantities after modal is fully shown
+    calculateUsedQuantities();
 });
 
 function removeCurtain(curtainId) {

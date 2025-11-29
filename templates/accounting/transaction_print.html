@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}طباعة القيد - {{ transaction.transaction_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .print-area, .print-area * {
+        visibility: visible;
+    }
+    .print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+    .no-print {
+        display: none !important;
+    }
+}
+.print-header {
+    border-bottom: 2px solid #333;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="no-print mb-4">
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="fas fa-print me-1"></i> طباعة
+        </button>
+        <a href="{% url 'accounting:transaction_detail' transaction.pk %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-right me-1"></i> رجوع
+        </a>
+    </div>
+
+    <div class="print-area">
+        <div class="card">
+            <div class="card-body">
+                <!-- رأس القيد -->
+                <div class="print-header text-center">
+                    <h2>قيد محاسبي</h2>
+                    <h4 class="text-muted">{{ transaction.transaction_number }}</h4>
+                </div>
+
+                <!-- معلومات القيد -->
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <p><strong>التاريخ:</strong> {{ transaction.date|date:"Y-m-d" }}</p>
+                        <p><strong>النوع:</strong> {{ transaction.get_transaction_type_display }}</p>
+                    </div>
+                    <div class="col-6 text-end">
+                        <p><strong>الحالة:</strong> 
+                            {% if transaction.status == 'posted' %}مرحّل
+                            {% elif transaction.status == 'draft' %}مسودة
+                            {% else %}{{ transaction.get_status_display }}{% endif %}
+                        </p>
+                        <p><strong>المرجع:</strong> {{ transaction.reference|default:"-" }}</p>
+                    </div>
+                </div>
+
+                <!-- البيان -->
+                <div class="mb-4">
+                    <strong>البيان:</strong>
+                    <p class="border p-2 bg-light">{{ transaction.description }}</p>
+                </div>
+
+                <!-- تفاصيل القيد -->
+                <table class="table table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>الحساب</th>
+                            <th class="text-end" width="150">مدين</th>
+                            <th class="text-end" width="150">دائن</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in transaction.lines.all %}
+                        <tr>
+                            <td>{{ line.account.code }} - {{ line.account.name }}</td>
+                            <td class="text-end">
+                                {% if line.debit > 0 %}{{ line.debit|floatformat:2 }}{% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if line.credit > 0 %}{{ line.credit|floatformat:2 }}{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr class="fw-bold">
+                            <th>المجموع</th>
+                            <th class="text-end">{{ totals.total_debit|floatformat:2 }}</th>
+                            <th class="text-end">{{ totals.total_credit|floatformat:2 }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <!-- التوقيعات -->
+                <div class="row mt-5 pt-4">
+                    <div class="col-4 text-center">
+                        <div class="border-top pt-2">
+                            <small>المحاسب</small>
+                        </div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="border-top pt-2">
+                            <small>المراجع</small>
+                        </div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="border-top pt-2">
+                            <small>المدير المالي</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- معلومات الطباعة -->
+                <div class="text-center mt-4 text-muted small">
+                    <p class="mb-0">طُبع بتاريخ: {% now "Y-m-d H:i" %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

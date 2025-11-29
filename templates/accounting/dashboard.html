@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}النظام المحاسبي - لوحة التحكم{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- العنوان -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">
+                    <i class="fas fa-calculator me-2"></i>
+                    لوحة التحكم المحاسبية
+                </h2>
+                <div>
+                    <a href="{% url 'accounting:transaction_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> قيد جديد
+                    </a>
+                    <a href="{% url 'accounting:advance_create' %}" class="btn btn-success">
+                        <i class="fas fa-money-bill me-1"></i> سلفة جديدة
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الإحصائيات السريعة -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">الحسابات النشطة</h6>
+                            <h3 class="mb-0">{{ total_accounts }}</h3>
+                        </div>
+                        <div class="opacity-50">
+                            <i class="fas fa-sitemap fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{% url 'accounting:account_list' %}" class="text-white text-decoration-none small">
+                        عرض الكل <i class="fas fa-arrow-left ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">القيود المرحّلة</h6>
+                            <h3 class="mb-0">{{ total_transactions }}</h3>
+                        </div>
+                        <div class="opacity-50">
+                            <i class="fas fa-file-invoice fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{% url 'accounting:transaction_list' %}" class="text-white text-decoration-none small">
+                        عرض الكل <i class="fas fa-arrow-left ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-dark-50 mb-1">قيود معلقة</h6>
+                            <h3 class="mb-0">{{ pending_transactions }}</h3>
+                        </div>
+                        <div class="opacity-50">
+                            <i class="fas fa-clock fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{% url 'accounting:transaction_list' %}?status=draft" class="text-dark text-decoration-none small">
+                        عرض المعلقة <i class="fas fa-arrow-left ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">السلف النشطة</h6>
+                            <h3 class="mb-0">{{ active_advances }}</h3>
+                        </div>
+                        <div class="opacity-50">
+                            <i class="fas fa-hand-holding-usd fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{% url 'accounting:advance_list' %}?status=active" class="text-white text-decoration-none small">
+                        عرض الكل <i class="fas fa-arrow-left ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات المبالغ -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card border-danger h-100">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    إجمالي المديونيات
+                </div>
+                <div class="card-body text-center">
+                    <h2 class="text-danger mb-0">{{ total_receivables|floatformat:2 }} {{ currency_symbol }}</h2>
+                    <small class="text-muted">المستحق على العملاء</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+            <div class="card border-success h-100">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-piggy-bank me-2"></i>
+                    إجمالي السلف النشطة
+                </div>
+                <div class="card-body text-center">
+                    <h2 class="text-success mb-0">{{ total_advances_amount|floatformat:2 }} {{ currency_symbol }}</h2>
+                    <small class="text-muted">سلف العملاء المتاحة</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- آخر القيود -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        آخر القيود المحاسبية
+                    </h5>
+                    <a href="{% url 'accounting:transaction_list' %}" class="btn btn-sm btn-outline-primary">
+                        عرض الكل
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>الرقم</th>
+                                    <th>التاريخ</th>
+                                    <th>البيان</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in recent_transactions %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'accounting:transaction_detail' transaction.pk %}">
+                                            {{ transaction.transaction_number }}
+                                        </a>
+                                    </td>
+                                    <td>{{ transaction.date }}</td>
+                                    <td>{{ transaction.description|truncatechars:30 }}</td>
+                                    <td>
+                                        {% if transaction.status == 'posted' %}
+                                        <span class="badge bg-success">مرحّل</span>
+                                        {% elif transaction.status == 'draft' %}
+                                        <span class="badge bg-warning">مسودة</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ transaction.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        لا توجد قيود بعد
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- عملاء لديهم مديونية -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2 text-danger"></i>
+                        عملاء لديهم مديونية
+                    </h5>
+                    <a href="{% url 'accounting:customer_balances' %}" class="btn btn-sm btn-outline-danger">
+                        عرض الكل
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>العميل</th>
+                                    <th>إجمالي الطلبات</th>
+                                    <th>المدفوع</th>
+                                    <th>المتبقي</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for summary in customers_with_debt %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'accounting:customer_financial' summary.customer.pk %}">
+                                            {{ summary.customer.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ summary.total_orders_amount|floatformat:2 }}</td>
+                                    <td class="text-success">{{ summary.total_paid|floatformat:2 }}</td>
+                                    <td class="text-danger fw-bold">{{ summary.total_debt|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
+                                        <br>لا يوجد عملاء لديهم مديونية
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- روابط سريعة للتقارير -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        التقارير المحاسبية
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{% url 'accounting:trial_balance' %}" class="btn btn-outline-primary w-100 py-3">
+                                <i class="fas fa-balance-scale fa-2x mb-2 d-block"></i>
+                                ميزان المراجعة
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{% url 'accounting:income_statement' %}" class="btn btn-outline-success w-100 py-3">
+                                <i class="fas fa-chart-line fa-2x mb-2 d-block"></i>
+                                قائمة الدخل
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{% url 'accounting:balance_sheet' %}" class="btn btn-outline-info w-100 py-3">
+                                <i class="fas fa-file-invoice-dollar fa-2x mb-2 d-block"></i>
+                                الميزانية العمومية
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{% url 'accounting:customer_balances' %}" class="btn btn-outline-warning w-100 py-3">
+                                <i class="fas fa-users fa-2x mb-2 d-block"></i>
+                                أرصدة العملاء
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

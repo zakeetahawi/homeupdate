@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تقرير الحركات اليومية{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">
+                    <i class="fas fa-calendar-day me-2"></i>
+                    تقرير الحركات اليومية
+                </h2>
+                <button onclick="window.print()" class="btn btn-outline-secondary">
+                    <i class="fas fa-print me-1"></i> طباعة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلترة التاريخ -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">التاريخ</label>
+                            <input type="date" name="date" class="form-control" value="{{ date }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i> عرض
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قائمة الحركات -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        حركات يوم {{ date }}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% for transaction in transactions %}
+                    <div class="border-bottom p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">
+                                <a href="{% url 'accounting:transaction_detail' transaction.pk %}">
+                                    {{ transaction.transaction_number }}
+                                </a>
+                                <span class="badge bg-{{ transaction.status }}">{{ transaction.get_status_display }}</span>
+                            </h6>
+                            <small class="text-muted">{{ transaction.get_transaction_type_display }}</small>
+                        </div>
+                        <p class="text-muted mb-2">{{ transaction.description }}</p>
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>الحساب</th>
+                                    <th class="text-end text-success">مدين</th>
+                                    <th class="text-end text-danger">دائن</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line in transaction.lines.all %}
+                                <tr>
+                                    <td>{{ line.account.code }} - {{ line.account.name }}</td>
+                                    <td class="text-end text-success">
+                                        {% if line.debit > 0 %}{{ line.debit|floatformat:2 }}{% endif %}
+                                    </td>
+                                    <td class="text-end text-danger">
+                                        {% if line.credit > 0 %}{{ line.credit|floatformat:2 }}{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>لا توجد حركات في هذا اليوم</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

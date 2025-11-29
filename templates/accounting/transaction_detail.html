@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ transaction.transaction_number }} - تفاصيل القيد{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">المحاسبة</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounting:transaction_list' %}">القيود</a></li>
+                    <li class="breadcrumb-item active">{{ transaction.transaction_number }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h2 class="mb-0">
+                    <span class="badge {% if transaction.status == 'posted' %}bg-success{% elif transaction.status == 'draft' %}bg-warning{% else %}bg-danger{% endif %} me-2">
+                        {% if transaction.status == 'posted' %}مرحّل{% elif transaction.status == 'draft' %}مسودة{% else %}ملغي{% endif %}
+                    </span>
+                    قيد {{ transaction.transaction_number }}
+                </h2>
+                <div>
+                    {% if transaction.status == 'draft' %}
+                    <form action="{% url 'accounting:transaction_post' transaction.pk %}" method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i> ترحيل
+                        </button>
+                    </form>
+                    {% endif %}
+                    <a href="{% url 'accounting:transaction_print' transaction.pk %}" class="btn btn-outline-secondary" target="_blank">
+                        <i class="fas fa-print me-1"></i> طباعة
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- معلومات القيد -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        معلومات القيد
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless mb-0">
+                        <tr>
+                            <th width="40%">رقم القيد:</th>
+                            <td>{{ transaction.transaction_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>التاريخ:</th>
+                            <td>{{ transaction.date }}</td>
+                        </tr>
+                        <tr>
+                            <th>النوع:</th>
+                            <td>
+                                {% if transaction.transaction_type == 'journal' %}
+                                قيد عام
+                                {% elif transaction.transaction_type == 'sales' %}
+                                مبيعات
+                                {% elif transaction.transaction_type == 'receipt' %}
+                                مقبوضات
+                                {% elif transaction.transaction_type == 'payment' %}
+                                مدفوعات
+                                {% else %}
+                                {{ transaction.transaction_type }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>الحالة:</th>
+                            <td>
+                                {% if transaction.status == 'draft' %}
+                                <span class="badge bg-warning">مسودة</span>
+                                {% elif transaction.status == 'posted' %}
+                                <span class="badge bg-success">مرحّل</span>
+                                {% else %}
+                                <span class="badge bg-danger">ملغي</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>متوازن:</th>
+                            <td>
+                                {% if transaction.is_balanced %}
+                                <span class="text-success"><i class="fas fa-check-circle"></i> نعم</span>
+                                {% else %}
+                                <span class="text-danger"><i class="fas fa-times-circle"></i> لا</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if transaction.order %}
+                        <tr>
+                            <th>الطلب:</th>
+                            <td>
+                                <a href="{% url 'orders:order_detail' transaction.order.pk %}">
+                                    {{ transaction.order.order_number }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if transaction.customer %}
+                        <tr>
+                            <th>العميل:</th>
+                            <td>
+                                <a href="{% url 'customers:customer_detail' transaction.customer.pk %}">
+                                    {{ transaction.customer.name }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>أنشئ بواسطة:</th>
+                            <td>{{ transaction.created_by.username|default:'-' }}</td>
+                        </tr>
+                        {% if transaction.posted_by %}
+                        <tr>
+                            <th>رُحّل بواسطة:</th>
+                            <td>{{ transaction.posted_by.username }}</td>
+                        </tr>
+                        <tr>
+                            <th>تاريخ الترحيل:</th>
+                            <td>{{ transaction.posted_at }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- البيان والملاحظات -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-align-right me-2"></i>
+                        البيان والملاحظات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>البيان:</h6>
+                    <p class="lead">{{ transaction.description|default:'-' }}</p>
+                    
+                    {% if transaction.notes %}
+                    <hr>
+                    <h6>ملاحظات:</h6>
+                    <p class="text-muted">{{ transaction.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- سطور القيد -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        سطور القيد
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="10%">كود الحساب</th>
+                                    <th width="30%">اسم الحساب</th>
+                                    <th width="30%">البيان</th>
+                                    <th width="15%" class="text-end text-success">مدين</th>
+                                    <th width="15%" class="text-end text-danger">دائن</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line in transaction.lines.all %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ line.account.code }}</span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'accounting:account_detail' line.account.pk %}">
+                                            {{ line.account.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ line.description|default:'-' }}</td>
+                                    <td class="text-end text-success fw-bold">
+                                        {% if line.debit > 0 %}{{ line.debit|floatformat:2 }}{% endif %}
+                                    </td>
+                                    <td class="text-end text-danger fw-bold">
+                                        {% if line.credit > 0 %}{{ line.credit|floatformat:2 }}{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr class="fw-bold">
+                                    <th colspan="3" class="text-end">المجموع:</th>
+                                    <th class="text-end text-success">{{ totals.total_debit|floatformat:2 }}</th>
+                                    <th class="text-end text-danger">{{ totals.total_credit|floatformat:2 }}</th>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end">الفرق:</td>
+                                    <td colspan="2" class="text-center {% if totals.total_debit == totals.total_credit %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                        {% widthratio totals.total_debit 1 1 as debit %}
+                                        {% widthratio totals.total_credit 1 1 as credit %}
+                                        {% if totals.total_debit == totals.total_credit %}
+                                        <i class="fas fa-check-circle"></i> القيد متوازن
+                                        {% else %}
+                                        <i class="fas fa-exclamation-triangle"></i> القيد غير متوازن
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

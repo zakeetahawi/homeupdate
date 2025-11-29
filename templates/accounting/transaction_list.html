@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}القيود المحاسبية{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">
+                    <i class="fas fa-file-invoice me-2"></i>
+                    القيود المحاسبية
+                </h2>
+                <a href="{% url 'accounting:transaction_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> قيد جديد
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلترة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">الحالة</label>
+                            <select name="status" class="form-select">
+                                <option value="">الكل</option>
+                                <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>مسودة</option>
+                                <option value="posted" {% if request.GET.status == 'posted' %}selected{% endif %}>مرحّل</option>
+                                <option value="void" {% if request.GET.status == 'void' %}selected{% endif %}>ملغي</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">النوع</label>
+                            <select name="type" class="form-select">
+                                <option value="">الكل</option>
+                                <option value="journal" {% if request.GET.type == 'journal' %}selected{% endif %}>قيد عام</option>
+                                <option value="sales" {% if request.GET.type == 'sales' %}selected{% endif %}>مبيعات</option>
+                                <option value="receipt" {% if request.GET.type == 'receipt' %}selected{% endif %}>مقبوضات</option>
+                                <option value="payment" {% if request.GET.type == 'payment' %}selected{% endif %}>مدفوعات</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">بحث</label>
+                            <input type="text" name="q" class="form-control" placeholder="رقم القيد أو البيان" value="{{ request.GET.q }}">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-1"></i> بحث
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الجدول -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>رقم القيد</th>
+                                    <th>التاريخ</th>
+                                    <th>النوع</th>
+                                    <th>البيان</th>
+                                    <th>الحالة</th>
+                                    <th>التوازن</th>
+                                    <th>بواسطة</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in transactions %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'accounting:transaction_detail' transaction.pk %}">
+                                            {{ transaction.transaction_number }}
+                                        </a>
+                                    </td>
+                                    <td>{{ transaction.date }}</td>
+                                    <td>
+                                        {% if transaction.transaction_type == 'journal' %}
+                                        <span class="badge bg-secondary">قيد عام</span>
+                                        {% elif transaction.transaction_type == 'sales' %}
+                                        <span class="badge bg-success">مبيعات</span>
+                                        {% elif transaction.transaction_type == 'receipt' %}
+                                        <span class="badge bg-info">مقبوضات</span>
+                                        {% elif transaction.transaction_type == 'payment' %}
+                                        <span class="badge bg-warning">مدفوعات</span>
+                                        {% else %}
+                                        <span class="badge bg-dark">{{ transaction.transaction_type }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.description|truncatechars:40 }}</td>
+                                    <td>
+                                        {% if transaction.status == 'draft' %}
+                                        <span class="badge bg-warning">مسودة</span>
+                                        {% elif transaction.status == 'posted' %}
+                                        <span class="badge bg-success">مرحّل</span>
+                                        {% elif transaction.status == 'void' %}
+                                        <span class="badge bg-danger">ملغي</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if transaction.is_balanced %}
+                                        <span class="text-success"><i class="fas fa-check"></i></span>
+                                        {% else %}
+                                        <span class="text-danger"><i class="fas fa-times"></i></span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.created_by.username|default:'-' }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'accounting:transaction_detail' transaction.pk %}" class="btn btn-outline-primary" title="عرض">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if transaction.status == 'draft' %}
+                                            <a href="{% url 'accounting:transaction_post' transaction.pk %}" class="btn btn-outline-success" title="ترحيل">
+                                                <i class="fas fa-check"></i>
+                                            </a>
+                                            {% endif %}
+                                            <a href="{% url 'accounting:transaction_print' transaction.pk %}" class="btn btn-outline-secondary" title="طباعة" target="_blank">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-5">
+                                        <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+                                        <h5>لا توجد قيود</h5>
+                                        <a href="{% url 'accounting:transaction_create' %}" class="btn btn-primary">
+                                            <i class="fas fa-plus me-1"></i> إنشاء قيد جديد
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if transactions.has_other_pages %}
+                <div class="card-footer">
+                    <nav>
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if transactions.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ transactions.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">السابق</a>
+                            </li>
+                            {% endif %}
+                            
+                            <li class="page-item disabled">
+                                <span class="page-link">صفحة {{ transactions.number }} من {{ transactions.paginator.num_pages }}</span>
+                            </li>
+                            
+                            {% if transactions.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ transactions.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">التالي</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -386,6 +386,12 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="financial-tab" data-bs-toggle="tab" data-bs-target="#financial" type="button" role="tab">
+                        <i class="fas fa-wallet me-2"></i>الملف المالي
+                        <span id="financial-badge" class="badge bg-secondary ms-1" style="display:none;"></span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="complaints-tab" data-bs-toggle="tab" data-bs-target="#complaints" type="button" role="tab">
                         <i class="fas fa-exclamation-triangle me-2"></i>الشكاوى
                     </button>
@@ -449,6 +455,31 @@
                             {% else %}
                             <p class="text-muted">{% trans 'لا توجد ملاحظات' %}</p>
                             {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Tab -->
+                <div class="tab-pane fade" id="financial" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-wallet me-2"></i>الملف المالي للعميل
+                            </h5>
+                            <div>
+                                <a href="{% url 'accounting:customer_financial' customer.pk %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-external-link-alt me-1"></i>فتح الملف المالي الكامل
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body" id="financial-content">
+                            <!-- سيتم تحميل المحتوى ديناميكياً -->
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">جاري التحميل...</span>
+                                </div>
+                                <p class="mt-2 text-muted">جاري تحميل البيانات المالية...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -792,6 +823,113 @@
             });
         });
 
+        // === تحميل البيانات المالية ===
+        let financialLoaded = false;
+        const financialTab = document.getElementById('financial-tab');
+        const financialContent = document.getElementById('financial-content');
+        const financialBadge = document.getElementById('financial-badge');
+        
+        // تحميل الشارة المالية
+        function loadFinancialBadge() {
+            fetch('{% url "accounting:api_customer_badge" customer.pk %}')
+                .then(response => response.json())
+                .then(data => {
+                    if (financialBadge) {
+                        financialBadge.textContent = data.text;
+                        financialBadge.className = 'badge ms-1 ' + 
+                            (data.class === 'badge-danger' ? 'bg-danger' : 
+                             data.class === 'badge-success' ? 'bg-success' : 'bg-info');
+                        financialBadge.style.display = '';
+                    }
+                })
+                .catch(error => console.log('Financial badge error:', error));
+        }
+        
+        // تحميل المحتوى المالي
+        function loadFinancialContent() {
+            if (financialLoaded) return;
+            
+            fetch('{% url "accounting:api_customer_summary" customer.pk %}')
+                .then(response => response.json())
+                .then(data => {
+                    financialLoaded = true;
+                    const statusClass = data.status === 'debit' ? 'danger' : 
+                                       (data.status === 'credit' ? 'success' : 'info');
+                    const statusText = data.status === 'debit' ? 'مدين' : 
+                                      (data.status === 'credit' ? 'دائن' : 'صافي');
+                    const currencySymbol = data.currency_symbol || 'ر.س';
+                    
+                    financialContent.innerHTML = `
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card bg-primary text-white h-100">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-white-50">إجمالي الطلبات</h6>
+                                        <h4 class="mb-0">${data.total_orders_amount.toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
+                                        <small>${data.total_orders} طلب</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-success text-white h-100">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-white-50">المدفوعات</h6>
+                                        <h4 class="mb-0">${data.total_payments.toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-${statusClass} text-white h-100">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-white-50">الرصيد</h6>
+                                        <h4 class="mb-0">${Math.abs(data.balance).toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
+                                        <small>${statusText}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-warning text-dark h-100">
+                                    <div class="card-body text-center">
+                                        <h6>السلف المتاحة</h6>
+                                        <h4 class="mb-0">${data.available_advances.toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
+                                        <small>من ${data.total_advances.toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <a href="{% url 'accounting:customer_financial' customer.pk %}" class="btn btn-primary">
+                                <i class="fas fa-wallet me-2"></i>فتح الملف المالي الكامل
+                            </a>
+                            <button type="button" class="btn btn-success ms-2" data-bs-toggle="modal" data-bs-target="#quickPaymentModal">
+                                <i class="fas fa-money-bill me-2"></i>تسجيل دفعة
+                            </button>
+                            <button type="button" class="btn btn-warning ms-2" data-bs-toggle="modal" data-bs-target="#quickAdvanceModal">
+                                <i class="fas fa-hand-holding-usd me-2"></i>تسجيل سلفة
+                            </button>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    financialContent.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            لم يتم إعداد النظام المحاسبي بعد أو حدث خطأ في تحميل البيانات.
+                            <a href="{% url 'accounting:dashboard' %}" class="alert-link">الذهاب للنظام المحاسبي</a>
+                        </div>
+                    `;
+                });
+        }
+        
+        // تحميل الشارة عند تحميل الصفحة
+        loadFinancialBadge();
+        
+        // تحميل المحتوى عند النقر على التبويب
+        if (financialTab) {
+            financialTab.addEventListener('shown.bs.tab', loadFinancialContent);
+        }
+        // === نهاية تحميل البيانات المالية ===
+
         // التحقق من نموذج إضافة الملاحظة
         const noteForm = document.getElementById('noteForm');
         const noteTextarea = document.getElementById('noteTextarea');
@@ -1109,6 +1247,122 @@
                     </button>
                     <button type="submit" class="btn btn-primary" id="addNoteBtn" disabled>
                         <i class="fas fa-plus me-1"></i>إضافة الملاحظة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal تسجيل دفعة سريعة -->
+<div class="modal fade" id="quickPaymentModal" tabindex="-1" aria-labelledby="quickPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{% url 'accounting:register_payment' customer.pk %}" method="post">
+                {% csrf_token %}
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="quickPaymentModalLabel">
+                        <i class="fas fa-money-bill-wave me-2"></i>
+                        تسجيل دفعة جديدة
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">الطلب (اختياري)</label>
+                        <select name="order" class="form-select">
+                            <option value="">بدون طلب محدد</option>
+                            {% for order in customer.customer_orders.all %}
+                            <option value="{{ order.pk }}">{{ order.order_number }} - {{ order.total_amount }} ج.م</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" name="amount" class="form-control" step="0.01" required placeholder="0.00">
+                            <span class="input-group-text">ج.م</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">طريقة الدفع</label>
+                        <select name="payment_method" class="form-select">
+                            <option value="cash">نقداً</option>
+                            <option value="bank_transfer">تحويل بنكي</option>
+                            <option value="card">بطاقة</option>
+                            <option value="cheque">شيك</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">تاريخ الدفع</label>
+                        <input type="date" name="payment_date" class="form-control" value="">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">رقم الإيصال</label>
+                        <input type="text" name="receipt_number" class="form-control" placeholder="اختياري">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-1"></i>تسجيل الدفعة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal تسجيل سلفة سريعة -->
+<div class="modal fade" id="quickAdvanceModal" tabindex="-1" aria-labelledby="quickAdvanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{% url 'accounting:register_advance' customer.pk %}" method="post">
+                {% csrf_token %}
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="quickAdvanceModalLabel">
+                        <i class="fas fa-hand-holding-usd me-2"></i>
+                        تسجيل سلفة جديدة
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" name="amount" class="form-control" step="0.01" required placeholder="0.00">
+                            <span class="input-group-text">ج.م</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">طريقة الدفع</label>
+                        <select name="payment_method" class="form-select">
+                            <option value="cash">نقداً</option>
+                            <option value="bank_transfer">تحويل بنكي</option>
+                            <option value="check">شيك</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">رقم الإيصال</label>
+                        <input type="text" name="receipt_number" class="form-control" placeholder="اختياري">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-check me-1"></i>تسجيل السلفة
                     </button>
                 </div>
             </form>

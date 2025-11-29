@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}قائمة الدخل{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    قائمة الدخل
+                </h2>
+                <button onclick="window.print()" class="btn btn-outline-secondary">
+                    <i class="fas fa-print me-1"></i> طباعة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- الإيرادات -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-arrow-up me-2"></i>
+                        الإيرادات
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>كود الحساب</th>
+                                    <th>اسم الحساب</th>
+                                    <th class="text-end">المبلغ ({{ currency_symbol }})</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for account in revenue_accounts %}
+                                <tr>
+                                    <td><span class="badge bg-secondary">{{ account.code }}</span></td>
+                                    <td>{{ account.name }}</td>
+                                    <td class="text-end text-success">{{ account.current_balance|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3">
+                                        لا توجد إيرادات
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-success">
+                                <tr class="fw-bold">
+                                    <th colspan="2" class="text-end">إجمالي الإيرادات:</th>
+                                    <th class="text-end">{{ total_revenue|floatformat:2 }} {{ currency_symbol }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- المصروفات -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-arrow-down me-2"></i>
+                        المصروفات
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>كود الحساب</th>
+                                    <th>اسم الحساب</th>
+                                    <th class="text-end">المبلغ ({{ currency_symbol }})</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for account in expense_accounts %}
+                                <tr>
+                                    <td><span class="badge bg-secondary">{{ account.code }}</span></td>
+                                    <td>{{ account.name }}</td>
+                                    <td class="text-end text-danger">{{ account.current_balance|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3">
+                                        لا توجد مصروفات
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-danger">
+                                <tr class="fw-bold">
+                                    <th colspan="2" class="text-end">إجمالي المصروفات:</th>
+                                    <th class="text-end">{{ total_expenses|floatformat:2 }} {{ currency_symbol }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- صافي الربح -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card {% if net_income >= 0 %}border-success{% else %}border-danger{% endif %}">
+                <div class="card-body text-center py-4">
+                    <h4 class="text-muted mb-3">صافي {% if net_income >= 0 %}الربح{% else %}الخسارة{% endif %}</h4>
+                    <h1 class="{% if net_income >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
+                        {{ net_income|floatformat:2 }} {{ currency_symbol }}
+                    </h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .navbar, .breadcrumb, form, .btn {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}

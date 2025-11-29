@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}شجرة الحسابات{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">
+                    <i class="fas fa-sitemap me-2"></i>
+                    شجرة الحسابات
+                </h2>
+                <div>
+                    <a href="{% url 'accounting:account_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-1"></i> عرض قائمة
+                    </a>
+                    <a href="{% url 'admin:accounting_account_add' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> حساب جديد
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="account-tree">
+                        {% for account in root_accounts %}
+                        <div class="tree-item">
+                            <div class="tree-node level-0">
+                                <span class="tree-toggle" data-bs-toggle="collapse" data-bs-target="#children-{{ account.pk }}">
+                                    {% if account.children.count > 0 %}
+                                    <i class="fas fa-chevron-down"></i>
+                                    {% else %}
+                                    <i class="fas fa-minus text-muted"></i>
+                                    {% endif %}
+                                </span>
+                                <a href="{% url 'accounting:account_detail' account.pk %}" class="tree-link">
+                                    <span class="account-code badge bg-primary me-2">{{ account.code }}</span>
+                                    <span class="account-name">{{ account.name }}</span>
+                                </a>
+                                <span class="account-balance ms-auto {% if account.current_balance > 0 %}text-success{% elif account.current_balance < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                    {{ account.current_balance|floatformat:2 }}
+                                </span>
+                            </div>
+                            
+                            {% if account.children.count > 0 %}
+                            <div class="collapse show" id="children-{{ account.pk }}">
+                                {% for child in account.children.all %}
+                                <div class="tree-item">
+                                    <div class="tree-node level-1">
+                                        <span class="tree-toggle" data-bs-toggle="collapse" data-bs-target="#children-{{ child.pk }}">
+                                            {% if child.children.count > 0 %}
+                                            <i class="fas fa-chevron-down"></i>
+                                            {% else %}
+                                            <i class="fas fa-minus text-muted"></i>
+                                            {% endif %}
+                                        </span>
+                                        <a href="{% url 'accounting:account_detail' child.pk %}" class="tree-link">
+                                            <span class="account-code badge bg-secondary me-2">{{ child.code }}</span>
+                                            <span class="account-name">{{ child.name }}</span>
+                                        </a>
+                                        <span class="account-balance ms-auto {% if child.current_balance > 0 %}text-success{% elif child.current_balance < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                            {{ child.current_balance|floatformat:2 }}
+                                        </span>
+                                    </div>
+                                    
+                                    {% if child.children.count > 0 %}
+                                    <div class="collapse show" id="children-{{ child.pk }}">
+                                        {% for grandchild in child.children.all %}
+                                        <div class="tree-item">
+                                            <div class="tree-node level-2">
+                                                <span class="tree-toggle">
+                                                    <i class="fas fa-minus text-muted"></i>
+                                                </span>
+                                                <a href="{% url 'accounting:account_detail' grandchild.pk %}" class="tree-link">
+                                                    <span class="account-code badge bg-light text-dark me-2">{{ grandchild.code }}</span>
+                                                    <span class="account-name">{{ grandchild.name }}</span>
+                                                </a>
+                                                <span class="account-balance ms-auto {% if grandchild.current_balance > 0 %}text-success{% elif grandchild.current_balance < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                    {{ grandchild.current_balance|floatformat:2 }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+                            <h4>لا توجد حسابات</h4>
+                            <p class="text-muted">ابدأ بإنشاء شجرة الحسابات</p>
+                            <a href="{% url 'admin:accounting_account_add' %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i> إضافة حساب
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.account-tree {
+    font-size: 14px;
+}
+.tree-item {
+    margin-bottom: 2px;
+}
+.tree-node {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+.tree-node:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+.tree-toggle {
+    width: 24px;
+    cursor: pointer;
+}
+.tree-link {
+    text-decoration: none;
+    color: inherit;
+}
+.tree-link:hover {
+    color: var(--bs-primary);
+}
+.level-0 {
+    background-color: rgba(0,123,255,0.1);
+    font-weight: 600;
+}
+.level-1 {
+    margin-right: 24px;
+    background-color: rgba(0,123,255,0.05);
+}
+.level-2 {
+    margin-right: 48px;
+}
+.account-balance {
+    font-family: 'Roboto', monospace;
+    font-weight: 500;
+}
+</style>
+{% endblock %}

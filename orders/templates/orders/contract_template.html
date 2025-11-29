@@ -902,12 +902,12 @@
                                 {% if accessory.size %}
                                 <div style="text-align: center; margin-left: 10px;">
                                     <div style="font-size: 11px; color: #666; margin-bottom: 2px;">مقاس</div>
-                                    <span class="acc-size-pill">{{ accessory.size }}</span>
+                                    <span class="acc-size-pill">{{ accessory.size|floatformat:-1 }}</span>
                                 </div>
                                 {% endif %}
                                 <div style="text-align: center;">
                                     <div style="font-size: 11px; color: #666; margin-bottom: 2px;">عدد</div>
-                                    <span class="acc-qty-pill">{{ accessory.quantity }}</span>
+                                    <span class="acc-qty-pill">{{ accessory.quantity|floatformat:-1 }}</span>
                                 </div>
                             </div>
                         </div>

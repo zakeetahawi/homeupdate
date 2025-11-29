@@ -97,25 +97,25 @@
                     <tr>
                         <td>{{ item.product.name }}</td>
                         <td>{{ item.quantity }}</td>
-                        <td>{{ item.unit_price }} ج.م</td>
+                        <td>{{ item.unit_price }} {{ currency_symbol }}</td>
                         <td>{{ item.discount_percentage }}%</td>
-                        <td>{{ item.total_price }} ج.م</td>
-                        <td class="fw-bold">{{ item.final_price }} ج.م</td>
+                        <td>{{ item.total_price }} {{ currency_symbol }}</td>
+                        <td class="fw-bold">{{ item.final_price }} {{ currency_symbol }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot class="table-light">
                     <tr>
                         <th colspan="4" class="text-end">المجموع قبل الخصم:</th>
-                        <th colspan="2">{{ totals.subtotal }} ج.م</th>
+                        <th colspan="2">{{ totals.subtotal }} {{ currency_symbol }}</th>
                     </tr>
                     <tr>
                         <th colspan="4" class="text-end text-danger">إجمالي الخصم:</th>
-                        <th colspan="2" class="text-danger">{{ totals.total_discount }} ج.م</th>
+                        <th colspan="2" class="text-danger">{{ totals.total_discount }} {{ currency_symbol }}</th>
                     </tr>
                     <tr>
                         <th colspan="4" class="text-end">المجموع النهائي:</th>
-                        <th colspan="2" class="text-success h5">{{ totals.final_total }} ج.م</th>
+                        <th colspan="2" class="text-success h5">{{ totals.final_total }} {{ currency_symbol }}</th>
                     </tr>
                 </tfoot>
             </table>
@@ -186,11 +186,11 @@
                     </tr>
                     <tr>
                         <th>المبلغ المدفوع:</th>
-                        <td class="fw-bold text-success">{{ draft.paid_amount }} ج.م</td>
+                        <td class="fw-bold text-success">{{ draft.paid_amount }} {{ currency_symbol }}</td>
                     </tr>
                     <tr>
                         <th>المتبقي:</th>
-                        <td class="fw-bold text-danger">{{ totals.remaining }} ج.م</td>
+                        <td class="fw-bold text-danger">{{ totals.remaining }} {{ currency_symbol }}</td>
                     </tr>
                 </table>
             </div>
@@ -440,23 +440,23 @@
                     {% endif %}
                     <tr>
                         <td class="text-muted">الإجمالي:</td>
-                        <td><strong>{{ totals.subtotal }} ج.م</strong></td>
+                        <td><strong>{{ totals.subtotal }} {{ currency_symbol }}</strong></td>
                     </tr>
                     <tr>
                         <td class="text-muted">الخصم:</td>
-                        <td class="text-danger"><strong>{{ totals.total_discount }} ج.م</strong></td>
+                        <td class="text-danger"><strong>{{ totals.total_discount }} {{ currency_symbol }}</strong></td>
                     </tr>
                     <tr class="border-top">
                         <td class="text-muted"><strong>المبلغ النهائي:</strong></td>
-                        <td><strong class="text-success fs-5">{{ totals.final_total }} ج.م</strong></td>
+                        <td><strong class="text-success fs-5">{{ totals.final_total }} {{ currency_symbol }}</strong></td>
                     </tr>
                     <tr>
                         <td class="text-muted">المدفوع:</td>
-                        <td><strong class="text-success">{{ draft.paid_amount }} ج.م</strong></td>
+                        <td><strong class="text-success">{{ draft.paid_amount }} {{ currency_symbol }}</strong></td>
                     </tr>
                     <tr>
                         <td class="text-muted">المتبقي:</td>
-                        <td><strong class="text-danger">{{ totals.remaining }} ج.م</strong></td>
+                        <td><strong class="text-danger">{{ totals.remaining }} {{ currency_symbol }}</strong></td>
                     </tr>
                 </table>
             </div>

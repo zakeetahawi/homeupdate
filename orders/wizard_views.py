@@ -25,8 +25,20 @@ from .models import Order, OrderItem, Payment
 from .contract_models import ContractCurtain, CurtainFabric, CurtainAccessory
 from inventory.models import Product
 from customers.models import Customer
+from accounts.models import SystemSettings
 
 logger = logging.getLogger(__name__)
+
+
+def get_currency_context():
+    """
+    الحصول على سياق العملة من إعدادات النظام
+    """
+    settings = SystemSettings.get_settings()
+    return {
+        'currency_code': settings.currency,
+        'currency_symbol': settings.currency_symbol,
+    }
 
 
 def get_total_steps(draft):
@@ -327,6 +339,7 @@ def wizard_step_3_order_items(request, draft):
     items = draft.items.all()
     
     total_steps = get_total_steps(draft)
+    currency = get_currency_context()
     
     context = {
         'draft': draft,
@@ -336,6 +349,8 @@ def wizard_step_3_order_items(request, draft):
         'step_title': 'عناصر الطلب',
         'progress_percentage': round((3 / total_steps) * 100, 2),
         'totals': draft.calculate_totals(),
+        'currency_symbol': currency['currency_symbol'],
+        'currency_code': currency['currency_code'],
     }
     
     return render(request, 'orders/wizard/step3_order_items.html', context)
@@ -576,6 +591,7 @@ def wizard_step_4_invoice_payment(request, draft):
     totals['minimum_payment'] = (final_total * Decimal('0.5')).quantize(Decimal('0.01'))
     
     total_steps = get_total_steps(draft)
+    currency = get_currency_context()
     
     context = {
         'draft': draft,
@@ -585,6 +601,8 @@ def wizard_step_4_invoice_payment(request, draft):
         'step_title': 'تفاصيل المرجع والدفع',
         'progress_percentage': round((4 / total_steps) * 100, 2),
         'totals': totals,
+        'currency_symbol': currency['currency_symbol'],
+        'currency_code': currency['currency_code'],
     }
     
     return render(request, 'orders/wizard/step4_invoice_payment.html', context)
@@ -670,6 +688,7 @@ def wizard_step_5_contract(request, draft):
     installation_options = WizardFieldOption.get_active_options('installation_type')
     
     total_steps = get_total_steps(draft)
+    currency = get_currency_context()
     
     context = {
         'draft': draft,
@@ -681,6 +700,8 @@ def wizard_step_5_contract(request, draft):
         'total_steps': total_steps,
         'step_title': 'العقد',
         'progress_percentage': round((5 / total_steps) * 100, 2),
+        'currency_symbol': currency['currency_symbol'],
+        'currency_code': currency['currency_code'],
     }
     
     return render(request, 'orders/wizard/step5_contract.html', context)
@@ -714,6 +735,7 @@ def wizard_step_6_review(request, draft):
     needs_contract = draft.selected_type in ['installation', 'tailoring', 'accessory']
     actual_step = 6 if needs_contract else 5
     total_steps = get_total_steps(draft)
+    currency = get_currency_context()
     
     context = {
         'draft': draft,
@@ -727,6 +749,8 @@ def wizard_step_6_review(request, draft):
         'total_steps': total_steps,
         'step_title': 'المراجعة والتأكيد',
         'progress_percentage': 100,
+        'currency_symbol': currency['currency_symbol'],
+        'currency_code': currency['currency_code'],
     }
     
     return render(request, 'orders/wizard/step6_review.html', context)
@@ -1282,11 +1306,24 @@ def wizard_edit_curtain(request, curtain_id):
             # إرجاع بيانات الستارة للتعديل
             fabrics_data = []
             for fabric in curtain.fabrics.all():
+                # محاولة الحصول على item_id من draft_order_item أو البحث بالاسم
+                item_id = None
+                if fabric.draft_order_item_id:
+                    item_id = str(fabric.draft_order_item_id)
+                elif fabric.fabric_name:
+                    # البحث عن العنصر بالاسم في المسودة
+                    matching_item = draft.items.filter(product__name=fabric.fabric_name).first()
+                    if matching_item:
+                        item_id = str(matching_item.id)
+                        # تحديث الربط في قاعدة البيانات
+                        fabric.draft_order_item = matching_item
+                        fabric.save(update_fields=['draft_order_item'])
+                
                 fabrics_data.append({
                     'type': fabric.fabric_type,
                     'type_display': fabric.get_fabric_type_display(),
                     'name': fabric.fabric_name,
-                    'item_id': str(fabric.draft_order_item_id) if fabric.draft_order_item_id else None,
+                    'item_id': item_id,
                     'meters': float(fabric.meters),
                     'pieces': fabric.pieces,
                     'tailoring': fabric.tailoring_type or '',
@@ -1295,14 +1332,30 @@ def wizard_edit_curtain(request, curtain_id):
             
             accessories_data = []
             for accessory in curtain.accessories.all():
+                # محاولة الحصول على item_id من draft_order_item أو البحث بالاسم
+                item_id = None
+                source = 'external'
+                if accessory.draft_order_item_id:
+                    item_id = str(accessory.draft_order_item_id)
+                    source = 'invoice'
+                elif accessory.accessory_name:
+                    # البحث عن العنصر بالاسم في المسودة
+                    matching_item = draft.items.filter(product__name=accessory.accessory_name).first()
+                    if matching_item:
+                        item_id = str(matching_item.id)
+                        source = 'invoice'
+                        # تحديث الربط في قاعدة البيانات
+                        accessory.draft_order_item = matching_item
+                        accessory.save(update_fields=['draft_order_item'])
+                
                 accessories_data.append({
                     'name': accessory.accessory_name,
                     'quantity': float(accessory.quantity),
                     'count': accessory.count,
-                    'size': float(accessory.size),
+                    'size': float(accessory.size) if accessory.size else 0,
                     'color': accessory.color or '',
-                    'item_id': accessory.draft_order_item_id if accessory.draft_order_item else None,
-                    'source': 'invoice' if accessory.draft_order_item else 'external'
+                    'item_id': item_id,
+                    'source': source
                 })
             
             return JsonResponse({

@@ -94,6 +94,9 @@ urlpatterns = [
     ),
     # نظام النسخ الاحتياطي والاستعادة الجديد
     path("backup-system/", include("backup_system.urls", namespace="backup_system")),
+    
+    # النظام المحاسبي المتكامل
+    path("accounting/", include("accounting.urls", namespace="accounting")),
 
 
     # لوحة مراقبة النظام
