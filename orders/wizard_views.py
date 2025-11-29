@@ -116,11 +116,32 @@ def wizard_start(request):
 def wizard_start_new(request):
     """
     إنشاء مسودة جديدة مباشرة (تجاوز المسودات الموجودة)
+    يمكن تمرير معرف العميل أو كود العميل كمعامل
     """
+    from customers.models import Customer
+    
+    customer = None
+    customer_code = request.GET.get('customer')
+    customer_id = request.GET.get('customer_id')
+    
+    # البحث عن العميل بالكود أو المعرف
+    if customer_code:
+        customer = Customer.objects.filter(code=customer_code).first()
+    elif customer_id:
+        customer = Customer.objects.filter(pk=customer_id).first()
+    
+    # إنشاء المسودة مع العميل إذا وُجد
     draft = DraftOrder.objects.create(
         created_by=request.user,
-        current_step=1
+        current_step=1,
+        customer=customer
     )
+    
+    # إذا تم تحديد العميل، نضع علامة أن الخطوة 1 جزئياً مكتملة
+    if customer:
+        # تخزين معرف المسودة في الجلسة
+        request.session['wizard_draft_id'] = draft.id
+    
     return redirect('orders:wizard_step', step=1)
 
 
