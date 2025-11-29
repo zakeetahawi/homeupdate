@@ -141,9 +141,9 @@
                                 <div class="card-body py-2 px-3">
                                     <div class="fw-bold">{{ accessory.accessory_name }}</div>
                                     <small class="text-muted">
-                                        العدد: {{ accessory.quantity }}
+                                        العدد: {{ accessory.count }}
                                         {% if accessory.size %}
-                                            - المقاس: {{ accessory.size }}
+                                            - المقاس: {{ accessory.size|floatformat:-1 }}
                                         {% endif %}
                                         {% if accessory.color %}
                                             - اللون: {{ accessory.color }}
@@ -974,7 +974,7 @@ function addAccessoryFromInvoice() {
     const select = document.getElementById('accessory-from-invoice');
     const itemId = select.value;
     const countInput = document.getElementById('accessory-invoice-quantity');
-    const count = parseFloat(countInput.value);
+    const count = parseInt(countInput.value);  // العدد يجب أن يكون عدد صحيح
     const sizeInput = document.getElementById('accessory-invoice-size');
     const size = parseFloat(sizeInput.value);
     const color = document.getElementById('accessory-invoice-color').value.trim();
@@ -1043,7 +1043,7 @@ function addAccessoryFromInvoice() {
 function addExternalAccessory() {
     const name = document.getElementById('accessory-external-name').value.trim();
     const countInput = document.getElementById('accessory-external-quantity');
-    const count = parseFloat(countInput.value);
+    const count = parseInt(countInput.value);  // العدد يجب أن يكون عدد صحيح
     const sizeInput = document.getElementById('accessory-external-size');
     const size = parseFloat(sizeInput.value);
     const color = document.getElementById('accessory-external-color').value.trim();

@@ -356,7 +356,7 @@
                                 <p class="mb-0"><small><strong>{{ accessory.accessory_name }}</strong></small></p>
                                 <p class="mb-0">
                                     <small class="text-muted">
-                                        العدد: {{ accessory.count }} × المقاس: {{ accessory.size }} = {{ accessory.quantity }}
+                                        العدد: {{ accessory.count }} × المقاس: {{ accessory.size|floatformat:-1 }} = {{ accessory.quantity|floatformat:-1 }}
                                     </small>
                                 </p>
                                 {% if accessory.color %}
