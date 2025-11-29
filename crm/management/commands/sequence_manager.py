@@ -263,7 +263,12 @@ class Command(BaseCommand):
                 # تحديد القيمة الابتدائية
                 if start_value is None:
                     # استخدام أعلى ID موجود + 1
-                    cursor.execute(f'SELECT COALESCE(MAX(id), 0) + 1 FROM {table_name}')
+                    from psycopg2 import sql
+                    cursor.execute(
+                        sql.SQL('SELECT COALESCE(MAX(id), 0) + 1 FROM {}').format(
+                            sql.Identifier(table_name)
+                        )
+                    )
                     start_value = cursor.fetchone()[0]
                 
                 # إعادة تعيين التسلسل
@@ -292,7 +297,12 @@ class Command(BaseCommand):
         """الحصول على أعلى ID في الجدول"""
         with connection.cursor() as cursor:
             try:
-                cursor.execute(f'SELECT MAX(id) FROM {table_name}')
+                from psycopg2 import sql
+                cursor.execute(
+                    sql.SQL('SELECT MAX(id) FROM {}').format(
+                        sql.Identifier(table_name)
+                    )
+                )
                 result = cursor.fetchone()
                 return result[0] if result and result[0] is not None else 0
             except Exception:

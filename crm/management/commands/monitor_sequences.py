@@ -9,6 +9,7 @@ from django.core.management import call_command
 from django.core.mail import send_mail
 from django.db import connection
 from django.conf import settings
+from psycopg2 import sql
 import logging
 import json
 import os
@@ -202,17 +203,30 @@ class Command(BaseCommand):
                     }
 
                 # الحصول على أعلى ID موجود
-                cursor.execute(f'SELECT COALESCE(MAX({column_name}), 0) FROM {table_name}')
+                cursor.execute(
+                    sql.SQL('SELECT COALESCE(MAX({}), 0) FROM {}').format(
+                        sql.Identifier(column_name),
+                        sql.Identifier(table_name)
+                    )
+                )
                 max_id_result = cursor.fetchone()
                 max_id = max_id_result[0] if max_id_result else 0
 
                 # الحصول على القيمة الحالية للتسلسل
-                cursor.execute(f"SELECT last_value FROM {sequence_name}")
+                cursor.execute(
+                    sql.SQL("SELECT last_value FROM {}").format(
+                        sql.Identifier(sequence_name)
+                    )
+                )
                 seq_result = cursor.fetchone()
                 current_seq = seq_result[0] if seq_result else 0
 
                 # حساب عدد الصفوف
-                cursor.execute(f'SELECT COUNT(*) FROM {table_name}')
+                cursor.execute(
+                    sql.SQL('SELECT COUNT(*) FROM {}').format(
+                        sql.Identifier(table_name)
+                    )
+                )
                 count_result = cursor.fetchone()
                 row_count = count_result[0] if count_result else 0
                 

@@ -383,6 +383,7 @@ MIDDLEWARE = [
     'crm.middleware.emergency_connection.EmergencyConnectionMiddleware',  # إدارة الاتصالات الطارئة
     'orders.middleware.CurrentUserMiddleware',  # تتبع المستخدم الحالي
     'django.middleware.security.SecurityMiddleware',
+    'core.security_middleware.SecurityHeadersMiddleware',  # 🔒 Security Headers متقدمة
     # CSP معطل في التطوير - سيتم تفعيله في الإنتاج فقط
     # 'csp.middleware.CSPMiddleware',  # Content Security Policy
     'corsheaders.middleware.CorsMiddleware',  # يجب أن يكون قبل CommonMiddleware
@@ -390,7 +391,12 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'core.security_middleware.SQLInjectionProtectionMiddleware',  # 🔒 حماية SQL Injection
+    'core.security_middleware.XSSProtectionMiddleware',  # 🔒 حماية XSS
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.security_middleware.SecureSessionMiddleware',  # 🔒 حماية الجلسات (بعد Auth)
+    'core.security_middleware.BruteForceProtectionMiddleware',  # 🔒 حماية Brute Force
+    'core.security_middleware.RateLimitMiddleware',  # 🔒 Rate Limiting
     'accounts.middleware.current_user.CurrentUserMiddleware',  # تتبع المستخدم الحالي
     'accounts.middleware.log_terminal_activity.TerminalActivityLoggerMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -1375,3 +1381,280 @@ def apply_large_operation_settings():
 
 # استدعاء دالة تطبيق الإعدادات
 apply_large_operation_settings()
+
+# ======================================
+# إعدادات الأمان المحسّنة للإنتاج
+# ======================================
+
+if not DEBUG:
+    # 1. إجبار HTTPS
+    SECURE_SSL_REDIRECT = True
+    
+    # 2. HTTP Strict Transport Security
+    SECURE_HSTS_SECONDS = 31536000  # سنة واحدة
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    
+    # 3. Cookies آمنة
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = True
+    
+    # 4. حماية من Clickjacking
+    X_FRAME_OPTIONS = 'DENY'
+    
+    # 5. منع MIME type sniffing
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    
+    # 6. فلتر XSS في المتصفح
+    SECURE_BROWSER_XSS_FILTER = True
+    
+    # 7. Referrer Policy
+    SECURE_REFERRER_POLICY = 'same-origin'
+
+# ======================================
+# إعدادات CSRF المحسّنة
+# ======================================
+CSRF_USE_SESSIONS = True
+CSRF_COOKIE_SAMESITE = 'Strict'
+SESSION_COOKIE_SAMESITE = 'Strict'
+
+# ======================================
+# إعدادات رفع الملفات
+# ======================================
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
+
+# قائمة الامتدادات المسموحة
+ALLOWED_UPLOAD_EXTENSIONS = [
+    '.jpg', '.jpeg', '.png', '.gif', '.webp',  # صور
+    '.pdf',  # مستندات PDF
+    '.xlsx', '.xls',  # إكسل
+    '.docx', '.doc',  # وورد
+]
+
+# الحد الأقصى لحجم الصورة
+MAX_IMAGE_WIDTH = 4096
+MAX_IMAGE_HEIGHT = 4096
+
+# ======================================
+# نظام Logging متقدم للأمان
+# ======================================
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '[{levelname}] {asctime} {message}',
+            'style': '{',
+        },
+        'security': {
+            'format': '[SECURITY] {asctime} | {levelname} | {message} | User: {user} | IP: {ip}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'security_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'security.log'),
+            'maxBytes': 10485760,  # 10MB
+            'backupCount': 10,
+            'formatter': 'security',
+        },
+        'attack_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'attacks.log'),
+            'maxBytes': 10485760,
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'audit_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'audit.log'),
+            'maxBytes': 10485760,
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'security': {
+            'handlers': ['security_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'attacks': {
+            'handlers': ['attack_file', 'console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'audit': {
+            'handlers': ['audit_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['security_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
+
+# ======================================
+# إعدادات أمان متقدمة إضافية
+# ======================================
+
+# تشفير البيانات الحساسة
+USE_ENCRYPTION = True
+
+# إعدادات Session أكثر أماناً
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'  # أسرع وأكثر أماناً
+SESSION_COOKIE_AGE = 43200  # 12 ساعة (تقليل من 24 ساعة)
+SESSION_SAVE_EVERY_REQUEST = False
+SESSION_COOKIE_NAME = 'elkhawaga_sessionid'  # اسم مخصص بدلاً من sessionid
+
+# حماية من BREACH attack
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# منع Clickjacking
+X_FRAME_OPTIONS = 'DENY'
+
+# حماية CSRF إضافية
+CSRF_FAILURE_VIEW = 'core.views.csrf_failure'  # صفحة خطأ مخصصة
+CSRF_COOKIE_AGE = 31449600  # سنة
+CSRF_COOKIE_NAME = 'elkhawaga_csrftoken'  # اسم مخصص
+
+# حماية Password
+PASSWORD_RESET_TIMEOUT = 900  # 15 دقيقة فقط
+
+# Rate Limiting للAPI
+REST_FRAMEWORK_RATE_LIMIT = {
+    'anon': '100/hour',  # المستخدمون غير المصادقين
+    'user': '1000/hour',  # المستخدمون المصادقون
+}
+
+# تسجيل محاولات تسجيل الدخول الفاشلة
+AXES_ENABLED = False  # نستخدم نظامنا الخاص في middleware
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1800  # 30 دقيقة
+
+# منع المعلومات الحساسة من الظهور في الأخطاء
+ADMINS = [('Admin', 'admin@localhost')]
+MANAGERS = ADMINS
+
+# تحديد الحد الأقصى لحجم الرفع (للحماية من DoS)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000  # الحد الأقصى لحقول النموذج
+
+# ======================================
+# إعدادات الأمان المطلق - المستوى النهائي
+# ======================================
+
+# تفعيل جميع security headers
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_REDIRECT_EXEMPT = []  # لا استثناءات
+
+# Cookie Security مطلق
+SESSION_COOKIE_DOMAIN = None  # استخدام النطاق الحالي فقط
+CSRF_COOKIE_DOMAIN = None
+SESSION_COOKIE_PATH = '/'
+CSRF_COOKIE_PATH = '/'
+
+# منع استخدام iframe من نطاقات أخرى
+X_FRAME_OPTIONS = 'DENY'
+
+# Subresource Integrity
+USE_SRI = True  # للتحقق من سلامة الملفات الخارجية
+
+# Database Connection Security
+CONN_MAX_AGE = 600  # 10 دقائق max
+CONN_HEALTH_CHECKS = True  # فحص صحة الاتصال
+
+# Password Validation مشدد
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'OPTIONS': {'max_similarity': 0.5}  # أكثر صرامة
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 12}  # 12 حرف على الأقل
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# Password Hashers (Argon2 - الأقوى)
+# تثبيت المكتبة: pip install django[argon2]
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',  # الأقوى - يحتاج تثبيت
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',  # احتياطي
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',  # احتياطي
+]
+
+# Account Lockout
+ACCOUNT_LOCKOUT_THRESHOLD = 5  # بعد 5 محاولات
+ACCOUNT_LOCKOUT_DURATION = 1800  # حظر 30 دقيقة
+
+# Session Security محسّن
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # إنهاء عند إغلاق المتصفح
+SESSION_COOKIE_AGE = 43200  # 12 ساعة max
+SESSION_SAVE_EVERY_REQUEST = False  # لا نحفظ في كل طلب
+CSRF_COOKIE_AGE = 31449600  # سنة للـ CSRF
+
+# Security Monitoring
+SECURITY_MONITORING_ENABLED = True
+LOG_SECURITY_EVENTS = True
+ALERT_ON_ATTACK_ATTEMPTS = True
+
+# Content Type Restrictions
+ALLOWED_CONTENT_TYPES = [
+    'text/html',
+    'application/json',
+    'application/xml',
+    'text/plain',
+]
+
+# IP Blacklist/Whitelist Support
+ENABLE_IP_FILTERING = False  # فعّل في الإنتاج إذا لزم الأمر
+IP_BLACKLIST = []  # قائمة IP المحظورة
+IP_WHITELIST = []  # قائمة IP المسموحة فقط
+
+# Automatic Security Updates Check
+AUTO_CHECK_SECURITY_UPDATES = True
+SECURITY_UPDATE_CHECK_INTERVAL = 86400  # كل 24 ساعة
+
+# Database Backup Encryption
+BACKUP_ENCRYPTION_ENABLED = True
+BACKUP_RETENTION_DAYS = 30
+
+# Two-Factor Authentication
+TWO_FACTOR_AUTH_ENABLED = False  # فعّل عند الحاجة
+TWO_FACTOR_AUTH_REQUIRED_FOR_ADMIN = True

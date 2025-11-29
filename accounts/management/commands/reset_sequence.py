@@ -11,7 +11,7 @@ class Command(BaseCommand):
             max_id = cursor.fetchone()[0] or 1
             
             # Set the sequence to the next available ID
-            cursor.execute(f"SELECT setval('accounts_user_id_seq', {max_id + 1}, false)")
+            cursor.execute("SELECT setval('accounts_user_id_seq', %s, false)", [max_id + 1])
             
             self.stdout.write(
                 self.style.SUCCESS(f'Successfully reset sequence for accounts_user to {max_id + 1}')

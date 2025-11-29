@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 from django.db import connection
 from django.conf import settings
 import psycopg2
+from psycopg2 import sql
 import time
 
 
@@ -172,7 +173,7 @@ class Command(BaseCommand):
                     self.stdout.write(f'   تحليل جدول: {table_name}')
                     
                     start_time = time.time()
-                    cursor.execute(f'ANALYZE "{table_name}";')
+                    cursor.execute(sql.SQL('ANALYZE {}').format(sql.Identifier(table_name)))
                     end_time = time.time()
                     
                     self.stdout.write(f'   ✅ تم ({end_time - start_time:.2f}s)')
@@ -207,7 +208,7 @@ class Command(BaseCommand):
                     self.stdout.write(f'   تنظيف جدول: {table_name}')
                     
                     start_time = time.time()
-                    cursor.execute(f'VACUUM ANALYZE "{table_name}";')
+                    cursor.execute(sql.SQL('VACUUM ANALYZE {}').format(sql.Identifier(table_name)))
                     end_time = time.time()
                     
                     self.stdout.write(f'   ✅ تم ({end_time - start_time:.2f}s)')
@@ -242,7 +243,7 @@ class Command(BaseCommand):
                     self.stdout.write(f'   إعادة بناء فهرس: {index_name}')
                     
                     start_time = time.time()
-                    cursor.execute(f'REINDEX INDEX "{index_name}";')
+                    cursor.execute(sql.SQL('REINDEX INDEX {}').format(sql.Identifier(index_name)))
                     end_time = time.time()
                     
                     self.stdout.write(f'   ✅ تم ({end_time - start_time:.2f}s)')

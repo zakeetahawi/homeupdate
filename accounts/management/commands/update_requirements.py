@@ -9,6 +9,7 @@ import re
 import os
 from pathlib import Path
 from django.conf import settings
+from datetime import datetime
 
 class Command(BaseCommand):
     help = 'تحديث ملف requirements.txt بالحزم المثبتة حديثاً'
@@ -111,6 +112,6 @@ class Command(BaseCommand):
     def add_packages_to_requirements(self, requirements_path, new_packages):
         """إضافة الحزم الجديدة إلى ملف requirements.txt"""
         with open(requirements_path, 'a', encoding='utf-8') as f:
-            f.write(f"\n# حزم مضافة تلقائياً في {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"\n# حزم مضافة تلقائياً في {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             for package in new_packages:
                 f.write(f"{package}\n")
