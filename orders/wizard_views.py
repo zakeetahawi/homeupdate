@@ -13,6 +13,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 
 from .wizard_models import (
     DraftOrder, DraftOrderItem
@@ -120,6 +121,21 @@ def wizard_start_new(request):
     """
     from customers.models import Customer
     
+    # التحقق من وجود مسودات غير مكتملة للمستخدم
+    existing_drafts = DraftOrder.objects.filter(
+        created_by=request.user,
+        is_completed=False
+    )
+    
+    # إذا كان هناك مسودات وطلب التأكيد غير موجود
+    if existing_drafts.exists() and not request.GET.get('confirm_new'):
+        # تخزين معاملات الطلب الأصلية في الجلسة
+        request.session['pending_new_order_params'] = {
+            'customer': request.GET.get('customer'),
+            'customer_id': request.GET.get('customer_id')
+        }
+        return redirect('orders:wizard_confirm_new')
+    
     customer = None
     customer_code = request.GET.get('customer')
     customer_id = request.GET.get('customer_id')
@@ -130,19 +146,65 @@ def wizard_start_new(request):
     elif customer_id:
         customer = Customer.objects.filter(pk=customer_id).first()
     
-    # إنشاء المسودة مع العميل إذا وُجد
+    # تحديد الفرع تلقائياً بناءً على المستخدم
+    user_branch = None
+    if hasattr(request.user, 'branch') and request.user.branch:
+        user_branch = request.user.branch
+    
+    # إنشاء المسودة مع العميل والفرع إذا وُجدا
     draft = DraftOrder.objects.create(
         created_by=request.user,
         current_step=1,
-        customer=customer
+        customer=customer,
+        branch=user_branch
     )
     
-    # إذا تم تحديد العميل، نضع علامة أن الخطوة 1 جزئياً مكتملة
-    if customer:
-        # تخزين معرف المسودة في الجلسة
-        request.session['wizard_draft_id'] = draft.id
+    # تخزين معرف المسودة في الجلسة
+    request.session['wizard_draft_id'] = draft.id
     
     return redirect('orders:wizard_step', step=1)
+
+
+@login_required
+def wizard_confirm_new(request):
+    """
+    صفحة تأكيد إنشاء مسودة جديدة عند وجود مسودات غير مكتملة
+    """
+    existing_drafts = DraftOrder.objects.filter(
+        created_by=request.user,
+        is_completed=False
+    ).select_related('customer', 'branch').order_by('-updated_at')
+    
+    context = {
+        'existing_drafts': existing_drafts,
+        'pending_params': request.session.get('pending_new_order_params', {})
+    }
+    
+    return render(request, 'orders/wizard/confirm_new.html', context)
+
+
+@login_required
+def wizard_delete_and_create_new(request):
+    """
+    حذف جميع المسودات غير المكتملة وإنشاء مسودة جديدة
+    """
+    # حذف المسودات غير المكتملة
+    DraftOrder.objects.filter(
+        created_by=request.user,
+        is_completed=False
+    ).delete()
+    
+    # استرجاع معاملات الطلب الأصلية
+    pending_params = request.session.pop('pending_new_order_params', {})
+    
+    # إعادة التوجيه لإنشاء مسودة جديدة مع التأكيد
+    url = reverse('orders:wizard_start_new') + '?confirm_new=1'
+    if pending_params.get('customer'):
+        url += f"&customer={pending_params['customer']}"
+    elif pending_params.get('customer_id'):
+        url += f"&customer_id={pending_params['customer_id']}"
+    
+    return redirect(url)
 
 
 @login_required

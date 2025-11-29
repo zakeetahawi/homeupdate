@@ -19,10 +19,13 @@ urlpatterns = [
     # API Endpoints
     path('api/products/search/', api_views.products_search_api, name='products_search_api'),
     path('api/check-invoice-number/', api_views.check_invoice_number_api, name='check_invoice_number_api'),
+    path('api/salespersons/', api_views.salespersons_by_branch_api, name='salespersons_by_branch_api'),
     
     # Wizard URLs - Multi-step order creation
     path('wizard/', wizard_views.wizard_start, name='wizard_start'),
     path('wizard/new/', wizard_views.wizard_start_new, name='wizard_start_new'),
+    path('wizard/confirm-new/', wizard_views.wizard_confirm_new, name='wizard_confirm_new'),
+    path('wizard/delete-and-create-new/', wizard_views.wizard_delete_and_create_new, name='wizard_delete_and_create_new'),
     path('wizard/drafts/', wizard_views.wizard_drafts_list, name='wizard_drafts_list'),
     path('wizard/draft/<int:draft_id>/delete/', wizard_views.wizard_delete_draft, name='wizard_delete_draft'),
     path('wizard/step/<int:step>/', wizard_views.wizard_step, name='wizard_step'),

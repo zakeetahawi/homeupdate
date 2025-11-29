@@ -51,39 +51,59 @@ class Step1BasicInfoForm(forms.ModelForm):
         self.fields['customer'].empty_label = "اختر العميل..."
         self.fields['customer'].required = True
         
-        # الفرع: تلقائي حسب فرع الموظف (إلا للـ admin)
-        if user:
-            if user.is_superuser:
-                # المدير يستطيع اختيار أي فرع
-                self.fields['branch'].queryset = Branch.objects.filter(is_active=True)
-            elif hasattr(user, 'branch') and user.branch:
-                # الموظف: الفرع الافتراضي هو فرعه
-                self.fields['branch'].initial = user.branch
-                # إذا كان له فروع متعددة (مدير منطقة)
-                if hasattr(user, 'managed_branches'):
-                    managed = user.managed_branches.filter(is_active=True)
-                    if managed.exists():
-                        self.fields['branch'].queryset = managed
-                    else:
-                        # فرعه فقط
-                        self.fields['branch'].queryset = Branch.objects.filter(id=user.branch.id)
-                else:
-                    # فرعه فقط
-                    self.fields['branch'].queryset = Branch.objects.filter(id=user.branch.id)
+        # تحديد ما إذا كان المستخدم من الفرع الرئيسي أو مدير
+        is_main_branch_user = False
+        is_admin_user = False
+        user_branch = None
         
-        # البائع: فقط البائعين المرتبطين بالفرع
-        if self.instance and self.instance.branch:
+        if user:
+            is_admin_user = user.is_superuser or user.groups.filter(name__in=['مدير نظام', 'مدير عام']).exists()
+            
+            if hasattr(user, 'branch') and user.branch:
+                user_branch = user.branch
+                # التحقق إذا كان الفرع الرئيسي (بالاسم أو is_main)
+                is_main_branch_user = (
+                    hasattr(user.branch, 'is_main') and user.branch.is_main
+                ) or user.branch.name in ['الرئيسي', 'الفرع الرئيسي', 'Main', 'Main Branch']
+        
+        # تحديد الفروع المتاحة
+        if is_admin_user or is_main_branch_user:
+            # مدير النظام أو مستخدم الفرع الرئيسي - جميع الفروع
+            self.fields['branch'].queryset = Branch.objects.filter(is_active=True)
+            # جميع البائعين
+            self.fields['salesperson'].queryset = Salesperson.objects.filter(is_active=True)
+        elif user and user_branch:
+            # موظف عادي - فرعه فقط
+            # التحقق من وجود فروع متعددة (مدير منطقة)
+            if hasattr(user, 'branches') and user.branches.exists():
+                user_branches = user.branches.filter(is_active=True)
+                self.fields['branch'].queryset = user_branches
+                self.fields['salesperson'].queryset = Salesperson.objects.filter(
+                    branch__in=user_branches,
+                    is_active=True
+                )
+            else:
+                # فرعه فقط
+                self.fields['branch'].queryset = Branch.objects.filter(id=user_branch.id, is_active=True)
+                self.fields['salesperson'].queryset = Salesperson.objects.filter(
+                    branch=user_branch,
+                    is_active=True
+                )
+        else:
+            # لا يوجد فرع - جميع الفروع والبائعين
+            self.fields['branch'].queryset = Branch.objects.filter(is_active=True)
+            self.fields['salesperson'].queryset = Salesperson.objects.filter(is_active=True)
+        
+        # تعيين الفرع الافتراضي
+        if not self.instance.branch and user_branch:
+            self.fields['branch'].initial = user_branch
+        
+        # إذا كان هناك فرع محدد في المسودة، تصفية البائعين بناءً عليه
+        if self.instance and self.instance.branch and not (is_admin_user or is_main_branch_user):
             self.fields['salesperson'].queryset = Salesperson.objects.filter(
                 branch=self.instance.branch,
                 is_active=True
             )
-        elif user and hasattr(user, 'branch') and user.branch:
-            self.fields['salesperson'].queryset = Salesperson.objects.filter(
-                branch=user.branch,
-                is_active=True
-            )
-        else:
-            self.fields['salesperson'].queryset = Salesperson.objects.filter(is_active=True)
 
 
 class Step2OrderTypeForm(forms.ModelForm):

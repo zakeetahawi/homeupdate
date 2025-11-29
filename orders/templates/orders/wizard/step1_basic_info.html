@@ -441,6 +441,44 @@ $(document).ready(function() {
     }
     
     console.log('✅ تم تطبيق القوائم المنسدلة العادية للفرع والبائع');
+    
+    // تحديث البائعين عند تغيير الفرع
+    if (branchField) {
+        branchField.addEventListener('change', function() {
+            const branchId = this.value;
+            const salespersonSelect = document.getElementById('{{ form.salesperson.id_for_label }}');
+            
+            if (!branchId) {
+                salespersonSelect.innerHTML = '<option value="">اختر البائع...</option>';
+                return;
+            }
+            
+            // إظهار رسالة تحميل
+            salespersonSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+            salespersonSelect.disabled = true;
+            
+            // طلب البائعين من الخادم
+            fetch(`/orders/api/salespersons/?branch=${branchId}`)
+                .then(response => response.json())
+                .then(data => {
+                    salespersonSelect.innerHTML = '<option value="">اختر البائع...</option>';
+                    if (data.results) {
+                        data.results.forEach(sp => {
+                            const option = document.createElement('option');
+                            option.value = sp.id;
+                            option.textContent = sp.name;
+                            salespersonSelect.appendChild(option);
+                        });
+                    }
+                    salespersonSelect.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error loading salespersons:', error);
+                    salespersonSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+                    salespersonSelect.disabled = false;
+                });
+        });
+    }
 });
 
 // معالجة إرسال النموذج

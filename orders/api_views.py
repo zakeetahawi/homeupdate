@@ -5,8 +5,12 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.contrib.auth import get_user_model
 from inventory.models import Product
+from accounts.models import Branch
 from .models import Order
+
+User = get_user_model()
 
 
 @login_required
@@ -207,5 +211,56 @@ def check_invoice_number_api(request):
         return JsonResponse({
             'exists': False,
             'message': '',
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def salespersons_by_branch_api(request):
+    """
+    API endpoint للحصول على البائعين حسب الفرع
+    يستخدم في ويزارد إنشاء الطلب
+    """
+    try:
+        branch_id = request.GET.get('branch', '').strip()
+        
+        # الحصول على البائعين
+        salespersons = User.objects.filter(
+            is_active=True,
+            user_type='salesperson'
+        ).select_related('branch')
+        
+        # تصفية حسب الفرع إذا تم تحديده
+        if branch_id:
+            salespersons = salespersons.filter(branch_id=branch_id)
+        
+        # ترتيب النتائج
+        salespersons = salespersons.order_by('first_name', 'last_name')
+        
+        # تحضير النتائج
+        results = []
+        for user in salespersons:
+            name = user.get_full_name() or user.username
+            branch_name = user.branch.name if user.branch else ''
+            results.append({
+                'id': user.id,
+                'name': name,
+                'branch': branch_name,
+            })
+        
+        return JsonResponse({
+            'results': results,
+            'total': len(results)
+        })
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in salespersons_by_branch_api: {e}")
+        
+        return JsonResponse({
+            'results': [],
+            'total': 0,
             'error': str(e)
         }, status=500)
