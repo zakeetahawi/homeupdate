@@ -125,3 +125,4 @@ tmp/
 .settings/
 dump.rdb
 .env
+*.rdb
