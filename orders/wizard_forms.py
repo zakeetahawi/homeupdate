@@ -94,14 +94,27 @@ class Step1BasicInfoForm(forms.ModelForm):
             self.fields['branch'].queryset = Branch.objects.filter(is_active=True)
             self.fields['salesperson'].queryset = Salesperson.objects.filter(is_active=True)
         
-        # تعيين الفرع الافتراضي
-        if not self.instance.branch and user_branch:
+        # تعيين الفرع الافتراضي وتصفية البائعين
+        active_branch = None
+        
+        if self.instance and self.instance.branch:
+            # إذا كان هناك فرع محدد في المسودة
+            active_branch = self.instance.branch
+        elif user_branch:
+            # أو استخدم فرع المستخدم كافتراضي
+            active_branch = user_branch
             self.fields['branch'].initial = user_branch
         
-        # إذا كان هناك فرع محدد في المسودة، تصفية البائعين بناءً عليه
-        if self.instance and self.instance.branch and not (is_admin_user or is_main_branch_user):
+        # تصفية البائعين بناءً على الفرع النشط (للمستخدمين العاديين)
+        if active_branch and not (is_admin_user or is_main_branch_user):
             self.fields['salesperson'].queryset = Salesperson.objects.filter(
-                branch=self.instance.branch,
+                branch=active_branch,
+                is_active=True
+            )
+        elif active_branch and (is_admin_user or is_main_branch_user):
+            # حتى للمدراء، نعرض البائعين المرتبطين بالفرع المحدد أولاً
+            self.fields['salesperson'].queryset = Salesperson.objects.filter(
+                branch=active_branch,
                 is_active=True
             )
 
