@@ -633,6 +633,10 @@ BACKUP_SUPPORTED_FORMATS = [
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Forms URLField settings (Django 5.2+)
+# استخدام https كافتراضي لحقول URL
+FORMS_URLFIELD_ASSUME_HTTPS = True
+
 # Authentication settings
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'

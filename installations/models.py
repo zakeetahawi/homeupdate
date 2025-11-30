@@ -202,22 +202,21 @@ class InstallationSchedule(models.Model):
         # حفظ الحالة الأصلية للإشارات
         self._original_status = old_status
         
-        # تحديث حالة الطلب عند إكمال التركي��
+        # تحديث حالة الطلب عند إكمال التركيب
         if self.status == 'completed' and not self.completion_date:
             # استخدام التاريخ المحلي للمنطقة الزمنية المحددة
             from django.utils import timezone as django_timezone
-            import pytz
+            from zoneinfo import ZoneInfo
             from datetime import datetime, time
             
             # الحصول على المنطقة الزمنية من الإعدادات
-            local_tz = pytz.timezone('Africa/Cairo')
+            local_tz = ZoneInfo('Africa/Cairo')
             current_time = django_timezone.now()
             local_time = current_time.astimezone(local_tz)
             
-            # إنشاء datetime بالتوقيت المحلي ثم تحويله إلى UTC للحفظ
+            # إنشاء datetime بالتوقيت المحلي
             local_date = local_time.date()
-            local_datetime = datetime.combine(local_date, local_time.time())
-            local_datetime = local_tz.localize(local_datetime)
+            local_datetime = datetime.combine(local_date, local_time.time(), tzinfo=local_tz)
             
             self.completion_date = local_datetime
             
@@ -261,10 +260,10 @@ class InstallationSchedule(models.Model):
         elif self.status == 'in_installation' and old_status == 'scheduled':
             # استخدام التاريخ المحلي للمنطقة الزمنية المحددة
             from django.utils import timezone as django_timezone
-            import pytz
+            from zoneinfo import ZoneInfo
             
             # الحصول على المنطقة الزمنية من الإعدادات
-            local_tz = pytz.timezone('Africa/Cairo')
+            local_tz = ZoneInfo('Africa/Cairo')
             current_time = django_timezone.now()
             local_time = current_time.astimezone(local_tz)
             current_date = local_time.date()
@@ -325,8 +324,8 @@ class InstallationSchedule(models.Model):
         # إذا كان مكتمل وله تاريخ إكمال، إرجاع تاريخ الإكمال الفعلي (أولوية عالية)
         if self.status == 'completed' and self.completion_date:
             # تحويل تاريخ الإكمال إلى المنطقة الزمنية المحلية للعرض
-            import pytz
-            local_tz = pytz.timezone('Africa/Cairo')
+            from zoneinfo import ZoneInfo
+            local_tz = ZoneInfo('Africa/Cairo')
             local_completion_date = self.completion_date.astimezone(local_tz)
             return local_completion_date.date()
         # إذا كان التركيب مجدول أو قيد التنفيذ، إرجاع تاريخ الجدولة
