@@ -24,22 +24,23 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         if not settings.DEBUG:
             csp_policy = (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net code.jquery.com; "
+                "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net code.jquery.com static.cloudflareinsights.com unpkg.com; "
                 "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
                 "img-src 'self' data: https:; "
                 "font-src 'self' cdn.jsdelivr.net; "
-                "connect-src 'self'; "
+                "connect-src 'self' cloudflareinsights.com; "
                 "frame-ancestors 'none'; "
                 "base-uri 'self'; "
                 "form-action 'self';"
             )
             response['Content-Security-Policy'] = csp_policy
         
-        # Permissions Policy (Feature Policy) - مصحح
+        # Permissions Policy (Feature Policy) - السماح بالكاميرا للمستخدم
+        # camera=(self) يسمح باستخدام الكاميرا في الصفحة نفسها فقط بناءً على إذن المستخدم
         response['Permissions-Policy'] = (
             'geolocation=(), '
             'microphone=(), '
-            'camera=(), '
+            'camera=(self), '
             'payment=(), '
             'usb=(), '
             'magnetometer=(), '
